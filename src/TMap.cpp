@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,8 +30,8 @@
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
-#include "mudlet.h"
 #include "mapInfoContributorManager.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QElapsedTimer>
@@ -50,72 +50,8 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mpRoomDB(new TRoomDB(this))
 , mpHost(pH)
 , mProfileName(profileName)
-, mpMapper(nullptr)
-// default map version that new maps will get
-, mDefaultVersion(20)
-// maximum version of the map format that this Mudlet can understand and will
-// allow the user to load
-/*
- * WARNING: There is new code that will be activated when this is incremented
- * above 20:
- * * The room special exits (QMap<QString, int>) and special exit locks data
- *   QSet<QString> will be stored directly in those new container elements
- *   replacing the backwards compatible combination (a QMultiMap<int, QString>)
- *   that prefixed a '1' for a locked exit or '0' for an unlocked one onto the
- *   special exit name (stored in the VALUE) in the old format.
- * It has been tested and *seems* to work. SlySven - 2020/12
- */
-, mMaxVersion(20)
-// minimum version this instance of Mudlet will allow the user to save maps in
-, mMinVersion(17)
-, mMapSymbolFont(QFont(qsl("Bitstream Vera Sans Mono"), 12, QFont::Normal))
 {
-    mSaveVersion = mDefaultVersion; // Can not be set initialiser list because of ordering issues (?)
-                                    // It needs to be set (for when writing new
-                                    // map files) as it triggers some version features
-                                    // that NEED a new map file format to be usable, it
-                                    // can be changed by control in last tab of profile
-                                    // preference dialog.
-    mVersion = mDefaultVersion;     // This is overwritten during a map restore and
-                                    // is the loaded file version
-    mCustomEnvColors[257] = mpHost->mRed_2;
-    mCustomEnvColors[258] = mpHost->mGreen_2;
-    mCustomEnvColors[259] = mpHost->mYellow_2;
-    mCustomEnvColors[260] = mpHost->mBlue_2;
-    mCustomEnvColors[261] = mpHost->mMagenta_2;
-    mCustomEnvColors[262] = mpHost->mCyan_2;
-    mCustomEnvColors[263] = mpHost->mWhite_2;
-    mCustomEnvColors[264] = mpHost->mBlack_2;
-    mCustomEnvColors[265] = mpHost->mLightRed_2;
-    mCustomEnvColors[266] = mpHost->mLightGreen_2;
-    mCustomEnvColors[267] = mpHost->mLightYellow_2;
-    mCustomEnvColors[268] = mpHost->mLightBlue_2;
-    mCustomEnvColors[269] = mpHost->mLightMagenta_2;
-    mCustomEnvColors[270] = mpHost->mLightCyan_2;
-    mCustomEnvColors[271] = mpHost->mLightWhite_2;
-    mCustomEnvColors[272] = mpHost->mLightBlack_2;
-    unitVectors[DIR_NORTH] = QVector3D(0, -1, 0);
-    unitVectors[DIR_NORTHEAST] = QVector3D(1, -1, 0);
-    unitVectors[DIR_NORTHWEST] = QVector3D(-1, -1, 0);
-    unitVectors[DIR_EAST] = QVector3D(1, 0, 0);
-    unitVectors[DIR_WEST] = QVector3D(-1, 0, 0);
-    unitVectors[DIR_SOUTH] = QVector3D(0, 1, 0);
-    unitVectors[DIR_SOUTHEAST] = QVector3D(1, 1, 0);
-    unitVectors[DIR_SOUTHWEST] = QVector3D(-1, 1, 0);
-    unitVectors[DIR_UP] = QVector3D(0, 0, 1);
-    unitVectors[DIR_DOWN] = QVector3D(0, 0, -1);
-    reverseDirections[1] = 6; //contains complementary directions
-    reverseDirections[2] = 8;
-    reverseDirections[3] = 7;
-    reverseDirections[4] = 5;
-    reverseDirections[5] = 4;
-    reverseDirections[6] = 1;
-    reverseDirections[7] = 3;
-    reverseDirections[8] = 2;
-    reverseDirections[9] = 10;
-    reverseDirections[10] = 9;
-    reverseDirections[11] = 12;
-    reverseDirections[12] = 11;
+    restore16ColorSet();
 
     // According to Qt Docs we should really only have one of these
     // (QNetworkAccessManager) for the whole application, but: each profile's
@@ -152,22 +88,7 @@ void TMap::mapClear()
     mWeightList.clear();
     mCustomEnvColors.clear();
     // Need to restore the default colours:
-    mCustomEnvColors[257] = mpHost->mRed_2;
-    mCustomEnvColors[258] = mpHost->mGreen_2;
-    mCustomEnvColors[259] = mpHost->mYellow_2;
-    mCustomEnvColors[260] = mpHost->mBlue_2;
-    mCustomEnvColors[261] = mpHost->mMagenta_2;
-    mCustomEnvColors[262] = mpHost->mCyan_2;
-    mCustomEnvColors[263] = mpHost->mWhite_2;
-    mCustomEnvColors[264] = mpHost->mBlack_2;
-    mCustomEnvColors[265] = mpHost->mLightRed_2;
-    mCustomEnvColors[266] = mpHost->mLightGreen_2;
-    mCustomEnvColors[267] = mpHost->mLightYellow_2;
-    mCustomEnvColors[268] = mpHost->mLightBlue_2;
-    mCustomEnvColors[269] = mpHost->mLightMagenta_2;
-    mCustomEnvColors[270] = mpHost->mLightCyan_2;
-    mCustomEnvColors[271] = mpHost->mLightWhite_2;
-    mCustomEnvColors[272] = mpHost->mLightBlack_2;
+    restore16ColorSet();
     roomidToIndex.clear();
     edgeHash.clear();
     locations.clear();
@@ -236,6 +157,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
     bool result = pR->setArea(area, isToDeferAreaRelatedRecalculations);
     if (result) {
         mMapGraphNeedsUpdate = true;
+        mUnsavedMap = true;
     }
     return result;
 }
@@ -245,6 +167,7 @@ bool TMap::addRoom(int id)
     bool ret = mpRoomDB->addRoom(id);
     if (ret) {
         mMapGraphNeedsUpdate = true;
+        mUnsavedMap = true;
     }
     return ret;
 }
@@ -260,6 +183,7 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     pR->y = y;
     pR->z = z;
 
+    mUnsavedMap = true;
     return true;
 }
 
@@ -275,8 +199,8 @@ int compSign(int a, int b)
 // reason why it cannot.
 QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType)
 {
-    Q_ASSERT_X(unitVectors.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no unitVector.value() for the given dirType");
-    Q_ASSERT_X(reverseDirections.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no reverseDirections.value() for the given dirType");
+    Q_ASSERT_X(scmUnitVectors.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no unitVector.value() for the given dirType");
+    Q_ASSERT_X(scmReverseDirections.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no scmReverseDirections.value() for the given dirType");
 
     TRoom* pFromR = mpRoomDB->getRoom(fromRoomId);
     if (!pFromR) {
@@ -293,8 +217,8 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
                 .arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
     }
 
-    int reverseDir = reverseDirections.value(dirType);
-    QVector3D unitVector = unitVectors.value(dirType);
+    int reverseDir = scmReverseDirections.value(dirType);
+    QVector3D unitVector = scmUnitVectors.value(dirType);
     // QVector3D is composed of floating point values so we need to round them
     // if we want to assign them to integral variables without compiler warnings!
     int ux = qRound(unitVector.x());
@@ -383,7 +307,8 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
         }
 
         setExit(fromRoomId, minDistanceRoom, dirType);
-        setExit(minDistanceRoom, fromRoomId, reverseDirections.value(dirType));
+        setExit(minDistanceRoom, fromRoomId, scmReverseDirections.value(dirType));
+        mUnsavedMap = true;
         return {};
     }
 
@@ -426,17 +351,13 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
         return qsl("toID (%1) does not have any stub exits").arg(toRoomId);
     }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QSet<int> fromRoomStubs{pFromR->exitStubs.cbegin(), pFromR->exitStubs.cend()};
-#else
-    QSet<int> fromRoomStubs{pFromR->exitStubs.toSet()};
-#endif
     QListIterator<int> itToRoomStubs{pToR->exitStubs};
     QSet<int> toReverseStubDirections;
     while (itToRoomStubs.hasNext()) {
         auto direction = itToRoomStubs.next();
-        Q_ASSERT_X(reverseDirections.contains(direction), "TMap::connectExitStubByToId(...)", "there is no reverseDirections.value() for a particular direction encountered");
-        toReverseStubDirections.insert(reverseDirections.value(direction));
+        Q_ASSERT_X(scmReverseDirections.contains(direction), "TMap::connectExitStubByToId(...)", "there is no scmReverseDirections.value() for a particular direction encountered");
+        toReverseStubDirections.insert(scmReverseDirections.value(direction));
     }
 
     QSet<int> usableStubDirections{fromRoomStubs};
@@ -460,7 +381,8 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
     // else we must have just one direction:
     int usableStubDirection = *(usableStubDirections.constBegin());
     setExit(fromRoomId, toRoomId, usableStubDirection);
-    setExit(toRoomId, fromRoomId, reverseDirections.value(usableStubDirection));
+    setExit(toRoomId, fromRoomId, scmReverseDirections.value(usableStubDirection));
+    mUnsavedMap = true;
     return {};
 }
 
@@ -474,7 +396,7 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
 // the reason why it cannot.
 QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int dirType, const int toRoomId)
 {
-    Q_ASSERT_X(reverseDirections.contains(dirType), "TMap::connectExitStubByDirectionAndToId(...)", "there is no reverseDirections.value() for the given dirType");
+    Q_ASSERT_X(scmReverseDirections.contains(dirType), "TMap::connectExitStubByDirectionAndToId(...)", "there is no scmReverseDirections.value() for the given dirType");
 
     auto pFromR = mpRoomDB->getRoom(fromRoomId);
     if (!pFromR) {
@@ -495,17 +417,18 @@ QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int 
         return qsl("toID (%1) room does not exist").arg(toRoomId);
     }
 
-    if (!pToR->exitStubs.contains(reverseDirections.value(dirType))) {
+    if (!pToR->exitStubs.contains(scmReverseDirections.value(dirType))) {
         return qsl("toID (%1) does not have an exit stub in the reverse direction '%2' (%3) of that given '%4' (%5)")
                 .arg(QString::number(toRoomId),
-                     TRoom::dirCodeToString(reverseDirections.value(dirType)),
-                     QString::number(reverseDirections.value(dirType)),
+                     TRoom::dirCodeToString(scmReverseDirections.value(dirType)),
+                     QString::number(scmReverseDirections.value(dirType)),
                      TRoom::dirCodeToString(dirType),
                      QString::number(dirType));
     }
 
     setExit(fromRoomId, toRoomId, dirType);
-    setExit(toRoomId, fromRoomId, reverseDirections.value(dirType));
+    setExit(toRoomId, fromRoomId, scmReverseDirections.value(dirType));
+    mUnsavedMap = true;
     return {};
 }
 
@@ -589,6 +512,7 @@ bool TMap::setExit(int from, int to, int dir)
     }
     pA->determineAreaExitsOfRoom(pR->getId());
     mpRoomDB->updateEntranceMap(pR);
+    mUnsavedMap = true;
     return ret;
 }
 
@@ -1780,11 +1704,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 } else {
                     QList<int> oldRoomsList;
                     ifs >> oldRoomsList;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                     pA->rooms = QSet<int>{oldRoomsList.begin(), oldRoomsList.end()};
-#else
-                    pA->rooms = oldRoomsList.toSet();
-#endif
                 }
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
@@ -1920,22 +1840,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             mpRoomDB->restoreSingleRoom(i, pT);
         }
 
-        mCustomEnvColors[257] = mpHost->mRed_2;
-        mCustomEnvColors[258] = mpHost->mGreen_2;
-        mCustomEnvColors[259] = mpHost->mYellow_2;
-        mCustomEnvColors[260] = mpHost->mBlue_2;
-        mCustomEnvColors[261] = mpHost->mMagenta_2;
-        mCustomEnvColors[262] = mpHost->mCyan_2;
-        mCustomEnvColors[263] = mpHost->mWhite_2;
-        mCustomEnvColors[264] = mpHost->mBlack_2;
-        mCustomEnvColors[265] = mpHost->mLightRed_2;
-        mCustomEnvColors[266] = mpHost->mLightGreen_2;
-        mCustomEnvColors[267] = mpHost->mLightYellow_2;
-        mCustomEnvColors[268] = mpHost->mLightBlue_2;
-        mCustomEnvColors[269] = mpHost->mLightMagenta_2;
-        mCustomEnvColors[270] = mpHost->mLightCyan_2;
-        mCustomEnvColors[271] = mpHost->mLightWhite_2;
-        mCustomEnvColors[272] = mpHost->mLightBlack_2;
+        restore16ColorSet();
 
         QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
                            "consistency details..." )
@@ -2265,6 +2170,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
         }
     }
 
+    mUnsavedMap = true;
     return labelId;
 }
 
@@ -2300,6 +2206,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
         }
     }
 
+    mUnsavedMap = true;
     return labelId;
 }
 
@@ -2310,8 +2217,11 @@ void TMap::deleteMapLabel(int area, int labelId)
         return;
     }
 
-    if (pA->mMapLabels.remove(labelId) && mpMapper) {
-        mpMapper->mp2dMap->update();
+    if (pA->mMapLabels.remove(labelId)) {
+        mUnsavedMap = true;
+        if (mpMapper) {
+            mpMapper->mp2dMap->update();
+        }
     }
 }
 
@@ -2333,6 +2243,11 @@ void TMap::set3DViewCenter(const int areaId, const int xPos, const int yPos, con
     if (mpM) {
         mpM->setViewCenter(areaId, xPos, yPos, zPos);
     }
+#else
+    Q_UNUSED(areaId)
+    Q_UNUSED(xPos)
+    Q_UNUSED(yPos)
+    Q_UNUSED(zPos)
 #endif
 }
 
@@ -2961,15 +2876,9 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QList<int> areaRawIdsList{mpRoomDB->getAreaMap().keys()};
     QList<int> areaNameRawIdsList{mpRoomDB->getAreaNamesMap().keys()};
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QSet<int> areaIdsSet{areaRawIdsList.begin(), areaRawIdsList.end()};
     areaIdsSet.unite(QSet<int>{areaNameRawIdsList.begin(), areaNameRawIdsList.end()});
     QList<int> areaIdsList{areaIdsSet.begin(), areaIdsSet.end()};
-#else
-    QSet<int> areaIdsSet = areaRawIdsList.toSet();
-    areaIdsSet.unite(areaNameRawIdsList.toSet());
-    QList<int> areaIdsList = areaIdsSet.toList();
-#endif
     if (areaIdsList.count() > 1) {
         std::sort(areaIdsList.begin(), areaIdsList.end());
     }
@@ -3187,6 +3096,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    if (mapObj.contains(QLatin1String("userData"))) {
+        readJsonUserData(mapObj[QLatin1String("userData")].toObject());
+    }
     QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     float mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
     bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
@@ -3510,4 +3422,24 @@ QColor TMap::getColor(int id)
         color = mCustomEnvColors.value(env);
     }
     return color;
+}
+
+void TMap::restore16ColorSet()
+{
+    mCustomEnvColors[257] = mpHost->mRed_2;
+    mCustomEnvColors[258] = mpHost->mGreen_2;
+    mCustomEnvColors[259] = mpHost->mYellow_2;
+    mCustomEnvColors[260] = mpHost->mBlue_2;
+    mCustomEnvColors[261] = mpHost->mMagenta_2;
+    mCustomEnvColors[262] = mpHost->mCyan_2;
+    mCustomEnvColors[263] = mpHost->mWhite_2;
+    mCustomEnvColors[264] = mpHost->mBlack_2;
+    mCustomEnvColors[265] = mpHost->mLightRed_2;
+    mCustomEnvColors[266] = mpHost->mLightGreen_2;
+    mCustomEnvColors[267] = mpHost->mLightYellow_2;
+    mCustomEnvColors[268] = mpHost->mLightBlue_2;
+    mCustomEnvColors[269] = mpHost->mLightMagenta_2;
+    mCustomEnvColors[270] = mpHost->mLightCyan_2;
+    mCustomEnvColors[271] = mpHost->mLightWhite_2;
+    mCustomEnvColors[272] = mpHost->mLightBlack_2;
 }

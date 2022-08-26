@@ -3,6 +3,7 @@
  *   Copyright (C) 2013-2014, 2016-2021 by Stephen Lyons                   *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -38,6 +39,9 @@
 #include <QStringListIterator>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
+#include "TAccessibleConsole.h"
+#include "TAccessibleTextEdit.h"
+#include "Announcer.h"
 
 using namespace std::chrono_literals;
 
@@ -89,6 +93,7 @@ void removeOldNoteColorEmojiFonts()
     QStringList oldNotoFontDirectories;
     oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
 
     QStringListIterator itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
@@ -149,9 +154,7 @@ int main(int argc, char* argv[])
 #endif // _MSC_VER && _DEBUG
     spDebugConsole = nullptr;
 
-    // due to a Qt bug, this only safely works for both non- and HiDPI displays on 5.12+
-    // 5.6 - 5.11 make the application blow up in size on non-HiDPI displays
-#if defined (Q_OS_UNIX) && (QT_VERSION >= QT_VERSION_CHECK(5, 12, 0))
+#if defined (Q_OS_UNIX)
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 #endif
 
@@ -168,6 +171,13 @@ int main(int argc, char* argv[])
 #endif
 
     auto app = qobject_cast<QApplication*>(new QApplication(argc, argv));
+
+    QAccessible::installFactory(TAccessibleConsole::consoleFactory);
+    QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
+
+#if defined(Q_OS_LINUX)
+    QAccessible::installFactory(Announcer::accessibleFactory);
+#endif
 
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
     auto abortLaunch = runUpdate();
@@ -393,7 +403,7 @@ int main(int argc, char* argv[])
 #if defined(Q_OS_LINUX)
     // Only needed/works on Linux to provide color emojis:
     removeOldNoteColorEmojiFonts();
-    QString notoFontDirectory{qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
+    QString notoFontDirectory{qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -448,9 +458,9 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
 #if defined(Q_OS_LINUX)
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-07-15-v2.028"), qsl("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-07-15-v2.028"), qsl("LICENSE"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-07-15-v2.028"), qsl("README"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-11-01-v2.034"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-11-01-v2.034"), qsl("LICENSE"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-11-01-v2.034"), qsl("README"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 

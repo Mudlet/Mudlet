@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "TRoom.h"
 #include "VarUnit.h"
 #include "mudlet.h"
 
@@ -373,12 +374,8 @@ void XMLimport::readMap()
     QListIterator<int> itAreaWithRooms(tempAreaRoomsHash.uniqueKeys());
     while (itAreaWithRooms.hasNext()) {
         int areaId = itAreaWithRooms.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         auto values = tempAreaRoomsHash.values(areaId);
         QSet<int> areaRoomsSet{values.begin(), values.end()};
-#else
-        QSet<int> areaRoomsSet{tempAreaRoomsHash.values(areaId).toSet()};
-#endif
 
         if (!mpHost->mpMap->mpRoomDB->areas.contains(areaId)) {
             // It is known for map files to have rooms with area Ids that are
@@ -447,9 +444,33 @@ void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
             } else {
                 readUnknownMapElement();
             }
-        } else if (isEndElement()) {
+        } else if (isEndElement() && name() == qsl("rooms")) {
             break;
         }
+    }
+}
+
+void XMLimport::readRoomFeatures(TRoom* pR)
+{
+    while (!atEnd()) {
+        readNext();
+
+        if (Q_LIKELY(isStartElement())) {
+            if (name() == qsl("features")) {
+                continue;
+            } else if (Q_LIKELY(name() == qsl("feature"))) {
+                readRoomFeature(pR);
+            }
+        } else if (isEndElement() && name() == qsl("features")) {
+            break;
+        }
+    }
+}
+
+void XMLimport::readRoomFeature(TRoom* pR)
+{
+    if (Q_LIKELY(attributes().hasAttribute(qsl("type")))) {
+        pR->userData.insert(qsl("feature-%1").arg(attributes().value(qsl("type"))), qsl("true"));
     }
 }
 
@@ -474,32 +495,62 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
         } else if (Q_LIKELY(name() == qsl("exit"))) {
             QString dir = attributes().value(qsl("direction")).toString();
             int e = attributes().value(qsl("target")).toString().toInt();
+            // If there is a "hidden" exit mark it as a locked door, otherwise
+            // if there is a "door" mark it as an open/closed/locked door
+            // depending on the value (I.R.E. MUD maps always uses "1" for "door"
+            // and/or "hidden" - though the latter does not always appear with
+            // former):
+            int door = (attributes().hasAttribute(qsl("hidden")) && attributes().value(qsl("hidden")).toString().toInt() == 1)
+                    ? 3
+                    : (attributes().hasAttribute(qsl("door")) && attributes().value(qsl("door")).toString().toInt() >= 0 && attributes().value(qsl("door")).toString().toInt() <= 3)
+                      ? attributes().value(qsl("door")).toString().toInt()
+                      : 0;
             if (dir.isEmpty()) {
-                continue;
+                if (attributes().value(qsl("special")).toString().toInt() == 1 && !attributes().value(qsl("command")).toString().isEmpty()) {
+                    // This is how IRE XML maps mark special exits, rather than
+                    // by just using a different string for the direction!
+                    dir = attributes().value(qsl("command")).toString();
+                    pT->setSpecialExit(e, dir);
+                    pT->setDoor(dir, door);
+                } else {
+                    continue;
+                }
             } else if (dir == qsl("north")) {
                 pT->north = e;
+                pT->setDoor(qsl("n"), door);
             } else if (dir == qsl("east")) {
                 pT->east = e;
+                pT->setDoor(qsl("e"), door);
             } else if (dir == qsl("south")) {
                 pT->south = e;
+                pT->setDoor(qsl("s"), door);
             } else if (dir == qsl("west")) {
                 pT->west = e;
+                pT->setDoor(qsl("w"), door);
             } else if (dir == qsl("up")) {
                 pT->up = e;
+                pT->setDoor(qsl("up"), door);
             } else if (dir == qsl("down")) {
                 pT->down = e;
+                pT->setDoor(qsl("down"), door);
             } else if (dir == qsl("northeast")) {
                 pT->northeast = e;
+                pT->setDoor(qsl("ne"), door);
             } else if (dir == qsl("southwest")) {
                 pT->southwest = e;
+                pT->setDoor(qsl("sw"), door);
             } else if (dir == qsl("southeast")) {
                 pT->southeast = e;
+                pT->setDoor(qsl("se"), door);
             } else if (dir == qsl("northwest")) {
                 pT->northwest = e;
+                pT->setDoor(qsl("nw"), door);
             } else if (dir == qsl("in")) {
                 pT->in = e;
+                pT->setDoor(qsl("in"), door);
             } else if (dir == qsl("out")) {
                 pT->out = e;
+                pT->setDoor(qsl("out"), door);
             } else {
                 // TODO: Handle Special Exits
             }
@@ -512,11 +563,13 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             pT->y = attributes().value(qsl("y")).toString().toInt();
             pT->z = attributes().value(qsl("z")).toString().toInt();
             continue;
+        } else if (name() == qsl("features")) {
+            readRoomFeatures(pT);
         } else if (Q_UNLIKELY(name().isEmpty())) {
             continue;
         }
 
-        if (isEndElement()) {
+        if (isEndElement() && name() == qsl("room")) {
             break;
         }
     }
@@ -829,6 +882,33 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->setEditorShowBidi(true);
     }
+    if (attributes().hasAttribute("announceIncomingText")) {
+        pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;
+    } else {
+        pHost->mAnnounceIncomingText = true;
+    }
+    if (attributes().hasAttribute("caretShortcut")) {
+        const QStringRef caretShortcut(attributes().value(qsl("caretShortcut")));
+        if (caretShortcut == qsl("None")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::None;
+        } else if (caretShortcut == qsl("Tab")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        } else if (caretShortcut == qsl("CtrlTab")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        } else if (caretShortcut == qsl("F6")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::F6;
+        }
+    }
+    if (attributes().hasAttribute("blankLineBehaviour")) {
+        const QStringRef blankLineBehaviour(attributes().value(qsl("blankLineBehaviour")));
+        if (blankLineBehaviour == qsl("Hide")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Hide;
+        } else if (blankLineBehaviour == qsl("Show")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
+        } else if (blankLineBehaviour == qsl("ReplaceWithSpace")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
+        }
+    }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
     pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
@@ -1091,7 +1171,9 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "mRoomBorderColor") {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
             } else if (name() == "mMapInfoBg") {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
                 pHost->mMapInfoBg.setNamedColor(readElementText());
+                pHost->mMapInfoBg.setAlpha(alpha);
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
@@ -1483,7 +1565,8 @@ int XMLimport::readActionGroup(TAction* pParent)
                 // or "2" (true) for backward compatibility
                 pT->mButtonState = (readElementText().toInt() == 2);
             } else if (name() == "buttonColor") {
-                pT->mButtonColor.setNamedColor(readElementText());
+                // Not longer present/used, skip over it if it is still in file:
+                skipCurrentElement();
             } else if (name() == "buttonColumn") {
                 pT->mButtonColumns = readElementText().toInt();
             } else if (name() == "posX") {

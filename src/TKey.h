@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2018, 2020, 2022 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -63,9 +64,9 @@ public:
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     bool registerKey();
 
-    bool exportItem;
-    bool mModuleMasterFolder;
-    bool mRegisteredAnonymousLuaFunction;
+    bool exportItem = true;
+    bool mModuleMasterFolder = false;
+    bool mRegisteredAnonymousLuaFunction = false;
 
 private:
     TKey() = default;
@@ -82,15 +83,17 @@ private:
      * Qt::KeypadModifier  0x20000000 A keypad button is pressed.
      */
 
-    Qt::Key mKeyCode;
-    Qt::KeyboardModifiers mKeyModifier;
+    // Have to use brace default initiliaser here as there is not a null enum
+    // value declared:
+    Qt::Key mKeyCode = {};
+    Qt::KeyboardModifiers mKeyModifier = Qt::NoModifier;
 
     QString mRegexCode;
     QString mScript;
     QString mFuncName;
     QPointer<Host> mpHost;
-    bool mNeedsToBeCompiled;
-    bool mModuleMember;
+    bool mNeedsToBeCompiled = true;
+    bool mModuleMember = false;
 };
 
 #endif // MUDLET_TKEY_H

@@ -14,7 +14,9 @@ if (-not $(Test-Path "$workingBaseDir")) {
 }
 
 $64Bit = (Get-WmiObject Win32_OperatingSystem).OSArchitecture -eq "64-bit"
-if($64Bit){
+# Appveyor's CMake is in C:\Program Files\CMake
+
+if($64Bit -and ($Env:APPVEYOR -ne "True")){
   $CMakePath = "C:\Program Files (x86)\CMake\bin"
 } else {
   $CMakePath = "C:\Program Files\CMake\bin"
@@ -230,6 +232,8 @@ function InstallQt() {
   cd ..
   Step "Installing Qt"
   exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
+  Step "Installing Mingw 7.3.0 Win32 tools"
+  exec "aqt" @("install-tool", "windows", "desktop", "tools_mingw", "qt.tools.win32_mingw730")
 }
 
 function InstallPython() {
@@ -242,7 +246,7 @@ function InstallPython() {
 
 function InstallOpenssl() {
   # needs to be from http://wiki.overbyte.eu/wiki/index.php/ICS_Download as it includes extra binaries not available on openssl.org
-  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1l-win32.zip" "openssl-win32.zip"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1n-win32.zip" "openssl-win32.zip"
   ExtractZip "openssl-win32.zip" "openssl"
   Step "installing"
   exec "XCOPY" @("/S", "/I", "/Q", "openssl", "$Env:MINGW_BASE_DIR\bin")
@@ -340,7 +344,7 @@ function InstallLibzip() {
   }
   Set-Location build
   Step "running cmake"
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "..")
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "-DBUILD_REGRESS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_DOC=OFF", "..")
   RunMake
   RunMakeInstall
   $Env:Path = $ShPath
@@ -441,6 +445,15 @@ function InstallLuaZip () {
   Copy-Item "zip.dll" "$Env:MINGW_BASE_DIR\lib\lua\5.1"
 }
 
+function InstallCcache() {
+    Step "installing ccache"
+    DownloadFile "https://github.com/ccache/ccache/releases/download/v4.6.1/ccache-4.6.1-windows-x86_64.zip" "ccache.zip"
+    ExtractZip "ccache.zip" "ccache"
+    Set-Location "ccache/ccache-4.6.1-windows-x86_64"
+    New-Item "C:\Program Files\ccache" -ItemType "directory" -Force
+    Copy-Item "ccache.exe" "C:\Program Files\ccache\ccache.exe" -Force
+}
+
 function InstallLuaModules(){
   CheckAndInstall "lfs" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lfs.dll" { InstallLfs }
   CheckAndInstall "luasql.sqlite3" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\luasql\sqlite3.dll" { InstallLuasql }
@@ -450,6 +463,11 @@ function InstallLuaModules(){
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
   CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
   CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
+}
+
+function CheckAndInstallCcache(){
+  CheckAndInstall "ccache" "C:\Program Files\ccache\ccache.exe" { InstallCcache }
+
 }
 
 function CheckAndInstall7z(){

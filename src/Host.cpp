@@ -56,6 +56,7 @@
 #include <QDialog>
 #include <QtUiTools>
 #include <QNetworkProxy>
+#include <QSettings>
 #include <zip.h>
 #include <memory>
 #include "post_guard.h"
@@ -262,7 +263,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
 , mThemePreviewItemID(-1)
 , mThemePreviewType(QString())
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
 , mBlack(QColorConstants::Black)
 , mLightBlack(QColorConstants::DarkGray)
 , mRed(QColorConstants::DarkRed)
@@ -302,47 +302,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFgColor_2(QColorConstants::LightGray)
 , mBgColor_2(QColorConstants::Black)
 , mRoomBorderColor(QColorConstants::LightGray)
-#else
-, mBlack(Qt::black)
-, mLightBlack(Qt::darkGray)
-, mRed(Qt::darkRed)
-, mLightRed(Qt::red)
-, mLightGreen(Qt::green)
-, mGreen(Qt::darkGreen)
-, mLightBlue(Qt::blue)
-, mBlue(Qt::darkBlue)
-, mLightYellow(Qt::yellow)
-, mYellow(Qt::darkYellow)
-, mLightCyan(Qt::cyan)
-, mCyan(Qt::darkCyan)
-, mLightMagenta(Qt::magenta)
-, mMagenta(Qt::darkMagenta)
-, mLightWhite(Qt::white)
-, mWhite(Qt::lightGray)
-, mFgColor(Qt::lightGray)
-, mBgColor(Qt::black)
-, mCommandBgColor(Qt::black)
-, mCommandFgColor(QColor(113, 113, 0))
-, mBlack_2(Qt::black)
-, mLightBlack_2(Qt::darkGray)
-, mRed_2(Qt::darkRed)
-, mLightRed_2(Qt::red)
-, mLightGreen_2(Qt::green)
-, mGreen_2(Qt::darkGreen)
-, mLightBlue_2(Qt::blue)
-, mBlue_2(Qt::darkBlue)
-, mLightYellow_2(Qt::yellow)
-, mYellow_2(Qt::darkYellow)
-, mLightCyan_2(Qt::cyan)
-, mCyan_2(Qt::darkCyan)
-, mLightMagenta_2(Qt::magenta)
-, mMagenta_2(Qt::darkMagenta)
-, mLightWhite_2(Qt::white)
-, mWhite_2(Qt::lightGray)
-, mFgColor_2(Qt::lightGray)
-, mBgColor_2(Qt::black)
-, mRoomBorderColor(Qt::lightGray)
-#endif
 , mMapStrongHighlight(false)
 , mEnableSpellCheck(true)
 , mDiscordDisableServerSide(true)
@@ -369,6 +328,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mpDlgIRC(nullptr)
 , mpDlgProfilePreferences(nullptr)
+, mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
 , mTriggerUnit(this)
@@ -401,7 +361,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
-, mTutorialForCompactLineAlreadyShown(false)
 {
     TDebug::addHost(this);
 
@@ -495,6 +454,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         auto entry = i.next();
         profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mShortcutsManager->getSequence(entry)));
     }
+
+    startMapAutosave();
 }
 
 Host::~Host()
@@ -507,6 +468,28 @@ Host::~Host()
     mErrorLogStream.flush();
     mErrorLogFile.close();
     TDebug::removeHost(this);
+}
+
+void Host::startMapAutosave()
+{
+    auto settings = mudlet::self()->getQSettings();
+    if (auto interval = settings->value("autosaveIntervalMinutes", 2).toInt(); interval > 0) {
+        startTimer(interval * 1min);
+    }
+}
+
+void Host::timerEvent(QTimerEvent *event)
+{
+    Q_UNUSED(event);
+
+    autoSaveMap();
+}
+
+void Host::autoSaveMap()
+{
+    if (mpMap->mUnsavedMap) {
+        mpConsole->saveMap(mudlet::getMudletPath(mudlet::profileMapPathFileName, mHostName, qsl("autosave.dat")));
+    }
 }
 
 void Host::loadPackageInfo()
@@ -1134,11 +1117,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
     }
     QStringList commandList;
     if (!mCommandSeparator.isEmpty()) {
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
         commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
-#else
-        commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
-#endif
     } else if (!cmd.isEmpty()) {
         // don't split command if the command separator is blank
         commandList << cmd;
@@ -4002,4 +3981,13 @@ void Host::setEditorShowBidi(const bool state)
             mpEditorDialog->setEditorShowBidi(state);
         }
     }
+}
+
+bool Host::caretEnabled() const {
+    return mCaretEnabled;
+}
+
+void Host::setCaretEnabled(bool enabled) {
+    mCaretEnabled = enabled;
+    mpConsole->setCaretMode(enabled);
 }
