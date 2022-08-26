@@ -5705,7 +5705,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "22.8.1"
+local newversion = "22.8.2"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -6401,6 +6401,7 @@ function mmp.speedwalking(event, num)
   end
 end
 
+-- doSpeedWalk is used by the mudlet mapping script and should not be changed
 function doSpeedWalk(dashtype)
   mmp.speedWalkDir = mmp.deepcopy(speedWalkDir)
   mmp.speedWalkPath = mmp.deepcopy(speedWalkPath)
@@ -9700,7 +9701,7 @@ end</script>
 					<name>Fix setExit</name>
 					<packageName></packageName>
 					<script>do
-local oldsetExit = mmp.setExit
+local oldsetExit = setExit
 
 local exitmap = {
   n = 1,
@@ -9739,8 +9740,8 @@ end</script>
 					<name>Fix exit locking funcs</name>
 					<packageName></packageName>
 					<script>do
-local oldlockExit = mmp.lockExit
-local oldhasExitLock = mmp.hasExitLock
+local oldlockExit = lockExit
+local oldhasExitLock = hasExitLock
 
 local exitmap = {
   n = 1,
@@ -10292,7 +10293,7 @@ end</script>
 		locked_areas = mmp.locked,
 		options = mmp.settings:getAllOptions()
 	}
-
+  local _sep
 	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
 	local saveFile = getMudletHomeDir() ..  _sep .. "mapper.options.lua"
 
@@ -10317,7 +10318,7 @@ end
 
 function mmp.loadLocks()
 	local loadTable = {}
-
+  local _sep
 	if string.char(getMudletHomeDir():byte()) == "/" then _sep = "/" else  _sep = "\\" end
 	local loadFile = getMudletHomeDir() ..  _sep .. "mapper.options.lua"
 
