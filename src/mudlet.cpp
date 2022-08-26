@@ -323,7 +323,7 @@ mudlet::mudlet()
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_close_profile_requested);
     mpTabBar->setMovable(true);
-    connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tab_changed);
+    connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tabChanged);
     connect(mpTabBar, &QTabBar::tabMoved, this, &mudlet::slot_tabMoved);
     auto layoutTopLevel = new QVBoxLayout(frame);
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
@@ -550,23 +550,23 @@ mudlet::mudlet()
         mpMainToolBar->addAction(actionFullScreeniew);
         actionFullScreeniew->setObjectName(qsl("fullscreen_action"));
         mpMainToolBar->widgetForAction(actionFullScreeniew)->setObjectName(actionFullScreeniew->objectName());
-        connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::toggleFullScreenView);
+        connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
     }
 
     QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
 
-    connect(mpActionConnect.data(), &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
-    connect(mpActionHelp.data(), &QAction::triggered, this, &mudlet::show_help_dialog);
-    connect(mpActionTimers.data(), &QAction::triggered, this, &mudlet::show_timer_dialog);
-    connect(mpActionAliases.data(), &QAction::triggered, this, &mudlet::show_alias_dialog);
-    connect(mpActionScripts.data(), &QAction::triggered, this, &mudlet::show_script_dialog);
-    connect(mpActionKeys.data(), &QAction::triggered, this, &mudlet::show_key_dialog);
-    connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::show_variable_dialog);
-    connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::show_action_dialog);
-    connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::slot_show_options_dialog);
-    connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_show_about_dialog);
+    connect(mpActionConnect.data(), &QAction::triggered, this, &mudlet::slot_showConnectionDialog);
+    connect(mpActionHelp.data(), &QAction::triggered, this, &mudlet::slot_showHelpDialog);
+    connect(mpActionTimers.data(), &QAction::triggered, this, &mudlet::slot_showTimerDialog);
+    connect(mpActionAliases.data(), &QAction::triggered, this, &mudlet::slot_showAliasDialog);
+    connect(mpActionScripts.data(), &QAction::triggered, this, &mudlet::slot_showScriptDialog);
+    connect(mpActionKeys.data(), &QAction::triggered, this, &mudlet::slot_showKeyDialog);
+    connect(mpActionVariables.data(), &QAction::triggered, this, &mudlet::slot_showVariableDialog);
+    connect(mpActionButtons.data(), &QAction::triggered, this, &mudlet::slot_showActionDialog);
+    connect(mpActionOptions.data(), &QAction::triggered, this, &mudlet::slot_showPreferencesDialog);
+    connect(mpActionAbout.data(), &QAction::triggered, this, &mudlet::slot_showAboutDialog);
     connect(mpActionMultiView.data(), &QAction::triggered, this, &mudlet::slot_multi_view);
     connect(mpActionReconnect.data(), &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(mpActionDisconnect.data(), &QAction::triggered, this, &mudlet::slot_disconnect);
@@ -581,16 +581,16 @@ mudlet::mudlet()
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_package_exporter);
 
-    connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_show_connection_dialog);
+    connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_showConnectionDialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
     connect(dactionDisconnect, &QAction::triggered, this, &mudlet::slot_disconnect);
     connect(dactionCloseProfile, &QAction::triggered, this, &mudlet::slot_close_current_profile);
     connect(dactionNotepad, &QAction::triggered, this, &mudlet::slot_notes);
     connect(dactionReplay, &QAction::triggered, this, &mudlet::slot_replay);
 
-    connect(dactionHelp, &QAction::triggered, this, &mudlet::show_help_dialog);
-    connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_show_help_dialog_video);
-    connect(dactionForum, &QAction::triggered, this, &mudlet::slot_show_help_dialog_forum);
+    connect(dactionHelp, &QAction::triggered, this, &mudlet::slot_showHelpDialog);
+    connect(dactionVideo, &QAction::triggered, this, &mudlet::slot_showHelpDialogVideo);
+    connect(dactionForum, &QAction::triggered, this, &mudlet::slot_showHelpDialogForum);
     connect(dactionIRC, &QAction::triggered, this, &mudlet::slot_irc);
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_discord);
     connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudlet_discord);
@@ -600,7 +600,7 @@ mudlet::mudlet()
         if (!host) {
             return;
         }
-        host->mpEditorDialog->slot_show_current();
+        host->mpEditorDialog->showCurrentTriggerItem();
         host->mpEditorDialog->raise();
         host->mpEditorDialog->showNormal();
         host->mpEditorDialog->activateWindow();
@@ -618,8 +618,8 @@ mudlet::mudlet()
     // public test version:
     if (scmIsPublicTestVersion) {
         dactionReportIssue->setVisible(true);
-        connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_report_issue);
-        connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_report_issue);
+        connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_reportIssue);
+        connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_reportIssue);
     } else {
         dactionReportIssue->setVisible(false);
     }
@@ -633,12 +633,12 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_package_exporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_module_manager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multi_view);
-    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compact_input_line);
-    connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::show_trigger_dialog);
-    connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::show_editor_dialog);
+    connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compactInputLine);
+    connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::slot_showTriggerDialog);
+    connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::slot_showEditorDialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
-    connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_show_options_dialog);
-    connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_show_about_dialog);
+    connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_showPreferencesDialog);
+    connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_showAboutDialog);
 
     // we historically use Alt on Windows and Linux, but that is uncomfortable on macOS
 #if defined(Q_OS_MACOS)
@@ -668,11 +668,11 @@ mudlet::mudlet()
     reconnectKeySequence = QKeySequence(Qt::ALT | Qt::Key_R);
     closeProfileKeySequence = QKeySequence(Qt::ALT | Qt::Key_W);
 #endif
-    connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_update_shortcuts);
-    connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assign_shortcuts_from_profile);
-    connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assign_shortcuts_from_profile);
+    connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_updateShortcuts);
+    connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assignShortcutsFromProfile);
+    connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assignShortcutsFromProfile);
     connect(this, &mudlet::signal_tabChanged, this, [=]() {
-        slot_assign_shortcuts_from_profile(getActiveHost());
+        slot_assignShortcutsFromProfile(getActiveHost());
     });
 
     mShortcutsManager = new ShortcutsManager();
@@ -702,7 +702,7 @@ mudlet::mudlet()
     // ensure that 'Check for updates' is under the Applications menu per convention
     dactionUpdate->setMenuRole(QAction::ApplicationSpecificRole);
 #else
-    connect(updater, &Updater::signal_updateInstalled, this, &mudlet::slot_update_installed);
+    connect(updater, &Updater::signal_updateInstalled, this, &mudlet::slot_updateInstalled);
 #endif // !Q_OS_MACOS
 #endif // INCLUDE_UPDATER
 
@@ -1343,7 +1343,7 @@ void mudlet::slot_close_current_profile()
 
     if (!getActiveHost()) {
         disableToolbarButtons();
-        slot_show_connection_dialog();
+        slot_showConnectionDialog();
     }
 }
 
@@ -1456,7 +1456,7 @@ void mudlet::reshowRequiredMainConsoles()
     }
 }
 
-void mudlet::slot_tab_changed(int tabID)
+void mudlet::slot_tabChanged(int tabID)
 {
     QString hostName = mpTabBar->tabData(tabID).toString();
     auto pHost = mHostManager.getHost(hostName);
@@ -2130,7 +2130,7 @@ void mudlet::writeSettings()
     settings.setValue("appearance", mAppearance);
 }
 
-void mudlet::slot_show_connection_dialog()
+void mudlet::slot_showConnectionDialog()
 {
     if (mConnectionDialog) {
         return;
@@ -2144,7 +2144,7 @@ void mudlet::slot_show_connection_dialog()
     mConnectionDialog->show();
 }
 
-void mudlet::show_editor_dialog()
+void mudlet::slot_showEditorDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
@@ -2154,13 +2154,13 @@ void mudlet::show_editor_dialog()
     if (!pEditor) {
         return;
     }
-    pEditor->slot_show_current();
+    pEditor->showCurrentTriggerItem();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
 }
 
-void mudlet::show_trigger_dialog()
+void mudlet::slot_showTriggerDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
@@ -2170,13 +2170,13 @@ void mudlet::show_trigger_dialog()
     if (!pEditor) {
         return;
     }
-    pEditor->slot_show_triggers();
+    pEditor->slot_showTriggers();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
 }
 
-void mudlet::show_alias_dialog()
+void mudlet::slot_showAliasDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
@@ -2186,13 +2186,13 @@ void mudlet::show_alias_dialog()
     if (!pEditor) {
         return;
     }
-    pEditor->slot_show_aliases();
+    pEditor->slot_showAliases();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
 }
 
-void mudlet::show_timer_dialog()
+void mudlet::slot_showTimerDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
@@ -2202,13 +2202,13 @@ void mudlet::show_timer_dialog()
     if (!pEditor) {
         return;
     }
-    pEditor->slot_show_timers();
+    pEditor->slot_showTimers();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
 }
 
-void mudlet::show_script_dialog()
+void mudlet::slot_showScriptDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
@@ -2218,13 +2218,13 @@ void mudlet::show_script_dialog()
     if (!pEditor) {
         return;
     }
-    pEditor->slot_show_scripts();
+    pEditor->slot_showScripts();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
 }
 
-void mudlet::show_key_dialog()
+void mudlet::slot_showKeyDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
@@ -2234,13 +2234,13 @@ void mudlet::show_key_dialog()
     if (!pEditor) {
         return;
     }
-    pEditor->slot_show_keys();
+    pEditor->slot_showKeys();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
 }
 
-void mudlet::show_variable_dialog()
+void mudlet::slot_showVariableDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
@@ -2256,7 +2256,7 @@ void mudlet::show_variable_dialog()
     pEditor->activateWindow();
 }
 
-void mudlet::show_action_dialog()
+void mudlet::slot_showActionDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
@@ -2266,7 +2266,7 @@ void mudlet::show_action_dialog()
     if (!pEditor) {
         return;
     }
-    pEditor->slot_show_actions();
+    pEditor->slot_showActions();
     pEditor->raise();
     pEditor->showNormal();
     pEditor->activateWindow();
@@ -2292,7 +2292,7 @@ void mudlet::show_options_dialog(const QString& tab)
         connect(mpActionReconnect.data(), &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
         connect(dactionReconnect, &QAction::triggered, pPrefs->need_reconnect_for_specialoption, &QWidget::hide);
         connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=]() {
-            slot_assign_shortcuts_from_profile(getActiveHost());
+            slot_assignShortcutsFromProfile(getActiveHost());
         });
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
@@ -2305,7 +2305,7 @@ void mudlet::show_options_dialog(const QString& tab)
     pPrefs->show();
 }
 
-void mudlet::slot_assign_shortcuts_from_profile(Host* pHost)
+void mudlet::slot_assignShortcutsFromProfile(Host* pHost)
 {
     if (pHost) {
         auto iterator = mShortcutsManager->iterator();
@@ -2317,7 +2317,7 @@ void mudlet::slot_assign_shortcuts_from_profile(Host* pHost)
     assignKeySequences();
 }
 
-void mudlet::slot_update_shortcuts()
+void mudlet::slot_updateShortcuts()
 {
     if (Q_LIKELY(mMenuVisibleState.has_value())) {
         if ((mMenuBarVisibility == visibleNever
@@ -2367,7 +2367,7 @@ void mudlet::assignKeySequences()
         // test first:
         delete triggersShortcut.data();
         triggersShortcut = new QShortcut(triggersKeySequence, this);
-        connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::show_editor_dialog);
+        connect(triggersShortcut.data(), &QShortcut::activated, this, &mudlet::slot_showEditorDialog);
         dactionScriptEditor->setShortcut(QKeySequence());
 
         delete showMapShortcut.data();
@@ -2377,12 +2377,12 @@ void mudlet::assignKeySequences()
 
         delete inputLineShortcut.data();
         inputLineShortcut = new QShortcut(inputLineKeySequence, this);
-        connect(inputLineShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggle_compact_input_line);
+        connect(inputLineShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggleCompactInputLine);
         dactionInputLine->setShortcut(QKeySequence());
 
         delete optionsShortcut.data();
         optionsShortcut = new QShortcut(optionsKeySequence, this);
-        connect(optionsShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_options_dialog);
+        connect(optionsShortcut.data(), &QShortcut::activated, this, &mudlet::slot_showPreferencesDialog);
         dactionOptions->setShortcut(QKeySequence());
 
         delete notepadShortcut.data();
@@ -2407,7 +2407,7 @@ void mudlet::assignKeySequences()
 
         delete connectShortcut.data();
         connectShortcut = new QShortcut(connectKeySequence, this);
-        connect(connectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_show_connection_dialog);
+        connect(connectShortcut.data(), &QShortcut::activated, this, &mudlet::slot_showConnectionDialog);
         dactionConnect->setShortcut(QKeySequence());
 
         delete disconnectShortcut.data();
@@ -2468,30 +2468,31 @@ void mudlet::assignKeySequences()
     }
 }
 
-void mudlet::slot_show_options_dialog()
+void mudlet::slot_showPreferencesDialog()
 {
     show_options_dialog(qsl("tab_general"));
 }
 
-void mudlet::show_help_dialog()
+void mudlet::slot_showHelpDialog()
 {
     QDesktopServices::openUrl(QUrl("https://wiki.mudlet.org/w/Manual:Contents"));
 }
 
-void mudlet::slot_show_help_dialog_video()
+void mudlet::slot_showHelpDialogVideo()
 {
     QDesktopServices::openUrl(QUrl("https://www.mudlet.org/media/"));
 }
 
-void mudlet::slot_show_help_dialog_forum()
+void mudlet::slot_showHelpDialogForum()
 {
     QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/"));
 }
 
-void mudlet::slot_show_help_dialog_irc()
-{
-    QDesktopServices::openUrl(QUrl("https://web.libera.chat/?channel=#mudlet"));
-}
+// Not used:
+//void mudlet::slot_showHelpDialogIrc()
+//{
+//    QDesktopServices::openUrl(QUrl("https://web.libera.chat/?channel=#mudlet"));
+//}
 
 void mudlet::slot_mapper()
 {
@@ -2502,12 +2503,12 @@ void mudlet::slot_mapper()
     pHost->showHideOrCreateMapper(true);
 }
 
-void mudlet::slot_open_mappingscripts_page()
+void mudlet::slot_openMappingScriptsPage()
 {
     QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
 }
 
-void mudlet::slot_show_about_dialog()
+void mudlet::slot_showAboutDialog()
 {
     if (!mpAboutDlg) {
         mpAboutDlg = new dlgAboutDialog(this);
@@ -2689,7 +2690,7 @@ void mudlet::startAutoLogin(const QString& cliProfile)
     }
 
     if (!openedProfile) {
-        slot_show_connection_dialog();
+        slot_showConnectionDialog();
     }
 }
 
@@ -2855,10 +2856,10 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
 void mudlet::processEventLoopHack()
 {
-    QTimer::singleShot(1ms, this, &mudlet::processEventLoopHack_timerRun);
+    QTimer::singleShot(1ms, this, &mudlet::slot_processEventLoopHackTimerRun);
 }
 
-void mudlet::processEventLoopHack_timerRun()
+void mudlet::slot_processEventLoopHackTimerRun()
 {
     Host* pH = getActiveHost();
     if (!pH) {
@@ -2986,20 +2987,20 @@ void mudlet::slot_multi_view(const bool state)
     if (!foundActiveHost && mpTabBar->count() > 0) {
         // If there IS at least one profile still active, but none of them WAS
         // the active one then make one (the first) the active one:
-        slot_tab_changed(0);
+        slot_tabChanged(0);
     }
 }
 
 // Called by the short-cut to the menu item that doesn't pass the checked state
 // of the menu-item that it provides a short-cut to:
-void mudlet::slot_toggle_compact_input_line()
+void mudlet::slot_toggleCompactInputLine()
 {
     const bool newState = !dactionInputLine->isChecked();
-    slot_compact_input_line(newState);
+    slot_compactInputLine(newState);
 }
 
 // Called by the menu-item's action itself, that DOES pass the checked state:
-void mudlet::slot_compact_input_line(const bool state)
+void mudlet::slot_compactInputLine(const bool state)
 {
     if (dactionInputLine->isChecked() != state) {
         // Ensure the menu item reflectes the actual state:
@@ -3045,7 +3046,7 @@ mudlet::~mudlet()
     mudlet::_self = nullptr;
 }
 
-void mudlet::toggleFullScreenView()
+void mudlet::slot_toggleFullScreenView()
 {
     if (isFullScreen()) {
         showNormal();
@@ -3637,7 +3638,7 @@ void mudlet::slot_check_manual_update()
     updater->manuallyCheckUpdates();
 }
 
-void mudlet::slot_report_issue()
+void mudlet::slot_reportIssue()
 {
     QDesktopServices::openUrl(QUrl(qsl("https://github.com/Mudlet/Mudlet/issues/new")));
 }
@@ -3706,7 +3707,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     mpButtonAbout->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
 }
 
-void mudlet::slot_update_installed()
+void mudlet::slot_updateInstalled()
 {
 // can't comment out method entirely as moc chokes on it, so leave a stub
 #if !defined(Q_OS_MACOS)
@@ -3860,7 +3861,7 @@ bool mudlet::migratePasswordsToSecureStorage()
 
         mProfilePasswordsToMigrate.append(profile);
 
-        connect(job, &QKeychain::WritePasswordJob::finished, this, &mudlet::slot_password_migrated_to_secure);
+        connect(job, &QKeychain::WritePasswordJob::finished, this, &mudlet::slot_passwordMigratedToSecureStorage);
 
         job->start();
     }
@@ -3874,7 +3875,7 @@ bool mudlet::migratePasswordsToSecureStorage()
     return true;
 }
 
-void mudlet::slot_password_migrated_to_secure(QKeychain::Job* job)
+void mudlet::slot_passwordMigratedToSecureStorage(QKeychain::Job* job)
 {
     const auto profileName = job->property("profile").toString();
     if (job->error()) {
@@ -3910,7 +3911,7 @@ bool mudlet::migratePasswordsToProfileStorage()
         job->setProperty("profile", profile);
         mProfilePasswordsToMigrate.append(profile);
 
-        connect(job, &QKeychain::ReadPasswordJob::finished, this, &mudlet::slot_password_migrated_to_profile);
+        connect(job, &QKeychain::ReadPasswordJob::finished, this, &mudlet::slot_passwordMigratedToPortableStorage);
         job->start();
     }
 
@@ -3922,14 +3923,14 @@ bool mudlet::migratePasswordsToProfileStorage()
     return true;
 }
 
-void mudlet::slot_password_migrated_to_profile(QKeychain::Job* job)
+void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
 {
     const auto profileName = job->property("profile").toString();
 
     if (job->error()) {
         const auto error = job->errorString();
         if (error != qsl("Entry not found") && error != qsl("No match")) {
-            qWarning().nospace().noquote() << "mudlet::slot_password_migrated_to_profile(...) ERROR - could not migrate for \"" << profileName << "\"; error was: " << error << ".";
+            qWarning().nospace().noquote() << "mudlet::slot_passwordMigratedToPortableStorage(...) ERROR - could not migrate for \"" << profileName << "\"; error was: " << error << ".";
         }
 
     } else {
@@ -4542,7 +4543,7 @@ void mudlet::activateProfile(Host* pHost)
     const QString newActiveHostName{pHost->getName()};
     if (mpCurrentActiveHost != pHost) {
         // Need to switch mpCurrentActiveHost to be the given pHost and change
-        // the tab to match - without triggering slot_tab_changed(int)
+        // the tab to match - without triggering slot_tabChanged(int)
         int tabToBeActive = mpTabBar->tabIndex(newActiveHostName);
         if (tabToBeActive >= 0) {
             mpTabBar->blockSignals(true);
