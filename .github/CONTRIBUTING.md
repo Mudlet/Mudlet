@@ -81,6 +81,10 @@ If you just need to use a plain .arg() call, use multiple arguments within it an
 
 ([source](https://meetingcpp.com/tl_files/mcpp/2015/talks/Marc-Mutz-MC++15-Effective-Qt.pdf))
 
+## Naming things? Check against antipatterns
+
+Check https://www.linguistic-antipatterns.com when naming anything to help ensure it can be understood intuitively.
+
 # Internationalization do's and don'ts
 
 Do:
