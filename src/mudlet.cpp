@@ -2927,7 +2927,7 @@ void mudlet::slot_connection_dlg_finished(const QString& profile, bool connect)
     //      the worst that can happen is that they have to login manually.
 
     if (connect) {
-        pHost->connectToServer();
+        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
     } else {
         QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
