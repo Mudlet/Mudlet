@@ -1141,7 +1141,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 // from the expected resource file and the translation
                 // statistics file was also found from there
 
-                auto value = translationStats.value(languageCode).toObject().value(qsl("translatedpc"));
+                auto value = translationStats.value(languageCode).toObject().value(qsl("translated_percent"));
                 if (value != QJsonValue::Undefined) {
                     percentageTranslated = value.toInt();
                 } else {
