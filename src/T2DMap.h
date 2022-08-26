@@ -199,7 +199,7 @@ public slots:
     // This is ONLY used as a slot in older versions
     void slot_switchArea(const QString& newAreaName);
 #endif
-    void toggleShiftMode();
+// Not used: void slot_toggleShiftMode();
     void slot_shiftUp();
     void slot_shiftDown();
     void slot_shiftLeft();

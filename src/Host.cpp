@@ -1032,7 +1032,7 @@ void Host::check_for_mappingscript()
             return;
         }
 
-        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_open_mappingscripts_page);
+        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_openMappingScriptsPage);
 
         dialog->show();
         dialog->raise();

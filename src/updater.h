@@ -88,10 +88,10 @@ signals:
     void signal_automaticUpdatesChanged(const bool);
 
 public slots:
-    void installOrRestartClicked(QAbstractButton* button, const QString& filePath);
+    void slot_installOrRestartClicked(QAbstractButton* button, const QString& filePath);
 #if defined(Q_OS_LINUX)
     // might want to make these private
-    void updateBinaryOnLinux();
+    void slot_updateLinuxBinary();
 #endif
 };
 
