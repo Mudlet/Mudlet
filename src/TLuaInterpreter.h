@@ -641,6 +641,7 @@ public:
     static int getLabelSizeHint(lua_State*);
     static int announce(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
+    // check new functions against https://www.linguistic-antipatterns.com when creating them
 
     void freeLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);

@@ -15277,6 +15277,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
     // PLACEMARKER: End of main Lua interpreter functions registration
+    // check new functions against https://www.linguistic-antipatterns.com when creating them
 
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
