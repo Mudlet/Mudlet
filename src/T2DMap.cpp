@@ -136,11 +136,12 @@ void T2DMap::slot_shiftDown()
     update();
 }
 
-void T2DMap::toggleShiftMode()
-{
-    mShiftMode = !mShiftMode;
-    update();
-}
+// Not used:
+//void T2DMap::slot_toggleShiftMode()
+//{
+//    mShiftMode = !mShiftMode;
+//    update();
+//}
 
 void T2DMap::slot_shiftUp()
 {
