@@ -32,18 +32,18 @@ dlgComposer::dlgComposer(Host* pH) : mpHost(pH)
     setupUi(this);
     QFont f = QFont(qsl("Bitstream Vera Sans Mono"), 10, QFont::Normal);
     edit->setFont(f);
-    connect(saveButton, &QAbstractButton::clicked, this, &dlgComposer::save);
-    connect(cancelButton, &QAbstractButton::clicked, this, &dlgComposer::cancel);
+    connect(saveButton, &QAbstractButton::clicked, this, &dlgComposer::slot_save);
+    connect(cancelButton, &QAbstractButton::clicked, this, &dlgComposer::slot_cancel);
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgComposer::cancel()
+void dlgComposer::slot_cancel()
 {
     mpHost->mTelnet.atcpComposerCancel();
     this->hide();
 }
 
-void dlgComposer::save()
+void dlgComposer::slot_save()
 {
     mpHost->mTelnet.atcpComposerSave(edit->toPlainText());
     this->hide();

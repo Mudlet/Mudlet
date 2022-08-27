@@ -62,13 +62,13 @@ private:
     QFont font;
 
 private slots:
-    void save();
-    void pickFgColor();
-    void pickBgColor();
-    void pickFont();
-    void pickFile();
-    void updateControls();
-    void updateControlsVisibility();
+    void slot_save();
+    void slot_pickFgColor();
+    void slot_pickBgColor();
+    void slot_pickFont();
+    void slot_pickFile();
+    void slot_updateControls();
+    void slot_updateControlsVisibility();
 };
 
 #endif //MUDLET_DLGMAPLABEL_H

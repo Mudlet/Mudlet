@@ -191,7 +191,7 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
 , mpFileDownloader(new QNetworkAccessManager(this))
 , mpFileSystemWatcher(new QFileSystemWatcher(this))
 {
-    connect(&purgeTimer, &QTimer::timeout, this, &TLuaInterpreter::slotPurge);
+    connect(&purgeTimer, &QTimer::timeout, this, &TLuaInterpreter::slot_purge);
     connect(mpFileDownloader, &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_httpRequestFinished);
     connect(mpFileSystemWatcher, &QFileSystemWatcher::fileChanged, this, &TLuaInterpreter::slot_pathChanged);
     connect(mpFileSystemWatcher, &QFileSystemWatcher::directoryChanged, this, &TLuaInterpreter::slot_pathChanged);
@@ -597,7 +597,7 @@ void TLuaInterpreter::slot_pathChanged(const QString& path)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::slotDeleteSender(int exitCode, QProcess::ExitStatus exitStatus)
+void TLuaInterpreter::slot_deleteSender(int exitCode, QProcess::ExitStatus exitStatus)
 {
     Q_UNUSED(exitCode);
     Q_UNUSED(exitStatus);
@@ -606,7 +606,7 @@ void TLuaInterpreter::slotDeleteSender(int exitCode, QProcess::ExitStatus exitSt
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::slotPurge()
+void TLuaInterpreter::slot_purge()
 {
     while (!objectsToDelete.isEmpty()) {
         delete objectsToDelete.takeFirst();

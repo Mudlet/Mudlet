@@ -65,18 +65,18 @@ signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
 
 public slots:
-    void slot_update_name(const QString&);
-    void slot_save_name();
-    void slot_update_url(const QString&);
-    void slot_update_port(const QString&);
-    void slot_update_SSL_TSL_port(int state);
-    void slot_update_login(const QString&);
-    void slot_update_pass(const QString&);
-    void slot_update_website(const QString&);
+    void slot_updateName(const QString&);
+    void slot_saveName();
+    void slot_updateUrl(const QString&);
+    void slot_updatePort(const QString&);
+    void slot_updateSslTslPort(int state);
+    void slot_updateLogin(const QString&);
+    void slot_updatePassword(const QString&);
+// Not used:    void slot_updateWebsite(const QString&);
     void slot_deleteprofile_check(const QString&);
     void slot_update_description();
 
-    void slot_item_clicked(QListWidgetItem*);
+    void slot_itemClicked(QListWidgetItem*);
     void slot_addProfile();
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();
