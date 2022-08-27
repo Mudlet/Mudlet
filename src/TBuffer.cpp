@@ -2346,7 +2346,7 @@ TBuffer::binarySearchHorizontalAdvance(const int &lineIndex, const int &indentSi
     bool useHorizontalAdvance = true;
     const int actualAverageCharWidth = calculatedWidth / lineText.size();
     const int charWidthFactor = actualAverageCharWidth / averageCharWidth;
-    if (charWidthFactor > 0 && actualAverageCharWidth % averageCharWidth == 0) {
+    if (calculatedWidth % lineText.size() == 0 && charWidthFactor > 0 && actualAverageCharWidth % averageCharWidth == 0) {
         useHorizontalAdvance = false;
     }
     // horizontalAdvance() is quite costly, so run a binary search to find the wrap point
