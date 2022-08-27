@@ -47,10 +47,10 @@ public:
     void resetPackageTable();
 
 private slots:
-    void slot_install_package();
-    void slot_remove_packages();
-    void slot_item_clicked(QTableWidgetItem*);
-    void slot_toggle_remove_button();
+    void slot_installPackage();
+    void slot_removePackages();
+    void slot_itemClicked(QTableWidgetItem*);
+    void slot_toggleRemoveButton();
 
 private:
     void fillAdditionalDetails(const QMap<QString, QString>&);

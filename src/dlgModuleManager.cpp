@@ -40,11 +40,11 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     mModuleHelpButton = ui->helpButton;
 
     layoutModules();
-    connect(mModuleUninstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_uninstall_module);
-    connect(mModuleInstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_install_module);
-    connect(mModuleHelpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_help_module);
-    connect(mModuleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_module_clicked);
-    connect(mModuleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_module_changed);
+    connect(mModuleUninstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_uninstallModule);
+    connect(mModuleInstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
+    connect(mModuleHelpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
+    connect(mModuleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
+    connect(mModuleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgModuleManager::close);
     setWindowTitle(tr("Module Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
@@ -128,7 +128,7 @@ void dlgModuleManager::layoutModules()
     mModuleTable->resizeColumnsToContents();
 }
 
-void dlgModuleManager::slot_install_module()
+void dlgModuleManager::slot_installModule()
 {
     if (!mpHost) {
         return;
@@ -153,7 +153,7 @@ void dlgModuleManager::slot_install_module()
     layoutModules();
 }
 
-void dlgModuleManager::slot_uninstall_module()
+void dlgModuleManager::slot_uninstallModule()
 {
     if (!mpHost) {
         return;
@@ -170,7 +170,7 @@ void dlgModuleManager::slot_uninstall_module()
     layoutModules();
 }
 
-void dlgModuleManager::slot_module_clicked(QTableWidgetItem* pItem)
+void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
 {
     if (!mpHost) {
         return;
@@ -199,7 +199,7 @@ void dlgModuleManager::slot_module_clicked(QTableWidgetItem* pItem)
     }
 }
 
-void dlgModuleManager::slot_module_changed(QTableWidgetItem* pItem)
+void dlgModuleManager::slot_moduleChanged(QTableWidgetItem* pItem)
 {
     if (!mpHost) {
         return;
@@ -224,7 +224,7 @@ void dlgModuleManager::slot_module_changed(QTableWidgetItem* pItem)
     mpHost->mModulePriorities[entry->text()] = itemPriority->text().toInt();
 }
 
-void dlgModuleManager::slot_help_module()
+void dlgModuleManager::slot_helpModule()
 {
     if (!mpHost) {
         return;

@@ -44,7 +44,7 @@ public:
     void restore();
 
 private slots:
-    void slot_text_written();
+    void slot_textWritten();
 
 private:
     void timerEvent(QTimerEvent *event) override;

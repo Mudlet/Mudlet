@@ -88,12 +88,12 @@ public:
 
 public slots:
     void slot_addFiles();
-    void slot_export_package();
+    void slot_exportPackage();
 
 private slots:
     void slot_addDependency();
     void slot_removeDependency();
-    void slot_import_icon();
+    void slot_importIcon();
     void slot_openPackageLocation();
     void slot_packageChanged(int);
     void slot_updateLocationPlaceholder();

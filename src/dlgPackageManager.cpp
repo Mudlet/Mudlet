@@ -41,12 +41,12 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     mDetailsTable = ui->additionalDetails;
     mDescription = ui->packageDescription;
     resetPackageTable();
-    connect(mPackageTable, &QTableWidget::itemClicked, this, &dlgPackageManager::slot_item_clicked);
-    connect(mInstallButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_install_package);
-    connect(mRemoveButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_remove_packages);
+    connect(mPackageTable, &QTableWidget::itemClicked, this, &dlgPackageManager::slot_itemClicked);
+    connect(mInstallButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_installPackage);
+    connect(mRemoveButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_removePackages);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
-    connect(mPackageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_item_clicked);
-    connect(mPackageTable, &QTableWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggle_remove_button);
+    connect(mPackageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_itemClicked);
+    connect(mPackageTable, &QTableWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleRemoveButton);
 
     setWindowTitle(tr("Package Manager (experimental) - %1").arg(mpHost->getName()));
     mDetailsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -100,7 +100,7 @@ void dlgPackageManager::resetPackageTable()
     mPackageTable->resizeColumnsToContents();
 }
 
-void dlgPackageManager::slot_install_package()
+void dlgPackageManager::slot_installPackage()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
     if (fileName.isEmpty()) {
@@ -116,7 +116,7 @@ void dlgPackageManager::slot_install_package()
     mpHost->installPackage(fileName, 0);
 }
 
-void dlgPackageManager::slot_remove_packages()
+void dlgPackageManager::slot_removePackages()
 {
     QModelIndexList selection = mPackageTable->selectionModel()->selectedRows();
     QStringList removePackages;
@@ -135,7 +135,7 @@ void dlgPackageManager::slot_remove_packages()
     mDescription->hide();
 }
 
-void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
+void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
 {
     if (!pItem) {
         return;
@@ -231,7 +231,7 @@ void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& pack
     }
 }
 
-void dlgPackageManager::slot_toggle_remove_button()
+void dlgPackageManager::slot_toggleRemoveButton()
 {
     QModelIndexList selection = mPackageTable->selectionModel()->selectedRows();
     int selectionCount = selection.count();
