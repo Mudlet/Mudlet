@@ -53,8 +53,8 @@ private:
 
 
 private slots:
-    void slotReceivedData();
-    void slotFinish(int, QProcess::ExitStatus);
+    void slot_receivedData();
+    void slot_finished(int, QProcess::ExitStatus);
 };
 
 #endif // MUDLET_TFORKEDPROCESS_H

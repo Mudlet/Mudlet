@@ -194,7 +194,7 @@ void Updater::setupOnWindows()
     updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, nullptr, settings);
     mpInstallOrRestart->setText(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
-    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
+    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
 // moved the new updater to the same directory as mudlet.exe so it is run on the next
@@ -252,7 +252,7 @@ void Updater::setupOnLinux()
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
-        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::updateBinaryOnLinux);
+        connect(watcher, &QFutureWatcher<void>::finished, this, &Updater::slot_updateLinuxBinary);
         watcher->setFuture(future);
     });
 
@@ -260,7 +260,7 @@ void Updater::setupOnLinux()
     updateDialog = new dblsqd::UpdateDialog(feed, updateAutomatically() ? dblsqd::UpdateDialog::OnLastWindowClosed : dblsqd::UpdateDialog::Manual, nullptr, settings);
     mpInstallOrRestart->setText(tr("Update"));
     updateDialog->addInstallButton(mpInstallOrRestart);
-    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::installOrRestartClicked);
+    connect(updateDialog, &dblsqd::UpdateDialog::installButtonClicked, this, &Updater::slot_installOrRestartClicked);
 }
 
 void Updater::untarOnLinux(const QString& fileName)
@@ -281,7 +281,7 @@ void Updater::untarOnLinux(const QString& fileName)
     qWarning() << __func__ << "finished";
 }
 
-void Updater::updateBinaryOnLinux()
+void Updater::slot_updateLinuxBinary()
 {
     qWarning() << __func__ << "started";
 
@@ -316,7 +316,7 @@ void Updater::updateBinaryOnLinux()
 }
 #endif // Q_OS_LINUX
 
-void Updater::installOrRestartClicked(QAbstractButton* button, const QString& filePath)
+void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QString& filePath)
 {
     Q_UNUSED(button)
 
@@ -352,7 +352,7 @@ void Updater::installOrRestartClicked(QAbstractButton* button, const QString& fi
     auto watcher = new QFutureWatcher<void>;
     connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
 #if defined(Q_OS_LINUX)
-        updateBinaryOnLinux();
+        slot_updateLinuxBinary();
 #elif defined(Q_OS_WIN32)
         finishSetup();
 #endif
