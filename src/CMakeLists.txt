@@ -163,6 +163,7 @@ elseif(UNIX AND NOT APPLE)
   list(APPEND mudlet_SRCS AnnouncerLinux.cpp)
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
+  list(APPEND mudlet_SRCS uiawrapper.cpp)
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -319,6 +320,10 @@ set(mudlet_HDRS
     widechar_width.h
     XMLexport.h
     XMLimport.h)
+
+if(WIN32)
+  list(APPEND mudlet_HDRS uiawrapper.h)
+endif()
 
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)

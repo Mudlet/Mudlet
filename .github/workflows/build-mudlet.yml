@@ -35,11 +35,11 @@ jobs:
             compiler: clang_64
             qt: '5.14.2'
             deploy: 'deploy'
-#          - os: windows-2019
-#            buildname: 'windows'
-#            triplet: x64-mingw-dynamic
-#            # compiler: flag not used in windows pipeline
-#            qt: '5.14.2'
+          - os: windows-2019
+            buildname: 'windows'
+            triplet: x64-mingw-dynamic
+            # compiler: flag not used in windows pipeline
+            qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
