@@ -2084,8 +2084,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     const QFont hostFont = mpHost->getDisplayFont();
     int mFontWidth = QFontMetrics(hostFont).averageCharWidth();
     int wrapByPixel = mWrapAt * mFontWidth;
-    QFontMetrics qfm(hostFont);
-    if (qfm.horizontalAdvance(lineBuffer.back()) > wrapByPixel || lineText.indexOf("\n") != -1) {
+    QFontMetrics fontMetrics(hostFont);
+    if (fontMetrics.horizontalAdvance(lineBuffer.back()) > wrapByPixel || lineText.indexOf("\n") != -1) {
         TChar format(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         wrapLine(getLastLineNumber(), wrapByPixel, mWrapIndent, format, true, true);
     }
@@ -2331,17 +2331,17 @@ void TBuffer::logRemainingOutput()
 inline void
 TBuffer::binarySearchHorizontalAdvance(const int &lineIndex, const int &indentSize, const QString &lineIndent,
                                        const int &screenWidth, const int &subStringStart, const int &lineCharTotal,
-                                       const QFontMetrics &qfm, int &lineCharIterator, const bool isBefore) {
+                                       const QFontMetrics &fontMetrics, int &lineCharIterator, const bool isBefore) {
     // Does an initial entire string check to ensure we are not searching for no reason
     QStringRef lineText = lineBuffer.at(lineIndex).midRef(subStringStart, lineCharTotal - subStringStart);
-    int indentWidth = (indentSize > 0) ? qfm.horizontalAdvance(lineIndent) : 0;
-    int calculatedWidth = qfm.horizontalAdvance(lineText.toString()) + indentWidth;
+    int indentWidth = (indentSize > 0) ? fontMetrics.horizontalAdvance(lineIndent) : 0;
+    int calculatedWidth = fontMetrics.horizontalAdvance(lineText.toString()) + indentWidth;
     if (calculatedWidth <= screenWidth) {
         lineCharIterator = lineCharTotal;
         return;
     }
 
-    const int averageCharWidth = qfm.averageCharWidth();
+    const int averageCharWidth = fontMetrics.averageCharWidth();
     bool useHorizontalAdvance = true;
     const int actualAverageCharWidth = calculatedWidth / lineText.size();
     const int charWidthFactor = actualAverageCharWidth / averageCharWidth;
@@ -2360,7 +2360,7 @@ TBuffer::binarySearchHorizontalAdvance(const int &lineIndex, const int &indentSi
         const int newStringSize = bSearchIteratorCurrent - subStringStart;
         lineText = lineBuffer.at(lineIndex).midRef(subStringStart, newStringSize);
         if (useHorizontalAdvance) {
-            calculatedWidth = qfm.horizontalAdvance(lineText.toString()) + indentWidth;
+            calculatedWidth = fontMetrics.horizontalAdvance(lineText.toString()) + indentWidth;
         } else {
             calculatedWidth = (newStringSize * averageCharWidth * charWidthFactor) + indentWidth;
         }
@@ -2413,19 +2413,18 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
     QList<bool> promptList;
     int lineCount = 0;
     const QFont hostFont = mpHost->getDisplayFont();
-    const QFontMetrics qfm(hostFont);
+    const QFontMetrics fontMetrics(hostFont);
     // Loop from current line up to the last line sitting in buffer
-    for (int i = startLine; i < bufferSize; ++i) {
-        if (onlyWrapOneLine && i > startLine) {
+    for (int currentLine = startLine; currentLine < bufferSize; ++currentLine) {
+        if (onlyWrapOneLine && currentLine > startLine) {
             break; //only wrap one line of text
         }
-        int lineWidth = qfm.horizontalAdvance(lineBuffer.at(i));
-        bool stillContainsNewLine = containsNewLine ? lineBuffer.at(i).contains(QChar::LineFeed) : false;
+        int lineWidth = fontMetrics.horizontalAdvance(lineBuffer.at(currentLine));
+        bool stillContainsNewLine = containsNewLine ? lineBuffer.at(currentLine).contains(QChar::LineFeed) : false;
         if (lineWidth > screenWidth || stillContainsNewLine) {
             // Track for dangling items, this is really only for instance where last character is QChar::LineFeed
             bool insertEmptyLine;
-            // Track where subStringStart
-            // what is subStringStart?
+            // Track beginning of substring, which is the first argument to QString.midRef(start, length)
             int subStringStart = 0;
             // Use to indent the wrapped content
             QString lineIndent;
@@ -2434,18 +2433,20 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             // this is to build the buffer
             std::deque<TChar> newLine;
             // This is where actual wrapping occurs
-            QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineBuffer.at(i));
-            // There are two conditions, one requires horizontal advance, another require newline check
-            // but what are the conditions?
-            for (int lineCharIterator = 0, lineCharTotal = static_cast<int>(buffer.at(i).size()); lineCharIterator < lineCharTotal;) {
-                // trigger skipping of QChar::LineFeed
-                // what exactly does this variable track?
+            QTextBoundaryFinder wordFinder(QTextBoundaryFinder::Line, lineBuffer.at(currentLine));
+            // There are two conditions (from above)
+            // "lineWidth > screenWidth" First condition is for when the line require wrapping based on length calculated by horizontalAdvance
+            // "stillContainsNewLine" Second condition is where this particular line only require wrapping from QChar::LineFeed, thus skip horizontalAdvance calculation
+            for (int lineCharIterator = 0, lineCharTotal = static_cast<int>(buffer.at(currentLine).size()); lineCharIterator < lineCharTotal;) {
+                // Tracks whethere there is a QChar::LineFeed before where we are wrapping the line
+                // This being true would cause the wrapping to happen at the QChar::LineFeed instead
+                // Which also cause the QChar::LineFeed character to be skip in the resulting string
                 bool newLineChop = false;
                 insertEmptyLine = false;
                 // First run gets lineWidth from outside
                 if (lineWidth > screenWidth) {
                     // This sets lineCharIterator to the position right before it breaches screenWidth
-                    binarySearchHorizontalAdvance(i, indentSize, lineIndent, screenWidth, subStringStart, lineCharTotal, qfm, lineCharIterator, true);
+                    binarySearchHorizontalAdvance(currentLine, indentSize, lineIndent, screenWidth, subStringStart, lineCharTotal, fontMetrics, lineCharIterator, true);
                     wordFinder.setPosition(lineCharIterator);
                     // If current position is not at a boundary, we move to the previous one
                     if (!wordFinder.isAtBoundary() || (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) == 0) {
@@ -2456,7 +2457,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                     }
                     // Special check to see whether there is newLine before the boundary
                     if (stillContainsNewLine) {
-                        int firstNewLine = lineBuffer.at(i).indexOf(QChar::LineFeed, subStringStart);
+                        int firstNewLine = lineBuffer.at(currentLine).indexOf(QChar::LineFeed, subStringStart);
                         // If next new line happen before the chop off point
                         if (firstNewLine == -1) {
                             stillContainsNewLine = false;
@@ -2467,7 +2468,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                     }
                 } else {
                     // For instance where this is being run only for newLine, and not for wrapping
-                    lineCharIterator = lineBuffer.at(i).indexOf(QChar::LineFeed, subStringStart);
+                    lineCharIterator = lineBuffer.at(currentLine).indexOf(QChar::LineFeed, subStringStart);
                     // Check for instance where we are looking for just new line, but there is no more new line
                     if (lineCharIterator == -1) {
                         lineCharIterator = lineCharTotal;
@@ -2475,13 +2476,13 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                     newLineChop = true;
                 }
                 
-                lineText = lineBuffer.at(i).midRef(subStringStart, lineCharIterator - subStringStart);
-                for (int i3 = subStringStart; i3 < lineCharIterator; ++i3) {
-                    newLine.push_back(buffer.at(i).at(i3));
+                lineText = lineBuffer.at(currentLine).midRef(subStringStart, lineCharIterator - subStringStart);
+                for (int currentCharacter = subStringStart; currentCharacter < lineCharIterator; ++currentCharacter) {
+                    newLine.push_back(buffer.at(currentLine).at(currentCharacter));
                 }
                 queue.push_back(newLine);
-                timeList.append(timeBuffer.at(i));
-                promptList.append(promptBuffer.at(i));
+                timeList.append(timeBuffer.at(currentLine));
+                promptList.append(promptBuffer.at(currentLine));
                 newLine.clear();
                 if (newLineChop) {
                     subStringStart += lineText.size() + 1;
@@ -2493,13 +2494,13 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                     if (indentSize > 0) {
                         tempList.append(lineIndent + lineText);
                         if (lineIndent.isEmpty()) {
-                            for (int i3 = 0; i3 < indentSize; ++i3) {
+                            for (int charCounter = 0; charCounter < indentSize; ++charCounter) {
                                 TChar pSpace = format;
                                 newLine.push_back(pSpace);
                                 lineIndent.append(QChar::Space);
                             }
                         } else {
-                            for (int i3 = 0; i3 < indentSize; ++i3) {
+                            for (int charCounter = 0; charCounter < indentSize; ++charCounter) {
                                 TChar pSpace = format;
                                 newLine.push_back(pSpace);
                             }
@@ -2511,15 +2512,15 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
             }
             if (insertEmptyLine) {
                 queue.push_back(newLine);
-                timeList.append(timeBuffer.at(i));
-                promptList.append(promptBuffer.at(i));
+                timeList.append(timeBuffer.at(currentLine));
+                promptList.append(promptBuffer.at(currentLine));
                 tempList.append(QString());
             }
         } else {
-            queue.push_back(buffer.at(i));
-            tempList.append(lineBuffer.at(i));
-            timeList.append(timeBuffer.at(i));
-            promptList.append(promptBuffer.at(i));
+            queue.push_back(buffer.at(currentLine));
+            tempList.append(lineBuffer.at(currentLine));
+            timeList.append(timeBuffer.at(currentLine));
+            promptList.append(promptBuffer.at(currentLine));
         }
         ++lineCount;
     }
@@ -2535,30 +2536,30 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
         promptBuffer.removeAt(startLine);
 
         buffer.insert(buffer.begin() + startLine, queue.begin(), queue.end());
-        for (int i = 0, tempListSize = static_cast<int>(tempList.size()); i < tempListSize; ++i) {
-            lineBuffer.insert(startLine + i, tempList.at(i));
-            timeBuffer.insert(startLine + i, time);
-            promptBuffer.insert(startLine + i, isPrompt);
+        for (int currentLine = 0, tempListSize = static_cast<int>(tempList.size()); currentLine < tempListSize; ++currentLine) {
+            lineBuffer.insert(startLine + currentLine, tempList.at(currentLine));
+            timeBuffer.insert(startLine + currentLine, time);
+            promptBuffer.insert(startLine + currentLine, isPrompt);
         }
         log(startLine, startLine + tempList.size() - 1);
     } else {
-        for (int i = 0; i < lineCount; ++i) {
+        for (int currentLine = 0; currentLine < lineCount; ++currentLine) {
             buffer.pop_back();
             lineBuffer.pop_back();
             timeBuffer.pop_back();
             promptBuffer.pop_back();
         }
-        for (int i = 0, tempListSize = static_cast<int>(tempList.size()); i < tempListSize; ++i) {
+        for (int currentLine = 0, tempListSize = static_cast<int>(tempList.size()); currentLine < tempListSize; ++currentLine) {
             buffer.push_back(queue.front());
             queue.pop_front();
-            if (tempList.at(i).isEmpty()) {
+            if (tempList.at(currentLine).isEmpty()) {
                 lineBuffer.append(QString());
                 timeBuffer.append(QString());
                 promptBuffer.push_back(false);
             } else {
-                lineBuffer.append(tempList.at(i));
-                timeBuffer.append(timeList.at(i));
-                promptBuffer.push_back(promptList.at(i));
+                lineBuffer.append(tempList.at(currentLine));
+                timeBuffer.append(timeList.at(currentLine));
+                promptBuffer.push_back(promptList.at(currentLine));
             }
         }
         log(startLine, startLine + tempList.size());
