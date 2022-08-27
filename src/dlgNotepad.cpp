@@ -45,7 +45,7 @@ dlgNotepad::dlgNotepad(Host* pH)
         restore();
     }
 
-    connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_text_written);
+    connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_textWritten);
 
     startTimer(2min);
 }
@@ -111,7 +111,7 @@ void dlgNotepad::restore()
     restoreFile(fileName, false);
 }
 
-void dlgNotepad::slot_text_written()
+void dlgNotepad::slot_textWritten()
 {
     mNeedToSave = true;
 }
