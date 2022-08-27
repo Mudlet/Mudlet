@@ -2057,14 +2057,14 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     append(text, sub_start, sub_end, format.mFgColor, format.mBgColor, format.mFlags & TChar::TestMask, linkID);
 }
 
-// This function adds text to existing buffer, it needs to ensure wrapping is done properly
+// adds text to existing buffer and ensures wrapping is done properly
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
         shrinkBuffer();
     }
 
-    // Prevent instance where buffer is empty
+    // Prevent buffer from being empty
     if (buffer.empty()) {
         std::deque<TChar> newLine;
         TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
@@ -2082,8 +2082,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     QStringRef lineText = text.midRef(sub_start, sub_end - sub_start);
     lineBuffer.back().append(lineText);
     const QFont hostFont = mpHost->getDisplayFont();
-    int mFontWidth = QFontMetrics(hostFont).averageCharWidth();
-    int wrapByPixel = mWrapAt * mFontWidth;
+
+    int wrapByPixel = mWrapAt * QFontMetrics(hostFont).averageCharWidth();
     QFontMetrics fontMetrics(hostFont);
     if (fontMetrics.horizontalAdvance(lineBuffer.back()) > wrapByPixel || lineText.indexOf("\n") != -1) {
         TChar format(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
@@ -2274,6 +2274,7 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
     return offset;
 }
 
+// wraps text all the way from startLine until the end of the buffer
 inline int TBuffer::wrap(int startLine)
 {
     TChar pSpace;
@@ -2397,10 +2398,13 @@ TBuffer::binarySearchHorizontalAdvance(const int &lineIndex, const int &indentSi
     }
 }
 
-// The difference between this and wrap is, wrap does it from startLine all the way to the end
-// while wrapLine only does it for one line.
-// Thus, wrap uses pop_back and push_back while wrapLine uses remove_at and insert.
-// Returns how many new lines have been added by the wrapping action
+// wrap text:
+// startLine = Line to start at (index)
+// screenWidth = Width of the screen (in pixel)
+// indentSize = Characters to indent the wrapped text
+// format = What the indent character is (default to space)
+// onlyWrapOneLine = True would wrap only the startLine, while False would wraps text all the way from startLine until the end of the buffer (default: True)
+// containsNewLine = True to indicate the line can contain LineFeed, while false means it does not contain LineFeed (default: False)
 inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine, bool containsNewLine)
 {
     const int bufferSize = static_cast<int>(buffer.size());
@@ -2480,10 +2484,8 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                 for (int currentCharacter = subStringStart; currentCharacter < lineCharIterator; ++currentCharacter) {
                     newLine.push_back(buffer.at(currentLine).at(currentCharacter));
                 }
-                queue.push_back(newLine);
                 timeList.append(timeBuffer.at(currentLine));
                 promptList.append(promptBuffer.at(currentLine));
-                newLine.clear();
                 if (newLineChop) {
                     subStringStart += lineText.size() + 1;
                     tempList.append(lineText.toString());
@@ -2491,24 +2493,26 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                     insertEmptyLine = true;
                 } else {
                     subStringStart += lineText.size();
+                    // Insert the indention
                     if (indentSize > 0) {
                         tempList.append(lineIndent + lineText);
+                        // First run doesn't do any actual indention
                         if (lineIndent.isEmpty()) {
                             for (int charCounter = 0; charCounter < indentSize; ++charCounter) {
-                                TChar pSpace = format;
-                                newLine.push_back(pSpace);
                                 lineIndent.append(QChar::Space);
                             }
                         } else {
+                        // Subsequent run have indention
                             for (int charCounter = 0; charCounter < indentSize; ++charCounter) {
-                                TChar pSpace = format;
-                                newLine.push_back(pSpace);
+                                newLine.push_front(format);
                             }
                         }
                     } else {
                         tempList.append(lineText.toString());
                     }
                 }
+                queue.push_back(newLine);
+                newLine.clear();
             }
             if (insertEmptyLine) {
                 queue.push_back(newLine);
