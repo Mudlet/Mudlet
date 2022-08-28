@@ -30,7 +30,7 @@ dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
     connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editing_name_finished);
 
     if (mudlet::self()->firstLaunch) {
-        lineEdit_alias_pattern->setPlaceholderText("for example, ^myalias$ to match 'myalias'");
+        lineEdit_alias_pattern->setPlaceholderText(tr("for example, ^myalias$ to match 'myalias'"));
     }
 }
 
