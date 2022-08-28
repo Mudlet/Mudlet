@@ -4324,6 +4324,7 @@ void dlgTriggerEditor::saveAction()
         return;
     }
 
+    mpActionsMainArea->trimName();
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
     QString commandDown = mpActionsMainArea->lineEdit_action_button_command_down->text();
@@ -4806,6 +4807,7 @@ void dlgTriggerEditor::saveKey()
         return;
     }
 
+    mpKeysMainArea->trimName();
     QString name = mpKeysMainArea->lineEdit_key_name->text();
     if (name.isEmpty() || name == tr("New key")) {
         name = mpKeysMainArea->lineEdit_key_binding->text();
