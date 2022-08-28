@@ -680,8 +680,8 @@ public:
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
     void slot_pathChanged(const QString& path);
-    void slotPurge();
-    void slotDeleteSender(int, QProcess::ExitStatus);
+    void slot_purge();
+    void slot_deleteSender(int, QProcess::ExitStatus);
 
 private:
     bool callReference(lua_State*, QString name, int parameters);

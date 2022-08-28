@@ -47,11 +47,11 @@ public:
      QTableWidget* mModuleTable;
 
 private slots:
-    void slot_install_module();
-    void slot_uninstall_module();
-    void slot_help_module();
-    void slot_module_clicked(QTableWidgetItem*);
-    void slot_module_changed(QTableWidgetItem*);
+    void slot_installModule();
+    void slot_uninstallModule();
+    void slot_helpModule();
+    void slot_moduleClicked(QTableWidgetItem*);
+    void slot_moduleChanged(QTableWidgetItem*);
 
 private:
     Ui::module_manager* ui = nullptr;
