@@ -1291,53 +1291,53 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="87"/>
       <source>Debug messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>I messaggi di debug sono mostrati qui.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="103"/>
       <source>Error Console</source>
-      <translation type="unfinished"/>
+      <translation>Console Errori</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="104"/>
       <source>Error messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>I messaggi di errore sono mostrati qui.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="106"/>
       <source>Sub Console</source>
-      <translation type="unfinished"/>
+      <translation>Console Secondaria</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="107"/>
       <source>Sub console messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>I messaggi della console secondaria sono mostrati qui.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="109"/>
       <source>User Window</source>
-      <translation type="unfinished"/>
+      <translation>Finestra Utente</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="110"/>
       <source>User window messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>I messaggi della finestra utente sono mostrati qui.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="123"/>
       <source>Main Window</source>
-      <translation type="unfinished"/>
+      <translation>Finestra Principale</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="124"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
-      <translation type="unfinished"/>
+      <translation>Il contenuto del gioco è mostrato qui. Può contenere delle sotto-console e la finestra del mapper.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="270"/>
       <location filename="../src/TConsole.cpp" line="2018"/>
       <source>main window</source>
-      <translation type="unfinished"/>
+      <translation>finestra principale</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="359"/>
@@ -1389,13 +1389,13 @@ per le stanze selezionate:</translation>
       <location filename="../src/TConsole.cpp" line="2015"/>
       <source>main window past content</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>contenuto precedente della finestra principale</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2016"/>
       <source>main window live content</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>contenuto attuale della finestra principale</translation>
     </message>
   </context>
   <context>
@@ -6964,7 +6964,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomExits.cpp" line="1289"/>
       <location filename="../src/dlgRoomExits.cpp" line="1298"/>
       <source>Entered number is invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Il numero inserito non è valido.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1522"/>
@@ -12541,42 +12541,42 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3840"/>
       <source>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</source>
-      <translation type="unfinished"/>
+      <translation>In alcune piattaforme, come macOS, lo strumento screen reader annunciare completamente il testo in arrivo, senza saltarlo. Con questa opzione, puoi scegliere di disabilitare l'annuncio di nuovo testo dal gioco per utilizzare, invece, un TTS personalizzato che evita tali problemi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3843"/>
       <source>Announce incoming text in screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Annunciare il testo in arrivo nello screen reader</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3851"/>
       <source>show them</source>
-      <translation type="unfinished"/>
+      <translation>mostra</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3856"/>
       <source>hide them</source>
-      <translation type="unfinished"/>
+      <translation>nascondi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3861"/>
       <source>replace with a space</source>
-      <translation type="unfinished"/>
+      <translation>sostituisci con uno spazio</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3869"/>
       <source>When the game sends blank lines:</source>
-      <translation type="unfinished"/>
+      <translation>Quando il gioco invia righe vuote:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3879"/>
       <source>Switch between input line and main window using:</source>
-      <translation type="unfinished"/>
+      <translation>Passa dalla linea di input alla finestra principale utilizzando:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3890"/>
       <source>no key</source>
-      <translation type="unfinished"/>
+      <translation>nessun tasto</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3895"/>
