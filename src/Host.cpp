@@ -361,6 +361,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
+, mSetInSocketData(false)
+, mSetInSocketDataBuffer(std::vector<char>())
 {
     TDebug::addHost(this);
 

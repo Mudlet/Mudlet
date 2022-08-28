@@ -665,6 +665,9 @@ public:
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
 
+    bool mSetInSocketData;
+    std::vector<char> mSetInSocketDataBuffer;
+    
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:

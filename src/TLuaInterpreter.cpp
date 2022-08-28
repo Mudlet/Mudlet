@@ -14229,6 +14229,9 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         case ARGUMENT_TYPE_FUNCTION:
             lua_rawgeti(L, LUA_REGISTRYINDEX, pE.mArgumentList.at(i).toInt());
             break;
+        case ARGUMENT_TYPE_BYTE_ARRAY:
+            lua_pushlstring(L, pE.mArgumentList.at(i).toLatin1().constData(), pE.mArgumentList.at(i).toLatin1().size());
+            break;
         default:
             qWarning(R"(TLuaInterpreter::callEventHandler("%s", TEvent) ERROR: Unhandled ARGUMENT_TYPE: %i encountered in argument %i.)", function.toUtf8().constData(), pE.mArgumentTypeList.at(i), i);
             lua_pushnil(L);
@@ -15276,6 +15279,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
+    lua_register(pGlobalLua, "setInboundSocketData", TLuaInterpreter::setInboundSocketData);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -17478,4 +17482,19 @@ int TLuaInterpreter::announce(lua_State *L) {
 
     mudlet::self()->announce(text, processing);
     return 0;
+}
+
+int TLuaInterpreter::setInboundSocketData(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    size_t len = 0;
+    const char* str = lua_tolstring(L, 1, &len);
+    
+    host.mSetInSocketData = true;
+    host.mSetInSocketDataBuffer.clear();
+    for (int i = 0; i < (int)len; i++) {
+        host.mSetInSocketDataBuffer.push_back(str[i]);
+    }
+
+    return 1;
 }

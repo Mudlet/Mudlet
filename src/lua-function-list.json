@@ -434,6 +434,7 @@
     "setGridMode": "setGridMode(areaID, true/false)",
     "setHexBgColor": "setHexBgColor([windowName], hexColorString)",
     "setHexFgColor": "setHexFgColor([windowName], hexColorString)",
+    "setInboundSocketData": "setInboundSocketData(data)",
     "setIrcChannels": "setIrcChannels(channels)",
     "setIrcNick": "setIrcNick(nickname)",
     "setIrcServer": "setIrcServer(hostname, port[, secure])",
