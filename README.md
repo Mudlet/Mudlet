@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://github.com/Mudlet/Mudlet"><img src="https://bazaar.launchpad.net/~mudlet-makers/mudlet/artwork/download/head:/mudlet_main_256px.pn-20171109060211-hidv2woj9dffwyql-11/mudlet_main_256px.png" alt="Mudlet"></a>
+  <a href="https://github.com/Mudlet/Mudlet"><img src="https://github.com/Mudlet/artwork/blob/master/mudlet_main_256px.png?raw=true" alt="Mudlet"></a>
   <br>
   Mudlet
   <br>
