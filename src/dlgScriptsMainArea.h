@@ -42,7 +42,7 @@ public:
 
 private slots:
     void slot_editingNameFinished();
-    void slot_editing_event_name_finished();
+    void slot_editingEventNameFinished();
 };
 
 #endif // MUDLET_DLGSCRIPTSMAINAREA_H

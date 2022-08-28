@@ -28,7 +28,7 @@ dlgScriptsMainArea::dlgScriptsMainArea(QWidget* pF) : QWidget(pF)
     setupUi(this);
 
     connect(lineEdit_script_name, &QLineEdit::editingFinished, this, &dlgScriptsMainArea::slot_editingNameFinished);
-    connect(lineEdit_script_event_handler_entry, &QLineEdit::editingFinished, this, &dlgScriptsMainArea::slot_editing_event_name_finished);
+    connect(lineEdit_script_event_handler_entry, &QLineEdit::editingFinished, this, &dlgScriptsMainArea::slot_editingEventNameFinished);
 }
 
 void dlgScriptsMainArea::trimName()
@@ -46,7 +46,7 @@ void dlgScriptsMainArea::slot_editingNameFinished()
     trimName();
 }
 
-void dlgScriptsMainArea::slot_editing_event_name_finished()
+void dlgScriptsMainArea::slot_editingEventNameFinished()
 {
     trimEventHandlerName();
 }
