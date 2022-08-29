@@ -5784,10 +5784,10 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaLoops(value);
-            } else if (key == QLatin1String("continue")) {
-                bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
-                mediaData.setMediaContinue(value);
             }
+        } else if (key == QLatin1String("continue")) {
+            bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
+            mediaData.setMediaContinue(value);
         }
 
         // removes value, but keeps key for next iteration
