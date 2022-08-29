@@ -2023,7 +2023,7 @@ void TBuffer::resetColors()
     }
 
     // These should match the corresponding settings in
-    // dlgProfilePreferences::resetColors() :
+    // dlgProfilePreferences::slot_resetColors() :
     pHost->mBlack = Qt::black;
     pHost->mLightBlack = Qt::darkGray;
     pHost->mRed = Qt::darkRed;

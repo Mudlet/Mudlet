@@ -521,24 +521,24 @@ public slots:
     void slot_showHelpDialogForum();
 // Not used:    void slot_showHelpDialogIrc();
     void slot_openMappingScriptsPage();
-    void slot_multi_view(const bool);
-    void slot_toggle_multi_view();
-    void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
-    void slot_timer_fires();
+    void slot_multiView(const bool);
+    void slot_toggleMultiView();
+    void slot_connectionDialogueFinished(const QString& profile, bool connectOnLoad);
+    void slot_timerFires();
     void slot_replay();
     void slot_disconnect();
     void slot_notes();
     void slot_reconnect();
-    void slot_close_current_profile();
-    void slot_close_profile_requested(int);
+    void slot_closeCurrentProfile();
+    void slot_closeProfileRequested(int);
     void slot_irc();
-    void slot_discord();
-    void slot_mudlet_discord();
-    void slot_package_manager();
-    void slot_package_exporter();
-    void slot_module_manager();
+    void slot_profileDiscord();
+    void slot_mudletDiscord();
+    void slot_packageManager();
+    void slot_packageExporter();
+    void slot_moduleManager();
 #if defined(INCLUDE_UPDATER)
-    void slot_check_manual_update();
+    void slot_manualUpdateCheck();
 #endif
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }

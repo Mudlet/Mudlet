@@ -289,7 +289,7 @@ public slots:
     void slot_searchBufferUp();
     void slot_searchBufferDown();
     void slot_toggleReplayRecording();
-    void slot_stop_all_triggers(bool);
+    void slot_stopAllItems(bool);
     void slot_toggleLogging();
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
 

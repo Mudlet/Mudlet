@@ -93,7 +93,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 
     profiles_tree_widget->setSelectionMode(QAbstractItemView::SingleSelection);
     profiles_tree_widget->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(profiles_tree_widget, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profile_menu);
+    connect(profiles_tree_widget, &QWidget::customContextMenuRequested, this, &dlgConnectionProfiles::slot_profileContextMenu);
 
     QAbstractButton* abort = dialog_buttonbox->button(QDialogButtonBox::Cancel);
     connect_button = dialog_buttonbox->addButton(tr("Connect"), QDialogButtonBox::AcceptRole);
@@ -209,23 +209,23 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(connect_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::accept);
     connect(abort, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_cancel);
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
-    connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profile);
-    connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copy_profilesettings_only);
+    connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyProfile);
+    connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
     connect(profile_name_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updateName);
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_saveName);
     connect(host_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updateUrl);
     connect(port_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updatePort);
     connect(port_ssl_tsl, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateSslTslPort);
-    connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autologin);
-    connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_autoreconnect);
+    connect(autologin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateAutoConnect);
+    connect(auto_reconnect, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateAutoReconnect);
     connect(login_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updateLogin);
     connect(character_password_entry, &QLineEdit::textEdited, this, &dlgConnectionProfiles::slot_updatePassword);
-    connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_update_description);
+    connect(mud_description_textedit, &QPlainTextEdit::textChanged, this, &dlgConnectionProfiles::slot_updateDescription);
     connect(profiles_tree_widget, &QListWidget::currentItemChanged, this, &dlgConnectionProfiles::slot_itemClicked);
     connect(profiles_tree_widget, &QListWidget::itemDoubleClicked, this, &dlgConnectionProfiles::accept);
 
-    connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_update_discord_optin);
+    connect(discord_optin_checkBox, &QCheckBox::stateChanged, this, &dlgConnectionProfiles::slot_updateDiscordOptIn);
 
     // website_entry atm is only a label
     //connect(website_entry, SIGNAL(textEdited(const QString)), this, SLOT(slot_updateWebsite(const QString)));
@@ -290,7 +290,7 @@ void dlgConnectionProfiles::accept()
     }
 }
 
-void dlgConnectionProfiles::slot_update_description()
+void dlgConnectionProfiles::slot_updateDescription()
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
@@ -335,7 +335,7 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
     job->setTextData(pass);
     job->setProperty("profile", profile);
 
-    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_password_saved);
+    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_passwordSaved);
 
     job->start();
 }
@@ -349,7 +349,7 @@ void dlgConnectionProfiles::deleteSecurePassword(const QString& profile) const
     job->setKey(profile);
     job->setProperty("profile", profile);
 
-    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_password_deleted);
+    connect(job, &QKeychain::WritePasswordJob::finished, this, &dlgConnectionProfiles::slot_passwordDeleted);
 
     job->start();
 }
@@ -382,7 +382,7 @@ void dlgConnectionProfiles::slot_updateUrl(const QString& url)
     }
 }
 
-void dlgConnectionProfiles::slot_update_autologin(int state)
+void dlgConnectionProfiles::slot_updateAutoConnect(int state)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (!pItem) {
@@ -391,7 +391,7 @@ void dlgConnectionProfiles::slot_update_autologin(int state)
     writeProfileData(pItem->data(csmNameRole).toString(), qsl("autologin"), QString::number(state));
 }
 
-void dlgConnectionProfiles::slot_update_autoreconnect(int state)
+void dlgConnectionProfiles::slot_updateAutoReconnect(int state)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (!pItem) {
@@ -402,7 +402,7 @@ void dlgConnectionProfiles::slot_update_autoreconnect(int state)
 
 // This gets called when the QCheckBox that it is connect-ed to gets its
 // checked state set programmatically AS WELL as when the user clicks on it:
-void dlgConnectionProfiles::slot_update_discord_optin(int state)
+void dlgConnectionProfiles::slot_updateDiscordOptIn(int state)
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     if (!pItem) {
@@ -590,7 +590,7 @@ void dlgConnectionProfiles::slot_addProfile()
 }
 
 // enables the deletion button once the correct text (profile name) is entered
-void dlgConnectionProfiles::slot_deleteprofile_check(const QString& text)
+void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 {
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     if (profile != text) {
@@ -662,7 +662,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    connect(delete_profile_lineedit, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_deleteprofile_check);
+    connect(delete_profile_lineedit, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_deleteProfileCheck);
     connect(delete_profile_dialog, &QDialog::accepted, this, &dlgConnectionProfiles::slot_reallyDeleteProfile);
 
     delete_profile_lineedit->setPlaceholderText(profile);
@@ -1471,29 +1471,29 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
     profiles_tree_widget->addItem(pItem);
 }
 
-void dlgConnectionProfiles::slot_profile_menu(QPoint pos)
+void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
     QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
-        menu.addAction(tr("Reset icon", "Reset the custom picture for this profile in the connection dialog and show the default one instead"), this, &dlgConnectionProfiles::slot_reset_custom_icon);
+        menu.addAction(tr("Reset icon", "Reset the custom picture for this profile in the connection dialog and show the default one instead"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
     } else {
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
                        tr("Set custom icon", "Set a custom picture to show for the profile in the connection dialog"),
                        this,
-                       &dlgConnectionProfiles::slot_set_custom_icon);
+                       &dlgConnectionProfiles::slot_setCustomIcon);
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
                        tr("Set custom color", "Set a custom color to show for the profile in the connection dialog"),
                        this,
-                       &dlgConnectionProfiles::slot_set_custom_color);
+                       &dlgConnectionProfiles::slot_setCustomColor);
     }
 
     menu.exec(globalPos);
 }
 
-void dlgConnectionProfiles::slot_set_custom_icon()
+void dlgConnectionProfiles::slot_setCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
@@ -1511,7 +1511,7 @@ void dlgConnectionProfiles::slot_set_custom_icon()
     auto icon = QIcon(QPixmap(imageLocation).scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation).copy());
     profiles_tree_widget->currentItem()->setIcon(icon);
 }
-void dlgConnectionProfiles::slot_set_custom_color()
+void dlgConnectionProfiles::slot_setCustomColor()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
@@ -1525,7 +1525,7 @@ void dlgConnectionProfiles::slot_set_custom_color()
         profiles_tree_widget->currentItem()->setIcon(customIcon(profileName, {color}));
     }
 }
-void dlgConnectionProfiles::slot_reset_custom_icon()
+void dlgConnectionProfiles::slot_resetCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
@@ -1539,19 +1539,19 @@ void dlgConnectionProfiles::slot_reset_custom_icon()
     profiles_tree_widget->setCurrentRow(currentRow);
 }
 
-void dlgConnectionProfiles::slot_password_saved(QKeychain::Job* job)
+void dlgConnectionProfiles::slot_passwordSaved(QKeychain::Job* job)
 {
     if (job->error()) {
-        qWarning() << "dlgConnectionProfiles::slot_password_saved ERROR: couldn't save password for" << job->property("profile").toString() << "; error was:" << job->errorString();
+        qWarning().nospace().noquote() << "dlgslot_passwordSaved:slot_passwordSaved(...) ERROR - could not save password for \"" << job->property("profile").toString() << "\"; error was: \"" << job->errorString() << "\".";
     }
 
     job->deleteLater();
 }
 
-void dlgConnectionProfiles::slot_password_deleted(QKeychain::Job* job)
+void dlgConnectionProfiles::slot_passwordDeleted(QKeychain::Job* job)
 {
     if (job->error()) {
-        qWarning() << "dlgConnectionProfiles::slot_password_deleted ERROR: couldn't delete password for" << job->property("profile").toString() << "; error was:" << job->errorString();
+        qWarning() << "dlgConnectionProfiles::slot_passwordDeleted(...) ERROR - could not delete password for: \"" << job->property("profile").toString() << "\"; error was: \"" << job->errorString() << "\".";
     }
 
     job->deleteLater();
@@ -1564,7 +1564,7 @@ void dlgConnectionProfiles::slot_cancel()
     QDialog::done(QDialog::Rejected);
 }
 
-void dlgConnectionProfiles::slot_copy_profile()
+void dlgConnectionProfiles::slot_copyProfile()
 {
     mCopyingProfile = true;
 
@@ -1612,7 +1612,7 @@ void dlgConnectionProfiles::slot_copy_profile()
     watcher->setFuture(future);
 }
 
-void dlgConnectionProfiles::slot_copy_profilesettings_only()
+void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
 {
     QString profile_name;
     QString oldname;

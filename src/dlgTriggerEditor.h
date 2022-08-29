@@ -222,16 +222,16 @@ public:
 
 public slots:
     void slot_toggleHiddenVariables(bool);
-    void slot_toggleHiddenVar(bool);
-    void slot_var_selected(QTreeWidgetItem*);
-    void slot_var_changed(QTreeWidgetItem*);
-    void slot_show_vars();
+    void slot_hideVariable(bool);
+    void slot_variableSelected(QTreeWidgetItem*);
+    void slot_variableChanged(QTreeWidgetItem*);
+    void slot_showVariables();
     void slot_viewErrorsAction();
     void slot_setupPatternControls(const int);
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
     void slot_colorizeTriggerSetFgColor();
-    void slot_item_selected_save(QTreeWidgetItem* pItem);
+    void slot_saveSelectedItem(QTreeWidgetItem* pItem);
     void slot_export();
     void slot_import();
     void slot_viewStatsAction();
