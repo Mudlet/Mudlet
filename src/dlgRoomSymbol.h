@@ -57,12 +57,12 @@ private:
     QColor roomColor;
 
 private slots:
-    void openColorSelector();
-    void currentColorChanged(const QColor&);
-    void colorSelected(const QColor&);
-    void colorRejected();
-    void updatePreview();
-    void resetColor();
+    void slot_openColorSelector();
+    void slot_currentColorChanged(const QColor&);
+    void slot_colorSelected(const QColor&);
+    void slot_colorRejected();
+    void slot_updatePreview();
+    void slot_resetColors();
 };
 
 #endif // MUDLET_DLGROOMSYMBOL_H

@@ -319,7 +319,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
     treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost(mpHost);
@@ -328,7 +328,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->header()->hide();
     treeWidget_aliases->setRootIsDecorated(false);
     treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_actions->hide();
     treeWidget_actions->setHost(mpHost);
@@ -337,7 +337,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated(false);
     treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_timers->hide();
     treeWidget_timers->setHost(mpHost);
@@ -346,7 +346,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated(false);
     treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_variables->hide();
     treeWidget_variables->setHost(mpHost);
@@ -356,7 +356,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->header()->hide();
     treeWidget_variables->setRootIsDecorated(false);
     treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_keys->hide();
     treeWidget_keys->setHost(mpHost);
@@ -365,7 +365,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated(false);
     treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_scripts->hide();
     treeWidget_scripts->setHost(mpHost);
@@ -374,7 +374,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated(false);
     treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     QAction* viewTriggerAction = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
@@ -404,7 +404,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QAction* viewVarsAction = new QAction(QIcon(qsl(":/icons/variables.png")), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Show Variables"));
     viewVarsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Variables"), tr("Ctrl+6")));
-    connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_vars);
+    connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showVariables);
 
     QAction* viewActionAction = new QAction(QIcon(qsl(":/icons/bookmarks.png")), tr("Buttons"), this);
     viewActionAction->setStatusTip(tr("Show Buttons"));
@@ -561,7 +561,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     connect(checkBox_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
 
-    connect(mpVarsMainArea->checkBox_variable_hidden, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_toggleHiddenVar);
+    connect(mpVarsMainArea->checkBox_variable_hidden, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_hideVariable);
 
     toolBar2->addAction(viewTriggerAction);
     toolBar2->addAction(viewAliasAction);
@@ -650,8 +650,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(treeWidget_aliases, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
     connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_actionSelected);
     connect(treeWidget_actions, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
-    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_var_selected);
-    connect(treeWidget_variables, &QTreeWidget::itemChanged, this, &dlgTriggerEditor::slot_var_changed);
+    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_variableSelected);
+    connect(treeWidget_variables, &QTreeWidget::itemChanged, this, &dlgTriggerEditor::slot_variableChanged);
     connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
     connect(treeWidget_searchResults, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_itemSelectedInSearchResults);
 
@@ -837,7 +837,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
 }
 
-void dlgTriggerEditor::slot_toggleHiddenVar(bool status)
+void dlgTriggerEditor::slot_hideVariable(bool status)
 {
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
@@ -3529,7 +3529,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     mpCurrentVarItem = pNewItem;
     treeWidget_variables->setCurrentItem(pNewItem);
     showInfo(msgInfoAddVar);
-    slot_var_selected(treeWidget_variables->currentItem());
+    slot_variableSelected(treeWidget_variables->currentItem());
 }
 
 void dlgTriggerEditor::addKey(bool isFolder)
@@ -4629,7 +4629,7 @@ void dlgTriggerEditor::saveVar()
     QString newName = mpVarsMainArea->lineEdit_var_name->text();
     QString newValue = mpSourceEditorEdbeeDocument->text();
     if (newName.isEmpty()) {
-        slot_var_selected(pItem);
+        slot_variableSelected(pItem);
         return;
     }
     mChangingVar = true;
@@ -4797,7 +4797,7 @@ void dlgTriggerEditor::saveVar()
     }
     pItem->setIcon(0, icon);
     mChangingVar = false;
-    slot_var_selected(pItem);
+    slot_variableSelected(pItem);
 }
 
 void dlgTriggerEditor::saveKey()
@@ -5304,7 +5304,7 @@ void dlgTriggerEditor::recursiveSearchVariables(TVar* var, QList<TVar*>& list, b
     }
 }
 
-void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
 {
     // This handles a small case where the radio button is clicked while the item is currently selected
     // which causes the variable to not save. In places where we populate the TreeWidgetItem, we have
@@ -5367,7 +5367,7 @@ void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem* pItem)
     }
 }
 
-void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
 {
     if (!pItem ||treeWidget_variables->indexOfTopLevelItem(pItem) == 0) {
         // Null item or it is for the first row of the tree
@@ -5704,7 +5704,7 @@ void dlgTriggerEditor::slot_treeSelectionChanged()
             } else if (sender == treeWidget_actions) {
                 slot_actionSelected(item);
             } else if (sender == treeWidget_variables) {
-                slot_var_selected(item);
+                slot_variableSelected(item);
             } else if (sender == treeWidget_triggers) {
                 slot_triggerSelected(item);
             }
@@ -6883,7 +6883,7 @@ void dlgTriggerEditor::slot_showKeys()
     }
 }
 
-void dlgTriggerEditor::slot_show_vars()
+void dlgTriggerEditor::slot_showVariables()
 {
     changeView(EditorViewType::cmVarsView);
     repopulateVars();
@@ -6900,7 +6900,7 @@ void dlgTriggerEditor::slot_show_vars()
     } else {
         mpVarsMainArea->show();
         mpSourceEditorArea->show();
-        slot_var_selected(treeWidget_variables->currentItem());
+        slot_variableSelected(treeWidget_variables->currentItem());
     }
     if (!mVarEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mVarEditorSplitterState);
@@ -6923,7 +6923,7 @@ void dlgTriggerEditor::show_vars()
     if (pI) {
         if (pI->childCount() > 0) {
             mpVarsMainArea->show();
-            slot_var_selected(treeWidget_variables->currentItem());
+            slot_variableSelected(treeWidget_variables->currentItem());
         } else {
             mpVarsMainArea->hide();
             showInfo(msgInfoAddVar);
@@ -7224,7 +7224,7 @@ void dlgTriggerEditor::slot_deleteItemOrGroup()
     }
 }
 
-void dlgTriggerEditor::slot_item_selected_save(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_saveSelectedItem(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         return;
@@ -7253,7 +7253,7 @@ void dlgTriggerEditor::slot_item_selected_save(QTreeWidgetItem* pItem)
         saveVar();
         break;
     case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_item_selected_save() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_saveSelectedItem() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 }
 
