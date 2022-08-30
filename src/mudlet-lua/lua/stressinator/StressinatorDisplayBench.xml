@@ -15,6 +15,7 @@
         <name>stressinator</name>
         <script>Stressinator = Stressinator or {}
 local st = Stressinator
+local runBench = os.getenv("AUTORUN_DISPLAY_BENCHMARK")
 
 function st.loadLines()
   local countText = st.lineString
@@ -67,6 +68,9 @@ function st.runStress(times)
     secho("Total time taken", totalTimeMS / 1000 .. "s")
     secho("Time taken per line (avg)", perLine .. "ms")
     echo(bar)
+    if runBench then
+      os.exit()
+    end
   end)
 end
 
@@ -74,6 +78,19 @@ function st.stressTest(times)
   times = tonumber(times) or 10000
   st.runStress(times)
 end
+
+local function autoBench()
+  if not runBench then
+    ioprint "Not setup to auto run display benchmark."
+    return
+  end
+  tempTimer(1, function()
+    ioprint "Setup to auto run the display benchmark, this may take a few moments"
+    st.runStress(1000000)
+  end)
+end
+
+registerNamedEventHandler("display benchmark", "autorun", "sysLoadEvent", autoBench)
 
 -- Nothing code related below here, just a whole TON of lines from The Count of Monte Cristo, by Alexandre Dumas
 
