@@ -22,6 +22,27 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
+  describe("Tests the functionality of utf8.cut", function()
+    it("should return the same string if it is <= maxLen", function()
+      local testString = "Haydée"
+      local expected = "Haydée"
+      local actual = utf8.cut(testString, 6)
+      assert.equals(expected, actual)
+      local actual = utf8.cut(testString, 10)
+      assert.equals(expected, actual)
+    end)
+
+    it("should return a string of length maxLen if it is given a string longer than that", function()
+      local testString = "This is a test of the Haydée utf8 string cutting system"
+      local expected = "This is a "
+      local expectedLength = 10
+      local actual = utf8.cut(testString, expectedLength)
+      local actualLength = utf8.len(actual)
+      assert.equals(expected, actual)
+      assert.equals(expectedLength, actualLength)
+    end)
+  end)
+
   describe("Tests the functionality of string.enclose", function()
     it("should return [[]] is empty string is given", function()
       assert.equals("[[]]", string.enclose(""))

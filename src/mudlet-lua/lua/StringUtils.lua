@@ -14,6 +14,13 @@ function string:cut(maxLen)
   end
 end
 
+function utf8.cut(str, maxLen)
+  if utf8.len(str) <= maxLen then
+    return str
+  end
+  return utf8.remove(str, maxLen)
+end
+
 
 
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.enclose
