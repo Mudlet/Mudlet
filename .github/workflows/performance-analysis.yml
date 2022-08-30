@@ -63,3 +63,10 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
 
+    - name: Run display benchmark
+      timeout-minutes: 5
+      uses: GabrielBB/xvfb-action@v1.6
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_DISPLAY_BENCHMARK: 'true'
