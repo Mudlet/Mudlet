@@ -18,7 +18,7 @@ function utf8.cut(str, maxLen)
   if utf8.len(str) <= maxLen then
     return str
   end
-  return utf8.remove(str, maxLen)
+  return utf8.remove(str, maxLen + 1)
 end
 
 
