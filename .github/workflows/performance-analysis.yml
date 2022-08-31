@@ -2,7 +2,8 @@ name: "Performance analysis"
 
 on:
   push:
-  #  branches: development
+    branches: development
+  pull_request:
   workflow_dispatch:
 
 jobs:
