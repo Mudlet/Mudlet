@@ -84,8 +84,8 @@ local function autoBench()
     ioprint "Not setup to auto run display benchmark."
     return
   end
+  ioprint "Setup to auto run the display benchmark, this may take a few moments"
   tempTimer(1, function()
-    ioprint "Setup to auto run the display benchmark, this may take a few moments"
     st.runStress(1000000)
   end)
 end
