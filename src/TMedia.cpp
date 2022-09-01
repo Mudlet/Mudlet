@@ -721,25 +721,35 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
         int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
         int startPosition = pPlayer.getMediaData().getMediaStart();
+        bool fadeInUsed = fadeInPosition != TMediaData::MediaFadeNotSet;
+        bool fadeOutUsed = fadeOutPosition != TMediaData::MediaFadeNotSet;
+        bool actionTaken = false;
 
-        if (fadeInPosition != TMediaData::MediaFadeNotSet) {
+        if (fadeInUsed) {
             if (progress < fadeInPosition) {
                 double fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((fadeInPosition - startPosition) * 1.0);
 
                 pPlayer.getMediaPlayer()->setVolume(qRound(fadeInVolume));
+                actionTaken = true;
             } else if (progress == fadeInPosition) {
                 pPlayer.getMediaPlayer()->setVolume(volume);
+                actionTaken = true;
             }
         }
 
-        if (fadeOutPosition != TMediaData::MediaFadeNotSet && progress > 0) {
+        if (!actionTaken && fadeOutUsed && progress > 0) {
             int duration = pPlayer.getMediaPlayer()->duration();
 
             if (progress > duration - fadeOutPosition) {
                 double fadeOutVolume = static_cast<double>(volume * (duration - progress)) / static_cast<double>(fadeOutPosition * 1.0);
 
                 pPlayer.getMediaPlayer()->setVolume(qRound(fadeOutVolume));
+                actionTaken = true;
             }
+        }
+
+        if (!actionTaken && ((fadeInUsed && progress > fadeInPosition) || (fadeOutUsed && progress < fadeOutPosition))) {
+            pPlayer.getMediaPlayer()->setVolume(volume); // Added to support multiple continue = true calls of same music
         }
     });
 
