@@ -69,7 +69,7 @@ function st.runStress(times)
     secho("Time taken per line (avg)", perLine .. "ms")
     echo(bar)
     if runBench then
-      os.exit()
+      tempTimer(0, closeMudlet)
     end
   end)
 end
