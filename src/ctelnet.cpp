@@ -1380,9 +1380,9 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
 
         if (option == OPT_TIMING_MARK) {
-            qDebug() << "We ARE willing to enable TIMING_MARK";
-            // send WILL TIMING_MARK
-            sendTelnetOption(TN_WILL, option);
+            // See https://www.rfc-editor.org/rfc/rfc860.txt
+            qDebug() << "We have received a DO TIMING_MARK request, sending a WONT as we do not actually do anything with it but even that can be useful to the sender.";
+            sendTelnetOption(TN_WONT, option);
         } else if (!myOptionState[idxOption]) {
             // only if the option is currently disabled
 
