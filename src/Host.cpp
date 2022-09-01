@@ -3986,3 +3986,12 @@ void Host::setCaretEnabled(bool enabled) {
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
 }
+
+bool Host::autoWrap() const {
+    return mAutoWrap;
+}
+
+void Host::setAutoWrap(bool enabled) {
+    mAutoWrap = enabled;
+    mpConsole->setAutoWrap(enabled);
+}
