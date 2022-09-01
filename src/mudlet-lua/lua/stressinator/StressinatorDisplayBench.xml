@@ -69,6 +69,7 @@ function st.runStress(times)
     secho("Time taken per line (avg)", perLine .. "ms")
     echo(bar)
     if runBench then
+      enableTrigger("generic_mapper")
       tempTimer(0, closeMudlet)
     end
   end)
@@ -84,8 +85,10 @@ local function autoBench()
     ioprint "Not setup to auto run display benchmark."
     return
   end
-  ioprint "Setup to auto run the display benchmark, this may take a few moments"
+
   tempTimer(1, function()
+    ioprint "Setup to auto run the display benchmark, this may take a few moments"
+    disableTrigger("generic_mapper")
     st.runStress(1000000)
   end)
 end
