@@ -1024,25 +1024,25 @@ the highlighted room (%1) to:</source>
       <location filename="../src/T2DMap.cpp" line="3611"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>حسنا</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3616"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3815"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>حسنا</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3820"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3878"/>
@@ -1768,73 +1768,73 @@ Tried these locations:
       <location filename="../src/TMap.cpp" line="1074"/>
       <source>n</source>
       <comment>This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>n</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1075"/>
       <source>ne</source>
       <comment>This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ne</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1076"/>
       <source>e</source>
       <comment>This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>e</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1077"/>
       <source>se</source>
       <comment>This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>se</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1078"/>
       <source>s</source>
       <comment>This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>s</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1079"/>
       <source>sw</source>
       <comment>This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>sw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1080"/>
       <source>w</source>
       <comment>This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>ص</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1081"/>
       <source>nw</source>
       <comment>This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>nw</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1082"/>
       <source>up</source>
       <comment>This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>فوق</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1083"/>
       <source>down</source>
       <comment>This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>تحت</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1084"/>
       <source>in</source>
       <comment>This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>للداخل</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1085"/>
       <source>out</source>
       <comment>This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!</comment>
-      <translation type="unfinished"/>
+      <translation>للخارج</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="112"/>
@@ -3850,7 +3850,7 @@ Uninstalling old version &apos;%2&apos;.</source>
       <location filename="../src/ctelnet.cpp" line="2035"/>
       <source>Cancel</source>
       <comment>Cancel download of GUI package from Server</comment>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1662"/>
@@ -3934,7 +3934,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2367"/>
       <source>OK</source>
       <comment>Keep the capisalisation, the translated text at 7 letters max so it aligns nicely</comment>
-      <translation type="unfinished"/>
+      <translation>حسنا</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2560"/>
@@ -5250,7 +5250,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="124"/>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1607"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>نسخ</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="126"/>
@@ -7284,7 +7284,7 @@ for all of the %n selected room(s):</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="4776"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5554"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
-      <translation type="unfinished"/>
+      <translation>المتغيرات المحددة سيتم تحديثها وتحميلها مع ملف التعريف الخاص بك.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="4912"/>
@@ -7502,12 +7502,12 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8256"/>
       <source>Couldn&apos;t save profile</source>
-      <translation type="unfinished"/>
+      <translation>لا يمكن حفظ ملف التعريف</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8256"/>
       <source>Sorry, couldn&apos;t save your profile - got the following error: %1</source>
-      <translation type="unfinished"/>
+      <translation>للأسف, لا يمكن حفظ ملف التعريف بسبب الخطأ التالي: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8263"/>
@@ -8064,7 +8064,7 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="574"/>
       <source>Copy</source>
-      <translation type="unfinished"/>
+      <translation>نسخ</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="575"/>
@@ -8600,12 +8600,12 @@ There is NO WARRANTY, to the extent permitted by law.
     <message>
       <location filename="../src/ui/map_label.ui" line="243"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>حفظ</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="250"/>
       <source>Cancel</source>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
   </context>
   <context>
@@ -12508,7 +12508,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="186"/>
       <source>North</source>
-      <translation type="unfinished"/>
+      <translation>شمال</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="320"/>
@@ -12518,7 +12518,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="454"/>
       <source>Up</source>
-      <translation type="unfinished"/>
+      <translation>فوق</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="534"/>
@@ -12547,7 +12547,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="588"/>
       <source>West</source>
-      <translation type="unfinished"/>
+      <translation>غرب</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="728"/>
@@ -12557,12 +12557,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="841"/>
       <source>East</source>
-      <translation type="unfinished"/>
+      <translation>شرق</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="972"/>
       <source>Down</source>
-      <translation type="unfinished"/>
+      <translation>أسفل</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1106"/>
@@ -12572,7 +12572,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1258"/>
       <source>South</source>
-      <translation type="unfinished"/>
+      <translation>جنوب</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1392"/>
