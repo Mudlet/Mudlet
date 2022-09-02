@@ -2405,7 +2405,7 @@ TBuffer::binarySearchHorizontalAdvance(const int &lineIndex, const int &indentSi
 // format = What the indent character is (default to space)
 // onlyWrapOneLine = True would wrap only the startLine, while False would wraps text all the way from startLine until the end of the buffer (default: True)
 // containsNewLine = True to indicate the line can contain LineFeed, while false means it does not contain LineFeed (default: False)
-inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine, bool containsNewLine)
+int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine, bool containsNewLine)
 {
     const int bufferSize = static_cast<int>(buffer.size());
     if (bufferSize < startLine || startLine < 0) {
