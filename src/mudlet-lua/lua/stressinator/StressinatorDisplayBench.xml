@@ -89,7 +89,7 @@ local function autoBench()
   tempTimer(1, function()
     ioprint "Setup to auto run the display benchmark, this may take a few moments"
     disableTrigger("generic_mapper")
-    st.runStress(1000000)
+    st.runStress(1000000) 
   end)
 end
 
