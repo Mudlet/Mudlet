@@ -85,7 +85,8 @@ local function autoBench()
     ioprint "Not setup to auto run display benchmark."
     return
   end
-
+  ioprint "Setup to auto run the display benchmark, this may take a few moments"
+  ioprint runBench
   tempTimer(1, function()
     ioprint "Setup to auto run the display benchmark, this may take a few moments"
     disableTrigger("generic_mapper")
