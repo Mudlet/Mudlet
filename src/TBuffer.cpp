@@ -2330,13 +2330,20 @@ void TBuffer::logRemainingOutput()
 }
 
 inline void
-TBuffer::binarySearchHorizontalAdvance(const int &lineIndex, const int &indentSize, const QString &lineIndent,
+TBuffer::binarySearchHorizontalAdvance(const int &lineIndex, const int &indentSize, const QString &lineIndent, const int &lineWidth,
                                        const int &screenWidth, const int &subStringStart, const int &lineCharTotal,
                                        const QFontMetrics &fontMetrics, int &lineCharIterator, const bool isBefore) {
     // Does an initial entire string check to ensure we are not searching for no reason
     QStringRef lineText = lineBuffer.at(lineIndex).midRef(subStringStart, lineCharTotal - subStringStart);
     int indentWidth = (indentSize > 0) ? fontMetrics.horizontalAdvance(lineIndent) : 0;
-    int calculatedWidth = fontMetrics.horizontalAdvance(lineText.toString()) + indentWidth;
+    int calculatedWidth;
+    // Skip horizontalAdvance for first run, since it was already calculated before binarySearch was called
+    if (subStringStart == 0) {
+        calculatedWidth = lineWidth;
+    } else {
+        calculatedWidth = fontMetrics.horizontalAdvance(lineText.toString()) + indentWidth;
+    }
+    
     if (calculatedWidth <= screenWidth) {
         lineCharIterator = lineCharTotal;
         return;
@@ -2450,7 +2457,7 @@ inline int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TCh
                 // First run gets lineWidth from outside
                 if (lineWidth > screenWidth) {
                     // This sets lineCharIterator to the position right before it breaches screenWidth
-                    binarySearchHorizontalAdvance(currentLine, indentSize, lineIndent, screenWidth, subStringStart, lineCharTotal, fontMetrics, lineCharIterator, true);
+                    binarySearchHorizontalAdvance(currentLine, indentSize, lineIndent, lineWidth, screenWidth, subStringStart, lineCharTotal, fontMetrics, lineCharIterator, true);
                     wordFinder.setPosition(lineCharIterator);
                     // If current position is not at a boundary, we move to the previous one
                     if (!wordFinder.isAtBoundary() || (wordFinder.boundaryReasons() & QTextBoundaryFinder::BreakOpportunity) == 0) {
