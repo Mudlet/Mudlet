@@ -67,7 +67,7 @@ jobs:
     - name: Copy mudlet executable in place for executing display benchmark
       run: cp ${{github.workspace}}/mudlet ${{github.workspace}}/src
       shell: bash
-    
+
     - name: Remove Mudlet config directory
       run: rm -rf $HOME/.config/mudlet
       shell: bash
