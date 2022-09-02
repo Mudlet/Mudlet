@@ -5194,7 +5194,7 @@ Count</translation>
       <location filename="../src/dlgAliasMainArea.cpp" line="33"/>
       <source>for example, ^myalias$ to match &apos;myalias&apos;</source>
       <comment>This text is shown as placeholder in the pattern box when no real pattern was entered, yet.</comment>
-      <translation type="unfinished"/>
+      <translation>for example, ^myalias$ to match &apos;myalias&apos;</translation>
     </message>
   </context>
   <context>
@@ -11545,17 +11545,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1020"/>
       <source>Wrap lines:</source>
-      <translation type="unfinished"/>
+      <translation>Wrap lines:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1027"/>
       <source>automatically</source>
-      <translation type="unfinished"/>
+      <translation>automatically</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1034"/>
       <source>or at</source>
-      <translation type="unfinished"/>
+      <translation>or at</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1170"/>
