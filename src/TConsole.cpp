@@ -2044,23 +2044,23 @@ void TConsole::setCaretMode(bool enabled)
         mUpperPane->initializeCaret();
         mUpperPane->setFocusPolicy(Qt::StrongFocus);
         mUpperPane->setFocusProxy(nullptr);
-#if defined(Q_OS_WIN32)
+//#if defined(Q_OS_WIN32)
         // windows doesn't move keyboard focus to the main window without this
         mUpperPane->setFocus(Qt::MouseFocusReason);
         mUpperPane->grabKeyboard();
 
         QAccessibleEvent event(mUpperPane, QAccessible::Focus);
         QAccessible::updateAccessibility(&event);
-#endif
+//#endif
 
     } else {
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
-#if defined(Q_OS_WIN32)
+//#if defined(Q_OS_WIN32)
         // NVDA breaks focus reset, so do it on a timer
         QTimer::singleShot(0, this, [this] () {
             mUpperPane->releaseKeyboard();
         });
-#endif
+//#endif
         if (mType == MainConsole) {
             mUpperPane->setFocusProxy(mpCommandLine);
             QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
