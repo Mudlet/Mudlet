@@ -5237,7 +5237,7 @@ Nutzungen</translation>
       <location filename="../src/dlgAliasMainArea.cpp" line="33"/>
       <source>for example, ^myalias$ to match &apos;myalias&apos;</source>
       <comment>This text is shown as placeholder in the pattern box when no real pattern was entered, yet.</comment>
-      <translation type="unfinished"/>
+      <translation>Beispiel: ^meinAlias$ reagiert auf &apos;meinAlias&apos;</translation>
     </message>
   </context>
   <context>
@@ -11625,17 +11625,17 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1020"/>
       <source>Wrap lines:</source>
-      <translation type="unfinished"/>
+      <translation>Zeilen umbrechen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1027"/>
       <source>automatically</source>
-      <translation type="unfinished"/>
+      <translation>automatisch</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1034"/>
       <source>or at</source>
-      <translation type="unfinished"/>
+      <translation>oder bei</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1170"/>
