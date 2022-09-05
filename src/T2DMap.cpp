@@ -2444,6 +2444,7 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     label.bgColor = mpDlgMapLabel->getBgColor();
     label.showOnTop = mpDlgMapLabel->isOnTop();
     label.noScaling = mpDlgMapLabel->noScale();
+    label.temporary = mpDlgMapLabel->isTemporary();
 
     QPixmap pixmap(fabs(labelRectangle.width()), fabs(labelRectangle.height()));
     pixmap.fill(Qt::transparent);
@@ -2477,6 +2478,9 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     if (Q_LIKELY(labelId >= 0)) {
         pArea->mMapLabels.insert(labelId, label);
         update();
+        if (!label.temporary) {
+            mpMap->mUnsavedMap = true;
+        }
     }
 }
 
@@ -3470,6 +3474,7 @@ void T2DMap::slot_deleteLabel()
     }
 
     bool updateNeeded = false;
+    bool saveNeeded = false;
     QMutableMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
@@ -3480,12 +3485,17 @@ void T2DMap::slot_deleteLabel()
         if (label.highlight) {
             itMapLabel.remove();
             updateNeeded = true;
+            if (!label.temporary) {
+                saveNeeded = true;
+            }
         }
     }
 
     if (updateNeeded) {
         update();
-        mpMap->mUnsavedMap = true;
+        if (saveNeeded) {
+            mpMap->mUnsavedMap = true;
+        }
     }
 }
 
@@ -4342,6 +4352,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         auto pA = mpMap->mpRoomDB->getArea(mAreaID);
         if (pA && !pA->mMapLabels.isEmpty()) {
             bool needUpdate = false;
+            bool needToSave = false;
             QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
             while (itMapLabel.hasNext()) {
                 itMapLabel.next();
@@ -4358,10 +4369,15 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 mapLabel.pos = QVector3D(mx, my, mOz);
                 pA->mMapLabels[itMapLabel.key()] = mapLabel;
                 needUpdate = true;
+                if (!mapLabel.temporary) {
+                    needToSave = true;
+                }
             }
             if (needUpdate) {
                 update();
-                mpMap->mUnsavedMap = true;
+                if (needToSave) {
+                    mpMap->mUnsavedMap = true;
+                }
             }
         }
     } else {
@@ -5093,7 +5109,6 @@ void T2DMap::slot_createLabel()
     mSizeLabel = true;
     mMultiSelection = true;
     update();
-    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_roomSelectionChanged()

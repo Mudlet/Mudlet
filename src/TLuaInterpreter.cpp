@@ -8703,6 +8703,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     float zoom = 30.0;
     bool showOnTop = true;
     bool noScaling = true;
+    bool temporary = false;
     QString fontName;
     int foregroundTransparency = 255;
     int backgroundTransparency = 50;
@@ -8738,9 +8739,12 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     if (args > 17) {
         backgroundTransparency = getVerifiedInt(L, __func__, 18, "backgroundTransparency", true);
     }
+    if (args > 18) {
+        temporary = getVerifiedBool(L, __func__, 19, "temporary", true);
+    }
 
     Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, zoom, fontSize, fontName));
+    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName));
     return 1;
 }
 
@@ -8763,6 +8767,7 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapImageLabel
 int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
+    int args = lua_gettop(L);
     int area = getVerifiedInt(L, __func__, 1, "areaID");
     QString imagePathFileName = getVerifiedString(L, __func__, 2, "imagePathFileName");
     float posx = getVerifiedFloat(L, __func__, 3, "posX");
@@ -8772,9 +8777,13 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     float height = getVerifiedFloat(L, __func__, 7, "height");
     float zoom = getVerifiedFloat(L, __func__, 8, "zoom");
     bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
+    bool temporary = false;
+    if (args > 9) {
+        temporary = getVerifiedBool(L, __func__, 10, "showOnTop", true);
+    }
 
     Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop));
+    lua_pushinteger(L, host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop, temporary));
     return 1;
 }
 

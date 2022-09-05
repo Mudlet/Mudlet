@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -160,6 +161,11 @@ QFont& dlgMapLabel::getFont()
 bool dlgMapLabel::isOnTop()
 {
     return comboBox_position->currentIndex() == 1;
+}
+
+bool dlgMapLabel::isTemporary()
+{
+    return checkBox_temporary->isChecked();
 }
 
 bool dlgMapLabel::noScale()

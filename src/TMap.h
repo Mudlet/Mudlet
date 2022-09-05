@@ -86,7 +86,16 @@ public:
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
-    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop);
+    int createMapImageLabel(int area,
+                            QString filePath,
+                            float x,
+                            float y,
+                            float z,
+                            float width,
+                            float height,
+                            float zoom,
+                            bool showOnTop,
+                            bool temporary);
     int createMapLabel(int area,
                        const QString& text,
                        float x,
@@ -96,6 +105,7 @@ public:
                        QColor bg,
                        bool showOnTop = true,
                        bool noScaling = true,
+                       bool temporary = false,
                        qreal zoom = 30.0,
                        int fontSize = 50,
                        std::optional<QString> fontName = std::nullopt);
