@@ -2048,9 +2048,6 @@ void TConsole::setCaretMode(bool enabled)
         // windows doesn't move keyboard focus to the main window without this
         mUpperPane->setFocus(Qt::MouseFocusReason);
         mUpperPane->grabKeyboard();
-
-        QAccessibleEvent event(mUpperPane, QAccessible::Focus);
-        QAccessible::updateAccessibility(&event);
 #endif
 
     } else {
