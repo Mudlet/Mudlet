@@ -3985,7 +3985,6 @@ bool Host::caretEnabled() const {
 void Host::setCaretEnabled(bool enabled) {
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
-    qDebug() << "caret mode" << enabled;
 }
 
 bool Host::autoWrap() const {
