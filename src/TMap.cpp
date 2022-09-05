@@ -157,19 +157,19 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
     bool result = pR->setArea(area, isToDeferAreaRelatedRecalculations);
     if (result) {
         mMapGraphNeedsUpdate = true;
-        mUnsavedMap = true;
+        setUnsaved(__func__);
     }
     return result;
 }
 
 bool TMap::addRoom(int id)
 {
-    bool ret = mpRoomDB->addRoom(id);
-    if (ret) {
+    if (mpRoomDB->addRoom(id)) {
         mMapGraphNeedsUpdate = true;
-        mUnsavedMap = true;
+        setUnsaved(__func__);
+        return true;
     }
-    return ret;
+    return false;
 }
 
 bool TMap::setRoomCoordinates(int id, int x, int y, int z)
@@ -183,7 +183,7 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     pR->y = y;
     pR->z = z;
 
-    mUnsavedMap = true;
+    setUnsaved(__func__);
     return true;
 }
 
@@ -308,7 +308,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
 
         setExit(fromRoomId, minDistanceRoom, dirType);
         setExit(minDistanceRoom, fromRoomId, scmReverseDirections.value(dirType));
-        mUnsavedMap = true;
+        setUnsaved(__func__);
         return {};
     }
 
@@ -382,7 +382,7 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
     int usableStubDirection = *(usableStubDirections.constBegin());
     setExit(fromRoomId, toRoomId, usableStubDirection);
     setExit(toRoomId, fromRoomId, scmReverseDirections.value(usableStubDirection));
-    mUnsavedMap = true;
+    setUnsaved(__func__);
     return {};
 }
 
@@ -428,7 +428,7 @@ QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int 
 
     setExit(fromRoomId, toRoomId, dirType);
     setExit(toRoomId, fromRoomId, scmReverseDirections.value(dirType));
-    mUnsavedMap = true;
+    setUnsaved(__func__);
     return {};
 }
 
@@ -512,7 +512,7 @@ bool TMap::setExit(int from, int to, int dir)
     }
     pA->determineAreaExitsOfRoom(pR->getId());
     mpRoomDB->updateEntranceMap(pR);
-    mUnsavedMap = true;
+    setUnsaved(__func__);
     return ret;
 }
 
@@ -2178,7 +2178,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     }
 
     if (!temporary) {
-        mUnsavedMap = true;
+        setUnsaved(__func__);
     }
     return labelId;
 }
@@ -2217,7 +2217,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     }
 
     if (!temporary) {
-        mUnsavedMap = true;
+        setUnsaved(__func__);
     }
     return labelId;
 }
@@ -2238,7 +2238,7 @@ void TMap::deleteMapLabel(int area, int labelId)
         // The TMapLabel default constructor sets the temporary member to false
         // so we can safely rely on it being true for a permanent one:
         if (!label.temporary) {
-            mUnsavedMap = true;
+            setUnsaved(__func__);
         }
         if (mpMapper) {
             mpMapper->mp2dMap->update();
@@ -3463,4 +3463,15 @@ void TMap::restore16ColorSet()
     mCustomEnvColors[270] = mpHost->mLightCyan_2;
     mCustomEnvColors[271] = mpHost->mLightWhite_2;
     mCustomEnvColors[272] = mpHost->mLightBlack_2;
+}
+
+void TMap::setUnsaved(const char* fromWhere)
+{
+#if defined(DEBUG_MAPAUTOSAVE)
+    Q_UNUSED(fromWhere);
+#else
+    QString nowString = QDateTime::currentDateTimeUtc().toString("HH:mm:ss.zzz");
+    qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
+#endif
+    mUnsavedMap = true;
 }
