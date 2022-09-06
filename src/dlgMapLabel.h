@@ -3,7 +3,6 @@
 
 /***************************************************************************
  *   Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -47,7 +46,6 @@ public:
     QColor& getFgColor();
     QFont& getFont();
     bool isOnTop();
-    bool isTemporary();
     bool noScale();
 
 signals:

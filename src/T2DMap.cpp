@@ -2444,7 +2444,6 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     label.bgColor = mpDlgMapLabel->getBgColor();
     label.showOnTop = mpDlgMapLabel->isOnTop();
     label.noScaling = mpDlgMapLabel->noScale();
-    label.temporary = mpDlgMapLabel->isTemporary();
 
     QPixmap pixmap(fabs(labelRectangle.width()), fabs(labelRectangle.height()));
     pixmap.fill(Qt::transparent);
