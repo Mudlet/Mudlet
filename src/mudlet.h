@@ -505,7 +505,7 @@ public:
         {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a>", ":/icons/cleftofdimensions.png"}},
         {"Legends of the Jedi", {"legendsofthejedi.com", 5656, false, "<a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a>", ":/icons/legendsofthejedi_120x30.png"}},
         {"CoreMUD", {"coremud.org", 4020, true, "<a href='https://coremud.org/'>coremud.org</a>", ":/icons/coremud_icon.jpg"}},
-        {"CoreMUD Temp", {"", 4020, true, "<a href='https://core.evilmog.io/'>core.evilmog.io</a>", ":/icons/coremud_icon.jpg"}},
+        {"CoreMUD Temp", {"core.evilmog.io", 4020, true, "<a href='https://core.evilmog.io/'>core.evilmog.io</a>", ":/icons/coremud_icon.jpg"}},
         {"Multi-Users in Middle-earth", {"mume.org", 4242, true, "<a href='https://mume.org/'>mume.org</a>", ":/icons/mume.png"}},
     };
     // clang-format on
