@@ -63,3 +63,18 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
 
+    - name: Copy mudlet executable in place for executing display benchmark
+      run: cp ${{github.workspace}}/mudlet ${{github.workspace}}/src
+      shell: bash
+
+    - name: Remove Mudlet config directory
+      run: rm -rf $HOME/.config/mudlet
+      shell: bash
+
+    - name: Run display benchmark
+      timeout-minutes: 3
+      uses: GabrielBB/xvfb-action@v1.6
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_DISPLAY_BENCHMARK: 'true'
