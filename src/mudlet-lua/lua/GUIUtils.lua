@@ -2024,6 +2024,7 @@ end
 function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local lastColour = ansi_default_color
+  local coloursToUse = nil
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
@@ -2047,7 +2048,7 @@ function ansi2decho(text, ansi_default_color)
     for i = 0, 7 do
       lightColours[i] = convertindex(i+8)
     end
-    local coloursToUse = colours
+    coloursToUse = coloursToUse or colours
 
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
     -- the data first, then assemble it in the order we need at the end
