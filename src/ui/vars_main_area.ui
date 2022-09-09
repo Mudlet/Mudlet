@@ -216,6 +216,12 @@ from GUI)</string>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>lineEdit_var_name</tabstop>
+  <tabstop>comboBox_variable_key_type</tabstop>
+  <tabstop>comboBox_variable_value_type</tabstop>
+  <tabstop>checkBox_variable_hidden</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
