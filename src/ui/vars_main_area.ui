@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>515</width>
+    <width>560</width>
     <height>75</height>
    </rect>
   </property>
@@ -86,6 +86,9 @@
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
+        <property name="buddy">
+         <cstring>comboBox_variable_value_type</cstring>
+        </property>
        </widget>
       </item>
       <item row="0" column="0">
@@ -110,6 +113,9 @@
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_var_name</cstring>
            </property>
           </widget>
          </item>
@@ -176,6 +182,9 @@ from GUI)</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="buddy">
+         <cstring>comboBox_variable_key_type</cstring>
         </property>
        </widget>
       </item>
