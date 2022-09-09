@@ -5705,7 +5705,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "22.8.2"
+local newversion = "22.9.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -11501,7 +11501,7 @@ end</script>
 						<name>mmp.stickmudStopSpeedwalkForWrongDir</name>
 						<packageName></packageName>
 						<script>function mmp.stickmudStopSpeedwalkForWrongDir()
-  if mmp.game and mmp.game ~= "StickMUD" then
+  if mmp.game and mmp.game ~= "stickmud" then
     return
   end
   if #mmp.speedWalkPath &gt; 0 then
