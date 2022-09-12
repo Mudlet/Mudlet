@@ -580,6 +580,8 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
         pCondition->multiCapturePosList.push_back(posList);
         if (nameMatches != nullptr) {
             pCondition->nameCaptures.push_back(*nameMatches);
+        } else {
+            pCondition->nameCaptures.push_back(QVector<QPair<QString,QString>>());
         }
         if (mudlet::debugMode) {
             TDebug(Qt::darkYellow, Qt::black) << "match state " << mConditionMap.size() << "/" << mConditionMap.size() << " condition #" << regexNumber << "=true (" << regexNumber
