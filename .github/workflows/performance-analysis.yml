@@ -80,10 +80,5 @@ jobs:
       env:
         AUTORUN_DISPLAY_BENCHMARK: 'true'
 
-    - name: Setup NodeJS & npm
-      uses: actions/setup-node@v3
-      with:
-        node-version: 16
-
     - name: Upload results
       uses: Mudlet/gsheet-append-action@development
