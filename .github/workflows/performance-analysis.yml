@@ -79,3 +79,6 @@ jobs:
         run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_DISPLAY_BENCHMARK: 'true'
+
+    - name: Upload results
+      uses: Mudlet/gsheet-append-action@development
