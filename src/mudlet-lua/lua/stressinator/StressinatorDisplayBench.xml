@@ -60,9 +60,10 @@ function st.runStress(times)
       cecho(string.format("&lt;green&gt;%s: &lt;firebrick&gt;%s\n", catString, result))
     end
     local bar = string.rep("*", 50) .. "\n"
+    local ver = getMudletVersion("string")
     echo("\n\n" .. bar)
     echo("Stress test complete, here's what we know:\n")
-    secho("Mudlet Version", getMudletVersion("string"))
+    secho("Mudlet Version", ver)
     secho("Started", startTime)
     secho("Finished", finishTime)
     secho("Total lines processed", times)
@@ -71,6 +72,7 @@ function st.runStress(times)
     echo(bar)
     if runBench then
       enableTrigger("generic_mapper")
+      os.execute(string.format([[echo PERFDATA="%s,%s,%s,rpi 4b 4gb linux" >> $GITHUB_ENV ]], ver, times, perLine))
       tempTimer(0, closeMudlet)
     end
   end)
