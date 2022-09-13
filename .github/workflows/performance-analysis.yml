@@ -85,6 +85,7 @@ jobs:
       with:
         node-version: 16
         cache: 'npm'
+        cache-dependency-path: npm-cache/package-lock.json
         
     - name: Install Google Sheets actions dependencies
       run: npm install
