@@ -84,9 +84,6 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: 16
-        
-    - name: Install Google Sheets actions dependencies
-      run: npm install
 
     - name: Upload results
       uses: Mudlet/gsheet-append-action@development
