@@ -81,4 +81,4 @@ jobs:
         AUTORUN_DISPLAY_BENCHMARK: 'true'
 
     - name: Upload results
-      uses: Mudlet/gsheet-append-action@development
+      uses: Mudlet/gsheets-append-action@development
