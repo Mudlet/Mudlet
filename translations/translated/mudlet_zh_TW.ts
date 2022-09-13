@@ -6,7 +6,7 @@
     <message>
       <location filename="../src/discord.cpp" line="151"/>
       <source>via Mudlet</source>
-      <translation>透过Mudlet的</translation>
+      <translation>透過 Mudlet</translation>
     </message>
   </context>
   <context>
@@ -24,7 +24,7 @@
     <message>
       <location filename="../3rdparty/dblsqd/dblsqd/feed.cpp" line="295"/>
       <source>Could not verify download integrity.</source>
-      <translation>无法验证下载完整性。</translation>
+      <translation>無法驗證下載完整性。</translation>
     </message>
   </context>
   <context>
@@ -32,18 +32,18 @@
     <message>
       <location filename="../src/glwidget.cpp" line="280"/>
       <source>No rooms in the map - load another one, or start mapping from scratch to begin.</source>
-      <translation>该地图中没有任何房间数据 - 加载另一个, 或从头开始制作新地图。</translation>
+      <translation>地圖中沒有房間 - 載入其他地圖，或從頭開始創建地圖</translation>
     </message>
     <message>
       <location filename="../src/glwidget.cpp" line="285"/>
       <source>You do not have a map yet - load one, or start mapping from scratch to begin.</source>
-      <translation>您还没有地图 - 你可以加载一个现有地图，或新建一个地图。</translation>
+      <translation>您還沒有地圖 - 加載一個地圖，或從頭開始創建地圖。</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="282"/>
       <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
       <translation>
-        <numerusform>你已加载地图（%n 房间），但 Mudlet 不知道你当前在哪个房间。</numerusform>
+        <numerusform>您已載入地圖（共 %n 個房間），但 Mudlet 不知道您現在的位置。</numerusform>
       </translation>
     </message>
   </context>
@@ -52,7 +52,7 @@
     <message>
       <location filename="../src/Host.cpp" line="441"/>
       <source>Text to send to the game</source>
-      <translation>要发送到游戏的文本</translation>
+      <translation>要傳送至遊戲的文字</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="615"/>
@@ -70,13 +70,13 @@
       <location filename="../src/Host.cpp" line="918"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[  OK  ]  - %1 非常感谢你使用公共测试版!</translation>
+      <translation>[  OK  ] - %1 非常感謝您使用公開測試版本！</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="919"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
-      <translation>[  OK  ]  - %1 提交报告将帮助我们提升 Mudlet .</translation>
+      <translation>[  OK  ] - %1 提交任何問題，幫助我們讓 Mudlet 變得更好。</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1709"/>
@@ -13047,7 +13047,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="20"/>
       <source>Which area would you like to move the room(s) to?</source>
-      <translation>您要将房间移到哪个区域?</translation>
+      <translation>您想要將房間移動至哪個區域？</translation>
     </message>
   </context>
   <context>
@@ -13055,7 +13055,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_area.ui" line="26"/>
       <source>Form</source>
-      <translation>表单</translation>
+      <translation>表單</translation>
     </message>
   </context>
   <context>
@@ -13083,7 +13083,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="169"/>
       <source>Time:</source>
-      <translation>时间：</translation>
+      <translation>時間：</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
@@ -13366,7 +13366,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="128"/>
       <source>Variable name ...</source>
-      <translation>变量名...</translation>
+      <translation>變數名稱 ...</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="138"/>
@@ -13415,22 +13415,22 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="56"/>
       <source>string</source>
-      <translation>字符串</translation>
+      <translation>字串</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="61"/>
       <source>number</source>
-      <translation>数字</translation>
+      <translation>數字</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="66"/>
       <source>boolean</source>
-      <translation>布尔值</translation>
+      <translation>布林值</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="76"/>
       <source>function</source>
-      <translation>函数</translation>
+      <translation>函式</translation>
     </message>
   </context>
 </TS>
