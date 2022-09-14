@@ -953,7 +953,7 @@ QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quin
                    "and change through the coming years and those players who seek challenge and "
                    "possess imagination will come in search of what the 3D world fails to offer them.");
     }
-    if (hostUrl == QLatin1String("coremud.org")) {
+    if (hostUrl == QLatin1String("coremud.org") || hostUrl == QLatin1String("core.evilmog.io")) {
         return qsl("Welcome to Core Mud, an interactive text MUD set on the planet formal star-charts "
                    "refer to as Hermes 571-G, but that everyone in the know refers to simply as \"Core\"."
                    "\n\n"
