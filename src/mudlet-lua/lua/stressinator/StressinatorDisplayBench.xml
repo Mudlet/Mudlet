@@ -16,6 +16,10 @@
         <script>Stressinator = Stressinator or {}
 local st = Stressinator
 local runBench = os.getenv("AUTORUN_DISPLAY_BENCHMARK")
+local commitDate
+if runBench then
+  commitDate = os.getenv("COMMIT_DATE")
+end
 
 function st.loadLines()
   local countText = st.lineString
@@ -72,7 +76,7 @@ function st.runStress(times)
     echo(bar)
     if runBench then
       enableTrigger("generic_mapper")
-      os.execute(string.format([[echo PERFDATA="%s,%s,%s,rpi 4b 4gb linux" >> $GITHUB_ENV ]], ver, times, perLine))
+      os.execute(string.format([[echo PERFDATA="%s,%s,%s,rpi 4b 4gb linux,%s" >> $GITHUB_ENV ]], ver, times, perLine, commitDate))
       tempTimer(0, closeMudlet)
     end
   end)

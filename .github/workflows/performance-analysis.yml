@@ -71,6 +71,10 @@ jobs:
     - name: Remove Mudlet config directory
       run: rm -rf $HOME/.config/mudlet
       shell: bash
+    
+    - name: Get commit date
+      id: commitdate
+      run: echo "::set-output name=date::$(TZ=UTC0 git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%S' --format='%cd' ${{ env.GIT_COMMIT_SHA }})"
 
     - name: Run display benchmark
       timeout-minutes: 3
@@ -79,6 +83,7 @@ jobs:
         run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_DISPLAY_BENCHMARK: 'true'
+        COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
 
     - name: Upload results
       uses: Mudlet/gsheets-append-action@development
