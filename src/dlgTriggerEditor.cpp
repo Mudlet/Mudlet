@@ -8357,9 +8357,9 @@ void dlgTriggerEditor::setShortcuts(const bool active)
     for (auto& action : actionList) {
         actionText = action->text();
         if (actionText ==  tr("Save Item")) {
-            action->setShortcut((active) ? tr("Ctrl+S") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+S") : QString());
         } else if (actionText == tr("Save Profile")) {
-            action->setShortcut((active) ? tr("Ctrl+Shift+S") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+Shift+S") : QString());
         }
     }
     actionList = toolBar2->actions();
@@ -8367,25 +8367,25 @@ void dlgTriggerEditor::setShortcuts(const bool active)
         actionText = action->text();
         // TODO: Refactor into nice list to iterate
         if (actionText == tr("Triggers")) {
-            action->setShortcut((active) ? tr("Ctrl+1") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+1") : QString());
         } else if (actionText == tr("Aliases")) {
-            action->setShortcut((active) ? tr("Ctrl+2") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+2") : QString());
         } else if (actionText == tr("Scripts")) {
-            action->setShortcut((active) ? tr("Ctrl+3") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+3") : QString());
         } else if (actionText == tr("Timers")) {
-            action->setShortcut((active) ? tr("Ctrl+4") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+4") : QString());
         } else if (actionText == tr("Keys")) {
-            action->setShortcut((active) ? tr("Ctrl+5") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+5") : QString());
         } else if (actionText == tr("Variables")) {
-            action->setShortcut((active) ? tr("Ctrl+6") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+6") : QString());
         } else if (actionText == tr("Buttons")) {
-            action->setShortcut((active) ? tr("Ctrl+7") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+7") : QString());
         } else if (actionText == tr("Errors")) {
-            action->setShortcut((active) ? tr("Ctrl+8") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+8") : QString());
         } else if (actionText == tr("Statistics")) {
-            action->setShortcut((active) ? tr("Ctrl+9") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+9") : QString());
         } else if (actionText == tr("Debug")) {
-            action->setShortcut((active) ? tr("Ctrl+0") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+0") : QString());
         }
     }
 }
