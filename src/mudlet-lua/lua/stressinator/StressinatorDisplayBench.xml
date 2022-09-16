@@ -76,7 +76,7 @@ function st.runStress(times)
     echo(bar)
     if runBench then
       enableTrigger("generic_mapper")
-      os.execute(string.format([[echo PERFDATA="%s,%s,%s,rpi 4b 4gb linux,%s" >> $GITHUB_ENV ]], ver, times, perLine, commitDate))
+      os.execute(string.format([[echo PERFDATA="%s,%s,%s,rpi 4b 4gb linux,%s" >> $GITHUB_ENV ]], ver, commitDate, times, perLine))
       tempTimer(0, closeMudlet)
     end
   end)

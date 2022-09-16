@@ -71,7 +71,7 @@ jobs:
     - name: Remove Mudlet config directory
       run: rm -rf $HOME/.config/mudlet
       shell: bash
-    
+
     - name: Get commit date
       id: commitdate
       run: echo "::set-output name=date::$(TZ=UTC0 git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%S' --format='%cd' ${{ env.GIT_COMMIT_SHA }})"
