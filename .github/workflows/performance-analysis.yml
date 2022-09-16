@@ -93,3 +93,57 @@ jobs:
         SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
         TABLE_START_CELL: 'A64'
         DATA_ENV_NAME: 'PERFDATA'
+
+    - name: Run display benchmark
+      timeout-minutes: 3
+      uses: GabrielBB/xvfb-action@v1.6
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_DISPLAY_BENCHMARK: 'true'
+        COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
+
+    - name: Upload results
+      uses: Mudlet/gsheets-append-action@development
+      with:
+        GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
+        GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
+        SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
+        TABLE_START_CELL: 'A64'
+        DATA_ENV_NAME: 'PERFDATA'
+
+    - name: Run display benchmark
+      timeout-minutes: 3
+      uses: GabrielBB/xvfb-action@v1.6
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_DISPLAY_BENCHMARK: 'true'
+        COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
+
+    - name: Upload results
+      uses: Mudlet/gsheets-append-action@development
+      with:
+        GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
+        GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
+        SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
+        TABLE_START_CELL: 'A64'
+        DATA_ENV_NAME: 'PERFDATA'
+
+    - name: Run display benchmark
+      timeout-minutes: 3
+      uses: GabrielBB/xvfb-action@v1.6
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_DISPLAY_BENCHMARK: 'true'
+        COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
+
+    - name: Upload results
+      uses: Mudlet/gsheets-append-action@development
+      with:
+        GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
+        GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
+        SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
+        TABLE_START_CELL: 'A64'
+        DATA_ENV_NAME: 'PERFDATA'
