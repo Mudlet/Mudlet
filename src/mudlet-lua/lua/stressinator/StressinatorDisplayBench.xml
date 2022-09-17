@@ -22,11 +22,11 @@ local ver = getMudletVersion("string")
 if runBench then
   commitDate = os.getenv("COMMIT_DATE")
   local versionTbl = getMudletVersion()
-  local sha = os.getenv("GITHUB_SHA"):sub(7)
+  local sha = os.getenv("GITHUB_SHA"):sub(1,7)
   local mainVersion = f"{versionTbl.major}.{versionTbl.minor}.{versionTbl.revision}"
   local build = versionTbl.build
   if build ~= "" then
-    build = build:gsub("-%w+$", sha)
+    build = build:gsub("%w+$", sha)
   end
   ver = mainVersion .. build
 end
