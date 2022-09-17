@@ -17,8 +17,18 @@
 local st = Stressinator
 local runBench = os.getenv("AUTORUN_DISPLAY_BENCHMARK")
 local commitDate
+local ver = getMudletVersion("string")
+
 if runBench then
   commitDate = os.getenv("COMMIT_DATE")
+  local versionTbl = getMudletVersion()
+  local sha = os.getenv("GIT_COMMIT_SHORT_SHA")
+  local mainVersion = f"{versionTbl.major}.{versionTbl.minor}.{versionTbl.revision}"
+  local build = versionTbl.build
+  if build ~= "" then
+    build = build:gsub("-%w+$", sha)
+  end
+  ver = mainVersion .. build
 end
 
 function st.loadLines()
@@ -64,7 +74,6 @@ function st.runStress(times)
       cecho(string.format("&lt;green&gt;%s: &lt;firebrick&gt;%s\n", catString, result))
     end
     local bar = string.rep("*", 50) .. "\n"
-    local ver = getMudletVersion("string")
     echo("\n\n" .. bar)
     echo("Stress test complete, here's what we know:\n")
     secho("Mudlet Version", ver)
@@ -76,7 +85,7 @@ function st.runStress(times)
     echo(bar)
     if runBench then
       enableTrigger("generic_mapper")
-      os.execute(string.format([[echo PERFDATA="%s,'%s,%s,rpi 4b 4gb linux,%s" >> $GITHUB_ENV ]], ver, commitDate, times, perLine))
+      os.execute(string.format([[echo PERFDATA="%s,'%s,%s,%s,rpi 4b 4gb linux" >> $GITHUB_ENV ]], ver, commitDate, times, perLine))
       tempTimer(0, closeMudlet)
     end
   end)
