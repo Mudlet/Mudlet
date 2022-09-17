@@ -1272,48 +1272,48 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="105"/>
       <source>Error Console</source>
-      <translation type="unfinished"/>
+      <translation>错误控制台</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="106"/>
       <source>Error messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>此处显示错误消息。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="108"/>
       <source>Sub Console</source>
-      <translation type="unfinished"/>
+      <translation>子控制台</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="109"/>
       <source>Sub console messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>此处显示子控制台消息。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="111"/>
       <source>User Window</source>
-      <translation type="unfinished"/>
+      <translation>用户窗口</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="112"/>
       <source>User window messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>用户窗口信息显示在这里。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="125"/>
       <source>Main Window</source>
-      <translation type="unfinished"/>
+      <translation>主窗口</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="126"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
-      <translation type="unfinished"/>
+      <translation>游戏内容显示在这里。它可能包含子控制台和地图窗口。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="272"/>
       <location filename="../src/TConsole.cpp" line="2020"/>
       <source>main window</source>
-      <translation type="unfinished"/>
+      <translation>主窗口</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="361"/>
@@ -1365,13 +1365,13 @@ rooms:</source>
       <location filename="../src/TConsole.cpp" line="2017"/>
       <source>main window past content</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>主窗口历史内容</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2018"/>
       <source>main window live content</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>主窗口实时内容</translation>
     </message>
   </context>
   <context>
@@ -6891,7 +6891,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1289"/>
       <location filename="../src/dlgRoomExits.cpp" line="1298"/>
       <source>Entered number is invalid.</source>
-      <translation type="unfinished"/>
+      <translation>输入的数字无效。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1522"/>
@@ -11560,12 +11560,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1027"/>
       <source>automatically</source>
-      <translation type="unfinished"/>
+      <translation>自动</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1034"/>
       <source>or at</source>
-      <translation type="unfinished"/>
+      <translation>或在</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1170"/>
@@ -12437,7 +12437,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3851"/>
       <source>Accessibility</source>
-      <translation type="unfinished"/>
+      <translation>辅助功能</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3857"/>
@@ -12452,27 +12452,27 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3868"/>
       <source>show them</source>
-      <translation type="unfinished"/>
+      <translation>显示</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3873"/>
       <source>hide them</source>
-      <translation type="unfinished"/>
+      <translation>隐藏</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3878"/>
       <source>replace with a space</source>
-      <translation type="unfinished"/>
+      <translation>替换为空格</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3886"/>
       <source>When the game sends blank lines:</source>
-      <translation type="unfinished"/>
+      <translation>当游戏发送空白行时:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3896"/>
       <source>Switch between input line and main window using:</source>
-      <translation type="unfinished"/>
+      <translation>在输入行和主窗口之间切换：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3907"/>
