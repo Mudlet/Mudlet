@@ -1267,7 +1267,7 @@ rooms:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="89"/>
       <source>Debug messages are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>调试信息显示在这里。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="105"/>
@@ -5202,7 +5202,7 @@ Count</source>
       <location filename="../src/dlgAliasMainArea.cpp" line="33"/>
       <source>for example, ^myalias$ to match &apos;myalias&apos;</source>
       <comment>This text is shown as placeholder in the pattern box when no real pattern was entered, yet.</comment>
-      <translation type="unfinished"/>
+      <translation>例如，^myalias$匹配 &apos;myalias&apos;</translation>
     </message>
   </context>
   <context>
@@ -6177,7 +6177,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="700"/>
       <source>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</source>
-      <translation type="unfinished"/>
+      <translation>来自字典文件 &lt;tt&gt;%1.dic&lt;/tt&gt; （及其配套后缀 &lt;tt&gt;.aff&lt;/tt&gt; 文件）。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="837"/>
@@ -6416,12 +6416,12 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3455"/>
       <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
-      <translation type="unfinished"/>
+      <translation>若仅使用特定字体的符号(字形)，房间符号将会像这样显示。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3460"/>
       <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
-      <translation type="unfinished"/>
+      <translation>如果使用任意字体符号(字形)，房间符号将会像这样显示。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3500"/>
@@ -6436,7 +6436,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3526"/>
       <source>The symbol can be made entirely from glyphs in the specified font.</source>
-      <translation type="unfinished"/>
+      <translation>符号可以完全由指定字体的字形制成。</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3544"/>
@@ -6735,7 +6735,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="997"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>没有输入命令或Lua脚本，如果保留当前空白，当点击 &lt;tt&gt;保存&lt;/tt&gt; ，这个出口将被删除。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="999"/>
@@ -6755,7 +6755,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomExits.cpp" line="1087"/>
       <source>&lt;b&gt;Room is locked&lt;/b&gt;, it will not be used for speed-walks for any exit that leads to it.</source>
       <comment>Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that goes to it.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;房间已锁定&lt;/b&gt;，它将不会被用于快速行走。</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1079"/>
@@ -11555,7 +11555,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1020"/>
       <source>Wrap lines:</source>
-      <translation type="unfinished"/>
+      <translation>换行</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1027"/>
@@ -11605,7 +11605,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1372"/>
       <source>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</source>
-      <translation type="unfinished"/>
+      <translation>显示双向 Unicode 字符，这些字符可用于更改源代码的含义，同时保持不可见状态</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1375"/>
@@ -12442,12 +12442,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3857"/>
       <source>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</source>
-      <translation type="unfinished"/>
+      <translation>在某些平台( 如 macOS ) 上，屏幕朗读器工具有一些问题，这些问题会完全的引入文本，而不会跳过。 您可以选择在使用此选项的游戏中禁用发布新文本，以使用定制 TTS ，从而避免此类问题</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3860"/>
       <source>Announce incoming text in screen reader</source>
-      <translation type="unfinished"/>
+      <translation>在屏幕阅读器中发布输入文本</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3868"/>
@@ -12477,22 +12477,22 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3907"/>
       <source>no key</source>
-      <translation type="unfinished"/>
+      <translation>未绑定按键</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3912"/>
       <source>Tab</source>
-      <translation type="unfinished"/>
+      <translation>Tab</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3917"/>
       <source>Ctrl+Tab</source>
-      <translation type="unfinished"/>
+      <translation>Ctrl+Tab</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3922"/>
       <source>F6</source>
-      <translation type="unfinished"/>
+      <translation>F6</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3978"/>
