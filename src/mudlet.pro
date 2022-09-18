@@ -247,7 +247,7 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # * Produce a timestamped message on the OS's command line when an autosave of
 # the map file gets requested and when such a request gets actioned (or
 # rejected because the profile is being loaded):
-# DEFINES+=DEBUG_MAPAUTOSAVE
+DEFINES+=DEBUG_MAPAUTOSAVE
 
 
 unix:!macx {
