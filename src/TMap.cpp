@@ -2235,8 +2235,8 @@ void TMap::deleteMapLabel(int area, int labelId)
         // not have a "default constructed" label - i.e. a real one and not
         // one that the QMap<T1, T2>::take(const T1&) has created for us in the
         // absence of an actual TMapLabel.
-        // The TMapLabel default constructor sets the temporary member to false
-        // so we can safely rely on it being true for a permanent one:
+        // The TMapLabel default constructor sets the 'temporary' class member
+        // to false so we can safely rely on it being true for a temporary one:
         if (!label.temporary) {
             setUnsaved(__func__);
         }
