@@ -4404,7 +4404,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                     continue;
                 }
 
-                float rx = static_cast<float>(room->x     ) * mRoomWidth  + fx;
+                float rx = static_cast<float>(room->x) * mRoomWidth  + fx;
                 float ry = static_cast<float>(room->y * -1) * mRoomHeight + fy;
                 QRectF dr;
                 if (pArea->gridMode) {
