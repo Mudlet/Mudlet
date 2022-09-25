@@ -1,0 +1,58 @@
+{
+	"backtrace" : 0,
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : 
+		[
+			"3rdparty/edbee-lib/vendor/qslog/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			}
+		]
+	},
+	"id" : "QsLog_autogen_timestamp_deps::@7b586b0758a5c53d02d4",
+	"isGeneratorProvided" : true,
+	"name" : "QsLog_autogen_timestamp_deps",
+	"paths" : 
+	{
+		"build" : "3rdparty/edbee-lib/edbee-lib/qslog",
+		"source" : "3rdparty/edbee-lib/vendor/qslog"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				0
+			]
+		},
+		{
+			"name" : "CMake Rules",
+			"sourceIndexes" : 
+			[
+				1
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "cmake-build-debug-clang-event-trace/3rdparty/edbee-lib/edbee-lib/qslog/CMakeFiles/QsLog_autogen_timestamp_deps",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "cmake-build-debug-clang-event-trace/3rdparty/edbee-lib/edbee-lib/qslog/CMakeFiles/QsLog_autogen_timestamp_deps.rule",
+			"sourceGroupIndex" : 1
+		}
+	],
+	"type" : "UTILITY"
+}

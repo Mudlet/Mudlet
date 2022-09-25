@@ -1,0 +1,6 @@
+-I/media/vadi/SSDer/Programs/Mudlet/3rdparty/communi/include/IrcCore
+-I/media/vadi/SSDer/Programs/Mudlet/3rdparty/communi/include/IrcModel
+-I/media/vadi/SSDer/Programs/Mudlet/3rdparty/communi/include/IrcUtil
+-o
+/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/communi/IrcCore/moc_ircconnection.cpp
+/media/vadi/SSDer/Programs/Mudlet/3rdparty/communi/include/IrcCore/ircconnection.h

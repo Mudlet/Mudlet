@@ -1,0 +1,154 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install"
+		],
+		"files" : 
+		[
+			"3rdparty/qtkeychain/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 243,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 270,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 274,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 308,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 311,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 315,
+				"parent" : 0
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "share/qt5keychain/translations",
+			"paths" : 
+			[
+				"cmake-build-debug-clang-event-trace/3rdparty/qtkeychain/qtkeychain_de.qm",
+				"cmake-build-debug-clang-event-trace/3rdparty/qtkeychain/qtkeychain_fr.qm",
+				"cmake-build-debug-clang-event-trace/3rdparty/qtkeychain/qtkeychain_ro.qm",
+				"cmake-build-debug-clang-event-trace/3rdparty/qtkeychain/qtkeychain_ru.qm",
+				"cmake-build-debug-clang-event-trace/3rdparty/qtkeychain/qtkeychain_zh.qm"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 2,
+			"component" : "Unspecified",
+			"destination" : "include/qt5keychain",
+			"paths" : 
+			[
+				"3rdparty/qtkeychain/keychain.h",
+				"cmake-build-debug-clang-event-trace/3rdparty/qtkeychain/qkeychain_export.h"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"3rdparty/qtkeychain/libqt5keychain.so.0.13.99",
+				"3rdparty/qtkeychain/libqt5keychain.so.1"
+			],
+			"targetId" : "qt5keychain::@d74965387978f0573745",
+			"targetIndex" : 36,
+			"targetInstallNamelink" : "skip",
+			"type" : "target"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"3rdparty/qtkeychain/libqt5keychain.so"
+			],
+			"targetId" : "qt5keychain::@d74965387978f0573745",
+			"targetIndex" : 36,
+			"targetInstallNamelink" : "only",
+			"type" : "target"
+		},
+		{
+			"backtrace" : 4,
+			"component" : "Unspecified",
+			"destination" : "mkspecs/modules",
+			"paths" : 
+			[
+				"cmake-build-debug-clang-event-trace/3rdparty/qtkeychain/qt_Qt5Keychain.pri"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 5,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/Qt5Keychain",
+			"exportName" : "Qt5KeychainLibraryDepends",
+			"exportTargets" : 
+			[
+				{
+					"id" : "qt5keychain::@d74965387978f0573745",
+					"index" : 36
+				}
+			],
+			"paths" : 
+			[
+				"3rdparty/qtkeychain/CMakeFiles/Export/lib/cmake/Qt5Keychain/Qt5KeychainLibraryDepends.cmake"
+			],
+			"type" : "export"
+		},
+		{
+			"backtrace" : 6,
+			"component" : "Unspecified",
+			"destination" : "lib/cmake/Qt5Keychain",
+			"paths" : 
+			[
+				"cmake-build-debug-clang-event-trace/3rdparty/qtkeychain/Qt5KeychainConfig.cmake",
+				"cmake-build-debug-clang-event-trace/3rdparty/qtkeychain/Qt5KeychainConfigVersion.cmake"
+			],
+			"type" : "file"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "3rdparty/qtkeychain",
+		"source" : "3rdparty/qtkeychain"
+	}
+}

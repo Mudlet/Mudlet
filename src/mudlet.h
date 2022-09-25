@@ -494,7 +494,7 @@ public:
                                  "<a href='http://www.wotmod.org/'>Forums</a>", ":/icons/wotmudicon.png"}},
         {"Midnight Sun 2", {"midnightsun2.org", 3000, false, "<a href='http://midnightsun2.org/'>http://midnightsun2.org/</a>", ":/icons/midnightsun2.png"}},
         {"Luminari", {"luminarimud.com", 4100, false, "<a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a>", ":/icons/luminari_icon.png"}},
-        {"StickMUD", {"stickmud.com", 7680, false, "<a href='http://www.stickmud.com/'>stickmud.com</a>", ":/icons/stickmud_icon.jpg"}},
+        {"StickMUD", {"stickmud.com", 7670, true, "<a href='http://www.stickmud.com/'>stickmud.com</a>", ":/icons/stickmud_icon.jpg"}},
         {"Clessidra", {"mud.clessidra.it", 4000, false, "<a href='http://www.clessidra.it/'>http://www.clessidra.it</a>", ":/icons/clessidra.jpg"}},
         {"Reinos de Leyenda", {"reinosdeleyenda.es", 23, false, "<a href='https://www.reinosdeleyenda.es/'>Sitio web principal</a><br>"
                                  "<a href='https://www.reinosdeleyenda.es/foro/'>Foros</a><br>"
@@ -504,7 +504,7 @@ public:
         {"Carrion Fields", {"carrionfields.net", 4449, false, "<a href='http://www.carrionfields.net'>www.carrionfields.net</a>", ":/icons/carrionfields.png"}},
         {"Cleft of Dimensions", {"cleftofdimensions.net", 4354, false, "<a href='https://www.cleftofdimensions.net/'>cleftofdimensions.net</a>", ":/icons/cleftofdimensions.png"}},
         {"Legends of the Jedi", {"legendsofthejedi.com", 5656, false, "<a href='https://www.legendsofthejedi.com/'>legendsofthejedi.com</a>", ":/icons/legendsofthejedi_120x30.png"}},
-        {"CoreMUD", {"coremud.org", 4020, true, "<a href='https://coremud.org/'>coremud.org</a>", ":/icons/coremud_icon.jpg"}},
+        {"CoreMUD", {"core.evilmog.io", 4020, true, "<a href='https://core.evilmog.io/'>core.evilmog.io</a>", ":/icons/coremud_icon.jpg"}},
         {"Multi-Users in Middle-earth", {"mume.org", 4242, true, "<a href='https://mume.org/'>mume.org</a>", ":/icons/mume.png"}},
     };
     // clang-format on

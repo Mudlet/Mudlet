@@ -1,0 +1,179 @@
+{
+	"BUILD_DIR" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd/dblsqd_autogen",
+	"CMAKE_BINARY_DIR" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace",
+	"CMAKE_CURRENT_BINARY_DIR" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd",
+	"CMAKE_EXECUTABLE" : "/snap/clion/204/bin/cmake/linux/bin/cmake",
+	"CMAKE_LIST_FILES" : 
+	[
+		"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd/CMakeLists.txt",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5/Qt5ConfigVersion.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5/Qt5Config.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5/Qt5ModuleLocation.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfigVersion.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfig.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfigExtras.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfigExtrasMkspecDir.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Core/Qt5CoreMacros.cmake",
+		"/snap/clion/204/bin/cmake/linux/share/cmake-3.23/Modules/CMakeParseArguments.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Network/Qt5NetworkConfigVersion.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Network/Qt5NetworkConfig.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Network/Qt5Network_QConnmanEnginePlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Network/Qt5Network_QGenericEnginePlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Network/Qt5Network_QNetworkManagerEnginePlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsConfigVersion.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsConfig.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5GuiConfigVersion.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5GuiConfig.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QComposePlatformInputContextPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEglFSEmulatorIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEglFSIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEglFSKmsEglDeviceIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEglFSX11IntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEvdevKeyboardPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEvdevMousePlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEvdevTabletPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEvdevTouchScreenPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QGifPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QGtk3ThemePlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QICNSPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QICOPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QIbusPlatformInputContextPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QJpegPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QLinuxFbIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QMinimalEglIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QMinimalIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QOffscreenIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QSvgIconPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QSvgPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QTgaPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QTiffPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QTuioTouchPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QVncIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWaylandEglPlatformIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWaylandIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWaylandXCompositeEglPlatformIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWaylandXCompositeGlxPlatformIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWbmpPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWebpPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QXcbEglIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QXcbGlxIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QXcbIntegrationPlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QXdgDesktopPortalThemePlugin.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Gui/Qt5GuiConfigExtras.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsConfigExtras.cmake",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsMacros.cmake",
+		"/snap/clion/204/bin/cmake/linux/share/cmake-3.23/Modules/CMakeParseArguments.cmake"
+	],
+	"CMAKE_SOURCE_DIR" : "/media/vadi/SSDer/Programs/Mudlet",
+	"DEP_FILE" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd/dblsqd_autogen/deps",
+	"DEP_FILE_RULE_NAME" : "dblsqd_autogen/timestamp",
+	"HEADERS" : 
+	[
+		[
+			"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd/dblsqd/feed.h",
+			"MU",
+			"ORNICVTX3W/moc_feed.cpp",
+			null
+		],
+		[
+			"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd/dblsqd/release.h",
+			"MU",
+			"ORNICVTX3W/moc_release.cpp",
+			null
+		],
+		[
+			"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd/dblsqd/semver.h",
+			"MU",
+			"ORNICVTX3W/moc_semver.cpp",
+			null
+		],
+		[
+			"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd/dblsqd/update_dialog.h",
+			"MU",
+			"ORNICVTX3W/moc_update_dialog.cpp",
+			null
+		]
+	],
+	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
+	"INCLUDE_DIR" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd/dblsqd_autogen/include",
+	"MOC_COMPILATION_FILE" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd/dblsqd_autogen/mocs_compilation.cpp",
+	"MOC_DEFINITIONS" : [ "QT_CORE_LIB", "QT_GUI_LIB", "QT_NETWORK_LIB", "QT_WIDGETS_LIB" ],
+	"MOC_DEPEND_FILTERS" : 
+	[
+		[
+			"Q_PLUGIN_METADATA",
+			"[\n][ \t]*Q_PLUGIN_METADATA[ \t]*\\([^\\)]*FILE[ \t]*\"([^\"]+)\""
+		]
+	],
+	"MOC_INCLUDES" : 
+	[
+		"/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd",
+		"/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd/dblsqd_autogen/include",
+		"/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd/dblsqd_autogen/include_Debug",
+		"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtCore",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/mkspecs/linux-g++",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtNetwork",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtWidgets",
+		"/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtGui",
+		"/usr/include",
+		"/usr/include/c++/11",
+		"/usr/include/x86_64-linux-gnu/c++/11",
+		"/usr/include/c++/11/backward",
+		"/usr/lib/llvm-14/lib/clang/14.0.0/include",
+		"/usr/local/include",
+		"/usr/include/x86_64-linux-gnu"
+	],
+	"MOC_MACRO_NAMES" : [ "Q_OBJECT", "Q_GADGET", "Q_NAMESPACE", "Q_NAMESPACE_EXPORT" ],
+	"MOC_OPTIONS" : [],
+	"MOC_PATH_PREFIX" : false,
+	"MOC_PREDEFS_CMD" : 
+	[
+		"/usr/bin/clang++",
+		"-dM",
+		"-E",
+		"-c",
+		"/snap/clion/204/bin/cmake/linux/share/cmake-3.23/Modules/CMakeCXXCompilerABI.cpp"
+	],
+	"MOC_PREDEFS_FILE" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd/dblsqd_autogen/moc_predefs.h",
+	"MOC_RELAXED_MODE" : false,
+	"MOC_SKIP" : [],
+	"MULTI_CONFIG" : false,
+	"PARALLEL" : 6,
+	"PARSE_CACHE_FILE" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd/CMakeFiles/dblsqd_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/bin/moc",
+	"QT_UIC_EXECUTABLE" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/bin/uic",
+	"QT_VERSION_MAJOR" : 5,
+	"QT_VERSION_MINOR" : 15,
+	"SETTINGS_FILE" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/dblsqd/CMakeFiles/dblsqd_autogen.dir/AutogenUsed.txt",
+	"SOURCES" : 
+	[
+		[
+			"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd/dblsqd/feed.cpp",
+			"MU",
+			null
+		],
+		[
+			"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd/dblsqd/release.cpp",
+			"MU",
+			null
+		],
+		[
+			"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd/dblsqd/semver.cpp",
+			"MU",
+			null
+		],
+		[
+			"/media/vadi/SSDer/Programs/Mudlet/3rdparty/dblsqd/dblsqd/update_dialog.cpp",
+			"MU",
+			null
+		]
+	],
+	"UIC_OPTIONS" : [],
+	"UIC_SEARCH_PATHS" : [],
+	"UIC_SKIP" : [],
+	"UIC_UI_FILES" : [],
+	"VERBOSITY" : 0
+}

@@ -1,0 +1,77 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"install",
+			"QsLog_install_target"
+		],
+		"files" : 
+		[
+			"3rdparty/edbee-lib/vendor/qslog/CMakeLists.txt",
+			"3rdparty/edbee-lib/vendor/qslog/cmake/QsLogConfigTargets.cmake"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 103,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 104,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 1,
+				"line" : 46,
+				"parent" : 2
+			}
+		]
+	},
+	"installers" : 
+	[
+		{
+			"backtrace" : 1,
+			"component" : "Unspecified",
+			"destination" : "include/QsLog",
+			"paths" : 
+			[
+				"3rdparty/edbee-lib/vendor/qslog/QsLog.h",
+				"3rdparty/edbee-lib/vendor/qslog/QsLogDest.h",
+				"3rdparty/edbee-lib/vendor/qslog/QsLogDestConsole.h",
+				"3rdparty/edbee-lib/vendor/qslog/QsLogDestFile.h",
+				"3rdparty/edbee-lib/vendor/qslog/QsLogDestFunctor.h",
+				"3rdparty/edbee-lib/vendor/qslog/QsLogDisableForThisFile.h",
+				"3rdparty/edbee-lib/vendor/qslog/QsLogLevel.h",
+				"3rdparty/edbee-lib/vendor/qslog/QsLogMessage.h",
+				"3rdparty/edbee-lib/vendor/qslog/QsLogSharedLibrary.h"
+			],
+			"type" : "file"
+		},
+		{
+			"backtrace" : 3,
+			"component" : "Unspecified",
+			"destination" : "lib",
+			"paths" : 
+			[
+				"3rdparty/edbee-lib/edbee-lib/qslog/lib/libQsLog_d.so"
+			],
+			"targetId" : "QsLog::@7b586b0758a5c53d02d4",
+			"targetIndex" : 0,
+			"type" : "target"
+		}
+	],
+	"paths" : 
+	{
+		"build" : "3rdparty/edbee-lib/edbee-lib/qslog",
+		"source" : "3rdparty/edbee-lib/vendor/qslog"
+	}
+}

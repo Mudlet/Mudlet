@@ -1,0 +1,53 @@
+/snap/clion/204/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=/snap/clion/204/bin/ninja/linux/ninja -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_PREFIX_PATH=/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/ -DUSE_ALTERNATE_LINKER=mold --profiling-format=google-trace --profiling-output=CMakeFiles/clion-event-trace.json -G Ninja -S /media/vadi/SSDer/Programs/Mudlet -B /media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace
+-- Including optional updater
+-- Including optional fonts
+-- Including optional 3D mapper
+-- Including optional build-type splash screen
+-- Including optional own QKeychain (Qt5) library
+-- Excluding optional original CI (setup-windows-sdk.ps1) windows build system as it is not supported on this platform
+checking for a BSD-compatible install... /usr/bin/install -c
+checking whether build environment is sane... yes
+checking for a thread-safe mkdir -p... /usr/bin/mkdir -p
+checking for gawk... gawk
+checking whether make sets $(MAKE)... yes
+checking for gcc... gcc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... configure: error: in `/media/vadi/SSDer/Programs/Mudlet/3rdparty/edbee-lib/vendor/onig':
+configure: error: cannot compute suffix of executables: cannot compile and link
+See `config.log' for more details
+-- Building translations
+
+We have statistics for 43 languages:
+
+   lang_CNTRY    trnsl  utrnsl  finish  unfin  total  done
+*    en_US          14       0      14      0     14  100%
+*    it_IT        2323      30    2323      0   2353   98%
+*    ru_RU        2310      43    2310      0   2353   98%
+*    de_DE        2295      58    2295      0   2353   97%
+*    zh_CN        2253     100    2253      0   2353   95%
+     pl_PL        2122     231    2122      0   2353   90%
+     zh_TW        1765     588    1765      0   2353   75%
+     en_GB        1410     943    1410      0   2353   59%
+     es_ES         868    1485     868      0   2353   36%
+     fr_FR         618    1735     618      0   2353   26%
+     pt_PT         389    1964     389      0   2353   16%
+     pt_BR         371    1982     371      0   2353   15%
+     nl_NL         236    2117     236      0   2353   10%
+     tr_TR         205    2148     205      0   2353    8%
+     ar_SA         169    2184     169      0   2353    7%
+     sv_SE          55    2298      55      0   2353    2%
+     fi_FI          39    2314      39      0   2353    1%
+     ar_EG          12    2285      12      0   2297    0%
+     yd_YD           1    2264       1      0   2265    0%
+     en_XY           1    2352       1      0   2353    0%
+     el_GR           1    2352       1      0   2353    0%
+     en_PT           0    2353       0      0   2353    0%
+
+-- Qt version: 5.15.2
+-- Using Clang compiler
+-- Using TextToSpeech module
+-- Using Gamepad module
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace

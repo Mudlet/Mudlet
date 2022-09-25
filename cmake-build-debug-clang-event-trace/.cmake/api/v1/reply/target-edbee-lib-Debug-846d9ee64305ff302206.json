@@ -1,0 +1,1894 @@
+{
+	"archive" : {},
+	"artifacts" : 
+	[
+		{
+			"path" : "3rdparty/edbee-lib/edbee-lib/libedbee-lib.a"
+		}
+	],
+	"backtrace" : 2,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"_add_library",
+			"ADD_LIBRARY",
+			"target_link_libraries",
+			"ADD_DEFINITIONS",
+			"INCLUDE_DIRECTORIES"
+		],
+		"files" : 
+		[
+			"3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake",
+			"3rdparty/edbee-lib/edbee-lib/CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 1
+			},
+			{
+				"command" : 1,
+				"file" : 1,
+				"line" : 206,
+				"parent" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 618,
+				"parent" : 1
+			},
+			{
+				"command" : 2,
+				"file" : 1,
+				"line" : 210,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 1,
+				"line" : 190,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 1,
+				"line" : 198,
+				"parent" : 0
+			}
+		]
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-g -fPIC"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-fPIC"
+				},
+				{
+					"fragment" : "-std=c++11"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 4,
+					"define" : "QT_CORE_LIB"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/edbee-lib/edbee-lib"
+				},
+				{
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/3rdparty/edbee-lib/edbee-lib"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/edbee-lib/edbee-lib/edbee-lib_autogen/include"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtUiTools"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtWidgets"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtGui"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/3rdparty/edbee-lib/vendor/onig"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/3rdparty/edbee-lib/vendor/onig/enc/unicode"
+				},
+				{
+					"backtrace" : 5,
+					"isSystem" : true,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include"
+				},
+				{
+					"backtrace" : 5,
+					"isSystem" : true,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtCore"
+				},
+				{
+					"backtrace" : 5,
+					"isSystem" : true,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/./mkspecs/linux-g++"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					3
+				],
+				"standard" : "11"
+			},
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				41,
+				42,
+				43,
+				44,
+				45,
+				46,
+				47,
+				48,
+				49,
+				50,
+				51,
+				52,
+				53,
+				54,
+				55,
+				57,
+				58,
+				59,
+				60,
+				61,
+				62,
+				63,
+				64,
+				65,
+				66,
+				67,
+				68,
+				69,
+				70,
+				71,
+				72,
+				73,
+				74,
+				75,
+				76,
+				77,
+				78
+			]
+		},
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-g -fPIC"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-fPIC"
+				}
+			],
+			"defines" : 
+			[
+				{
+					"backtrace" : 4,
+					"define" : "QT_CORE_LIB"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/edbee-lib/edbee-lib"
+				},
+				{
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/3rdparty/edbee-lib/edbee-lib"
+				},
+				{
+					"backtrace" : 0,
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/cmake-build-debug-clang-event-trace/3rdparty/edbee-lib/edbee-lib/edbee-lib_autogen/include"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtUiTools"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtWidgets"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtGui"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/3rdparty/edbee-lib/vendor/onig"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/media/vadi/SSDer/Programs/Mudlet/3rdparty/edbee-lib/vendor/onig/enc/unicode"
+				},
+				{
+					"backtrace" : 5,
+					"isSystem" : true,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include"
+				},
+				{
+					"backtrace" : 5,
+					"isSystem" : true,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/include/QtCore"
+				},
+				{
+					"backtrace" : 5,
+					"isSystem" : true,
+					"path" : "/media/vadi/SSDer/Programs/Qt/5.15.2/gcc_64/./mkspecs/linux-g++"
+				}
+			],
+			"language" : "C",
+			"sourceIndexes" : 
+			[
+				158,
+				159,
+				160,
+				161,
+				162,
+				163,
+				164,
+				165,
+				166,
+				167,
+				168,
+				169,
+				170,
+				171,
+				172,
+				173,
+				174,
+				175,
+				176,
+				177,
+				178,
+				179,
+				181,
+				182,
+				183,
+				184,
+				185,
+				186,
+				187,
+				188,
+				189,
+				190,
+				191,
+				192,
+				193,
+				194,
+				195,
+				196,
+				197,
+				198,
+				199,
+				200,
+				201,
+				202,
+				203,
+				204,
+				205,
+				206,
+				207,
+				208,
+				209,
+				210,
+				211,
+				212
+			]
+		}
+	],
+	"dependencies" : 
+	[
+		{
+			"backtrace" : 3,
+			"id" : "QsLog::@7b586b0758a5c53d02d4"
+		},
+		{
+			"id" : "edbee-lib_autogen_timestamp_deps::@7cea5057e8e9cbe91b8e"
+		},
+		{
+			"backtrace" : 0,
+			"id" : "edbee-lib_autogen::@7cea5057e8e9cbe91b8e"
+		}
+	],
+	"id" : "edbee-lib::@7cea5057e8e9cbe91b8e",
+	"name" : "edbee-lib",
+	"nameOnDisk" : "libedbee-lib.a",
+	"paths" : 
+	{
+		"build" : "3rdparty/edbee-lib/edbee-lib",
+		"source" : "3rdparty/edbee-lib/edbee-lib"
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40,
+				41,
+				42,
+				43,
+				44,
+				45,
+				46,
+				47,
+				48,
+				49,
+				50,
+				51,
+				52,
+				53,
+				54,
+				55,
+				57,
+				58,
+				59,
+				60,
+				61,
+				62,
+				63,
+				64,
+				65,
+				66,
+				67,
+				68,
+				69,
+				70,
+				71,
+				72,
+				73,
+				74,
+				75,
+				76,
+				77,
+				78,
+				158,
+				159,
+				160,
+				161,
+				162,
+				163,
+				164,
+				165,
+				166,
+				167,
+				168,
+				169,
+				170,
+				171,
+				172,
+				173,
+				174,
+				175,
+				176,
+				177,
+				178,
+				179,
+				181,
+				182,
+				183,
+				184,
+				185,
+				186,
+				187,
+				188,
+				189,
+				190,
+				191,
+				192,
+				193,
+				194,
+				195,
+				196,
+				197,
+				198,
+				199,
+				200,
+				201,
+				202,
+				203,
+				204,
+				205,
+				206,
+				207,
+				208,
+				209,
+				210,
+				211,
+				212
+			]
+		},
+		{
+			"name" : "Header Files",
+			"sourceIndexes" : 
+			[
+				56,
+				79,
+				80,
+				81,
+				82,
+				83,
+				84,
+				85,
+				86,
+				87,
+				88,
+				89,
+				90,
+				91,
+				92,
+				93,
+				94,
+				95,
+				96,
+				97,
+				98,
+				99,
+				100,
+				101,
+				102,
+				103,
+				104,
+				105,
+				106,
+				107,
+				108,
+				109,
+				110,
+				111,
+				112,
+				113,
+				114,
+				115,
+				116,
+				117,
+				118,
+				119,
+				120,
+				121,
+				122,
+				123,
+				124,
+				125,
+				126,
+				127,
+				128,
+				129,
+				130,
+				131,
+				132,
+				133,
+				134,
+				135,
+				136,
+				137,
+				138,
+				139,
+				140,
+				141,
+				142,
+				143,
+				144,
+				145,
+				146,
+				147,
+				148,
+				149,
+				150,
+				151,
+				152,
+				153,
+				154,
+				155,
+				156,
+				157,
+				180,
+				213,
+				214,
+				215,
+				216,
+				217,
+				218,
+				219,
+				220,
+				221,
+				222,
+				223
+			]
+		},
+		{
+			"name" : "",
+			"sourceIndexes" : 
+			[
+				224
+			]
+		},
+		{
+			"name" : "CMake Rules",
+			"sourceIndexes" : 
+			[
+				225
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 0,
+			"compileGroupIndex" : 0,
+			"isGenerated" : true,
+			"path" : "cmake-build-debug-clang-event-trace/3rdparty/edbee-lib/edbee-lib/edbee-lib_autogen/mocs_compilation.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/commentcommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/copycommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/cutcommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/debugcommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/duplicatecommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/findcommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/movelinecommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/newlinecommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/pastecommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/redocommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/removecommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/replaceselectioncommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/selectioncommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/tabcommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/togglereadonlycommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/undocommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/data/factorycommandmap.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/data/factorykeymap.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/edbee.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/textdocumentserializer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/tmlanguageparser.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/tmthemeparser.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/lexers/grammartextlexer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/change.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/abstractrangedchange.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/linedatachange.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/linedatalistchange.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/mergablechangegroup.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/selectionchange.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/textchange.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/textchangewithcaret.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/chardocument/chartextbuffer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/chardocument/chartextdocument.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/dynamicvariables.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textautocompleteprovider.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textbuffer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textdocument.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textdocumentfilter.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textdocumentscopes.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorcommandmap.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorconfig.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textlexer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textlinedata.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textrange.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textsearcher.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textundostack.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/texteditorcommand.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/texteditorwidget.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/cascadingqvariantmap.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/gapvector.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/lineending.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/lineoffsetvector.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/mem/debug_allocs.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/mem/debug_new.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/rangelineiterator.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/rangesetlineiterator.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/regexp.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/simpleprofiler.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/test.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/textcodec.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/textcodecdetector.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/util.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorautocompletecomponent.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorrenderer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/components/textmargincomponent.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/textcaretcache.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/texteditorscrollarea.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/textlayout.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/textrenderer.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/textselection.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 0,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/commentcommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/copycommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/cutcommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/debugcommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/duplicatecommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/findcommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/movelinecommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/newlinecommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/pastecommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/redocommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/removecommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/replaceselectioncommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/selectioncommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/tabcommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/togglereadonlycommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/commands/undocommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/data/factorycommandmap.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/data/factorykeymap.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/debug.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/edbee.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/textdocumentserializer.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/tmlanguageparser.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/io/tmthemeparser.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/lexers/grammartextlexer.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/change.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/abstractrangedchange.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/linedatachange.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/linedatalistchange.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/mergablechangegroup.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/selectionchange.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/textchange.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/changes/textchangewithcaret.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/chardocument/chartextbuffer.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/chardocument/chartextdocument.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/dynamicvariables.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textautocompleteprovider.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textbuffer.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textdocument.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textdocumentfilter.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textdocumentscopes.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorcommandmap.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorconfig.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textlexer.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textlinedata.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textrange.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textsearcher.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/models/textundostack.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/texteditorcommand.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/texteditorwidget.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/cascadingqvariantmap.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/lineending.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/lineoffsetvector.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/logging.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/mem/debug_allocs.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/mem/debug_new.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/rangelineiterator.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/rangesetlineiterator.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/regexp.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/simpleprofiler.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/test.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/textcodec.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/textcodecdetector.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/util/util.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorautocompletecomponent.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorrenderer.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/components/textmargincomponent.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/textcaretcache.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/texteditorscrollarea.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/textlayout.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/textrenderer.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/textselection.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/edbee-lib/edbee/views/texttheme.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regcomp.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regenc.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regerror.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regexec.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regext.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/reggnu.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regparse.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regposerr.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regposix.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regsyntax.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regtrav.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regversion.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/st.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/ascii.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/big5.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/cp949.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/emacs_mule.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/euc_jp.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/euc_kr.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/euc_tw.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/gb18030.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/gbk.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_1.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_10.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_11.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_13.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_14.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_15.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_16.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_2.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_3.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_4.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_5.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_6.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_7.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_8.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/iso_8859_9.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/koi8_r.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/koi8_u.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/shift_jis.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/unicode.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/us_ascii.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/utf_16be.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/utf_16le.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/utf_32be.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/utf_32le.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/utf_8.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/windows_1250.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/windows_1251.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/windows_1252.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/windows_1253.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/windows_1254.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/windows_1257.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"compileGroupIndex" : 1,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/windows_31j.c",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/config.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/enc/unicode/casefold.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/onigmo.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/onigmognu.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/onigmoposix.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regenc.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regint.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/regparse.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/st.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/win32/config.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 2,
+			"path" : "3rdparty/edbee-lib/vendor/onig/config-onig-edbee.h",
+			"sourceGroupIndex" : 1
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "cmake-build-debug-clang-event-trace/3rdparty/edbee-lib/edbee-lib/edbee-lib_autogen/timestamp",
+			"sourceGroupIndex" : 2
+		},
+		{
+			"backtrace" : 0,
+			"isGenerated" : true,
+			"path" : "cmake-build-debug-clang-event-trace/3rdparty/edbee-lib/edbee-lib/edbee-lib_autogen/timestamp.rule",
+			"sourceGroupIndex" : 3
+		}
+	],
+	"type" : "STATIC_LIBRARY"
+}
