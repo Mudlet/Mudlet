@@ -7305,7 +7305,7 @@ per tutte le %n stanze selezionate:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="508"/>
       <source>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Salva il profilo. (Ctrl+Maiusc+S)&lt;/p&gt;&lt;p&gt;Salva il tuo intero profilo (trigger, alias, script, timer, bottoni e tasti, ma non la mappa o le impostazioni specifiche degli script) sul disco fisso quindi in caso di un arresto anomalo del computer o del programma, tutte le modifiche che hai fatto verranno mantenute.&lt;/p&gt;&lt;p&gt;Fa anche un backup del tuo profilo così da poter caricare una versione precedente al momento della connessione.&lt;/p&gt;&lt;p&gt;Se sono presenti moduli contrassegnati come &quot;&lt;i&gt;sincronizzati&lt;/i&gt;&quot; questo causerà anche il salvataggio e l'aggiornamento degli stessi in altri profili se sono attivi.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="594"/>
