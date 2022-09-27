@@ -86,7 +86,7 @@ jobs:
         COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
 
     - name: Upload results 1
-      uses: Mudlet/gsheets-append-action@main
+      uses: Mudlet/gsheets-append-action@development
       with:
         GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
         GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
@@ -104,7 +104,7 @@ jobs:
         COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
 
     - name: Upload results 2
-      uses: Mudlet/gsheets-append-action@main
+      uses: Mudlet/gsheets-append-action@development
       with:
         GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
         GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
@@ -122,7 +122,7 @@ jobs:
         COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
 
     - name: Upload results 3
-      uses: Mudlet/gsheets-append-action@main
+      uses: Mudlet/gsheets-append-action@development
       with:
         GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
         GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
@@ -140,7 +140,7 @@ jobs:
         COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
 
     - name: Upload results 4
-      uses: Mudlet/gsheets-append-action@main
+      uses: Mudlet/gsheets-append-action@development
       with:
         GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
         GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
