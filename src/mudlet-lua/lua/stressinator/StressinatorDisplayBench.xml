@@ -85,7 +85,7 @@ function st.runStress(times)
     echo(bar)
     if runBench then
       enableTrigger("generic_mapper")
-      local data = string.format([[echo PERFDATA="%s,%s,%s,%s,rpi 4b 4gb linux" >> $GITHUB_ENV ]], ver, commitDate, times, perLine)
+      local data = string.format([[echo PERFDATA='%s,"%s",%s,%s,rpi 4b 4gb linux' >> $GITHUB_ENV ]], ver, commitDate, times, perLine)
       echo(data)
       os.execute(data)
       
