@@ -16,6 +16,20 @@
         <script>Stressinator = Stressinator or {}
 local st = Stressinator
 local runBench = os.getenv("AUTORUN_DISPLAY_BENCHMARK")
+local commitDate
+local ver = getMudletVersion("string")
+
+if runBench then
+  commitDate = os.getenv("COMMIT_DATE")
+  local versionTbl = getMudletVersion()
+  local sha = os.getenv("GITHUB_SHA"):sub(1,7)
+  local mainVersion = f"{versionTbl.major}.{versionTbl.minor}.{versionTbl.revision}"
+  local build = versionTbl.build
+  if build ~= "" then
+    build = build:gsub("%w+$", sha)
+  end
+  ver = mainVersion .. build
+end
 
 function st.loadLines()
   local countText = st.lineString
@@ -62,7 +76,7 @@ function st.runStress(times)
     local bar = string.rep("*", 50) .. "\n"
     echo("\n\n" .. bar)
     echo("Stress test complete, here's what we know:\n")
-    secho("Mudlet Version", getMudletVersion("string"))
+    secho("Mudlet Version", ver)
     secho("Started", startTime)
     secho("Finished", finishTime)
     secho("Total lines processed", times)
@@ -71,6 +85,10 @@ function st.runStress(times)
     echo(bar)
     if runBench then
       enableTrigger("generic_mapper")
+      local data = string.format([[echo PERFDATA="%s,'%s,%s,%s,rpi 4b 4gb linux" >> $GITHUB_ENV ]], ver, commitDate, times, perLine)
+      echo(data)
+      os.execute(data)
+      
       tempTimer(0, closeMudlet)
     end
   end)
