@@ -90,7 +90,7 @@ jobs:
         GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
         GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
         SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
-        TABLE_START_CELL: 'A65'
+        TABLE_START_CELL: 'A1'
         DATA_ENV_NAME: 'PERFDATA'
 
     - name: Run display benchmark 2
@@ -108,7 +108,7 @@ jobs:
         GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
         GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
         SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
-        TABLE_START_CELL: 'A65'
+        TABLE_START_CELL: 'A1'
         DATA_ENV_NAME: 'PERFDATA'
 
     - name: Run display benchmark 3
@@ -126,7 +126,7 @@ jobs:
         GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
         GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
         SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
-        TABLE_START_CELL: 'A65'
+        TABLE_START_CELL: 'A1'
         DATA_ENV_NAME: 'PERFDATA'
 
     - name: Run display benchmark 4
@@ -144,5 +144,5 @@ jobs:
         GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
         GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
         SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
-        TABLE_START_CELL: 'A65'
+        TABLE_START_CELL: 'A1'
         DATA_ENV_NAME: 'PERFDATA'
