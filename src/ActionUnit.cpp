@@ -536,10 +536,6 @@ TAction* ActionUnit::getHeadAction(TEasyButtonBar* pT)
 
 void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 {
-    if (!pA->isDataChanged()) {
-        return;
-    }
-
     pTB->clear();
     if (pA->mLocation == 4) {
         // Floating toolbars are handled differently from EasyButtonBars, and
