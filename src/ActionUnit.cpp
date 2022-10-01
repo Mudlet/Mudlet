@@ -293,15 +293,14 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
         }
         if (action->mPackageName.size() > 0) {
             for (auto& childAction : *action->mpMyChildrenList) {
-                bool found = false;
                 QPointer<TToolBar> pTB = nullptr;
                 for (auto& toolBar : mToolBarList) {
                     if (toolBar == childAction->mpToolBar) {
-                        found = true;
                         pTB = toolBar;
+                        break;
                     }
                 }
-                if (!found) {
+                if (!pTB) {
                     pTB = new TToolBar(childAction, childAction->getName(), mudlet::self());
                     mToolBarList.push_back(pTB);
                 }
@@ -316,15 +315,15 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
             }
             continue; //action package
         }
-        bool found = false;
+
         QPointer<TToolBar> pTB = nullptr;
         for (auto& toolBar : mToolBarList) {
             if (toolBar == action->mpToolBar) {
-                found = true;
                 pTB = toolBar;
+                break;
             }
         }
-        if (!found) {
+        if (!pTB) {
             pTB = new TToolBar(action, action->getName(), mudlet::self());
             mToolBarList.push_back(pTB);
         }
@@ -349,15 +348,14 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
         }
         if (rootAction->mPackageName.size() > 0) {
             for (auto childActionIterator = rootAction->mpMyChildrenList->begin(); childActionIterator != rootAction->mpMyChildrenList->end(); childActionIterator++) {
-                bool found = false;
                 TEasyButtonBar* pTB = nullptr;
                 for (auto& easyButtonBar : mEasyButtonBarList) {
                     if (easyButtonBar == (*childActionIterator)->mpEasyButtonBar) {
-                        found = true;
                         pTB = easyButtonBar;
+                        break;
                     }
                 }
-                if (!found) {
+                if (!pTB) {
                     pTB = new TEasyButtonBar(rootAction, (*childActionIterator)->getName(), mpHost->mpConsole->mpTopToolBar);
                     mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
                     mEasyButtonBarList.emplace_back(pTB);
@@ -374,15 +372,15 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
             }
             continue; //rootAction package
         }
-        bool found = false;
+
         TEasyButtonBar* pTB = nullptr;
         for (auto& easyButtonBar : mEasyButtonBarList) {
             if (easyButtonBar == rootAction->mpEasyButtonBar) {
-                found = true;
                 pTB = easyButtonBar;
+                break;
             }
         }
-        if (!found) {
+        if (!pTB) {
             pTB = new TEasyButtonBar(rootAction, rootAction->getName(), mpHost->mpConsole->mpTopToolBar);
             mpHost->mpConsole->mpTopToolBar->layout()->addWidget(pTB);
             mEasyButtonBarList.emplace_back(pTB);
