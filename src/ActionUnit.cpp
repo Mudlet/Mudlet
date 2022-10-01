@@ -285,7 +285,7 @@ int ActionUnit::getNewID()
     return ++mMaxID;
 }
 
-std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
+void ActionUnit::regenerateToolBars()
 {
     for (auto& action : mActionRootNodeList) {
         if (action->mLocation != 4) {
@@ -337,11 +337,9 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
         action->mpToolBar = pTB;
         pTB->setStyleSheet(pTB->mpTAction->css);
     }
-
-    return mToolBarList;
 }
 
-std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
+void ActionUnit::regenerateEasyButtonBars()
 {
     for (auto& rootAction : mActionRootNodeList) {
         if (rootAction->mLocation == 4) {
@@ -397,8 +395,6 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
         rootAction->mpEasyButtonBar = pTB;
         pTB->setStyleSheet(pTB->mpTAction->css);
     }
-
-    return mEasyButtonBarList;
 }
 
 TAction* ActionUnit::getHeadAction(TToolBar* pT)
@@ -541,6 +537,6 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 
 void ActionUnit::updateToolbar()
 {
-        getToolBarList();
-        getEasyButtonBarList();
+    regenerateToolBars();
+    regenerateEasyButtonBars();
 }
