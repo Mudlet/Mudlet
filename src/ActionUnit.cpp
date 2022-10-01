@@ -300,7 +300,7 @@ std::list<QPointer<TToolBar>> ActionUnit::getToolBarList()
             }
             continue; // skip over any root action node that is NOT going to be a TToolBar.
         }
-        if (!action->mPackageName.isEmpty()) {
+        if (action->mPackageName.size() > 0) {
             for (auto& childAction : *action->mpMyChildrenList) {
                 QPointer<TToolBar> pTB = nullptr;
                 for (auto& toolBar : mToolBarList) {
@@ -364,8 +364,7 @@ std::list<QPointer<TEasyButtonBar>> ActionUnit::getEasyButtonBarList()
             }
             continue; // skip over any root action node that IS going to be a TToolBar.
         }
-
-        if (!rootAction->mPackageName.isEmpty()) {
+        if (rootAction->mPackageName.size() > 0) {
             // It has a package name so it is actually the parent
             // module/package item rather than the actual ToolBar
             for (auto childActionIterator = rootAction->mpMyChildrenList->begin(); childActionIterator != rootAction->mpMyChildrenList->end(); childActionIterator++) {
