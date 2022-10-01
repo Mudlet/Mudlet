@@ -1825,7 +1825,7 @@ void TConsole::slot_searchBufferUp()
     for (int i = mCurrentSearchResult - 1; i >= 0; i--) {
         int begin = -1;
         do {
-            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1);
+            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1, Qt::CaseInsensitive);
             if (begin > -1) {
                 int length = mSearchQuery.size();
                 moveCursor(0, i);
