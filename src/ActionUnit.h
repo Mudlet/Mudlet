@@ -69,11 +69,10 @@ public:
     void uninstall(const QString&);
     void _uninstall(TAction* pChild, const QString& packageName);
     void updateToolbar();
+    std::list<QPointer<TToolBar>> getToolBarList();
+    std::list<QPointer<TEasyButtonBar>> getEasyButtonBarList();
     TAction* getHeadAction(TToolBar*);
     TAction* getHeadAction(TEasyButtonBar*);
-    std::list<QPointer<TToolBar>> getToolBarList() { return mToolBarList; }
-    void regenerateToolBars();
-    void regenerateEasyButtonBars();
     void constructToolbar(TAction*, TToolBar* pTB);
     void constructToolbar(TAction*, TEasyButtonBar* pTB);
     void showToolBar(const QString&);
