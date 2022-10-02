@@ -2278,7 +2278,7 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 inline int TBuffer::wrap(int startLine)
 {
     TChar pSpace;
-    qDebug() << mName << "wrapping at" << mWrapAt;
+    qDebug() << this << "wrapping at" << mWrapAt;
     return wrapLine(startLine, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mWrapIndent, pSpace, false);
 }
 
