@@ -291,7 +291,7 @@ void ActionUnit::regenerateToolBars()
         if (action->mLocation != 4) {
             continue; // skip over any root action node that is NOT going to be a TToolBar.
         }
-        if (action->mPackageName.size() > 0) {
+        if (!action->mPackageName.isEmpty()) {
             for (auto& childAction : *action->mpMyChildrenList) {
                 bool found = false;
                 QPointer<TToolBar> pTB = nullptr;
@@ -345,7 +345,7 @@ void ActionUnit::regenerateEasyButtonBars()
         if (rootAction->mLocation == 4) {
             continue; // skip over any root action node that IS going to be a TToolBar.
         }
-        if (rootAction->mPackageName.size() > 0) {
+        if (!rootAction->mPackageName.isEmpty()) {
             for (auto childActionIterator = rootAction->mpMyChildrenList->begin(); childActionIterator != rootAction->mpMyChildrenList->end(); childActionIterator++) {
                 bool found = false;
                 TEasyButtonBar* pTB = nullptr;

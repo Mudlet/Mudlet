@@ -709,7 +709,7 @@ COMMIT_LINE:
             }
 
             if (!lineBuffer.back().isEmpty()) {
-                if (mMudLine.size() > 0) {
+                if (!mMudLine.isEmpty()) {
                     lineBuffer << mMudLine;
                 } else {
                     if (ch == '\r') {
@@ -726,7 +726,7 @@ COMMIT_LINE:
                     promptBuffer.append(false);
                 }
             } else {
-                if (mMudLine.size() > 0) {
+                if (!mMudLine.isEmpty()) {
                     lineBuffer.back().append(mMudLine);
                 } else {
                     if (ch == '\r') {

@@ -6602,7 +6602,7 @@ int TLuaInterpreter::errorc(lua_State* L)
     }
 
     if (host.mEchoLuaErrors) {
-        if (host.mpConsole->buffer.size() > 0 && !host.mpConsole->buffer.lineBuffer.at(host.mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        if (!host.mpConsole->buffer.isEmpty() && !host.mpConsole->buffer.lineBuffer.at(host.mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             host.postMessage(qsl("\n"));
         }
         host.mpConsole->print(qsl("[  LUA  ] - "), QColor(80,160,255), QColor(Qt::black));
@@ -12858,7 +12858,7 @@ int TLuaInterpreter::setClipboardText(lua_State* L)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 {
-    if (code.size() < 1) {
+    if (code.isEmpty()) {
         return false;
     }
     lua_State* L = pGlobalLua;
@@ -13409,7 +13409,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
     // The quote characters mean that the encased word is a string, the quotes themselves are not sent.
     QStringList packageList = string_data.split(MSSP_VAR);
 
-    if (packageList.size() > 0) {
+    if (!packageList.isEmpty()) {
         Host& host = getHostFromLua(L);
 
         for (int i = 1; i < packageList.size(); i++) {
@@ -13829,7 +13829,7 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
         // the previous line, however there is a nasty gotcha in that during
         // profile loading the (TMainConsole*) Host::mpConsole pointer is
         // null - but then the buffer must itself be empty:
-        if (mpHost->mpConsole && mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        if (mpHost->mpConsole && !mpHost->mpConsole->buffer.isEmpty() && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
@@ -13850,7 +13850,7 @@ void TLuaInterpreter::logEventError(const QString& event, const QString& error)
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
         // ensure the Lua error is on a line of its own and is not prepended to the previous line
-        if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        if (!mpHost->mpConsole->buffer.isEmpty() && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 

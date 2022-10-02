@@ -2019,7 +2019,7 @@ void dlgRoomExits::slot_checkModified()
                         break;
                     }
                 }
-                if (foundMap.count()) {
+                if (!foundMap.isEmpty()) {
                     isModified = true;
                 }
             }

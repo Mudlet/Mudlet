@@ -990,7 +990,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             return false;
         }
 
-        if (haystack.size() < 1) {
+        if (haystack.isEmpty()) {
             return false;
         }
 
@@ -1352,7 +1352,7 @@ void TTrigger::execute()
         mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
         mpHost->mpMedia->playMedia(mediaData);
     }
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {

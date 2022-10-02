@@ -4489,7 +4489,7 @@ void dlgTriggerEditor::saveScript()
     }
     QStringList handlerList;
     for (auto& listWidgetItem : itemList) {
-        if (listWidgetItem->text().size() < 1) {
+        if (listWidgetItem->text().isEmpty()) {
             continue;
         }
         handlerList << listWidgetItem->text();
@@ -7269,7 +7269,7 @@ void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
     mIsScriptsMainAreaEditHandler = true;
     mpScriptsMainAreaEditHandlerItem = pItem;
     QString regex = pItem->text();
-    if (regex.size() < 1) {
+    if (regex.isEmpty()) {
         mIsScriptsMainAreaEditHandler = false;
         return;
     }

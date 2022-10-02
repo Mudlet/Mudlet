@@ -2778,7 +2778,7 @@ void mudlet::attachDebugArea(const QString& hostname)
 
 void mudlet::doAutoLogin(const QString& profile_name)
 {
-    if (profile_name.size() < 1) {
+    if (profile_name.isEmpty()) {
         return;
     }
 
@@ -2984,7 +2984,7 @@ void mudlet::slot_multiView(const bool state)
             console->hide();
         }
     }
-    if (!foundActiveHost && mpTabBar->count() > 0) {
+    if (!foundActiveHost && mpTabBar->count()) {
         // If there IS at least one profile still active, but none of them WAS
         // the active one then make one (the first) the active one:
         slot_tabChanged(0);
@@ -4178,7 +4178,7 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
 {
     QMultiMap<unsigned int, QString> sortedGraphemeCounts;
     // Sort the graphemes into a descending order list:
-    if (gc.size()) {
+    if (!gc.isEmpty()) {
         QHashIterator<QString, unsigned int> itGraphemeCount(gc);
         while (itGraphemeCount.hasNext()) {
             itGraphemeCount.next();
