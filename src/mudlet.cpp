@@ -4649,6 +4649,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),          {qsl("carrionfields.net")}},
         {qsl(":/run-tests.xml"),          {qsl("mudlet.org")}},
+        {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
         {qsl(":/mudlet-mapper.xml"),      {qsl("aetolia.com"),
                                                       qsl("achaea.com"),
                                                       qsl("lusternia.com"),

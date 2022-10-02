@@ -63,3 +63,86 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
 
+    - name: Copy mudlet executable in place for executing display benchmark
+      run: cp ${{github.workspace}}/mudlet ${{github.workspace}}/src
+      shell: bash
+
+    - name: Remove Mudlet config directory
+      run: rm -rf $HOME/.config/mudlet
+      shell: bash
+
+    - name: Get commit date
+      id: commitdate
+      run: echo "::set-output name=date::$(TZ=UTC0 git show --quiet --date='format-local:%Y-%m-%dT%H:%M:%S' --format='%cd' ${{ env.GIT_COMMIT_SHA }})"
+
+    - name: Run display benchmark 1
+      timeout-minutes: 3
+      uses: GabrielBB/xvfb-action@v1.6
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_DISPLAY_BENCHMARK: 'true'
+        COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
+
+    - name: Upload results 1
+      uses: Mudlet/gsheets-append-action@development
+      with:
+        GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
+        GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
+        SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
+        TABLE_START_CELL: 'A1'
+        DATA_ENV_NAME: 'PERFDATA'
+
+    - name: Run display benchmark 2
+      timeout-minutes: 3
+      uses: GabrielBB/xvfb-action@v1.6
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_DISPLAY_BENCHMARK: 'true'
+        COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
+
+    - name: Upload results 2
+      uses: Mudlet/gsheets-append-action@development
+      with:
+        GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
+        GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
+        SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
+        TABLE_START_CELL: 'A1'
+        DATA_ENV_NAME: 'PERFDATA'
+
+    - name: Run display benchmark 3
+      timeout-minutes: 3
+      uses: GabrielBB/xvfb-action@v1.6
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_DISPLAY_BENCHMARK: 'true'
+        COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
+
+    - name: Upload results 3
+      uses: Mudlet/gsheets-append-action@development
+      with:
+        GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
+        GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
+        SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
+        TABLE_START_CELL: 'A1'
+        DATA_ENV_NAME: 'PERFDATA'
+
+    - name: Run display benchmark 4
+      timeout-minutes: 3
+      uses: GabrielBB/xvfb-action@v1.6
+      with:
+        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_DISPLAY_BENCHMARK: 'true'
+        COMMIT_DATE: ${{ steps.commitdate.outputs.date }}
+
+    - name: Upload results 4
+      uses: Mudlet/gsheets-append-action@development
+      with:
+        GOOGLE_USER_MAIL: ${{secrets.GOOGLE_PERFORMANCE_EMAIL}}
+        GOOGLE_USER_KEY: ${{secrets.GOOGLE_PERFORMANCE_KEY}}
+        SPREADSHEET: '1Fm-CyDJFNQUeg9LYE845lzogq0eDMI0lXMOg-wU1-2g'
+        TABLE_START_CELL: 'A1'
+        DATA_ENV_NAME: 'PERFDATA'
