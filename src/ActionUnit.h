@@ -92,8 +92,6 @@ private:
     QMap<int, TAction*> mActionMap;
     std::list<TAction*> mActionRootNodeList;
     int mMaxID = 0;
-    QPointer<TToolBar> mpToolBar;
-    QPointer<TEasyButtonBar> mpEasyButtonBar;
     bool mModuleMember = false;
     std::list<QPointer<TToolBar>> mToolBarList;
     std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
