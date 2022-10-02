@@ -102,7 +102,7 @@ TChar::TChar(const TChar& copy)
 const QString timeStampFormat = qsl("hh:mm:ss.zzz ");
 const QString blankTimeStamp  = qsl("------------ ");
 
-// Store for text and attributes (such as character color) to be drawn on screen 
+// Store for text and attributes (such as character color) to be drawn on screen
 // Contents are rendered by a TTextEdit
 TBuffer::TBuffer(Host* pH)
 : mBlack(pH->mBlack)
@@ -2278,6 +2278,7 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 inline int TBuffer::wrap(int startLine)
 {
     TChar pSpace;
+    qDebug() << mName << "wrapping at" << mWrapAt;
     return wrapLine(startLine, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mWrapIndent, pSpace, false);
 }
 
@@ -2343,7 +2344,7 @@ TBuffer::binarySearchHorizontalAdvance(const int &lineIndex, const int &indentSi
     } else {
         calculatedWidth = fontMetrics.horizontalAdvance(lineText.toString()) + indentWidth;
     }
-    
+
     if (calculatedWidth <= screenWidth) {
         lineCharIterator = lineCharTotal;
         return;
@@ -2486,7 +2487,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
                     }
                     newLineChop = true;
                 }
-                
+
                 lineText = lineBuffer.at(currentLine).midRef(subStringStart, lineCharIterator - subStringStart);
                 for (int currentCharacter = subStringStart; currentCharacter < lineCharIterator; ++currentCharacter) {
                     newLine.push_back(buffer.at(currentLine).at(currentCharacter));
@@ -2575,7 +2576,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
         }
         log(startLine, startLine + tempList.size());
     }
-    
+
     return insertedLines > 0 ? insertedLines : 0;
 }
 
