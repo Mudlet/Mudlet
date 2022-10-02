@@ -16,6 +16,9 @@ jobs:
   analyze:
     name: ${{matrix.buildname}}
     runs-on: ubuntu-latest
+    
+    permissions:
+      security-events: write
 
     strategy:
       fail-fast: false
