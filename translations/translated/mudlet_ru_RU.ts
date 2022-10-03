@@ -3002,7 +3002,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1572"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** запуск нового сеанса ***</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1657"/>
@@ -3568,7 +3568,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="326"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[Ошибка триггера:] %1 лимит захвата групп превышен, захватите меньше групп.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="412"/>
@@ -3580,7 +3580,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="1164"/>
       <source>Trigger name=%1 expired.</source>
-      <translation type="unfinished"/>
+      <translation>Триггер=%1 истек.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1169"/>
@@ -8407,7 +8407,14 @@ for all of the %n selected room(s):</source>
 
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Использование: %1 [OPTION...]
+       -h, --help выводит сообщение.
+       -v, --version выводит информацию о версии.
+       -q, --quiet отсутствие заставки при запуске.
+       --profile=&lt;profile&gt;  дополнительный профиль для открытия
+
+Есть и другие унаследованные опции, возникающие из библиотек Qt, которые
+менее вероятно будут полезны для обычного использования этого приложения:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="276"/>
