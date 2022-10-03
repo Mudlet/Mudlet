@@ -4243,7 +4243,7 @@ void T2DMap::slot_setArea()
 
     connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=](QString newText) {
         auto buttonBox = set_room_area_dialog->findChild<QDialogButtonBox*>("buttonBox");
-        buttonBox->button( QDialogButtonBox::Ok )->setEnabled( !newText.isEmpty() );
+        buttonBox->button( QDialogButtonBox::Ok )->setEnabled(!newText.isEmpty());
     });
 
     QStringList sortedAreaList;
