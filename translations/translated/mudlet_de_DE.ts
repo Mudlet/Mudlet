@@ -146,24 +146,24 @@ Bitte warten...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="117"/>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Gebiet:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="141"/>
       <source>Room Name: %1</source>
-      <translation type="unfinished"/>
+      <translation>Raumname: %1</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="155"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>Raum%1ID:%1%2 Position%1auf%1der%1Karte: (%3,%4,%5) ‑%1Aktuelle Spielposition</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="177"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>Raum%1ID:%1%2 Position%1auf%1der%1Karte: (%3,%4,%5) ‑%1Ausgewählter Raum</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mapInfoContributorManager.cpp" line="200"/>
@@ -1164,7 +1164,7 @@ Ganzzahl eingeben:</translation>
       <location filename="../src/TAlias.cpp" line="125"/>
       <location filename="../src/TAlias.cpp" line="196"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[Alias-Fehler:] %1 Limit für erfasste Gruppen überschritten. Erfasse weniger Gruppen.</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="267"/>
@@ -1477,7 +1477,7 @@ Ganzzahl eingeben:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15561"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>[FEHLER] - Code-Formatierer kann nicht geladen werden.Die Einrückungungsfunktion wird nicht verfügbar sein.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15638"/>
@@ -1555,12 +1555,12 @@ Diese Orte wurden ausprobiert:
     <message>
       <location filename="../src/TMainConsole.cpp" line="219"/>
       <source>Logging has started. Log file is %1</source>
-      <translation type="unfinished"/>
+      <translation>Protokoll gestartet. Datei ist %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="229"/>
       <source>Logging has been stopped. Log file is %1</source>
-      <translation type="unfinished"/>
+      <translation>Protokoll beendet. Datei ist %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="339"/>
@@ -1671,7 +1671,9 @@ Diese Orte wurden ausprobiert:
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+--------------------------------------------------------------+
+|                      Systemstatistiken                       |
++--------------------------------------------------------------+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1455"/>
@@ -1861,7 +1863,7 @@ Diese Orte wurden ausprobiert:
     <message>
       <location filename="../src/TMap.cpp" line="112"/>
       <source>[MAP ERROR:]%1</source>
-      <translation type="unfinished"/>
+      <translation>[KARTENFEHLER:]%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="526"/>
@@ -2564,23 +2566,27 @@ und der Ausgang wird in eine Abzweigung umgewandelt.</translation>
       <location filename="../src/TRoom.cpp" line="1637"/>
       <source>It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Er war versperrt. Dies wird als Benutzerdaten 
+gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1640"/>
       <source>It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Er war versperrt. Dies wird als Benutzerdaten 
+gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1650"/>
       <source>It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Er hatte ein Gewicht. Dies wird als Benutzerdaten 
+gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1653"/>
       <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Er hatte ein Gewicht. Dies wird als Benutzerdaten 
+gespeichert unter dem Schlüssel: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1664"/>
@@ -2694,13 +2700,14 @@ Bestimme neue IDs, die statt dessen genutzt werden können.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="857"/>
       <source>[ INFO ]  - The renumbered rooms will be:</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Die neu nummerierten Räume sind:</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1177"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Die durchgeführten Änderungen sind:
+(ID) &quot;alter Name&quot; ==&gt; &quot;neuer Name&quot;</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="715"/>
@@ -2972,7 +2979,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1572"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** Neue Sitzung wird gestartet ***</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1657"/>
@@ -3538,7 +3545,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="326"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[Trigger-Fehler:] %1 Limit für erfasste Gruppen überschritten. Erfasse weniger Gruppen.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="412"/>
@@ -3550,14 +3557,14 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="1164"/>
       <source>Trigger name=%1 expired.</source>
-      <translation type="unfinished"/>
+      <translation>Trigger namens %1 abgelaufen.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1169"/>
       <source>Trigger name=%1 will fire %n more time(s).</source>
       <translation>
-        <numerusform>Trigger name=%1 wird noch %n mal auslösen.</numerusform>
-        <numerusform>Trigger name=%1 wird noch %n mal auslösen.</numerusform>
+        <numerusform>Trigger namens %1 wird noch %n mal auslösen.</numerusform>
+        <numerusform>Trigger namens %1 wird noch %n mal auslösen.</numerusform>
       </translation>
     </message>
   </context>
@@ -8371,7 +8378,14 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
 
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Verwendung: %1 [OPTION...]
+       -h, --help           zeigt diese Meldung.
+       -v, --version        zeigt Versionsinformationen an.
+       -q, --quiet          kein Splashscreen beim Start.
+       --profile=&lt;Profil>  Profil, das zusätzlich geöffnet werden soll.
+
+Es gibt andere Optionen, die aus den Qt-Bibliotheken übernommen wurden, die 
+wahrscheinlich weniger nützlich für die normale Verwendung dieser Anwendung sind:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="276"/>
