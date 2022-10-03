@@ -4273,10 +4273,12 @@ void T2DMap::slot_setArea()
     } else if (sortedAreaList.contains(arealist_combobox->currentText().trimmed())) {
         newAreaId = mpMap->mpRoomDB->getAreaNamesMap().key(arealist_combobox->currentText());
     } else {
-        newAreaId = mpMap->mpRoomDB->addArea(arealist_combobox->currentText());
+        auto newAreaName = arealist_combobox->currentText();
+        newAreaId = mpMap->mpRoomDB->addArea(newAreaName);
         if (newAreaId == 0) {
-            return; // Just return. This should not happen, but if it fails addArea underneath will log reason
+            return; // This should not happen, but if it fails addArea underneath will log reason
         }
+        mpMap->postMessage(tr("[  OK  ]  - Added %1 (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
         mpMap->mUnsavedMap = true;
 
         if (mpMap->mpMapper) {
