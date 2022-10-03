@@ -3512,7 +3512,10 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1169"/>
       <source>Trigger name=%1 will fire %n more time(s).</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Trigger name=%1 will fire %n more time.</numerusform>
+        <numerusform>Trigger name=%1 will fire %n more time.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -3942,22 +3945,22 @@ Reason: </translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="566"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Trying secure connection to %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="573"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - The IP address of %1 has been found. It is: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="575"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Trying to connect to %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="577"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Trying to connect to %1:%2 via proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="624"/>
@@ -7154,7 +7157,7 @@ for all the %n selected rooms:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="291"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** starting new session ***</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
@@ -8341,7 +8344,7 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="294"/>
       <source>Copyright © 2008-2022  Mudlet developers</source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-2022  Mudlet developers</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="295"/>
