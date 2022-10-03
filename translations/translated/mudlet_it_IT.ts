@@ -169,7 +169,10 @@ attendere prego...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="200"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanza selezionata</numerusform>
+        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanze selezionate</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -1164,7 +1167,7 @@ per le stanze selezionate:</translation>
       <location filename="../src/TAlias.cpp" line="125"/>
       <location filename="../src/TAlias.cpp" line="196"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - %1 superato il limite dei gruppo di cattura nell'alias, cattura meno gruppi.</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="267"/>
@@ -1477,7 +1480,7 @@ per le stanze selezionate:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15561"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile caricare il modulo di formattazione codice, l'indentazione automatico non sarà disponibile.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15638"/>
@@ -2578,12 +2581,13 @@ e l'uscita verrà trasformata in uno stub.</translation>
       <location filename="../src/TRoom.cpp" line="1637"/>
       <source>It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>L'uscita è bloccata, questa informazione è registrata nei dati utenti con chiave:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1640"/>
       <source>It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>L'uscita è bloccata, questa informazione è registrata nei dati utenti con chiave: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1650"/>
@@ -3572,7 +3576,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="326"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - %1 superato il limite dei gruppo di cattura nel trigger, cattura meno gruppi.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="412"/>
