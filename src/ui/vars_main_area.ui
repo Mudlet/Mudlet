@@ -86,6 +86,9 @@
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
+        <property name="buddy">
+         <cstring>comboBox_variable_value_type</cstring>
+        </property>
        </widget>
       </item>
       <item row="0" column="0">
@@ -110,6 +113,9 @@
            </property>
            <property name="alignment">
             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+           <property name="buddy">
+            <cstring>lineEdit_var_name</cstring>
            </property>
           </widget>
          </item>
@@ -177,6 +183,9 @@ from GUI)</string>
         <property name="alignment">
          <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
+        <property name="buddy">
+         <cstring>comboBox_variable_key_type</cstring>
+        </property>
        </widget>
       </item>
       <item row="1" column="0">
@@ -207,6 +216,12 @@ from GUI)</string>
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>lineEdit_var_name</tabstop>
+  <tabstop>comboBox_variable_key_type</tabstop>
+  <tabstop>comboBox_variable_value_type</tabstop>
+  <tabstop>checkBox_variable_hidden</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
