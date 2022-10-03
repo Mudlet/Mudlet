@@ -3857,7 +3857,7 @@ Reason: </source>
     <message>
       <location filename="../src/ctelnet.cpp" line="573"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - La dirección IP de %1 ha sido encontrada. Es: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="575"/>
@@ -8191,7 +8191,7 @@ less likely to be useful for normal use of this application:</source>
       <location filename="../src/main.cpp" line="291"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)</source>
       <comment>%1 and %2 are version numbers</comment>
-      <translation type="unfinished"/>
+      <translation>Librerías Qt %1 (compilación) %2 (tiempo de ejecución)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="294"/>
@@ -8207,7 +8207,8 @@ less likely to be useful for normal use of this application:</source>
       <location filename="../src/main.cpp" line="296"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
-      <translation type="unfinished"/>
+      <translation>Esto es software libre: eres libre de modificarlo y redistribuirlo.
+NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="321"/>
