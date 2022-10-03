@@ -109,7 +109,7 @@ void TMap::mapClear()
 void TMap::logError(QString& msg)
 {
     if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->mpErrorConsole->print(tr("[MAP ERROR:]%1\n").arg(msg), QColor(255, 128, 0), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(qsl("%1\n").arg(tr("[MAP ERROR:]%1").arg(msg)), QColor(255, 128, 0), QColor(Qt::black));
     }
 }
 

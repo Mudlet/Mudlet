@@ -1632,11 +1632,12 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             QString auditKeyLocked = qsl("audit.invalid_exit.%1.isLocked").arg(dirCode);
             userData.insert(auditKeyLocked, qsl("true"));
             if (mudlet::self()->showMapAuditErrors()) {
-                infoMsg.append(tr("\nIt was locked, this is recorded as user data with key:\n"
-                                  "\"%1\".")
-                                       .arg(auditKeyLocked));
+                infoMsg.append(
+                    qsl("\n%1").arg(
+                        tr("It was locked, this is recorded as user data with key:\n\"%1\".")
+                        .arg(auditKeyLocked)));
             }
-            logMsg.append(tr(R"(  It was locked, this is recorded as user data with key: "%1".)").arg(auditKeyLocked));
+            logMsg.append(qsl("  %1").arg(tr(R"(It was locked, this is recorded as user data with key: "%1".)").arg(auditKeyLocked)));
             exitLocks.removeAll(dirCode);
         }
 
@@ -1644,11 +1645,12 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             QString auditKeyWeight = qsl("audit.invalid_exit.%1.weight").arg(dirCode);
             userData.insert(auditKeyWeight, QString::number(exitWeights.value(exitKey)));
             if (mudlet::self()->showMapAuditErrors()) {
-                infoMsg.append(tr("\nIt had a weight, this is recorded as user data with key:\n"
-                                  "\"%1\".")
-                                       .arg(auditKeyWeight));
+                infoMsg.append(
+                    qsl("\n%1").arg(
+                        tr("It had a weight, this is recorded as user data with key:\n\"%1\".")
+                        .arg(auditKeyWeight)));
             }
-            logMsg.append(tr(R"(  It had a weight, this is recorded as user data with key: "%1".)").arg(auditKeyWeight));
+            logMsg.append(qsl("  %1").arg(tr(R"(It had a weight, this is recorded as user data with key: "%1".)").arg(auditKeyWeight)));
             exitWeights.remove(exitKey);
         }
         if (mudlet::self()->showMapAuditErrors()) {

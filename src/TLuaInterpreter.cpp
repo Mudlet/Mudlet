@@ -15558,7 +15558,7 @@ void TLuaInterpreter::initIndenterGlobals()
         if (lua_isstring(pIndenterState.get(), -1)) {
             e = tr("Lua error: %1.").arg(lua_tostring(pIndenterState.get(), -1));
         }
-        QString msg = tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n");
+        QString msg = qsl("%1\n").arg(tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     }

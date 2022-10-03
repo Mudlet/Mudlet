@@ -216,7 +216,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         QTextCodec* pLogCodec = QTextCodec::codecForName("UTF-8");
         mLogStream.setCodec(pLogCodec);
         if (isMessageEnabled) {
-            QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());
+            QString message = qsl("%1\n").arg(tr("Logging has started. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
             // This puts text onto console that is IMMEDIATELY POSTED into log file so
             // must be done BEFORE logging starts - or actually mLogToLogFile gets set!
@@ -226,7 +226,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         file.remove();
         mLogToLogFile = false;
         if (isMessageEnabled) {
-            QString message = tr("Logging has been stopped. Log file is %1\n").arg(mLogFile.fileName());
+            QString message = qsl("%1\n").arg(tr("Logging has been stopped. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
             // This puts text onto console that is IMMEDIATELY POSTED into log file so
             // must be done AFTER logging ends - or actually mLogToLogFile gets reset!
@@ -1442,10 +1442,11 @@ void TMainConsole::showStatistics()
         return;
     }
 
-    QString header = tr("+--------------------------------------------------------------+\n"
-                        "|                      system statistics                       |\n"
-                        "+--------------------------------------------------------------+\n",
-                        "Header for the system's statistics information displayed in the console, it is 64 'narrow' characters wide");
+    QString header = qsl("%1\n").arg(tr(
+        "+--------------------------------------------------------------+\n"
+        "|                      system statistics                       |\n"
+        "+--------------------------------------------------------------+",
+        "Header for the system's statistics information displayed in the console, it is 64 'narrow' characters wide"));
     print(header, QColor(150, 120, 0), Qt::black);
 
     QStringList subjects;

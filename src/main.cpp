@@ -225,14 +225,14 @@ int main(int argc, char* argv[])
     QStringList texts;
     if (parser.isSet(showHelp)) {
         // Do "help" action
-        texts << QCoreApplication::translate("main", "Usage: %1 [OPTION...]\n"
-                                                     "       -h, --help           displays this message.\n"
-                                                     "       -v, --version        displays version information.\n"
-                                                     "       -q, --quiet          no splash screen on startup.\n"
-                                                     "       --profile=<profile>  additional profile to open\n\n"
-                                                     "There are other inherited options that arise from the Qt Libraries which are\n"
-                                                     "less likely to be useful for normal use of this application:\n")
-                 .arg(QLatin1String(APP_TARGET));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]\n"
+                               "       -h, --help           displays this message.\n"
+                               "       -v, --version        displays version information.\n"
+                               "       -q, --quiet          no splash screen on startup.\n"
+                               "       --profile=<profile>  additional profile to open\n\n"
+                               "There are other inherited options that arise from the Qt Libraries which are\n"
+                               "less likely to be useful for normal use of this application:")
+                 .arg(QLatin1String(APP_TARGET)));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
         texts << qsl("       --dograb        ignore any implicit or explicit -nograb.\n"
                                 "                       --dograb wins over --nograb even when --nograb is last on\n"
@@ -273,8 +273,8 @@ int main(int argc, char* argv[])
                                 "                       specified port. The number is the port value and block is\n"
                                 "                       optional and will make the application wait until a\n"
                                 "                       debugger connects to it.\n\n");
-        texts << QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues\n");
-        texts << QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/\n");
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }
@@ -282,19 +282,20 @@ int main(int argc, char* argv[])
     if (parser.isSet(showVersion)) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)\n",
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)",
          "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD));
+                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD)));
 #else // ! defined(QT_DEBUG)
         texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
 #endif // ! defined(QT_DEBUG)
-        texts << QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)\n",
-             "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion());
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
+             "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << QCoreApplication::translate("main", "Copyright © 2008-2022  Mudlet developers\n");
-        texts << QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html\n");
-        texts << QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
-                                                     "There is NO WARRANTY, to the extent permitted by law.\n");
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Copyright © 2008-2022  Mudlet developers"));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main",
+            "This is free software: you are free to change and redistribute it.\n"
+            "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }

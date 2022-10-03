@@ -322,7 +322,10 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
 {
     if (rc == 0) {
         if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+            mpHost->mpEditorDialog->mpErrorConsole->print(
+                qsl("%1\n").arg(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
+                QColor(255, 128, 0),
+                QColor(Qt::black));
         }
         qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     }
@@ -1158,12 +1161,12 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
 
                 if (mudlet::debugMode) {
                     // FIXME: This message is translated - but most other TDebug ones are not!
-                    TDebug(Qt::yellow, Qt::darkMagenta) << tr("Trigger name=%1 expired.\n").arg(mName) >> mpHost;
+                    TDebug(Qt::yellow, Qt::darkMagenta) << qsl("%1\n").arg(tr("Trigger name=%1 expired.").arg(mName)) >> mpHost;
                 }
 
             } else if (mudlet::debugMode) {
                 // FIXME: This message is translated - but most other TDebug ones are not!
-                TDebug(Qt::yellow, Qt::darkMagenta) << tr("Trigger name=%1 will fire %n more time(s).\n", "", mExpiryCount).arg(mName) >> mpHost;
+                TDebug(Qt::yellow, Qt::darkMagenta) << qsl("%1\n").arg(tr("Trigger name=%1 will fire %n more time(s).", "", mExpiryCount).arg(mName)) >> mpHost;
             }
         }
 
