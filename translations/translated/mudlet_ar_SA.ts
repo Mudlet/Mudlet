@@ -3859,7 +3859,7 @@ Reason: </source>
     <message>
       <location filename="../src/ctelnet.cpp" line="575"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ معلومة ]  - نحاول الاتصال ب %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="577"/>
