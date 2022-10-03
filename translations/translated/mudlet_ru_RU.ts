@@ -3585,7 +3585,12 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1169"/>
       <source>Trigger name=%1 will fire %n more time(s).</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Триггер=%1 сработает ещё %n раз.</numerusform>
+        <numerusform>Триггер=%1 сработает ещё %n раз.</numerusform>
+        <numerusform>Триггер=%1 сработает ещё %n раз.</numerusform>
+        <numerusform>Триггер=%1 сработает ещё %n раз.</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -4015,22 +4020,22 @@ Reason: </source>
     <message>
       <location filename="../src/ctelnet.cpp" line="566"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Попытка защищенного соединения с %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="573"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - IP-адрес %1 был найден. Это: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="575"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Идёт подключение к %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="577"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Идёт подключение к %1: %2 через прокси...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="624"/>
@@ -7231,12 +7236,12 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="211"/>
       <source>-- Enter your lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- Введите код Lua здесь</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="291"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** запуск нового сеанса ***</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
@@ -8407,40 +8412,41 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="276"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues</source>
-      <translation type="unfinished"/>
+      <translation>Об ошибках сообщайте: https://github.com/Mudlet/Mudlet/issues</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="277"/>
       <source>Project home page: http://www.mudlet.org/</source>
-      <translation type="unfinished"/>
+      <translation>Главная страница проекта: http://www.mudlet.org</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
       <source>%1 %2%3 (with debug symbols, without optimisations)</source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (символы отладки, без оптимизаций)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="291"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)</source>
       <comment>%1 and %2 are version numbers</comment>
-      <translation type="unfinished"/>
+      <translation>Qt библиотеки %1 (компиляция) %2 (среда выполнения)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="294"/>
       <source>Copyright © 2008-2022  Mudlet developers</source>
-      <translation type="unfinished"/>
+      <translation>Авторское право © 2008-2022 Mudlet разработчики</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="295"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html</source>
-      <translation type="unfinished"/>
+      <translation>Лицензия GPLv2 +: GNU GPL версии 2 или более поздней версии http://gnu.org/licenses/gpl.html</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
-      <translation type="unfinished"/>
+      <translation>Это свободное программное обеспечение: вы свободны изменять и распространять его.
+Нет никаких гарантий в степени разрешенной законом.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="321"/>
