@@ -146,30 +146,33 @@ please wait...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="117"/>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="141"/>
       <source>Room Name: %1</source>
-      <translation type="unfinished"/>
+      <translation>Room Name: %1</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="155"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="177"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mapInfoContributorManager.cpp" line="200"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1centre of %n selected rooms</numerusform>
+        <numerusform>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1centre of %n selected rooms</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -1167,7 +1170,7 @@ rooms:</translation>
       <location filename="../src/TAlias.cpp" line="125"/>
       <location filename="../src/TAlias.cpp" line="196"/>
       <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[Alias Error:] %1 capture group limit exceeded, capture less groups.</translation>
     </message>
     <message>
       <location filename="../src/TAlias.cpp" line="267"/>
@@ -1480,7 +1483,7 @@ rooms:</translation>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15561"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15638"/>
@@ -1558,12 +1561,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="219"/>
       <source>Logging has started. Log file is %1</source>
-      <translation type="unfinished"/>
+      <translation>Logging has started. Log file is %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="229"/>
       <source>Logging has been stopped. Log file is %1</source>
-      <translation type="unfinished"/>
+      <translation>Logging has been stopped. Log file is %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="339"/>
@@ -1674,7 +1677,9 @@ Tried these locations:
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+--------------------------------------------------------------+
+|                      system statistics                       |
++--------------------------------------------------------------+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1455"/>
@@ -1864,7 +1869,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMap.cpp" line="112"/>
       <source>[MAP ERROR:]%1</source>
-      <translation type="unfinished"/>
+      <translation>[MAP ERROR:]%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="526"/>
@@ -2536,23 +2541,25 @@ and the exit will be turned into a stub.</source>
       <location filename="../src/TRoom.cpp" line="1637"/>
       <source>It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>It was locked, this is recorded as user data with key:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1640"/>
       <source>It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>It was locked, this is recorded as user data with key: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1650"/>
       <source>It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>It had a weight, this is recorded as user data with key:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1653"/>
       <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1664"/>
@@ -2659,13 +2666,14 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="857"/>
       <source>[ INFO ]  - The renumbered rooms will be:</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - The renumbered rooms will be:</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1177"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - The changes made are:
+(ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="715"/>
@@ -2929,7 +2937,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1572"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** starting new session ***</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1657"/>
@@ -3495,7 +3503,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="326"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.</source>
-      <translation type="unfinished"/>
+      <translation>[Trigger Error:] %1 capture group limit exceeded, capture less groups.</translation>
     </message>
     <message>
       <location filename="../src/TTrigger.cpp" line="412"/>
@@ -3507,7 +3515,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="1164"/>
       <source>Trigger name=%1 expired.</source>
-      <translation type="unfinished"/>
+      <translation>Trigger name=%1 expired.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1169"/>
@@ -7152,7 +7160,7 @@ for all the %n selected rooms:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="211"/>
       <source>-- Enter your lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- Enter your lua code here</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="291"/>
@@ -8317,29 +8325,36 @@ for all the %n selected rooms:</numerusform>
 
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Usage: %1 [OPTION...]
+       -h, --help           displays this message.
+       -v, --version        displays version information.
+       -q, --quiet          no splash screen on startup.
+       --profile=&lt;profile&gt;  additional profile to open
+
+There are other inherited options that arise from the Qt Libraries which are
+less likely to be useful for normal use of this application:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="276"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues</source>
-      <translation type="unfinished"/>
+      <translation>Report bugs to: https://github.com/Mudlet/Mudlet/issues</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="277"/>
       <source>Project home page: http://www.mudlet.org/</source>
-      <translation type="unfinished"/>
+      <translation>Project home page: http://www.mudlet.org/</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
       <source>%1 %2%3 (with debug symbols, without optimisations)</source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (with debug symbols, without optimisations)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="291"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)</source>
       <comment>%1 and %2 are version numbers</comment>
-      <translation type="unfinished"/>
+      <translation>Qt libraries %1 (compilation) %2 (runtime)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="294"/>
@@ -8349,13 +8364,14 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="295"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html</source>
-      <translation type="unfinished"/>
+      <translation>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
-      <translation type="unfinished"/>
+      <translation>This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="321"/>
