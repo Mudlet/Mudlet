@@ -4241,6 +4241,11 @@ void T2DMap::slot_setArea()
         return;
     }
 
+    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=](QString newText) {
+        auto buttonBox = set_room_area_dialog->findChild<QDialogButtonBox*>("buttonBox");
+        buttonBox->button( QDialogButtonBox::Ok )->setEnabled( !newText.isEmpty() );
+    });
+
     QStringList sortedAreaList;
     sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
 
@@ -4257,13 +4262,27 @@ void T2DMap::slot_setArea()
         arealist_combobox->addItem(qsl("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
 
-
-
     if (set_room_area_dialog->exec() == QDialog::Rejected) { // Don't proceed if "cancel" was pressed
         return;
     }
 
-    int newAreaId = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
+    auto newArea = arealist_combobox->itemData(arealist_combobox->currentIndex());
+    int  newAreaId;
+    if (newArea.isValid()) {
+        newAreaId = newArea.toInt();
+    } else if (sortedAreaList.contains(arealist_combobox->currentText().trimmed())) {
+        newAreaId = mpMap->mpRoomDB->getAreaNamesMap().key(arealist_combobox->currentText());
+    } else {
+        newAreaId = mpMap->mpRoomDB->addArea(arealist_combobox->currentText());
+        if (newAreaId == 0) {
+            return; // Just return. This should not happen, but if it fails addArea underneath will log reason
+        }
+        mpMap->mUnsavedMap = true;
+
+        if (mpMap->mpMapper) {
+            mpMap->mpMapper->updateAreaComboBox();
+        }
+    }
     mMultiRect = QRect(0, 0, 0, 0);
     QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
     while (itSelectedRoom.hasNext()) {

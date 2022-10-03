@@ -22,7 +22,11 @@
     </widget>
    </item>
    <item>
-    <widget class="QComboBox" name="arealist_combobox"/>
+    <widget class="QComboBox" name="arealist_combobox">
+     <property name="editable">
+      <bool>true</bool>
+     </property>
+    </widget>
    </item>
    <item>
     <spacer name="verticalSpacer">
