@@ -3525,7 +3525,9 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1169"/>
       <source>Trigger name=%1 will fire %n more time(s).</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>觸發名稱 =%1 將被觸發 %n 次</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -3954,22 +3956,22 @@ Reason: </source>
     <message>
       <location filename="../src/ctelnet.cpp" line="566"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ] - 尝试安全连接到 %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="573"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - 已經取得 %1 的 IP 位址：%2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="575"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ]  - 正在尝试连接到 %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="577"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ]  - 正在尝试通过via代理连接到 %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="624"/>
@@ -7144,12 +7146,12 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="211"/>
       <source>-- Enter your lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- 在此输入您的lua代码</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="291"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** 开始新的会话 ***</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
@@ -8320,34 +8322,34 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="276"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues</source>
-      <translation type="unfinished"/>
+      <translation>报告bugs：https://github.com/Mudelet/Mudelet/issues</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="277"/>
       <source>Project home page: http://www.mudlet.org/</source>
-      <translation type="unfinished"/>
+      <translation>项目主页：http://www.mudelet.org/</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
       <source>%1 %2%3 (with debug symbols, without optimisations)</source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (带有调试符号，没有优化)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="291"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)</source>
       <comment>%1 and %2 are version numbers</comment>
-      <translation type="unfinished"/>
+      <translation>Qt库 %1 (编译) %2 (运行时)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="294"/>
       <source>Copyright © 2008-2022  Mudlet developers</source>
-      <translation type="unfinished"/>
+      <translation>版权所有 © 2008-2022  Mudlet developers</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="295"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html</source>
-      <translation type="unfinished"/>
+      <translation>许可证 GPLv2+: GNU GPL 版本 2 或更高版本 - http://gnu.org/licenses/gpl.html</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
