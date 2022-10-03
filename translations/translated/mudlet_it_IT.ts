@@ -146,24 +146,24 @@ attendere prego...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="117"/>
       <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation type="unfinished"/>
+      <translation>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="141"/>
       <source>Room Name: %1</source>
-      <translation type="unfinished"/>
+      <translation>Nome Stanza: %1</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="155"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation type="unfinished"/>
+      <translation>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1stanza corrente</translation>
     </message>
     <message>
       <location filename="../src/mapInfoContributorManager.cpp" line="177"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation type="unfinished"/>
+      <translation>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1stanza selezionata</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mapInfoContributorManager.cpp" line="200"/>
@@ -1555,12 +1555,12 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMainConsole.cpp" line="219"/>
       <source>Logging has started. Log file is %1</source>
-      <translation type="unfinished"/>
+      <translation>La registrazione è iniziata. File di log è %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="229"/>
       <source>Logging has been stopped. Log file is %1</source>
-      <translation type="unfinished"/>
+      <translation>La registrazione è stata interrotta. File di log è %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="339"/>
@@ -1671,7 +1671,9 @@ Percorsi analizzati:
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+ -------------------------------------------------------------- +
+|                    statistiche di sistema                      |
++ -------------------------------------------------------------- +</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1455"/>
@@ -1861,7 +1863,7 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMap.cpp" line="112"/>
       <source>[MAP ERROR:]%1</source>
-      <translation type="unfinished"/>
+      <translation>[ERRORE MAPPA:]%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="526"/>
@@ -2587,12 +2589,13 @@ e l'uscita verrà trasformata in uno stub.</translation>
       <location filename="../src/TRoom.cpp" line="1650"/>
       <source>It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>L'uscita ha un peso, questa informazione è registrata nei dati utenti con chiave:
+&quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1653"/>
       <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>L'uscita ha un peso, questa informazione è registrata nei dati utenti con chiave: &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1664"/>
@@ -2702,13 +2705,14 @@ nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="857"/>
       <source>[ INFO ]  - The renumbered rooms will be:</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Le stanze rinumerate sono:</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1177"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Le modifiche effettuate sono:
+(ID) &quot;vecchio nome&quot; ==&gt; &quot;nuovo nome&quot;</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="715"/>
@@ -3002,7 +3006,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1572"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** Inizio nuova sessione ***</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1657"/>
@@ -3579,7 +3583,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTrigger.cpp" line="1164"/>
       <source>Trigger name=%1 expired.</source>
-      <translation type="unfinished"/>
+      <translation>Nome del trigger=%1 scaduto.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1169"/>
@@ -8403,7 +8407,14 @@ dalla GUI)</translation>
 
 There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Sintassi: %1 [OPZIONE...]
+       -h, --help visualizza questo messaggio.
+       -v, --version visualizza le informazioni sulla versione.
+       -q, --quiet nessun splash screen all'avvio.
+        --profile=&lt;profile&gt;  profilo addizionale da aprire
+
+Ci sono altre opzioni che derivano dalle librerie Qt che sono
+meno utili per un uso normale di questa applicazione:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="276"/>
