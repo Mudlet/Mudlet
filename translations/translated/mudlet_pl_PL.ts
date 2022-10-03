@@ -3509,7 +3509,12 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
     <message numerus="yes">
       <location filename="../src/TTrigger.cpp" line="1169"/>
       <source>Trigger name=%1 will fire %n more time(s).</source>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Nazwa wyzwalacza=%1 będzie działać %n więcej raz(y).</numerusform>
+        <numerusform>Nazwa wyzwalacza=%1 będzie działać %n więcej raz(y).</numerusform>
+        <numerusform>Nazwa wyzwalacza=%1 będzie działać %n więcej raz(y).</numerusform>
+        <numerusform>Nazwa wyzwalacza=%1 będzie działać %n więcej raz(y).</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -3938,22 +3943,22 @@ Powód odłączenia: </translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="566"/>
       <source>[ INFO ]  - Trying secure connection to %1: %2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Próba bezpiecznego połączenia z %1: %2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="573"/>
       <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Adres IP %1 został znaleziony. Jest to: %2</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="575"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Próba połączenia do %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="577"/>
       <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Próba połączenia do %1:%2 przez serwer pośredniczący proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="624"/>
@@ -7149,12 +7154,12 @@ dla wszystkich %n wybranych pokoi:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="211"/>
       <source>-- Enter your lua code here</source>
-      <translation type="unfinished"/>
+      <translation>-- Wprowadź tutaj swój kod lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="291"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** rozpoczęcie nowej sesji ***</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
@@ -8325,34 +8330,34 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="276"/>
       <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues</source>
-      <translation type="unfinished"/>
+      <translation>Zgłaszanie błędów do: https://github.com/Mudlet/Mudlet/issues</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="277"/>
       <source>Project home page: http://www.mudlet.org/</source>
-      <translation type="unfinished"/>
+      <translation>Strona główna projektu: http://www.mudlet.org/</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
       <source>%1 %2%3 (with debug symbols, without optimisations)</source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation type="unfinished"/>
+      <translation>%1 %2%3 (z symbolami debugowania, bez optymalizacji)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="291"/>
       <source>Qt libraries %1 (compilation) %2 (runtime)</source>
       <comment>%1 and %2 are version numbers</comment>
-      <translation type="unfinished"/>
+      <translation>Biblioteki Qt %1 (kompilacja) %2 (czas wykonania)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="294"/>
       <source>Copyright © 2008-2022  Mudlet developers</source>
-      <translation type="unfinished"/>
+      <translation>Prawa autorskie © 2008-2022  Deweloperzy Mudlet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="295"/>
       <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html</source>
-      <translation type="unfinished"/>
+      <translation>Licencja GPLv2+: GNU GPL w wersji 2 lub nowszej - http://gnu.org/licenses/gpl.html</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
