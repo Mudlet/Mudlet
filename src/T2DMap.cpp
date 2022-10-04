@@ -4283,7 +4283,7 @@ void T2DMap::slot_setArea()
                                   "The '[MAP ERROR:]' text should be the same as that used for the translation of \"[MAP ERROR:]%1\n\" in the 'TMAP::logerror(...)' function.").arg(newAreaName));
             return;
         }
-        mpMap->postMessage(tr("[  OK  ]  - Added %1 (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
+        mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
         mpMap->mUnsavedMap = true;
 
         if (mpMap->mpMapper) {
