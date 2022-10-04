@@ -1783,7 +1783,29 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                 bool ok = false;
                 int num = numberText.toInt(&ok, 10);
                 if (Q_LIKELY(!numberText.isEmpty() && ok)) {
-                    list << num;
+                    switch (num) {
+                    case REGEX_SUBSTRING:
+                        [[fallthrough]];
+                    case REGEX_PERL:
+                        [[fallthrough]];
+                    case REGEX_BEGIN_OF_LINE_SUBSTRING:
+                        [[fallthrough]];
+                    case REGEX_EXACT_MATCH:
+                        [[fallthrough]];
+                    case REGEX_LUA_CODE:
+                        [[fallthrough]];
+                    case REGEX_LINE_SPACER:
+                        [[fallthrough]];
+                    case REGEX_COLOR_PATTERN:
+                        [[fallthrough]];
+                    case REGEX_PROMPT:
+                        list << num;
+                        break;
+                    default:
+                        mpHost->postMessage(qsl("[ ERROR ] - \"%1\" as a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\" cannot be understood by this version of Mudlet, is it from a later version? Converting it to a SUBSTRING type so the data can be shown but it will probably not work as expected.").arg(numberText, parentName));
+                        list << REGEX_SUBSTRING; //Set it to the default type
+                    }                        
+
                 } else {
                     qWarning(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
                            numberText.toUtf8().constData(),
