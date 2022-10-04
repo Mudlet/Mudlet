@@ -374,12 +374,8 @@ void XMLimport::readMap()
     QListIterator<int> itAreaWithRooms(tempAreaRoomsHash.uniqueKeys());
     while (itAreaWithRooms.hasNext()) {
         int areaId = itAreaWithRooms.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         auto values = tempAreaRoomsHash.values(areaId);
         QSet<int> areaRoomsSet{values.begin(), values.end()};
-#else
-        QSet<int> areaRoomsSet{tempAreaRoomsHash.values(areaId).toSet()};
-#endif
 
         if (!mpHost->mpMap->mpRoomDB->areas.contains(areaId)) {
             // It is known for map files to have rooms with area Ids that are
@@ -885,6 +881,41 @@ void XMLimport::readHostPackage(Host* pHost)
         pHost->setEditorShowBidi(attributes().value(qsl("mEditorShowBidi")) == YES);
     } else {
         pHost->setEditorShowBidi(true);
+    }
+    bool autoWrap = false;
+    if (attributes().hasAttribute("mAutoWrap")) {
+        autoWrap = attributes().value(qsl("mAutoWrap")) == YES;
+    }
+    // don't call wrap function during profile load as the console won't exist yet
+    QTimer::singleShot(0, pHost, [autoWrap, pHost]() {
+        pHost->setAutoWrap(autoWrap);
+    });
+    if (attributes().hasAttribute("announceIncomingText")) {
+        pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;
+    } else {
+        pHost->mAnnounceIncomingText = true;
+    }
+    if (attributes().hasAttribute("caretShortcut")) {
+        const QStringRef caretShortcut(attributes().value(qsl("caretShortcut")));
+        if (caretShortcut == qsl("None")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::None;
+        } else if (caretShortcut == qsl("Tab")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        } else if (caretShortcut == qsl("CtrlTab")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        } else if (caretShortcut == qsl("F6")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::F6;
+        }
+    }
+    if (attributes().hasAttribute("blankLineBehaviour")) {
+        const QStringRef blankLineBehaviour(attributes().value(qsl("blankLineBehaviour")));
+        if (blankLineBehaviour == qsl("Hide")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Hide;
+        } else if (blankLineBehaviour == qsl("Show")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
+        } else if (blankLineBehaviour == qsl("ReplaceWithSpace")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
+        }
     }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
@@ -1547,7 +1578,8 @@ int XMLimport::readActionGroup(TAction* pParent)
                 // or "2" (true) for backward compatibility
                 pT->mButtonState = (readElementText().toInt() == 2);
             } else if (name() == "buttonColor") {
-                pT->mButtonColor.setNamedColor(readElementText());
+                // Not longer present/used, skip over it if it is still in file:
+                skipCurrentElement();
             } else if (name() == "buttonColumn") {
                 pT->mButtonColumns = readElementText().toInt();
             } else if (name() == "posX") {

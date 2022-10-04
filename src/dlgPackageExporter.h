@@ -88,12 +88,12 @@ public:
 
 public slots:
     void slot_addFiles();
-    void slot_export_package();
+    void slot_exportPackage();
 
 private slots:
     void slot_addDependency();
     void slot_removeDependency();
-    void slot_import_icon();
+    void slot_importIcon();
     void slot_openPackageLocation();
     void slot_packageChanged(int);
     void slot_updateLocationPlaceholder();
@@ -167,9 +167,7 @@ class dlgPackageExporterDescription : public QTextEdit
 
 public:
     Q_DISABLE_COPY(dlgPackageExporterDescription)
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 13, 0))
     Q_DISABLE_MOVE(dlgPackageExporterDescription)
-#endif
     explicit dlgPackageExporterDescription(QWidget* pW = nullptr);
     ~dlgPackageExporterDescription();
     bool canInsertFromMimeData(const QMimeData* source) const override;

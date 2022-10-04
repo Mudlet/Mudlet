@@ -100,6 +100,17 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals(expected, actual)
     end)
 
+    it("Should handle bold, before or after colours", function()
+      local sequences = {
+        {"\27[31m\27[1m", "<128,0,0><255,0,0>"},
+        {"\27[1m\27[31m", "<255,0,0>"},
+      }
+      for _, seq in ipairs(sequences) do
+          local actualResult = ansi2decho(seq[1])
+          assert.are.same(seq[2], actualResult)
+      end
+    end)
+
     it("Should leave normal text and other escape sequences alone", function()
       local sequences = {
         {"Hello World", "Hello World"},

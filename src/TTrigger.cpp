@@ -322,7 +322,10 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
 {
     if (rc == 0) {
         if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+            mpHost->mpEditorDialog->mpErrorConsole->print(
+                qsl("%1\n").arg(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
+                QColor(255, 128, 0),
+                QColor(Qt::black));
         }
         qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     }
@@ -458,18 +461,10 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
                     // otherwise highlight complete expression match
                     if (i % numberOfCaptureGroups != 1) {
                         pC->selectSection(begin, length);
-    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                         if (mBgColor != QColorConstants::Transparent) {
-    #else
-                        if (mBgColor != QColor("transparent")) {
-    #endif
                             pC->setBgColor(r1, g1, b1, 255);
                         }
-    #if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
                         if (mFgColor != QColorConstants::Transparent) {
-    #else
-                        if (mFgColor != QColor("transparent")) {
-    #endif
                             pC->setFgColor(r2, g2, b2);
                         }
                     }
@@ -551,18 +546,10 @@ void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int 
             std::string& s = *its;
             int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mBgColor != QColorConstants::Transparent) {
-#else
-            if (mBgColor != QColor("transparent")) {
-#endif
                 pC->setBgColor(r1, g1, b1, 255);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mFgColor != QColorConstants::Transparent) {
-#else
-            if (mFgColor != QColor("transparent")) {
-#endif
                 pC->setFgColor(r2, g2, b2);
             }
         }
@@ -594,8 +581,10 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
         mConditionMap[pCondition] = pCondition;
         pCondition->multiCaptureList.push_back(captureList);
         pCondition->multiCapturePosList.push_back(posList);
-        if (nameMatches != nullptr) {
+        if (nameMatches) {
             pCondition->nameCaptures.push_back(*nameMatches);
+        } else {
+            pCondition->nameCaptures.push_back(QVector<QPair<QString, QString>>());
         }
         if (mudlet::debugMode) {
             TDebug(Qt::darkYellow, Qt::black) << "match state " << mConditionMap.size() << "/" << mConditionMap.size() << " condition #" << regexNumber << "=true (" << regexNumber
@@ -695,18 +684,10 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
             std::string& s = *its;
             int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mBgColor != QColorConstants::Transparent) {
-#else
-            if (mBgColor != QColor("transparent")) {
-#endif
                 pC->setBgColor(r1, g1, b1, 255);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mFgColor != QColorConstants::Transparent) {
-#else
-            if (mFgColor != QColor("transparent")) {
-#endif
                 pC->setFgColor(r2, g2, b2);
             }
         }
@@ -823,18 +804,10 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
             std::string& s = *its;
             int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mBgColor != QColorConstants::Transparent) {
-#else
-            if (mBgColor != QColor("transparent")) {
-#endif
                 pC->setBgColor(r1, g1, b1, 255);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mFgColor != QColorConstants::Transparent) {
-#else
-            if (mFgColor != QColor("transparent")) {
-#endif
                 pC->setFgColor(r2, g2, b2);
             }
         }
@@ -974,18 +947,10 @@ void TTrigger::processExactMatch(const QString& line, int patternNumber, int pos
             std::string& s = *its;
             int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mBgColor != QColorConstants::Transparent) {
-#else
-            if (mBgColor != QColor("transparent")) {
-#endif
                 pC->setBgColor(r1, g1, b1, 255);
             }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             if (mFgColor != QColorConstants::Transparent) {
-#else
-            if (mFgColor != QColor("transparent")) {
-#endif
                 pC->setFgColor(r2, g2, b2);
             }
         }
@@ -1028,7 +993,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             return false;
         }
 
-        if (haystack.size() < 1) {
+        if (haystack.isEmpty()) {
             return false;
         }
 
@@ -1196,12 +1161,12 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
 
                 if (mudlet::debugMode) {
                     // FIXME: This message is translated - but most other TDebug ones are not!
-                    TDebug(Qt::yellow, Qt::darkMagenta) << tr("Trigger name=%1 expired.\n").arg(mName) >> mpHost;
+                    TDebug(Qt::yellow, Qt::darkMagenta) << qsl("%1\n").arg(tr("Trigger name=%1 expired.").arg(mName)) >> mpHost;
                 }
 
             } else if (mudlet::debugMode) {
                 // FIXME: This message is translated - but most other TDebug ones are not!
-                TDebug(Qt::yellow, Qt::darkMagenta) << tr("Trigger name=%1 will fire %n more time(s).\n", "", mExpiryCount).arg(mName) >> mpHost;
+                TDebug(Qt::yellow, Qt::darkMagenta) << qsl("%1\n").arg(tr("Trigger name=%1 will fire %n more time(s).", "", mExpiryCount).arg(mName)) >> mpHost;
             }
         }
 
@@ -1390,7 +1355,7 @@ void TTrigger::execute()
         mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
         mpHost->mpMedia->playMedia(mediaData);
     }
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {

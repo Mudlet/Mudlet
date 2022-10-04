@@ -27,7 +27,7 @@ dlgTriggersMainArea::dlgTriggersMainArea(QWidget* pF) : QWidget(pF)
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_trigger_name, &QLineEdit::editingFinished, this, &dlgTriggersMainArea::slot_editing_name_finished);
+    connect(lineEdit_trigger_name, &QLineEdit::editingFinished, this, &dlgTriggersMainArea::slot_editingNameFinished);
 }
 
 void dlgTriggersMainArea::trimName()
@@ -35,7 +35,7 @@ void dlgTriggersMainArea::trimName()
     lineEdit_trigger_name->setText(lineEdit_trigger_name->text().trimmed());
 }
 
-void dlgTriggersMainArea::slot_editing_name_finished()
+void dlgTriggersMainArea::slot_editingNameFinished()
 {
     trimName();
 }

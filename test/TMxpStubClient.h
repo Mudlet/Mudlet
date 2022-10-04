@@ -127,7 +127,7 @@ public:
 
     int setLink(const QStringList& hrefs, const QStringList& hints) override
     {
-        qDebug().noquote() << qsl("setLink([%1], [%2])").arg(hrefs.join(", "),hints.join(", "));
+        qDebug().noquote() << qsl("setLink([%1], [%2])").arg(hrefs.join(", "), hints.join(", "));
         mHrefs = hrefs;
         mHints = hints;
 

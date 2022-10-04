@@ -3,6 +3,7 @@
 #    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
 #    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -90,6 +91,7 @@ set(mudlet_SRCS
     ShortcutsManager.cpp
     ScriptUnit.cpp
     T2DMap.cpp
+    TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
@@ -155,6 +157,15 @@ set(mudlet_SRCS
     XMLexport.cpp
     XMLimport.cpp)
 
+if(APPLE)
+  list(APPEND mudlet_SRCS AnnouncerMac.mm)
+elseif(UNIX AND NOT APPLE)
+  list(APPEND mudlet_SRCS AnnouncerLinux.cpp)
+elseif(WIN32)
+  list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
+  list(APPEND mudlet_SRCS uiawrapper.cpp)
+endif()
+
 # This is for compiled UI files, not those used at runtime
 set(mudlet_UIS
     ui/about_dialog.ui
@@ -187,6 +198,7 @@ set(mudlet_UIS
 
 set(mudlet_HDRS
     ActionUnit.h
+    Announcer.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
     ctelnet.h
@@ -233,6 +245,8 @@ set(mudlet_HDRS
     ShortcutsManager.h
     ScriptUnit.h
     T2DMap.h
+    TAccessibleConsole.h
+    TAccessibleTextEdit.h
     TAction.h
     TAlias.h
     TArea.h
@@ -307,6 +321,10 @@ set(mudlet_HDRS
     XMLexport.h
     XMLimport.h)
 
+if(WIN32)
+  list(APPEND mudlet_HDRS uiawrapper.h)
+endif()
+
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
   list(APPEND mudlet_HDRS updater.h)
@@ -338,7 +356,7 @@ endif()
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
 
 find_package(
-  Qt5 5.11 REQUIRED
+  Qt5 5.14 REQUIRED
   COMPONENTS Core
              Multimedia
              Network
@@ -349,9 +367,9 @@ find_package(
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if(Qt5Core_VERSION VERSION_LESS 5.11)
+if(Qt5Core_VERSION VERSION_LESS 5.14)
   message(
-    FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
+    FATAL_ERROR "Mudlet requires Qt 5.14 or later, yours is ${Qt5Core_VERSION}")
 else()
   # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")

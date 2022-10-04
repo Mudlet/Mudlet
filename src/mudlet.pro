@@ -1,9 +1,10 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2021 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2022 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
 #    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -35,8 +36,8 @@
 #                                                                          #
 ############################################################################
 
-lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 11)) {
-    error("Mudlet requires Qt 5.11 or later")
+lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_VERSION, 14)) {
+    error("Mudlet requires Qt 5.14 or later")
 }
 
 # Including IRC Library
@@ -325,7 +326,8 @@ unix:!macx {
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
         -lpugixml \
-        -lWs2_32
+        -lws2_32 \
+        -loleaut32
 
     # Leave this unset - we do not need it on Windows:
     # LUA_DEFAULT_DIR =
@@ -364,12 +366,12 @@ macx {
 }
 
 # use ccache if available
-unix {
-    BASE_CXX = $$QMAKE_CXX
-    # common linux location
-    exists(/usr/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
-    # common macos location
-    exists(/usr/local/bin/ccache):QMAKE_CXX = ccache $$BASE_CXX
+BASE_CXX = $$QMAKE_CXX
+BASE_C = $$QMAKE_C
+# common linux location
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe) {
+    QMAKE_CXX = ccache $$BASE_CXX
+    QMAKE_C = ccache $$BASE_C
 }
 
 # There does not seem to be an obvious pkg-config option for this one, it is
@@ -622,6 +624,7 @@ SOURCES += \
     TTabBar.cpp \
     TTextCodec.cpp \
     TTextEdit.cpp \
+    TAccessibleTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
     TTreeWidget.cpp \
@@ -632,11 +635,14 @@ SOURCES += \
     XMLimport.cpp
 
 HEADERS += \
+    ../3rdparty/discord/rpc/include/discord_register.h \
+    ../3rdparty/discord/rpc/include/discord_rpc.h \
     ActionUnit.h \
+    Announcer.h \
     AliasUnit.h \
     AltFocusMenuBarDisable.h \
-    DarkTheme.h \
     ctelnet.h \
+    DarkTheme.h \
     discord.h \
     dlgAboutDialog.h \
     dlgActionMainArea.h \
@@ -686,6 +692,7 @@ HEADERS += \
     TBuffer.h \
     TCommandLine.h \
     TConsole.h \
+    TAccessibleConsole.h \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
@@ -699,7 +706,6 @@ HEADERS += \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
-    TScrollBox.h \
     TLinkStore.h \
     TLuaInterpreter.h \
     TMainConsole.h \
@@ -707,6 +713,7 @@ HEADERS += \
     TMapLabel.h \
     TMatchState.h \
     TMedia.h \
+    TMediaData.h \
     TMxpBRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
@@ -727,7 +734,7 @@ HEADERS += \
     TMxpTagHandler.h \
     TMxpTagParser.h \
     TMxpTagProcessor.h \
-    TMxpSupportTagHandler.cpp \
+    TMxpSupportTagHandler.h \
     TMxpVarTagHandler.h \
     TMxpVersionTagHandler.h \
     Tree.h \
@@ -735,12 +742,14 @@ HEADERS += \
     TRoom.h \
     TRoomDB.h \
     TScript.h \
+    TScrollBox.h \
     TSplitter.h \
     TSplitterHandle.h \
     TStringUtils.h \
     TTabBar.h \
     TTextCodec.h \
     TTextEdit.h \
+    TAccessibleTextEdit.h \
     TTimer.h \
     TToolBar.h \
     TTreeWidget.h \
@@ -754,6 +763,20 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
+macx {
+    OBJECTIVE_SOURCES += AnnouncerMac.mm
+}
+
+win32 {
+    SOURCES += AnnouncerWindows.cpp \
+        uiawrapper.cpp
+
+    HEADERS += uiawrapper.h
+}
+
+linux {
+    SOURCES += AnnouncerLinux.cpp
+}
 
 # This is for compiled UI files, not those used at runtime through the resource file.
 FORMS += \

@@ -426,6 +426,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
+    host.append_attribute("mAutoWrap") = pHost->autoWrap() ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
@@ -468,8 +469,13 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
+    host.append_attribute("announceIncomingText") = pHost->mAnnounceIncomingText ? "yes" : "no";
+    host.append_attribute("caretShortcut") = QMetaEnum::fromType<Host::CaretShortcut>().valueToKey(
+            static_cast<int>(pHost->mCaretShortcut));
+    host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(
+            static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
-    if (int mode = pHost->getControlCharacterMode(); mode) {
+    if (int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
         // Don't bother to include the attribute if it is the default (zero)
         // value - and as it is an ASCII digit it only needs
         // QString::toLatin1() encoding:
@@ -867,13 +873,8 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             trigger.append_child("mStayOpen").text().set(QString::number(pT->mStayOpen).toUtf8().constData());
             trigger.append_child("mCommand").text().set(pT->mCommand.toUtf8().constData());
             trigger.append_child("packageName").text().set(pT->mPackageName.toUtf8().constData());
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             trigger.append_child("mFgColor").text().set(pT->mFgColor == QColorConstants::Transparent ? "transparent": pT->mFgColor.name().toUtf8().constData());
             trigger.append_child("mBgColor").text().set(pT->mBgColor == QColorConstants::Transparent ? "transparent": pT->mBgColor.name().toUtf8().constData());
-#else
-            trigger.append_child("mFgColor").text().set(pT->mFgColor == QColor("transparent") ? "transparent": pT->mFgColor.name().toUtf8().constData());
-            trigger.append_child("mBgColor").text().set(pT->mBgColor == QColor("transparent") ? "transparent": pT->mBgColor.name().toUtf8().constData());
-#endif
             trigger.append_child("mSoundFile").text().set(pT->mSoundFile.toUtf8().constData());
             trigger.append_child("colorTriggerFgColor").text().set(pT->mColorTriggerFgColor.name().toUtf8().constData());
             trigger.append_child("colorTriggerBgColor").text().set(pT->mColorTriggerBgColor.name().toUtf8().constData());
@@ -1012,7 +1013,6 @@ void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
             actionContents.append_child("sizeY").text().set(QString::number(pT->mSizeY).toUtf8().constData());
             actionContents.append_child("buttonColumn").text().set(QString::number(pT->mButtonColumns).toUtf8().constData());
             actionContents.append_child("buttonRotation").text().set(QString::number(pT->mButtonRotation).toUtf8().constData());
-            actionContents.append_child("buttonColor").text().set(pT->mButtonColor.name().toUtf8().constData());
         }
     }
 

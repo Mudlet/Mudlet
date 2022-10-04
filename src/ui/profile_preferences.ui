@@ -999,6 +999,9 @@ you can use it but there could be issues with aligning columns of text</string>
              <enum>QFrame::NoFrame</enum>
             </property>
             <layout class="QHBoxLayout" name="horizontalLayout_frame_wrap_at">
+             <property name="spacing">
+              <number>0</number>
+             </property>
              <item>
               <widget class="QLabel" name="label_wrap_at_spinBox">
                <property name="sizePolicy">
@@ -1014,7 +1017,21 @@ you can use it but there could be issues with aligning columns of text</string>
                 </size>
                </property>
                <property name="text">
-                <string>Wrap lines at:</string>
+                <string>Wrap lines:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="checkBox_autoWrap">
+               <property name="text">
+                <string>automatically</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_6">
+               <property name="text">
+                <string>or at</string>
                </property>
               </widget>
              </item>
@@ -1032,7 +1049,7 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="label_23">
+              <widget class="QLabel" name="label_wrapCharacters">
                <property name="text">
                 <string>characters</string>
                </property>
@@ -3846,6 +3863,88 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="title">
+          <string>Accessibility</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="0" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_announceIncomingText">
+            <property name="toolTip">
+             <string>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</string>
+            </property>
+            <property name="text">
+             <string>Announce incoming text in screen reader</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="comboBox_blankLinesBehaviour">
+            <item>
+             <property name="text">
+              <string>show them</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>hide them</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>replace with a space</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_blankLinesBehaviour">
+            <property name="text">
+             <string>When the game sends blank lines:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_blankLinesBehaviour</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_caretModeKey">
+            <property name="text">
+             <string>Switch between input line and main window using:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_caretModeKey</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="comboBox_caretModeKey">
+            <item>
+             <property name="text">
+              <string>no key</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Tab</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Ctrl+Tab</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>F6</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <spacer name="verticalSpacer_specialOptions">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -4081,5 +4180,4 @@ you can use it but there could be issues with aligning columns of text</string>
  <resources>
   <include location="../mudlet.qrc"/>
  </resources>
- <connections/>
 </ui>

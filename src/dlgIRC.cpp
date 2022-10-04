@@ -296,7 +296,7 @@ void dlgIRC::setupBuffers()
 
 bool dlgIRC::processCustomCommand(IrcCommand* cmd)
 {
-    if (cmd->type() != IrcCommand::Custom || cmd->parameters().count() < 1) {
+    if (cmd->type() != IrcCommand::Custom || cmd->parameters().isEmpty()) {
         return false;
     }
 
@@ -479,11 +479,7 @@ void dlgIRC::slot_onTextEntered()
         lineEdit->clear();
     } else if (input.length() > 1) {
         QString error;
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
         QString command = lineEdit->text().mid(1).split(" ", Qt::SkipEmptyParts).value(0).toUpper();
-#else
-        QString command = lineEdit->text().mid(1).split(" ", QString::SkipEmptyParts).value(0).toUpper();
-#endif
         if (commandParser->commands().contains(command)) {
             error = tr("[ERROR] Syntax: %1").arg(commandParser->syntax(command).replace(qsl("<"), qsl("&lt;")).replace(qsl(">"), qsl("&gt;")));
         } else {
@@ -511,7 +507,7 @@ void dlgIRC::slot_onHistoryCompletion()
         mInputHistoryIdxCurrent = 0;
     }
 
-    if (mInputHistory.count() == 0) {
+    if (mInputHistory.isEmpty()) {
         return;
     }
 
@@ -805,11 +801,7 @@ QStringList dlgIRC::readIrcChannels(Host* pH)
     if (channelstr.isEmpty()) {
         channels << dlgIRC::DefaultChannels;
     } else {
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
         channels = channelstr.split(qsl(" "), Qt::SkipEmptyParts);
-#else
-        channels = channelstr.split(qsl(" "), QString::SkipEmptyParts);
-#endif
     }
     return channels;
 }

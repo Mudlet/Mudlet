@@ -100,16 +100,16 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     QTimer::singleShot(0, this, [this]() {
 #if !defined(QT_NO_SSL)
         if (mpHost->mSslTsl) {
-            connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
+            connect(&socket, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
         } else {
-            connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+            connect(&socket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
         }
-        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
+        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
 #else
-        connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+        connect(&socket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
 #endif
-        connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
-        connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
+        connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
+        connect(&socket, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
     });
 
 
@@ -402,7 +402,7 @@ void cTelnet::connectIt(const QString& address, int port)
     hostPort = port;
     postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
     // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
-    QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
+    QHostInfo::lookupHost(address, this, SLOT(slot_socketHostFound(QHostInfo)));
 }
 
 void cTelnet::reconnect()
@@ -429,11 +429,12 @@ void cTelnet::abortConnection()
     socket.abort();
 }
 
-void cTelnet::handle_socket_signal_error()
-{
-    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
-    postMessage(err);
-}
+// Not used:
+//void cTelnet::slot_socketError()
+//{
+//    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
+//    postMessage(err);
+//}
 
 void cTelnet::sendCharacterName()
 {
@@ -498,7 +499,7 @@ std::pair<bool, QString> cTelnet::sendCustomLogin(const int loginId)
     return {true, QString()};
 }
 
-void cTelnet::handle_socket_signal_connected()
+void cTelnet::slot_socketConnected()
 {
     QString msg;
 
@@ -534,7 +535,7 @@ void cTelnet::handle_socket_signal_connected()
     mpHost->raiseEvent(event);
 }
 
-void cTelnet::handle_socket_signal_disconnected()
+void cTelnet::slot_socketDisconnected()
 {
     QString msg;
     TEvent event {};
@@ -615,7 +616,7 @@ void cTelnet::handle_socket_signal_disconnected()
 }
 
 #if !defined(QT_NO_SSL)
-void cTelnet::handle_socket_signal_sslError(const QList<QSslError>& errors)
+void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
 {
     QSslCertificate cert = socket.peerCertificate();
     QList<QSslError> ignoreErrorList;
@@ -635,22 +636,22 @@ void cTelnet::handle_socket_signal_sslError(const QList<QSslError>& errors)
 }
 #endif
 
-void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
+void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 {
 #if !defined(QT_NO_SSL)
     if (mpHost->mSslTsl) {
-        postMessage(tr("[ INFO ]  - Trying secure connection to %1: %2 ...\n").arg(hostInfo.hostName(), QString::number(hostPort)));
+        postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying secure connection to %1: %2 ...").arg(hostInfo.hostName(), QString::number(hostPort))));
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
     } else {
 #endif
         if (!hostInfo.addresses().isEmpty()) {
             mHostAddress = hostInfo.addresses().constFirst();
-            postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
+            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(hostName, mHostAddress.toString())));
             if (!mConnectViaProxy) {
-                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 ...").arg(mHostAddress.toString(), QString::number(hostPort))));
             } else {
-                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...").arg(mHostAddress.toString(), QString::number(hostPort))));
             }
             socket.connectToHost(mHostAddress, hostPort);
         } else {
@@ -897,7 +898,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
     }
 }
 
-void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
+void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
 {
     mpProgressDialog->setRange(0, static_cast<int>(tot));
     mpProgressDialog->setValue(static_cast<int>(got));
@@ -1456,9 +1457,9 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
 
         if (option == OPT_TIMING_MARK) {
-            qDebug() << "We ARE willing to enable TIMING_MARK";
-            // send WILL TIMING_MARK
-            sendTelnetOption(TN_WILL, option);
+            // See https://www.rfc-editor.org/rfc/rfc860.txt
+            qDebug() << "We have received a DO TIMING_MARK request, sending a WONT as we do not actually do anything with it but even that can be useful to the sender.";
+            sendTelnetOption(TN_WONT, option);
         } else if (!myOptionState[idxOption]) {
             // only if the option is currently disabled
 
@@ -1747,7 +1748,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 mudlet::self()->setNetworkRequestDefaults(url, request);
                 mpPackageDownloadReply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-                connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+                connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
                 connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
                 mpProgressDialog->show();
             }
@@ -2109,7 +2110,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mudlet::self()->setNetworkRequestDefaults(url, request);
         mpPackageDownloadReply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-        connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+        connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
         connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
         mpProgressDialog->show();
         return;
@@ -2818,7 +2819,7 @@ void cTelnet::slot_processReplayChunk()
     }
 }
 
-void cTelnet::handle_socket_signal_readyRead()
+void cTelnet::slot_socketReadyToBeRead()
 {
     if (mWaitingForResponse) {
         networkLatencyTime = networkLatencyTimer.elapsed() / 1000.0;

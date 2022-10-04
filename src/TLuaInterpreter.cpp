@@ -44,19 +44,20 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
-#include "TTrigger.h"
 #include "dlgComposer.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
+#include "mapInfoContributorManager.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
-#include "mapInfoContributorManager.h"
 
-#include "math.h"
+#include <limits>
+#include <math.h>
+
 #include "pre_guard.h"
 #include <QtConcurrent>
 #include <QCollator>
@@ -73,23 +74,7 @@
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
-#include <limits>
 using namespace std::chrono_literals;
-
-const QMap<Qt::MouseButton, QString> TLuaInterpreter::mMouseButtons = {
-        {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},
-        {Qt::MiddleButton, qsl("MidButton")},      {Qt::BackButton, qsl("BackButton")},       {Qt::ForwardButton, qsl("ForwardButton")},
-        {Qt::TaskButton, qsl("TaskButton")},       {Qt::ExtraButton4, qsl("ExtraButton4")},   {Qt::ExtraButton5, qsl("ExtraButton5")},
-        {Qt::ExtraButton6, qsl("ExtraButton6")},   {Qt::ExtraButton7, qsl("ExtraButton7")},   {Qt::ExtraButton8, qsl("ExtraButton8")},
-        {Qt::ExtraButton9, qsl("ExtraButton9")},   {Qt::ExtraButton10, qsl("ExtraButton10")}, {Qt::ExtraButton11, qsl("ExtraButton11")},
-        {Qt::ExtraButton12, qsl("ExtraButton12")}, {Qt::ExtraButton13, qsl("ExtraButton13")}, {Qt::ExtraButton14, qsl("ExtraButton14")},
-        {Qt::ExtraButton15, qsl("ExtraButton15")}, {Qt::ExtraButton16, qsl("ExtraButton16")}, {Qt::ExtraButton17, qsl("ExtraButton17")},
-        {Qt::ExtraButton18, qsl("ExtraButton18")}, {Qt::ExtraButton19, qsl("ExtraButton19")}, {Qt::ExtraButton20, qsl("ExtraButton20")},
-        {Qt::ExtraButton21, qsl("ExtraButton21")}, {Qt::ExtraButton22, qsl("ExtraButton22")}, {Qt::ExtraButton23, qsl("ExtraButton23")},
-        {Qt::ExtraButton24, qsl("ExtraButton24")},
-
-};
-
 
 extern "C" {
 int luaopen_yajl(lua_State*);
@@ -198,16 +183,16 @@ static const char *bad_label_value = "label \"%s\" not found";
 // GCC, leading to a crash.
 
 
-TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id) : mpHost(pH), hostName(hostName), mHostID(id), purgeTimer(this)
+TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
+: mpHost(pH)
+, hostName(hostName)
+, mHostID(id)
+, purgeTimer(this)
+, mpFileDownloader(new QNetworkAccessManager(this))
+, mpFileSystemWatcher(new QFileSystemWatcher(this))
 {
-    pGlobalLua = nullptr;
-
-    connect(&purgeTimer, &QTimer::timeout, this, &TLuaInterpreter::slotPurge);
-
-    mpFileDownloader = new QNetworkAccessManager(this);
+    connect(&purgeTimer, &QTimer::timeout, this, &TLuaInterpreter::slot_purge);
     connect(mpFileDownloader, &QNetworkAccessManager::finished, this, &TLuaInterpreter::slot_httpRequestFinished);
-
-    mpFileSystemWatcher = new QFileSystemWatcher(this);
     connect(mpFileSystemWatcher, &QFileSystemWatcher::fileChanged, this, &TLuaInterpreter::slot_pathChanged);
     connect(mpFileSystemWatcher, &QFileSystemWatcher::directoryChanged, this, &TLuaInterpreter::slot_pathChanged);
 
@@ -327,11 +312,7 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
     lua_pushstring(L, message.toUtf8().constData());
     if (mudlet::debugMode) {
         auto& host = getHostFromLua(L);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         TDebug(Qt::white, QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> &host;
-#else
-        TDebug(Qt::white, QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> &host;
-#endif
     }
     return 2;
 }
@@ -346,11 +327,7 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
     lua_pushstring(L, message);
     if (mudlet::debugMode) {
         auto& host = getHostFromLua(L);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         TDebug(Qt::white, QColorConstants::Svg::orange) << "Lua: " << functionName << ": " << message << "\n" >> &host;
-#else
-        TDebug(Qt::white, QColor("orange")) << "Lua: " << functionName << ": " << message << "\n" >> &host;
-#endif
     }
     return 2;
 }
@@ -620,7 +597,7 @@ void TLuaInterpreter::slot_pathChanged(const QString& path)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::slotDeleteSender(int exitCode, QProcess::ExitStatus exitStatus)
+void TLuaInterpreter::slot_deleteSender(int exitCode, QProcess::ExitStatus exitStatus)
 {
     Q_UNUSED(exitCode);
     Q_UNUSED(exitStatus);
@@ -629,7 +606,7 @@ void TLuaInterpreter::slotDeleteSender(int exitCode, QProcess::ExitStatus exitSt
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::slotPurge()
+void TLuaInterpreter::slot_purge()
 {
     while (!objectsToDelete.isEmpty()) {
         delete objectsToDelete.takeFirst();
@@ -3609,7 +3586,8 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
         Host& host = getHostFromLua(L);
         host.mpConsole->mUpperPane->resetHScrollbar();
         host.mpConsole->buffer.clear();
-        host.mpConsole->mUpperPane->forceUpdate();
+        host.mpConsole->mUpperPane->showNewLines();
+        //host.mpConsole->mUpperPane->forceUpdate();
         return 0;
     }
     QString text = lua_tostring(L, 1);
@@ -5024,23 +5002,15 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
         QSet<QString> keysSet;
         while (itRoom.hasNext()) {
             itRoom.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             // In the brave new world of range based initializers one must use
             // a pair of iterators that point to the SAME thing that lasts
             // long enough - using the output of a Qt method that returns a
             // QList twice is not good enough and causes seg. faults...
             QList<QString> roomDataKeysList{itRoom.value()->userData.keys()};
             keysSet.unite(QSet<QString>{roomDataKeysList.begin(), roomDataKeysList.end()});
-#else
-            keysSet.unite(itRoom.value()->userData.keys().toSet());
-#endif
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QStringList keys{keysSet.begin(), keysSet.end()};
-#else
-        QStringList keys{keysSet.toList()};
-#endif
         if (keys.size() > 1) {
             std::sort(keys.begin(), keys.end());
         }
@@ -5062,11 +5032,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QStringList values{valuesSet.begin(), valuesSet.end()};
-#else
-        QStringList values{valuesSet.toList()};
-#endif
         if (values.size() > 1) {
             std::sort(values.begin(), values.end());
         }
@@ -5087,11 +5053,7 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QList<int> roomIds{roomIdsSet.begin(), roomIdsSet.end()};
-#else
-        QList<int> roomIds{roomIdsSet.toList()};
-#endif
         if (roomIds.size() > 1) {
             std::sort(roomIds.begin(), roomIds.end());
         }
@@ -5136,19 +5098,11 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
         QSet<QString> keysSet;
         while (itArea.hasNext()) {
             itArea.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             QList<QString> areaDataKeysList{itArea.value()->mUserData.keys()};
             keysSet.unite(QSet<QString>{areaDataKeysList.begin(), areaDataKeysList.end()});
-#else
-            keysSet.unite(itArea.value()->mUserData.keys().toSet());
-#endif
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QStringList keys{keysSet.begin(), keysSet.end()};
-#else
-        QStringList keys{keysSet.toList()};
-#endif
         if (keys.size() > 1) {
             std::sort(keys.begin(), keys.end());
         }
@@ -5170,11 +5124,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QStringList values{valuesSet.begin(), valuesSet.end()};
-#else
-        QStringList values{valuesSet.toList()};
-#endif
         if (values.size() > 1) {
             std::sort(values.begin(), values.end());
         }
@@ -5195,11 +5145,7 @@ int TLuaInterpreter::searchAreaUserData(lua_State* L)
             }
         }
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         QList<int> areaIds{areaIdsSet.begin(), areaIdsSet.end()};
-#else
-        QList<int> areaIds{areaIdsSet.toList()};
-#endif
         if (areaIds.size() > 1) {
             std::sort(areaIds.begin(), areaIds.end());
         }
@@ -5838,10 +5784,10 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaLoops(value);
-            } else if (key == QLatin1String("continue")) {
-                bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
-                mediaData.setMediaContinue(value);
             }
+        } else if (key == QLatin1String("continue")) {
+            bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
+            mediaData.setMediaContinue(value);
         }
 
         // removes value, but keeps key for next iteration
@@ -6656,7 +6602,7 @@ int TLuaInterpreter::errorc(lua_State* L)
     }
 
     if (host.mEchoLuaErrors) {
-        if (host.mpConsole->buffer.size() > 0 && !host.mpConsole->buffer.lineBuffer.at(host.mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        if (!host.mpConsole->buffer.isEmpty() && !host.mpConsole->buffer.lineBuffer.at(host.mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             host.postMessage(qsl("\n"));
         }
         host.mpConsole->print(qsl("[  LUA  ] - "), QColor(80,160,255), QColor(Qt::black));
@@ -12358,9 +12304,6 @@ void TLuaInterpreter::ttsBuild()
     bSpeechQueueing = false;
 
     connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
-    speechUnit->setVolume(1.0);
-    speechUnit->setRate(0.0);
-    speechUnit->setPitch(0.0);
     return;
 }
 
@@ -12915,7 +12858,7 @@ int TLuaInterpreter::setClipboardText(lua_State* L)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 {
-    if (code.size() < 1) {
+    if (code.isEmpty()) {
         return false;
     }
     lua_State* L = pGlobalLua;
@@ -13466,7 +13409,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
     // The quote characters mean that the encased word is a string, the quotes themselves are not sent.
     QStringList packageList = string_data.split(MSSP_VAR);
 
-    if (packageList.size() > 0) {
+    if (!packageList.isEmpty()) {
         Host& host = getHostFromLua(L);
 
         for (int i = 1; i < packageList.size(); i++) {
@@ -13886,7 +13829,7 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
         // the previous line, however there is a nasty gotcha in that during
         // profile loading the (TMainConsole*) Host::mpConsole pointer is
         // null - but then the buffer must itself be empty:
-        if (mpHost->mpConsole && mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        if (mpHost->mpConsole && !mpHost->mpConsole->buffer.isEmpty() && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
@@ -13907,7 +13850,7 @@ void TLuaInterpreter::logEventError(const QString& event, const QString& error)
     // Log error to Profile's Main TConsole:
     if (mpHost->mEchoLuaErrors) {
         // ensure the Lua error is on a line of its own and is not prepended to the previous line
-        if (mpHost->mpConsole->buffer.size() > 0 && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
+        if (!mpHost->mpConsole->buffer.isEmpty() && !mpHost->mpConsole->buffer.lineBuffer.at(mpHost->mpConsole->buffer.lineBuffer.size() - 1).isEmpty()) {
             mpHost->postMessage(qsl("\n"));
         }
 
@@ -14124,14 +14067,14 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             lua_newtable(L);
 
             // push button()
-            lua_pushstring(L, mMouseButtons.value(qME->button()).toUtf8().constData());
+            lua_pushstring(L, csmMouseButtons.value(qME->button()).toUtf8().constData());
             lua_setfield(L, -2, qsl("button").toUtf8().constData());
 
             // push buttons()
             lua_newtable(L);
-            QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
+            QMap<Qt::MouseButton, QString>::const_iterator iter = csmMouseButtons.constBegin();
             int counter = 1;
-            while (iter != mMouseButtons.constEnd()) {
+            while (iter != csmMouseButtons.constEnd()) {
                 if (iter.key() & qME->buttons()) {
                     lua_pushnumber(L, counter);
                     lua_pushstring(L, iter.value().toUtf8().constData());
@@ -14193,9 +14136,9 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
 
             // push buttons()
             lua_newtable(L);
-            QMap<Qt::MouseButton, QString>::const_iterator iter = mMouseButtons.constBegin();
+            QMap<Qt::MouseButton, QString>::const_iterator iter = csmMouseButtons.constBegin();
             int counter = 1;
-            while (iter != mMouseButtons.constEnd()) {
+            while (iter != csmMouseButtons.constEnd()) {
                 if (iter.key() & qME->buttons()) {
                     lua_pushnumber(L, counter);
                     lua_pushstring(L, iter.value().toUtf8().constData());
@@ -14206,13 +14149,7 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
 
-// The Qt documentation is unclear when, precisely QWheelEvent::globalPos()
-// became obsolete, 5.14.0 is a guess
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             auto globalPosition = qME->globalPosition();
-#else
-            auto globalPosition = qME->globalPos();
-#endif
             // Push globalX()
             lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
@@ -14221,24 +14158,14 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             lua_pushnumber(L, globalPosition.y());
             lua_setfield(L, -2, qsl("globalY").toUtf8().constData());
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             auto position = qME->position();
-#endif
 
             // Push x()
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             lua_pushnumber(L, position.x());
-#else
-            lua_pushnumber(L, qME->x());
-#endif
             lua_setfield(L, -2, qsl("x").toUtf8().constData());
 
             // Push y()
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             lua_pushnumber(L, position.y());
-#else
-            lua_pushnumber(L, qME->y());
-#endif
             lua_setfield(L, -2, qsl("y").toUtf8().constData());
 
             // Push angleDelta()
@@ -15352,7 +15279,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getBackgroundColor", TLuaInterpreter::getBackgroundColor);
     lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
+    lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
     // PLACEMARKER: End of main Lua interpreter functions registration
+    // check new functions against https://www.linguistic-antipatterns.com when creating them
 
     QStringList additionalLuaPaths;
     QStringList additionalCPaths;
@@ -15377,6 +15306,10 @@ void TLuaInterpreter::initLuaGlobals()
     // binary directory for both modules and binary libraries:
     additionalCPaths << qsl("%1/?.so").arg(appPath);
     additionalLuaPaths << qsl("%1/?.lua").arg(appPath);
+
+    // Luarocks installs rocks locally for developers, even with sudo
+    additionalCPaths << qsl("%1/.luarocks/lib/lua/5.1/?.so").arg(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first());
+    additionalLuaPaths << qsl("%1/.luarocks/share/lua/5.1/?.lua;%1/.luarocks/share/lua/5.1/?/init.lua").arg(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first());
 #elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
     // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
     additionalCPaths << qsl("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
@@ -15629,7 +15562,7 @@ void TLuaInterpreter::initIndenterGlobals()
         if (lua_isstring(pIndenterState.get(), -1)) {
             e = tr("Lua error: %1.").arg(lua_tostring(pIndenterState.get(), -1));
         }
-        QString msg = tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n");
+        QString msg = qsl("%1\n").arg(tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     }
@@ -16348,12 +16281,8 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     }
 
     lua_newtable(L);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.begin(),
                                   pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.end()};
-#else
-    QList<int> selectionRoomsList{pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.toList()};
-#endif
     if (!selectionRoomsList.isEmpty()) {
         if (selectionRoomsList.count() > 1) {
             std::sort(selectionRoomsList.begin(), selectionRoomsList.end());
@@ -16536,16 +16465,12 @@ int TLuaInterpreter::getDictionaryWordList(lua_State* L)
 
     // This may stall if this is accessing the shared user dictionary and that
     // is being updated by another profile, but it should eventually return...
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     // We must keep a local reference/copy of the value returned because the
     // returned item is a deep-copy in the case of a shared dictionary and two
     // calls to TConsole::getWordSet() can return two different instances which
     // is fatally dangerous if used in a range based initialiser:
     QSet<QString> wordSet{host.mpConsole->getWordSet()};
     QStringList wordList{wordSet.begin(), wordSet.end()};
-#else
-    QStringList wordList{host.mpConsole->getWordSet().toList()};
-#endif
     int wordCount = wordList.size();
     if (wordCount > 1) {
         QCollator sorter;
@@ -17357,6 +17282,14 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("autoClearInputLine")) {
+        host.mAutoClearCommandLineAfterSend = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("showSentText")) {
+        host.mPrintCommand = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("fixUnnecessaryLinebreaks")) {
         host.set_USE_IRE_DRIVER_BUGFIX(getVerifiedBool(L, __func__, 2, "value"));
         return success();
@@ -17376,6 +17309,48 @@ int TLuaInterpreter::setConfig(lua_State * L)
     if (key == qsl("specialForceMxpNegotiationOff")) {
         host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
+    }
+    if (key == qsl("announceIncomingText")) {
+        host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("blankLinesBehaviour")) {
+        static const QStringList behaviours{"show", "hide", "replacewithspace"};
+        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
+
+        if (!behaviours.contains(behaviour)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
+                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
+            return lua_error(L);
+        }
+
+        if (behaviour == qsl("show")) {
+            host.mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
+        } else if (behaviour == qsl("hide")) {
+            host.mBlankLineBehaviour = Host::BlankLineBehaviour::Hide;
+        } else if (behaviour == qsl("replacewithspace")) {
+            host.mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
+        }
+    }
+    if (key == qsl("caretShortcut")) {
+        static const QStringList keys{"none", "tab", "ctrltab", "f6"};
+        const auto key = getVerifiedString(L, __func__, 2, "value");
+
+        if (!keys.contains(key)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (key should be one of %s, got %s!)",
+                __func__, 2, keys.join(qsl(", ")).toUtf8().constData(), key.toUtf8().constData());
+            return lua_error(L);
+        }
+
+        if (key == qsl("none")) {
+            host.mCaretShortcut = Host::CaretShortcut::None;
+        } else if (key == qsl("tab")) {
+            host.mCaretShortcut = Host::CaretShortcut::Tab;
+        } else if (key == qsl("ctrltab")) {
+            host.mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        } else if (key == qsl("f6")) {
+            host.mCaretShortcut = Host::CaretShortcut::F6;
+        }
     }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
@@ -17559,4 +17534,25 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_settable(L, -3);
 
     return 1;
+}
+
+int TLuaInterpreter::announce(lua_State *L) {
+    const QString text = getVerifiedString(L, __func__, 1, "text to announce");
+    static const QStringList processingKinds{"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"};
+    QString processing;
+
+    int n = lua_gettop(L);
+    if (n > 1) {
+        // while this only has effect on Windows, it should fail silently in order not to spam
+        processing = getVerifiedString(L, __func__, 2, "processing style");
+
+        if (!processingKinds.contains(processing)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (processing should be one of %s, got %s!)",
+                __func__, 2, processingKinds.join(qsl(", ")).toUtf8().constData(), processing.toUtf8().constData());
+            return lua_error(L);
+        }
+    }
+
+    mudlet::self()->announce(text, processing);
+    return 0;
 }

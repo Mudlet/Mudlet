@@ -4,6 +4,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,6 +41,8 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QAccessibleInterface>
+#include <QAccessibleWidget>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QMimeData>
@@ -52,6 +55,8 @@
 
 const QString TConsole::cmLuaLineVariable("line");
 
+// A high-performance text widget with split screen ability for scrolling back
+// Contains two TTextEdits, each backed by a TBuffer
 TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
@@ -80,6 +85,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     if (mType & CentralDebugConsole) {
         setWindowTitle(tr("Debug Console"));
+        setAccessibleName(tr("Debug Console"));
+        setAccessibleDescription(tr("Debug messages are shown here."));
         // Probably will not show up as this is used inside a QMainWindow widget
         // which has its own title and icon set.
         // mIsSubConsole was left false for this
@@ -93,6 +100,17 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             mMainFrameBottomHeight = 0;
             mMainFrameLeftWidth = 0;
             mMainFrameRightWidth = 0;
+
+            if (mType & ErrorConsole) {
+                setAccessibleName(tr("Error Console"));
+                setAccessibleDescription(tr("Error messages are shown here."));
+            } else if (mType & SubConsole) {
+                setAccessibleName(tr("Sub Console"));
+                setAccessibleDescription(tr("Sub console messages are shown here."));
+            } else {
+                setAccessibleName(tr("User Window"));
+                setAccessibleDescription(tr("User window messages are shown here."));
+            }
         } else if (mType & (MainConsole|Buffer)) {
             // Originally this was for TConsole instances without a parent pointer
             // This branch for: Buffers, MainConsole
@@ -103,6 +121,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             mMainFrameRightWidth = mpHost->mBorderRightWidth;
             mCommandBgColor = mpHost->mCommandBgColor;
             mCommandFgColor = mpHost->mCommandFgColor;
+
+            setAccessibleName(tr("Main Window"));
+            setAccessibleDescription(tr("Game content is shown here. It may contain subconsoles and a mapper window."));
         } else {
             Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
         }
@@ -248,6 +269,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
     mUpperPane->setFocusPolicy(Qt::NoFocus);
+    mUpperPane->setAccessibleName(tr("main window"));
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
     mLowerPane->setContentsMargins(0, 0, 0, 0);
@@ -258,10 +280,14 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setFocusProxy(mpCommandLine);
         mUpperPane->setFocusProxy(mpCommandLine);
         mLowerPane->setFocusProxy(mpCommandLine);
+        // technically this is the 'main input line' - but as it's the one most often used,
+        // it is important to keep its name short
+        mpCommandLine->setAccessibleName(qsl("input line"));
     } else if (mType == UserWindow) {
         setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+        mpHost->mpConsole->setAccessibleName(qsl("%1 input line").arg(mpHost->mpConsole->mConsoleName));
     }
 
     splitter->addWidget(mUpperPane);
@@ -385,7 +411,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
     emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers.")));
-    connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stop_all_triggers);
+    connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
 
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
     mpBufferSearchBox->setMaximumSize(QSize(150, 30));
@@ -500,7 +526,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mDisplayFontSize = mDisplayFont.pointSize();
 
         // They always use "Control Pictures" to show control characters:
-        mControlCharacter = Picture;
+        mControlCharacter = ControlCharacterMode::Picture;
         refreshView();
     } else if (mpHost) {
         connect(mpHost, &Host::signal_controlCharacterHandlingChanged, this, &TConsole::slot_changeControlCharacterHandling);
@@ -519,6 +545,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     if (mType & MainConsole) {
         mpCommandLine->adjustHeight();
     }
+
+    adjustAccessibleNames();
 }
 
 TConsole::~TConsole()
@@ -1041,6 +1069,7 @@ void TConsole::scrollDown(int lines)
         mUpperPane->updateScreenView();
         mUpperPane->forceUpdate();
     }
+    adjustAccessibleNames();
 }
 
 void TConsole::scrollUp(int lines)
@@ -1055,6 +1084,7 @@ void TConsole::scrollUp(int lines)
         QTimer::singleShot(0, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
     }
     mUpperPane->scrollUp(lines);
+    adjustAccessibleNames();
 }
 
 void TConsole::deselect()
@@ -1142,7 +1172,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             buffer.applyLink(P, P2, func, hint, luaReference);
             if (text.indexOf("\n") != -1) {
                 int y_tmp = mUserCursor.y();
-                int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(mUserCursor.y(), mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
                 int y_neu = y_tmp + down;
                 int x_adjust = text.lastIndexOf("\n");
@@ -1179,7 +1209,7 @@ void TConsole::insertText(const QString& text, QPoint P)
             buffer.insertInLine(mUserCursor, text, mFormatCurrent);
             int y_tmp = mUserCursor.y();
             if (text.indexOf(QChar::LineFeed) != -1) {
-                int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(y_tmp, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
             } else {
                 mUpperPane->needUpdate(y_tmp, y_tmp + 1);
@@ -1354,7 +1384,7 @@ void TConsole::luaWrapLine(int line)
         return;
     }
     TChar ch(mpHost);
-    buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
+    buffer.wrapLine(line, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mIndentCount, ch);
 }
 
 bool TConsole::setFontSize(int size)
@@ -1493,7 +1523,7 @@ int TConsole::select(const QString& text, int numOfMatch)
     int begin = -1;
     for (int i = 0; i < numOfMatch; i++) {
         QString li = buffer.line(mUserCursor.y());
-        if (li.size() < 1) {
+        if (li.isEmpty()) {
             continue;
         }
         begin = li.indexOf(text, begin + 1);
@@ -1647,7 +1677,7 @@ void TConsole::printCommand(QString& msg)
                 QPoint P(promptEnd, lineBeforeNewContent);
                 TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
-                int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(lineBeforeNewContent, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
 
                 mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
@@ -1761,7 +1791,7 @@ void TConsole::appendBuffer(const TBuffer& bufferSlice)
     mLowerPane->showNewLines();
 }
 
-void TConsole::slot_stop_all_triggers(bool b)
+void TConsole::slot_stopAllItems(bool b)
 {
     if (b) {
         mpHost->stopAllTriggers();
@@ -1981,6 +2011,17 @@ void TConsole::mousePressEvent(QMouseEvent* event)
     raiseMudletMousePressOrReleaseEvent(event, true);
 }
 
+void TConsole::adjustAccessibleNames()
+{
+    if (mLowerPane->isVisible()) {
+        mUpperPane->setAccessibleName(tr("main window past content", "accessibility-friendly name to describe the upper half of the Mudlet window when you've scrolled up"));
+        mLowerPane->setAccessibleName(tr("main window live content", "accessibility-friendly name to describe the lower half of the Mudlet window when you've scrolled up"));
+    } else {
+        mUpperPane->setAccessibleName(tr("main window"));
+        mLowerPane->setAccessibleName(QString());
+    }
+}
+
 void TConsole::mouseReleaseEvent(QMouseEvent* event)
 {
     raiseMudletMousePressOrReleaseEvent(event, false);
@@ -1991,5 +2032,58 @@ void TConsole::TConsole::slot_changeControlCharacterHandling(const ControlCharac
     if (mControlCharacter != mode) {
         mControlCharacter = mode;
         refreshView();
+    }
+}
+
+void TConsole::setCaretMode(bool enabled)
+{
+    mUpperPane->updateCaret();
+    mLowerPane->updateCaret();
+
+    if (enabled) {
+        mUpperPane->initializeCaret();
+        mUpperPane->setFocusPolicy(Qt::StrongFocus);
+        mUpperPane->setFocusProxy(nullptr);
+#if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
+        // windows & linux don't move keyboard focus to the main window without this
+        mUpperPane->setFocus(Qt::MouseFocusReason);
+        mUpperPane->grabKeyboard();
+
+        QAccessibleEvent event(mUpperPane, QAccessible::Focus);
+        QAccessible::updateAccessibility(&event);
+#endif
+
+    } else {
+        mUpperPane->setFocusPolicy(Qt::ClickFocus);
+#if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
+        // NVDA breaks focus reset, so do it on a timer
+        QTimer::singleShot(0, this, [this] () {
+            mUpperPane->releaseKeyboard();
+        });
+#endif
+        if (mType == MainConsole) {
+            mUpperPane->setFocusProxy(mpCommandLine);
+            QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        } else if (mType == UserWindow) {
+            mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+            QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        }
+    }
+
+    mUpperPane->setFocus();
+}
+
+bool TConsole::autoWrap() const {
+    return mAutoWrap;
+}
+
+void TConsole::setAutoWrap(bool enabled) {
+    mAutoWrap = enabled;
+
+    if (enabled) {
+        mUpperPane->updateWrap();
+        mLowerPane->updateWrap();
     }
 }

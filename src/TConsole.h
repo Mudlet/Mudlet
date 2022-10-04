@@ -8,6 +8,7 @@
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2020 by Matthias Urlichs matthias@urlichs.de            *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -47,7 +48,7 @@
 #include <map>
 
 
-enum ControlCharacterMode {
+enum class ControlCharacterMode {
     AsIs = 0x0,
     Picture = 0x1,
     OEM = 0x2
@@ -172,6 +173,8 @@ public:
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
     QColor getConsoleBgColor() const { return mBgColor; }
+    bool autoWrap() const;
+    void setAutoWrap(bool enabled);
 
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
@@ -192,6 +195,8 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
 
+    void setCaretMode(bool enabled);
+
 
     QPointer<Host> mpHost;
     // Only assigned a value for user windows:
@@ -209,17 +214,10 @@ public:
     QWidget* layerCommandLine = nullptr;
     QHBoxLayout* layoutLayer2 = nullptr;
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-#else
-    QColor mBgColor = Qt::black;
-    QColor mFgColor = Qt::lightGray;
-    QColor mSystemMessageFgColor = Qt::red;
-    QColor mCommandBgColor = Qt::black;
-#endif
     QColor mSystemMessageBgColor = mBgColor;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
@@ -286,14 +284,14 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
-    ControlCharacterMode mControlCharacter = AsIs;
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
 
 public slots:
     void slot_searchBufferUp();
     void slot_searchBufferDown();
     void slot_toggleReplayRecording();
-    void slot_stop_all_triggers(bool);
+    void slot_stopAllItems(bool);
     void slot_toggleLogging();
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
 
@@ -306,8 +304,11 @@ protected:
 
 
 private:
+    void adjustAccessibleNames();
+
     ConsoleType mType = UnknownType;
     QSize mOldSize;
+    bool mAutoWrap = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

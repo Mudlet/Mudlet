@@ -221,7 +221,6 @@ public:
     KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
     ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
 
-    void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
     int getHostID()
@@ -397,6 +396,10 @@ public:
     std::optional<QString> windowType(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
+    bool caretEnabled() const;
+    void setCaretEnabled(bool enabled);
+    bool autoWrap() const;
+    void setAutoWrap(bool enabled);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -516,7 +519,9 @@ public:
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
+    // wrap at a specific amount of characters if not autowrapping:
     int mWrapAt;
+    // after wrapping a line, intent it by how many spaces:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
@@ -647,6 +652,26 @@ public:
 
     bool mTutorialForCompactLineAlreadyShown;
 
+    bool mAnnounceIncomingText = true;
+    enum class BlankLineBehaviour {
+        Show,
+        Hide,
+        ReplaceWithSpace
+    };
+    Q_ENUM(BlankLineBehaviour)
+    BlankLineBehaviour mBlankLineBehaviour = BlankLineBehaviour::Show;
+
+    // shortcuts options visually impaired players have to switch between the input line and the main window
+    enum class CaretShortcut {
+        None,
+        Tab,
+        CtrlTab,
+        F6
+    };
+    Q_ENUM(CaretShortcut)
+    // shortcut to switch between the input line and the main window
+    CaretShortcut mCaretShortcut = CaretShortcut::None;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -695,6 +720,9 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
+
+    // automatically calculate wrapping?
+    bool mAutoWrap = true;
 
     QFile mErrorLogFile;
 
@@ -820,10 +848,12 @@ private:
     //   EN: https://en.wikipedia.org/wiki/Code_page_437
     //   DE: https://de.wikipedia.org/wiki/Codepage_437
     //   RU: https://ru.wikipedia.org/wiki/CP437
-    ControlCharacterMode mControlCharacter = AsIs;
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
     bool mLargeAreaExitArrows = false;
     bool mEditorShowBidi = true;
+    // should focus should be on the main window with the caret enabled?
+    bool mCaretEnabled = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

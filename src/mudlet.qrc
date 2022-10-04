@@ -147,6 +147,7 @@
         <file>icons/mudlet_ptb_256px.png</file>
         <file>icons/mudlet_room_exits.png</file>
         <file>icons/mume.png</file>
+        <file>icons/mudren.png</file>
         <file>icons/offsettimer-off.png</file>
         <file>icons/offsettimer-on.png</file>
         <file>icons/package-exporter.png</file>
@@ -190,6 +191,8 @@
         <file>icons/zombiemud.png</file>
         <file>lua-function-list.json</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
+        <file>mudlet-lua/lua/enable-accessibility/enable-accessibility.xml</file>
+        <file>mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
         <file>Mudlet_splashscreen_development.png</file>
