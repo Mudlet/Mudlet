@@ -4286,9 +4286,7 @@ void T2DMap::slot_setArea()
         mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
         mpMap->mUnsavedMap = true;
 
-        if (mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
-        }
+        mpMap->mpMapper->updateAreaComboBox();
     }
     mMultiRect = QRect(0, 0, 0, 0);
     QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
