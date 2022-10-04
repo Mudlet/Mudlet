@@ -94,11 +94,6 @@
        <height>21</height>
       </size>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>9</pointsize>
-      </font>
-     </property>
      <property name="toolTip">
       <string>enter a perl regex pattern for your alias; alias are triggers on your input</string>
      </property>
