@@ -240,10 +240,7 @@ function table.matches(tbl, ...)
     for key,value in pairs(tbl) do
       local keyType = type(key)
       local valueType = type(value)
-      if (valueType == "string" or valueType == "number") and string.match(value, pattern) then
-        matches[key] = value
-      end
-      if (check_keys and ((keyType == "string" or keyType == "number") and string.match(key, pattern))) then
+      if ((valueType == "string" or valueType == "number") and string.match(value, pattern)) or (check_keys and ((keyType == "string" or keyType == "number") and string.match(key, pattern))) then
         matches[key] = value
       end
     end
