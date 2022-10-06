@@ -48,11 +48,13 @@ void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
     mpSymbols = pSymbols;
     mpRooms = pRooms;
     if (mpSymbols.size() <= 1) {
+        // show simple text-entry box, either empty or with the (single) existing symbol pre-filled
         lineEdit_roomSymbol->setText(!mpSymbols.isEmpty() ? mpSymbols.keys().first() : QString());
         comboBox_roomSymbol->hide();
     } else {
-        comboBox_roomSymbol->addItems(getComboBoxItems());
+        // show combined dropdown & text-entry box to host all of the (multiple) existing symbols
         lineEdit_roomSymbol->hide();
+        comboBox_roomSymbol->addItems(getComboBoxItems());
     }
     initInstructionLabel();
     if (!pRooms.isEmpty()) {
