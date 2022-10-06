@@ -26,6 +26,7 @@
 
 #include "dlgMapLabel.h"
 #include "dlgRoomSymbol.h"
+#include "dlgRoomProperties.h"
 
 #include "pre_guard.h"
 #include <QCache>
@@ -287,6 +288,7 @@ private:
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
     dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
+    dlgRoomProperties* mpDlgRoomProperties = nullptr;
     dlgMapLabel* mpDlgMapLabel = nullptr;
 
 private slots:
