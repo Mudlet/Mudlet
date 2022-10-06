@@ -34,6 +34,7 @@
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
 #include "dlgRoomSymbol.h"
+#include "dlgRoomProperties.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
@@ -2912,6 +2913,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize > 0) {
+                    auto roomPreferences = new QAction(tr("Set preferences...", "2D Mapper context menu (room) item"), this);
+                    roomPreferences->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip")));
+                    connect(roomPreferences, &QAction::triggered, this, &T2DMap::slot_showPreferencesSelection);
+                    popup->addAction(roomPreferences);
+                }
+
+                if (selectionSize > 0) {
                     auto recolorRoom = new QAction(tr("Set color...", "2D Mapper context menu (room) item"), this);
                     connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
                     popup->addAction(recolorRoom);
@@ -3700,6 +3708,57 @@ void T2DMap::slot_showSymbolSelection()
         connect(mpDlgRoomSymbol, &dlgRoomSymbol::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
         connect(mpDlgRoomSymbol, &QDialog::finished, this, [=]() {
             mpDlgRoomSymbol = nullptr;
+        });
+    }
+}
+
+void T2DMap::slot_showPreferencesSelection()
+{
+    // Analyses and reports the existing symbols used in ALL the selected
+    // rooms if more than one (and sorts by their frequency)
+    // Allows the existing letters to be deleted (by clearing all the displayed letters)
+
+    // No need to show if no rooms are selected
+    if (mMultiSelectionSet.empty()) {
+        return;
+    }
+
+    // First scan and count all the different symbol used
+    TRoom* room;
+    bool isAtLeastOneRoom = false;
+    QHash<QString, int> usedSymbols;
+    QSetIterator<int> itRoom = mMultiSelectionSet;
+    QSet<TRoom*> roomPtrsSet;
+    while (itRoom.hasNext()) {
+        room = mpMap->mpRoomDB->getRoom(itRoom.next());
+        if (!room) {
+            continue;
+        }
+
+        roomPtrsSet.insert(room);
+        isAtLeastOneRoom = true;
+        if (room->mSymbol.isEmpty()) {
+            continue;
+        }
+
+        QString thisLetter = QString(room->mSymbol);
+        if (!thisLetter.isEmpty()) {
+            if (usedSymbols.contains(thisLetter)) {
+                (usedSymbols[thisLetter])++;
+            } else {
+                usedSymbols[thisLetter] = 1;
+            }
+        }
+    }
+
+    if (isAtLeastOneRoom && !mpDlgRoomPreferences) {
+        mpDlgRoomPreferences = new dlgRoomPreferences(mpHost, this);
+        mpDlgRoomPreferences->init(usedSymbols, roomPtrsSet);
+        mpDlgRoomPreferences->show();
+        mpDlgRoomPreferences->raise();
+        connect(mpDlgRoomPreferences, &dlgRoomPreferences::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
+        connect(mpDlgRoomPreferences, &QDialog::finished, this, [=]() {
+            mpDlgRoomPreferences = nullptr;
         });
     }
 }
