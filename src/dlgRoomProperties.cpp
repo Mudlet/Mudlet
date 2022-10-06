@@ -19,7 +19,7 @@
  ***************************************************************************/
 
 
-#include "dlgRoomSymbol.h"
+#include "dlgRoomProperties.h"
 #include "Host.h"
 #include "TRoomDB.h"
 
@@ -28,31 +28,33 @@
 #include <QPainter>
 #include "post_guard.h"
 
-dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pParentWidget)
+dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
 : QDialog(pParentWidget)
 , mpHost(pHost)
 {
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomSymbol::slot_updatePreview);
-    connect(pushButton_roomSymbolColor, &QAbstractButton::released, this, &dlgRoomSymbol::slot_openColorSelector);
-    connect(pushButton_reset, &QAbstractButton::released, this, &dlgRoomSymbol::slot_resetColors);
-    connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomSymbol::slot_updatePreview);
+    connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
+    connect(pushButton_roomSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openColorSelector);
+    connect(pushButton_reset, &QAbstractButton::released, this, &dlgRoomProperties::slot_resetColors);
+    connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomProperties::slot_updatePreview);
 
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
+void dlgRoomProperties::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
 {
     mpSymbols = pSymbols;
     mpRooms = pRooms;
     if (mpSymbols.size() <= 1) {
+        // show simple text-entry box, either empty or with the (single) existing symbol pre-filled
         lineEdit_roomSymbol->setText(!mpSymbols.isEmpty() ? mpSymbols.keys().first() : QString());
         comboBox_roomSymbol->hide();
     } else {
-        comboBox_roomSymbol->addItems(getComboBoxItems());
+        // show combined dropdown & text-entry box to host all of the (multiple) existing symbols
         lineEdit_roomSymbol->hide();
+        comboBox_roomSymbol->addItems(getComboBoxItems());
     }
     initInstructionLabel();
     if (!pRooms.isEmpty()) {
@@ -67,7 +69,7 @@ void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
     slot_updatePreview();
 }
 
-void dlgRoomSymbol::initInstructionLabel()
+void dlgRoomProperties::initInstructionLabel()
 {
     if (mpSymbols.empty()) {
         label_instructions->hide();
@@ -109,7 +111,7 @@ void dlgRoomSymbol::initInstructionLabel()
     label_instructions->setText(instructions);
 }
 
-QStringList dlgRoomSymbol::getComboBoxItems()
+QStringList dlgRoomProperties::getComboBoxItems()
 {
     QHashIterator<QString, int> itSymbolUsed(mpSymbols);
     QSet<int> symbolCountsSet;
@@ -142,13 +144,13 @@ QStringList dlgRoomSymbol::getComboBoxItems()
     return displayStrings;
 }
 
-void dlgRoomSymbol::accept()
+void dlgRoomProperties::accept()
 {
     QDialog::accept();
     emit signal_save_symbol(getNewSymbol(), selectedColor, mpRooms);
 }
 
-QString dlgRoomSymbol::getNewSymbol()
+QString dlgRoomProperties::getNewSymbol()
 {
     if (mpSymbols.size() <= 1) {
         return lineEdit_roomSymbol->text();
@@ -162,7 +164,7 @@ QString dlgRoomSymbol::getNewSymbol()
     }
 }
 
-void dlgRoomSymbol::slot_updatePreview()
+void dlgRoomProperties::slot_updatePreview()
 {
     auto realColor = selectedColor != nullptr ? selectedColor : defaultColor();
     auto newSymbol = getNewSymbol();
@@ -175,7 +177,7 @@ void dlgRoomSymbol::slot_updatePreview()
                     .arg(realColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
 }
 
-QFont dlgRoomSymbol::getFontForPreview(QString text) {
+QFont dlgRoomProperties::getFontForPreview(QString text) {
 
     auto font = mpHost->mpMap->mMapSymbolFont;
     font.setPointSize(font.pointSize() * 0.9);
@@ -194,47 +196,47 @@ QFont dlgRoomSymbol::getFontForPreview(QString text) {
     return font;
 }
 
-void dlgRoomSymbol::slot_openColorSelector()
+void dlgRoomProperties::slot_openColorSelector()
 {
     auto* dialog = selectedColor != nullptr ? new QColorDialog(selectedColor, this) : new QColorDialog(defaultColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Pick color"));
     dialog->open(this, SLOT(slot_colorSelected(const QColor&)));
-    connect(dialog, &QColorDialog::currentColorChanged, this, &dlgRoomSymbol::slot_currentColorChanged);
-    connect(dialog, &QColorDialog::rejected, this, &dlgRoomSymbol::slot_colorRejected);
+    connect(dialog, &QColorDialog::currentColorChanged, this, &dlgRoomProperties::slot_currentColorChanged);
+    connect(dialog, &QColorDialog::rejected, this, &dlgRoomProperties::slot_colorRejected);
 }
 
-void dlgRoomSymbol::slot_currentColorChanged(const QColor& color)
+void dlgRoomProperties::slot_currentColorChanged(const QColor& color)
 {
     previewColor = color;
     slot_updatePreview();
 }
 
-void dlgRoomSymbol::slot_colorSelected(const QColor& color)
+void dlgRoomProperties::slot_colorSelected(const QColor& color)
 {
     selectedColor = color;
     slot_updatePreview();
 }
 
-void dlgRoomSymbol::slot_colorRejected()
+void dlgRoomProperties::slot_colorRejected()
 {
     previewColor = selectedColor;
     slot_updatePreview();
 }
 
-void dlgRoomSymbol::slot_resetColors()
+void dlgRoomProperties::slot_resetColors()
 {
     selectedColor = QColor();
     previewColor = QColor();
     slot_updatePreview();
 }
 
-QColor dlgRoomSymbol::backgroundBasedColor(QColor background)
+QColor dlgRoomProperties::backgroundBasedColor(QColor background)
 {
     return background.lightness() > 127 ? Qt::black : Qt::white;
 }
 
-QColor dlgRoomSymbol::defaultColor()
+QColor dlgRoomProperties::defaultColor()
 {
     return backgroundBasedColor(roomColor);
 }
