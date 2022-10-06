@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>499</width>
-    <height>431</height>
+    <width>459</width>
+    <height>409</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -139,20 +139,13 @@
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
+      <item row="2" column="0">
        <widget class="QCheckBox" name="checkBox_locked">
         <property name="text">
-         <string>Locked</string>
+         <string>Lock room, so it will never be used for speedwalking</string>
         </property>
         <property name="tristate">
          <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0" colspan="2">
-       <widget class="QLabel" name="label_lock">
-        <property name="text">
-         <string>Locked rooms will never be walked through when speedwalking:</string>
         </property>
        </widget>
       </item>
@@ -192,7 +185,7 @@
       <item row="2" column="3">
        <widget class="QPushButton" name="pushButton_reset">
         <property name="text">
-         <string>Clear symbol color</string>
+         <string>Reset symbol color</string>
         </property>
        </widget>
       </item>
