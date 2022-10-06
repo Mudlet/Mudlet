@@ -118,8 +118,8 @@ bool TCommandLine::event(QEvent* event)
             return false;
         }
 
-        if(ke->matches(QKeySequence::Copy)){ // Copy is Ctrl+C and possibly Ctrl+Ins, F16
-            if(mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0)) {
+        if (ke->matches(QKeySequence::Copy)){ // Copy is Ctrl+C and possibly Ctrl+Ins, F16
+            if (mpConsole->mUpperPane->mSelectedRegion != QRegion(0, 0, 0, 0)) {
                 // Only process if there is a selection active in the TConsole
                 mpConsole->mUpperPane->slot_copySelectionToClipboard();
                 ke->accept();
@@ -127,8 +127,8 @@ bool TCommandLine::event(QEvent* event)
             }
         }
 
-        if(ke->matches(QKeySequence::Find)){ // Find is Ctrl+F
-            if(mudlet::self()->dactionInputLine->isChecked()){
+        if (ke->matches(QKeySequence::Find)){ // Find is Ctrl+F
+            if (mudlet::self()->dactionInputLine->isChecked()){
                 // If hidden then reveal as if pressed Alt-L
                 mudlet::self()->dactionInputLine->setChecked(false);
                 mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
