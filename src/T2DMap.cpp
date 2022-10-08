@@ -4114,15 +4114,35 @@ void T2DMap::slot_setRoomWeight()
                     itWeightsUsed.next();
                     if (itWeightsUsed.value() == weightCountsList.at(i)) {
                         if (itWeightsUsed.key() == 1) { // Indicate the "default" value which is unity weight
-                            displayStrings.append(tr("%1 {count:%2, default}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
+                            displayStrings.append(tr("%1 {count:%2, default}",
+                                                     // Intentional comment to separate arguments
+                                                     "Everything after the first parameter (the '%1') will be removed by processing "
+                                                     "it as a QRegularExpression programmatically, ensure the translated text has "
+                                                     "` {` immediately after the '%1', and '}' as the very last character, so that the "
+                                                     "right portion can be extracted if the user clicks on this item when it is shown "
+                                                     "in the QComboBox it is put in.")
+                                                          .arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
                         } else {
-                            displayStrings.append(tr("%1 {count:%2}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
+                            displayStrings.append(tr("%1 {count:%2}",
+                                                     // Intentional comment to separate arguments
+                                                     "Everything after the first parameter (the '%1') will be removed by processing "
+                                                     "it as a QRegularExpression programmatically, ensure the translated text has "
+                                                     "` {` immediately after the '%1', and '}' as the very last character, so that the "
+                                                     "right portion can be extracted if the user clicks on this item when it is shown "
+                                                     "in the QComboBox it is put in.")
+                                                          .arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
                         }
                     }
                 }
             }
             if (!usedWeights.contains(1)) { // If unity weight was not used insert it at end of list
-                displayStrings.append(tr("1 {count 0, default}"));
+                displayStrings.append(tr("1 {count 0, default}",
+                                         // Intentional comment to separate arguments
+                                         "Everything after the first character (the '1') will be removed by processing "
+                                         "it as a QRegularExpression programmatically, ensure the translated text has "
+                                         "` {` immediately after the '1', and '}' as the very last character, so that the "
+                                         "right portion can be extracted if the user clicks on this item when it is shown "
+                                         "in the QComboBox it is put in."));
             }
             QString newWeightText = QInputDialog::getItem(this,                    // QWidget * parent
                                                           tr("Enter room weight"), // const QString & title
@@ -4144,6 +4164,12 @@ void T2DMap::slot_setRoomWeight()
                                                           Qt::ImhDigitsOnly);                                               // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
             newWeight = 1;
             if (isOk) { // Don't do anything if cancel was pressed
+                // Parse an initial number out of what was selected or typed
+                QRegularExpression countStripper(qsl("^(\\d+) {.*}$"));
+                QRegularExpressionMatch match = countStripper.match(newWeightText);
+                if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+                    newWeightText = match.captured(1);
+                }
                 if (newWeightText.toInt() > 0) {
                     newWeight = newWeightText.toInt();
                 } else {
