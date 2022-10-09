@@ -4313,6 +4313,7 @@ void T2DMap::slot_setArea()
                     }
                 }
             }
+            mMultiSelectionSet.clear();
         }
     }
     repaint();
