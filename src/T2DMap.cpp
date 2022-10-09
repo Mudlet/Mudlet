@@ -3751,14 +3751,14 @@ void T2DMap::slot_showPreferencesSelection()
         }
     }
 
-    if (isAtLeastOneRoom && !mpDlgRoomPreferences) {
-        mpDlgRoomPreferences = new dlgRoomPreferences(mpHost, this);
-        mpDlgRoomPreferences->init(usedSymbols, roomPtrsSet);
-        mpDlgRoomPreferences->show();
-        mpDlgRoomPreferences->raise();
-        connect(mpDlgRoomPreferences, &dlgRoomPreferences::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
-        connect(mpDlgRoomPreferences, &QDialog::finished, this, [=]() {
-            mpDlgRoomPreferences = nullptr;
+    if (isAtLeastOneRoom && !mpDlgRoomProperties) {
+        mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
+        mpDlgRoomProperties->init(usedSymbols, roomPtrsSet);
+        mpDlgRoomProperties->show();
+        mpDlgRoomProperties->raise();
+        connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
+        connect(mpDlgRoomProperties, &QDialog::finished, this, [=]() {
+            mpDlgRoomProperties = nullptr;
         });
     }
 }
