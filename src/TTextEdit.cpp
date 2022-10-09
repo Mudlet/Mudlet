@@ -1569,7 +1569,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             QAction* clearErrorConsole = new QAction(tr("Clear console"), this);
             connect(clearErrorConsole, &QAction::triggered, this, [=]() {
                 mpConsole->buffer.clear();
-                mpConsole->print(tr("*** starting new session ***\n"));
+                mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
             });
             popup->addAction(clearErrorConsole);
         }

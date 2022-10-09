@@ -4277,7 +4277,8 @@ void T2DMap::slot_setArea()
             if (!(mpMap->setRoomArea(currentRoomId, newAreaId, false))) {
                 // Failed on the last of multiple room area move so do the missed
                 // out recalculations for the dirtied areas
-                QSet<TArea*> areaPtrsSet{mpMap->mpRoomDB->getAreaPtrList().begin(), mpMap->mpRoomDB->getAreaPtrList().end()};
+                auto areaPtrsList{mpMap->mpRoomDB->getAreaPtrList()};
+                QSet<TArea*> areaPtrsSet{areaPtrsList.begin(), areaPtrsList.end()};
                 QSetIterator<TArea*> itpArea{areaPtrsSet};
                 while (itpArea.hasNext()) {
                     TArea* pArea = itpArea.next();
@@ -4322,8 +4323,8 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         if (room) {
             if (room->customLines.contains(mCustomLineSelectedExit)) {
                 if (room->customLines[mCustomLineSelectedExit].size() > mCustomLineSelectedPoint) {
-                    float mx = (event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0);
-                    float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
+                    qreal mx = static_cast<qreal>(event->pos().x()) / static_cast<qreal>(mRoomWidth) + mOx - static_cast<qreal>(xspan / 2.0f);
+                    qreal my = static_cast<qreal>(yspan / 2.0f) - static_cast<qreal>(event->pos().y()) / static_cast<qreal>(mRoomHeight) - mOy;
                     QPointF pc = QPointF(mx, my);
                     room->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = pc;
                     room->calcRoomDimensions();
@@ -4353,9 +4354,9 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 if (!mapLabel.highlight) {
                     continue;
                 }
-                int mx = qRound((event->pos().x() / mRoomWidth) + mOx -(xspan / 2.0));
-                int my = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy);
-                mapLabel.pos = QVector3D(mx, my, mOz);
+                float mx = (static_cast<float>(event->pos().x()) / mRoomWidth) + static_cast<float>(mOx) -(xspan / 2.0f);
+                float my = (yspan / 2.0f) - (static_cast<float>(event->pos().y()) / mRoomHeight) - static_cast<float>(mOy);
+                mapLabel.pos = QVector3D(mx, my, static_cast<float>(mOz));
                 pA->mMapLabels[itMapLabel.key()] = mapLabel;
                 needUpdate = true;
             }
@@ -4386,11 +4387,10 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             return;
         }
 
-        float fx = xspan / 2.0 * mRoomWidth - mRoomWidth * mOx;
-        float fy = yspan / 2.0 * mRoomHeight - mRoomHeight * mOy;
-
         if (!mSizeLabel) { // NOT sizing a label
             mMultiSelectionSet.clear();
+            float fx = xspan / 2.0f * mRoomWidth - mRoomWidth * static_cast<float>(mOx);
+            float fy = yspan / 2.0f * mRoomHeight - mRoomHeight * static_cast<float>(mOy);
             QSetIterator<int> itSelectedRoom(pArea->getAreaRooms());
             while (itSelectedRoom.hasNext()) {
                 int currentRoomId = itSelectedRoom.next();
@@ -4398,21 +4398,20 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 if (!room) {
                     continue;
                 }
-                int rx = qRound(room->x      * mRoomWidth + fx);
-                int ry = qRound(room->y * -1 * mRoomHeight + fy);
-                int rz = room->z;
 
                 // copy rooms on all z-levels if the shift key is being pressed
                 // CHECK: Consider adding z-level to multi-selection Widget?
-                if (rz != mOz && !(event->modifiers().testFlag(Qt::ShiftModifier))) {
+                if ((room->z != mOz) && !(event->modifiers().testFlag(Qt::ShiftModifier))) {
                     continue;
                 }
 
+                float rx = static_cast<float>(room->x) * mRoomWidth  + fx;
+                float ry = static_cast<float>(room->y * -1) * mRoomHeight + fy;
                 QRectF dr;
                 if (pArea->gridMode) {
-                    dr = QRectF(rx - (mRoomWidth / 2.0), ry - (mRoomHeight / 2.0), mRoomWidth, mRoomHeight);
+                    dr = QRectF(static_cast<qreal>(rx - (mRoomWidth / 2.0f)), static_cast<qreal>(ry - (mRoomHeight / 2.0f)), static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight));
                 } else {
-                    dr = QRectF(rx - ((mRoomWidth * rSize) / 2.0), ry - ((mRoomHeight * rSize) / 2.0), mRoomWidth * rSize, mRoomHeight * rSize);
+                    dr = QRectF(static_cast<qreal>(rx - mRoomWidth * static_cast<float>(rSize / 2.0)), static_cast<qreal>(ry - mRoomHeight * static_cast<float>(rSize / 2.0)), static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
                 }
                 if (mMultiRect.contains(dr)) {
                     mMultiSelectionSet.insert(currentRoomId);

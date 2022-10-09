@@ -679,7 +679,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // while populating the widget, it reduces noise about:
     // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "dictList")  index:  ##
     dictList->blockSignals(true);
-    if (entries.count()) {
+    if (!entries.isEmpty()) {
         QListWidgetItem* scrollToItem = nullptr;
         for (int i = 0, total = entries.size(); i < total; ++i) {
             // This is a file name and to support macOs platforms should not be case sensitive:

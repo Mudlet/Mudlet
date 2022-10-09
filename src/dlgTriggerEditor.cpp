@@ -208,7 +208,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the editor preferences
     connect(mudlet::self(), &mudlet::signal_editorTextOptionsChanged, this, &dlgTriggerEditor::slot_changeEditorTextOptions);
-    mpSourceEditorEdbeeDocument->setText(tr("-- Enter your lua code here\n"));
+    mpSourceEditorEdbeeDocument->setText(qsl("%1\n").arg(tr("-- Enter your lua code here")));
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
@@ -288,7 +288,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
     mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);
-    mpErrorConsole->print(tr("*** starting new session ***\n"));
+    mpErrorConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
     mpErrorConsole->setMinimumHeight(100);
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
     splitter_right->addWidget(mpErrorConsole);
@@ -4489,7 +4489,7 @@ void dlgTriggerEditor::saveScript()
     }
     QStringList handlerList;
     for (auto& listWidgetItem : itemList) {
-        if (listWidgetItem->text().size() < 1) {
+        if (listWidgetItem->text().isEmpty()) {
             continue;
         }
         handlerList << listWidgetItem->text();
@@ -7269,7 +7269,7 @@ void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
     mIsScriptsMainAreaEditHandler = true;
     mpScriptsMainAreaEditHandlerItem = pItem;
     QString regex = pItem->text();
-    if (regex.size() < 1) {
+    if (regex.isEmpty()) {
         mIsScriptsMainAreaEditHandler = false;
         return;
     }
@@ -8350,16 +8350,16 @@ void dlgTriggerEditor::slot_keyGrab()
 
 // Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc.
 // Deactivate instead with optional "false" - to allow these for keybindings
-void dlgTriggerEditor::setShortcuts(const bool setNotUnset)
+void dlgTriggerEditor::setShortcuts(const bool active)
 {
     QList<QAction*> actionList = toolBar->actions();
     QString actionText;
     for (auto& action : actionList) {
         actionText = action->text();
         if (actionText ==  tr("Save Item")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+S") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+S") : QString());
         } else if (actionText == tr("Save Profile")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+Shift+S") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+Shift+S") : QString());
         }
     }
     actionList = toolBar2->actions();
@@ -8367,25 +8367,25 @@ void dlgTriggerEditor::setShortcuts(const bool setNotUnset)
         actionText = action->text();
         // TODO: Refactor into nice list to iterate
         if (actionText == tr("Triggers")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+1") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+1") : QString());
         } else if (actionText == tr("Aliases")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+2") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+2") : QString());
         } else if (actionText == tr("Scripts")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+3") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+3") : QString());
         } else if (actionText == tr("Timers")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+4") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+4") : QString());
         } else if (actionText == tr("Keys")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+5") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+5") : QString());
         } else if (actionText == tr("Variables")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+6") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+6") : QString());
         } else if (actionText == tr("Buttons")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+7") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+7") : QString());
         } else if (actionText == tr("Errors")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+8") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+8") : QString());
         } else if (actionText == tr("Statistics")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+9") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+9") : QString());
         } else if (actionText == tr("Debug")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+0") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+0") : QString());
         }
     }
 }
