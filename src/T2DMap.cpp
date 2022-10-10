@@ -4114,35 +4114,39 @@ void T2DMap::slot_setRoomWeight()
                     itWeightsUsed.next();
                     if (itWeightsUsed.value() == weightCountsList.at(i)) {
                         if (itWeightsUsed.key() == 1) { // Indicate the "default" value which is unity weight
-                            displayStrings.append(tr("%1 {count:%2, default}",
+                            displayStrings.append(tr("1 {count:%1, default}",
                                                      // Intentional comment to separate arguments
-                                                     "Everything after the first parameter (the '%1') will be removed by processing "
-                                                     "it as a QRegularExpression programmatically, ensure the translated text has "
-                                                     "` {` immediately after the '%1', and '}' as the very last character, so that the "
-                                                     "right portion can be extracted if the user clicks on this item when it is shown "
-                                                     "in the QComboBox it is put in.")
-                                                          .arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
+                                                     "An entry into the QComboBox used to show the existing room weights in a selection "
+                                                     "of rooms for the user to choose to apply to every room in the selection. "
+                                                     "Everything after the '1' which is the default weight (and which is used by %1 "
+                                                     "rooms in the selection) will be removed by processing the entry as a "
+                                                     "QRegularExpression programmatically - the translation needs to also begin with "
+                                                     "that number '1'.")
+                                                          .arg(QString::number(itWeightsUsed.value())));
                         } else {
                             displayStrings.append(tr("%1 {count:%2}",
                                                      // Intentional comment to separate arguments
-                                                     "Everything after the first parameter (the '%1') will be removed by processing "
-                                                     "it as a QRegularExpression programmatically, ensure the translated text has "
-                                                     "` {` immediately after the '%1', and '}' as the very last character, so that the "
-                                                     "right portion can be extracted if the user clicks on this item when it is shown "
-                                                     "in the QComboBox it is put in.")
+                                                     "An entry into the QComboBox used to show the existing room weights in a selection "
+                                                     "of rooms for the user to choose to apply to every room in the selection. "
+                                                     "Everything after the '%1' which is a number and is the weight used by a number "
+                                                     "%2 of rooms in the selection) will be removed by processing the entry as a "
+                                                     "QRegularExpression programmatically - the translation needs to also begin with "
+                                                     "that number '%1'.")
                                                           .arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
                         }
                     }
                 }
             }
-            if (!usedWeights.contains(1)) { // If unity weight was not used insert it at end of list
-                displayStrings.append(tr("1 {count 0, default}",
+            if (!usedWeights.contains(1)) { // If unity weight was not used insert it at end of list - this should be the same Engineering English as above
+                displayStrings.append(tr("1 {count:%1, default}",
                                          // Intentional comment to separate arguments
-                                         "Everything after the first character (the '1') will be removed by processing "
-                                         "it as a QRegularExpression programmatically, ensure the translated text has "
-                                         "` {` immediately after the '1', and '}' as the very last character, so that the "
-                                         "right portion can be extracted if the user clicks on this item when it is shown "
-                                         "in the QComboBox it is put in."));
+                                         "An entry into the QComboBox used to show the existing room weights in a selection "
+                                         "of rooms for the user to choose to apply to every room in the selection. "
+                                         "Everything after the '1' which is the default weight (and which is used by %1 "
+                                         "rooms in the selection) will be removed by processing the entry as a "
+                                         "QRegularExpression programmatically - the translation needs to also begin with "
+                                         "that number '1'.")
+                                              .arg(QString::number(0)));
             }
             QString newWeightText = QInputDialog::getItem(this,                    // QWidget * parent
                                                           tr("Enter room weight"), // const QString & title
