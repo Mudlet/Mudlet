@@ -4165,7 +4165,7 @@ void T2DMap::slot_setRoomWeight()
             newWeight = 1;
             if (isOk) { // Don't do anything if cancel was pressed
                 // Parse an initial number out of what was selected or typed
-                QRegularExpression countStripper(qsl("^(\\d+) {.*}$"));
+                QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
                 QRegularExpressionMatch match = countStripper.match(newWeightText);
                 if (match.hasMatch() && match.lastCapturedIndex() > 0) {
                     newWeightText = match.captured(1);
