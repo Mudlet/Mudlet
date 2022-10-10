@@ -4276,8 +4276,7 @@ void T2DMap::slot_setArea()
         auto newAreaName = arealist_combobox->currentText();
         newAreaId = mpMap->mpRoomDB->addArea(newAreaName);
         if (!newAreaId) {
-            // This should not happen, but if it fails TRoomDB::addArea(...) above will log a reason to the main console
-            mpMap->postMessage(tr("[ ERROR ] - Unable to add \"%1\" as an area to the map.\n"
+                        mpMap->postMessage(tr("[ ERROR ] - Unable to add \"%1\" as an area to the map.\n"
                                   "See the \"[MAP ERROR:]\" message for the reason.",
                                   // Intentional separator between argument
                                   "The '[MAP ERROR:]' text should be the same as that used for the translation of \"[MAP ERROR:]%1\n\" in the 'TMAP::logerror(...)' function.").arg(newAreaName));
@@ -4313,10 +4312,12 @@ void T2DMap::slot_setArea()
                     }
                 }
             }
-            mMultiSelectionSet.clear();
+            auto& targetAreaName = areaNamesMap.value(newAreaId);
+            mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            slot_switchArea(targetAreaName);
         }
     }
-    repaint();
+    update();
 }
 
 
