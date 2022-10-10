@@ -113,15 +113,16 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         TArea* area = mpHost->mpMap->mpRoomDB->getArea(areaId);
         QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         if (area) {
-            infoText = tr("Area:%1%2 ID:%1%3 x:%1%4%1<‑>%1%5 y:%1%6%1<‑>%1%7 z:%1%8%1<‑>%1%9\n",
-                          // Intentional separator
-                          "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
-                          "them literally in raw strings) and non-breaking hyphens which are used to "
-                          "prevent the line being split at some places it might otherwise be; when "
-                          "translating please consider at which points the text may be divided to fit onto "
-                          "more than one line. "
-                          "%2 is the (text) name of the area, %3 is the number for it, "
-                          "%4 to %9 are pairs (min <-> max) of extremes for each of x,y and z coordinates")
+            infoText = qsl("%1\n").arg(
+                           tr("Area:%1%2 ID:%1%3 x:%1%4%1<‑>%1%5 y:%1%6%1<‑>%1%7 z:%1%8%1<‑>%1%9",
+                           // Intentional separator
+                           "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
+                           "them literally in raw strings) and non-breaking hyphens which are used to "
+                           "prevent the line being split at some places it might otherwise be; when "
+                           "translating please consider at which points the text may be divided to fit onto "
+                           "more than one line. "
+                           "%2 is the (text) name of the area, %3 is the number for it, "
+                           "%4 to %9 are pairs (min <-> max) of extremes for each of x,y and z coordinates")
                                .arg(QChar(160),
                                     areaName,
                                     QString::number(areaId),
@@ -130,14 +131,14 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                     QString::number(area->min_y),
                                     QString::number(area->max_y),
                                     QString::number(area->min_z),
-                                    QString::number(area->max_z));
+                                    QString::number(area->max_z)));
         } else {
             infoText = QChar::LineFeed;
         }
 
 
         if (!room->name.isEmpty()) {
-            infoText.append(tr("Room Name: %1\n").arg(room->name));
+            infoText.append(qsl("%1\n").arg(tr("Room Name: %1").arg(room->name)));
         }
 
         // Italicise the text if the current display area {mAreaID} is not the
@@ -150,7 +151,8 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
         // If one or more rooms are selected - make the text slightly orange.
         switch (selectionSize) {
         case 0:
-            infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location\n",
+            infoText.append(qsl("%1\n").arg(
+                               tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location",
                                // Intentional comment to separate arguments
                                "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                                "them literally in raw strings) and a non-breaking hyphen which are used to "
@@ -159,7 +161,11 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                "more than one line. "
                                "This text is for when NO rooms are selected, %3 is the room number "
                                "of, and %4-%6 are the x,y and z coordinates for, the current player's room.")
-                                    .arg(QChar(160), QString::number(roomID), QString::number(room->x), QString::number(room->y), QString::number(room->z)));
+                                    .arg(QChar(160),
+                                        QString::number(roomID),
+                                        QString::number(room->x),
+                                        QString::number(room->y),
+                                        QString::number(room->z))));
             if (areaId != displayAreaId) {
                 isItalic = true;
             } else {
@@ -167,7 +173,8 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
             }
             break;
         case 1:
-            infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room\n",
+            infoText.append(qsl("%1\n").arg(
+                               tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room",
                                // Intentional comment to separate arguments
                                "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                                "them literally in raw strings) and a non-breaking hyphen which are used to "
@@ -176,7 +183,11 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                "more than one line. "
                                "This text is for when ONE room is selected, %3 is the room number "
                                "of, and %4-%6 are the x,y and z coordinates for, the selected Room.")
-                                    .arg(QChar(160), QString::number(roomID), QString::number(room->x), QString::number(room->y), QString::number(room->z)));
+                                    .arg(QChar(160),
+                                        QString::number(roomID),
+                                        QString::number(room->x),
+                                        QString::number(room->y),
+                                        QString::number(room->z))));
             isBold = true;
             if (infoColor.lightness() > 127) {
                 color = QColor(255, 223, 191); // Slightly orange white
@@ -185,7 +196,8 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
             }
             break;
         default:
-            infoText.append(tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms\n",
+            infoText.append(qsl("%1\n").arg(
+                               tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms",
                                // Intentional comment to separate arguments
                                "This text uses non-breaking spaces (as '%1's, as Qt Creator cannot handle "
                                "them literally in raw strings) and a non-breaking hyphen which are used to "
@@ -199,7 +211,11 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                                "provided so that non-English translations can select required plural forms as "
                                "needed.",
                                selectionSize)
-                                    .arg(QChar(160), QString::number(roomID), QString::number(room->x), QString::number(room->y), QString::number(room->z)));
+                                    .arg(QChar(160),
+                                        QString::number(roomID),
+                                        QString::number(room->x),
+                                        QString::number(room->y),
+                                        QString::number(room->z))));
             isBold = true;
             if (infoColor.lightness() > 127) {
                 color = QColor(255, 223, 191); // Slightly orange white
