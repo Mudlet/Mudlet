@@ -544,6 +544,7 @@ SOURCES += \
     dlgPackageManager.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
+    dlgRoomProperties.cpp \
     dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
@@ -660,6 +661,7 @@ HEADERS += \
     dlgPackageManager.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
+    dlgRoomProperties.h \
     dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
