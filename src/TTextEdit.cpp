@@ -1587,11 +1587,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
+            const QString &uniqueName = it.key();
             const QString &actionName = actionInfo.at(1);
-            QAction * action = new QAction(actionName, this);
-            action->setToolTip(actionInfo.at(2));
-            popup->addAction(action);
-            connect(action, &QAction::triggered, this, [this, actionName] { slot_mouseAction(actionName); });
+            QAction * mouseAction = new QAction(actionName, this);
+            mouseAction->setToolTip(actionInfo.at(2));
+            popup->addAction(mouseAction);
+            connect(mouseAction, &QAction::triggered, this, [this, uniqueName] { slot_mouseAction(uniqueName); });
         }
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
