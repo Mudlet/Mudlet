@@ -208,7 +208,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the editor preferences
     connect(mudlet::self(), &mudlet::signal_editorTextOptionsChanged, this, &dlgTriggerEditor::slot_changeEditorTextOptions);
-    mpSourceEditorEdbeeDocument->setText(tr("-- Enter your lua code here\n"));
+    mpSourceEditorEdbeeDocument->setText(qsl("%1\n").arg(tr("-- Enter your lua code here")));
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
@@ -288,7 +288,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
     mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);
-    mpErrorConsole->print(tr("*** starting new session ***\n"));
+    mpErrorConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
     mpErrorConsole->setMinimumHeight(100);
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
     splitter_right->addWidget(mpErrorConsole);
@@ -4489,7 +4489,7 @@ void dlgTriggerEditor::saveScript()
     }
     QStringList handlerList;
     for (auto& listWidgetItem : itemList) {
-        if (listWidgetItem->text().size() < 1) {
+        if (listWidgetItem->text().isEmpty()) {
             continue;
         }
         handlerList << listWidgetItem->text();
@@ -7269,7 +7269,7 @@ void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
     mIsScriptsMainAreaEditHandler = true;
     mpScriptsMainAreaEditHandlerItem = pItem;
     QString regex = pItem->text();
-    if (regex.size() < 1) {
+    if (regex.isEmpty()) {
         mIsScriptsMainAreaEditHandler = false;
         return;
     }

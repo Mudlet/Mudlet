@@ -1523,7 +1523,7 @@ int TConsole::select(const QString& text, int numOfMatch)
     int begin = -1;
     for (int i = 0; i < numOfMatch; i++) {
         QString li = buffer.line(mUserCursor.y());
-        if (li.size() < 1) {
+        if (li.isEmpty()) {
             continue;
         }
         begin = li.indexOf(text, begin + 1);
