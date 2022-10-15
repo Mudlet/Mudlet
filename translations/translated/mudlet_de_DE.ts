@@ -6849,7 +6849,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1388"/>
       <location filename="../src/dlgRoomExits.cpp" line="1564"/>
       <source>Set the number of the room in from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums innerhalb von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1298"/>
@@ -6891,7 +6891,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1522"/>
       <source>This is the Room ID number for this room; this &lt;b&gt;room is locked&lt;/b&gt; so it will not be used for speed-walks at all.</source>
       <comment>This text is a revision to the default tooltip text set for this widget in the &apos;room_exits.ui&apos; file. Bold HTML tags are used to emphasis that this room&apos;s locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that comes to it.</comment>
-      <translation type="unfinished"/>
+      <translation>Dies ist die Raum-ID-Nummer für diesen Raum; dieser &lt;b&gt;Raum ist verschlossen&lt;/b&gt; und wird daher nicht für Speedwalking genutzt.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1534"/>
@@ -8295,7 +8295,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Type in one or more commands you want the key to send directly to the game when pressed. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tippe ein oder mehrere Befehle, die die Taste direkt an das Spiel senden soll, wenn sie gedrückt wird. (Optional)&lt;/p&gt;&lt;p&gt;Um komplexere Befehle zu senden, die von Variablen innerhalb dieses Profils abhängen oder diese verändern könnten, sollte &lt;i&gt;stattdessen&lt;/i&gt; ein Lua Skript im unteren Bereich des Editors eingegeben werden. Alles hier eingegebene wird buchstäblich nur zum Spielserver gesendet.&lt;/p&gt;&lt;p&gt;Man darf auch hier etwas &lt;i&gt;und&lt;/i&gt; ein Lua Skript eingeben - dieser Text wird gesendet &lt;b&gt;bevor&lt;/b&gt; das Skript ausgeführt wird.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
@@ -12563,7 +12563,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="768"/>
       <source>&lt;p&gt;This is the Room ID Number for this room.</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dies ist die Raum-ID-Nummer für diesen Raum.</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="803"/>
@@ -12573,7 +12573,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/room_exits.ui" line="816"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dies ist die normale Gewichtung dieses Raums. Sie wird für jeden Ausgang benutzt, der &lt;i&gt;zu &lt;u&gt;diesem Raum&lt;/u&gt; hinführt&lt;/i&gt; und keinen eigenen Wert gesetzt hat.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="879"/>
