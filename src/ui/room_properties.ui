@@ -111,7 +111,7 @@
      </property>
      <layout class="QGridLayout" name="gridLayout_8">
       <item row="0" column="0" colspan="4">
-       <widget class="QLabel" name="label_instructions">
+       <widget class="QLabel" name="label_symbolInstructions">
         <property name="text">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Choose: &lt;br/&gt;• an existing symbol from the list below (sorted by most commonly used first)&lt;br/&gt;• enter one or more graphemes (&amp;quot;visible characters&amp;quot;) as a new symbol&lt;br/&gt;• enter a space to clear any existing symbols&lt;br/&gt;for all of the 5 selected rooms:&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
@@ -125,14 +125,14 @@
        </widget>
       </item>
       <item row="2" column="3">
-       <widget class="QPushButton" name="pushButton_reset">
+       <widget class="QPushButton" name="pushButton_resetSymbolColor">
         <property name="text">
          <string>Reset symbol color</string>
         </property>
        </widget>
       </item>
       <item row="2" column="2">
-       <widget class="QPushButton" name="pushButton_roomSymbolColor">
+       <widget class="QPushButton" name="pushButton_setSymbolColor">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -247,7 +247,7 @@
       </widget>
      </item>
      <item row="0" column="5">
-      <widget class="QPushButton" name="pushButton_room_color">
+      <widget class="QPushButton" name="pushButton_setRoomColor">
        <property name="text">
         <string>Set room color</string>
        </property>
