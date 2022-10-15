@@ -6749,7 +6749,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1087"/>
       <source>&lt;b&gt;Room is locked&lt;/b&gt;, it will not be used for speed-walks for any exit that leads to it.</source>
       <comment>Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that goes to it.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Der Raum ist verschlossen&lt;/b&gt;, er wird nicht für Speed-Walks genutzt, für keinen Ausgang, der dorthin führt.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1079"/>
@@ -6801,7 +6801,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1340"/>
       <location filename="../src/dlgRoomExits.cpp" line="1552"/>
       <source>Set the number of the room west of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums westlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1244"/>
@@ -6809,7 +6809,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1348"/>
       <location filename="../src/dlgRoomExits.cpp" line="1554"/>
       <source>Set the number of the room east of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums östlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1253"/>
@@ -6817,7 +6817,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1356"/>
       <location filename="../src/dlgRoomExits.cpp" line="1556"/>
       <source>Set the number of the room down from this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums unterhalb von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1262"/>
@@ -6825,7 +6825,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1364"/>
       <location filename="../src/dlgRoomExits.cpp" line="1558"/>
       <source>Set the number of the room southwest of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums südwestlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1271"/>
@@ -6833,7 +6833,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1372"/>
       <location filename="../src/dlgRoomExits.cpp" line="1560"/>
       <source>Set the number of the room south of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums südlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1280"/>
@@ -6841,7 +6841,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomExits.cpp" line="1380"/>
       <location filename="../src/dlgRoomExits.cpp" line="1562"/>
       <source>Set the number of the room southeast of this one.</source>
-      <translation type="unfinished"/>
+      <translation>Stelle die Nummer des Raums südöstlich von diesem ein.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1289"/>
