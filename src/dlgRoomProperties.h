@@ -43,26 +43,26 @@ signals:
 
 private:
     QColor backgroundBasedColor(QColor);
-    QColor defaultColor();
+    QColor defaultSymbolColor();
     QString getNewSymbol();
-    void initInstructionLabel();
-    QStringList getComboBoxItems();
+    void initSymbolInstructionLabel();
+    QStringList getComboBoxSymbolItems();
     QFont getFontForPreview(QString);
 
     Host* mpHost;
     QSet<TRoom*> mpRooms;
     QHash<QString, int> mpSymbols;
-    QColor selectedColor;
-    QColor previewColor;
+    QColor selectedSymbolColor;
+    QColor previewSymbolColor;
     QColor roomColor;
 
 private slots:
-    void slot_openColorSelector();
-    void slot_currentColorChanged(const QColor&);
-    void slot_colorSelected(const QColor&);
-    void slot_colorRejected();
+    void slot_openSymbolColorSelector();
+    void slot_currentSymbolColorChanged(const QColor&);
+    void slot_symbolColorSelected(const QColor&);
+    void slot_symbolColorRejected();
     void slot_updatePreview();
-    void slot_resetColors();
+    void slot_resetSymbolColor();
 };
 
 #endif // MUDLET_DLGROOMPROPERTIES_H
