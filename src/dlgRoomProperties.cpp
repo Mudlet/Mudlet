@@ -67,6 +67,7 @@ void dlgRoomProperties::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms
         }
     }
     slot_updatePreview();
+    adjustSize();
 }
 
 void dlgRoomProperties::initInstructionLabel()
