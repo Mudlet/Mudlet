@@ -176,7 +176,7 @@ void dlgRoomProperties::slot_updatePreview()
             .arg(realSymbolColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
     pushButton_roomSymbolColor->setStyleSheet(
         qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;")
-            .arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name());
+            .arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
 }
 
 QFont dlgRoomProperties::getFontForPreview(QString text)
