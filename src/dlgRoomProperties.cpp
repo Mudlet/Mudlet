@@ -109,6 +109,7 @@ void dlgRoomProperties::initSymbolInstructionLabel()
                           "%n is the number of rooms involved.", mpRooms.size());
     }
     label_symbolInstructions->setText(instructions);
+    label_symbolInstructions->setWordWrap(true);
 }
 
 QStringList dlgRoomProperties::getComboBoxSymbolItems()
