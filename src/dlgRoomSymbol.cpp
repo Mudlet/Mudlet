@@ -77,23 +77,21 @@ void dlgRoomSymbol::initInstructionLabel()
     QString instructions;
     if (mpSymbols.size() == 1) {
         if (mpRooms.size() > 1) {
-            instructions = tr("The only used symbol is \"%1\" in one or\n"
-                              "more of the selected %n room(s), delete this to\n"
-                              "clear it from all selected rooms or replace\n"
+            instructions = tr("The only used symbol is \"%1\" in one or "
+                              "more of the selected %n room(s), delete this to "
+                              "clear it from all selected rooms or replace "
                               "with a new symbol to use for all the rooms:",
                               // Intentional comment to separate arguments!
                               "This is for when applying a new room symbol to one or more rooms "
                               "and some have the SAME symbol (others may have none) at present, "
-                              "%n is the total number of rooms involved and is at least two. "
-                              "Use line feeds to format text into a reasonable rectangle.",
+                              "%n is the total number of rooms involved and is at least two. ",
                               mpRooms.size()).arg(mpSymbols.keys().first());
         } else {
-            instructions = tr("The symbol is \"%1\" in the selected room,\n"
-                              "delete this to clear the symbol or replace\n"
+            instructions = tr("The symbol is \"%1\" in the selected room, "
+                              "delete this to clear the symbol or replace "
                               "it with a new symbol for this room:",
                               // Intentional comment to separate arguments!
-                              "This is for when applying a new room symbol to one room. "
-                              "Use line feeds to format text into a reasonable rectangle.")
+                              "This is for when applying a new room symbol to one room.")
                                    .arg(mpSymbols.keys().first());
         }
     } else {
@@ -103,10 +101,12 @@ void dlgRoomSymbol::initInstructionLabel()
                           " • enter a space to clear any existing symbols\n"
                           "for all of the %n selected room(s):",
                           // Intentional comment to separate arguments!
-                          "Use line feeds to format text into a reasonable rectangle if needed, "
+                          "This is for when applying a new room symbol to one or more rooms "
+                          "and some have different symbols (others may have none) at present, "
                           "%n is the number of rooms involved.", mpRooms.size());
     }
     label_instructions->setText(instructions);
+    label_instructions->setWordWrap(true);
 }
 
 QStringList dlgRoomSymbol::getComboBoxItems()
