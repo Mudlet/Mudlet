@@ -171,11 +171,12 @@ void dlgRoomProperties::slot_updatePreview()
     auto newSymbol = getNewSymbol();
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
-    auto bgStyle = qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name());
-    pushButton_setSymbolColor->setStyleSheet(bgStyle);
     label_preview->setStyleSheet(
-            qsl("color: %1; background-color: %2; border: %3;")
-                    .arg(realSymbolColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
+        qsl("color: %1; background-color: %2; border: %3;")
+            .arg(realSymbolColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
+    pushButton_roomSymbolColor->setStyleSheet(
+        qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;")
+            .arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name());
 }
 
 QFont dlgRoomProperties::getFontForPreview(QString text) {
