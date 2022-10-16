@@ -3592,12 +3592,11 @@ void T2DMap::slot_movePosition()
     pLEx->setText(QString::number(pR_start->x));
     pLEy->setText(QString::number(pR_start->y));
     pLEz->setText(QString::number(pR_start->z));
-    QLabel* pLa0 = new QLabel(tr("Move the selection, centered on\n"
-                                 "the highlighted room (%1) to:",
+    QLabel* pLa0 = new QLabel(tr("Move the selection, centered on the highlighted room (%1) to:",
                                  // Intentional comment to separate arguments
-                                 "Use linefeeds as necessary to format text into a reasonable rectangle of text, "
                                  "%1 is a room number")
                               .arg(mMultiSelectionHighlightRoomId));
+    pLa0->setWordWrap(true);
     // Record the starting coordinates - can be a help when working out how to move a block of rooms!
     QLabel* pLa1 = new QLabel(tr("x coordinate (was %1):").arg(pR_start->x));
     QLabel* pLa2 = new QLabel(tr("y coordinate (was %1):").arg(pR_start->y));
