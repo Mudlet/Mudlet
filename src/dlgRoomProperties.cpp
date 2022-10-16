@@ -174,7 +174,7 @@ void dlgRoomProperties::slot_updatePreview()
     label_preview->setStyleSheet(
         qsl("color: %1; background-color: %2; border: %3;")
             .arg(realSymbolColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
-    pushButton_roomSymbolColor->setStyleSheet(
+    pushButton_setSymbolColor->setStyleSheet(
         qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;")
             .arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
 }
