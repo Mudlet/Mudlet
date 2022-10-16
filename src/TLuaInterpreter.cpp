@@ -3950,6 +3950,120 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
     return 4;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandBackgroundColor
+int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString windowName;
+    int r, alpha;
+    int s = 1;
+
+    auto validRange = [](int number) {
+        return number >= 0 && number <= 255;
+    };
+
+    if (lua_type(L, s) == LUA_TSTRING) {
+        windowName = WINDOW_NAME(L, s++);
+        r = getVerifiedInt(L, __func__, s, "red value 0-255");
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, qsl("red value %1 needs to be between 0-255").arg(r));
+        }
+    } else if (lua_isnumber(L, s)) {
+        r = static_cast<int>(lua_tonumber(L, s));
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, qsl("red value %1 needs to be between 0-255").arg(r));
+        }
+    } else {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+
+    int g = getVerifiedInt(L, __func__, ++s, "green value 0-255");
+    if (!validRange(g)) {
+        return warnArgumentValue(L, __func__, qsl("green value %1 needs to be between 0-255").arg(g));
+    }
+
+    int b = getVerifiedInt(L, __func__, ++s, "blue value 0-255");
+    if (!validRange(b)) {
+        return warnArgumentValue(L, __func__, qsl("blue value %1 needs to be between 0-255").arg(b));
+    }
+
+    // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
+    alpha = 255;
+    if (lua_gettop(L) > s) {
+        alpha = getVerifiedInt(L, __func__, ++s, "alpha value 0-255", true);
+        if (!validRange(alpha)) {
+            return warnArgumentValue(L, __func__, qsl("alpha value %1 needs to be between 0-255").arg(alpha));
+        }
+    }
+
+    if (isMain(windowName)) {
+        host.mCommandBgColor.setRgb(r, g, b, alpha);
+        host.mpConsole->setCommandBgColor(r, g, b, alpha);
+    } else if (!host.setCommandBackgroundColor(windowName, r, g, b, alpha)) {
+        return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandForegroundColor
+int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString windowName;
+    int r, alpha;
+    int s = 1;
+
+    auto validRange = [](int number) {
+        return number >= 0 && number <= 255;
+    };
+
+    if (lua_type(L, s) == LUA_TSTRING) {
+        windowName = WINDOW_NAME(L, s++);
+        r = getVerifiedInt(L, __func__, s, "red value 0-255");
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, qsl("red value %1 needs to be between 0-255").arg(r));
+        }
+    } else if (lua_isnumber(L, s)) {
+        r = static_cast<int>(lua_tonumber(L, s));
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, qsl("red value %1 needs to be between 0-255").arg(r));
+        }
+    } else {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+
+    int g = getVerifiedInt(L, __func__, ++s, "green value 0-255");
+    if (!validRange(g)) {
+        return warnArgumentValue(L, __func__, qsl("green value %1 needs to be between 0-255").arg(g));
+    }
+
+    int b = getVerifiedInt(L, __func__, ++s, "blue value 0-255");
+    if (!validRange(b)) {
+        return warnArgumentValue(L, __func__, qsl("blue value %1 needs to be between 0-255").arg(b));
+    }
+
+    // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
+    alpha = 255;
+    if (lua_gettop(L) > s) {
+        alpha = getVerifiedInt(L, __func__, ++s, "alpha value 0-255", true);
+        if (!validRange(alpha)) {
+            return warnArgumentValue(L, __func__, qsl("alpha value %1 needs to be between 0-255").arg(alpha));
+        }
+    }
+
+    if (isMain(windowName)) {
+        host.mCommandFgColor.setRgb(r, g, b, alpha);
+        host.mpConsole->setCommandFgColor(r, g, b, alpha);
+    } else if (!host.setCommandForegroundColor(windowName, r, g, b, alpha)) {
+        return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#calcFontSize
 int TLuaInterpreter::calcFontSize(lua_State* L)
 {
@@ -14888,6 +15002,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
     lua_register(pGlobalLua, "resetBackgroundImage", TLuaInterpreter::resetBackgroundImage);
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
+    lua_register(pGlobalLua, "setCommandBackgroundColor", TLuaInterpreter::setCommandBackgroundColor);
+    lua_register(pGlobalLua, "setCommandForegroundColor", TLuaInterpreter::setCommandForegroundColor);
     lua_register(pGlobalLua, "setCmdLineAction", TLuaInterpreter::setCmdLineAction);
     lua_register(pGlobalLua, "resetCmdLineAction", TLuaInterpreter::resetCmdLineAction);
     lua_register(pGlobalLua, "setCmdLineStyleSheet", TLuaInterpreter::setCmdLineStyleSheet);

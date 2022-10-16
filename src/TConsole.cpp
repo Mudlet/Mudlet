@@ -1640,6 +1640,26 @@ void TConsole::setFgColor(const QColor& newColor)
     mLowerPane->forceUpdate();
 }
 
+void TConsole::setCommandBgColor(int r, int g, int b, int a)
+{
+    setCommandBgColor(QColor(r, g, b, a));
+}
+
+void TConsole::setCommandBgColor(const QColor& newColor)
+{
+    mCommandBgColor = newColor;
+}
+
+void TConsole::setCommandFgColor(int r, int g, int b, int a)
+{
+    setCommandFgColor(QColor(r, g, b, a));
+}
+
+void TConsole::setCommandFgColor(const QColor& newColor)
+{
+    mCommandFgColor = newColor;
+}
+
 void TConsole::setScrollBarVisible(bool isVisible)
 {
     if (mpScrollBar) {
