@@ -179,8 +179,8 @@ void dlgRoomProperties::slot_updatePreview()
             .arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name());
 }
 
-QFont dlgRoomProperties::getFontForPreview(QString text) {
-
+QFont dlgRoomProperties::getFontForPreview(QString text)
+{
     auto font = mpHost->mpMap->mMapSymbolFont;
     font.setPointSize(font.pointSize() * 0.9);
     QString symbolString = text;
