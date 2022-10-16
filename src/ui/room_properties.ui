@@ -110,6 +110,13 @@
       <string>Symbol</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_8">
+      <item row="3" column="3">
+       <widget class="QPushButton" name="pushButton_resetSymbolColor">
+        <property name="text">
+         <string>Reset symbol color</string>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="0" colspan="4">
        <widget class="QLabel" name="label_symbolInstructions">
         <property name="text">
@@ -117,21 +124,25 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="3">
-       <widget class="QComboBox" name="comboBox_roomSymbol">
-        <property name="editable">
-         <bool>true</bool>
-        </property>
-       </widget>
+      <item row="1" column="0" colspan="4">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QLineEdit" name="lineEdit_roomSymbol">
+          <property name="placeholderText">
+           <string>Room symbol...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboBox_roomSymbol">
+          <property name="editable">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
-      <item row="2" column="3">
-       <widget class="QPushButton" name="pushButton_resetSymbolColor">
-        <property name="text">
-         <string>Reset symbol color</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="2">
+      <item row="3" column="0">
        <widget class="QPushButton" name="pushButton_setSymbolColor">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -152,13 +163,6 @@
         </property>
         <property name="text">
          <string>Set symbol color</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QLineEdit" name="lineEdit_roomSymbol">
-        <property name="placeholderText">
-         <string>Room symbol...</string>
         </property>
        </widget>
       </item>
