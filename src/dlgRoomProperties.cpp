@@ -43,8 +43,17 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomProperties::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
+void dlgRoomProperties::init(QString roomName, QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
 {
+    // Configure display in preview section
+    mName = roomName;
+    if (mName->isEmpty()) {
+        lineEdit_name->setPlaceholderText(tr("Multiple values..."))
+    } else {
+        lineEdit_name->setText(mName);
+    }
+
+    // Configure display in symbol section
     mpSymbols = pSymbols;
     mpRooms = pRooms;
     if (mpSymbols.size() <= 1) {
@@ -149,10 +158,10 @@ void dlgRoomProperties::accept()
 {
     QDialog::accept();
 
-    QString newName = "Test"; // TODO FIXME
+    QString newName = lineEdit_name->text();
     int newRoomColor = 1; // TODO FIXME
     int newWeight = 5; // TODO FIXME
-    bool newLockStatus = true; // TODO FIXME
+    bool newLockStatus = checkBox_locked->isChecked();
 
     emit signal_save_symbol(newName, newRoomColor, getNewSymbol(), selectedSymbolColor, newWeight, newLockStatus, mpRooms);
 }

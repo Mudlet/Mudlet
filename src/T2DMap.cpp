@@ -3748,6 +3748,9 @@ void T2DMap::slot_showPropertiesSelection()
         return;
     }
 
+    // TODO: Find room name(s)
+    QString roomName; // If multiple different names are found, push them all or just empty string?
+
     // Analyses and reports the existing symbols used in ALL the selected
     // rooms if more than one (and sorts by their frequency)
     // Allows the existing letters to be deleted (by clearing all the displayed letters)
@@ -3782,7 +3785,7 @@ void T2DMap::slot_showPropertiesSelection()
 
     if (isAtLeastOneRoom && !mpDlgRoomProperties) {
         mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-        mpDlgRoomProperties->init(usedSymbols, roomPtrsSet);
+        mpDlgRoomProperties->init(roomName, usedSymbols, roomPtrsSet);
         mpDlgRoomProperties->show();
         mpDlgRoomProperties->raise();
         connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
@@ -3794,7 +3797,7 @@ void T2DMap::slot_showPropertiesSelection()
 
 
 void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, bool lockStatus, QSet<TRoom*> rooms) {
-    // setRoomName(QString roomName, QSet<TRoom*> rooms);
+    setRoomName(roomName, rooms);
     // setRoomColor(QColor roomColor, QSet<TRoom*> rooms);
     setRoomSymbol(symbol, symbolColor, rooms);
     setRoomWeight(weight, rooms);
@@ -3802,6 +3805,28 @@ void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString sym
 
     repaint();
     mpMap->mUnsavedMap = true;
+}
+
+
+void T2DMap::setRoomName(QString roomName, QSet<TRoom*> rooms) {
+    QSetIterator<TRoom*> itpRoom(rooms);
+    TRoom* room;
+    if (newSymbol.isEmpty()) {
+        while (itpRoom.hasNext()) {
+            itpRoom.next()->name = QString();
+        }
+    } else {
+        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // handle/use/allow - by normalising the symbol we can ensure that
+        // all the entered ones are decomposed and recomposed in a
+        // "standard" way and will have the same sequence of codepoints:
+        roomName = roomName.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+
+        while (itpRoom.hasNext()) {
+            room = itpRoom.next();
+            room->name = roomName;
+        }
+    }
 }
 
 
