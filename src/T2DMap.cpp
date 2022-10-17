@@ -3713,6 +3713,13 @@ void T2DMap::slot_showSymbolSelection()
 
 
 void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
+    setRoomSymbol(newSymbol, symbolColor, rooms);
+    repaint();
+    mpMap->mUnsavedMap = true;
+}
+
+
+void T2DMap::setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
     if (newSymbol.isEmpty()) {
         QSetIterator<TRoom*> itRoomPtr(rooms);
         while (itRoomPtr.hasNext()) {
@@ -3731,8 +3738,6 @@ void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoo
             room->mSymbolColor = symbolColor;
         }
     }
-    repaint();
-    mpMap->mUnsavedMap = true;
 }
 
 
@@ -3791,9 +3796,12 @@ void T2DMap::slot_showPropertiesSelection()
 void T2DMap::slot_setRoomProperties(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
     // setName
     // setRoomColor
-    slot_setRoomSymbol(newSymbol, symbolColor, rooms);
+    setRoomSymbol(newSymbol, symbolColor, rooms);
     // setWeight
     // setLockStatus
+
+    repaint();
+    mpMap->mUnsavedMap = true;
 }
 
 

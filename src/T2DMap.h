@@ -252,7 +252,8 @@ private:
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
-    void setRoomWeight(int newWeight, QSetIterator<int> itSelectedRoom)
+    void setRoomWeight(int newWeight, QSetIterator<int> itSelectedRoom);
+    void setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
 
     bool mDialogLock = false;
     struct ClickPosition {
