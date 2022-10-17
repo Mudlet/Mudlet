@@ -3921,9 +3921,7 @@ void T2DMap::slot_changeColor()
     listWidget->sortItems();
 
     if (dialog->exec() == QDialog::Accepted && mpMap->mCustomEnvColors.contains(mChosenRoomColor)) {
-        // Only proceed if OK - "Cancel" now prevents change AND check for a valid
-        // color here rather than inside the room change loop as before (only test
-        // once rather than for each room)
+        // Only proceed if OK pressed and color is valid - "Cancel" prevents change
         mMultiRect = QRect(0, 0, 0, 0);
         QSetIterator<int> itSelectedRoom(mMultiSelectionSet);
         while (itSelectedRoom.hasNext()) {
