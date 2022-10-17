@@ -39,7 +39,7 @@ public:
     void accept() override;
 
 signals:
-    void signal_save_symbol(QString symbol, QColor color, QSet<TRoom*> rooms);
+    void signal_save_symbol(QString symbol, QColor symbolColor, QSet<TRoom*> rooms);
 
 private:
     QColor backgroundBasedColor(QColor);
