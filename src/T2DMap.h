@@ -222,6 +222,7 @@ public slots:
     void slot_setUserData();
     void slot_lockRoom();
     void slot_unlockRoom();
+    void slot_getRoomWeight();
     void slot_setRoomWeight();
     void slot_setArea();
     void slot_setCustomLine();
@@ -251,6 +252,7 @@ private:
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
+    void setRoomWeight(int newWeight, QSetIterator<int> itSelectedRoom)
 
     bool mDialogLock = false;
     struct ClickPosition {
