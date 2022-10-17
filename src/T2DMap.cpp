@@ -4111,9 +4111,6 @@ void T2DMap::setRoomLockStatus(bool newStatus, QSet<TRoom*> rooms) {
 
 void T2DMap::slot_setRoomWeight()
 {
-    // This is just the first part of the former T2DMap::slot_setRoomWeight() and will become obsolete by room properties dialog eventually.
-    // It will give its findings to T2DMap::setRoomWeight(int newWeight, QSet<TRoom*> rooms), just like the dialog will.
-
     if (mMultiSelectionSet.isEmpty()) {
         return;
     }
@@ -4272,8 +4269,6 @@ void T2DMap::slot_setRoomWeight()
 
 void T2DMap::setRoomWeight(int newWeight, QSet<TRoom*> rooms)
 {
-    // This will acutally just set the given weight to the rooms given. It will not scan data, nor open dialog windows, etc.
-
     QSetIterator<int> itRoom = rooms;
     TRoom* room;
     itRoom.toFront();
