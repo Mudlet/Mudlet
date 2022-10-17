@@ -4234,7 +4234,7 @@ void T2DMap::slot_getRoomWeight()
     }
 
     if (isOk && newWeight > 0) { // Don't proceed if cancel was pressed or the value is not valid
-        slot_setRoomWeight(newWeight, itSelectedRoom);
+        setRoomWeight(newWeight, itSelectedRoom);
     }
 }
 
@@ -4320,7 +4320,7 @@ void T2DMap::slot_setRoomWeight()
                                              2147483647,
                                              1,
                                              &isOk);
-        } else {
+        } else { // More than one different weight used
             QMapIterator<uint, uint> itWeightsUsed = usedWeights;
             // Obtain a set of "used" weights
             QSet<uint> weightCountsSet;
