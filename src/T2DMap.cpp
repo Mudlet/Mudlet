@@ -4109,10 +4109,10 @@ void T2DMap::setRoomLockStatus(bool newStatus, QSet<TRoom*> rooms) {
 }
 
 
-void T2DMap::slot_getRoomWeight()
+void T2DMap::slot_setRoomWeight()
 {
     // This is just the first part of the former T2DMap::slot_setRoomWeight() and will become obsolete by room properties dialog eventually.
-    // It will give its findings to T2DMap::setRoomWeight(int newWeight, QSetIterator<int> itSelectedRoom), just like the dialog will.
+    // It will give its findings to T2DMap::setRoomWeight(int newWeight, QSet<TRoom*> rooms), just like the dialog will.
 
     if (mMultiSelectionSet.isEmpty()) {
         return;
@@ -4233,16 +4233,16 @@ void T2DMap::slot_getRoomWeight()
     }
 
     if (isOk && newWeight > 0) { // Don't proceed if cancel was pressed or the value is not valid
-        setRoomWeight(newWeight, itSelectedRoom);
+        setRoomWeight(newWeight, mMultiSelectionSet);
     }
 }
 
 
-void T2DMap::setRoomWeight(int newWeight, QSetIterator<int> itSelectedRoom)
+void T2DMap::setRoomWeight(int newWeight, QSet<TRoom*> rooms)
 {
     // This will acutally just set the given weight to the rooms given. It will not scan data, nor open dialog windows, etc.
-    // TODO: Why does it use QSetIterator here and not QSet like T2DMap::slot_setRoomSymbol(...) does? Need to align that!
 
+    QSetIterator<int> itSelectedRoom = rooms;
     TRoom* room;
     itSelectedRoom.toFront();
     while (itSelectedRoom.hasNext()) {
@@ -4258,142 +4258,6 @@ void T2DMap::setRoomWeight(int newWeight, QSetIterator<int> itSelectedRoom)
     mpMap->mUnsavedMap = true;
 }
 
-
-void T2DMap::slot_setRoomWeight()
-{
-    if (mMultiSelectionSet.isEmpty()) {
-        return;
-    }
-
-    // First scan and count all the different weights used
-    QMap<uint, uint> usedWeights; // key is weight, value is count of uses
-    QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
-    TRoom* room;
-    while (itSelectedRoom.hasNext()) {
-        room = mpMap->mpRoomDB->getRoom(itSelectedRoom.next());
-        if (!room) {
-            continue;
-        }
-
-        int roomWeight = room->getWeight();
-        if (roomWeight > 0) {
-            if (usedWeights.contains(roomWeight)) {
-                usedWeights[roomWeight] += 1;
-            } else {
-                usedWeights[roomWeight] = 1;
-            }
-        }
-    }
-
-    int newWeight = 1;
-    bool isOk = false;
-    // Choose most appropriate weight dialog on number of rooms selected and
-    // how many of them have different weights already:
-    if (mMultiSelectionSet.size() == 1) { // Just one room selected
-        newWeight = QInputDialog::getInt(this,
-                                         tr("Enter room weight"),
-                                         tr("Enter new roomweight\n"
-                                            "(= travel time), minimum\n"
-                                            "(and default) is 1:",
-                                            // Intentional comment to separate arguments
-                                            "Use line feeds to format text into a reasonable rectangle."),
-                                         usedWeights.keys().first(),
-                                         1,
-                                         2147483647,
-                                         1,
-                                         &isOk);
-    } else { // More than one room selected
-        if (usedWeights.size() == 1) {
-            newWeight = QInputDialog::getInt(this,
-                                             tr("Enter room weight"),
-                                             tr("Enter new roomweight\n"
-                                                "(= travel time) for all\n"
-                                                "selected rooms, minimum\n"
-                                                "(and default) is 1 and\n"
-                                                "the only current value\n"
-                                                "used is:",
-                                                // Intentional comment to separate arguments
-                                                "Use line feeds to format text into a reasonable rectangle."),
-                                             usedWeights.keys().first(),
-                                             1,
-                                             2147483647,
-                                             1,
-                                             &isOk);
-        } else { // More than one different weight used
-            QMapIterator<uint, uint> itWeightsUsed = usedWeights;
-            // Obtain a set of "used" weights
-            QSet<uint> weightCountsSet;
-            while (itWeightsUsed.hasNext()) {
-                itWeightsUsed.next();
-                weightCountsSet.insert(itWeightsUsed.value());
-            }
-            // Obtains a list of those weights sorted in ascending count of used
-            QList<uint> weightCountsList{weightCountsSet.begin(), weightCountsSet.end()};
-            if (weightCountsList.size() > 1) {
-                std::sort(weightCountsList.begin(), weightCountsList.end());
-            }
-            // Build a list of the "used" weights in descending count of use
-            QStringList displayStrings;
-            for (int i = weightCountsList.size() - 1; i >= 0; --i) {
-                itWeightsUsed.toFront();
-                while (itWeightsUsed.hasNext()) {
-                    itWeightsUsed.next();
-                    if (itWeightsUsed.value() == weightCountsList.at(i)) {
-                        if (itWeightsUsed.key() == 1) { // Indicate the "default" value which is unity weight
-                            displayStrings.append(tr("%1 {count:%2, default}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
-                        } else {
-                            displayStrings.append(tr("%1 {count:%2}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
-                        }
-                    }
-                }
-            }
-            if (!usedWeights.contains(1)) { // If unity weight was not used insert it at end of list
-                displayStrings.append(tr("1 {count 0, default}"));
-            }
-            QString newWeightText = QInputDialog::getItem(this,                    // QWidget * parent
-                                                          tr("Enter room weight"), // const QString & title
-                                                          tr("Choose an existing\n"
-                                                             "roomweight (= travel\n"
-                                                             "time) from the list\n"
-                                                             "(sorted by most commonly\n"
-                                                             "used first) or enter a\n"
-                                                             "new (positive) integer\n"
-                                                             "value for all selected\n"
-                                                             "rooms:",
-                                                             // Intentional comment to separate arguments
-                                                             "Use line feeds to format text into a reasonable rectangle."), // const QString & label
-                                                          displayStrings,                                                   // QStringList & items
-                                                          0,                                                                // int current = 0, last value in list
-                                                          true,                                                             // bool editable = true
-                                                          &isOk,                                                            // bool * ok = 0
-                                                          Qt::WindowFlags(),                                                // Qt::WindowFlags flags = 0
-                                                          Qt::ImhDigitsOnly);                                               // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
-            newWeight = 1;
-            if (isOk) { // Don't do anything if cancel was pressed
-                if (newWeightText.toInt() > 0) {
-                    newWeight = newWeightText.toInt();
-                } else {
-                    isOk = false; // Prevent any change if the value is not reasonable
-                }
-            }
-        }
-    }
-
-    if (isOk && newWeight > 0) { // Don't proceed if cancel was pressed or the value is not valid
-        itSelectedRoom.toFront();
-        while (itSelectedRoom.hasNext()) {
-            room = mpMap->mpRoomDB->getRoom(itSelectedRoom.next());
-            if (!room) {
-                continue;
-            }
-
-            room->setWeight(newWeight);
-        }
-        mpMap->mMapGraphNeedsUpdate = true;
-        repaint();
-        mpMap->mUnsavedMap = true;
-    }
-}
 
 void T2DMap::slot_loadMap() {
     if (!mpHost) {

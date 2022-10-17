@@ -255,7 +255,7 @@ private:
     // void setRoomName(QString newSymbol, QSet<TRoom*> rooms);
     // void setRoomColor(QColor roomColor, QSet<TRoom*> rooms);
     void setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
-    void setRoomWeight(int newWeight, QSetIterator<int> itSelectedRoom);
+    void setRoomWeight(int newWeight, QSet<TRoom*> rooms);
     void setRoomLockStatus(bool newStatus, QSet<TRoom*> rooms);
 
     bool mDialogLock = false;
