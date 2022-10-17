@@ -208,7 +208,7 @@ public slots:
     void slot_showSymbolSelection();
     void slot_showPropertiesSelection();
     void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
-    void slot_setRoomProperties(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
+    void slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, bool lockStatus, QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
     void slot_defineNewColor();
@@ -222,7 +222,6 @@ public slots:
     void slot_setUserData();
     void slot_lockRoom();
     void slot_unlockRoom();
-    void slot_getRoomWeight();
     void slot_setRoomWeight();
     void slot_setArea();
     void slot_setCustomLine();
@@ -252,8 +251,8 @@ private:
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
-    // void setRoomName(QString newSymbol, QSet<TRoom*> rooms);
-    // void setRoomColor(QColor roomColor, QSet<TRoom*> rooms);
+    // void setRoomName(QString roomName, QSet<TRoom*> rooms);
+    // void setRoomColor(int roomColor, QSet<TRoom*> rooms);
     void setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void setRoomWeight(int newWeight, QSet<TRoom*> rooms);
     void setRoomLockStatus(bool newStatus, QSet<TRoom*> rooms);

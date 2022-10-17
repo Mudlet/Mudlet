@@ -3793,12 +3793,12 @@ void T2DMap::slot_showPropertiesSelection()
 }
 
 
-void T2DMap::slot_setRoomProperties(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
-    // setName
-    // setRoomColor
-    setRoomSymbol(newSymbol, symbolColor, rooms);
-    // setWeight
-    // setLockStatus
+void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, bool lockStatus, QSet<TRoom*> rooms) {
+    // setRoomName(QString roomName, QSet<TRoom*> rooms);
+    // setRoomColor(QColor roomColor, QSet<TRoom*> rooms);
+    setRoomSymbol(symbol, symbolColor, rooms);
+    setRoomWeight(weight, rooms);
+    setRoomLockStatus(lockStatus, rooms);
 
     repaint();
     mpMap->mUnsavedMap = true;

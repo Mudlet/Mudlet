@@ -148,7 +148,13 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
 void dlgRoomProperties::accept()
 {
     QDialog::accept();
-    emit signal_save_symbol(getNewSymbol(), selectedSymbolColor, mpRooms);
+
+    QString newName = "Test"; // TODO FIXME
+    int newRoomColor = 1; // TODO FIXME
+    int newWeight = 5; // TODO FIXME
+    bool newLockStatus = true; // TODO FIXME
+
+    emit signal_save_symbol(newName, newRoomColor, getNewSymbol(), selectedSymbolColor, newWeight, newLockStatus, mpRooms);
 }
 
 QString dlgRoomProperties::getNewSymbol()
