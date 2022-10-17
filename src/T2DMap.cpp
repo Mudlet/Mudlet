@@ -3751,11 +3751,6 @@ void T2DMap::slot_showPropertiesSelection()
     // TODO: Find room name(s)
     QString roomName; // If multiple different names are found, push them all or just empty string?
 
-    // Analyses and reports the existing symbols used in ALL the selected
-    // rooms if more than one (and sorts by their frequency)
-    // Allows the existing letters to be deleted (by clearing all the displayed letters)
-
-    // First scan and count all the different symbols used
     TRoom* room;
     bool isAtLeastOneRoom = false;
     QHash<QString, int> usedSymbols;
@@ -3766,19 +3761,22 @@ void T2DMap::slot_showPropertiesSelection()
         if (!room) {
             continue;
         }
-
         roomPtrsSet.insert(room);
         isAtLeastOneRoom = true;
-        if (room->mSymbol.isEmpty()) {
-            continue;
-        }
 
-        QString thisLetter = QString(room->mSymbol);
-        if (!thisLetter.isEmpty()) {
-            if (usedSymbols.contains(thisLetter)) {
-                (usedSymbols[thisLetter])++;
-            } else {
-                usedSymbols[thisLetter] = 1;
+        // Analyses and reports the existing symbols used in ALL the selected
+        // rooms if more than one (and sorts by their frequency)
+        // Allows the existing letters to be deleted (by clearing all the displayed letters)
+
+        // First scan and count all the different symbols used
+        if (!room->mSymbol.isEmpty()) {
+            QString thisLetter = QString(room->mSymbol);
+            if (!thisLetter.isEmpty()) {
+                if (usedSymbols.contains(thisLetter)) {
+                    (usedSymbols[thisLetter])++;
+                } else {
+                    usedSymbols[thisLetter] = 1;
+                }
             }
         }
     }
