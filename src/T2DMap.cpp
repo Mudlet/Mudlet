@@ -2913,9 +2913,9 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize > 0) {
-                    auto roomPreferences = new QAction(tr("Set preferences...", "2D Mapper context menu (room) item"), this);
+                    auto roomPreferences = new QAction(tr("Set room properties...", "2D Mapper context menu (room) item"), this);
                     roomPreferences->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip")));
-                    connect(roomPreferences, &QAction::triggered, this, &T2DMap::slot_showPreferencesSelection);
+                    connect(roomPreferences, &QAction::triggered, this, &T2DMap::slot_showPropertiesSelection);
                     popup->addAction(roomPreferences);
                 }
 
@@ -3711,7 +3711,7 @@ void T2DMap::slot_showSymbolSelection()
     }
 }
 
-void T2DMap::slot_showPreferencesSelection()
+void T2DMap::slot_showPropertiesSelection()
 {
     // Analyses and reports the existing symbols used in ALL the selected
     // rooms if more than one (and sorts by their frequency)
