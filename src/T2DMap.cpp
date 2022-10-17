@@ -3794,12 +3794,19 @@ void T2DMap::slot_showPropertiesSelection()
 }
 
 
-void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, bool lockStatus, QSet<TRoom*> rooms) {
+void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, CheckState lockStatus, QSet<TRoom*> rooms) {
     setRoomName(roomName, rooms);
     // setRoomColor(QColor roomColor, QSet<TRoom*> rooms);
     setRoomSymbol(symbol, symbolColor, rooms);
     setRoomWeight(weight, rooms);
-    setRoomLockStatus(lockStatus, rooms);
+
+    // Lock/Unlock
+    if (lockStatus == Qt::Unchecked) {
+        setRoomLockStatus(false, rooms);
+    } else if (lockStatus == Qt::Checked)
+    {
+        setRoomLockStatus(true, rooms);
+    } // if Qt::PartiallyChecked then don't change any room's state
 
     repaint();
     mpMap->mUnsavedMap = true;

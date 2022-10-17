@@ -43,7 +43,7 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomProperties::init(QString roomName, QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
+void dlgRoomProperties::init(QString roomName, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<QString, int>& pWeights, CheckState lockStatus, QSet<TRoom*>& pRooms)
 {
     // Configure display in preview section
     mName = roomName;
@@ -76,6 +76,13 @@ void dlgRoomProperties::init(QString roomName, QHash<QString, int>& pSymbols, QS
         }
     }
     slot_updatePreview();
+
+    // Configure display in pathfinding section
+    if (lockStatus == Qt::PartiallyChecked) {
+        checkBox_locked->setTristate(true);
+    }
+    checkBox_locked->setCheckState(lockStatus);
+
     adjustSize();
 }
 
@@ -161,7 +168,7 @@ void dlgRoomProperties::accept()
     QString newName = lineEdit_name->text();
     int newRoomColor = 1; // TODO FIXME
     int newWeight = 5; // TODO FIXME
-    bool newLockStatus = checkBox_locked->isChecked();
+    Qt::CheckState newLockStatus = checkBox_locked->checkState();
 
     emit signal_save_symbol(newName, newRoomColor, getNewSymbol(), selectedSymbolColor, newWeight, newLockStatus, mpRooms);
 }

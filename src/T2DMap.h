@@ -208,7 +208,7 @@ public slots:
     void slot_showSymbolSelection();
     void slot_showPropertiesSelection();
     void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
-    void slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, bool lockStatus, QSet<TRoom*> rooms);
+    void slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, CheckState lockStatus, QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
     void slot_defineNewColor();
