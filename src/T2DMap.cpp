@@ -4085,7 +4085,7 @@ void T2DMap::slot_lockRoom()
     
     // setRoomLockStatus(true, mMultiSelectionSet);
 
-    QSetIterator<int> itRoom(rooms);
+    QSetIterator<int> itRoom(mMultiSelectionSet);
     while (itRoom.hasNext()) {
         TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
         if (room) {
@@ -4106,7 +4106,7 @@ void T2DMap::slot_unlockRoom()
 
     // setRoomLockStatus(false, mMultiSelectionSet);
 
-    QSetIterator<int> itRoom(rooms);
+    QSetIterator<int> itRoom(mMultiSelectionSet);
     while (itRoom.hasNext()) {
         TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
         if (room) {
