@@ -3743,14 +3743,14 @@ void T2DMap::setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> r
 
 void T2DMap::slot_showPropertiesSelection()
 {
-    // Analyses and reports the existing symbols used in ALL the selected
-    // rooms if more than one (and sorts by their frequency)
-    // Allows the existing letters to be deleted (by clearing all the displayed letters)
-
     // No need to show if no rooms are selected
     if (mMultiSelectionSet.empty()) {
         return;
     }
+
+    // Analyses and reports the existing symbols used in ALL the selected
+    // rooms if more than one (and sorts by their frequency)
+    // Allows the existing letters to be deleted (by clearing all the displayed letters)
 
     // First scan and count all the different symbols used
     TRoom* room;
