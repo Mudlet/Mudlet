@@ -4120,7 +4120,7 @@ void T2DMap::slot_unlockRoom()
 void T2DMap::setRoomLockStatus(bool newStatus, QSet<TRoom*> rooms) {
     QSetIterator<TRoom*> itpRoom(rooms);
     while (itpRoom.hasNext()) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(itpRoom.next());
+        TRoom* room = itpRoom.next();
         if (room) {
             room->isLocked = newStatus;
             mpMap->mMapGraphNeedsUpdate = true;
@@ -4293,7 +4293,7 @@ void T2DMap::setRoomWeight(int newWeight, QSet<TRoom*> rooms)
     TRoom* room;
     itpRoom.toFront(); // Needed or not?
     while (itpRoom.hasNext()) {
-        room = mpMap->mpRoomDB->getRoom(itpRoom.next());
+        room = itpRoom.next();
         if (!room) {
             continue;
         }
