@@ -4098,9 +4098,9 @@ void T2DMap::slot_unlockRoom()
 
 
 void T2DMap::setRoomLockStatus(bool newStatus, QSet<TRoom*> rooms) {
-    QSetIterator<int> itSelectedRoom(rooms);
-    while (itSelectedRoom.hasNext()) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(itSelectedRoom.next());
+    QSetIterator<int> itRoom(rooms);
+    while (itRoom.hasNext()) {
+        TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
         if (room) {
             room->isLocked = newStatus;
             mpMap->mMapGraphNeedsUpdate = true;
@@ -4120,14 +4120,16 @@ void T2DMap::slot_setRoomWeight()
 
     // First scan and count all the different weights used
     QMap<uint, uint> usedWeights; // key is weight, value is count of uses
-    QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
+    QSetIterator<int> itRoom = mMultiSelectionSet;
     TRoom* room;
-    while (itSelectedRoom.hasNext()) {
-        room = mpMap->mpRoomDB->getRoom(itSelectedRoom.next());
+    QSet<TRoom*> roomPtrsSet;
+    while (itRoom.hasNext()) {
+        room = mpMap->mpRoomDB->getRoom(itRoom.next());
         if (!room) {
             continue;
         }
 
+        roomPtrsSet.insert(room);
         int roomWeight = room->getWeight();
         if (roomWeight > 0) {
             if (usedWeights.contains(roomWeight)) {
@@ -4233,7 +4235,7 @@ void T2DMap::slot_setRoomWeight()
     }
 
     if (isOk && newWeight > 0) { // Don't proceed if cancel was pressed or the value is not valid
-        setRoomWeight(newWeight, mMultiSelectionSet);
+        setRoomWeight(newWeight, roomPtrsSet);
     }
 }
 
@@ -4242,11 +4244,11 @@ void T2DMap::setRoomWeight(int newWeight, QSet<TRoom*> rooms)
 {
     // This will acutally just set the given weight to the rooms given. It will not scan data, nor open dialog windows, etc.
 
-    QSetIterator<int> itSelectedRoom = rooms;
+    QSetIterator<int> itRoom = rooms;
     TRoom* room;
-    itSelectedRoom.toFront();
-    while (itSelectedRoom.hasNext()) {
-        room = mpMap->mpRoomDB->getRoom(itSelectedRoom.next());
+    itRoom.toFront();
+    while (itRoom.hasNext()) {
+        room = mpMap->mpRoomDB->getRoom(itRoom.next());
         if (!room) {
             continue;
         }
