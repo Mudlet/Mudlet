@@ -3711,6 +3711,31 @@ void T2DMap::slot_showSymbolSelection()
     }
 }
 
+
+void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
+    if (newSymbol.isEmpty()) {
+        QSetIterator<TRoom*> itRoomPtr(rooms);
+        while (itRoomPtr.hasNext()) {
+            itRoomPtr.next()->mSymbol = QString();
+        }
+    } else {
+        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // handle/use/allow - by normalising the symbol we can ensure that
+        // all the entered ones are decomposed and recomposed in a
+        // "standard" way and will have the same sequence of codepoints:
+        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        QSetIterator<TRoom*> itRoomPtr(rooms);
+        while (itRoomPtr.hasNext()) {
+            auto room = itRoomPtr.next();
+            room->mSymbol = newSymbol;
+            room->mSymbolColor = symbolColor;
+        }
+    }
+    repaint();
+    mpMap->mUnsavedMap = true;
+}
+
+
 void T2DMap::slot_showPropertiesSelection()
 {
     // Analyses and reports the existing symbols used in ALL the selected
@@ -3722,7 +3747,7 @@ void T2DMap::slot_showPropertiesSelection()
         return;
     }
 
-    // First scan and count all the different symbol used
+    // First scan and count all the different symbols used
     TRoom* room;
     bool isAtLeastOneRoom = false;
     QHash<QString, int> usedSymbols;
@@ -3755,35 +3780,22 @@ void T2DMap::slot_showPropertiesSelection()
         mpDlgRoomProperties->init(usedSymbols, roomPtrsSet);
         mpDlgRoomProperties->show();
         mpDlgRoomProperties->raise();
-        connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomSymbol);
+        connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
         connect(mpDlgRoomProperties, &QDialog::finished, this, [=]() {
             mpDlgRoomProperties = nullptr;
         });
     }
 }
 
-void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
-    if (newSymbol.isEmpty()) {
-        QSetIterator<TRoom*> itRoomPtr(rooms);
-        while (itRoomPtr.hasNext()) {
-            itRoomPtr.next()->mSymbol = QString();
-        }
-    } else {
-        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
-        // handle/use/allow - by normalising the symbol we can ensure that
-        // all the entered ones are decomposed and recomposed in a
-        // "standard" way and will have the same sequence of codepoints:
-        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
-        QSetIterator<TRoom*> itRoomPtr(rooms);
-        while (itRoomPtr.hasNext()) {
-            auto room = itRoomPtr.next();
-            room->mSymbol = newSymbol;
-            room->mSymbolColor = symbolColor;
-        }
-    }
-    repaint();
-    mpMap->mUnsavedMap = true;
+
+void T2DMap::slot_setRoomProperties(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
+    // setName
+    // setRoomColor
+    slot_setRoomSymbol(newSymbol, symbolColor, rooms);
+    // setWeight
+    // setLockStatus
 }
+
 
 void T2DMap::slot_setImage()
 {
