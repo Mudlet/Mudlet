@@ -79,6 +79,8 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
     // Configure display in pathfinding section
     if (lockStatus == Qt::PartiallyChecked) {
         checkBox_locked->setTristate(true);
+    } else {
+        checkBox_locked->setTristate(false);
     }
     checkBox_locked->setCheckState(lockStatus);
 
