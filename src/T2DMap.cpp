@@ -3758,7 +3758,7 @@ void T2DMap::slot_showPropertiesSelection()
     QHash<int, int> usedColors;
     QHash<QString, int> usedSymbols;
     QHash<int, int> usedWeights; // key is weight, value is count of uses
-    Qt::Checkstate usedLockStatus = Qt::PartiallyChecked;
+    int usedLockStatus = Qt::PartiallyChecked;
     QSetIterator<int> itRoom = mMultiSelectionSet;
     QSet<TRoom*> roomPtrsSet;
     while (itRoom.hasNext()) {
@@ -3825,7 +3825,7 @@ void T2DMap::slot_showPropertiesSelection()
 }
 
 
-void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, CheckState lockStatus, QSet<TRoom*> rooms) {
+void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, int lockStatus, QSet<TRoom*> rooms) {
     setRoomName(roomName, rooms);
     // setRoomColor(QColor roomColor, QSet<TRoom*> rooms);
     setRoomSymbol(symbol, symbolColor, rooms);
