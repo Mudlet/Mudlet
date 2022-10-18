@@ -251,7 +251,7 @@ private:
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
-    // void setRoomName(QString roomName, QSet<TRoom*> rooms);
+    void setRoomName(QString roomName, QSet<TRoom*> rooms);
     // void setRoomColor(int roomColor, QSet<TRoom*> rooms);
     void setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void setRoomWeight(int newWeight, QSet<TRoom*> rooms);
