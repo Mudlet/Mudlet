@@ -3858,8 +3858,7 @@ void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString sym
     // Lock/Unlock
     if (lockStatus == Qt::Unchecked) {
         setRoomLockStatus(false, rooms);
-    } else if (lockStatus == Qt::Checked)
-    {
+    } else if (lockStatus == Qt::Checked) {
         setRoomLockStatus(true, rooms);
     } // if Qt::PartiallyChecked then don't change any room's state
 
