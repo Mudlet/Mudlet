@@ -3825,7 +3825,7 @@ void T2DMap::slot_showPropertiesSelection()
 }
 
 
-void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, int lockStatus, QSet<TRoom*> rooms) {
+void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, Qt::CheckState lockStatus, QSet<TRoom*> rooms) {
     setRoomName(roomName, rooms);
     // setRoomColor(QColor roomColor, QSet<TRoom*> rooms);
     setRoomSymbol(symbol, symbolColor, rooms);
