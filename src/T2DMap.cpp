@@ -3847,7 +3847,7 @@ void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString sym
 void T2DMap::setRoomName(QString roomName, QSet<TRoom*> rooms) {
     QSetIterator<TRoom*> itpRoom(rooms);
     TRoom* room;
-    if (newSymbol.isEmpty()) {
+    if (roomName.isEmpty()) {
         while (itpRoom.hasNext()) {
             itpRoom.next()->name = QString();
         }
