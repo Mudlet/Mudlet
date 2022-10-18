@@ -2947,7 +2947,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize > 0) {
-                    // TODO: Do not show both action simultaneously, if all selected rooms have same status.
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/6116
+                    //   Do not show both action simultaneously, if all selected rooms have same status.
 
                     auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
                     lockRoom->setToolTip(utils::richText(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip")));
@@ -3689,12 +3690,12 @@ void T2DMap::slot_showSymbolSelection()
             continue;
         }
 
-        QString thisLetter = QString(room->mSymbol);
-        if (!thisLetter.isEmpty()) {
-            if (usedSymbols.contains(thisLetter)) {
-                (usedSymbols[thisLetter])++;
+        QString thisSymbol = QString(room->mSymbol);
+        if (!thisSymbol.isEmpty()) {
+            if (usedSymbols.contains(thisSymbol)) {
+                (usedSymbols[thisSymbol])++;
             } else {
-                usedSymbols[thisLetter] = 1;
+                usedSymbols[thisSymbol] = 1;
             }
         }
     }
@@ -3753,7 +3754,11 @@ void T2DMap::slot_showPropertiesSelection()
 
     TRoom* room;
     bool isAtLeastOneRoom = false;
+    QHash<QString, int> usedNames;
+    QHash<int, int> usedColors;
     QHash<QString, int> usedSymbols;
+    QHash<int, int> usedWeights; // key is weight, value is count of uses
+    Qt::Checkstate usedLockStatus = Qt::PartiallyChecked;
     QSetIterator<int> itRoom = mMultiSelectionSet;
     QSet<TRoom*> roomPtrsSet;
     while (itRoom.hasNext()) {
@@ -3764,26 +3769,52 @@ void T2DMap::slot_showPropertiesSelection()
         roomPtrsSet.insert(room);
         isAtLeastOneRoom = true;
 
-        // Analyses and reports the existing symbols used in ALL the selected
-        // rooms if more than one (and sorts by their frequency)
-        // Allows the existing letters to be deleted (by clearing all the displayed letters)
-
-        // First scan and count all the different symbols used
-        if (!room->mSymbol.isEmpty()) {
-            QString thisLetter = QString(room->mSymbol);
-            if (!thisLetter.isEmpty()) {
-                if (usedSymbols.contains(thisLetter)) {
-                    (usedSymbols[thisLetter])++;
+        // Scan all the different names used, is it more than one?
+        if (!room->name.isEmpty()) {
+            QString thisName = QString(room->name);
+            if (!thisName.isEmpty()) {
+                if (usedNames.contains(thisName)) {
+                    (usedNames[thisName])++;
                 } else {
-                    usedSymbols[thisLetter] = 1;
+                    usedNames[thisName] = 1;
                 }
             }
         }
+
+        // TODO: Find usedColors
+
+        // Analyses and reports the existing symbols used in ALL the selected
+        // rooms if more than one (and sorts by their frequency)
+        // Allows the existing symbols to be deleted (by clearing all the displayed letters)
+
+        // Scan and count all the different symbols used
+        if (!room->mSymbol.isEmpty()) {
+            QString thisSymbol = QString(room->mSymbol);
+            if (!thisSymbol.isEmpty()) {
+                if (usedSymbols.contains(thisSymbol)) {
+                    (usedSymbols[thisSymbol])++;
+                } else {
+                    usedSymbols[thisSymbol] = 1;
+                }
+            }
+        }
+
+        // Scan and count all the different weights used
+        int thisWeight = room->getWeight();
+        if (thisWeight > 0) {
+            if (usedWeights.contains(thisWeight)) {
+                (usedWeights[thisWeight])++;
+            } else {
+                usedWeights[thisWeight] = 1;
+            }
+        }
+
+        // TODO: Find usedLockStatus
     }
 
     if (isAtLeastOneRoom && !mpDlgRoomProperties) {
         mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-        mpDlgRoomProperties->init(roomName, usedSymbols, roomPtrsSet);
+        mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, roomPtrsSet);
         mpDlgRoomProperties->show();
         mpDlgRoomProperties->raise();
         connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
