@@ -3744,8 +3744,13 @@ void T2DMap::setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> r
 
 void T2DMap::slot_showPropertiesSelection()
 {
-    // No need to show if no rooms are selected
+    // No need to show dialog if no rooms are selected
     if (mMultiSelectionSet.empty()) {
+        return;
+    }
+
+    // No need to show if dialog is already shown
+    if (mpDlgRoomProperties) {
         return;
     }
 
@@ -3758,7 +3763,7 @@ void T2DMap::slot_showPropertiesSelection()
     QHash<int, int> usedColors;
     QHash<QString, int> usedSymbols;
     QHash<int, int> usedWeights; // key is weight, value is count of uses
-    Qt::CheckState usedLockStatus = Qt::PartiallyChecked;
+    QHash<bool, int> usedLockStatus;
     QSetIterator<int> itRoom = mMultiSelectionSet;
     QSet<TRoom*> roomPtrsSet;
     while (itRoom.hasNext()) {
@@ -3809,19 +3814,41 @@ void T2DMap::slot_showPropertiesSelection()
             }
         }
 
-        // TODO: Find usedLockStatus
+        // Scan and count all the different lock status used
+        bool thisLockStatus = room->isLocked;
+        if (usedLockStatus.contains(thisLockStatus)) {
+            (usedLockStatus[thisLockStatus])++;
+        } else {
+            usedLockStatus[thisLockStatus] = 1;
+        }
+        
     }
 
-    if (isAtLeastOneRoom && !mpDlgRoomProperties) {
-        mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-        mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, roomPtrsSet);
-        mpDlgRoomProperties->show();
-        mpDlgRoomProperties->raise();
-        connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
-        connect(mpDlgRoomProperties, &QDialog::finished, this, [=]() {
-            mpDlgRoomProperties = nullptr;
-        });
+    // No need to show dialog if no rooms were found
+    if (!isAtLeastOneRoom) {
+        return;
     }
+
+    // Are all locks the same or mixed status? Then show dialog in tristate.
+    Qt::CheckState combinedLockStatus;
+    if (usedLockStatus.contains(true)) {
+        if (usedLockStatus.contains(false)) {
+            combinedLockStatus = Qt::PartiallyChecked;
+        } else {
+            combinedLockStatus = Qt::Checked;
+        }
+    } else {
+        combinedLockStatus = Qt::Unchecked;
+    }
+
+    mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, combinedLockStatus, roomPtrsSet);
+    mpDlgRoomProperties->show();
+    mpDlgRoomProperties->raise();
+    connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
+    connect(mpDlgRoomProperties, &QDialog::finished, this, [=]() {
+        mpDlgRoomProperties = nullptr;
+    });
 }
 
 
