@@ -43,7 +43,7 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, int lockStatus, QSet<TRoom*>& pRooms)
+void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, Qt::CheckState lockStatus, QSet<TRoom*>& pRooms)
 {
     // Configure display in preview section
     if (usedNames.size() == 1) {
