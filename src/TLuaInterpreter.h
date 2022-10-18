@@ -391,6 +391,8 @@ public:
     static int setBackgroundImage(lua_State*);
     static int resetBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
+    static int setCommandBackgroundColor(lua_State*);
+    static int setCommandForegroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
     static int setMovie(lua_State*);
     static int startMovie(lua_State*);
