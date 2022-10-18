@@ -3754,9 +3754,6 @@ void T2DMap::slot_showPropertiesSelection()
         return;
     }
 
-    // TODO: Find room name(s)
-    QString roomName; // If multiple different names are found, push them all or just empty string?
-
     TRoom* room;
     bool isAtLeastOneRoom = false;
     QHash<QString, int> usedNames;
@@ -3821,7 +3818,7 @@ void T2DMap::slot_showPropertiesSelection()
         } else {
             usedLockStatus[thisLockStatus] = 1;
         }
-        
+
     }
 
     // No need to show dialog if no rooms were found

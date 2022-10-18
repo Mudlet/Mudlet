@@ -46,7 +46,7 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
 void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, Qt::CheckState lockStatus, QSet<TRoom*>& pRooms)
 {
     // Configure display in preview section
-    if (usedNames.size() == 1) {
+    if (usedNames.size() > 1) {
         lineEdit_name->setPlaceholderText(tr("Multiple values..."));
     } else {
         lineEdit_name->setText(usedNames.keys().first());
