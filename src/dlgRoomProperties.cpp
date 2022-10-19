@@ -47,7 +47,7 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
 {
     // Configure display in preview section
     if (usedNames.size() > 1) {
-        lineEdit_name->setPlaceholderText(tr("Multiple values..."));
+        lineEdit_name->setText(tr("(Multiple values...)"));
     } else {
         lineEdit_name->setText(usedNames.keys().first());
     }
@@ -147,7 +147,7 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
         while (itSymbolUsed.hasNext()) {
             itSymbolUsed.next();
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                displayStrings.append(tr("%1 {count:%2}",
+                displayStrings.append(tr("%1 (count:%2)",
                                          // Intentional comment to separate arguments
                                          "Everything after the first parameter (the '%1') will be removed by processing "
                                          "it as a QRegularExpression programmatically, ensure the translated text has "
@@ -159,6 +159,7 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
             }
         }
     }
+    displayStrings.insert(multipleValuesPlaceholder);
     return displayStrings;
 }
 
@@ -179,7 +180,7 @@ QString dlgRoomProperties::getNewSymbol()
     if (mpSymbols.size() <= 1) {
         return lineEdit_roomSymbol->text();
     } else {
-        QRegularExpression countStripper(qsl("^(.*) {.*}$"));
+        QRegularExpression countStripper(qsl("^(.*) /(.*/)$"));
         QRegularExpressionMatch match = countStripper.match(comboBox_roomSymbol->currentText());
         if (match.hasMatch() && match.lastCapturedIndex() > 0) {
             return match.captured(1);
@@ -192,6 +193,10 @@ void dlgRoomProperties::slot_updatePreview()
 {
     auto realSymbolColor = selectedSymbolColor != nullptr ? selectedSymbolColor : defaultSymbolColor();
     auto newSymbol = getNewSymbol();
+    if (newSymbol == multipleValuesPlaceholder) {
+        // We do not want change into a new symbol, as none was decided, yet
+        newSymbol = QString();
+    }
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
     label_preview->setStyleSheet(

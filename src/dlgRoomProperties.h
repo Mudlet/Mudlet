@@ -48,6 +48,7 @@ private:
     void initSymbolInstructionLabel();
     QStringList getComboBoxSymbolItems();
     QFont getFontForPreview(QString);
+    QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
     Host* mpHost;
     QSet<TRoom*> mpRooms;
