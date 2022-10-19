@@ -159,7 +159,7 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
             }
         }
     }
-    displayStrings.insert(multipleValuesPlaceholder);
+    displayStrings.append(multipleValuesPlaceholder);
     return displayStrings;
 }
 
