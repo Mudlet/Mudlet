@@ -39,7 +39,15 @@ public:
     void accept() override;
 
 signals:
-    void signal_save_symbol(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, Qt::CheckState lockStatus, QSet<TRoom*> rooms);
+    void signal_save_symbol(
+        bool changeName, QString newName,
+        bool changeRoomColor, int newRoomColor,
+        bool changeSymbol, QString newSymbol,
+        bool changeSymbolColor, QColor newSymbolColor,
+        bool changeWeight, int newWeight,
+        bool changeLockStatus, bool newLockStatus,
+        QSet<TRoom*> mpRoom
+    );
 
 private:
     QColor backgroundBasedColor(QColor);

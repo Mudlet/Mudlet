@@ -47,7 +47,7 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pCo
 {
     // Configure display in preview section
     if (usedNames.size() > 1) {
-        lineEdit_name->setText(tr("(Multiple values...)"));
+        lineEdit_name->setText(multipleValuesPlaceholder);
     } else {
         lineEdit_name->setText(usedNames.keys().first());
     }
@@ -142,6 +142,7 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
         std::sort(symbolCountsList.begin(), symbolCountsList.end());
     }
     QStringList displayStrings;
+    displayStrings.append(multipleValuesPlaceholder);
     for (int i = symbolCountsList.size() - 1; i >= 0; --i) {
         itSymbolUsed.toFront();
         while (itSymbolUsed.hasNext()) {
@@ -159,7 +160,6 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
             }
         }
     }
-    displayStrings.append(multipleValuesPlaceholder);
     return displayStrings;
 }
 
@@ -168,11 +168,52 @@ void dlgRoomProperties::accept()
     QDialog::accept();
 
     QString newName = lineEdit_name->text();
-    int newRoomColor = 1; // TODO FIXME
-    int newWeight = 5; // TODO FIXME
-    Qt::CheckState newLockStatus = checkBox_locked->checkState();
+    bool changeName = true;
+    if (newName == multipleValuesPlaceholder) {
+        // TODO: We don't want to change the name then
+        newName = QString();
+        changeName = false;
+    }
 
-    emit signal_save_symbol(newName, newRoomColor, getNewSymbol(), selectedSymbolColor, newWeight, newLockStatus, mpRooms);
+    // TODO: FIXME
+    int newRoomColor = 1;
+    bool changeRoomColor = false;
+
+    QString newSymbol = getNewSymbol();
+    bool changeSymbol = true;
+    QColor newSymbolColor = selectedSymbolColor;
+    bool changeSymbolColor = true;
+    if (newSymbol == multipleValuesPlaceholder) {
+        // TODO: We don't want to change the symbol then
+        changeSymbol = false;
+    }
+
+    // TODO: FIXME
+    int newWeight = 5;
+    bool changeWeight = false;
+
+    Qt::CheckState newCheckState = checkBox_locked->checkState();
+    bool changeLockStatus = true;
+    bool newLockStatus;
+    if (newCheckState == Qt::PartiallyChecked) {
+        // We don't want change the lock then
+        changeLockStatus = false;
+    } else {
+        if (newCheckState == Qt::Checked) {
+            newLockStatus = true;
+        } else { // Qt::Unchecked
+            newLockStatus = false;
+        }
+    }
+
+    emit signal_save_symbol(
+        changeName, newName,
+        changeRoomColor, newRoomColor,
+        changeSymbol, newSymbol,
+        changeSymbolColor, newSymbolColor,
+        changeWeight, newWeight,
+        changeLockStatus, newLockStatus,
+        mpRooms);
 }
 
 QString dlgRoomProperties::getNewSymbol()
@@ -192,11 +233,7 @@ QString dlgRoomProperties::getNewSymbol()
 void dlgRoomProperties::slot_updatePreview()
 {
     auto realSymbolColor = selectedSymbolColor != nullptr ? selectedSymbolColor : defaultSymbolColor();
-    auto newSymbol = getNewSymbol();
-    if (newSymbol == multipleValuesPlaceholder) {
-        // We do not want change into a new symbol, as none was decided, yet
-        newSymbol = QString();
-    }
+    QString newSymbol = getNewSymbol();
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
     label_preview->setStyleSheet(

@@ -3849,18 +3849,34 @@ void T2DMap::slot_showPropertiesSelection()
 }
 
 
-void T2DMap::slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, Qt::CheckState lockStatus, QSet<TRoom*> rooms) {
-    setRoomName(roomName, rooms);
-    // setRoomColor(QColor roomColor, QSet<TRoom*> rooms);
-    setRoomSymbol(symbol, symbolColor, rooms);
-    setRoomWeight(weight, rooms);
+void T2DMap::slot_setRoomProperties(
+    bool changeName, QString newName,
+    bool changeRoomColor, int newRoomColor,
+    bool changeSymbol, QString newSymbol,
+    bool changeSymbolColor, QColor newSymbolColor,
+    bool changeWeight, int newWeight,
+    bool changeLockStatus, bool newLockStatus,
+    QSet<TRoom*> mpRoom)
+{
+    if (changeName) {
+        setRoomName(newName, rooms);
+    }
 
-    // Lock/Unlock
-    if (lockStatus == Qt::Unchecked) {
-        setRoomLockStatus(false, rooms);
-    } else if (lockStatus == Qt::Checked) {
-        setRoomLockStatus(true, rooms);
-    } // if Qt::PartiallyChecked then don't change any room's state
+    if (changeRoomColor) {
+        // setRoomColor(QColor newRoomColor, QSet<TRoom*> rooms);
+    }
+
+    if (changeSymbol || changeSymbolColor) {
+        setRoomSymbol(newSymbol, newSymbolColor, rooms);
+    }
+
+    if (changeWeight) {
+        setRoomWeight(newWeight, rooms);
+    }
+
+    if (changeLockStatus) {
+        setRoomLockStatus(newLockStatus, rooms);
+    }
 
     repaint();
     mpMap->mUnsavedMap = true;

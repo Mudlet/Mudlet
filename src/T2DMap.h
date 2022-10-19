@@ -208,7 +208,14 @@ public slots:
     void slot_showSymbolSelection();
     void slot_showPropertiesSelection();
     void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
-    void slot_setRoomProperties(QString roomName, int roomColor, QString symbol, QColor symbolColor, int weight, Qt::CheckState lockStatus, QSet<TRoom*> rooms);
+    void slot_setRoomProperties(
+        bool changeName, QString newName,
+        bool changeRoomColor, int newRoomColor,
+        bool changeSymbol, QString newSymbol,
+        bool changeSymbolColor, QColor newSymbolColor,
+        bool changeWeight, int newWeight,
+        bool changeLockStatus, bool newLockStatus,
+        QSet<TRoom*> mpRoom);
     void slot_setImage();
     void slot_movePosition();
     void slot_defineNewColor();
