@@ -35,7 +35,14 @@ class dlgRoomProperties : public QDialog, public Ui::room_properties
 public:
     Q_DISABLE_COPY(dlgRoomProperties)
     explicit dlgRoomProperties(Host*, QWidget* parent = nullptr);
-    void init(QHash<QString, int>  usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, Qt::CheckState lockStatus, QSet<TRoom*>& pRooms);
+    void init(
+        QHash<QString, int> usedNames, 
+        QHash<int, int>& pColors,
+        QHash<QString, int>& pSymbols, 
+        QHash<int, int>& pWeights, 
+        Qt::CheckState lockStatus, 
+        QSet<TRoom*>& pRooms
+    );
     void accept() override;
 
 signals:

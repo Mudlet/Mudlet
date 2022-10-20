@@ -51,19 +51,23 @@ void dlgRoomProperties::init(
     Qt::CheckState lockStatus, 
     QSet<TRoom*>& pRooms)
 {
-    // Configure display in preview section
+    // Configure name display
     if (usedNames.size() > 1) {
         lineEdit_name->setText(multipleValuesPlaceholder);
     } else {
         lineEdit_name->setText(usedNames.keys().first());
     }
 
-    // Configure display in symbol section
+    // Configure symbols display
     mpSymbols = pSymbols;
     mpRooms = pRooms;
-    if (mpSymbols.size() <= 1) {
-        // show simple text-entry box, either empty or with the (single) existing symbol pre-filled
-        lineEdit_roomSymbol->setText(!mpSymbols.isEmpty() ? mpSymbols.keys().first() : QString());
+    if (mpSymbols.isEmpty()) {
+        // show simple text-entry box empty 
+        lineEdit_roomSymbol->setText(QString());
+        comboBox_roomSymbol->hide();
+    } else if (mpSymbols.size() = 1) {
+        // show simple text-entry box with the (single) existing symbol pre-filled
+        lineEdit_roomSymbol->setText(mpSymbols.keys().first());
         comboBox_roomSymbol->hide();
     } else {
         // show combined dropdown & text-entry box to host all of the (multiple) existing symbols
@@ -71,18 +75,23 @@ void dlgRoomProperties::init(
         comboBox_roomSymbol->addItems(getComboBoxSymbolItems());
     }
     initSymbolInstructionLabel();
+
+    // Configure icon display
     if (!pRooms.isEmpty()) {
         auto pRoom = *(pRooms.begin());
         if (pRoom) {
             auto firstRoomId = pRoom->getId();
-            selectedSymbolColor = pRoom->mSymbolColor;
-            previewSymbolColor = pRoom->mSymbolColor;
             roomColor = mpHost->mpMap->getColor(firstRoomId);
+            selectedSymbolColor = pRoom->mSymbolColor;
+            previewSymbolColor = selectedSymbolColor;
         }
     }
     slot_updatePreview();
 
-    // Configure display in pathfinding section
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Configure weight display
+
+    // Configure lock display
     if (lockStatus == Qt::PartiallyChecked) {
         checkBox_locked->setTristate(true);
     } else {
@@ -90,6 +99,7 @@ void dlgRoomProperties::init(
     }
     checkBox_locked->setCheckState(lockStatus);
 
+    // Configure dialog display
     adjustSize();
 }
 
@@ -172,37 +182,42 @@ void dlgRoomProperties::accept()
 {
     QDialog::accept();
 
+    // find name to return back
     QString newName = lineEdit_name->text();
     bool changeName = true;
     if (newName == multipleValuesPlaceholder) {
-        // TODO: We don't want to change the name then
+        // We don't want to change the name then
         newName = QString();
         changeName = false;
     }
 
-    // TODO: FIXME
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   find color (if any) to return back
     int newRoomColor = 1;
     bool changeRoomColor = false;
 
+    // find symbol to return back
     QString newSymbol = getNewSymbol();
     bool changeSymbol = true;
     QColor newSymbolColor = selectedSymbolColor;
     bool changeSymbolColor = true;
     if (newSymbol == multipleValuesPlaceholder) {
-        // TODO: We don't want to change the symbol then
+        // We don't want to change the symbol then
         changeSymbol = false;
         changeSymbolColor = false;
     }
 
-    // TODO: FIXME
-    int newWeight = 5;
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   find weight (if any) to return back
+    int newWeight = 1;
     bool changeWeight = false;
 
+    // find lock status to return back
     Qt::CheckState newCheckState = checkBox_locked->checkState();
     bool changeLockStatus = true;
     bool newLockStatus;
     if (newCheckState == Qt::PartiallyChecked) {
-        // We don't want change the lock then
+        // We don't want to change the lock then
         changeLockStatus = false;
     } else {
         if (newCheckState == Qt::Checked) {
@@ -227,6 +242,9 @@ QString dlgRoomProperties::getNewSymbol()
     if (mpSymbols.size() <= 1) {
         return lineEdit_roomSymbol->text();
     } else {
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Add knowledge from https://github.com/Mudlet/Mudlet/pull/6359 to here as well
+    //   Maybe refactor both sections to use same regex logic to prevent this situation?
         QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
         QRegularExpressionMatch match = countStripper.match(comboBox_roomSymbol->currentText());
         if (match.hasMatch() && match.lastCapturedIndex() > 0) {
@@ -242,6 +260,8 @@ void dlgRoomProperties::slot_updatePreview()
     QString newSymbol = getNewSymbol();
     if (newSymbol == multipleValuesPlaceholder) {
         newSymbol = QString();
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Add placeholder icon (color?) to here as well, for example light grey rectangle
     }
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
@@ -253,28 +273,29 @@ void dlgRoomProperties::slot_updatePreview()
             .arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
 }
 
-QFont dlgRoomProperties::getFontForPreview(QString text)
+QFont dlgRoomProperties::getFontForPreview(QString symbolString)
 {
     auto font = mpHost->mpMap->mMapSymbolFont;
     font.setPointSize(font.pointSize() * 0.9);
-    QString symbolString = text;
-    QFontMetrics mapSymbolFontMetrics = QFontMetrics(font);
-    QVector<quint32> codePoints = symbolString.toUcs4();
-    QVector<bool> isUsable;
-    for (int i = 0; i < codePoints.size(); ++i) {
-        isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
-    }
-    bool needToFallback = isUsable.contains(false);
-    if (needToFallback) {
-        symbolString = QString(QChar::ReplacementCharacter);
-        font.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
+    if (!symbolString.isEmpty()) {
+        QFontMetrics mapSymbolFontMetrics = QFontMetrics(font);
+        QVector<quint32> codePoints = symbolString.toUcs4();
+        QVector<bool> isUsable;
+        for (int i = 0; i < codePoints.size(); ++i) {
+            isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
+        }
+        bool needToFallback = isUsable.contains(false);
+        if (needToFallback) {
+            symbolString = QString(QChar::ReplacementCharacter);
+            font.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
+        }
     }
     return font;
 }
 
 void dlgRoomProperties::slot_openSymbolColorSelector()
 {
-    auto* dialog = selectedSymbolColor != nullptr ? new QColorDialog(selectedSymbolColor, this) : new QColorDialog(defaultSymbolColor(), this);
+    auto* dialog = (selectedSymbolColor != nullptr) ? new QColorDialog(selectedSymbolColor, this) : new QColorDialog(defaultSymbolColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Pick color"));
     dialog->open(this, SLOT(slot_symbolColorSelected(const QColor&)));
