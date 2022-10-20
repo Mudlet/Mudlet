@@ -3824,6 +3824,10 @@ void T2DMap::slot_showPropertiesSelection()
         return;
     }
 
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Move whole following section to dialog, as it holds display logic only
+    //   Whereas the Map here should give all usedLockStatus like the other data
+    //
     // Are all locks the same or mixed status? Then show dialog in tristate.
     Qt::CheckState combinedLockStatus;
     if (usedLockStatus.contains(true)) {
