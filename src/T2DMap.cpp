@@ -3856,7 +3856,7 @@ void T2DMap::slot_setRoomProperties(
     bool changeSymbolColor, QColor newSymbolColor,
     bool changeWeight, int newWeight,
     bool changeLockStatus, bool newLockStatus,
-    QSet<TRoom*> mpRoom)
+    QSet<TRoom*> rooms)
 {
     if (changeName) {
         setRoomName(newName, rooms);

@@ -215,7 +215,7 @@ public slots:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, bool newLockStatus,
-        QSet<TRoom*> mpRoom);
+        QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
     void slot_defineNewColor();
