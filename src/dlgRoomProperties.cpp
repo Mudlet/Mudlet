@@ -118,7 +118,7 @@ void dlgRoomProperties::initSymbolInstructionLabel()
         instructions = tr("To change the symbol for all of the %n selected room(s), please choose:\n"
                           " • an existing symbol from the list below (sorted by most commonly used first)\n"
                           " • enter one or more graphemes (\"visible characters\") as a new symbol\n"
-                          " • enter a space to clear any existing symbols\n",
+                          " • enter a space to clear any existing symbols",
                           // Intentional comment to separate arguments!
                           "This is for when applying a new room symbol to one or more rooms "
                           "and some have different symbols (others may have none) at present, "
