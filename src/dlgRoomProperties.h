@@ -76,9 +76,7 @@ private:
 
 private slots:
     void slot_openSymbolColorSelector();
-    void slot_currentSymbolColorChanged(const QColor&);
     void slot_symbolColorSelected(const QColor&);
-    void slot_symbolColorRejected();
     void slot_updatePreview();
     void slot_resetSymbolColor();
 };
