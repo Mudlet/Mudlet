@@ -45,11 +45,11 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
 }
 
 void dlgRoomProperties::init(
-    QHash<QString, int> usedNames, 
-    QHash<int, int>& pColors, 
-    QHash<QString, int>& pSymbols, 
-    QHash<int, int>& pWeights, 
-    QHash<bool, int> lockStatus, 
+    QHash<QString, int> usedNames,
+    QHash<int, int>& pColors,
+    QHash<QString, int>& pSymbols,
+    QHash<int, int>& pWeights,
+    QHash<bool, int> lockStatus,
     QSet<TRoom*>& pRooms)
 {
     // Configure name display
@@ -63,7 +63,7 @@ void dlgRoomProperties::init(
     mpSymbols = pSymbols;
     mpRooms = pRooms;
     if (mpSymbols.isEmpty()) {
-        // show simple text-entry box empty 
+        // show simple text-entry box empty
         lineEdit_roomSymbol->setText(QString());
         comboBox_roomSymbol->hide();
     } else if (mpSymbols.size() == 1) {
@@ -91,7 +91,7 @@ void dlgRoomProperties::init(
     //   Configure weight display
     mpWeights = pWeights;
     if (mpWeights.isEmpty()) {
-        // show spin box with default value 
+        // show spin box with default value
         // ...
     } else if (mpWeights.size() == 1) {
         // show spin box with the (single) existing weight pre-filled
@@ -128,7 +128,7 @@ void dlgRoomProperties::initWeightInstructionLabel()
 
     QString instructions;
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Move instructions from T2DMap.cpp to here 
+    //   Move instructions from T2DMap.cpp to here
 }
 
 void dlgRoomProperties::initSymbolInstructionLabel()
@@ -192,14 +192,14 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
             itSymbolUsed.next();
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
                 displayStrings.append(tr("%1 (count:%2)",
-                                         // Intentional comment to separate arguments
-                                         "Everything after the first parameter (the '%1') will be removed by processing "
-                                         "it as a QRegularExpression programmatically, ensure the translated text has "
-                                         "` {` immediately after the '%1', and '}' as the very last character, so that the "
-                                         "right portion can be extracted if the user clicks on this item when it is shown "
-                                         "in the QComboBox it is put in.")
-                                              .arg(itSymbolUsed.key())
-                                              .arg(QString::number(itSymbolUsed.value())));
+                    // Intentional comment to separate arguments
+                    "Everything after the first parameter (the '%1') will be removed by processing "
+                    "it as a QRegularExpression programmatically, ensure the translated text has "
+                    "` {` immediately after the '%1', and '}' as the very last character, so that the "
+                    "right portion can be extracted if the user clicks on this item when it is shown "
+                    "in the QComboBox it is put in.")
+                        .arg(itSymbolUsed.key())
+                        .arg(QString::number(itSymbolUsed.value())));
             }
         }
     }
