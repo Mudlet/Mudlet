@@ -53,7 +53,6 @@ private:
     QSet<TRoom*> mpRooms;
     QHash<QString, int> mpSymbols;
     QColor selectedColor;
-    QColor previewColor;
     QColor roomColor;
 
 private slots:
