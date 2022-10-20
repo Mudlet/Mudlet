@@ -36,14 +36,20 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setupUi(this);
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
+    connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomProperties::slot_updatePreview);
     connect(pushButton_setSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openSymbolColorSelector);
     connect(pushButton_resetSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_resetSymbolColor);
-    connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomProperties::slot_updatePreview);
 
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomProperties::init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, Qt::CheckState lockStatus, QSet<TRoom*>& pRooms)
+void dlgRoomProperties::init(
+    QHash<QString, int> usedNames, 
+    QHash<int, int>& pColors, 
+    QHash<QString, int>& pSymbols, 
+    QHash<int, int>& pWeights, 
+    Qt::CheckState lockStatus, 
+    QSet<TRoom*>& pRooms)
 {
     // Configure display in preview section
     if (usedNames.size() > 1) {
