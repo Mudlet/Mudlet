@@ -83,7 +83,6 @@ void dlgRoomProperties::init(
             auto firstRoomId = pRoom->getId();
             roomColor = mpHost->mpMap->getColor(firstRoomId);
             selectedSymbolColor = pRoom->mSymbolColor;
-            previewSymbolColor = selectedSymbolColor;
         }
     }
     slot_updatePreview();
@@ -305,7 +304,6 @@ void dlgRoomProperties::slot_openSymbolColorSelector()
 
 void dlgRoomProperties::slot_currentSymbolColorChanged(const QColor& color)
 {
-    previewSymbolColor = color;
     slot_updatePreview();
 }
 
@@ -317,14 +315,12 @@ void dlgRoomProperties::slot_symbolColorSelected(const QColor& color)
 
 void dlgRoomProperties::slot_symbolColorRejected()
 {
-    previewSymbolColor = selectedSymbolColor;
     slot_updatePreview();
 }
 
 void dlgRoomProperties::slot_resetSymbolColor()
 {
     selectedSymbolColor = QColor();
-    previewSymbolColor = QColor();
     slot_updatePreview();
 }
 
