@@ -298,23 +298,11 @@ void dlgRoomProperties::slot_openSymbolColorSelector()
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Pick color"));
     dialog->open(this, SLOT(slot_symbolColorSelected(const QColor&)));
-    connect(dialog, &QColorDialog::currentColorChanged, this, &dlgRoomProperties::slot_currentSymbolColorChanged);
-    connect(dialog, &QColorDialog::rejected, this, &dlgRoomProperties::slot_symbolColorRejected);
-}
-
-void dlgRoomProperties::slot_currentSymbolColorChanged(const QColor& color)
-{
-    slot_updatePreview();
 }
 
 void dlgRoomProperties::slot_symbolColorSelected(const QColor& color)
 {
     selectedSymbolColor = color;
-    slot_updatePreview();
-}
-
-void dlgRoomProperties::slot_symbolColorRejected()
-{
     slot_updatePreview();
 }
 
