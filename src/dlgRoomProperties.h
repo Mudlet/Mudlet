@@ -68,6 +68,7 @@ private:
     Host* mpHost;
     QSet<TRoom*> mpRooms;
     QHash<QString, int> mpSymbols;
+    QHash<int, int>& mpWeights, 
     QColor selectedSymbolColor;
     QColor previewSymbolColor;
     QColor roomColor;
