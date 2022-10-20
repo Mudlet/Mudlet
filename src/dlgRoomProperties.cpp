@@ -89,6 +89,18 @@ void dlgRoomProperties::init(
 
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   Configure weight display
+    mpWeights = pWeights;
+    if (mpWeights.isEmpty()) {
+        // show spin box with default value 
+        // ...
+    } else if (mpWeights.size() == 1) {
+        // show spin box with the (single) existing weight pre-filled
+        // ...
+    } else {
+        // show combined dropdown & text-entry box to host all of the (multiple) existing weights
+        // ...
+    }
+    initWeightInstructionLabel();
 
     // Configure lock display
     if (lockStatus == Qt::PartiallyChecked) {
@@ -100,6 +112,18 @@ void dlgRoomProperties::init(
 
     // Configure dialog display
     adjustSize();
+}
+
+void dlgRoomProperties::initWeightInstructionLabel()
+{
+    if (mpWeights.empty()) {
+        label_weightInstructions->hide();
+        return;
+    }
+
+    QString instructions;
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Move instructions from T2DMap.cpp to here 
 }
 
 void dlgRoomProperties::initSymbolInstructionLabel()

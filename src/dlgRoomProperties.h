@@ -63,7 +63,7 @@ private:
     void initSymbolInstructionLabel();
     QStringList getComboBoxSymbolItems();
     QFont getFontForPreview(QString);
-    QString multipleValuesPlaceholder = tr("(Multiple values...)");
+    void initWeightInstructionLabel();
 
     Host* mpHost;
     QSet<TRoom*> mpRooms;
@@ -71,6 +71,7 @@ private:
     QColor selectedSymbolColor;
     QColor previewSymbolColor;
     QColor roomColor;
+    QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:
     void slot_openSymbolColorSelector();
