@@ -65,7 +65,7 @@ void dlgRoomProperties::init(
         // show simple text-entry box empty 
         lineEdit_roomSymbol->setText(QString());
         comboBox_roomSymbol->hide();
-    } else if (mpSymbols.size() = 1) {
+    } else if (mpSymbols.size() == 1) {
         // show simple text-entry box with the (single) existing symbol pre-filled
         lineEdit_roomSymbol->setText(mpSymbols.keys().first());
         comboBox_roomSymbol->hide();
