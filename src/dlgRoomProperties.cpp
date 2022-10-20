@@ -234,6 +234,9 @@ void dlgRoomProperties::slot_updatePreview()
 {
     auto realSymbolColor = selectedSymbolColor != nullptr ? selectedSymbolColor : defaultSymbolColor();
     QString newSymbol = getNewSymbol();
+    if (newSymbol == multipleValuesPlaceholder) {
+        newSymbol = QString();
+    }
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
     label_preview->setStyleSheet(
