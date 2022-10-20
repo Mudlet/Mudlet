@@ -185,6 +185,7 @@ void dlgRoomProperties::accept()
     if (newSymbol == multipleValuesPlaceholder) {
         // TODO: We don't want to change the symbol then
         changeSymbol = false;
+        changeSymbolColor = false;
     }
 
     // TODO: FIXME
