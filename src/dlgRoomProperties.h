@@ -36,11 +36,11 @@ public:
     Q_DISABLE_COPY(dlgRoomProperties)
     explicit dlgRoomProperties(Host*, QWidget* parent = nullptr);
     void init(
-        QHash<QString, int> usedNames, 
+        QHash<QString, int> usedNames,
         QHash<int, int>& pColors,
-        QHash<QString, int>& pSymbols, 
-        QHash<int, int>& pWeights, 
-        Qt::CheckState lockStatus, 
+        QHash<QString, int>& pSymbols,
+        QHash<int, int>& pWeights,
+        Qt::CheckState lockStatus,
         QSet<TRoom*>& pRooms
     );
     void accept() override;
@@ -68,7 +68,7 @@ private:
     Host* mpHost;
     QSet<TRoom*> mpRooms;
     QHash<QString, int> mpSymbols;
-    QHash<int, int>& mpWeights;
+    QHash<int, int> mpWeights;
     QColor selectedSymbolColor;
     QColor previewSymbolColor;
     QColor roomColor;
