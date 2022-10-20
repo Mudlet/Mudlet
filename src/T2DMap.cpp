@@ -2893,6 +2893,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     popup->addAction(moveRoom);
                 }
 
+                if (selectionSize > 0) {
+                    auto roomPreferences = new QAction(tr("Configure room...", "2D Mapper context menu (room) item"), this);
+                    roomPreferences->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms", "2D Mapper context menu (room) item tooltip")));
+                    connect(roomPreferences, &QAction::triggered, this, &T2DMap::slot_showPropertiesSelection);
+                    popup->addAction(roomPreferences);
+                }
+
                 if (selectionSize == 1) {
                     auto roomExits = new QAction(tr("Set exits...", "2D Mapper context menu (room) item"), this);
                     connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
@@ -2910,13 +2917,6 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                         customExitLine->setEnabled(false);
                     }
                     popup->addAction(customExitLine);
-                }
-
-                if (selectionSize > 0) {
-                    auto roomPreferences = new QAction(tr("Set room properties...", "2D Mapper context menu (room) item"), this);
-                    roomPreferences->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip")));
-                    connect(roomPreferences, &QAction::triggered, this, &T2DMap::slot_showPropertiesSelection);
-                    popup->addAction(roomPreferences);
                 }
 
                 if (selectionSize > 0) {
