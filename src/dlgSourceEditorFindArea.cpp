@@ -25,7 +25,7 @@
 #include <QDebug>
 #include "post_guard.h"
 
-dlgSourceEditorFindArea::dlgSourceEditorFindArea(QWidget* pF) : QWidget(pF)
+dlgSourceEditorFindArea::dlgSourceEditorFindArea(QWidget* pParentWidget) : QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);

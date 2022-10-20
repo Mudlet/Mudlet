@@ -29,7 +29,7 @@
 #include "edbee/views/textrenderer.h"
 #include "edbee/views/texttheme.h"
 
-dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pF) : QWidget(pF)
+dlgSourceEditorArea::dlgSourceEditorArea(QWidget* pParentWidget) : QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);

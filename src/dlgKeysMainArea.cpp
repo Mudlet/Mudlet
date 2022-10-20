@@ -23,7 +23,7 @@
 #include "dlgKeysMainArea.h"
 
 
-dlgKeysMainArea::dlgKeysMainArea(QWidget* pF) : QWidget(pF)
+dlgKeysMainArea::dlgKeysMainArea(QWidget* pParentWidget) : QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
