@@ -2894,10 +2894,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize > 0) {
-                    auto roomPreferences = new QAction(tr("Configure room...", "2D Mapper context menu (room) item"), this);
-                    roomPreferences->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms", "2D Mapper context menu (room) item tooltip")));
-                    connect(roomPreferences, &QAction::triggered, this, &T2DMap::slot_showPropertiesSelection);
-                    popup->addAction(roomPreferences);
+                    auto roomProperties = new QAction(tr("Configure room...", "2D Mapper context menu (room) item"), this);
+                    roomProperties->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms", "2D Mapper context menu (room) item tooltip")));
+                    connect(roomProperties, &QAction::triggered, this, &T2DMap::slot_showPropertiesSelection);
+                    popup->addAction(roomProperties);
                 }
 
                 if (selectionSize == 1) {
