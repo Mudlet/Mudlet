@@ -96,9 +96,6 @@
         <property name="text">
          <string>Lock room, so it will never be used for speedwalking</string>
         </property>
-        <property name="tristate">
-         <bool>true</bool>
-        </property>
        </widget>
       </item>
      </layout>
