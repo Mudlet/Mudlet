@@ -85,6 +85,10 @@
 #elif defined(Q_OS_HURD)
 #include <errno.h>
 #include <unistd.h>
+#elif defined(Q_OS_OPENBSD)
+// OpenBSD doesn't have a sysinfo.h
+#include <sys/sysctl.h>
+#include <unistd.h>
 #elif defined(Q_OS_UNIX)
 // Including both GNU/Linux and FreeBSD
 #include <sys/resource.h>
