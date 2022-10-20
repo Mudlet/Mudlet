@@ -221,7 +221,7 @@ QString dlgRoomProperties::getNewSymbol()
     if (mpSymbols.size() <= 1) {
         return lineEdit_roomSymbol->text();
     } else {
-        QRegularExpression countStripper(qsl("^(.*) \(.*\)$"));
+        QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
         QRegularExpressionMatch match = countStripper.match(comboBox_roomSymbol->currentText());
         if (match.hasMatch() && match.lastCapturedIndex() > 0) {
             return match.captured(1);
