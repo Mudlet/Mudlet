@@ -3860,11 +3860,23 @@ void T2DMap::slot_setRoomProperties(
     bool changeLockStatus, bool newLockStatus,
     QSet<TRoom*> rooms)
 {
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   This whole function and called functions need logic updated:
+    //   This function here should loop through rooms, and the called
+    //   functions should update only a single given room to them.
+    //   Instead right now, each function loops through all rooms again.
+    //   Which is expected, because they were seperate concerns until now.
+    //   E.g. rename setRoomName to setRoomNames and make a new setRoomName, etc.
+    //   This can be used in that, and also in the (soon obsolete) context menu entry.
+
     if (changeName) {
         setRoomName(newName, rooms);
     }
 
     if (changeRoomColor) {
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Actually use the selected color to modify selected rooms!
+    //  
         // setRoomColor(QColor newRoomColor, QSet<TRoom*> rooms);
     }
 
@@ -4184,9 +4196,6 @@ void T2DMap::slot_lockRoom()
     }
 
     mMultiRect = QRect(0, 0, 0, 0);
-
-    // setRoomLockStatus(true, mMultiSelectionSet);
-
     QSetIterator<int> itRoom(mMultiSelectionSet);
     while (itRoom.hasNext()) {
         TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -4197,7 +4206,6 @@ void T2DMap::slot_lockRoom()
     }
 }
 
-
 void T2DMap::slot_unlockRoom()
 {
     if (mMultiSelectionSet.empty()) {
@@ -4205,9 +4213,6 @@ void T2DMap::slot_unlockRoom()
     }
 
     mMultiRect = QRect(0, 0, 0, 0);
-
-    // setRoomLockStatus(false, mMultiSelectionSet);
-
     QSetIterator<int> itRoom(mMultiSelectionSet);
     while (itRoom.hasNext()) {
         TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -4217,7 +4222,6 @@ void T2DMap::slot_unlockRoom()
         }
     }
 }
-
 
 void T2DMap::setRoomLockStatus(bool newStatus, QSet<TRoom*> rooms) {
     QSetIterator<TRoom*> itpRoom(rooms);
@@ -4406,7 +4410,6 @@ void T2DMap::setRoomWeight(int newWeight, QSet<TRoom*> rooms)
     repaint();
     mpMap->mUnsavedMap = true;
 }
-
 
 void T2DMap::slot_loadMap() {
     if (!mpHost) {
