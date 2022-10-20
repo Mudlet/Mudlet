@@ -2896,7 +2896,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 if (selectionSize > 0) {
                     auto roomProperties = new QAction(tr("Configure room...", "2D Mapper context menu (room) item"), this);
                     roomProperties->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms", "2D Mapper context menu (room) item tooltip")));
-                    connect(roomProperties, &QAction::triggered, this, &T2DMap::slot_showPropertiesSelection);
+                    connect(roomProperties, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
                     popup->addAction(roomProperties);
                 }
 
@@ -3742,7 +3742,7 @@ void T2DMap::setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> r
 }
 
 
-void T2DMap::slot_showPropertiesSelection()
+void T2DMap::slot_showPropertiesDialog()
 {
     // No need to show dialog if no rooms are selected
     if (mMultiSelectionSet.empty()) {

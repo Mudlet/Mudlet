@@ -206,7 +206,7 @@ public slots:
     void slot_shiftLeft();
     void slot_shiftRight();
     void slot_showSymbolSelection();
-    void slot_showPropertiesSelection();
+    void slot_showPropertiesDialog();
     void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void slot_setRoomProperties(
         bool changeName, QString newName,
