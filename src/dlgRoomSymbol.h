@@ -57,9 +57,7 @@ private:
 
 private slots:
     void slot_openColorSelector();
-    void slot_currentColorChanged(const QColor&);
     void slot_colorSelected(const QColor&);
-    void slot_colorRejected();
     void slot_updatePreview();
     void slot_resetColors();
 };
