@@ -3790,14 +3790,12 @@ void T2DMap::slot_showPropertiesSelection()
         // Allows the existing symbols to be deleted (by clearing all the displayed letters)
 
         // Scan and count all the different symbols used
-        if (!room->mSymbol.isEmpty()) {
-            QString thisSymbol = QString(room->mSymbol);
-            if (!thisSymbol.isEmpty()) {
-                if (usedSymbols.contains(thisSymbol)) {
-                    (usedSymbols[thisSymbol])++;
-                } else {
-                    usedSymbols[thisSymbol] = 1;
-                }
+        QString thisSymbol = QString(room->mSymbol);        
+        if (!thisSymbol.isEmpty()) {
+            if (usedSymbols.contains(thisSymbol)) {
+                (usedSymbols[thisSymbol])++;
+            } else {
+                usedSymbols[thisSymbol] = 1;
             }
         }
 
