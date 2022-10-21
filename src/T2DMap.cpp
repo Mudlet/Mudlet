@@ -3754,7 +3754,6 @@ void T2DMap::slot_showPropertiesDialog()
         return;
     }
 
-    TRoom* room;
     bool isAtLeastOneRoom = false;
     QSetIterator<int> itRoom = mMultiSelectionSet;
     QSet<TRoom*> roomPtrsSet;
@@ -3766,14 +3765,14 @@ void T2DMap::slot_showPropertiesDialog()
     QHash<bool, int> usedLockStatus;
 
     while (itRoom.hasNext()) {
-        room = mpMap->mpRoomDB->getRoom(itRoom.next());
+        TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
         if (!room) {
             continue;
         }
         roomPtrsSet.insert(room);
         isAtLeastOneRoom = true;
 
-        // Scan all the different names used, is it more than one?
+        // Scan and count all the different names used
         if (!room->name.isEmpty()) {
             QString thisName = QString(room->name);
             if (!thisName.isEmpty()) {
