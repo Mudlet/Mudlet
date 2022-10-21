@@ -68,8 +68,8 @@ private:
     QHash<QString, int> mpSymbols;
     QHash<int, int> mpWeights;
     QColor selectedSymbolColor;
-    QColor previewSymbolColor;
-    QColor roomColor;
+    QColor mRoomColor;
+    bool mChangeRoomColor = false;;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:
@@ -77,6 +77,7 @@ private slots:
     void slot_symbolColorSelected(const QColor&);
     void slot_updatePreview();
     void slot_resetSymbolColor();
+    void slot_openRoomColorSelector();
 };
 
 #endif // MUDLET_DLGROOMPROPERTIES_H

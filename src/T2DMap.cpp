@@ -3788,7 +3788,13 @@ void T2DMap::slot_showPropertiesDialog()
             }
         }
 
-        // TODO: Find usedColors
+        // Scan and count all the different room colors used
+        int thisColor = room->environment;
+        if (usedColors.contains(thisColor)) {
+            (usedColors[thisColor])++;
+        } else {
+            usedColors[thisColor] = 1;
+        }
 
         // Scan and count all the different symbols used
         QString thisSymbol = QString(room->mSymbol);        
@@ -3961,11 +3967,11 @@ void T2DMap::slot_changeColor()
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
         QMenu menu;
-        menu.addAction(tr("Delete color", "Deletes an environment colour"), this, [=]() {
+        menu.addAction(tr("Delete color", "Deletes an environment color"), this, [=]() {
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
-            auto colour = selectedItem->text();
+            auto color = selectedItem->text();
 
-            mpMap->mCustomEnvColors.remove(colour.toInt());
+            mpMap->mCustomEnvColors.remove(color.toInt());
             repaint();
             mpMap->mUnsavedMap = true;
         });

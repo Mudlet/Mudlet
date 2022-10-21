@@ -39,6 +39,7 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomProperties::slot_updatePreview);
     connect(pushButton_setSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openSymbolColorSelector);
     connect(pushButton_resetSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_resetSymbolColor);
+    connect(pushButton_setRoomColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openRoomColorSelector);
 
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -77,13 +78,12 @@ void dlgRoomProperties::init(
     initSymbolInstructionLabel();
 
     // Configure icon display
-    if (!pRooms.isEmpty()) {
-        auto pRoom = *(pRooms.begin());
-        if (pRoom) {
-            auto firstRoomId = pRoom->getId();
-            roomColor = mpHost->mpMap->getColor(firstRoomId);
-            selectedSymbolColor = pRoom->mSymbolColor;
-        }
+    auto pRoom = *(pRooms.begin());
+    selectedSymbolColor = pRoom->mSymbolColor;
+    if (pColors.size() == 1) {
+        mRoomColor = pColors().keys().first();
+    } else {
+        mRoomColor = QColor(128, 128, 128); // TODO: Find better "neutral" state
     }
     slot_updatePreview();
 
@@ -221,8 +221,9 @@ void dlgRoomProperties::accept()
 
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   find color (if any) to return back
-    int newRoomColor = 1;
-    bool changeRoomColor = false;
+    //   make sure to prevent this from changing rooms if no change was done here
+    //   This is currently using mRoomColor and mChangeRoomColor
+    //   which are defined elsewhere and need no further review here.
 
     // find symbol to return back
     QString newSymbol = getNewSymbol();
@@ -237,6 +238,7 @@ void dlgRoomProperties::accept()
 
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   find weight (if any) to return back
+    //   make sure to prevent this from changing rooms if no change was done here
     int newWeight = 1;
     bool changeWeight = false;
 
@@ -257,7 +259,7 @@ void dlgRoomProperties::accept()
 
     emit signal_save_symbol(
         changeName, newName,
-        changeRoomColor, newRoomColor,
+        mChangeRoomColor, mRoomColor,
         changeSymbol, newSymbol,
         changeSymbolColor, newSymbolColor,
         changeWeight, newWeight,
@@ -295,7 +297,7 @@ void dlgRoomProperties::slot_updatePreview()
     label_preview->setText(newSymbol);
     label_preview->setStyleSheet(
         qsl("color: %1; background-color: %2; border: %3;")
-            .arg(realSymbolColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
+            .arg(realSymbolColor.name(), mRoomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
     pushButton_setSymbolColor->setStyleSheet(
         qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;")
             .arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
@@ -348,5 +350,35 @@ QColor dlgRoomProperties::backgroundBasedColor(QColor background)
 
 QColor dlgRoomProperties::defaultSymbolColor()
 {
-    return backgroundBasedColor(roomColor);
+    return backgroundBasedColor(mRoomColor);
+}
+
+void dlgRoomProperties::slot_openRoomColorSelector()
+{
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Copy from T2DMap::slot_changeColor() etc.
+    // 
+    //   Those do this and can spawn additional dialogs:
+    //   - slot_changeColor
+    //     - opens dialog to choose an existing room color
+    //     - lists all existing colors with number and colored box to click on
+    //     - see loop near QMapIterator<int, QColor> it(mpMap->mCustomEnvColors);
+    //     - click: slot sets int mChosenRoomColor = pSelectedIcon->text().toInt();
+    //     - doubleclick: dialog will be accepted and closed
+    //       - chosen color will be applied to all rooms like this:
+    //       - room->environment = mChosenRoomColor;
+    //       - This time, that will not be of scope here in dialog, but returned back to map!
+    //     - right click, delete color: Removes entry from mpMap->mCustomeEnvColors 
+    //     - button, define color: Rejects this dialog, opens slot_defineNewColor instead!
+    //   
+    //   - slot_defineNewColor
+    //     - Shows new QColorDialog to choose color freely (default = red?)
+    //     - When color is chosen, a complicated logic will search a new environmentID that is not used, yet 
+    //     - The chosen color will be added to mpMap -> mCustomerEnvColors 
+    //     - After this, slot_changeColor is called again ?!
+    //     - Finally, repaint() is called and unsavedMap set to true
+    //       - Is there a recursion error lurking here?
+    // 
+    //   Make sure to use mChangeRoomColor and mRoomColor accordingly!
+    //   
 }
