@@ -48,7 +48,7 @@ void dlgRoomProperties::init(
     QHash<int, int>& pColors, 
     QHash<QString, int>& pSymbols, 
     QHash<int, int>& pWeights, 
-    Qt::CheckState lockStatus, 
+    QHash<bool, int> lockStatus, 
     QSet<TRoom*>& pRooms)
 {
     // Configure name display
@@ -103,12 +103,23 @@ void dlgRoomProperties::init(
     initWeightInstructionLabel();
 
     // Configure lock display
-    if (lockStatus == Qt::PartiallyChecked) {
+    // Are all locks the same or mixed status? Then show dialog in tristate.
+    Qt::CheckState combinedLockStatus;
+    if (lockStatus.contains(true)) {
+        if (lockStatus.contains(false)) {
+            combinedLockStatus = Qt::PartiallyChecked;
+        } else {
+            combinedLockStatus = Qt::Checked;
+        }
+    } else {
+        combinedLockStatus = Qt::Unchecked;
+    }
+    if (combinedLockStatus == Qt::PartiallyChecked) {
         checkBox_locked->setTristate(true);
     } else {
         checkBox_locked->setTristate(false);
     }
-    checkBox_locked->setCheckState(lockStatus);
+    checkBox_locked->setCheckState(combinedLockStatus);
 
     // Configure dialog display
     adjustSize();

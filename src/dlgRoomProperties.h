@@ -40,7 +40,7 @@ public:
         QHash<int, int>& pColors,
         QHash<QString, int>& pSymbols,
         QHash<int, int>& pWeights,
-        Qt::CheckState lockStatus,
+        QHash<bool, int> lockStatus,
         QSet<TRoom*>& pRooms);
     void accept() override;
 
