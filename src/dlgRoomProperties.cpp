@@ -81,7 +81,7 @@ void dlgRoomProperties::init(
     auto pRoom = *(pRooms.begin());
     selectedSymbolColor = pRoom->mSymbolColor;
     if (pColors.size() == 1) {
-        mRoomColor = pColors().keys().first();
+        mRoomColor = pColors.keys().first();
     } else {
         mRoomColor = QColor(128, 128, 128); // TODO: Find better "neutral" state
     }
