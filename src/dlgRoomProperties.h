@@ -41,8 +41,7 @@ public:
         QHash<QString, int>& pSymbols,
         QHash<int, int>& pWeights,
         Qt::CheckState lockStatus,
-        QSet<TRoom*>& pRooms
-    );
+        QSet<TRoom*>& pRooms);
     void accept() override;
 
 signals:
@@ -53,8 +52,7 @@ signals:
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, bool newLockStatus,
-        QSet<TRoom*> mpRoom
-    );
+        QSet<TRoom*> mpRoom);
 
 private:
     QColor backgroundBasedColor(QColor);
