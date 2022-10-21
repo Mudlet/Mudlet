@@ -22,7 +22,8 @@
 #include "dlgTriggersMainArea.h"
 
 
-dlgTriggersMainArea::dlgTriggersMainArea(QWidget* pParentWidget) : QWidget(pParentWidget)
+dlgTriggersMainArea::dlgTriggersMainArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);

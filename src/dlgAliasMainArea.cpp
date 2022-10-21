@@ -22,7 +22,8 @@
 #include "dlgAliasMainArea.h"
 #include "mudlet.h"
 
-dlgAliasMainArea::dlgAliasMainArea(QWidget* pParentWidget) : QWidget(pParentWidget)
+dlgAliasMainArea::dlgAliasMainArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);

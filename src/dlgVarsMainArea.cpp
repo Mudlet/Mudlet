@@ -30,7 +30,8 @@ extern "C" {
 #include <lua.h>
 }
 
-dlgVarsMainArea::dlgVarsMainArea(QWidget* pParentWidget) : QWidget(pParentWidget)
+dlgVarsMainArea::dlgVarsMainArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
