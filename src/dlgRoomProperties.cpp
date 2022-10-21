@@ -104,22 +104,16 @@ void dlgRoomProperties::init(
 
     // Configure lock display
     // Are all locks the same or mixed status? Then show dialog in tristate.
-    Qt::CheckState combinedLockStatus;
-    if (lockStatus.contains(true)) {
-        if (lockStatus.contains(false)) {
-            combinedLockStatus = Qt::PartiallyChecked;
-        } else {
-            combinedLockStatus = Qt::Checked;
-        }
-    } else {
-        combinedLockStatus = Qt::Unchecked;
-    }
-    if (combinedLockStatus == Qt::PartiallyChecked) {
+    if (lockStatus.contains(true) && lockStatus.contains(false)) {
         checkBox_locked->setTristate(true);
-    } else {
+        checkBox_locked->setCheckState(Qt::PartiallyChecked);
+    } else if (lockStatus.contains(true)) {
         checkBox_locked->setTristate(false);
-    }
-    checkBox_locked->setCheckState(combinedLockStatus);
+        checkBox_locked->setCheckState(Qt::Checked);
+    } else { // lockStatus.contains(false)
+        checkBox_locked->setTristate(false);
+        checkBox_locked->setCheckState(Qt::Unchecked);
+    } 
 
     // Configure dialog display
     adjustSize();
