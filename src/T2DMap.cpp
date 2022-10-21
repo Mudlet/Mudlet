@@ -3744,6 +3744,10 @@ void T2DMap::setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> r
 
 void T2DMap::slot_showPropertiesDialog()
 {
+    // Counts and reports the existing properties used in ALL the selected rooms
+    // if more than one has been selected (and sorts by their frequency).
+    // Allows the existing symbols to be deleted (by clearing all the displayed letters)
+
     // No need to show dialog if no rooms are selected
     if (mMultiSelectionSet.empty()) {
         return;
@@ -3786,10 +3790,6 @@ void T2DMap::slot_showPropertiesDialog()
 
         // TODO: Find usedColors
 
-        // Analyses and reports the existing symbols used in ALL the selected
-        // rooms if more than one (and sorts by their frequency)
-        // Allows the existing symbols to be deleted (by clearing all the displayed letters)
-
         // Scan and count all the different symbols used
         QString thisSymbol = QString(room->mSymbol);        
         if (!thisSymbol.isEmpty()) {
@@ -3817,7 +3817,6 @@ void T2DMap::slot_showPropertiesDialog()
         } else {
             usedLockStatus[thisLockStatus] = 1;
         }
-
     }
 
     // No need to show dialog if no rooms were found
