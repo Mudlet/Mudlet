@@ -47,7 +47,7 @@ public:
 signals:
     void signal_save_symbol(
         bool changeName, QString newName,
-        bool mChangeRoomColor, QColor mRoomColor,
+        bool mChangeRoomColor, int mRoomColorNumber,
         bool changeSymbol, QString newSymbol,
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
@@ -69,6 +69,7 @@ private:
     QHash<int, int> mpWeights;
     QColor selectedSymbolColor;
     QColor mRoomColor;
+    int mRoomColorNumber;
     bool mChangeRoomColor = false;;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
