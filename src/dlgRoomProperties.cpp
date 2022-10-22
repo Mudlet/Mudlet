@@ -94,13 +94,16 @@ void dlgRoomProperties::init(
     mpWeights = pWeights;
     if (mpWeights.isEmpty()) {
         // show spin box with default value
-        // ...
+        spinBox_weight->setValue(1);
+        comboBox_weight->hide();
     } else if (mpWeights.size() == 1) {
         // show spin box with the (single) existing weight pre-filled
-        // ...
+        spinBox_weight->setValue(mpWeights.keys().first());
+        comboBox_weight->hide();
     } else {
         // show combined dropdown & text-entry box to host all of the (multiple) existing weights
-        // ...
+        spinBox_weight->hide();
+        comboBox_weight->addItems(getComboBoxWeightItems());
     }
     initWeightInstructionLabel();
 
@@ -176,16 +179,20 @@ void dlgRoomProperties::initSymbolInstructionLabel()
 
 QStringList dlgRoomProperties::getComboBoxSymbolItems()
 {
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Refactor getComboBoxSymbolItems and getComboBoxWeightItems into one maybe?
     QHashIterator<QString, int> itSymbolUsed(mpSymbols);
     QSet<int> symbolCountsSet;
     while (itSymbolUsed.hasNext()) {
         itSymbolUsed.next();
         symbolCountsSet.insert(itSymbolUsed.value());
     }
+
     QList<int> symbolCountsList{symbolCountsSet.begin(), symbolCountsSet.end()};
     if (symbolCountsList.size() > 1) {
         std::sort(symbolCountsList.begin(), symbolCountsList.end());
     }
+
     QStringList displayStrings;
     displayStrings.append(multipleValuesPlaceholder);
     for (int i = symbolCountsList.size() - 1; i >= 0; --i) {
@@ -195,6 +202,8 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
                 displayStrings.append(tr("%1 (count:%2)",
                     // Intentional comment to separate arguments
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Update comment for translators
                     "Everything after the first parameter (the '%1') will be removed by processing "
                     "it as a QRegularExpression programmatically, ensure the translated text has "
                     "` {` immediately after the '%1', and '}' as the very last character, so that the "
@@ -202,6 +211,44 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
                     "in the QComboBox it is put in.")
                         .arg(itSymbolUsed.key())
                         .arg(QString::number(itSymbolUsed.value())));
+            }
+        }
+    }
+    return displayStrings;
+}
+
+QStringList dlgRoomProperties::getComboBoxWeightItems()
+{
+    QHashIterator<QString, int> itWeightUsed(mpWeights);
+    QSet<int> weightCountsSet;
+    while (itWeightUsed.hasNext()) {
+        itWeightUsed.next();
+        weightCountsSet.insert(itWeightUsed.value());
+    }
+
+    QList<int> weightCountsList{weightCountsSet.begin(), weightCountsSet.end()};
+    if (weightCountsList.size() > 1) {
+        std::sort(weightCountsList.begin(), weightCountsList.end());
+    }
+
+    QStringList displayStrings;
+    displayStrings.append(multipleValuesPlaceholder);
+    for (int i = weightCountsList.size() - 1; i >= 0; --i) {
+        itWeightUsed.toFront();
+        while (itWeightUsed.hasNext()) {
+            itWeightUsed.next();
+            if (itWeightUsed.value() == weightCountsList.at(i)) {
+                displayStrings.append(tr("%1 (count:%2)",
+                    // Intentional comment to separate arguments
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Update comment for translators
+                    "Everything after the first parameter (the '%1') will be removed by processing "
+                    "it as a QRegularExpression programmatically, ensure the translated text has "
+                    "` {` immediately after the '%1', and '}' as the very last character, so that the "
+                    "right portion can be extracted if the user clicks on this item when it is shown "
+                    "in the QComboBox it is put in.")
+                        .arg(itWeightUsed.key())
+                        .arg(QString::number(itWeightUsed.value())));
             }
         }
     }
@@ -238,11 +285,12 @@ void dlgRoomProperties::accept()
         changeSymbolColor = false;
     }
 
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   find weight (if any) to return back
-    //   make sure to prevent this from changing rooms if no change was done here
-    int newWeight = 1;
-    bool changeWeight = false;
+    int newWeight = getNewWeight();
+    bool changeWeight = true;
+    if (newWeight == -1) {
+        // We don't want to change the symbol then
+        changeWeight = false;
+    }
 
     // find lock status to return back
     Qt::CheckState newCheckState = checkBox_locked->checkState();
@@ -286,6 +334,13 @@ QString dlgRoomProperties::getNewSymbol()
     }
 }
 
+int dlgRoomProperties::getNewWeight()
+{
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   find weight (if any) to return back
+    //   make sure to prevent this from changing rooms if no change was done here
+    return 1;
+}
 void dlgRoomProperties::slot_updatePreview()
 {
     auto realSymbolColor = selectedSymbolColor != nullptr ? selectedSymbolColor : defaultSymbolColor();
