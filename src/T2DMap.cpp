@@ -3843,7 +3843,7 @@ void T2DMap::slot_showPropertiesDialog()
 
 void T2DMap::slot_setRoomProperties(
     bool changeName, QString newName,
-    bool changeRoomColor, QColor newRoomColor,
+    bool changeRoomColor, int newRoomColor,
     bool changeSymbol, QString newSymbol,
     bool changeSymbolColor, QColor newSymbolColor,
     bool changeWeight, int newWeight,
