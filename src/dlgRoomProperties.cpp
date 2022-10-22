@@ -219,7 +219,7 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
 
 QStringList dlgRoomProperties::getComboBoxWeightItems()
 {
-    QHashIterator<QString, int> itWeightUsed(mpWeights);
+    QHashIterator<int, int> itWeightUsed(mpWeights);
     QSet<int> weightCountsSet;
     while (itWeightUsed.hasNext()) {
         itWeightUsed.next();
@@ -247,7 +247,7 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
                     "` {` immediately after the '%1', and '}' as the very last character, so that the "
                     "right portion can be extracted if the user clicks on this item when it is shown "
                     "in the QComboBox it is put in.")
-                        .arg(itWeightUsed.key())
+                        .arg(QString::number(itWeightUsed.key()))
                         .arg(QString::number(itWeightUsed.value())));
             }
         }
