@@ -335,6 +335,9 @@ QString dlgRoomProperties::getNewSymbol()
 
 int dlgRoomProperties::getNewWeight()
 {
+    if (mpWeights.size() <= 1) {
+        return spinBox_weight->value();
+    }
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   find weight (if any) to return back
     //   make sure to prevent this from changing rooms if no change was done here
