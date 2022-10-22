@@ -78,10 +78,10 @@ void dlgRoomProperties::init(
     initSymbolInstructionLabel();
 
     // Configure icon display
-    auto pRoom = *(pRooms.begin());
-    selectedSymbolColor = pRoom->mSymbolColor;
+    auto pFirstRoom = *(pRooms.begin());
+    selectedSymbolColor = pFirstRoom->mSymbolColor;
     if (pColors.size() == 1) {
-        mRoomColor = mpHost->mpMap->getColor(firstRoomId);
+        mRoomColor = mpHost->mpMap->getColor(pFirstRoom->getId());
         mRoomColorNumber = pColors.keys().first();
     } else {
         mRoomColor = QColor("grey"); // rgb(128, 128, 128)
