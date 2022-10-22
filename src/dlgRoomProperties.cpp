@@ -321,17 +321,16 @@ QString dlgRoomProperties::getNewSymbol()
 {
     if (mpSymbols.size() <= 1) {
         return lineEdit_roomSymbol->text();
-    } else {
+    }
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   Add knowledge from https://github.com/Mudlet/Mudlet/pull/6359 to here as well
     //   Maybe refactor both sections to use same regex logic to prevent this situation?
-        QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
-        QRegularExpressionMatch match = countStripper.match(comboBox_roomSymbol->currentText());
-        if (match.hasMatch() && match.lastCapturedIndex() > 0) {
-            return match.captured(1);
-        }
-        return comboBox_roomSymbol->currentText();
+    QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
+    QRegularExpressionMatch match = countStripper.match(comboBox_roomSymbol->currentText());
+    if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+        return match.captured(1);
     }
+    return comboBox_roomSymbol->currentText();
 }
 
 int dlgRoomProperties::getNewWeight()
