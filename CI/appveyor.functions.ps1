@@ -321,9 +321,9 @@ function InstallSqlite() {
 }
 
 function InstallZlib() {
-  DownloadFile "http://zlib.net/zlib-1.2.12.tar.gz" "zlib-1.2.12.tar.gz"
-  ExtractTar "$workingBaseDir\zlib-1.2.12.tar.gz" "$workingBaseDir\zlib"
-  Set-Location "$workingBaseDir\zlib\zlib-1.2.12"
+  DownloadFile "http://zlib.net/fossils/zlib-1.2.13.tar.gz" "zlib-1.2.13.tar.gz"
+  ExtractTar "$workingBaseDir\zlib-1.2.13.tar.gz" "$workingBaseDir\zlib"
+  Set-Location "$workingBaseDir\zlib\zlib-1.2.13"
   RunMake "win32/Makefile.gcc"
   $Env:INCLUDE_PATH = "$Env:MINGW_BASE_DIR\include"
   $Env:LIBRARY_PATH = "$Env:MINGW_BASE_DIR\lib"
