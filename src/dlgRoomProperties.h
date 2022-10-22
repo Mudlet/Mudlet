@@ -47,12 +47,12 @@ public:
 signals:
     void signal_save_symbol(
         bool changeName, QString newName,
-        bool changeRoomColor, int newRoomColor,
+        bool mChangeRoomColor, QColor mRoomColor,
         bool changeSymbol, QString newSymbol,
         bool changeSymbolColor, QColor newSymbolColor,
         bool changeWeight, int newWeight,
         bool changeLockStatus, bool newLockStatus,
-        QSet<TRoom*> mpRoom);
+        QSet<TRoom*> mpRooms);
 
 private:
     QColor backgroundBasedColor(QColor);

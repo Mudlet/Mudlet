@@ -3797,7 +3797,7 @@ void T2DMap::slot_showPropertiesDialog()
         }
 
         // Scan and count all the different symbols used
-        QString thisSymbol = QString(room->mSymbol);        
+        QString thisSymbol = QString(room->mSymbol);
         if (!thisSymbol.isEmpty()) {
             if (usedSymbols.contains(thisSymbol)) {
                 (usedSymbols[thisSymbol])++;
@@ -3843,7 +3843,7 @@ void T2DMap::slot_showPropertiesDialog()
 
 void T2DMap::slot_setRoomProperties(
     bool changeName, QString newName,
-    bool changeRoomColor, int newRoomColor,
+    bool changeRoomColor, QColor newRoomColor,
     bool changeSymbol, QString newSymbol,
     bool changeSymbolColor, QColor newSymbolColor,
     bool changeWeight, int newWeight,
@@ -3866,7 +3866,7 @@ void T2DMap::slot_setRoomProperties(
     if (changeRoomColor) {
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   Actually use the selected color to modify selected rooms!
-    //  
+    //
         // setRoomColor(QColor newRoomColor, QSet<TRoom*> rooms);
     }
 
