@@ -62,7 +62,7 @@ private:
     QStringList getComboBoxSymbolItems();
     QFont getFontForPreview(QString);
 
-    dlgRoomProperties::getNewWeight();
+    int getNewWeight();
     void initWeightInstructionLabel();
     QStringList getComboBoxWeightItems();
 
