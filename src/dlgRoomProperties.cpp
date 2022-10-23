@@ -259,11 +259,11 @@ void dlgRoomProperties::accept()
 {
     QDialog::accept();
 
-    // find name to return back
+    // Find name to return back
     QString newName = lineEdit_name->text();
     bool changeName = true;
     if (newName == multipleValuesPlaceholder) {
-        // We don't want to change the name then
+        // We don't want to change then
         newName = QString();
         changeName = false;
     }
@@ -271,33 +271,34 @@ void dlgRoomProperties::accept()
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   find color (if any) to return back
     //   make sure to prevent this from changing rooms if no change was done here
-    //   This is currently using mRoomColor and mChangeRoomColor
-    //   which are defined elsewhere and need no further review here.
+    //   This is currently using mRoomColor, mRoomColorNumber and mChangeRoomColor
+    //   which are defined elsewhere and may need no further review here.
 
-    // find symbol to return back
+    // Find symbol to return back
     QString newSymbol = getNewSymbol();
     bool changeSymbol = true;
     QColor newSymbolColor = selectedSymbolColor;
     bool changeSymbolColor = true;
     if (newSymbol == multipleValuesPlaceholder) {
-        // We don't want to change the symbol then
+        // We don't want to change then
         changeSymbol = false;
         changeSymbolColor = false;
     }
 
+    // Find symbol to return back
     int newWeight = getNewWeight();
     bool changeWeight = true;
-    if (newWeight == -1) {
-        // We don't want to change the symbol then
+    if (newWeight <= -1) {
+        // We don't want to change then
         changeWeight = false;
     }
 
-    // find lock status to return back
+    // Find lock status to return back
     Qt::CheckState newCheckState = checkBox_locked->checkState();
     bool changeLockStatus = true;
     bool newLockStatus;
     if (newCheckState == Qt::PartiallyChecked) {
-        // We don't want to change the lock then
+        // We don't want to change then
         changeLockStatus = false;
     } else {
         if (newCheckState == Qt::Checked) {
@@ -355,9 +356,10 @@ int dlgRoomProperties::getNewWeight()
     }
     if (newWeightText.toInt() > 0) {
         return newWeightText.toInt();
-    };
+    }
     return -2; // Maybe some other input we did not understand, so we will do no change
 }
+
 void dlgRoomProperties::slot_updatePreview()
 {
     auto realSymbolColor = selectedSymbolColor != nullptr ? selectedSymbolColor : defaultSymbolColor();
