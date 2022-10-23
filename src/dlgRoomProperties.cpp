@@ -89,7 +89,6 @@ void dlgRoomProperties::init(
     }
     slot_updatePreview();
 
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   Configure weight display
     mpWeights = pWeights;
     if (mpWeights.isEmpty()) {
