@@ -3798,17 +3798,11 @@ void T2DMap::slot_showPropertiesDialog()
 
         // Scan and count all the different symbols used
         QString thisSymbol = QString(room->mSymbol);
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Need to keep track of empty symbol rooms now as well.
-    //   For example, if 2 rooms got a symbol and 3 got none,
-    //   Then the dialog should not silently put the symbol to all 5.
-//        if (!thisSymbol.isEmpty()) {
-            if (usedSymbols.contains(thisSymbol)) {
-                (usedSymbols[thisSymbol])++;
-            } else {
-                usedSymbols[thisSymbol] = 1;
-            }
-//        }
+        if (usedSymbols.contains(thisSymbol)) {
+            (usedSymbols[thisSymbol])++;
+        } else {
+            usedSymbols[thisSymbol] = 1;
+        }
 
         // Scan and count all the different weights used
         int thisWeight = room->getWeight();
