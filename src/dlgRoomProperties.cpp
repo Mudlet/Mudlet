@@ -85,7 +85,7 @@ void dlgRoomProperties::init(
         mRoomColorNumber = pColors.keys().first();
     } else {
         mRoomColor = QColor("grey"); // rgb(128, 128, 128)
-        mRoomColorNumber = -1; // TODO: Find better "neutral" state
+        mRoomColorNumber = -1;
     }
     slot_updatePreview();
 
