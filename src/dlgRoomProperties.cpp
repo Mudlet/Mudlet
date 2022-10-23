@@ -341,7 +341,22 @@ int dlgRoomProperties::getNewWeight()
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   find weight (if any) to return back
     //   make sure to prevent this from changing rooms if no change was done here
-    return 1;
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Add knowledge from https://github.com/Mudlet/Mudlet/pull/6359 to here as well
+    //   Maybe refactor both sections to use same regex logic to prevent this situation?
+    QString newWeightText = comboBox_weight->currentText();
+    if (newWeightText == multipleValuesPlaceholder) {
+        return -1; // User did not want to select any weight, so we will do no change
+    }
+    QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
+    QRegularExpressionMatch match = countStripper.match(newWeightText);
+    if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+        return match.captured(1).toInt();
+    }
+    if (newWeightText.toInt() > 0) {
+        return newWeightText.toInt();
+    };
+    return -2; // Maybe some other input we did not understand, so we will do no change
 }
 void dlgRoomProperties::slot_updatePreview()
 {
