@@ -146,6 +146,8 @@ void dlgRoomProperties::initWeightInstructionLabel()
                           "and some have different weights at present. "
                           "%n is the total number of rooms involved.", mpRooms.size());
     }
+    label_weightInstructions->setText(instructions);
+    label_weightInstructions->setWordWrap(true);
 }
 
 void dlgRoomProperties::initSymbolInstructionLabel()
