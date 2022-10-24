@@ -131,8 +131,21 @@ void dlgRoomProperties::initWeightInstructionLabel()
     }
 
     QString instructions;
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Move instructions from T2DMap.cpp to here
+    if (mpWeights.size() == 1) {
+        instructions = tr("Enter a new room weight to use as the travel time for all of the %n selected room(s). "
+                          "This will be used for calculating the best path. The minimum and default is 1."
+                          // Intentional comment to separate arguments!
+                          "%n is the total number of rooms involved.",
+                          mpRooms.size());
+    } else {
+        instructions = tr("To change the room weight for all of the %n selected room(s), please choose:\n"
+                          " • an existing room weight from the list below\n"
+                          " • enter a new positive integer value to use as a new weight",
+                          // Intentional comment to separate arguments!
+                          "This is for when applying a new room weight to one or more rooms "
+                          "and some have different weights at present. "
+                          "%n is the total number of rooms involved.", mpRooms.size());
+    }
 }
 
 void dlgRoomProperties::initSymbolInstructionLabel()
@@ -148,7 +161,7 @@ void dlgRoomProperties::initSymbolInstructionLabel()
                           "for all of the %n selected room(s), or enter a space to clear the symbol:"
                           // Intentional comment to separate arguments!
                           "%n is the total number of rooms involved.",
-                          mpRooms.size()).arg(mpSymbols.keys().first());
+                          mpRooms.size());
     } else {
         instructions = tr("To change the symbol for all of the %n selected room(s), please choose:\n"
                           " • an existing symbol from the list below\n"
