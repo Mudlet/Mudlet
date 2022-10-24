@@ -44,7 +44,10 @@
 // https://github.com/jcsteh/osara/blob/master/src/uia.cpp
 class Announcer::UiaProvider : public IRawElementProviderSimple {
 public:
-  UiaProvider(_In_ HWND hwnd) : refCount(0), controlHWnd(hwnd) {}
+    UiaProvider(_In_ HWND hwnd)
+    : refCount(0)
+    , controlHWnd(hwnd)
+    {}
 
   ULONG STDMETHODCALLTYPE AddRef() { return InterlockedIncrement(&refCount); }
 
@@ -135,7 +138,11 @@ bool Announcer::initializeUia() {
   return true;
 }
 
-Announcer::Announcer(QWidget *parent) : QWidget{parent} { initializeUia(); }
+Announcer::Announcer(QWidget *parent)
+: QWidget{parent}
+{
+    initializeUia();
+}
 
 BSTR bStrFromQString(const QString &value) {
   return SysAllocString(reinterpret_cast<const wchar_t *>(value.utf16()));
