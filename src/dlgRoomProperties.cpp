@@ -133,7 +133,7 @@ void dlgRoomProperties::initWeightInstructionLabel()
     QString instructions;
     if (mpWeights.size() == 1) {
         instructions = tr("Enter a new room weight to use as the travel time for all of the %n selected room(s). "
-                          "This will be used for calculating the best path. The minimum and default is 1."
+                          "This will be used for calculating the best path. The minimum and default is 1.",
                           // Intentional comment to separate arguments!
                           "%n is the total number of rooms involved.",
                           mpRooms.size());
@@ -160,7 +160,7 @@ void dlgRoomProperties::initSymbolInstructionLabel()
     QString instructions;
     if (mpSymbols.size() == 1) {
         instructions = tr("Type one or more graphemes (\"visible characters\") to use as a symbol "
-                          "for all of the %n selected room(s), or enter a space to clear the symbol:"
+                          "for all of the %n selected room(s), or enter a space to clear the symbol:",
                           // Intentional comment to separate arguments!
                           "%n is the total number of rooms involved.",
                           mpRooms.size());
