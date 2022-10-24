@@ -145,19 +145,12 @@ void dlgRoomProperties::initSymbolInstructionLabel()
     QString instructions;
     if (mpSymbols.size() == 1) {
         if (mpRooms.size() > 1) {
-            instructions = tr("The only used symbol is \"%1\" in one or "
-                              "more of the selected %n room(s), delete this to "
-                              "clear it from all selected rooms or replace "
-                              "with a new symbol to use for all the rooms:",
+            instructions = tr("Type a symbol to use for all %n selected rooms, or none to delete it:"
                               // Intentional comment to separate arguments!
-                              "This is for when applying a new room symbol to one or more rooms "
-                              "and some have the SAME symbol (others may have none) at present, "
-                              "%n is the total number of rooms involved and is at least two. ",
+                              "%n is the total number of rooms involved and is at least two (2). ",
                               mpRooms.size()).arg(mpSymbols.keys().first());
         } else {
-            instructions = tr("The symbol is \"%1\" in the selected room, "
-                              "delete this to clear the symbol or replace "
-                              "it with a new symbol for this room:",
+            instructions = tr("Type a symbol to use for the selected room, or none to delete it:"
                               // Intentional comment to separate arguments!
                               "This is for when applying a new room symbol to one room. ")
                                    .arg(mpSymbols.keys().first());
@@ -201,13 +194,10 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
                 displayStrings.append(tr("%1 (count:%2)",
                     // Intentional comment to separate arguments
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Update comment for translators
-                    "Everything after the first parameter (the '%1') will be removed by processing "
-                    "it as a QRegularExpression programmatically, ensure the translated text has "
-                    "` {` immediately after the '%1', and '}' as the very last character, so that the "
-                    "right portion can be extracted if the user clicks on this item when it is shown "
-                    "in the QComboBox it is put in.")
+                        "This text will be part of a list of room values shown, where %1 will be "
+                        "the value itself, and %2 counts the number of rooms with this very value. "
+                        "When translating, ensure the %1 value comes first, as everything after it "
+                        "will be ignored going forward.")
                         .arg(itSymbolUsed.key())
                         .arg(QString::number(itSymbolUsed.value())));
             }
