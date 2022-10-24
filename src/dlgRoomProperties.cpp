@@ -144,19 +144,20 @@ void dlgRoomProperties::initSymbolInstructionLabel()
 
     QString instructions;
     if (mpSymbols.size() == 1) {
-        instructions = tr("Type a symbol to use for all of the %n selected room(s), or none to delete it:"
+        instructions = tr("Type one or more graphemes (\"visible characters\") to use as a symbol "
+                          "for all of the %n selected room(s), or enter a space to clear the symbol:"
                           // Intentional comment to separate arguments!
-                          "%n is the total number of rooms involved. ",
+                          "%n is the total number of rooms involved.",
                           mpRooms.size()).arg(mpSymbols.keys().first());
     } else {
         instructions = tr("To change the symbol for all of the %n selected room(s), please choose:\n"
-                          " • an existing symbol from the list below (sorted by most commonly used first)\n"
+                          " • an existing symbol from the list below\n"
                           " • enter one or more graphemes (\"visible characters\") as a new symbol\n"
                           " • enter a space to clear any existing symbols",
                           // Intentional comment to separate arguments!
                           "This is for when applying a new room symbol to one or more rooms "
-                          "and some have different symbols (others may have none) at present, "
-                          "%n is the number of rooms involved.", mpRooms.size());
+                          "and some have different symbols or no symbol at present. "
+                          "%n is the total number of rooms involved.", mpRooms.size());
     }
     label_symbolInstructions->setText(instructions);
     label_symbolInstructions->setWordWrap(true);
