@@ -139,7 +139,7 @@ void dlgRoomProperties::initWeightInstructionLabel()
                           mpRooms.size());
     } else {
         instructions = tr("To change the room weight for all of the %n selected room(s), please choose:\n"
-                          " • an existing room weight from the list below\n"
+                          " • an existing room weight from the list below (sorted by most commonly used first)\n"
                           " • enter a new positive integer value to use as a new weight",
                           // Intentional comment to separate arguments!
                           "This is for when applying a new room weight to one or more rooms "
@@ -164,7 +164,7 @@ void dlgRoomProperties::initSymbolInstructionLabel()
                           mpRooms.size());
     } else {
         instructions = tr("To change the symbol for all of the %n selected room(s), please choose:\n"
-                          " • an existing symbol from the list below\n"
+                          " • an existing symbol from the list below (sorted by most commonly used first)\n"
                           " • enter one or more graphemes (\"visible characters\") as a new symbol\n"
                           " • enter a space to clear any existing symbols",
                           // Intentional comment to separate arguments!
