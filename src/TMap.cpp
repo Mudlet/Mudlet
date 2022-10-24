@@ -3467,7 +3467,7 @@ void TMap::restore16ColorSet()
 
 void TMap::setUnsaved(const char* fromWhere)
 {
-#if defined(DEBUG_MAPAUTOSAVE)
+#if !defined(DEBUG_MAPAUTOSAVE)
     Q_UNUSED(fromWhere);
 #else
     QString nowString = QDateTime::currentDateTimeUtc().toString("HH:mm:ss.zzz");
