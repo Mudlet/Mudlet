@@ -1525,7 +1525,7 @@ int TConsole::select(const QString& text, int numOfMatch)
     int begin = -1;
     for (int i = 0; i < numOfMatch; i++) {
         QString li = buffer.line(mUserCursor.y());
-        if (li.size() < 1) {
+        if (li.isEmpty()) {
             continue;
         }
         begin = li.indexOf(text, begin + 1);
@@ -1640,6 +1640,26 @@ void TConsole::setFgColor(const QColor& newColor)
     buffer.applyFgColor(P_begin, P_end, newColor);
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
+}
+
+void TConsole::setCommandBgColor(int r, int g, int b, int a)
+{
+    setCommandBgColor(QColor(r, g, b, a));
+}
+
+void TConsole::setCommandBgColor(const QColor& newColor)
+{
+    mCommandBgColor = newColor;
+}
+
+void TConsole::setCommandFgColor(int r, int g, int b, int a)
+{
+    setCommandFgColor(QColor(r, g, b, a));
+}
+
+void TConsole::setCommandFgColor(const QColor& newColor)
+{
+    mCommandFgColor = newColor;
 }
 
 void TConsole::setScrollBarVisible(bool isVisible)

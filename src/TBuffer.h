@@ -153,6 +153,7 @@ public:
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0,  int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
+    bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int n);
     int find(int line, const QString& what, int pos);
     int wrap(int);

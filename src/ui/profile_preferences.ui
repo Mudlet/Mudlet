@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>777</width>
-    <height>761</height>
+    <height>666</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -707,7 +707,7 @@
        <item>
         <widget class="QGroupBox" name="groupBox_font">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -790,7 +790,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <widget class="QGroupBox" name="groupBox_borders">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -981,7 +981,7 @@ you can use it but there could be issues with aligning columns of text</string>
        <item>
         <widget class="QGroupBox" name="groupBox_wrapping">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>

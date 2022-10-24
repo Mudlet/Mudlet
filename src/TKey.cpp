@@ -181,7 +181,7 @@ bool TKey::compileScript()
 
 void TKey::execute()
 {
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {

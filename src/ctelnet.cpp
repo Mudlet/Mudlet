@@ -563,18 +563,18 @@ void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 {
 #if !defined(QT_NO_SSL)
     if (mpHost->mSslTsl) {
-        postMessage(tr("[ INFO ]  - Trying secure connection to %1: %2 ...\n").arg(hostInfo.hostName(), QString::number(hostPort)));
+        postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying secure connection to %1: %2 ...").arg(hostInfo.hostName(), QString::number(hostPort))));
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
     } else {
 #endif
         if (!hostInfo.addresses().isEmpty()) {
             mHostAddress = hostInfo.addresses().constFirst();
-            postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
+            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(hostName, mHostAddress.toString())));
             if (!mConnectViaProxy) {
-                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 ...").arg(mHostAddress.toString(), QString::number(hostPort))));
             } else {
-                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...").arg(mHostAddress.toString(), QString::number(hostPort))));
             }
             socket.connectToHost(mHostAddress, hostPort);
         } else {

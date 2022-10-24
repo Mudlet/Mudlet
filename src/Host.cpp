@@ -3768,6 +3768,34 @@ bool Host::resetBackgroundImage(const QString &name)
     return false;
 }
 
+bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setCommandBgColor(r, g, b, alpha);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setCommandFgColor(r, g, b, alpha);
+        return true;
+    }
+    return false;
+}
+
 // Needed to extract into a separate method from mudlet::slot_mapper() so that
 // we can use it WITHOUT loading a file - at least for the
 // TConsole::importMap(...) case that may need to create a map widget before it
