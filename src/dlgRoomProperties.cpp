@@ -182,6 +182,8 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
 {
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   Refactor getComboBoxSymbolItems and getComboBoxWeightItems into one maybe?
+
+    // Obtain a set of "used" values
     QHashIterator<QString, int> itSymbolUsed(mpSymbols);
     QSet<int> symbolCountsSet;
     while (itSymbolUsed.hasNext()) {
@@ -189,11 +191,13 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
         symbolCountsSet.insert(itSymbolUsed.value());
     }
 
+    // Obtains a list of those values sorted in ascending count of use
     QList<int> symbolCountsList{symbolCountsSet.begin(), symbolCountsSet.end()};
     if (symbolCountsList.size() > 1) {
         std::sort(symbolCountsList.begin(), symbolCountsList.end());
     }
 
+    // Build a list of strings for display in descending count of use
     QStringList displayStrings;
     displayStrings.append(multipleValuesPlaceholder);
     for (int i = symbolCountsList.size() - 1; i >= 0; --i) {
@@ -217,6 +221,7 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
 
 QStringList dlgRoomProperties::getComboBoxWeightItems()
 {
+    // Obtain a set of "used" values
     QHashIterator<int, int> itWeightUsed(mpWeights);
     QSet<int> weightCountsSet;
     while (itWeightUsed.hasNext()) {
@@ -224,11 +229,13 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
         weightCountsSet.insert(itWeightUsed.value());
     }
 
+    // Obtains a list of those values sorted in ascending count of use
     QList<int> weightCountsList{weightCountsSet.begin(), weightCountsSet.end()};
     if (weightCountsList.size() > 1) {
         std::sort(weightCountsList.begin(), weightCountsList.end());
     }
 
+    // Build a list of strings for display in descending count of use
     QStringList displayStrings;
     displayStrings.append(multipleValuesPlaceholder);
     for (int i = weightCountsList.size() - 1; i >= 0; --i) {
