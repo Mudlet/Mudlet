@@ -2947,9 +2947,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize > 0) {
-                    // TODO: https://github.com/Mudlet/Mudlet/issues/6116
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/6385
                     //   Do not show both action simultaneously, if all selected rooms have same status.
-
                     auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
                     lockRoom->setToolTip(utils::richText(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip")));
                     connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
