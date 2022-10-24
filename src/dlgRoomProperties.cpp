@@ -339,9 +339,6 @@ int dlgRoomProperties::getNewWeight()
         return spinBox_weight->value();
     }
     // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   find weight (if any) to return back
-    //   make sure to prevent this from changing rooms if no change was done here
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
     //   Add knowledge from https://github.com/Mudlet/Mudlet/pull/6359 to here as well
     //   Maybe refactor both sections to use same regex logic to prevent this situation?
     QString newWeightText = comboBox_weight->currentText();
