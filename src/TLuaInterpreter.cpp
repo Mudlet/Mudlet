@@ -15942,7 +15942,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
     pT->setIsFolder((timeout == 0 && function.isEmpty()));
     pT->setTemporary(false);
     // The name should be set after isTempTimer, as that is faster.
-    // Also for perminent timers it is easier to debug if it is set before
+    // Also for permanent timers it is easier to debug if it is set before
     // registration:
     pT->setName(name);
     // This will lead to the generation of the id number:

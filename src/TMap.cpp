@@ -1194,7 +1194,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
             // Also we now have temporary labels, so we need to count the
-            // perminent ones first to use as the count for ones to store:
+            // permanent ones first to use as the count for ones to store:
             const auto permanentLabelsList{pA->getPermanentLabelIds()};
             ofs << permanentLabelsList.size();
             QListIterator<int> itMapLabelId(permanentLabelsList);
