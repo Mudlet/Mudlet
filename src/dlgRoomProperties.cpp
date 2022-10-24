@@ -223,13 +223,10 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
             if (itWeightUsed.value() == weightCountsList.at(i)) {
                 displayStrings.append(tr("%1 (count:%2)",
                     // Intentional comment to separate arguments
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Update comment for translators
-                    "Everything after the first parameter (the '%1') will be removed by processing "
-                    "it as a QRegularExpression programmatically, ensure the translated text has "
-                    "` {` immediately after the '%1', and '}' as the very last character, so that the "
-                    "right portion can be extracted if the user clicks on this item when it is shown "
-                    "in the QComboBox it is put in.")
+                        "This text will be part of a list of room values shown, where %1 will be "
+                        "the value itself, and %2 counts the number of rooms with this very value. "
+                        "When translating, ensure the %1 value comes first, as everything after it "
+                        "will be ignored going forward.")
                         .arg(QString::number(itWeightUsed.key()))
                         .arg(QString::number(itWeightUsed.value())));
             }
