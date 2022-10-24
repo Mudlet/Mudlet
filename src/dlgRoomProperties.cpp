@@ -144,17 +144,10 @@ void dlgRoomProperties::initSymbolInstructionLabel()
 
     QString instructions;
     if (mpSymbols.size() == 1) {
-        if (mpRooms.size() > 1) {
-            instructions = tr("Type a symbol to use for all %n selected rooms, or none to delete it:"
-                              // Intentional comment to separate arguments!
-                              "%n is the total number of rooms involved and is at least two (2). ",
-                              mpRooms.size()).arg(mpSymbols.keys().first());
-        } else {
-            instructions = tr("Type a symbol to use for the selected room, or none to delete it:"
-                              // Intentional comment to separate arguments!
-                              "This is for when applying a new room symbol to one room. ")
-                                   .arg(mpSymbols.keys().first());
-        }
+        instructions = tr("Type a symbol to use for all of the %n selected room(s), or none to delete it:"
+                          // Intentional comment to separate arguments!
+                          "%n is the total number of rooms involved. ",
+                          mpRooms.size()).arg(mpSymbols.keys().first());
     } else {
         instructions = tr("To change the symbol for all of the %n selected room(s), please choose:\n"
                           " • an existing symbol from the list below (sorted by most commonly used first)\n"
