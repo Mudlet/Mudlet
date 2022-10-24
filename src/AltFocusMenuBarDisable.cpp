@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,7 +25,9 @@ AltFocusMenuBarDisable::AltFocusMenuBarDisable()
     setObjectName(baseStyle()->objectName());
 }
 
-AltFocusMenuBarDisable::AltFocusMenuBarDisable(const QString &style) : QProxyStyle(QStyleFactory::create(style)) {}
+AltFocusMenuBarDisable::AltFocusMenuBarDisable(const QString &style)
+: QProxyStyle(QStyleFactory::create(style))
+{}
 
 int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption *opt, const QWidget *widget, QStyleHintReturn *returnData) const
 {

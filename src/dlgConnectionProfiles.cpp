@@ -130,12 +130,12 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     copy_profile_toolbutton->addAction(copyProfileSettings);
     copy_profile_toolbutton->setDefaultAction(mpCopyProfile);
     auto widgetList = mpCopyProfile->associatedWidgets();
-    Q_ASSERT_X(widgetList.count(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfile QAction not found.");
+    Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfile QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile"));
     widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
 
     widgetList = copyProfileSettings->associatedWidgets();
-    Q_ASSERT_X(widgetList.count(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfileSettings QAction not found.");
+    Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfileSettings QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile settings"));
     widgetList.first()->setAccessibleDescription(tr("copy the settings and some other parts of the profile to a new one that will require a different new name."));
 
@@ -1822,13 +1822,13 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     if (pHost) {
         pHost->setName(profile_name);
 
-        if (host_name_entry->text().trimmed().size() > 0) {
+        if (!host_name_entry->text().trimmed().isEmpty()) {
             pHost->setUrl(host_name_entry->text().trimmed());
         } else {
             slot_updateUrl(pHost->getUrl());
         }
 
-        if (port_entry->text().trimmed().size() > 0) {
+        if (!port_entry->text().trimmed().isEmpty()) {
             pHost->setPort(port_entry->text().trimmed().toInt());
         } else {
             slot_updatePort(QString::number(pHost->getPort()));
@@ -1836,13 +1836,13 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         pHost->mSslTsl = port_ssl_tsl->isChecked();
 
-        if (character_password_entry->text().trimmed().size() > 0) {
+        if (!character_password_entry->text().trimmed().isEmpty()) {
             pHost->setPass(character_password_entry->text().trimmed());
         } else {
             slot_updatePassword(pHost->getPass());
         }
 
-        if (login_entry->text().trimmed().size() > 0) {
+        if (!login_entry->text().trimmed().isEmpty()) {
             pHost->setLogin(login_entry->text().trimmed());
         } else {
             slot_updateLogin(pHost->getLogin());
