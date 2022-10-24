@@ -140,7 +140,7 @@ void dlgRoomProperties::initWeightInstructionLabel()
     } else {
         instructions = tr("To change the room weight for all of the %n selected room(s), please choose:\n"
                           " • an existing room weight from the list below (sorted by most commonly used first)\n"
-                          " • enter a new positive integer value to use as a new weight",
+                          " • enter a new positive integer value to use as a new weight. The default is 1.",
                           // Intentional comment to separate arguments!
                           "This is for when applying a new room weight to one or more rooms "
                           "and some have different weights at present. "
