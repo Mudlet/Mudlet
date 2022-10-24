@@ -1232,7 +1232,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
         while (itArea.hasNext()){
             // Now we have temporary labels we need to identify areas with
-            // perminent ones:
+            // permanent ones:
             itArea.next();
             auto pArea = itArea.value();
             if (pArea && !pArea->mMapLabels.isEmpty() && pArea->hasPermanentLabels()) {
