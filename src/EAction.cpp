@@ -25,7 +25,9 @@
 #include "mudlet.h"
 
 
-EAction::EAction(QIcon& icon, QString& name) : QAction(icon, name, mudlet::self()), mID()
+EAction::EAction(QIcon& icon, QString& name)
+: QAction(icon, name, mudlet::self())
+, mID()
 {
     setText(name);
     setObjectName(name);
