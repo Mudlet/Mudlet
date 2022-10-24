@@ -22,7 +22,9 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 
-MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH) : QObject(parent), mpHost(pH)
+MapInfoContributorManager::MapInfoContributorManager(QObject* parent, Host* pH)
+: QObject(parent)
+, mpHost(pH)
 {
     registerContributor(qsl("Short"), [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
         return shortInfo(roomID, selectionSize, areaId, displayAreaId, infoColor);
