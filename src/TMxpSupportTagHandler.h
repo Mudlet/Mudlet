@@ -29,7 +29,9 @@ class TMxpSupportTagHandler : public TMxpSingleTagHandler
 public:
     QString processSupportsRequest(TMxpContext& ctx, MxpStartTag* tag);
 
-    TMxpSupportTagHandler() : TMxpSingleTagHandler("SUPPORT") {}
+    TMxpSupportTagHandler()
+    : TMxpSingleTagHandler("SUPPORT")
+    {}
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
 };
