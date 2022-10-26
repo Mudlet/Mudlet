@@ -34,7 +34,8 @@
 #include <QDebug>
 #include "post_guard.h"
 
-dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
+dlgAboutDialog::dlgAboutDialog(QWidget* parent)
+: QDialog(parent)
 {
     setupUi(this);
 
