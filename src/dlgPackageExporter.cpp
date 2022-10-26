@@ -93,14 +93,14 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mPackagePathFileName.clear();
     mXmlPathFileName.clear();
     connect(ui->addFiles, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_addFiles);
-    connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_export_package);
+    connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_exportPackage);
     connect(ui->pushButton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
     connect(ui->addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
-    connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_import_icon);
+    connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_importIcon);
     connect(mCancelButton, &QPushButton::clicked, this, &dlgPackageExporter::slot_cancelExport);
 
     ui->listWidget_addedFiles->installEventFilter(this);
@@ -340,7 +340,7 @@ void dlgPackageExporter::checkToEnableExportButton()
     }
 }
 
-void dlgPackageExporter::slot_import_icon()
+void dlgPackageExporter::slot_importIcon()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), QDir::currentPath(), tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
     if (fileName.isEmpty()) {
@@ -455,7 +455,7 @@ void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& t
     }
 }
 
-void dlgPackageExporter::slot_export_package()
+void dlgPackageExporter::slot_exportPackage()
 {
     // The native windows dialog does not support displaying files - and as this
     // code will clobber/overwrite an existing package with the same
@@ -916,12 +916,12 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
         QFileInfo stagingFileInfo(stagingFile.fileInfo());
         if (!stagingFileInfo.isReadable()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << stagingFile.fileName() << "it is NOT readable!";
+            qWarning() << "dlgPackageExporter::slot_exportPackage() skipping file: " << stagingFile.fileName() << "it is NOT readable!";
             continue;
         }
 
         if (stagingFileInfo.isSymLink()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << stagingFile.fileName() << "it is a Symlink - avoided to prevent file-system loops!";
+            qWarning() << "dlgPackageExporter::slot_exportPackage() skipping file: " << stagingFile.fileName() << "it is a Symlink - avoided to prevent file-system loops!";
             continue;
         }
 

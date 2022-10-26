@@ -494,7 +494,7 @@ public:
                                  "<a href='http://www.wotmod.org/'>Forums</a>", ":/icons/wotmudicon.png"}},
         {"Midnight Sun 2", {"midnightsun2.org", 3000, false, "<a href='http://midnightsun2.org/'>http://midnightsun2.org/</a>", ":/icons/midnightsun2.png"}},
         {"Luminari", {"luminarimud.com", 4100, false, "<a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a>", ":/icons/luminari_icon.png"}},
-        {"StickMUD", {"stickmud.com", 7680, false, "<a href='http://www.stickmud.com/'>stickmud.com</a>", ":/icons/stickmud_icon.jpg"}},
+        {"StickMUD", {"stickmud.com", 7670, true, "<a href='http://www.stickmud.com/'>stickmud.com</a>", ":/icons/stickmud_icon.jpg"}},
         {"Clessidra", {"mud.clessidra.it", 4000, false, "<a href='http://www.clessidra.it/'>http://www.clessidra.it</a>", ":/icons/clessidra.jpg"}},
         {"Reinos de Leyenda", {"reinosdeleyenda.es", 23, false, "<a href='https://www.reinosdeleyenda.es/'>Sitio web principal</a><br>"
                                  "<a href='https://www.reinosdeleyenda.es/foro/'>Foros</a><br>"
@@ -510,35 +510,35 @@ public:
     // clang-format on
 
 public slots:
-    void processEventLoopHack_timerRun();
+    void slot_processEventLoopHackTimerRun();
     void slot_mapper();
     void slot_replayTimeChanged();
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
-    void toggleFullScreenView();
-    void slot_show_about_dialog();
-    void slot_show_help_dialog_video();
-    void slot_show_help_dialog_forum();
-    void slot_show_help_dialog_irc();
-    void slot_open_mappingscripts_page();
-    void slot_multi_view(const bool);
-    void slot_toggle_multi_view();
-    void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
-    void slot_timer_fires();
+    void slot_toggleFullScreenView();
+    void slot_showAboutDialog();
+    void slot_showHelpDialogVideo();
+    void slot_showHelpDialogForum();
+// Not used:    void slot_showHelpDialogIrc();
+    void slot_openMappingScriptsPage();
+    void slot_multiView(const bool);
+    void slot_toggleMultiView();
+    void slot_connectionDialogueFinished(const QString& profile, bool connectOnLoad);
+    void slot_timerFires();
     void slot_replay();
     void slot_disconnect();
     void slot_notes();
     void slot_reconnect();
-    void slot_close_current_profile();
-    void slot_close_profile_requested(int);
+    void slot_closeCurrentProfile();
+    void slot_closeProfileRequested(int);
     void slot_irc();
-    void slot_discord();
-    void slot_mudlet_discord();
-    void slot_package_manager();
-    void slot_package_exporter();
-    void slot_module_manager();
+    void slot_profileDiscord();
+    void slot_mudletDiscord();
+    void slot_packageManager();
+    void slot_packageExporter();
+    void slot_moduleManager();
 #if defined(INCLUDE_UPDATER)
-    void slot_check_manual_update();
+    void slot_manualUpdateCheck();
 #endif
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
@@ -572,20 +572,20 @@ signals:
 
 
 private slots:
-    void slot_tab_changed(int);
-    void show_help_dialog();
-    void slot_show_connection_dialog();
-    void show_editor_dialog();
-    void show_trigger_dialog();
-    void show_alias_dialog();
-    void show_script_dialog();
-    void show_timer_dialog();
-    void show_action_dialog();
-    void show_key_dialog();
-    void show_variable_dialog();
-    void slot_update_shortcuts();
-    void slot_show_options_dialog();
-    void slot_assign_shortcuts_from_profile(Host* pHost = nullptr);
+    void slot_tabChanged(int);
+    void slot_showHelpDialog();
+    void slot_showConnectionDialog();
+    void slot_showEditorDialog();
+    void slot_showTriggerDialog();
+    void slot_showAliasDialog();
+    void slot_showScriptDialog();
+    void slot_showTimerDialog();
+    void slot_showActionDialog();
+    void slot_showKeyDialog();
+    void slot_showVariableDialog();
+    void slot_updateShortcuts();
+    void slot_showPreferencesDialog();
+    void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
@@ -594,14 +594,14 @@ private slots:
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
 #if defined(INCLUDE_UPDATER)
-    void slot_update_installed();
+    void slot_updateInstalled();
     void slot_updateAvailable(const int);
-    void slot_report_issue();
+    void slot_reportIssue();
 #endif
-    void slot_toggle_compact_input_line();
-    void slot_compact_input_line(const bool);
-    void slot_password_migrated_to_secure(QKeychain::Job *job);
-    void slot_password_migrated_to_profile(QKeychain::Job *job);
+    void slot_toggleCompactInputLine();
+    void slot_compactInputLine(const bool);
+    void slot_passwordMigratedToSecureStorage(QKeychain::Job *job);
+    void slot_passwordMigratedToPortableStorage(QKeychain::Job *job);
     void slot_tabMoved(const int oldPos, const int newPos);
 
 
@@ -751,7 +751,7 @@ private:
     // use setAppearance instead
     bool mDarkMode = false;
 
-    // Used to ensure that mudlet::slot_update_shortcuts() only runs once each
+    // Used to ensure that mudlet::slot_updateShortcuts() only runs once each
     // time the main if () logic changes state - will be true if the menu is
     // supposed to be visible, false if not and not have a value initially:
     std::optional<bool> mMenuVisibleState;

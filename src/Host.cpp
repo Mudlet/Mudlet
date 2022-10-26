@@ -369,6 +369,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // confuse it with the "autologin" item, which controls whether the profile
     // is automatically started when the Mudlet application is run!
     mLogStatus = QFile::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("autolog")));
+    // "autotimestamp" determines if profile loads with timestamps enabled
+    mTimeStampStatus = QFile::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
@@ -1032,7 +1034,7 @@ void Host::check_for_mappingscript()
             return;
         }
 
-        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_open_mappingscripts_page);
+        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_openMappingScriptsPage);
 
         dialog->show();
         dialog->raise();
@@ -1626,11 +1628,6 @@ void Host::disableTrigger(const QString& name)
 bool Host::killTrigger(const QString& name)
 {
     return mTriggerUnit.killTrigger(name);
-}
-
-void Host::connectToServer()
-{
-    mTelnet.connectIt(mUrl, mPort);
 }
 
 void Host::closingDown()
@@ -3760,6 +3757,34 @@ bool Host::resetBackgroundImage(const QString &name)
     return false;
 }
 
+bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setCommandBgColor(r, g, b, alpha);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setCommandFgColor(r, g, b, alpha);
+        return true;
+    }
+    return false;
+}
+
 // Needed to extract into a separate method from mudlet::slot_mapper() so that
 // we can use it WITHOUT loading a file - at least for the
 // TConsole::importMap(...) case that may need to create a map widget before it
@@ -3990,4 +4015,13 @@ bool Host::caretEnabled() const {
 void Host::setCaretEnabled(bool enabled) {
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
+}
+
+bool Host::autoWrap() const {
+    return mAutoWrap;
+}
+
+void Host::setAutoWrap(bool enabled) {
+    mAutoWrap = enabled;
+    mpConsole->setAutoWrap(enabled);
 }

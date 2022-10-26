@@ -219,7 +219,6 @@ public:
     KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
     ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
 
-    void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
     int getHostID()
@@ -380,6 +379,8 @@ public:
     bool setLabelOnLeave(const QString&, const int);
     std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
@@ -397,6 +398,8 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
+    bool autoWrap() const;
+    void setAutoWrap(bool enabled);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -516,7 +519,9 @@ public:
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
+    // wrap at a specific amount of characters if not autowrapping:
     int mWrapAt;
+    // after wrapping a line, intent it by how many spaces:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
@@ -585,6 +590,7 @@ public:
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;
+    bool mTimeStampStatus = false;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
@@ -714,6 +720,9 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
+
+    // automatically calculate wrapping?
+    bool mAutoWrap = true;
 
     QFile mErrorLogFile;
 

@@ -391,6 +391,8 @@ public:
     static int setBackgroundImage(lua_State*);
     static int resetBackgroundImage(lua_State*);
     static int setBackgroundColor(lua_State*);
+    static int setCommandBackgroundColor(lua_State*);
+    static int setCommandForegroundColor(lua_State*);
     static int setLabelClickCallback(lua_State*);
     static int setMovie(lua_State*);
     static int startMovie(lua_State*);
@@ -641,6 +643,7 @@ public:
     static int getLabelSizeHint(lua_State*);
     static int announce(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
+    // check new functions against https://www.linguistic-antipatterns.com when creating them
 
     void freeLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
@@ -678,8 +681,8 @@ public:
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
     void slot_pathChanged(const QString& path);
-    void slotPurge();
-    void slotDeleteSender(int, QProcess::ExitStatus);
+    void slot_purge();
+    void slot_deleteSender(int, QProcess::ExitStatus);
 
 private:
     bool callReference(lua_State*, QString name, int parameters);

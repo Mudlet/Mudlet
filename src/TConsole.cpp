@@ -55,6 +55,8 @@
 
 const QString TConsole::cmLuaLineVariable("line");
 
+// A high-performance text widget with split screen ability for scrolling back
+// Contains two TTextEdits, each backed by a TBuffer
 TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
@@ -339,7 +341,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutButtonMainLayer->addWidget(buttonLayerSpacer);
     layoutButtonMainLayer->addWidget(buttonLayer);
 
-    auto timeStampButton = new QToolButton;
+    timeStampButton = new QToolButton;
     timeStampButton->setCheckable(true);
     timeStampButton->setMinimumSize(QSize(30, 30));
     timeStampButton->setMaximumSize(QSize(30, 30));
@@ -409,7 +411,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     emergencyStop->setFocusPolicy(Qt::NoFocus);
     emergencyStop->setCheckable(true);
     emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers.")));
-    connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stop_all_triggers);
+    connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
 
     mpBufferSearchBox->setMinimumSize(QSize(100, 30));
     mpBufferSearchBox->setMaximumSize(QSize(150, 30));
@@ -1170,7 +1172,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             buffer.applyLink(P, P2, func, hint, luaReference);
             if (text.indexOf("\n") != -1) {
                 int y_tmp = mUserCursor.y();
-                int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(mUserCursor.y(), mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
                 int y_neu = y_tmp + down;
                 int x_adjust = text.lastIndexOf("\n");
@@ -1207,7 +1209,7 @@ void TConsole::insertText(const QString& text, QPoint P)
             buffer.insertInLine(mUserCursor, text, mFormatCurrent);
             int y_tmp = mUserCursor.y();
             if (text.indexOf(QChar::LineFeed) != -1) {
-                int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(y_tmp, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
             } else {
                 mUpperPane->needUpdate(y_tmp, y_tmp + 1);
@@ -1382,7 +1384,7 @@ void TConsole::luaWrapLine(int line)
         return;
     }
     TChar ch(mpHost);
-    buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
+    buffer.wrapLine(line, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mIndentCount, ch);
 }
 
 bool TConsole::setFontSize(int size)
@@ -1521,7 +1523,7 @@ int TConsole::select(const QString& text, int numOfMatch)
     int begin = -1;
     for (int i = 0; i < numOfMatch; i++) {
         QString li = buffer.line(mUserCursor.y());
-        if (li.size() < 1) {
+        if (li.isEmpty()) {
             continue;
         }
         begin = li.indexOf(text, begin + 1);
@@ -1638,6 +1640,26 @@ void TConsole::setFgColor(const QColor& newColor)
     mLowerPane->forceUpdate();
 }
 
+void TConsole::setCommandBgColor(int r, int g, int b, int a)
+{
+    setCommandBgColor(QColor(r, g, b, a));
+}
+
+void TConsole::setCommandBgColor(const QColor& newColor)
+{
+    mCommandBgColor = newColor;
+}
+
+void TConsole::setCommandFgColor(int r, int g, int b, int a)
+{
+    setCommandFgColor(QColor(r, g, b, a));
+}
+
+void TConsole::setCommandFgColor(const QColor& newColor)
+{
+    mCommandFgColor = newColor;
+}
+
 void TConsole::setScrollBarVisible(bool isVisible)
 {
     if (mpScrollBar) {
@@ -1675,7 +1697,7 @@ void TConsole::printCommand(QString& msg)
                 QPoint P(promptEnd, lineBeforeNewContent);
                 TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
-                int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(lineBeforeNewContent, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
 
                 mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
@@ -1789,7 +1811,7 @@ void TConsole::appendBuffer(const TBuffer& bufferSlice)
     mLowerPane->showNewLines();
 }
 
-void TConsole::slot_stop_all_triggers(bool b)
+void TConsole::slot_stopAllItems(bool b)
 {
     if (b) {
         mpHost->stopAllTriggers();
@@ -2126,8 +2148,8 @@ void TConsole::setCaretMode(bool enabled)
         mUpperPane->initializeCaret();
         mUpperPane->setFocusPolicy(Qt::StrongFocus);
         mUpperPane->setFocusProxy(nullptr);
-#if defined(Q_OS_WIN32)
-        // windows doesn't move keyboard focus to the main window without this
+#if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
+        // windows & linux don't move keyboard focus to the main window without this
         mUpperPane->setFocus(Qt::MouseFocusReason);
         mUpperPane->grabKeyboard();
 
@@ -2137,7 +2159,7 @@ void TConsole::setCaretMode(bool enabled)
 
     } else {
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
-#if defined(Q_OS_WIN32)
+#if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
         // NVDA breaks focus reset, so do it on a timer
         QTimer::singleShot(0, this, [this] () {
             mUpperPane->releaseKeyboard();
@@ -2155,4 +2177,17 @@ void TConsole::setCaretMode(bool enabled)
     }
 
     mUpperPane->setFocus();
+}
+
+bool TConsole::autoWrap() const {
+    return mAutoWrap;
+}
+
+void TConsole::setAutoWrap(bool enabled) {
+    mAutoWrap = enabled;
+
+    if (enabled) {
+        mUpperPane->updateWrap();
+        mLowerPane->updateWrap();
+    }
 }

@@ -145,6 +145,10 @@ public:
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
+    void setCommandBgColor(const QColor&);
+    void setCommandBgColor(int, int, int, int);
+    void setCommandFgColor(const QColor&);
+    void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
     void setCmdVisible(bool);
@@ -173,6 +177,8 @@ public:
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
     QColor getConsoleBgColor() const { return mBgColor; }
+    bool autoWrap() const;
+    void setAutoWrap(bool enabled);
 
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
@@ -271,6 +277,7 @@ public:
     TSplitter* splitter = nullptr;
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
+    QToolButton* timeStampButton = nullptr;
     bool mUserAgreedToCloseConsole = false;
     QLineEdit* mpBufferSearchBox = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
@@ -289,7 +296,7 @@ public slots:
     void slot_searchBufferUp();
     void slot_searchBufferDown();
     void slot_toggleReplayRecording();
-    void slot_stop_all_triggers(bool);
+    void slot_stopAllItems(bool);
     void slot_toggleLogging();
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
 
@@ -306,6 +313,7 @@ private:
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
+    bool mAutoWrap = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
