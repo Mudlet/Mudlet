@@ -3721,21 +3721,20 @@ void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoo
 
 void T2DMap::setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
     QSetIterator<TRoom*> itRoomPtr(rooms);
+    TRoom* room;
     if (newSymbol.isEmpty()) {
-        while (itRoomPtr.hasNext()) {
-            itRoomPtr.next()->mSymbol = QString();
-        }
+        newSymbol = QString();
     } else {
         // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
         // handle/use/allow - by normalising the symbol we can ensure that
         // all the entered ones are decomposed and recomposed in a
         // "standard" way and will have the same sequence of codepoints:
         newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
-        while (itRoomPtr.hasNext()) {
-            auto room = itRoomPtr.next();
-            room->mSymbol = newSymbol;
-            room->mSymbolColor = symbolColor;
-        }
+    }
+    while (itRoomPtr.hasNext()) {
+        room = itRoomPtr.next();
+        room->mSymbol = newSymbol;
+        room->mSymbolColor = symbolColor;
     }
 }
 
