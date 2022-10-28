@@ -433,28 +433,25 @@ void dlgRoomProperties::slot_selectRoomColor(QListWidgetItem* pI)
 void dlgRoomProperties::slot_defineNewColor()
 {
     auto color = QColorDialog::getColor(mpHost->mRed, this);
-    TMap* pMap = mpHost->mpMap;
     if (color.isValid()) {
-        auto environmentId = pMap->mCustomEnvColors.size() + 257 + 16;
-        if (pMap->mCustomEnvColors.contains(environmentId)) {
+        auto environmentId = mpHost->mpMap->mCustomEnvColors.size() + 257 + 16;
+        if (mpHost->mpMap->mCustomEnvColors.contains(environmentId)) {
             // find a new environment ID to use, starting with the latest
             // 'safe' number so the new environment is last in the dialog
             do {
                 environmentId++;
-            } while (pMap->mCustomEnvColors.contains(environmentId));
+            } while (mpHost->mpMap->mCustomEnvColors.contains(environmentId));
         }
 
-        pMap->mCustomEnvColors[environmentId] = color;
+        mpHost->mpMap->mCustomEnvColors[environmentId] = color;
         slot_openRoomColorSelector();
     }
     repaint();
-    pMap->mUnsavedMap = true;
+    mpHost->mpMap->mUnsavedMap = true;
 }
 
 void dlgRoomProperties::slot_openRoomColorSelector()
 {
-    TMap* pMap = mpHost->mpMap;
-
     auto dialog = new QDialog(this);
     auto vboxLayout = new QVBoxLayout;
     dialog->setLayout(vboxLayout);
@@ -473,9 +470,9 @@ void dlgRoomProperties::slot_openRoomColorSelector()
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
             auto color = selectedItem->text();
 
-            pMap->mCustomEnvColors.remove(color.toInt());
+            mpHost->mpMap->mCustomEnvColors.remove(color.toInt());
             repaint();
-            pMap->mUnsavedMap = true;
+            mpHost->mpMap->mUnsavedMap = true;
         });
 
         menu.exec(QCursor::pos());
@@ -511,7 +508,7 @@ void dlgRoomProperties::slot_openRoomColorSelector()
         pB_abort->setIcon(QIcon::fromTheme(key_dialog_cancel, QIcon(key_icon_dialog_cancel)));
     }
 
-    QMapIterator<int, QColor> it(pMap->mCustomEnvColors);
+    QMapIterator<int, QColor> it(mpHost->mpMap->mCustomEnvColors);
     while (it.hasNext()) {
         it.next();
         QColor c;
@@ -526,10 +523,10 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     }
     listWidget->sortItems();
 
-    if (dialog->exec() == QDialog::Accepted && pMap->mCustomEnvColors.contains(mRoomColorNumber)) {
+    if (dialog->exec() == QDialog::Accepted && mpHost->mpMap->mCustomEnvColors.contains(mRoomColorNumber)) {
         // Only proceed if OK pressed and color is valid - "Cancel" prevents change
         mChangeRoomColor = true;
-        mRoomColor = pMap->mCustomEnvColors.value(mRoomColorNumber);
+        mRoomColor = mpHost->mpMap->mCustomEnvColors.value(mRoomColorNumber);
         slot_updatePreview();
     }
 }
