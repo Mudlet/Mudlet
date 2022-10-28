@@ -26,6 +26,7 @@
 
 #include "pre_guard.h"
 #include <QColorDialog>
+#include <QMenu>
 #include <QPainter>
 #include "post_guard.h"
 
