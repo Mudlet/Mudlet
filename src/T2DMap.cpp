@@ -4393,13 +4393,11 @@ void T2DMap::setRoomWeight(int newWeight, QSet<TRoom*> rooms)
 {
     QSetIterator<TRoom*> itpRoom(rooms);
     TRoom* room;
-    itpRoom.toFront(); // Needed or not?
     while (itpRoom.hasNext()) {
         room = itpRoom.next();
         if (!room) {
             continue;
         }
-
         room->setWeight(newWeight);
     }
     mpMap->mMapGraphNeedsUpdate = true;
