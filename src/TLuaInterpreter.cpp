@@ -219,7 +219,11 @@ TLuaInterpreter::~TLuaInterpreter()
 // With reduced repetition like that:
 //    bool showOnTop = getVerifiedBool(L, "createMapLabel", 14, "showOnTop", true);
 //
-// The "isOptional" parameter is optional, and will default to not-optional parameters! :)
+// The "isOptional" parameter is optional but modifies the error message to say
+// that an argument is optional and it will default to not-optional parameters!
+// HOWEVER it does not actually handle the absence of an argument that is
+// supposed to BE optional - that has to be done by the caller before it
+// makes the call... 8-P
 //
 // See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, errorArgumentType
 bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
@@ -231,6 +235,26 @@ bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, co
         return false;
     }
     return lua_toboolean(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: getVerifiedBool
+/*static*/ std::pair<bool, QString> TLuaInterpreter::getVerifiedStringOrInteger(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (lua_type(L, pos) == LUA_TNUMBER) {
+        // use lua_tonumber(...) and round because lua_tointeger(...) can return
+        // oversized values (long long int?) on Windows which do not always fit
+        // into an int:
+        return {true, QString::number(qRound(lua_tonumber(L, pos)))};
+    }
+
+    if (lua_type(L, pos) == LUA_TSTRING) {
+        return {false, lua_tostring(L, pos)};
+    }
+
+    errorArgumentType(L, functionName, pos, publicName, "string or integer", isOptional);
+    lua_error(L);
+    Q_UNREACHABLE();
 }
 
 // No documentation available in wiki - internal function
@@ -7928,56 +7952,120 @@ int TLuaInterpreter::exists(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
 int TLuaInterpreter::isActive(lua_State* L)
 {
-    QString name = getVerifiedString(L, __func__, 1, "item name");
+    auto [isId, nameOrId] = getVerifiedStringOrInteger(L, __func__, 1, "item name or ID");
     // Although we only use 4 ASCII strings the user may not enter a purely
     // ASCII value which we might have to report...
     QString type = getVerifiedString(L, __func__, 2, "item type");
+    bool isOk = false;
+    int id = nameOrId.toInt(&isOk);
+    if (isId && (!isOk || id < 0)) {
+        // Must be zero or more but doesn't seem to be, must return the
+        // original supplied argument as a string (rather than the nameOrId
+        // "number" as the latter will have been rounded to an integer) to
+        // show what was entered:
+        return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
+    }
 
     Host& host = getHostFromLua(L);
     int cnt = 0;
-    if (type.compare(QLatin1String("timer"), Qt::CaseInsensitive) == 0) {
-        QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.constFind(name);
-        while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == name) {
+    // Remember, QString::compare(...) returns zero for a match:
+    if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getTimerUnit()->getTimer(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("timer ID %1 does not exist").arg(id));
+            }
+            lua_pushnumber(L, pT->isActive() ? 1 : 0);
+            return 1;
+        }
+
+        QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
+        while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
-    } else if (type.compare(QLatin1String("trigger"), Qt::CaseInsensitive) == 0) {
-        QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.constFind(name);
-        while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == name) {
+    } else if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getTriggerUnit()->getTrigger(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("trigger ID %1 does not exist").arg(id));
+            }
+            lua_pushnumber(L, pT->isActive() ? 1 : 0);
+            return 1;
+        }
+
+        QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
+        while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
-    } else if (type.compare(QLatin1String("alias"), Qt::CaseInsensitive) == 0) {
-        QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.constFind(name);
-        while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == name) {
+    } else if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getAliasUnit()->getAlias(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("alias ID %1 does not exist").arg(id));
+            }
+            lua_pushnumber(L, pT->isActive() ? 1 : 0);
+            return 1;
+        }
+
+        QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
+        while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
-    } else if (type.compare(QLatin1String("keybind"), Qt::CaseInsensitive) == 0) {
-        QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.constFind(name);
-        while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == name) {
+    } else if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getKeyUnit()->getKey(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("key-binding ID %1 does not exist").arg(id));
+            }
+            lua_pushnumber(L, pT->isActive() ? 1 : 0);
+            return 1;
+        }
+
+        QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
+        while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
             if (it1.value()->isActive()) {
                 cnt++;
             }
             it1++;
         }
-    } else if (type.compare(QLatin1String("button"), Qt::CaseInsensitive) == 0) {
+    } else if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getActionUnit()->getAction(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("button/menu/toolbar ID %1 does not exist").arg(id));
+            }
+            lua_pushnumber(L, pT->isActive() ? 1 : 0);
+            return 1;
+        }
+
         QMap<int, TAction*> actions = host.getActionUnit()->getActionList();
         for (auto action : actions) {
-            if (action->getName() == name && action->isActive()) {
+            if (action->getName() == nameOrId && action->isActive()) {
                 ++cnt;
             }
         }
-    } else if (type.compare(QLatin1String("script"), Qt::CaseInsensitive) == 0) {
+    } else if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getScriptUnit()->getScript(id);
+            if (!pT) {
+                return warnArgumentValue(L, __func__, qsl("script ID %1 does not exist").arg(id));
+            }
+            lua_pushnumber(L, pT->isActive() ? 1 : 0);
+            return 1;
+        }
+
         QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
         for (auto script : scripts) {
-            if (script->getName() == name && script->isActive()) {
+            if (script->getName() == nameOrId && script->isActive()) {
                 ++cnt;
             }
         }
