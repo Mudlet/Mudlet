@@ -351,9 +351,8 @@ int dlgRoomProperties::getNewWeight()
 }
 
 QString getComboInput(QString wholeText) {
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Add knowledge from https://github.com/Mudlet/Mudlet/pull/6359 to here as well
-    QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
+    // Parse an initial number out of what was selected or typed
+    QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
     QRegularExpressionMatch match = countStripper.match(wholeText);
     if (match.hasMatch() && match.lastCapturedIndex() > 0) {
         return match.captured(1);
