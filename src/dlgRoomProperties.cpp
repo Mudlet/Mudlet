@@ -366,8 +366,6 @@ void dlgRoomProperties::slot_updatePreview()
     QString newSymbol = getNewSymbol();
     if (newSymbol == multipleValuesPlaceholder) {
         newSymbol = QString();
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Add placeholder icon (color?) to here as well, for example light grey rectangle
     }
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
