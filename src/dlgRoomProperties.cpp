@@ -505,13 +505,6 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     hboxLayout->addWidget(pB_abort);
     vboxLayout->addWidget(pButtonBar);
 
-    /* didn't work out in this file, only in source T2DMap.cpp - isn't used elsewhere either so ok
-    if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
-        pB_ok->setIcon(QIcon::fromTheme(key_dialog_ok_apply, QIcon(key_icon_dialog_ok_apply)));
-        pB_abort->setIcon(QIcon::fromTheme(key_dialog_cancel, QIcon(key_icon_dialog_cancel)));
-    }
-    */
-
     QMapIterator<int, QColor> it(mpHost->mpMap->mCustomEnvColors);
     while (it.hasNext()) {
         it.next();
