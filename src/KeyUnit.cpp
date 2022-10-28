@@ -329,7 +329,7 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
         return name % mKeys.value(keyCode);
     }
 
-    return QStringLiteral("%1%2").arg(name, tr("undefined key (code: 0x%1)",
+    return qsl("%1%2").arg(name, tr("undefined key (code: 0x%1)",
               // Intentional comment to separate arguments
               "%1 is the code-number of a key which Mudlet has no name for. "
               "This is probably one of those extra keys around the edge of the keyboard "
