@@ -93,12 +93,9 @@ public:
     enum SearchOption {
         // Unset:
         SearchOptionNone = 0x0,
-        SearchOptionCaseSensitive = 0x1 /*,
-        SearchOptionIncludeVariables = 0x2,
-        SearchOptionRegExp = 0x4,
-        SearchOptionWholeWord = 0x8 */
+        SearchOptionCaseSensitive = 0x1
     };
-    Q_DECLARE_FLAGS(SearchOptions,SearchOption)
+    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
