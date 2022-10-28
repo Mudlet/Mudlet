@@ -183,9 +183,6 @@ void dlgRoomProperties::initSymbolInstructionLabel()
 
 QStringList dlgRoomProperties::getComboBoxSymbolItems()
 {
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Refactor getComboBoxSymbolItems and getComboBoxWeightItems into one maybe?
-
     // Obtain a set of "used" values
     QHashIterator<QString, int> itSymbolUsed(mpSymbols);
     QSet<int> symbolCountsSet;
