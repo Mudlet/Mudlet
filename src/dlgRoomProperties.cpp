@@ -32,6 +32,8 @@
 
 // qsls cannot be shared so define a common instance to use when
 // there are multiple places where they are used within this file:
+const QString& key_dialog_ok_apply = qsl("dialog-ok-apply");
+const QString& key_dialog_cancel = qsl("dialog-cancel");
 const QString& key_icon_dialog_ok_apply = qsl(":/icons/dialog-ok-apply.png");
 const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 
