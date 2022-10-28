@@ -3720,8 +3720,8 @@ void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoo
 
 
 void T2DMap::setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
+    QSetIterator<TRoom*> itRoomPtr(rooms);
     if (newSymbol.isEmpty()) {
-        QSetIterator<TRoom*> itRoomPtr(rooms);
         while (itRoomPtr.hasNext()) {
             itRoomPtr.next()->mSymbol = QString();
         }
@@ -3731,7 +3731,6 @@ void T2DMap::setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> r
         // all the entered ones are decomposed and recomposed in a
         // "standard" way and will have the same sequence of codepoints:
         newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
-        QSetIterator<TRoom*> itRoomPtr(rooms);
         while (itRoomPtr.hasNext()) {
             auto room = itRoomPtr.next();
             room->mSymbol = newSymbol;
