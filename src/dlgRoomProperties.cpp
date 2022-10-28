@@ -350,7 +350,7 @@ int dlgRoomProperties::getNewWeight()
     return -2; // Maybe some other input we did not understand, so we will do no change
 }
 
-QString getComboInput(QString wholeText) {
+QString dlgRoomProperties::getComboInput(QString wholeText) {
     // Parse an initial number out of what was selected or typed
     QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
     QRegularExpressionMatch match = countStripper.match(wholeText);
