@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,6 +24,7 @@
 #include "MxpTag.h"
 #include "TMxpContext.h"
 #include "TMxpTagHandlerResult.h"
+#include "utils.h"
 
 class TMediaData;
 
@@ -33,7 +34,9 @@ protected:
     TMxpContext* mpContext;
 
 public:
-    TMxpClient() : mpContext(nullptr) {}
+    TMxpClient()
+    : mpContext(nullptr)
+    {}
 
     virtual void initialize(TMxpContext* context) { mpContext = context; }
 

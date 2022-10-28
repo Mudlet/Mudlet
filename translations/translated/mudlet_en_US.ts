@@ -7,7 +7,7 @@
         <location filename="../../src/glwidget.cpp" line="290"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
-            <numerusform>You have a map loaded (one room), but Mudlet does not know where you are at the moment.</numerusform>
+            <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
             <numerusform>You have a map loaded (%n rooms), but Mudlet does not know where you are at the moment.</numerusform>
         </translation>
     </message>
@@ -49,54 +49,15 @@
 </numerusform>
         </translation>
     </message>
+</context>
+<context>
+    <name>T2DMap</name>
     <message numerus="yes">
-        <source>Enter the symbol to use
-for this/these %n room(s):</source>
-        <comment>this is for when applying a new room symbol to one or more rooms and none have a symbol at present; use line feeds to format text into a reasonable rectangle, %n is the number of rooms involved</comment>
-        <translatorcomment>No need to use %n in the singular case - even though Linguist doesn&apos;t like it.</translatorcomment>
-        <translation type="vanished">
-            <numerusform>Enter the symbol to use
-for this room:</numerusform>
-            <numerusform>Enter the symbol to use
-for these %n rooms:</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>The only used symbol is &quot;%1&quot; in one or
-more of the selected %n room(s), delete this to
-clear it from all selected rooms or replace
-with a new symbol to use for all the rooms:</source>
-        <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-        <translatorcomment>The singular case is never used in English as %n is always at least 2.</translatorcomment>
-        <translation type="vanished">
-            <numerusform>(Unused) The only used symbol is &quot;%1&quot; in one or
-more of the selected %n room(s), delete this to
-clear it from all selected rooms or replace
-with a new symbol to use for all the rooms:</numerusform>
-            <numerusform>The only used symbol is &quot;%1&quot; in one or
-more of the selected %n rooms, delete
-this to clear it from those rooms or replace
-with a new symbol to use for all the rooms:</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Choose:
- • an existing symbol from the list below (sorted by most commonly used first)
- • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
- • enter a space to clear any existing symbols
-for all of the %n selected room(s):</source>
-        <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
-        <translation type="vanished">
-            <numerusform>Choose:
- • an existing symbol from the list below (sorted by most commonly used first)
- • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
- • enter a space to clear any existing symbols
-for the selected room:</numerusform>
-            <numerusform>Choose:
- • an existing symbol from the list below (sorted by most commonly used first)
- • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
- • enter a space to clear any existing symbols
-for all of the %n selected rooms:</numerusform>
+        <location filename="../../src/T2DMap.cpp" line="1263"/>
+        <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
+        <translation>
+            <numerusform>You have a map loaded (1 room), but Mudlet does not know where you are at the moment.</numerusform>
+            <numerusform>You have a map loaded (%n rooms), but Mudlet does not know where you are at the moment.</numerusform>
         </translation>
     </message>
 </context>
@@ -104,7 +65,7 @@ for all of the %n selected rooms:</numerusform>
     <name>TRoomDB</name>
     <message numerus="yes">
         <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
- Look for further messsages related to the rooms that are supposed
+ Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</source>
         <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
         <translatorcomment>The singular case does not need to include the %n count parameter.</translatorcomment>
@@ -113,13 +74,13 @@ for all of the %n selected rooms:</numerusform>
  Look for further messsages related to the rooms that are supposed
  to be in this area...</numerusform>
             <numerusform>[ ALERT ] - %n areas detected as missing in map: adding them in.
- Look for further messsages related to the rooms that are supposed
+ Look for further messages related to the rooms that are supposed
  to be in these areas...</numerusform>
         </translation>
     </message>
     <message numerus="yes">
         <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
- Look for further messsages related to the rooms that is/are supposed to
+ Look for further messages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
         <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
         <translatorcomment>The source text should assume multiple rooms in the first line an area with just one room is not that likely - in this case then the source text will be a duplicate of another one in the same file.</translatorcomment>
@@ -128,7 +89,7 @@ for all of the %n selected rooms:</numerusform>
  Look for further messsages related to the rooms that are supposed
  to be in this area...</numerusform>
             <numerusform>[ ALERT ] - %n areas detected as missing in map: adding them in.
- Look for further messsages related to the rooms that are supposed
+ Look for further messages related to the rooms that are supposed
  to be in these areas...</numerusform>
         </translation>
     </message>
@@ -353,10 +314,9 @@ for all of the %n selected rooms:</numerusform>
         <location filename="../../src/mudlet.cpp" line="3540"/>
         <source>&lt;p&gt;Review the update(s) available...&lt;/p&gt;</source>
         <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-        <translatorcomment>As per the developer&apos;s comment it is not necessary to include the number of update in this text in English.</translatorcomment>
         <translation>
-            <numerusform>&lt;p&gt;Review the update available...&lt;/p&gt;</numerusform>
-            <numerusform>&lt;p&gt;Review the updates available...&lt;/p&gt;</numerusform>
+            <numerusform>Review the update available...</numerusform>
+            <numerusform>Review the updates available...</numerusform>
         </translation>
     </message>
 </context>

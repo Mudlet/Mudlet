@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2018, 2021-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -26,15 +27,6 @@
 #include "TConsole.h"
 #include "TTabBar.h"
 #include "mudlet.h"
-
-// This is a Unicode NON-character code which is explicitly undisplayable but
-// can be embedded for our own internal purposes:
-const QChar TDebug::csmContinue = QChar(0xFFFF);
-
-QMap<const Host*, QPair<QString, QString>> TDebug::smIdentifierMap;
-QQueue<QString> TDebug::smAvailableIdentifiers;
-bool TDebug::initialised = false;
-QQueue<TDebugMessage> TDebug::smMessageQueue;
 
 TDebug::TDebug(const QColor& c, const QColor& d)
 : fgColor(c)
@@ -111,7 +103,7 @@ TDebug& TDebug::operator<<(const int& t)
 TDebug& TDebug::operator<<(const QMap<QString, QString>& map)
 {
     for (QMap<QString, QString>::const_iterator it = map.constBegin(); it != map.constEnd(); ++it) {
-        msg += QStringLiteral("(%1, %2)").arg(it.key(), it.value());
+        msg += qsl("(%1, %2)").arg(it.key(), it.value());
     }
     msg += "), ";
     return *this;
@@ -120,7 +112,7 @@ TDebug& TDebug::operator<<(const QMap<QString, QString>& map)
 TDebug& TDebug::operator<<(const QMap<QString, int>& map)
 {
     for (QMap<QString, int>::const_iterator it = map.constBegin(); it != map.constEnd(); ++it) {
-        msg += QStringLiteral("(%1, %2)").arg(it.key(), QString::number(it.value()));
+        msg += qsl("(%1, %2)").arg(it.key(), QString::number(it.value()));
     }
     msg += "), ";
     return *this;
@@ -129,7 +121,7 @@ TDebug& TDebug::operator<<(const QMap<QString, int>& map)
 TDebug& TDebug::operator<<(const QMap<int, QString>& map)
 {
     for (QMap<int, QString>::const_iterator it = map.constBegin(); it != map.constEnd(); ++it) {
-        msg += QStringLiteral("(%1, %2)").arg(QString::number(it.key()), it.value());
+        msg += qsl("(%1, %2)").arg(QString::number(it.key()), it.value());
     }
     msg += "), ";
     return *this;
@@ -138,7 +130,7 @@ TDebug& TDebug::operator<<(const QMap<int, QString>& map)
 TDebug& TDebug::operator<<(const QMap<int, int>& map)
 {
     for (QMap<int, int>::const_iterator it = map.constBegin(); it != map.constEnd(); ++it) {
-        msg += QStringLiteral("(%1, %2)").arg(QString::number(it.key()), QString::number(it.value()));
+        msg += qsl("(%1, %2)").arg(QString::number(it.key()), QString::number(it.value()));
     }
     msg += "), ";
     return *this;
@@ -147,7 +139,7 @@ TDebug& TDebug::operator<<(const QMap<int, int>& map)
 TDebug& TDebug::operator<<(const QList<QString>& list)
 {
     for (QList<QString>::const_iterator it = list.constBegin(); it != list.constEnd(); ++it) {
-        msg += QStringLiteral("%1, ").arg(*it);
+        msg += qsl("%1, ").arg(*it);
     }
     msg += ")";
     return *this;
@@ -156,7 +148,7 @@ TDebug& TDebug::operator<<(const QList<QString>& list)
 TDebug& TDebug::operator<<(const QList<int>& list)
 {
     for (QList<int>::const_iterator it = list.constBegin(); it != list.constEnd(); ++it) {
-        msg += QStringLiteral("%1, ").arg(QString::number(*it));
+        msg += qsl("%1, ").arg(QString::number(*it));
     }
     msg += "), ";
     return *this;
@@ -174,12 +166,12 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
 /* static */ void TDebug::addHost(Host* pHost)
 {
     if (!initialised) {
-        smAvailableIdentifiers << QStringLiteral("[A] ") << QStringLiteral("[B] ") << QStringLiteral("[C] ") << QStringLiteral("[D] ") << QStringLiteral("[E] ")
-                               << QStringLiteral("[F] ") << QStringLiteral("[G] ") << QStringLiteral("[H] ") << QStringLiteral("[I] ") << QStringLiteral("[J] ")
-                               << QStringLiteral("[K] ") << QStringLiteral("[L] ") << QStringLiteral("[M] ") << QStringLiteral("[N] ") << QStringLiteral("[O] ")
-                               << QStringLiteral("[P] ") << QStringLiteral("[Q] ") << QStringLiteral("[R] ") << QStringLiteral("[S] ") << QStringLiteral("[T] ")
-                               << QStringLiteral("[U] ") << QStringLiteral("[V] ") << QStringLiteral("[W] ") << QStringLiteral("[X] ") << QStringLiteral("[Y] ")
-                               << QStringLiteral("[Z] ");
+        smAvailableIdentifiers << qsl("[A] ") << qsl("[B] ") << qsl("[C] ") << qsl("[D] ") << qsl("[E] ")
+                               << qsl("[F] ") << qsl("[G] ") << qsl("[H] ") << qsl("[I] ") << qsl("[J] ")
+                               << qsl("[K] ") << qsl("[L] ") << qsl("[M] ") << qsl("[N] ") << qsl("[O] ")
+                               << qsl("[P] ") << qsl("[Q] ") << qsl("[R] ") << qsl("[S] ") << qsl("[T] ")
+                               << qsl("[U] ") << qsl("[V] ") << qsl("[W] ") << qsl("[X] ") << qsl("[Y] ")
+                               << qsl("[Z] ");
         initialised = true;
     }
 
@@ -203,7 +195,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         TDebug::smIdentifierMap.insert(pHost, newIdentifier);
     }
     TDebug localMessage(Qt::blue, Qt::white);
-    localMessage << QStringLiteral("Profile '%1' started.\n").arg(hostName) >> nullptr;
+    localMessage << qsl("Profile '%1' started.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);
     tableMessage << TDebug::displayNewTable() >> nullptr;
     if (mudlet::debugMode) {
@@ -226,7 +218,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         smAvailableIdentifiers.enqueue(identifier.second);
     }
     TDebug localMessage(Qt::darkGray, Qt::white);
-    localMessage << QStringLiteral("Profile '%1' ended.\n").arg(pHost->getName()) >> nullptr;
+    localMessage << qsl("Profile '%1' ended.\n").arg(pHost->getName()) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);
     tableMessage << TDebug::displayNewTable() >> nullptr;
 }
@@ -246,17 +238,17 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
         if (itIdentifier.key()) {
             // Each identifier includes spaces, so no need to include one before
             // the '=' sign:
-            messageLines.append(QStringLiteral(" %1= \"%2\"").arg(itIdentifier.value().second, itIdentifier.value().first));
+            messageLines.append(qsl(" %1= \"%2\"").arg(itIdentifier.value().second, itIdentifier.value().first));
         }
     }
     if (messageLines.count() > 1) {
         std::sort(messageLines.begin(), messageLines.end());
     }
-    messageLines.prepend(QStringLiteral(" %1= System message, not belonging to a specific profile").arg(csmTagSystemMessage));
+    messageLines.prepend(qsl(" %1= System message, not belonging to a specific profile").arg(csmTagSystemMessage));
     // The line wrapping of these texts is a bit less than one might expect
     // because the default size will clip the text otherwise, unless the
     // user resizes the CDC:
-    messageLines.prepend(QStringLiteral("%1 profiles active now. Each message from a profile \n"
+    messageLines.prepend(qsl("%1 profiles active now. Each message from a profile \n"
                                         "will be prefixed as follows:")
                                  .arg(TDebug::smIdentifierMap.count()));
 

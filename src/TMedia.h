@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019, 2022 by Stephen Lyons                        *
+ *                                            - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -37,30 +38,26 @@ class TMediaPlayer
 {
 public:
     TMediaPlayer()
-        : mpHost(nullptr)
-        , mMediaData()
-        , mMediaPlayer(nullptr)
-        , initialized(false)
-        {}
-    ~TMediaPlayer() {}
-
+    : mMediaData()
+    {}
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
-        : mpHost(pHost)
-        , mMediaData(mediaData)
-        , mMediaPlayer(new QMediaPlayer(pHost))
-        , initialized(true)
-        {}
+    : mpHost(pHost)
+    , mMediaData(mediaData)
+    , mMediaPlayer(new QMediaPlayer(pHost))
+    , initialized(true)
+    {}
+    ~TMediaPlayer() = default;
 
-    TMediaData getMediaData() { return mMediaData; }
+    TMediaData getMediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
     QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
-    bool isInitialized() { return initialized; }
+    bool isInitialized() const { return initialized; }
 
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
-    QMediaPlayer* mMediaPlayer;
-    bool initialized;
+    QMediaPlayer* mMediaPlayer = nullptr;
+    bool initialized = false;
 };
 
 class TMedia : public QObject
@@ -70,15 +67,19 @@ class TMedia : public QObject
 public:
     Q_DISABLE_COPY(TMedia)
     TMedia(Host* pHost, const QString& profileName);
-    ~TMedia();
+    ~TMedia() = default;
 
     void playMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
 
+private slots:
+    void slot_writeFile(QNetworkReply* reply);
+
 private:
     void stopAllMediaPlayers();
+    void transitionNonRelativeFile(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
@@ -86,7 +87,6 @@ private:
     QStringList getFileNameList(TMediaData& mediaData);
     QUrl getFileUrl(TMediaData& mediaData);
     bool processUrl(TMediaData& mediaData);
-    void writeFile(QNetworkReply* reply);
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
@@ -100,6 +100,9 @@ private:
     static TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
     static QString parseJSONByMediaFileName(QJsonObject& json);
     static int parseJSONByMediaVolume(QJsonObject& json);
+    static int parseJSONByMediaFadeIn(QJsonObject& json);
+    static int parseJSONByMediaFadeOut(QJsonObject& json);
+    static int parseJSONByMediaStart(QJsonObject& json);
     static int parseJSONByMediaPriority(QJsonObject& json);
     static int parseJSONByMediaLoops(QJsonObject& json);
     static TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
@@ -119,8 +122,10 @@ private:
     QList<TMediaPlayer> mMSPMusicList;
     QList<TMediaPlayer> mGMCPSoundList;
     QList<TMediaPlayer> mGMCPMusicList;
+    QList<TMediaPlayer> mAPISoundList;
+    QList<TMediaPlayer> mAPIMusicList;
 
-    QNetworkAccessManager* mpNetworkAccessManager;
+    QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
 };
 #endif // MUDLET_TMEDIA_H

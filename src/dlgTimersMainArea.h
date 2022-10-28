@@ -4,6 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,13 +34,14 @@ class dlgTimersMainArea : public QWidget, public Ui::timers_main_area
 
 public:
     Q_DISABLE_COPY(dlgTimersMainArea)
-    dlgTimersMainArea(QWidget*);
+    explicit dlgTimersMainArea(QWidget*);
 
     // public function allow to trim even when QLineEdit::editingFinished()
     // is not raised. Example: When the user saves without leaving the LineEdit
     void trimName();
+
 private slots:
-    void slot_editing_name_finished();
+    void slot_editingNameFinished();
 };
 
 #endif // MUDLET_DLGTIMERSMAINAREA_H

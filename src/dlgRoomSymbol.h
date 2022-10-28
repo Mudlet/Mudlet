@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -51,17 +52,17 @@ private:
     Host* mpHost;
     QSet<TRoom*> mpRooms;
     QHash<QString, int> mpSymbols;
-    QColor selectedColor = nullptr;
-    QColor previewColor = nullptr;
+    QColor selectedColor;
+    QColor previewColor;
     QColor roomColor;
 
 private slots:
-    void openColorSelector();
-    void currentColorChanged(const QColor&);
-    void colorSelected(const QColor&);
-    void colorRejected();
-    void updatePreview();
-    void resetColor();
+    void slot_openColorSelector();
+    void slot_currentColorChanged(const QColor&);
+    void slot_colorSelected(const QColor&);
+    void slot_colorRejected();
+    void slot_updatePreview();
+    void slot_resetColors();
 };
 
 #endif // MUDLET_DLGROOMSYMBOL_H

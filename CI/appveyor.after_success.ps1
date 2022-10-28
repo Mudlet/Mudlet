@@ -112,7 +112,14 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
   if (-not (Test-Path -Path "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -PathType Leaf)) {
     Write-Output "=== ERROR: Squirrel failed to generate the installer! Build aborted. Squirrel log is:"
-    Get-Content -Path .\squirrel.windows\tools\SquirrelSetup.log
+    if (Test-Path -Path ".\squirrel.windows\tools\SquirrelSetup.log" -PathType Leaf) {
+      echo "SquirrelSetup.log: "
+      Get-Content -Path .\squirrel.windows\tools\SquirrelSetup.log
+    }
+    if (Test-Path -Path ".\squirrel.windows\tools\Squirrel-Releasify.log" -PathType Leaf) {
+      echo "Squirrel-Releasify.log: "
+      Get-Content -Path .\squirrel.windows\tools\Squirrel-Releasify.log
+    }
     exit 1
   }
 
@@ -170,7 +177,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     Invoke-WebRequest "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -OutFile $Script:DownloadedFeed
     Write-Output "=== Generating a changelog ==="
     Push-Location "$Env:APPVEYOR_BUILD_FOLDER\CI\"
-    $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-ptb-changelog.lua" --releasefile $Script:DownloadedFeed
+    $Script:Changelog = lua "$Env:APPVEYOR_BUILD_FOLDER\CI\generate-changelog.lua" --mode ptb --releasefile $Script:DownloadedFeed
     Pop-Location
     Write-Output $Script:Changelog
     Write-Output "=== Creating release in Dblsqd ==="

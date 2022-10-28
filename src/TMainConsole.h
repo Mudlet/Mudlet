@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -26,11 +26,12 @@
 
 
 #include "TConsole.h"
-
+#include "TScrollBox.h"
 #include "pre_guard.h"
 #include <QFile>
 #include <QTextStream>
 #include <QWidget>
+#include <optional>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
@@ -45,15 +46,16 @@ public:
     explicit TMainConsole(Host*, QWidget* parent = nullptr);
     ~TMainConsole();
 
+    void resizeEvent(QResizeEvent* event) override;
     void resetMainConsole();
-
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    TScrollBox* createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
     bool printWindow(const QString& name, const QString& text);
-    void setProfileName(const QString&);
+    void setProfileName(const QString&) override;
     void selectCurrentLine(std::string&);
     std::list<int> getFgColor(std::string& buf);
     std::list<int> getBgColor(std::string& buf);
@@ -70,15 +72,17 @@ public:
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     void setLabelStyleSheet(std::string& buf, std::string& sh);
+    std::optional<QString> getLabelStyleSheet(const QString& name) const;
+    std::optional<QSize> getLabelSizeHint(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
     bool setBackgroundImage(const QString& name, const QString& path);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
-
     void setSystemSpellDictionary(const QString&);
     void setProfileSpellDictionary();
+    void showStatistics();
     const QString& getSystemSpellDictionary() const { return mSpellDic; }
     QTextCodec* getHunspellCodec_system() const { return mpHunspellCodec_system; }
     Hunhandle* getHunspellHandle_system() const { return mpHunspell_system; }
@@ -108,11 +112,12 @@ public:
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
+    QMap<QString, TScrollBox*> mScrollBoxMap;
     TBuffer mClipboard;
     QFile mLogFile;
     QString mLogFileName;
     QTextStream mLogStream;
-    bool mLogToLogFile;
+    bool mLogToLogFile = false;
 
 
 public slots:
@@ -136,19 +141,19 @@ private:
     QString mSpellDic;
 
     // Cloned from Host
-    bool mEnableUserDictionary;
-    bool mUseSharedDictionary;
+    bool mEnableUserDictionary = true;
+    bool mUseSharedDictionary = false;
 
     // Three handles, one for the dictionary the user choses from the system
     // one created by the mudlet class for all profiles and the third for a per
     // profile one - the last pair are built by the user and/or lua functions:
-    Hunhandle* mpHunspell_system;
-    Hunhandle* mpHunspell_shared;
-    Hunhandle* mpHunspell_profile;
+    Hunhandle* mpHunspell_system = nullptr;
+    Hunhandle* mpHunspell_shared = nullptr;
+    Hunhandle* mpHunspell_profile = nullptr;
     // The user dictionary will always use the UTF-8 codec, but the one
     // selected from the system's ones may not:
     QByteArray mHunspellCodecName_system;
-    QTextCodec* mpHunspellCodec_system;
+    QTextCodec* mpHunspellCodec_system = nullptr;
     // To update the profile dictionary we actually have to track all the words
     // in it so we loaded the contents into this on startup and adjust it as we
     // go. Then, at the end of a session we will put the revised contents

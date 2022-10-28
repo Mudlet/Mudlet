@@ -20,14 +20,18 @@
 
 
 #include "dlgAliasMainArea.h"
-
+#include "mudlet.h"
 
 dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
 {
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editing_name_finished);
+    connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editingNameFinished);
+
+    if (mudlet::self()->firstLaunch) {
+        lineEdit_alias_pattern->setPlaceholderText(tr("for example, ^myalias$ to match 'myalias'", "This text is shown as placeholder in the pattern box when no real pattern was entered, yet."));
+    }
 }
 
 void dlgAliasMainArea::trimName()
@@ -35,7 +39,7 @@ void dlgAliasMainArea::trimName()
     lineEdit_alias_name->setText(lineEdit_alias_name->text().trimmed());
 }
 
-void dlgAliasMainArea::slot_editing_name_finished()
+void dlgAliasMainArea::slot_editingNameFinished()
 {
     trimName();
 }

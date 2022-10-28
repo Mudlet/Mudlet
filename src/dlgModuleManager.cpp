@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Chris Mitchell                                  *
+ *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia..com        *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,11 +40,11 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     mModuleHelpButton = ui->helpButton;
 
     layoutModules();
-    connect(mModuleUninstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_uninstall_module);
-    connect(mModuleInstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_install_module);
-    connect(mModuleHelpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_help_module);
-    connect(mModuleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_module_clicked);
-    connect(mModuleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_module_changed);
+    connect(mModuleUninstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_uninstallModule);
+    connect(mModuleInstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
+    connect(mModuleHelpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
+    connect(mModuleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
+    connect(mModuleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgModuleManager::close);
     setWindowTitle(tr("Module Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
@@ -96,22 +97,6 @@ void dlgModuleManager::layoutModules()
             auto itemLocation = new QTableWidgetItem();
             auto itemPriority = new QTableWidgetItem();
             QStringList moduleInfo = mpHost->mInstalledModules[pModules[i]];
-            QFileInfo moduleFile = moduleInfo[0];
-            QStringList accepted_suffix;
-            accepted_suffix << "xml" << "trigger";
-            if (accepted_suffix.contains(moduleFile.suffix().trimmed(), Qt::CaseInsensitive)) {
-                masterModule->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
-                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                                 .arg(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
-                                                         "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
-                                                         "is saved at the end of the session.")));
-            } else {
-                masterModule->setFlags(Qt::NoItemFlags);
-                masterModule->setToolTip(QStringLiteral("<html><head/><body><p>%1</p></body></html>")
-                                                 .arg(tr("<b>Note:</b> <i>.zip</i> and <i>.mpackage</i> modules are currently unable to be synced<br> "
-                                                         "only <i>.xml</i> packages are able to be synchronized across profiles at the moment. ")));
-            }
-
 
             if (moduleInfo.at(1).toInt()) {
                 masterModule->setCheckState(Qt::Checked);
@@ -119,6 +104,9 @@ void dlgModuleManager::layoutModules()
                 masterModule->setCheckState(Qt::Unchecked);
             }
             masterModule->setText(QString());
+            masterModule->setToolTip(utils::richText(tr("Checking this box will cause the module to be saved and <i>resynchronised</i> across all "
+                                                        "sessions that share it when the <i>Save Profile</i> button is clicked in the Editor or if it "
+                                                        "is saved at the end of the session.")));
 
             // Although there is now no text used here this may help to make the
             // checkbox more central in the column
@@ -128,7 +116,7 @@ void dlgModuleManager::layoutModules()
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             itemLocation->setText(moduleInfo[0]);
-            itemLocation->setToolTip(moduleInfo[0]);                          // show the full path in a tooltip, in case it doesn't fit in the table
+            itemLocation->setToolTip(utils::richText(moduleInfo[0]));     // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
             itemPriority->setData(Qt::EditRole, mpHost->mModulePriorities[moduleName]);
             mModuleTable->setItem(row, 0, itemEntry);
@@ -140,7 +128,7 @@ void dlgModuleManager::layoutModules()
     mModuleTable->resizeColumnsToContents();
 }
 
-void dlgModuleManager::slot_install_module()
+void dlgModuleManager::slot_installModule()
 {
     if (!mpHost) {
         return;
@@ -165,7 +153,7 @@ void dlgModuleManager::slot_install_module()
     layoutModules();
 }
 
-void dlgModuleManager::slot_uninstall_module()
+void dlgModuleManager::slot_uninstallModule()
 {
     if (!mpHost) {
         return;
@@ -182,7 +170,7 @@ void dlgModuleManager::slot_uninstall_module()
     layoutModules();
 }
 
-void dlgModuleManager::slot_module_clicked(QTableWidgetItem* pItem)
+void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
 {
     if (!mpHost) {
         return;
@@ -204,14 +192,14 @@ void dlgModuleManager::slot_module_clicked(QTableWidgetItem* pItem)
     }
 
     if (mpHost->moduleHelp.contains(entry->text())) {
-        mModuleHelpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(QStringLiteral("helpURL"))
-                                       || mpHost->moduleHelp.value(entry->text()).value(QStringLiteral("helpURL")).isEmpty()));
+        mModuleHelpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL"))
+                                       || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
     } else {
         mModuleHelpButton->setDisabled(true);
     }
 }
 
-void dlgModuleManager::slot_module_changed(QTableWidgetItem* pItem)
+void dlgModuleManager::slot_moduleChanged(QTableWidgetItem* pItem)
 {
     if (!mpHost) {
         return;
@@ -236,7 +224,7 @@ void dlgModuleManager::slot_module_changed(QTableWidgetItem* pItem)
     mpHost->mModulePriorities[entry->text()] = itemPriority->text().toInt();
 }
 
-void dlgModuleManager::slot_help_module()
+void dlgModuleManager::slot_helpModule()
 {
     if (!mpHost) {
         return;

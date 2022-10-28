@@ -32,9 +32,9 @@
 using namespace std::chrono;
 
 // Used before we spotted a problem with not specifying an encoding:
-const QString local8BitEncodedNotesFileName{QStringLiteral("notes.txt")};
+const QString local8BitEncodedNotesFileName{qsl("notes.txt")};
 // Used afterwards:
-const QString utf8EncodedNotesFileName{QStringLiteral("notes_utf8.txt")};
+const QString utf8EncodedNotesFileName{qsl("notes_utf8.txt")};
 
 dlgNotepad::dlgNotepad(Host* pH)
 : mpHost(pH)
@@ -45,7 +45,7 @@ dlgNotepad::dlgNotepad(Host* pH)
         restore();
     }
 
-    connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_text_written);
+    connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_textWritten);
 
     startTimer(2min);
 }
@@ -111,7 +111,7 @@ void dlgNotepad::restore()
     restoreFile(fileName, false);
 }
 
-void dlgNotepad::slot_text_written()
+void dlgNotepad::slot_textWritten()
 {
     mNeedToSave = true;
 }

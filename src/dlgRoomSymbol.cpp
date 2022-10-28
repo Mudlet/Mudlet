@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,15 +28,17 @@
 #include <QPainter>
 #include "post_guard.h"
 
-dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pParentWidget) : QDialog(pParentWidget), mpHost(pHost)
+dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pParentWidget)
+: QDialog(pParentWidget)
+, mpHost(pHost)
 {
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomSymbol::updatePreview);
-    connect(pushButton_roomSymbolColor, &QAbstractButton::released, this, &dlgRoomSymbol::openColorSelector);
-    connect(pushButton_reset, &QAbstractButton::released, this, &dlgRoomSymbol::resetColor);
-    connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomSymbol::updatePreview);
+    connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomSymbol::slot_updatePreview);
+    connect(pushButton_roomSymbolColor, &QAbstractButton::released, this, &dlgRoomSymbol::slot_openColorSelector);
+    connect(pushButton_reset, &QAbstractButton::released, this, &dlgRoomSymbol::slot_resetColors);
+    connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomSymbol::slot_updatePreview);
 
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -61,7 +64,7 @@ void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
             roomColor = mpHost->mpMap->getColor(firstRoomId);
         }
     }
-    updatePreview();
+    slot_updatePreview();
 }
 
 void dlgRoomSymbol::initInstructionLabel()
@@ -74,23 +77,21 @@ void dlgRoomSymbol::initInstructionLabel()
     QString instructions;
     if (mpSymbols.size() == 1) {
         if (mpRooms.size() > 1) {
-            instructions = tr("The only used symbol is \"%1\" in one or\n"
-                              "more of the selected %n room(s), delete this to\n"
-                              "clear it from all selected rooms or replace\n"
+            instructions = tr("The only used symbol is \"%1\" in one or "
+                              "more of the selected %n room(s), delete this to "
+                              "clear it from all selected rooms or replace "
                               "with a new symbol to use for all the rooms:",
                               // Intentional comment to separate arguments!
                               "This is for when applying a new room symbol to one or more rooms "
                               "and some have the SAME symbol (others may have none) at present, "
-                              "%n is the total number of rooms involved and is at least two. "
-                              "Use line feeds to format text into a reasonable rectangle.",
+                              "%n is the total number of rooms involved and is at least two. ",
                               mpRooms.size()).arg(mpSymbols.keys().first());
         } else {
-            instructions = tr("The symbol is \"%1\" in the selected room,\n"
-                              "delete this to clear the symbol or replace\n"
+            instructions = tr("The symbol is \"%1\" in the selected room, "
+                              "delete this to clear the symbol or replace "
                               "it with a new symbol for this room:",
                               // Intentional comment to separate arguments!
-                              "This is for when applying a new room symbol to one room. "
-                              "Use line feeds to format text into a reasonable rectangle.")
+                              "This is for when applying a new room symbol to one room.")
                                    .arg(mpSymbols.keys().first());
         }
     } else {
@@ -100,10 +101,12 @@ void dlgRoomSymbol::initInstructionLabel()
                           " • enter a space to clear any existing symbols\n"
                           "for all of the %n selected room(s):",
                           // Intentional comment to separate arguments!
-                          "Use line feeds to format text into a reasonable rectangle if needed, "
+                          "This is for when applying a new room symbol to one or more rooms "
+                          "and some have different symbols (others may have none) at present, "
                           "%n is the number of rooms involved.", mpRooms.size());
     }
     label_instructions->setText(instructions);
+    label_instructions->setWordWrap(true);
 }
 
 QStringList dlgRoomSymbol::getComboBoxItems()
@@ -114,11 +117,7 @@ QStringList dlgRoomSymbol::getComboBoxItems()
         itSymbolUsed.next();
         symbolCountsSet.insert(itSymbolUsed.value());
     }
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> symbolCountsList{symbolCountsSet.begin(), symbolCountsSet.end()};
-#else
-    QList<int> symbolCountsList{symbolCountsSet.toList()};
-#endif
     if (symbolCountsList.size() > 1) {
         std::sort(symbolCountsList.begin(), symbolCountsList.end());
     }
@@ -154,7 +153,7 @@ QString dlgRoomSymbol::getNewSymbol()
     if (mpSymbols.size() <= 1) {
         return lineEdit_roomSymbol->text();
     } else {
-        QRegularExpression countStripper(QStringLiteral("^(.*) {.*}$"));
+        QRegularExpression countStripper(qsl("^(.*) {.*}$"));
         QRegularExpressionMatch match = countStripper.match(comboBox_roomSymbol->currentText());
         if (match.hasMatch() && match.lastCapturedIndex() > 0) {
             return match.captured(1);
@@ -163,17 +162,17 @@ QString dlgRoomSymbol::getNewSymbol()
     }
 }
 
-void dlgRoomSymbol::updatePreview()
+void dlgRoomSymbol::slot_updatePreview()
 {
     auto realColor = selectedColor != nullptr ? selectedColor : defaultColor();
     auto newSymbol = getNewSymbol();
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
-    auto bgStyle = QStringLiteral("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realColor.name(), backgroundBasedColor(realColor).name());
+    auto bgStyle = qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realColor.name(), backgroundBasedColor(realColor).name());
     pushButton_roomSymbolColor->setStyleSheet(bgStyle);
     label_preview->setStyleSheet(
-            QStringLiteral("color: %1; background-color: %2; border: %3;")
-                    .arg(realColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? QStringLiteral("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : QStringLiteral("none")));
+            qsl("color: %1; background-color: %2; border: %3;")
+                    .arg(realColor.name(), roomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
 }
 
 QFont dlgRoomSymbol::getFontForPreview(QString text) {
@@ -195,39 +194,39 @@ QFont dlgRoomSymbol::getFontForPreview(QString text) {
     return font;
 }
 
-void dlgRoomSymbol::openColorSelector()
+void dlgRoomSymbol::slot_openColorSelector()
 {
     auto* dialog = selectedColor != nullptr ? new QColorDialog(selectedColor, this) : new QColorDialog(defaultColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Pick color"));
-    dialog->open(this, SLOT(colorSelected(const QColor&)));
-    connect(dialog, &QColorDialog::currentColorChanged, this, &dlgRoomSymbol::currentColorChanged);
-    connect(dialog, &QColorDialog::rejected, this, &dlgRoomSymbol::colorRejected);
+    dialog->open(this, SLOT(slot_colorSelected(const QColor&)));
+    connect(dialog, &QColorDialog::currentColorChanged, this, &dlgRoomSymbol::slot_currentColorChanged);
+    connect(dialog, &QColorDialog::rejected, this, &dlgRoomSymbol::slot_colorRejected);
 }
 
-void dlgRoomSymbol::currentColorChanged(const QColor& color)
+void dlgRoomSymbol::slot_currentColorChanged(const QColor& color)
 {
     previewColor = color;
-    updatePreview();
+    slot_updatePreview();
 }
 
-void dlgRoomSymbol::colorSelected(const QColor& color)
+void dlgRoomSymbol::slot_colorSelected(const QColor& color)
 {
     selectedColor = color;
-    updatePreview();
+    slot_updatePreview();
 }
 
-void dlgRoomSymbol::colorRejected()
+void dlgRoomSymbol::slot_colorRejected()
 {
     previewColor = selectedColor;
-    updatePreview();
+    slot_updatePreview();
 }
 
-void dlgRoomSymbol::resetColor()
+void dlgRoomSymbol::slot_resetColors()
 {
-    selectedColor = nullptr;
-    previewColor = nullptr;
-    updatePreview();
+    selectedColor = QColor();
+    previewColor = QColor();
+    slot_updatePreview();
 }
 
 QColor dlgRoomSymbol::backgroundBasedColor(QColor background)

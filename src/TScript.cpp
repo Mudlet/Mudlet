@@ -31,8 +31,8 @@ TScript::TScript( TScript * parent, Host * pHost )
 : Tree<TScript>( parent )
 , exportItem(true)
 , mModuleMasterFolder(false)
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
 , mModuleMember(false)
 {
 }
@@ -41,9 +41,9 @@ TScript::TScript(const QString& name, Host * pHost )
 : Tree<TScript>(nullptr)
 , exportItem(true)
 , mModuleMasterFolder(false)
-, mName( name )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
+, mName(name)
+, mpHost(pHost)
+, mNeedsToBeCompiled(true)
 , mModuleMember(false)
 {
 }
@@ -75,7 +75,7 @@ void TScript::setEventHandlerList(QStringList handlerList)
     }
     mEventHandlerList.clear();
     for (int i = 0; i < handlerList.size(); i++) {
-        if (handlerList[i].size() < 1) {
+        if (handlerList.at(i).isEmpty()) {
             continue;
         }
         mEventHandlerList.append(handlerList[i]);

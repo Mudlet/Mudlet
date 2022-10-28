@@ -6,7 +6,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +28,7 @@
 
 #include "pre_guard.h"
 #include <QLabel>
+#include <QMovie>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -42,7 +43,9 @@ class TLabel : public QLabel
 
 public:
     Q_DISABLE_COPY(TLabel)
-    TLabel(Host* pH, QWidget* pW = nullptr);
+    explicit TLabel(Host* pH, QWidget* pW = nullptr);
+    ~TLabel();
+
     void setClick(const int func);
     void setDoubleClick(const int func);
     void setRelease(const int func);
@@ -57,8 +60,8 @@ public:
     void mouseMoveEvent(QMouseEvent*) override;
     void leaveEvent(QEvent*) override;
     void enterEvent(QEvent*) override;
+    void resizeEvent(QResizeEvent* event) override;
     void setClickThrough(bool clickthrough);
-
 
     QPointer<Host> mpHost;
     int mClickFunction = 0;
@@ -68,9 +71,13 @@ public:
     int mWheelFunction = 0;
     int mEnterFunction = 0;
     int mLeaveFunction = 0;
+    QMovie* mpMovie = nullptr;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
+
+signals:
+    void resized();
 };
 
 #endif // MUDLET_TLABEL_H

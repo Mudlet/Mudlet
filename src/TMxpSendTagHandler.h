@@ -22,6 +22,7 @@
 
 #include "TEntityResolver.h"
 #include "TMxpTagHandler.h"
+#include "utils.h"
 
 // <SEND [href=command] [hint=text] [prompt] [expire=name]>
 class TMxpSendTagHandler : public TMxpSingleTagHandler
@@ -31,7 +32,7 @@ public:
     static QString extractHint(MxpStartTag* tag);
 
     TMxpSendTagHandler()
-    : TMxpSingleTagHandler(QStringLiteral("SEND"))
+    : TMxpSingleTagHandler(qsl("SEND"))
     , mIsHrefInContent(false)
     , mLinkId(0)
     {}
@@ -45,11 +46,11 @@ private:
     void updateHrefInLinks(TMxpClient& client) const;
     void resetCurrentTagContent(TMxpClient& client);
 
-    inline static const QString ATTR_HREF = QStringLiteral("href");
-    inline static const QString ATTR_HINT = QStringLiteral("hint");
-    inline static const QString ATTR_PROMPT = QStringLiteral("prompt");
-    inline static const QString ATTR_EXPIRE = QStringLiteral("expire");
-    inline static const QString TAG_CONTENT_PLACEHOLDER = QStringLiteral("&text;");
+    inline static const QString ATTR_HREF = qsl("href");
+    inline static const QString ATTR_HINT = qsl("hint");
+    inline static const QString ATTR_PROMPT = qsl("prompt");
+    inline static const QString ATTR_EXPIRE = qsl("expire");
+    inline static const QString TAG_CONTENT_PLACEHOLDER = qsl("&text;");
 
     bool mIsHrefInContent;
     QString mCurrentTagContent;
