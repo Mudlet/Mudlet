@@ -1023,8 +1023,8 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                                               true);
                 }
                 if (mudlet::self()->showMapAuditErrors()) {
-                    QString infoMsg = tr("[ INFO ]  - In area with id: %1 there were %n room(s) missing from those it\n"
-                                         "should be recording as possessing. They are:\n%2.\nThey have been added.", 
+                    QString infoMsg = tr("[ INFO ]  - In area with id: %1 there was/were %n room(s) missing from those it\n"
+                                         "should be recording as possessing. It is/They are:\n%2.\nIt has/They have been added.",
                                          "", 
                                          missingRooms.count())
                                       .arg(itArea.key())
@@ -1032,9 +1032,9 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
                     mpMap->postMessage(infoMsg);
                 }
                 mpMap->appendAreaErrorMsg(itArea.key(),
-                                          tr("[ INFO ]  - In this area there were %n room(s) missing from those it should be recorded as possessing. "
-                                             "They are: %1.\n"
-                                             "They have been added.", 
+                                          tr("[ INFO ]  - In this area there was/were %n room(s) missing from those it should be recorded as possessing. "
+                                             "It is/They are: %1.\n"
+                                             "It has/They have been added.",
                                              "", 
                                              missingRooms.count())
                                           .arg(roomList.join(qsl(", "))),
