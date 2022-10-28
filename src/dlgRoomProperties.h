@@ -61,7 +61,6 @@ private:
     void initSymbolInstructionLabel();
     QStringList getComboBoxSymbolItems();
     QFont getFontForPreview(QString);
-    QString getComboInput(QString);
 
     int getNewWeight();
     void initWeightInstructionLabel();

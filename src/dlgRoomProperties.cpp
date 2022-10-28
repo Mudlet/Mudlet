@@ -205,14 +205,14 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
         while (itSymbolUsed.hasNext()) {
             itSymbolUsed.next();
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
-                displayStrings.append(tr("%1 (count:%2)",
-                    // Intentional comment to separate arguments
-                        "This text will be part of a list of room values shown, where %1 will be "
-                        "the value itself, and %2 counts the number of rooms with this very value. "
-                        "When translating, ensure the %1 value comes first, as everything after it "
-                        "will be ignored going forward.")
-                        .arg(itSymbolUsed.key())
-                        .arg(QString::number(itSymbolUsed.value())));
+                displayStrings.append(qsl("%1 {%2:%3}")
+                    .arg(itSymbolUsed.key())
+                    .arg(tr("count",
+                            // Intentional comment to separate arguments
+                            "This text will be part of a list of room values shown, which will show the value "
+                            "itself, followed by the counted number of rooms with this very value like: "
+                            "grey {count:2} - so please translate like counted ammount, number of, etc."))
+                    .arg(QString::number(itSymbolUsed.value())));
             }
         }
     }
@@ -243,14 +243,14 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
         while (itWeightUsed.hasNext()) {
             itWeightUsed.next();
             if (itWeightUsed.value() == weightCountsList.at(i)) {
-                displayStrings.append(tr("%1 (count:%2)",
-                    // Intentional comment to separate arguments
-                        "This text will be part of a list of room values shown, where %1 will be "
-                        "the value itself, and %2 counts the number of rooms with this very value. "
-                        "When translating, ensure the %1 value comes first, as everything after it "
-                        "will be ignored going forward.")
-                        .arg(QString::number(itWeightUsed.key()))
-                        .arg(QString::number(itWeightUsed.value())));
+                displayStrings.append(qsl("%1 {%2:%3}")
+                    .arg(QString::number(itWeightUsed.key()))
+                    .arg(tr("count",
+                            // Intentional comment to separate arguments
+                            "This text will be part of a list of room values shown, which will name the value "
+                            "itself, followed by the counted number of rooms with that very value like: "
+                            "grey {count: 2} - So please translate like counted amount, number of, etc."))
+                    .arg(QString::number(itWeightUsed.value())));
             }
         }
     }
@@ -326,8 +326,11 @@ QString dlgRoomProperties::getNewSymbol()
         return lineEdit_roomSymbol->text();
     }
     QString newSymbolText = comboBox_roomSymbol->currentText();
-    if (QString matchedText = getComboInput(newSymbolText); !matchedText.isEmpty()) {
-        return matchedText;
+    // Parse the initial text before the curly braces containing count
+    QRegularExpression countStripper(qsl("^(.*) {.*}$"));
+    QRegularExpressionMatch match = countStripper.match(newSymbolText);
+    if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+        return match.captured(1);
     }
     return newSymbolText;
 }
@@ -341,23 +344,16 @@ int dlgRoomProperties::getNewWeight()
     if (newWeightText == multipleValuesPlaceholder) {
         return -1; // User did not want to select any weight, so we will do no change
     }
-    if (QString matchedText = getComboInput(newWeightText); !matchedText.isEmpty()) {
-        return matchedText.toInt();
+    // Parse an initial number out of what was selected or typed
+    QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
+    QRegularExpressionMatch match = countStripper.match(newWeightText);
+    if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+        return match.captured(1).toInt();
     }
     if (newWeightText.toInt() > 0) {
         return newWeightText.toInt();
     }
     return -2; // Maybe some other input we did not understand, so we will do no change
-}
-
-QString dlgRoomProperties::getComboInput(QString wholeText) {
-    // Parse an initial number out of what was selected or typed
-    QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
-    QRegularExpressionMatch match = countStripper.match(wholeText);
-    if (match.hasMatch() && match.lastCapturedIndex() > 0) {
-        return match.captured(1);
-    }
-    return QString();
 }
 
 void dlgRoomProperties::slot_updatePreview()
