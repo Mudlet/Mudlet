@@ -327,7 +327,7 @@ QString dlgRoomProperties::getNewSymbol()
     }
     QString newSymbolText = comboBox_roomSymbol->currentText();
     if (QString matchedText = getComboInput(newSymbolText); !matchedText.isEmpty()) {
-        return matchedText.toInt()
+        return matchedText;
     }
     return newSymbolText;
 }
@@ -342,7 +342,7 @@ int dlgRoomProperties::getNewWeight()
         return -1; // User did not want to select any weight, so we will do no change
     }
     if (QString matchedText = getComboInput(newWeightText); !matchedText.isEmpty()) {
-        return matchedText.toInt()
+        return matchedText.toInt();
     }
     if (newWeightText.toInt() > 0) {
         return newWeightText.toInt();
