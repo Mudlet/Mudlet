@@ -326,6 +326,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
 , mpDlgIRC(nullptr)
 , mpDlgProfilePreferences(nullptr)
 , mTutorialForCompactLineAlreadyShown(false)
@@ -2743,6 +2744,11 @@ void Host::setSearchOptions(const dlgTriggerEditor::SearchOptions optionsState)
     if (mpEditorDialog) {
         mpEditorDialog->setSearchOptions(optionsState);
     }
+}
+
+void Host::setBufferSearchOptions(const TConsole::SearchOptions optionsState)
+{
+    mBufferSearchOptions = optionsState;
 }
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
