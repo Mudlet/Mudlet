@@ -30,6 +30,11 @@
 #include <QPainter>
 #include "post_guard.h"
 
+// qsls cannot be shared so define a common instance to use when
+// there are multiple places where they are used within this file:
+const QString& key_icon_dialog_ok_apply = qsl(":/icons/dialog-ok-apply.png");
+const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
+
 dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
 : QDialog(pParentWidget)
 , mpHost(pHost)
