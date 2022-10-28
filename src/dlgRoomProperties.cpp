@@ -21,6 +21,7 @@
 
 #include "dlgRoomProperties.h"
 #include "Host.h"
+#include "TMap.h"
 #include "TRoomDB.h"
 
 #include "pre_guard.h"
@@ -423,32 +424,112 @@ QColor dlgRoomProperties::defaultSymbolColor()
     return backgroundBasedColor(mRoomColor);
 }
 
+
+void dlgRoomProperties::slot_selectRoomColor(QListWidgetItem* pI)
+{
+    mRoomColorNumber = pI->text().toInt();
+}
+
+void dlgRoomProperties::slot_defineNewColor()
+{
+    auto color = QColorDialog::getColor(mpHost->mRed, this);
+    TMap* pMap = mpHost->mpMap;
+    if (color.isValid()) {
+        auto environmentId = pMap->mCustomEnvColors.size() + 257 + 16;
+        if (pMap->mCustomEnvColors.contains(environmentId)) {
+            // find a new environment ID to use, starting with the latest
+            // 'safe' number so the new environment is last in the dialog
+            do {
+                environmentId++;
+            } while (pMap->mCustomEnvColors.contains(environmentId));
+        }
+
+        pMap->mCustomEnvColors[environmentId] = color;
+        slot_openRoomColorSelector();
+    }
+    repaint();
+    pMap->mUnsavedMap = true;
+}
+
 void dlgRoomProperties::slot_openRoomColorSelector()
 {
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Copy from T2DMap::slot_changeColor() etc.
-    //
-    //   Those do this and can spawn additional dialogs:
-    //   - slot_changeColor
-    //     - opens dialog to choose an existing room color
-    //     - lists all existing colors with number and colored box to click on
-    //     - see loop near QMapIterator<int, QColor> it(mpMap->mCustomEnvColors);
-    //     - click: slot sets int mChosenRoomColor = pSelectedIcon->text().toInt();
-    //     - doubleclick: dialog will be accepted and closed
-    //       - chosen color will be applied to all rooms like this:
-    //       - room->environment = mChosenRoomColor;
-    //       - This time, that will not be of scope here in dialog, but returned back to map!
-    //     - right click, delete color: Removes entry from mpMap->mCustomeEnvColors
-    //     - button, define color: Rejects this dialog, opens slot_defineNewColor instead!
-    //
-    //   - slot_defineNewColor
-    //     - Shows new QColorDialog to choose color freely (default = red?)
-    //     - When color is chosen, a complicated logic will search a new environmentID that is not used, yet
-    //     - The chosen color will be added to mpMap -> mCustomerEnvColors
-    //     - After this, slot_changeColor is called again ?!
-    //     - Finally, repaint() is called and unsavedMap set to true
-    //       - Is there a recursion error lurking here?
-    //
-    //   Make sure to use bool mChangeRoomColor, QColor mRoomColor, int mRoomColorNumber accordingly!
-    //
+    TMap* pMap = mpHost->mpMap;
+
+    auto dialog = new QDialog(this);
+    auto vboxLayout = new QVBoxLayout;
+    dialog->setLayout(vboxLayout);
+    dialog->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
+    dialog->setContentsMargins(0, 0, 0, 0);
+    auto listWidget = new QListWidget(dialog);
+    listWidget->setViewMode(QListView::IconMode);
+    listWidget->setResizeMode(QListView::Adjust);
+
+    connect(listWidget, &QListWidget::itemDoubleClicked, dialog, &QDialog::accept);
+    connect(listWidget, &QListWidget::itemClicked, this, &dlgRoomProperties::slot_selectRoomColor);
+    listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
+        QMenu menu;
+        menu.addAction(tr("Delete color", "Deletes an environment color"), this, [=]() {
+            auto selectedItem = listWidget->takeItem(listWidget->currentRow());
+            auto color = selectedItem->text();
+
+            pMap->mCustomEnvColors.remove(color.toInt());
+            repaint();
+            pMap->mUnsavedMap = true;
+        });
+
+        menu.exec(QCursor::pos());
+    });
+
+    vboxLayout->addWidget(listWidget);
+    auto pButtonBar = new QWidget(dialog);
+
+    auto hboxLayout = new QHBoxLayout;
+    pButtonBar->setLayout(hboxLayout);
+    pButtonBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
+    auto pB_newColor = new QPushButton(pButtonBar);
+    pB_newColor->setText(tr("Define new color"));
+
+    connect(pB_newColor, &QAbstractButton::clicked, dialog, &QDialog::reject);
+    connect(pB_newColor, &QAbstractButton::clicked, this, &dlgRoomProperties::slot_defineNewColor);
+
+    hboxLayout->addWidget(pB_newColor);
+
+    auto pB_ok = new QPushButton(pButtonBar);
+    pB_ok->setText(tr("OK", "confirm room color selection dialog"));
+    hboxLayout->addWidget(pB_ok);
+    connect(pB_ok, &QAbstractButton::clicked, dialog, &QDialog::accept);
+
+    auto pB_abort = new QPushButton(pButtonBar);
+    pB_abort->setText(tr("Cancel", "cancel room color selection dialog"));
+    connect(pB_abort, &QAbstractButton::clicked, dialog, &QDialog::reject);
+    hboxLayout->addWidget(pB_abort);
+    vboxLayout->addWidget(pButtonBar);
+
+    if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        pB_ok->setIcon(QIcon::fromTheme(key_dialog_ok_apply, QIcon(key_icon_dialog_ok_apply)));
+        pB_abort->setIcon(QIcon::fromTheme(key_dialog_cancel, QIcon(key_icon_dialog_cancel)));
+    }
+
+    QMapIterator<int, QColor> it(pMap->mCustomEnvColors);
+    while (it.hasNext()) {
+        it.next();
+        QColor c;
+        c = it.value();
+        auto pI = new QListWidgetItem(listWidget);
+        QPixmap pix = QPixmap(50, 50);
+        pix.fill(c);
+        QIcon mi(pix);
+        pI->setIcon(mi);
+        pI->setText(QString::number(it.key()));
+        listWidget->addItem(pI);
+    }
+    listWidget->sortItems();
+
+    if (dialog->exec() == QDialog::Accepted && pMap->mCustomEnvColors.contains(mRoomColorNumber)) {
+        // Only proceed if OK pressed and color is valid - "Cancel" prevents change
+        mChangeRoomColor = true;
+        mRoomColor = pMap->mCustomEnvColors.value(mRoomColorNumber);
+        slot_updatePreview();
+    }
 }

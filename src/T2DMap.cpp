@@ -3865,6 +3865,20 @@ void T2DMap::slot_setRoomProperties(
     //   Actually use the selected color to modify selected rooms!
     //
         // setRoomColor(QColor newRoomColor, QSet<TRoom*> rooms);
+        /*
+
+        QSetIterator<int> itSelectedRoom(mMultiSelectionSet);
+        while (itSelectedRoom.hasNext()) {
+            TRoom* room = pMap->mpRoomDB->getRoom(itSelectedRoom.next());
+            if (room) {
+                room->environment = mRoomColorNumber;
+            }
+        }
+
+        update();
+        pMap->mUnsavedMap = true;
+
+        */
     }
 
     if (changeSymbol || changeSymbolColor) {

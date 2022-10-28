@@ -81,6 +81,9 @@ private slots:
     void slot_symbolColorSelected(const QColor&);
     void slot_updatePreview();
     void slot_resetSymbolColor();
+
+    void slot_selectRoomColor(QListWidgetItem*)
+    void slot_defineNewColor()
     void slot_openRoomColorSelector();
 };
 
