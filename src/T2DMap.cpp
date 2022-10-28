@@ -3859,24 +3859,14 @@ void T2DMap::slot_setRoomProperties(
     }
 
     if (changeRoomColor) {
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Actually use the selected color to modify selected rooms!
-    //
-        // setRoomColor(QColor newRoomColor, QSet<TRoom*> rooms);
-        /*
-
-        QSetIterator<int> itSelectedRoom(mMultiSelectionSet);
-        while (itSelectedRoom.hasNext()) {
-            TRoom* room = pMap->mpRoomDB->getRoom(itSelectedRoom.next());
+        QSetIterator<TRoom*> itpRoom(rooms);
+        while (itpRoom.hasNext()) {
+            TRoom* room = itpRoom.next();
             if (room) {
-                room->environment = mRoomColorNumber;
+                room->environment = newRoomColor;
             }
         }
-
         update();
-        pMap->mUnsavedMap = true;
-
-        */
     }
 
     if (changeSymbol || changeSymbolColor) {
