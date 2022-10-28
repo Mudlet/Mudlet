@@ -92,11 +92,11 @@ void dlgRoomProperties::init(
     //   Configure weight display
     mpWeights = pWeights;
     if (mpWeights.isEmpty()) {
-        // show spin box with default value
+        // show spin-box with default value
         spinBox_weight->setValue(1);
         comboBox_weight->hide();
     } else if (mpWeights.size() == 1) {
-        // show spin box with the (single) existing weight pre-filled
+        // show spin-box with the (single) existing weight pre-filled
         spinBox_weight->setValue(mpWeights.keys().first());
         comboBox_weight->hide();
     } else {
@@ -325,15 +325,11 @@ QString dlgRoomProperties::getNewSymbol()
     if (mpSymbols.size() <= 1) {
         return lineEdit_roomSymbol->text();
     }
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Add knowledge from https://github.com/Mudlet/Mudlet/pull/6359 to here as well
-    //   Maybe refactor both sections to use same regex logic to prevent this situation?
-    QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
-    QRegularExpressionMatch match = countStripper.match(comboBox_roomSymbol->currentText());
-    if (match.hasMatch() && match.lastCapturedIndex() > 0) {
-        return match.captured(1);
+    QString newSymbolText = comboBox_roomSymbol->currentText();
+    if (QString matchedText = getComboInput(newSymbolText); !matchedText.isEmpty()) {
+        return matchedText.toInt()
     }
-    return comboBox_roomSymbol->currentText();
+    return newSymbolText;
 }
 
 int dlgRoomProperties::getNewWeight()
@@ -341,22 +337,28 @@ int dlgRoomProperties::getNewWeight()
     if (mpWeights.size() <= 1) {
         return spinBox_weight->value();
     }
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   Add knowledge from https://github.com/Mudlet/Mudlet/pull/6359 to here as well
-    //   Maybe refactor both sections to use same regex logic to prevent this situation?
     QString newWeightText = comboBox_weight->currentText();
     if (newWeightText == multipleValuesPlaceholder) {
         return -1; // User did not want to select any weight, so we will do no change
     }
-    QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
-    QRegularExpressionMatch match = countStripper.match(newWeightText);
-    if (match.hasMatch() && match.lastCapturedIndex() > 0) {
-        return match.captured(1).toInt();
+    if (QString matchedText = getComboInput(newWeightText); !matchedText.isEmpty()) {
+        return matchedText.toInt()
     }
     if (newWeightText.toInt() > 0) {
         return newWeightText.toInt();
     }
     return -2; // Maybe some other input we did not understand, so we will do no change
+}
+
+QString getComboInput(QString wholeText) {
+    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
+    //   Add knowledge from https://github.com/Mudlet/Mudlet/pull/6359 to here as well
+    QRegularExpression countStripper(qsl("^(.*) \\(.*\\)$"));
+    QRegularExpressionMatch match = countStripper.match(wholeText);
+    if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+        return match.captured(1);
+    }
+    return QString();
 }
 
 void dlgRoomProperties::slot_updatePreview()
