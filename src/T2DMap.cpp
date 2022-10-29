@@ -3736,26 +3736,6 @@ void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoo
 }
 
 
-void T2DMap::setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
-    QSetIterator<TRoom*> itRoomPtr(rooms);
-    TRoom* room;
-    if (newSymbol.isEmpty()) {
-        newSymbol = QString();
-    } else {
-        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
-        // handle/use/allow - by normalising the symbol we can ensure that
-        // all the entered ones are decomposed and recomposed in a
-        // "standard" way and will have the same sequence of codepoints:
-        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
-    }
-    while (itRoomPtr.hasNext()) {
-        room = itRoomPtr.next();
-        room->mSymbol = newSymbol;
-        room->mSymbolColor = symbolColor;
-    }
-}
-
-
 void T2DMap::slot_showPropertiesDialog()
 {
     // Counts and reports the existing properties used in ALL the selected rooms
@@ -3871,23 +3851,46 @@ void T2DMap::slot_setRoomProperties(
     //   E.g. rename setRoomName to setRoomNames and make a new setRoomName, etc.
     //   This can be used in that, and also in the (soon obsolete) context menu entry.
 
-    if (changeName) {
-        setRoomName(newName, rooms);
+    if (newSymbol.isEmpty()) {
+        newSymbol = QString();
+    } else {
+        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // handle/use/allow - by normalising the symbol we can ensure that
+        // all the entered ones are decomposed and recomposed in a
+        // "standard" way and will have the same sequence of codepoints:
+        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
     }
 
-    if (changeRoomColor) {
-        QSetIterator<TRoom*> itpRoom(rooms);
-        while (itpRoom.hasNext()) {
-            TRoom* room = itpRoom.next();
-            if (room) {
+    QSetIterator<TRoom*> itRoomPtr(rooms);
+    TRoom* room = nullptr;
+    while (itpRoom.hasNext()) {
+        room = itpRoom.next();
+        if (room) {
+            if (changeName) {
+                /* setRoomName(newName, rooms); */
+            }
+
+            if (changeRoomColor) {
                 room->environment = newRoomColor;
             }
+
+            if (changeSymbol || changeSymbolColor) {
+                room->mSymbol = newSymbol;
+                room->mSymbolColor = symbolColor;
+            }
+
+            if (changeWeight) {
+                /* setRoomWeight(newWeight, rooms); */
+            }
+
+            if (changeLockStatus) {
+                /* setRoomLockStatus(newLockStatus, rooms); */
+            }
         }
-        update();
     }
 
-    if (changeSymbol || changeSymbolColor) {
-        setRoomSymbol(newSymbol, newSymbolColor, rooms);
+    if (changeName) {
+        setRoomName(newName, rooms);
     }
 
     if (changeWeight) {
@@ -3899,6 +3902,7 @@ void T2DMap::slot_setRoomProperties(
     }
 
     repaint();
+    update();
     mpMap->mUnsavedMap = true;
 }
 
