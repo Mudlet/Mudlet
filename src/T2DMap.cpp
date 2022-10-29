@@ -3689,12 +3689,12 @@ void T2DMap::slot_showSymbolSelection()
             continue;
         }
 
-        QString thisSymbol = QString(room->mSymbol);
-        if (!thisSymbol.isEmpty()) {
-            if (usedSymbols.contains(thisSymbol)) {
-                (usedSymbols[thisSymbol])++;
+        QString thisLetter = QString(room->mSymbol);
+        if (!thisLetter.isEmpty()) {
+            if (usedSymbols.contains(thisLetter)) {
+                (usedSymbols[thisLetter])++;
             } else {
-                usedSymbols[thisSymbol] = 1;
+                usedSymbols[thisLetter] = 1;
             }
         }
     }
