@@ -3851,6 +3851,16 @@ void T2DMap::slot_setRoomProperties(
     //   E.g. rename setRoomName to setRoomNames and make a new setRoomName, etc.
     //   This can be used in that, and also in the (soon obsolete) context menu entry.
 
+    if (roomName.isEmpty()) {
+        roomName = QString();
+    } else {
+        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // handle/use/allow - by normalising the symbol we can ensure that
+        // all the entered ones are decomposed and recomposed in a
+        // "standard" way and will have the same sequence of codepoints:
+        roomName = roomName.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+    }
+
     if (newSymbol.isEmpty()) {
         newSymbol = QString();
     } else {
@@ -3863,11 +3873,12 @@ void T2DMap::slot_setRoomProperties(
 
     QSetIterator<TRoom*> itRoomPtr(rooms);
     TRoom* room = nullptr;
+
     while (itpRoom.hasNext()) {
         room = itpRoom.next();
         if (room) {
             if (changeName) {
-                /* setRoomName(newName, rooms); */
+                room->name = roomName;
             }
 
             if (changeRoomColor) {
@@ -3889,10 +3900,6 @@ void T2DMap::slot_setRoomProperties(
         }
     }
 
-    if (changeName) {
-        setRoomName(newName, rooms);
-    }
-
     if (changeWeight) {
         setRoomWeight(newWeight, rooms);
     }
@@ -3906,30 +3913,9 @@ void T2DMap::slot_setRoomProperties(
     mpMap->mUnsavedMap = true;
 }
 
-
-void T2DMap::setRoomName(QString roomName, QSet<TRoom*> rooms) {
-    QSetIterator<TRoom*> itpRoom(rooms);
-    TRoom* room;
-    if (roomName.isEmpty()) {
-        roomName = QString();
-    } else {
-        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
-        // handle/use/allow - by normalising the symbol we can ensure that
-        // all the entered ones are decomposed and recomposed in a
-        // "standard" way and will have the same sequence of codepoints:
-        roomName = roomName.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
-    }
-    while (itpRoom.hasNext()) {
-        room = itpRoom.next();
-        room->name = roomName;
-    }
-}
-
-
 void T2DMap::slot_setImage()
 {
 }
-
 
 void T2DMap::slot_deleteRoom()
 {
