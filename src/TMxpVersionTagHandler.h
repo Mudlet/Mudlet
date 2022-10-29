@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,7 +25,10 @@
 class TMxpVersionTagHandler : public TMxpSingleTagHandler
 {
 public:
-    TMxpVersionTagHandler() : TMxpSingleTagHandler("VERSION") {}
+    TMxpVersionTagHandler()
+    : TMxpSingleTagHandler("VERSION")
+    {}
+
     inline static const QString scmVersionString = qsl("\n\x1b[1z<VERSION MXP=1.0 CLIENT=Mudlet VERSION=%1>\n");
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
