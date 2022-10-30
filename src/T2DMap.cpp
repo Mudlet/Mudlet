@@ -3842,15 +3842,6 @@ void T2DMap::slot_setRoomProperties(
     bool changeLockStatus, bool newLockStatus,
     QSet<TRoom*> rooms)
 {
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   This whole function and called functions need logic updated:
-    //   This function here should loop through rooms, and the called
-    //   functions should update only a single given room to them.
-    //   Instead right now, each function loops through all rooms again.
-    //   Which is expected, because they were seperate concerns until now.
-    //   E.g. rename setRoomName to setRoomNames and make a new setRoomName, etc.
-    //   This can be used in that, and also in the (soon obsolete) context menu entry.
-
     if (roomName.isEmpty()) {
         roomName = QString();
     } else {
@@ -3891,14 +3882,14 @@ void T2DMap::slot_setRoomProperties(
         }
         if (changeWeight) {
             room->setWeight(newWeight);
-            mpMap->mMapGraphNeedsUpdate = true;
         }
         if (changeLockStatus) {
             room->isLocked = newLockStatus;
-            mpMap->mMapGraphNeedsUpdate = true;
         }
     }
-
+    if (changeWeight || changeLockStatus) {
+        mpMap->mMapGraphNeedsUpdate = true;
+    }
     repaint();
     update();
     mpMap->mUnsavedMap = true;
