@@ -3892,6 +3892,7 @@ void T2DMap::slot_setRoomProperties(
 
             if (changeWeight) {
                 /* setRoomWeight(newWeight, rooms); */
+                /* room->setWeight(newWeight); */
             }
 
             if (changeLockStatus) {
@@ -4368,7 +4369,18 @@ void T2DMap::slot_setRoomWeight()
     }
 
     if (isOk && newWeight > 0) { // Don't proceed if cancel was pressed or the value is not valid
-        setRoomWeight(newWeight, roomPtrsSet);
+        itSelectedRoom.toFront();
+        while (itSelectedRoom.hasNext()) {
+            room = mpMap->mpRoomDB->getRoom(itSelectedRoom.next());
+            if (!room) {
+                continue;
+            }
+
+            room->setWeight(newWeight);
+        }
+        mpMap->mMapGraphNeedsUpdate = true;
+        repaint();
+        mpMap->mUnsavedMap = true;
     }
 }
 
