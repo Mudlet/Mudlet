@@ -82,6 +82,7 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
 {
+    mMultiSelectionListWidget.setParent(this);
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
     QStringList headerLabels;
