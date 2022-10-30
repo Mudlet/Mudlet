@@ -3876,34 +3876,27 @@ void T2DMap::slot_setRoomProperties(
 
     while (itpRoom.hasNext()) {
         room = itpRoom.next();
-        if (room) {
-            if (changeName) {
-                room->name = roomName;
-            }
-
-            if (changeRoomColor) {
-                room->environment = newRoomColor;
-            }
-
-            if (changeSymbol || changeSymbolColor) {
-                room->mSymbol = newSymbol;
-                room->mSymbolColor = symbolColor;
-            }
-
-            if (changeWeight) {
-                /* setRoomWeight(newWeight, rooms); */
-                /* room->setWeight(newWeight); */
-            }
-
-            if (changeLockStatus) {
-                room->isLocked = newLockStatus;
-                mpMap->mMapGraphNeedsUpdate = true;
-            }
+        if (!room) {
+            continue;
         }
-    }
-
-    if (changeWeight) {
-        setRoomWeight(newWeight, rooms);
+        if (changeName) {
+            room->name = roomName;
+        }
+        if (changeRoomColor) {
+            room->environment = newRoomColor;
+        }
+        if (changeSymbol || changeSymbolColor) {
+            room->mSymbol = newSymbol;
+            room->mSymbolColor = symbolColor;
+        }
+        if (changeWeight) {
+            room->setWeight(newWeight);
+            mpMap->mMapGraphNeedsUpdate = true;
+        }
+        if (changeLockStatus) {
+            room->isLocked = newLockStatus;
+            mpMap->mMapGraphNeedsUpdate = true;
+        }
     }
 
     repaint();
@@ -4382,23 +4375,6 @@ void T2DMap::slot_setRoomWeight()
         repaint();
         mpMap->mUnsavedMap = true;
     }
-}
-
-
-void T2DMap::setRoomWeight(int newWeight, QSet<TRoom*> rooms)
-{
-    QSetIterator<TRoom*> itpRoom(rooms);
-    TRoom* room;
-    while (itpRoom.hasNext()) {
-        room = itpRoom.next();
-        if (!room) {
-            continue;
-        }
-        room->setWeight(newWeight);
-    }
-    mpMap->mMapGraphNeedsUpdate = true;
-    repaint();
-    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_loadMap() {
