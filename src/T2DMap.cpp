@@ -3895,17 +3895,14 @@ void T2DMap::slot_setRoomProperties(
             }
 
             if (changeLockStatus) {
-                /* setRoomLockStatus(newLockStatus, rooms); */
+                room->isLocked = newLockStatus;
+                mpMap->mMapGraphNeedsUpdate = true;
             }
         }
     }
 
     if (changeWeight) {
         setRoomWeight(newWeight, rooms);
-    }
-
-    if (changeLockStatus) {
-        setRoomLockStatus(newLockStatus, rooms);
     }
 
     repaint();
@@ -4217,18 +4214,6 @@ void T2DMap::slot_unlockRoom()
         }
     }
 }
-
-void T2DMap::setRoomLockStatus(bool newStatus, QSet<TRoom*> rooms) {
-    QSetIterator<TRoom*> itpRoom(rooms);
-    while (itpRoom.hasNext()) {
-        TRoom* room = itpRoom.next();
-        if (room) {
-            room->isLocked = newStatus;
-            mpMap->mMapGraphNeedsUpdate = true;
-        }
-    }
-}
-
 
 void T2DMap::slot_setRoomWeight()
 {
