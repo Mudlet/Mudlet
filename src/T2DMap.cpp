@@ -4191,9 +4191,9 @@ void T2DMap::slot_lockRoom()
     }
 
     mMultiRect = QRect(0, 0, 0, 0);
-    QSetIterator<int> itRoom(mMultiSelectionSet);
-    while (itRoom.hasNext()) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
+    QSetIterator<int> itSelectedRoom(mMultiSelectionSet);
+    while (itSelectedRoom.hasNext()) {
+        TRoom* room = mpMap->mpRoomDB->getRoom(itSelectedRoom.next());
         if (room) {
             room->isLocked = true;
             mpMap->mMapGraphNeedsUpdate = true;
@@ -4208,9 +4208,9 @@ void T2DMap::slot_unlockRoom()
     }
 
     mMultiRect = QRect(0, 0, 0, 0);
-    QSetIterator<int> itRoom(mMultiSelectionSet);
-    while (itRoom.hasNext()) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
+    QSetIterator<int> itSelectedRoom(mMultiSelectionSet);
+    while (itSelectedRoom.hasNext()) {
+        TRoom* room = mpMap->mpRoomDB->getRoom(itSelectedRoom.next());
         if (room) {
             room->isLocked = false;
             mpMap->mMapGraphNeedsUpdate = true;
