@@ -4208,16 +4208,14 @@ void T2DMap::slot_setRoomWeight()
 
     // First scan and count all the different weights used
     QMap<uint, uint> usedWeights; // key is weight, value is count of uses
-    QSetIterator<int> itRoom = mMultiSelectionSet;
+    QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
     TRoom* room;
-    QSet<TRoom*> roomPtrsSet;
-    while (itRoom.hasNext()) {
-        room = mpMap->mpRoomDB->getRoom(itRoom.next());
+    while (itSelectedRoom.hasNext()) {
+        room = mpMap->mpRoomDB->getRoom(itSelectedRoom.next());
         if (!room) {
             continue;
         }
 
-        roomPtrsSet.insert(room);
         int roomWeight = room->getWeight();
         if (roomWeight > 0) {
             if (usedWeights.contains(roomWeight)) {
