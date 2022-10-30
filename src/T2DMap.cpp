@@ -3970,11 +3970,11 @@ void T2DMap::slot_changeColor()
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
         QMenu menu;
-        menu.addAction(tr("Delete color", "Deletes an environment color"), this, [=]() {
+        menu.addAction(tr("Delete color", "Deletes an environment colour"), this, [=]() {
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
-            auto color = selectedItem->text();
+            auto colour = selectedItem->text();
 
-            mpMap->mCustomEnvColors.remove(color.toInt());
+            mpMap->mCustomEnvColors.remove(colour.toInt());
             repaint();
             mpMap->mUnsavedMap = true;
         });
@@ -4028,7 +4028,9 @@ void T2DMap::slot_changeColor()
     listWidget->sortItems();
 
     if (dialog->exec() == QDialog::Accepted && mpMap->mCustomEnvColors.contains(mChosenRoomColor)) {
-        // Only proceed if OK pressed and color is valid - "Cancel" prevents change
+        // Only proceed if OK - "Cancel" now prevents change AND check for a valid
+        // color here rather than inside the room change loop as before (only test
+        // once rather than for each room)
         mMultiRect = QRect(0, 0, 0, 0);
         QSetIterator<int> itSelectedRoom(mMultiSelectionSet);
         while (itSelectedRoom.hasNext()) {
