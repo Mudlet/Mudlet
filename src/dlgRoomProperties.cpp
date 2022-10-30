@@ -361,15 +361,18 @@ void dlgRoomProperties::slot_updatePreview()
     QString newSymbol = getNewSymbol();
     if (newSymbol == multipleValuesPlaceholder) {
         newSymbol = QString();
+        pushButton_setSymbolColor->setStyleSheet(QString());
+    } else {
+        pushButton_setSymbolColor->setStyleSheet(
+        qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;")
+            .arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
     }
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
     label_preview->setStyleSheet(
         qsl("color: %1; background-color: %2; border: %3;")
             .arg(realSymbolColor.name(), mRoomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
-    pushButton_setSymbolColor->setStyleSheet(
-        qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;")
-            .arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
+
 }
 
 QFont dlgRoomProperties::getFontForPreview(QString symbolString)
