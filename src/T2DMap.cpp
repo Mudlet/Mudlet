@@ -3842,14 +3842,14 @@ void T2DMap::slot_setRoomProperties(
     bool changeLockStatus, bool newLockStatus,
     QSet<TRoom*> rooms)
 {
-    if (roomName.isEmpty()) {
-        roomName = QString();
+    if (newName.isEmpty()) {
+        newName = QString();
     } else {
         // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
         // handle/use/allow - by normalising the symbol we can ensure that
         // all the entered ones are decomposed and recomposed in a
         // "standard" way and will have the same sequence of codepoints:
-        roomName = roomName.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        newName = newName.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
     }
 
     if (newSymbol.isEmpty()) {
@@ -3862,7 +3862,7 @@ void T2DMap::slot_setRoomProperties(
         newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
     }
 
-    QSetIterator<TRoom*> itRoomPtr(rooms);
+    QSetIterator<TRoom*> itpRoom(rooms);
     TRoom* room = nullptr;
 
     while (itpRoom.hasNext()) {
@@ -3871,14 +3871,14 @@ void T2DMap::slot_setRoomProperties(
             continue;
         }
         if (changeName) {
-            room->name = roomName;
+            room->name = newName;
         }
         if (changeRoomColor) {
             room->environment = newRoomColor;
         }
         if (changeSymbol || changeSymbolColor) {
             room->mSymbol = newSymbol;
-            room->mSymbolColor = symbolColor;
+            room->mSymbolColor = newSymbolColor;
         }
         if (changeWeight) {
             room->setWeight(newWeight);
