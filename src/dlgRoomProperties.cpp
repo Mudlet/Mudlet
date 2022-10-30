@@ -270,11 +270,10 @@ void dlgRoomProperties::accept()
         changeName = false;
     }
 
-    // TODO: https://github.com/Mudlet/Mudlet/pull/6354
-    //   find color (if any) to return back
-    //   make sure to prevent this from changing rooms if no change was done here
-    //   This is currently using mRoomColor, mRoomColorNumber and mChangeRoomColor
-    //   which are defined elsewhere and may need no further review here.
+    // Find color to return back
+    //   This is using mChangeRoomColor and mRoomColorNumber which are updated
+    //   immediately when the player changes colors in the dialog (as opposed
+    //   to the other room data here) - They need no further review at this time.
 
     // Find symbol to return back
     QString newSymbol = getNewSymbol();
