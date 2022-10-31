@@ -37,7 +37,7 @@ dlgRoomSymbol::dlgRoomSymbol(Host* pHost, QWidget* pParentWidget)
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomSymbol::slot_updatePreview);
     connect(pushButton_roomSymbolColor, &QAbstractButton::released, this, &dlgRoomSymbol::slot_openColorSelector);
-    connect(pushButton_reset, &QAbstractButton::released, this, &dlgRoomSymbol::slot_resetColors);
+    connect(toolButton_resetRoomSymbolColor, &QAbstractButton::released, this, &dlgRoomSymbol::slot_resetColors);
     connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomSymbol::slot_updatePreview);
 
     setAttribute(Qt::WA_DeleteOnClose);
