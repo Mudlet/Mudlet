@@ -135,7 +135,6 @@ void dlgRoomProperties::initLockInstructions()
                            "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
                            mpRooms.size());
     checkBox_locked->setText(instructions);
-    /* checkBox_locked->setWordWrap(true); // Unfortunately, this does not exist, yet. */
 }
 
 
