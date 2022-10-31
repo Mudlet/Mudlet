@@ -58,13 +58,14 @@ private:
     QColor backgroundBasedColor(QColor);
     QColor defaultSymbolColor();
     QString getNewSymbol();
-    void initSymbolInstructionLabel();
+    void initSymbolInstructions();
     QStringList getComboBoxSymbolItems();
     QFont getFontForPreview(QString);
 
     int getNewWeight();
-    void initWeightInstructionLabel();
+    void initWeightInstructions();
     QStringList getComboBoxWeightItems();
+    void initLockInstructions();
 
     Host* mpHost;
     QSet<TRoom*> mpRooms;

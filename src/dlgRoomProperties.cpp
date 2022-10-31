@@ -78,7 +78,7 @@ void dlgRoomProperties::init(
         lineEdit_roomSymbol->hide();
         comboBox_roomSymbol->addItems(getComboBoxSymbolItems());
     }
-    initSymbolInstructionLabel();
+    initSymbolInstructions();
 
     // Configure icon display
     auto pFirstRoom = *(pRooms.begin());
@@ -107,7 +107,7 @@ void dlgRoomProperties::init(
         spinBox_weight->hide();
         comboBox_weight->addItems(getComboBoxWeightItems());
     }
-    initWeightInstructionLabel();
+    initWeightInstructions();
 
     // Configure lock display
     // Are all locks the same or mixed status? Then show dialog in tristate.
@@ -121,12 +121,25 @@ void dlgRoomProperties::init(
         checkBox_locked->setTristate(false);
         checkBox_locked->setCheckState(Qt::Unchecked);
     }
+    initLockInstructions();
 
     // Configure dialog display
     adjustSize();
 }
 
-void dlgRoomProperties::initWeightInstructionLabel()
+
+void dlgRoomProperties::initLockInstructions()
+{
+    QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
+                           // Intentional comment to separate arguments!
+                           "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
+                           mpRooms.size());
+    checkBox_locked->setText(instructions);
+    /* checkBox_locked->setWordWrap(true); // Unfortunately, this does not exist, yet. */
+}
+
+
+void dlgRoomProperties::initWeightInstructions()
 {
     if (mpWeights.empty()) {
         label_weightInstructions->hide();
@@ -153,7 +166,8 @@ void dlgRoomProperties::initWeightInstructionLabel()
     label_weightInstructions->setWordWrap(true);
 }
 
-void dlgRoomProperties::initSymbolInstructionLabel()
+
+void dlgRoomProperties::initSymbolInstructions()
 {
     if (mpSymbols.empty()) {
         label_symbolInstructions->hide();
@@ -180,6 +194,7 @@ void dlgRoomProperties::initSymbolInstructionLabel()
     label_symbolInstructions->setText(instructions);
     label_symbolInstructions->setWordWrap(true);
 }
+
 
 QStringList dlgRoomProperties::getComboBoxSymbolItems()
 {
@@ -219,6 +234,7 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
     return displayStrings;
 }
 
+
 QStringList dlgRoomProperties::getComboBoxWeightItems()
 {
     // Obtain a set of "used" values
@@ -256,6 +272,7 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
     }
     return displayStrings;
 }
+
 
 void dlgRoomProperties::accept()
 {
@@ -319,6 +336,7 @@ void dlgRoomProperties::accept()
         mpRooms);
 }
 
+
 QString dlgRoomProperties::getNewSymbol()
 {
     if (mpSymbols.size() <= 1) {
@@ -333,6 +351,7 @@ QString dlgRoomProperties::getNewSymbol()
     }
     return newSymbolText;
 }
+
 
 int dlgRoomProperties::getNewWeight()
 {
@@ -355,6 +374,7 @@ int dlgRoomProperties::getNewWeight()
     return -2; // Maybe some other input we did not understand, so we will do no change
 }
 
+
 void dlgRoomProperties::slot_updatePreview()
 {
     auto realSymbolColor = selectedSymbolColor != nullptr ? selectedSymbolColor : defaultSymbolColor();
@@ -374,6 +394,7 @@ void dlgRoomProperties::slot_updatePreview()
             .arg(realSymbolColor.name(), mRoomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
 
 }
+
 
 QFont dlgRoomProperties::getFontForPreview(QString symbolString)
 {
@@ -395,6 +416,7 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
     return font;
 }
 
+
 void dlgRoomProperties::slot_openSymbolColorSelector()
 {
     auto* dialog = (selectedSymbolColor != nullptr) ? new QColorDialog(selectedSymbolColor, this) : new QColorDialog(defaultSymbolColor(), this);
@@ -403,17 +425,20 @@ void dlgRoomProperties::slot_openSymbolColorSelector()
     dialog->open(this, SLOT(slot_symbolColorSelected(const QColor&)));
 }
 
+
 void dlgRoomProperties::slot_symbolColorSelected(const QColor& color)
 {
     selectedSymbolColor = color;
     slot_updatePreview();
 }
 
+
 void dlgRoomProperties::slot_resetSymbolColor()
 {
     selectedSymbolColor = QColor();
     slot_updatePreview();
 }
+
 
 QColor dlgRoomProperties::backgroundBasedColor(QColor background)
 {
@@ -430,6 +455,7 @@ void dlgRoomProperties::slot_selectRoomColor(QListWidgetItem* pI)
 {
     mRoomColorNumber = pI->text().toInt();
 }
+
 
 void dlgRoomProperties::slot_defineNewColor()
 {
@@ -450,6 +476,7 @@ void dlgRoomProperties::slot_defineNewColor()
     repaint();
     mpHost->mpMap->mUnsavedMap = true;
 }
+
 
 void dlgRoomProperties::slot_openRoomColorSelector()
 {
