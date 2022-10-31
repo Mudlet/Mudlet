@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>397</width>
-    <height>477</height>
+    <width>345</width>
+    <height>456</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -30,18 +30,18 @@
        <enum>QLayout::SetMinimumSize</enum>
       </property>
       <property name="leftMargin">
-       <number>9</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
-       <number>9</number>
+       <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>9</number>
+       <number>0</number>
       </property>
       <property name="bottomMargin">
        <number>9</number>
       </property>
-      <item>
+      <item alignment="Qt::AlignLeft">
        <widget class="QLabel" name="label_name">
         <property name="text">
          <string>Name:</string>
@@ -126,11 +126,20 @@
         <property name="text">
          <string>&lt;p&gt;Choose: &lt;br/&gt;• an existing symbol from the list below (sorted by most commonly used first)&lt;br/&gt;• enter one or more graphemes (&amp;quot;visible characters&amp;quot;) as a new symbol&lt;br/&gt;• enter a space to clear any existing symbols&lt;br/&gt;for all of the %n selected room(s):&lt;/p&gt;</string>
         </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QWidget" name="widget_symbolText" native="true">
         <layout class="QHBoxLayout" name="horizontalLayout_widget_symbolText" stretch="1,1">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
          <item>
           <widget class="QLineEdit" name="lineEdit_roomSymbol">
            <property name="placeholderText">
@@ -151,6 +160,12 @@
       <item>
        <widget class="QWidget" name="widget_symbolColor" native="true">
         <layout class="QHBoxLayout" name="horizontalLayout_widget_symbolColor">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
          <item>
           <widget class="QPushButton" name="pushButton_setSymbolColor">
            <property name="sizePolicy">
@@ -205,11 +220,20 @@
         <property name="text">
          <string>Enter new roomweight (= travel time), minimum is 1:</string>
         </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
       <item>
        <widget class="QWidget" name="widget_weight" native="true">
         <layout class="QHBoxLayout" name="horizontalLayout_widget_weight">
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
          <item>
           <widget class="QSpinBox" name="spinBox_weight">
            <property name="sizePolicy">
