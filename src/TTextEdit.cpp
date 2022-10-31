@@ -181,6 +181,14 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
 {
     if (mShowTimeStamps != state) {
         mShowTimeStamps = state;
+        QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp")));
+        if (state){
+            file.open(QIODevice::WriteOnly | QIODevice::Text);
+            QTextStream out(&file);
+            file.close();
+        } else {
+            file.remove();
+        }
         forceUpdate();
         update();
     }
@@ -1579,11 +1587,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
+            const QString &uniqueName = it.key();
             const QString &actionName = actionInfo.at(1);
-            QAction * action = new QAction(actionName, this);
-            action->setToolTip(actionInfo.at(2));
-            popup->addAction(action);
-            connect(action, &QAction::triggered, this, [this, actionName] { slot_mouseAction(actionName); });
+            QAction * mouseAction = new QAction(actionName, this);
+            mouseAction->setToolTip(actionInfo.at(2));
+            popup->addAction(mouseAction);
+            connect(mouseAction, &QAction::triggered, this, [this, uniqueName] { slot_mouseAction(uniqueName); });
         }
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();

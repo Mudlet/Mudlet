@@ -82,6 +82,7 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
 {
+    mMultiSelectionListWidget.setParent(this);
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
     QStringList headerLabels;
@@ -3584,12 +3585,11 @@ void T2DMap::slot_movePosition()
     pLEx->setText(QString::number(pR_start->x));
     pLEy->setText(QString::number(pR_start->y));
     pLEz->setText(QString::number(pR_start->z));
-    QLabel* pLa0 = new QLabel(tr("Move the selection, centered on\n"
-                                 "the highlighted room (%1) to:",
+    QLabel* pLa0 = new QLabel(tr("Move the selection, centered on the highlighted room (%1) to:",
                                  // Intentional comment to separate arguments
-                                 "Use linefeeds as necessary to format text into a reasonable rectangle of text, "
                                  "%1 is a room number")
                               .arg(mMultiSelectionHighlightRoomId));
+    pLa0->setWordWrap(true);
     // Record the starting coordinates - can be a help when working out how to move a block of rooms!
     QLabel* pLa1 = new QLabel(tr("x coordinate (was %1):").arg(pR_start->x));
     QLabel* pLa2 = new QLabel(tr("y coordinate (was %1):").arg(pR_start->y));
@@ -4114,15 +4114,39 @@ void T2DMap::slot_setRoomWeight()
                     itWeightsUsed.next();
                     if (itWeightsUsed.value() == weightCountsList.at(i)) {
                         if (itWeightsUsed.key() == 1) { // Indicate the "default" value which is unity weight
-                            displayStrings.append(tr("%1 {count:%2, default}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
+                            displayStrings.append(tr("1 {count:%1, default}",
+                                                     // Intentional comment to separate arguments
+                                                     "An entry into the QComboBox used to show the existing room weights in a selection "
+                                                     "of rooms for the user to choose to apply to every room in the selection. "
+                                                     "Everything after the '1' which is the default weight (and which is used by %1 "
+                                                     "rooms in the selection) will be removed by processing the entry as a "
+                                                     "QRegularExpression programmatically - the translation needs to also begin with "
+                                                     "that number '1'.")
+                                                          .arg(QString::number(itWeightsUsed.value())));
                         } else {
-                            displayStrings.append(tr("%1 {count:%2}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
+                            displayStrings.append(tr("%1 {count:%2}",
+                                                     // Intentional comment to separate arguments
+                                                     "An entry into the QComboBox used to show the existing room weights in a selection "
+                                                     "of rooms for the user to choose to apply to every room in the selection. "
+                                                     "Everything after the '%1' which is a number and is the weight used by a number "
+                                                     "%2 of rooms in the selection) will be removed by processing the entry as a "
+                                                     "QRegularExpression programmatically - the translation needs to also begin with "
+                                                     "that number '%1'.")
+                                                          .arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
                         }
                     }
                 }
             }
-            if (!usedWeights.contains(1)) { // If unity weight was not used insert it at end of list
-                displayStrings.append(tr("1 {count 0, default}"));
+            if (!usedWeights.contains(1)) { // If unity weight was not used insert it at end of list - this should be the same Engineering English as above
+                displayStrings.append(tr("1 {count:%1, default}",
+                                         // Intentional comment to separate arguments
+                                         "An entry into the QComboBox used to show the existing room weights in a selection "
+                                         "of rooms for the user to choose to apply to every room in the selection. "
+                                         "Everything after the '1' which is the default weight (and which is used by %1 "
+                                         "rooms in the selection) will be removed by processing the entry as a "
+                                         "QRegularExpression programmatically - the translation needs to also begin with "
+                                         "that number '1'.")
+                                              .arg(QString::number(0)));
             }
             QString newWeightText = QInputDialog::getItem(this,                    // QWidget * parent
                                                           tr("Enter room weight"), // const QString & title
@@ -4144,6 +4168,12 @@ void T2DMap::slot_setRoomWeight()
                                                           Qt::ImhDigitsOnly);                                               // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
             newWeight = 1;
             if (isOk) { // Don't do anything if cancel was pressed
+                // Parse an initial number out of what was selected or typed
+                QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
+                QRegularExpressionMatch match = countStripper.match(newWeightText);
+                if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+                    newWeightText = match.captured(1);
+                }
                 if (newWeightText.toInt() > 0) {
                     newWeight = newWeightText.toInt();
                 } else {
