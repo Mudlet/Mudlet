@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,8 +26,8 @@
 #include "Host.h"
 
 
-dlgComposer::dlgComposer(Host* pH) : mpHost(pH)
-
+dlgComposer::dlgComposer(Host* pH)
+: mpHost(pH)
 {
     setupUi(this);
     QFont f = QFont(qsl("Bitstream Vera Sans Mono"), 10, QFont::Normal);
