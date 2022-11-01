@@ -418,7 +418,7 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # * Produce a timestamped message on the OS's command line when an autosave of
 # the map file gets requested and when such a request gets actioned (or
 # rejected because the profile is being loaded):
-target_compile_definitions(mudlet PRIVATE DEBUG_MAPAUTOSAVE)
+# target_compile_definitions(mudlet PRIVATE DEBUG_MAPAUTOSAVE)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
