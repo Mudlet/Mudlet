@@ -1658,6 +1658,11 @@ void mudlet::addConsoleForNewHost(Host* pH)
         pConsole->logButton->click();
     }
 
+    if (pH->mTimeStampStatus) {
+        // This is similar to logging above, but for timestamps
+        pConsole->timeStampButton->click();
+    }
+
     pConsole->show();
 
     auto pEditor = new dlgTriggerEditor(pH);

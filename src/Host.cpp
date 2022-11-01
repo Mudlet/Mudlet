@@ -368,6 +368,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // confuse it with the "autologin" item, which controls whether the profile
     // is automatically started when the Mudlet application is run!
     mLogStatus = QFile::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("autolog")));
+    // "autotimestamp" determines if profile loads with timestamps enabled
+    mTimeStampStatus = QFile::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
