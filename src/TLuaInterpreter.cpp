@@ -15393,6 +15393,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
     lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
+    lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -17654,4 +17655,26 @@ int TLuaInterpreter::scrollTo(lua_State *L) {
     }
 
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScroll
+int TLuaInterpreter::getScroll(lua_State *L) {
+    QString windowName;
+
+    int n = lua_gettop(L);
+    if (n == 1) {
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
+    } else {
+        windowName = QLatin1String("main");
+    }
+
+    auto console = getHostFromLua(L).findConsole(windowName);
+    if (!console) {
+        lua_pushnil(L);
+        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+        return 2;
+    }
+
+    lua_pushnumber(L, console->getLastLineNumber());
+    return 1;
 }
