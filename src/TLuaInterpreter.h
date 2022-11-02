@@ -483,7 +483,9 @@ public:
     static int disableScript(lua_State*);
     static int permAlias(lua_State*);
     static int exists(lua_State*);
+    static int existsID(lua_State*);
     static int isActive(lua_State*);
+    static int isActiveID(lua_State*);
     static int tempAlias(lua_State*);
     static int enableAlias(lua_State*);
     static int disableAlias(lua_State*);

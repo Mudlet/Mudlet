@@ -7925,6 +7925,50 @@ int TLuaInterpreter::exists(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#existsID
+int TLuaInterpreter::existsID(lua_State* L)
+{
+    auto id = getVerifiedInt(L, __func__, 1, "ID");
+    if (id < 0) {
+        // Must be zero or more but doesn't seem to be:
+        return warnArgumentValue(L, __func__, "item ID as %d does not seem to be a positive integer", id);
+    }
+    auto type = getVerifiedString(L, __func__, 2, "type").toLower();
+    Host& host = getHostFromLua(L);
+
+    if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        auto pT = host.getTimerUnit()->getTimer(id);
+        lua_pushboolean(L, static_cast<bool>(pT));
+        return 1;
+    }
+    if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
+        auto pT = host.getTriggerUnit()->getTrigger(id);
+        lua_pushboolean(L, static_cast<bool>(pT));
+        return 1;
+    }
+    if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
+        auto pT = host.getAliasUnit()->getAlias(id);
+        lua_pushboolean(L, static_cast<bool>(pT));
+        return 1;
+    }
+    if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
+        auto pT = host.getKeyUnit()->getKey(id);
+        lua_pushboolean(L, static_cast<bool>(pT));
+        return 1;
+    }
+    if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
+        auto pT = host.getActionUnit()->getAction(id);
+        lua_pushboolean(L, static_cast<bool>(pT));
+        return 1;
+    }
+    if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+        auto pT = host.getScriptUnit()->getScript(id);
+        lua_pushboolean(L, static_cast<bool>(pT));
+        return 1;
+    }
+    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
 int TLuaInterpreter::isActive(lua_State* L)
 {
@@ -7987,6 +8031,71 @@ int TLuaInterpreter::isActive(lua_State* L)
     }
     lua_pushnumber(L, cnt);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActiveID
+int TLuaInterpreter::isActiveID(lua_State* L)
+{
+    auto id = getVerifiedInt(L, __func__, 1, "item ID");
+    if (id < 0) {
+        // Must be zero or more but doesn't seem to be:
+        return warnArgumentValue(L, __func__, "item ID as %d does not seem to be a positive integer", id);
+    }
+
+    // Although we only use 4 ASCII strings the user may not enter a purely
+    // ASCII value which we might have to report...
+    QString type = getVerifiedString(L, __func__, 2, "item type");
+
+    Host& host = getHostFromLua(L);
+    if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        auto pT = host.getTimerUnit()->getTimer(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, "timer ID %d does not exist", id);
+        }
+        lua_pushboolean(L, pT->isActive());
+        return 1;
+    }
+    if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
+        auto pT = host.getTriggerUnit()->getTrigger(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, "trigger ID %d does not exist", id);
+        }
+        lua_pushboolean(L, pT->isActive());
+        return 1;
+    }
+    if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
+        auto pT = host.getAliasUnit()->getAlias(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, "alias ID %d does not exist", id);
+        }
+        lua_pushboolean(L, pT->isActive());
+        return 1;
+    }
+    if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
+        auto pT = host.getKeyUnit()->getKey(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, "key-binding ID %d does not exist", id);
+        }
+        lua_pushboolean(L, pT->isActive());
+        return 1;
+    }
+    if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
+        auto pT = host.getActionUnit()->getAction(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, "button/menu/toolbar ID %d does not exist", id);
+        }
+        lua_pushboolean(L, pT->isActive());
+        return 1;
+    }
+    if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+        auto pT = host.getScriptUnit()->getScript(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, "script ID %d does not exist", id);
+        }
+        lua_pushboolean(L, pT->isActive());
+        return 1;
+    }
+    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permAlias
@@ -15100,7 +15209,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "permKey", TLuaInterpreter::permKey);
     lua_register(pGlobalLua, "tempKey", TLuaInterpreter::tempKey);
     lua_register(pGlobalLua, "exists", TLuaInterpreter::exists);
+    lua_register(pGlobalLua, "existsID", TLuaInterpreter::existsID);
     lua_register(pGlobalLua, "isActive", TLuaInterpreter::isActive);
+    lua_register(pGlobalLua, "isActiveID", TLuaInterpreter::isActiveID);
     lua_register(pGlobalLua, "enableAlias", TLuaInterpreter::enableAlias);
     lua_register(pGlobalLua, "tempAlias", TLuaInterpreter::tempAlias);
     lua_register(pGlobalLua, "disableAlias", TLuaInterpreter::disableAlias);
