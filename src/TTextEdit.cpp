@@ -2719,7 +2719,7 @@ void TTextEdit::updateCaret()
 
     if (!mIsLowerPane) {
         if (mCaretLine < lineOffset) {
-            scrollTo(mCaretLine);
+            scrollTo(mCaretLine + 1);
         } else if (mCaretLine >= lineOffset + mScreenHeight) {
             int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine == mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
