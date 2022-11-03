@@ -670,6 +670,81 @@ QList<TMediaPlayer> TMedia::getMediaPlayerList(TMediaData& mediaData)
     return mTMediaPlayerList;
 }
 
+void TMedia::updateMediaPlayerList(TMediaPlayer& player)
+{
+    int matchedMediaPlayerIndex = -1;
+    TMediaData mediaData = player.getMediaData();
+    QList<TMediaPlayer> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+
+    for (int i = 0; i < mTMediaPlayerList.size(); ++i) {
+        TMediaPlayer pTestPlayer = mTMediaPlayerList.at(i);
+
+        if (pTestPlayer.getMediaPlayer() == player.getMediaPlayer()) {
+            matchedMediaPlayerIndex = i;
+            break;
+        }
+    }
+
+    switch (mediaData.getMediaProtocol()) {
+    case TMediaData::MediaProtocolMSP:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            if (matchedMediaPlayerIndex == -1) {
+                mMSPSoundList.append(player);
+            } else {
+                mMSPSoundList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        case TMediaData::MediaTypeMusic:
+            if (matchedMediaPlayerIndex == -1) {
+                mMSPMusicList.append(player);
+            } else {
+                mMSPMusicList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        }
+        break;
+
+    case TMediaData::MediaProtocolGMCP:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            if (matchedMediaPlayerIndex == -1) {
+                mGMCPSoundList.append(player);
+            } else {
+                mGMCPSoundList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        case TMediaData::MediaTypeMusic:
+            if (matchedMediaPlayerIndex == -1) {
+                mGMCPMusicList.append(player);
+            } else {
+                mGMCPMusicList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        }
+        break;
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            if (matchedMediaPlayerIndex == -1) {
+                mAPISoundList.append(player);
+            } else {
+                mAPISoundList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        case TMediaData::MediaTypeMusic:
+            if (matchedMediaPlayerIndex == -1) {
+                mAPIMusicList.append(player);
+            } else {
+                mAPIMusicList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        }
+        break;
+    }
+}
+
 TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
 {
     TMediaPlayer pPlayer{};
@@ -993,41 +1068,6 @@ void TMedia::play(TMediaData& mediaData)
         pPlayer.getMediaPlayer()->setPlaylist(playlist);
     }
 
-    switch (mediaData.getMediaProtocol()) {
-    case TMediaData::MediaProtocolMSP:
-        switch (mediaData.getMediaType()) {
-        case TMediaData::MediaTypeSound:
-            mMSPSoundList.append(pPlayer);
-            break;
-        case TMediaData::MediaTypeMusic:
-            mMSPMusicList.append(pPlayer);
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.getMediaType()) {
-        case TMediaData::MediaTypeSound:
-            mGMCPSoundList.append(pPlayer);
-            break;
-        case TMediaData::MediaTypeMusic:
-            mGMCPMusicList.append(pPlayer);
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolAPI:
-        switch (mediaData.getMediaType()) {
-        case TMediaData::MediaTypeSound:
-            mAPISoundList.append(pPlayer);
-            break;
-        case TMediaData::MediaTypeMusic:
-            mAPIMusicList.append(pPlayer);
-            break;
-        }
-        break;
-    }
-
     // Set volume, start and play media
     pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.getMediaVolume());
     pPlayer.getMediaPlayer()->setPosition(mediaData.getMediaStart());
@@ -1037,6 +1077,8 @@ void TMedia::play(TMediaData& mediaData)
     }
 
     pPlayer.getMediaPlayer()->play();
+
+    updateMediaPlayerList(pPlayer);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#type:_sound
