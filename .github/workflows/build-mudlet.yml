@@ -234,7 +234,7 @@ jobs:
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: pat-s/always-upload-cache@v3.0.1
+      uses: pat-s/always-upload-cache@v3.0.11
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
