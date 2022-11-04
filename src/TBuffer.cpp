@@ -2726,7 +2726,7 @@ void TBuffer::shrinkBuffer()
         promptBuffer.pop_front();
         timeBuffer.pop_front();
         buffer.pop_front();
-        --mCursorY;
+        mCursorY--;
     }
 
     if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole|TConsole::Buffer)) {
