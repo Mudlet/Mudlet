@@ -59,7 +59,7 @@ void dlgRoomProperties::init(
     // Configure name display
     if (usedNames.size() > 1) {
         lineEdit_name->setText(multipleValuesPlaceholder);
-    } else if (useNames.size() == 1) {
+    } else if (usedNames.size() == 1) {
         lineEdit_name->setText(usedNames.constBegin().key());
     } else {
         lineEdit_name->clear();
