@@ -58,8 +58,10 @@ void dlgRoomProperties::init(
     // Configure name display
     if (usedNames.size() > 1) {
         lineEdit_name->setText(multipleValuesPlaceholder);
+    } else if (useNames.size() == 1) {
+        lineEdit_name->setText(usedNames.constBegin().key());
     } else {
-        lineEdit_name->setText(usedNames.keys().first());
+        lineEdit_name->clear();
     }
 
     // Configure symbols display
