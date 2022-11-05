@@ -484,6 +484,7 @@ void dlgProfilePreferences::disableHostDetails()
 
     // ===== tab security =====
     groupBox_ssl->setEnabled(false);
+    mAskSslAvailable->setEnabled(false);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(false);
@@ -586,8 +587,10 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab security =====
 #if defined(QT_NO_SSL)
     groupBox_ssl->setEnabled(false);
+    mAskSslAvailable->setEnabled(false);
 #else
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
+    mAskSslAvailable->setEnabled(true);
 #endif
     checkBox_announceIncomingText->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
@@ -1100,6 +1103,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
+    mAskSslAvailable->setChecked(pHost->mAskSslAvailable);
+
     groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
     lineEdit_proxyAddress->setText(pHost->mProxyAddress);
@@ -1434,6 +1439,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
+    mAskSslAvailable->setChecked(false);
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -2686,6 +2692,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
+        pHost->mAskSslAvailable = mAskSslAvailable->isChecked();
 
         if (console) {
             console->changeColors();

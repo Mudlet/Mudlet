@@ -234,6 +234,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSslIgnoreExpired(false)
 , mSslIgnoreSelfSigned(false)
 , mSslIgnoreAll(false)
+, mAskSslAvailable(true)
+, mMSSPSslPort(0)
 , mUseProxy(false)
 , mProxyPort(0)
 , mIsGoingDown(false)

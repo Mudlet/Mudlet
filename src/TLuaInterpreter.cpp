@@ -13582,6 +13582,10 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 host.mpConsole->printSystemMessage(msg);
             }
             host.raiseEvent(event);
+
+            if (msspVAR == "SSL" && msspVAL != "-1") {
+                host.mMSSPSslPort = msspVAL.toInt();
+            }
         }
 
         lua_pop(L, lua_gettop(L));
@@ -17337,6 +17341,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("enableMSP")) {
         host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("askSslAvailable")) {
+        host.mAskSslAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("inputLineStrictUnixEndings")) {
