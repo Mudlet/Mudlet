@@ -422,7 +422,7 @@ void dlgRoomProperties::slot_openSymbolColorSelector()
 {
     auto* dialog = (selectedSymbolColor != nullptr) ? new QColorDialog(selectedSymbolColor, this) : new QColorDialog(defaultSymbolColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->setWindowTitle(tr("Pick color"));
+    dialog->setWindowTitle(tr("Set symbol color"));
     dialog->open(this, SLOT(slot_symbolColorSelected(const QColor&)));
 }
 
@@ -460,7 +460,7 @@ void dlgRoomProperties::slot_selectRoomColor(QListWidgetItem* pI)
 
 void dlgRoomProperties::slot_defineNewColor()
 {
-    auto color = QColorDialog::getColor(mpHost->mRed, this);
+    auto color = QColorDialog::getColor(mpHost->mRed, this, tr("Define new room color"));
     if (color.isValid()) {
         auto environmentId = mpHost->mpMap->mCustomEnvColors.size() + 257 + 16;
         if (mpHost->mpMap->mCustomEnvColors.contains(environmentId)) {
@@ -482,6 +482,7 @@ void dlgRoomProperties::slot_defineNewColor()
 void dlgRoomProperties::slot_openRoomColorSelector()
 {
     auto dialog = new QDialog(this);
+    dialog->setWindowTitle(tr("Set room color"));
     auto vboxLayout = new QVBoxLayout;
     dialog->setLayout(vboxLayout);
     dialog->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
@@ -495,7 +496,7 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
         QMenu menu;
-        menu.addAction(tr("Delete color", "Deletes an environment color"), this, [=]() {
+        menu.addAction(tr("Delete room color", "This action deletes a color from the list of all room colors"), this, [=]() {
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
             auto color = selectedItem->text();
 
@@ -514,7 +515,7 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     pButtonBar->setLayout(hboxLayout);
     pButtonBar->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed));
     auto pB_newColor = new QPushButton(pButtonBar);
-    pB_newColor->setText(tr("Define new color"));
+    pB_newColor->setText(tr("Define new room color"));
 
     connect(pB_newColor, &QAbstractButton::clicked, dialog, &QDialog::reject);
     connect(pB_newColor, &QAbstractButton::clicked, this, &dlgRoomProperties::slot_defineNewColor);
