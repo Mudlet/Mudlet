@@ -304,7 +304,7 @@ void dlgRoomProperties::accept()
         changeSymbolColor = false;
     }
 
-    // Find symbol to return back
+    // Find weight to return back
     int newWeight = getNewWeight();
     bool changeWeight = true;
     if (newWeight <= -1) {
