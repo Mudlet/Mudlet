@@ -3850,6 +3850,10 @@ void Host::createMapper(const bool loadDefaultMap)
 
     } else {
         if (pMap->mpMapper) {
+            // Needed to set the area selector widget to right area when map is
+            // loaded by clicking on Map main toolbar button:
+            pMap->mpMapper->updateAreaComboBox();
+            pMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
             pMap->mpMapper->show();
         }
     }
