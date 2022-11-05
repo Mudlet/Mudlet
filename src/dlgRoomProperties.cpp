@@ -73,7 +73,7 @@ void dlgRoomProperties::init(
         comboBox_roomSymbol->hide();
     } else if (mpSymbols.size() == 1) {
         // show simple text-entry box with the (single) existing symbol pre-filled
-        lineEdit_roomSymbol->setText(mpSymbols.keys().first());
+        lineEdit_roomSymbol->setText(mpSymbols.constBegin().key());
         comboBox_roomSymbol->hide();
     } else {
         // show combined dropdown & text-entry box to host all of the (multiple) existing symbols
@@ -87,7 +87,7 @@ void dlgRoomProperties::init(
     selectedSymbolColor = pFirstRoom->mSymbolColor;
     if (pColors.size() == 1) {
         mRoomColor = mpHost->mpMap->getColor(pFirstRoom->getId());
-        mRoomColorNumber = pColors.keys().first();
+        mRoomColorNumber = pColors.constBegin().key();
     } else {
         mRoomColor = QColor("grey"); // rgb(128, 128, 128)
         mRoomColorNumber = -1;
@@ -102,7 +102,7 @@ void dlgRoomProperties::init(
         comboBox_weight->hide();
     } else if (mpWeights.size() == 1) {
         // show spin-box with the (single) existing weight pre-filled
-        spinBox_weight->setValue(mpWeights.keys().first());
+        spinBox_weight->setValue(mpWeights.constBegin().key());
         comboBox_weight->hide();
     } else {
         // show combined dropdown & text-entry box to host all of the (multiple) existing weights
