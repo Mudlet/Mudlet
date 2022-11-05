@@ -68,14 +68,14 @@ private:
     QStringList getComboBoxWeightItems();
     void initLockInstructions();
 
-    Host* mpHost;
+    Host* mpHost = nullptr;
     QSet<TRoom*> mpRooms;
     QHash<QString, int> mpSymbols;
     QHash<int, int> mpWeights;
     QColor selectedSymbolColor;
     QColor mRoomColor;
-    int mRoomColorNumber;
-    bool mChangeRoomColor = false;;
+    int mRoomColorNumber = -1;
+    bool mChangeRoomColor = false;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:
