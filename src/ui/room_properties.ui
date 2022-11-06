@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>345</width>
-    <height>456</height>
+    <height>486</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -117,6 +117,12 @@
    </item>
    <item row="1" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox_symbol">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
      <property name="title">
       <string>Symbol</string>
      </property>
@@ -137,7 +143,13 @@
          <property name="leftMargin">
           <number>0</number>
          </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
          <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
           <number>0</number>
          </property>
          <item>
@@ -163,7 +175,13 @@
          <property name="leftMargin">
           <number>0</number>
          </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
          <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
           <number>0</number>
          </property>
          <item>
@@ -199,7 +217,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Reset</string>
+            <string extracomment="This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.">Reset</string>
            </property>
           </widget>
          </item>
@@ -231,7 +249,13 @@
          <property name="leftMargin">
           <number>0</number>
          </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
          <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
           <number>0</number>
          </property>
          <item>
@@ -322,8 +346,8 @@
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>443</x>
-     <y>401</y>
+     <x>335</x>
+     <y>476</y>
     </hint>
     <hint type="destinationlabel">
      <x>157</x>
@@ -338,8 +362,8 @@
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>443</x>
-     <y>401</y>
+     <x>335</x>
+     <y>476</y>
     </hint>
     <hint type="destinationlabel">
      <x>286</x>
