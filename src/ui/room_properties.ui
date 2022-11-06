@@ -209,7 +209,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QToolButton" name="toolButton_resetSymbolColor">
+          <widget class="QPushButton" name="pushButton_resetSymbolColor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
