@@ -45,11 +45,12 @@
 #endif
 
 #include "pre_guard.h"
+#include <QTextCodec>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMessageBox>
 #include <QNetworkProxy>
 #include <QProgressDialog>
-#include <QTextCodec>
 #include <QSslError>
 #include "post_guard.h"
 
