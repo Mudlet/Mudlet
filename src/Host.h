@@ -430,8 +430,8 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
-    bool mAskSslAvailable;
-    int mMSSPSslPort;
+    bool mAskTlsAvailable;
+    int mMSSPTlsPort;
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
