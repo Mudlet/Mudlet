@@ -67,6 +67,7 @@ set(mudlet_SRCS
     dlgPackageManager.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
+    dlgRoomProperties.cpp
     dlgRoomSymbol.cpp
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
@@ -185,6 +186,7 @@ set(mudlet_UIS
     ui/package_manager.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
+    ui/room_properties.ui
     ui/room_symbol.ui
     ui/scripts_main_area.ui
     ui/source_editor_area.ui
@@ -220,6 +222,7 @@ set(mudlet_HDRS
     dlgPackageManager.h
     dlgProfilePreferences.h
     dlgRoomExits.h
+    dlgRoomProperties.h
     dlgRoomSymbol.h
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
