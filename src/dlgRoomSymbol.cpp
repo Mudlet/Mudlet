@@ -166,7 +166,7 @@ QString dlgRoomSymbol::getNewSymbol()
 
 void dlgRoomSymbol::slot_updatePreview()
 {
-    auto realColor = selectedColor != nullptr ? selectedColor : defaultColor();
+    auto realColor = selectedColor.isValid() ? selectedColor : defaultColor();
     auto newSymbol = getNewSymbol();
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
@@ -198,7 +198,7 @@ QFont dlgRoomSymbol::getFontForPreview(QString text) {
 
 void dlgRoomSymbol::slot_openColorSelector()
 {
-    auto* dialog = selectedColor != nullptr ? new QColorDialog(selectedColor, this) : new QColorDialog(defaultColor(), this);
+    auto* dialog = new QColorDialog(selectedColor.isValid() ? selectedColor: defaultColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Pick color"));
     dialog->open(this, SLOT(slot_colorSelected(const QColor&)));
