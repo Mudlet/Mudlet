@@ -2433,12 +2433,33 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
         windowName = WINDOW_NAME(L, s++);
     }
 
-    int luaFrom = getVerifiedInt(L, __func__, s++, "linesLimit");
-    int luaTo = getVerifiedInt(L, __func__, s, "sizeOfBatchDeletion");
+    auto linesLimit = getVerifiedInt(L, __func__, s++, "linesLimit");
+    auto sizeOfBatchDeletion = getVerifiedInt(L, __func__, s, "sizeOfBatchDeletion");
 
+    // The macro will have returned with a nil + error message if the windowName
+    // was not found:
     auto console = CONSOLE(L, windowName);
-    console->buffer.setBufferSize(luaFrom, luaTo);
-    return 0;
+    console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
+    // Indicate success with a true return value:
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConsoleBufferSize
+int TLuaInterpreter::getConsoleBufferSize(lua_State* L)
+{
+    QString windowName;
+    if (lua_gettop(L)) {
+        windowName = WINDOW_NAME(L, 1);
+    }
+
+    // The macro will have returned with a nil + error message if the windowName
+    // was not found:
+    auto console = CONSOLE(L, windowName);
+    // Indicate success with two numeric return values:
+    lua_pushnumber(L, console->buffer.mLinesLimit);
+    lua_pushnumber(L, console->buffer.mBatchDeleteSize);
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrollBar
@@ -15167,6 +15188,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getBorderBottom", TLuaInterpreter::getBorderBottom);
     lua_register(pGlobalLua, "getBorderLeft", TLuaInterpreter::getBorderLeft);
     lua_register(pGlobalLua, "getBorderSizes", TLuaInterpreter::getBorderSizes);
+    lua_register(pGlobalLua, "getConsoleBufferSize", TLuaInterpreter::getConsoleBufferSize);
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
     lua_register(pGlobalLua, "disableScrollBar", TLuaInterpreter::disableScrollBar);
