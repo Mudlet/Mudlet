@@ -776,15 +776,10 @@ void mudlet::loadMaps()
     // More useful is the cross-referenced (Country <-> Languages):
     // https://www.unicode.org/cldr/charts/latest/supplemental/language_territory_information.html
     // Initially populated from the dictionaries provided within the Debian
-    // GNU/Linux distribution, and supplimented by those provided with
-    // OpenBSD 7.1:
+    // GNU/Linux distribution:
     //: In the translation source texts the language is the leading term, with, generally, the (primary) country(ies) in the brackets, with a trailing language disabiguation after a '-' Chinese is an exception!
     mDictionaryLanguageCodeMap = {{qsl("af"), tr("Afrikaans")},
                                   {qsl("af_za"), tr("Afrikaans (South Africa)")},
-                                  {qsl("ak"), tr("Akan")},
-                                  {qsl("ak_gh"), tr("Akan (Ghana)")},
-                                  {qsl("am"), tr("Amharic")},
-                                  {qsl("am_et"), tr("Amharic (Ethiopia)")},
                                   {qsl("an"), tr("Aragonese")},
                                   {qsl("an_es"), tr("Aragonese (Spain)")},
                                   {qsl("ar"), tr("Arabic")},
@@ -806,8 +801,6 @@ void mudlet::loadMaps()
                                   {qsl("ar_sy"), tr("Arabic (Syria)")},
                                   {qsl("ar_tn"), tr("Arabic (Tunisia)")},
                                   {qsl("ar_ye"), tr("Arabic (Yemen)")},
-                                  {qsl("az"), tr("Azerbaijani")},
-                                  {qsl("az_ir"), tr("Azerbaijani (Iran)")},
                                   {qsl("be"), tr("Belarusian")},
                                   {qsl("be_by"), tr("Belarusian (Belarus)")},
                                   {qsl("be_ru"), tr("Belarusian (Russia)")},
@@ -827,8 +820,6 @@ void mudlet::loadMaps()
                                   {qsl("ca"), tr("Catalan")},
                                   {qsl("ca_es"), tr("Catalan (Spain)")},
                                   {qsl("ca_es_valencia"), tr("Catalan (Spain - Valencian)")},
-                                  // OpenBSD - it uses a word not a code:
-                                  {qsl("cestina"), tr("Cestina {Czech}", "This is the native name of the language, as used by OpenBSD for one of it's supplied dictionaries")},
                                   {qsl("ckb"), tr("Central Kurdish")},
                                   {qsl("ckb_iq"), tr("Central Kurdish (Iraq)")},
                                   {qsl("cs"), tr("Czech")},
@@ -851,12 +842,6 @@ void mudlet::loadMaps()
                                   {qsl("dz_bt"), tr("Dzongkha (Bhutan)")},
                                   {qsl("el"), tr("Greek")},
                                   {qsl("el_gr"), tr("Greek (Greece)")},
-                                  {qsl("eo"), tr("Esperato")},
-                                  // Used by OpenBSD but this code is a bit
-                                  // bogus as, by definition, this 'Universal'
-                                  // constructed language should be the same in
-                                  // any country, so doesn't need a country code suffix.
-                                  {qsl("eo_eo"), tr("Esperato")},
                                   {qsl("en"), tr("English")},
                                   {qsl("en_ag"), tr("English (Antigua/Barbuda)")},
                                   {qsl("en_au"), tr("English (Australia)")},
@@ -912,11 +897,8 @@ void mudlet::loadMaps()
                                   {qsl("eu"), tr("Basque")},
                                   {qsl("eu_es"), tr("Basque (Spain)")},
                                   {qsl("eu_fr"), tr("Basque (France)")},
-                                  {qsl("fa"), tr("Persian")},
                                   {qsl("fi"), tr("Finnish")},
                                   {qsl("fi_fi"), tr("Finnish")},
-                                  {qsl("fo"), tr("Faroese")},
-                                  {qsl("fo_fo"), tr("Faroese (Faroe Islands)")},
                                   {qsl("fr"), tr("French")},
                                   // On OpenBSD this seems to be the "usual spellings of French,
                                   // with, in addition, some new spellings rectifying past
@@ -928,9 +910,6 @@ void mudlet::loadMaps()
                                   {qsl("fr_fr"), tr("French (France)")},
                                   {qsl("fr_lu"), tr("French (Luxemburg)")},
                                   {qsl("fr_mc"), tr("French (Monaco)")},
-                                  {qsl("fur"), tr("Friulian")},
-                                  {qsl("fur_it"), tr("Friulian (Italy)")},
-                                  {qsl("fy"), tr("Western Frisian")},
                                   {qsl("ga"), tr("Irish")},
                                   {qsl("gd"), tr("Gaelic")},
                                   {qsl("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
@@ -949,7 +928,6 @@ void mudlet::loadMaps()
                                   {qsl("hi_in"), tr("Hindi (India)")},
                                   {qsl("hr"), tr("Croatian")},
                                   {qsl("hr_hr"), tr("Croatian (Croatia)")},
-                                  {qsl("hsb"), tr("Upper Sorbian")},
                                   {qsl("hu"), tr("Hungarian")},
                                   {qsl("hu_hu"), tr("Hungarian (Hungary)")},
                                   {qsl("hy"), tr("Armenian")},
@@ -976,21 +954,12 @@ void mudlet::loadMaps()
                                   {qsl("lb_lu"), tr("Luxembourgish (Luxembourg)")},
                                   {qsl("lo"), tr("Lao")},
                                   {qsl("lo_la"), tr("Lao (Laos)")},
-                                  // OpenBSD - it uses a word not the code 'wen' for Sorbian:
-                                  {qsl("lower sorbian"), tr("Lower Sorbian")},
                                   {qsl("lt"), tr("Lithuanian")},
                                   {qsl("lt_lt"), tr("Lithuanian (Lithuania)")},
                                   {qsl("lv"), tr("Latvian")},
                                   {qsl("lv_lv"), tr("Latvian (Latvia)")},
-                                  {qsl("mg"), tr("Malagasy")},
-                                  {qsl("mg_mg"), tr("Malagasy (Madagascar)")},
-                                  {qsl("mi"), tr("Māori")},
-                                  // OpenBSD - "tai tokerau" is apparently "Northern" in Māori
-                                  {qsl("mi_x_tai tokerau"), tr("Māori {\"Northern Māori Dictionary\"}", "The term in {...} describes a project (now archived at the wayback machine) to compile a dictionary for the language.")},
                                   {qsl("ml"), tr("Malayalam")},
                                   {qsl("ml_in"), tr("Malayalam (India)")},
-                                  {qsl("mn"), tr("Mongolian")},
-                                  {qsl("mn_mn"), tr("Mongolian (Mongolia)")},
                                   {qsl("nb"), tr("Norwegian Bokmål")},
                                   {qsl("nb_no"), tr("Norwegian Bokmål (Norway)")},
                                   {qsl("ne"), tr("Nepali")},
@@ -1003,18 +972,8 @@ void mudlet::loadMaps()
                                   {qsl("nl_sr"), tr("Dutch (Suriname)")},
                                   {qsl("nn"), tr("Norwegian Nynorsk")},
                                   {qsl("nn_no"), tr("Norwegian Nynorsk (Norway)")},
-                                  {qsl("nr"), tr("South Ndebele")},
-                                  {qsl("nr_za"), tr("South Ndebele (South Africa)")},
-                                  {qsl("nso"), tr("Northern Sotho")},
-                                  {qsl("nso_za"), tr("Northern Sotho (South Africa)")},
-                                  {qsl("ny"), tr("Nyanja")},
-                                  {qsl("ny_mw"), tr("Nyanja (Malawi)")},
                                   {qsl("oc"), tr("Occitan")},
                                   {qsl("oc_fr"), tr("Occitan (France)")},
-                                  {qsl("or"), tr("Odia")},
-                                  {qsl("or_in"), tr("Odia (India)")},
-                                  {qsl("pa"), tr("Punjabi")},
-                                  {qsl("pa_in"), tr("Punjabi (India)")},
                                   {qsl("pl"), tr("Polish")},
                                   {qsl("pl_pl"), tr("Polish (Poland)")},
                                   {qsl("pt"), tr("Portuguese")},
@@ -1022,17 +981,6 @@ void mudlet::loadMaps()
                                   {qsl("pt_pt"), tr("Portuguese (Portugal)")},
                                   {qsl("ro"), tr("Romanian")},
                                   {qsl("ro_ro"), tr("Romanian (Romania)")},
-                                  {qsl("ro_ro_cedilla"), tr("Romanian (Romania {s and t with cedillas})")},
-                                  {qsl("ro_ro_classic"), tr("Romanian (Romania {s and t with commas})")},
-                                  {qsl("ro_ro_classiccedilla"), tr("Romanian (Romania {s and t with commas and cedillas})")},
-                                  // This is on OpenBSD and likely comes from:
-                                  // https://addons.thunderbird.net/en-US/thunderbird/addon/tb-langpack-roa-es-val/
-                                  // but it is probably wrong and should have been ca_VALENCIA or similar
-                                  // Some authorities consider Valencian to be the same as Catalan whilst
-                                  // others regard them as separate languages. roa may be a code
-                                  // for the large language "Romance" group which covers a large part of
-                                  // Western Europe:
-                                  {qsl("roa_es_val"), tr("Valencian (Spain)")},
                                   {qsl("ru"), tr("Russian")},
                                   {qsl("ru_ru"), tr("Russian (Russia)")},
                                   {qsl("se"), tr("Northern Sami")},
@@ -1045,8 +993,6 @@ void mudlet::loadMaps()
                                   {qsl("si_lk"), tr("Sinhala (Sri Lanka)")},
                                   {qsl("sk"), tr("Slovak")},
                                   {qsl("sk_sk"), tr("Slovak (Slovakia)")},
-                                  // Variant found on OpenBSD
-                                  {qsl("sk_sk_ascii"), tr("Slovak (Slovakia)")},
                                   {qsl("sl"), tr("Slovenian")},
                                   {qsl("sl_si"), tr("Slovenian (Slovenia)")},
                                   {qsl("so"), tr("Somali")},
@@ -1057,23 +1003,16 @@ void mudlet::loadMaps()
                                   {qsl("sr_me"), tr("Serbian (Montenegro)")},
                                   {qsl("sr_rs"), tr("Serbian (Serbia)")},
                                   {qsl("sr_latn_rs"), tr("Serbian (Serbia - Latin-alphabet)")},
-                                  // OpenBSD - uses words not a code:
-                                  {qsl("srpski_latinica"), tr("Serbian (Serbia - Latin-alphabet)")},
                                   {qsl("sr_yu"), tr("Serbian (former state of Yugoslavia)")},
                                   {qsl("ss"), tr("Swati")},
                                   {qsl("ss_sz"), tr("Swati (Swaziland)")},
                                   {qsl("ss_za"), tr("Swati (South Africa)")},
                                   {qsl("sv"), tr("Swedish")},
-                                  {qsl("st"), tr("Southern Sotho")},
-                                  {qsl("st_za"), tr("Southern Sotho (South Africa)")},
                                   {qsl("sv_se"), tr("Swedish (Sweden)")},
                                   {qsl("sv_fi"), tr("Swedish (Finland)")},
                                   {qsl("sw"), tr("Swahili")},
                                   {qsl("sw_ke"), tr("Swahili (Kenya)")},
                                   {qsl("sw_tz"), tr("Swahili (Tanzania)")},
-                                  {qsl("ta"), tr("Tamil")},
-                                  // OpenBSD uses ta as a Country/Regional designation though that doesn't seem to exist in practice
-                                  {qsl("ta_ta"), tr("Tamil (India {Tamil Nadu})")},
                                   {qsl("te"), tr("Telugu")},
                                   {qsl("te_in"), tr("Telugu (India)")},
                                   {qsl("th"), tr("Thai")},
@@ -1092,11 +1031,9 @@ void mudlet::loadMaps()
                                   {qsl("ts_za"), tr("Tsonga (South Africa)")},
                                   {qsl("uk"), tr("Ukrainian")},
                                   {qsl("uk_ua"), tr("Ukrainian (Ukraine)")},
-                                  {qsl("ur"), tr("Urdu")},
                                   {qsl("uz"), tr("Uzbek")},
                                   {qsl("uz_uz"), tr("Uzbek (Uzbekistan)")},
                                   {qsl("ve"), tr("Venda")},
-                                  {qsl("ve_za"), tr("Venda (South Africa)")},
                                   {qsl("vi"), tr("Vietnamese")},
                                   {qsl("vi_vn"), tr("Vietnamese (Vietnam)")},
                                   {qsl("vi_daucu"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
@@ -1107,13 +1044,11 @@ void mudlet::loadMaps()
                                   {qsl("vi_x_new"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
                                   {qsl("wa"), tr("Walloon")},
                                   {qsl("xh"), tr("Xhosa")},
-                                  {qsl("xh_za"), tr("Xhosa (South Africa)")},
                                   {qsl("yi"), tr("Yiddish")},
                                   {qsl("zh"), tr("Chinese")},
                                   {qsl("zh_cn"), tr("Chinese (China - simplified)")},
                                   {qsl("zh_tw"), tr("Chinese (Taiwan - traditional)")},
-                                  {qsl("zu"), tr("Zulu")},
-                                  {qsl("zu_za"), tr("Zulu (South Africa)")}};
+                                  {qsl("zu"), tr("Zulu")}};
 
     mEncodingNameMap = {{"ASCII", tr("ASCII (Basic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"UTF-8", tr("UTF-8 (Recommended)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
