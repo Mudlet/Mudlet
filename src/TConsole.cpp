@@ -428,6 +428,24 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBufferSearchBox->setToolTip(utils::richText(tr("Search buffer.")));
     connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
 
+    mpAction_searchOptions = new QAction(tr("Search Options"), this);
+    mpAction_searchOptions->setObjectName(qsl("mpAction_searchOptions"));
+
+    QMenu* pMenu_searchOptions = new QMenu(tr("Search Options"), this);
+    pMenu_searchOptions->setObjectName(qsl("pMenu_searchOptions"));
+    pMenu_searchOptions->setToolTipsVisible(true);
+
+    mpAction_searchCaseSensitive = new QAction(tr("Case sensitive"), this);
+    mpAction_searchCaseSensitive->setObjectName(qsl("mpAction_searchCaseSensitive"));
+    mpAction_searchCaseSensitive->setToolTip(utils::richText(tr("Match case precisely")));
+    mpAction_searchCaseSensitive->setCheckable(true);
+    pMenu_searchOptions->insertAction(nullptr, mpAction_searchCaseSensitive);
+
+    setSearchOptions(mSearchOptions);
+
+    connect(mpAction_searchCaseSensitive, &QAction::triggered, this, &TConsole::slot_toggleSearchCaseSensitivity);
+    mpAction_searchOptions->setMenu(pMenu_searchOptions);
+    mpBufferSearchBox->addAction(mpAction_searchOptions, QLineEdit::LeadingPosition);
 
     mpBufferSearchUp->setMinimumSize(QSize(30, 30));
     mpBufferSearchUp->setMaximumSize(QSize(30, 30));
@@ -1845,7 +1863,7 @@ void TConsole::slot_searchBufferUp()
     for (int i = mCurrentSearchResult - 1; i >= 0; i--) {
         int begin = -1;
         do {
-            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1);
+            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (begin > -1) {
                 int length = mSearchQuery.size();
                 moveCursor(0, i);
@@ -1884,7 +1902,7 @@ void TConsole::slot_searchBufferDown()
     for (int i = mCurrentSearchResult + 1; i < buffer.lineBuffer.size(); i++) {
         int begin = -1;
         do {
-            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1);
+            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
             if (begin > -1) {
                 int length = mSearchQuery.size();
                 moveCursor(0, i);
@@ -2105,5 +2123,47 @@ void TConsole::setAutoWrap(bool enabled) {
     if (enabled) {
         mUpperPane->updateWrap();
         mLowerPane->updateWrap();
+    }
+}
+
+void TConsole::createSearchOptionIcon()
+{
+    // When we add new search options we must create icons for each combination
+    // beforehand - which is simpler than having to do code to combine the
+    // QPixMaps...
+    QIcon newIcon;
+    switch (mSearchOptions) {
+    // Each combination must be handled here
+    case SearchOptionCaseSensitive:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
+        break;
+
+    case SearchOptionNone:
+        // Use the grey icon as that is appropriate for the "No options set" case
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-none.png"));
+        break;
+
+    default:
+        // Don't grey out this one - is a diagnositic for an uncoded combination
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-unspecified.png"));
+    }
+
+    mIcon_searchOptions = newIcon;
+    mpAction_searchOptions->setIcon(newIcon);
+}
+
+void TConsole::setSearchOptions(const SearchOptions optionsState)
+{
+    mSearchOptions = optionsState;
+    mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
+    createSearchOptionIcon();
+}
+
+void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
+{
+    if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
+        mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
+        createSearchOptionIcon();
+        mpHost->mBufferSearchOptions = mSearchOptions;
     }
 }
