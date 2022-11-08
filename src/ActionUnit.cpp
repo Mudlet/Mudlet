@@ -167,11 +167,11 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
             if (pChild->mLocation == 3) {
                 mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pChild->mpEasyButtonBar);
             }
+        }
+        if (pChild->mpToolBar) {
             if (pChild->mLocation == 4) {
-                if (pChild->mpToolBar) {
-                    pChild->mpToolBar->setFloating(false);
-                    mudlet::self()->removeDockWidget(pChild->mpToolBar);
-                }
+                pChild->mpToolBar->setFloating(false);
+                mudlet::self()->removeDockWidget(pChild->mpToolBar);
             }
         }
     }
@@ -289,6 +289,15 @@ void ActionUnit::regenerateToolBars()
 {
     for (auto& action : mActionRootNodeList) {
         if (action->mLocation != 4) {
+            // This TAction is not set to be a floating/dockable widget type toolbar
+            if (action->mpToolBar) {
+                // But it has a TToolBar type toolbar so we need to
+                // remove the ToolBar from the list of TToolBars:
+                mToolBarList.remove(action->mpToolBar);
+                // And destroy it:
+                action->mpToolBar->deleteLater();
+                action->mpToolBar = nullptr;
+            }
             continue; // skip over any root action node that is NOT going to be a TToolBar.
         }
         if (!action->mPackageName.isEmpty()) {
@@ -342,9 +351,20 @@ void ActionUnit::regenerateEasyButtonBars()
 {
     for (auto& rootAction : mActionRootNodeList) {
         if (rootAction->mLocation == 4) {
+            // This TAction is set to be a floating/dockable widget
+            if (rootAction->mpEasyButtonBar) {
+                // But it has a TEasyButtonBar type toolbar so we need to
+                // remove the TEasyButtonBar from the list of TEasyButtonBars:
+                mEasyButtonBarList.remove(rootAction->mpEasyButtonBar);
+                // And destroy it:
+                rootAction->mpEasyButtonBar->deleteLater();
+                rootAction->mpEasyButtonBar = nullptr;
+            }
             continue; // skip over any root action node that IS going to be a TToolBar.
         }
         if (!rootAction->mPackageName.isEmpty()) {
+            // It has a package name so it is actually the parent
+            // module/package item rather than the actual ToolBar
             for (auto childActionIterator = rootAction->mpMyChildrenList->begin(); childActionIterator != rootAction->mpMyChildrenList->end(); childActionIterator++) {
                 TEasyButtonBar* pTB = nullptr;
                 for (auto& easyButtonBar : mEasyButtonBarList) {
@@ -437,7 +457,21 @@ void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
     }
 
     pTB->clear();
-    if ((pA->mLocation != 4) || (!pA->isActive())) {
+    if (pA->mLocation != 4) {
+        // EasyButtonBars are handled differently from ToolBars, and
+        // if we get here then the TAction has just been changed to be one of
+        // those; we might still have a TToolBar associated with the
+        // (owner) TAction and if so we need to dispose of it:
+        if (pA->mpToolBar) {
+            // We need to remove the TToolBar from the list of TToolBars
+            mToolBarList.remove(pA->mpToolBar);
+            // before we get rid of it:
+            pA->mpToolBar->deleteLater();
+            pA->mpToolBar = nullptr;
+        }
+    }
+
+    if (!pA->isActive()) {
         pTB->setFloating(false);
         mudlet::self()->removeDockWidget(pTB);
         return;
@@ -498,9 +532,24 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 {
     pTB->clear();
     if (pA->mLocation == 4) {
-        //floating toolbars are handled differently
+        // Floating toolbars are handled differently from EasyButtonBars, and
+        // if we get here then the TAction has just been changed to be one of
+        // those; we might still have a TEasyButtonBar associated with the
+        // (owner) TAction and if so we need to dispose of it:
+        if (pA->mpEasyButtonBar) {
+            // We need to remove the TEasyButtonBar from the list of TEasyButtonBars
+            mEasyButtonBarList.remove(pA->mpEasyButtonBar);
+            // before we get rid of it:
+            pA->mpEasyButtonBar->deleteLater();
+            pA->mpEasyButtonBar = nullptr;
+        }
         return;
     }
+
+    // However, just because pA->mLocation != 4 does not mean that pA is for a
+    // TEasyButtonBar - it could be a menu or a button or a package/module
+    // (container)
+
     if (!pA->isActive()) {
         pTB->hide();
         return;
