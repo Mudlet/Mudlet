@@ -48,7 +48,9 @@ win32 {
     CMD = "where"
     message("You can safely ignore one or two \"INFO: Could not find files for the given pattern(s).\" messages that may appear!")
 } else {
-    CMD = "which"
+    # OpenBSD reports the failure to find lua5.1 loudly enough to be seen;
+    # so explictly bin the stderr output:
+    CMD = "which 2>/dev/null"
 }
 
 LUA_SEARCH_OUT = $$system("$$CMD lua5.1")

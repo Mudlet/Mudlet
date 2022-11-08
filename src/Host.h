@@ -196,7 +196,7 @@ public:
     void            setDiscordInviteURL(const QString& s);
     const QString&  getDiscordInviteURL() const { return mDiscordInviteURL; }
     void            setSpellDic(const QString&);
-    const QString&  getSpellDic() { return mSpellDic; }
+    QString         getSpellDic();
     void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;

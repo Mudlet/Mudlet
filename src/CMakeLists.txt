@@ -161,7 +161,7 @@ set(mudlet_SRCS
 if(APPLE)
   list(APPEND mudlet_SRCS AnnouncerMac.mm)
 elseif(UNIX AND NOT APPLE)
-  list(APPEND mudlet_SRCS AnnouncerLinux.cpp)
+  list(APPEND mudlet_SRCS AnnouncerUnix.cpp)
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
