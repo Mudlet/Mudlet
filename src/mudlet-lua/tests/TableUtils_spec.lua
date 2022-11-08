@@ -339,6 +339,20 @@ describe("Tests TableUtils.lua functions", function()
       end
       assert.has_error(errfn, "table.matches: bad argument #3 type (pattern to check as string expected, got number)")
     end)
+
+    it("should not error when things which are not strings or numbers are passed in", function()
+      local tbl = {
+        this = "that",
+        test = "passed",
+        tbl = {},
+        func = function() end,
+      }
+      local expected = {
+        test = "passed"
+      }
+      local actual = table.matches(tbl, "pass.+")
+      assert.same(expected, actual)
+    end)
   end)
 
   describe("Tests the functionality of table.n_matches", function()
@@ -395,6 +409,18 @@ describe("Tests TableUtils.lua functions", function()
         table.n_matches(tbl, "a string", not_string)
       end
       assert.has_error(errfn, "table.n_matches: bad argument #3 type (pattern to check as string expected, got number)")
+    end)
+
+    it("should not error if it contains non-string, non-number values", function()
+      local tbl = {
+        this = "that",
+        test = "passed",
+        tbl = {},
+        func = function() end,
+      }
+      local expected = { "passed" }
+      local actual = table.n_matches(tbl, "pass.+")
+      assert.same(expected, actual)
     end)
   end)
 
