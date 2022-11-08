@@ -650,7 +650,7 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="548"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation>Mapper: Kein Weg von %1 nach %2 konnte mit bekannten Ausgängen gefunden werden.</translation>
+      <translation>Mapper: Finde keinen Weg von %1 nach %2 mit bekannten Ausgängen.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1205"/>
