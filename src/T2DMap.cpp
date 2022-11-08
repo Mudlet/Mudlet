@@ -2921,12 +2921,14 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     popup->addAction(customExitLine);
                 }
 
+                // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
                 if (selectionSize > 0) {
                     auto recolorRoom = new QAction(tr("Set color...", "2D Mapper context menu (room) item"), this);
                     connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_changeColor);
                     popup->addAction(recolorRoom);
                 }
 
+                // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
                 if (selectionSize > 0) {
                     auto roomSymbol = new QAction(tr("Set symbol...", "2D Mapper context menu (room) item"), this);
                     roomSymbol->setToolTip(utils::richText(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip")));
@@ -2948,6 +2950,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     popup->addAction(shrinkRooms);
                 }
 
+                // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
                 if (selectionSize > 0) {
                     // TODO: https://github.com/Mudlet/Mudlet/issues/6385
                     //   Do not show both action simultaneously, if all selected rooms have same status.
@@ -2962,6 +2965,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     popup->addAction(unlockRoom);
                 }
 
+                // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
                 if (selectionSize > 0) {
                     auto weightRoom = new QAction(tr("Set weight...", "2D Mapper context menu (room) item"), this);
                     connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_setRoomWeight);

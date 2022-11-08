@@ -206,7 +206,7 @@ public slots:
     void slot_shiftDown();
     void slot_shiftLeft();
     void slot_shiftRight();
-    void slot_showSymbolSelection();
+    void slot_showSymbolSelection(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_showPropertiesDialog();
     void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void slot_setRoomProperties(
@@ -223,14 +223,14 @@ public slots:
     void slot_selectRoomColor(QListWidgetItem* pI);
     void slot_moveRoom();
     void slot_deleteRoom();
-    void slot_changeColor();
+    void slot_changeColor(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_spread();
     void slot_shrink();
     void slot_setExits();
     void slot_setUserData();
-    void slot_lockRoom();
-    void slot_unlockRoom();
-    void slot_setRoomWeight();
+    void slot_lockRoom(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_unlockRoom(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_setRoomWeight(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_setArea();
     void slot_setCustomLine();
     void slot_setCustomLine2();
