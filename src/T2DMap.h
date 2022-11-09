@@ -26,7 +26,7 @@
  ***************************************************************************/
 
 #include "dlgMapLabel.h"
-#include "dlgRoomSymbol.h"
+#include "dlgRoomSymbol.h" // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
 #include "dlgRoomProperties.h"
 
 #include "pre_guard.h"
@@ -206,9 +206,9 @@ public slots:
     void slot_shiftDown();
     void slot_shiftLeft();
     void slot_shiftRight();
-    void slot_showSymbolSelection(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_showSymbolSelection(); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_showPropertiesDialog();
-    void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
+    void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_setRoomProperties(
         bool changeName, QString newName,
         bool changeRoomColor, int newRoomColor,
@@ -219,11 +219,11 @@ public slots:
         QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
-    void slot_defineNewColor(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
-    void slot_selectRoomColor(QListWidgetItem* pI); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_defineNewColor(); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_selectRoomColor(QListWidgetItem* pI); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_moveRoom();
     void slot_deleteRoom();
-    void slot_changeColor(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_changeColor(); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_spread();
     void slot_shrink();
     void slot_setExits();

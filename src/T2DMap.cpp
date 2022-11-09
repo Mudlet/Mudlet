@@ -34,7 +34,7 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
-#include "dlgRoomSymbol.h"
+#include "dlgRoomSymbol.h" // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
 #include "dlgRoomProperties.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
@@ -3667,6 +3667,7 @@ void T2DMap::slot_moveRoom()
     mNewMoveAction = true;
 }
 
+// TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
 void T2DMap::slot_showSymbolSelection()
 {
     // Now analyses and reports the existing symbols used in ALL the selected
@@ -3717,7 +3718,7 @@ void T2DMap::slot_showSymbolSelection()
     }
 }
 
-
+// TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
 void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
     if (newSymbol.isEmpty()) {
         QSetIterator<TRoom*> itRoomPtr(rooms);
