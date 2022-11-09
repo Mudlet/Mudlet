@@ -24,6 +24,7 @@
 #include "TBuffer.h"
 
 #include "mudlet.h"
+#include "TEvent.h"
 #include "TStringUtils.h"
 
 #include "pre_guard.h"
@@ -104,8 +105,9 @@ const QString blankTimeStamp  = qsl("------------ ");
 
 // Store for text and attributes (such as character color) to be drawn on screen 
 // Contents are rendered by a TTextEdit
-TBuffer::TBuffer(Host* pH)
-: mBlack(pH->mBlack)
+TBuffer::TBuffer(Host* pH, TConsole* pConsole)
+: mpConsole(pConsole)
+, mBlack(pH->mBlack)
 , mLightBlack(pH->mLightBlack)
 , mRed(pH->mRed)
 , mLightRed(pH->mLightRed)
@@ -2725,6 +2727,18 @@ void TBuffer::shrinkBuffer()
         timeBuffer.pop_front();
         buffer.pop_front();
         mCursorY--;
+    }
+
+    if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole|TConsole::Buffer)) {
+        // Signal to lua subsystem that indexes into the Console will need adjusting
+        TEvent bufferShrinkEvent{};
+        bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        bufferShrinkEvent.mArgumentList.append(mpConsole->mConsoleName);
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(bufferShrinkEvent);
     }
 }
 
