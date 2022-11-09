@@ -3917,11 +3917,13 @@ void T2DMap::slot_deleteRoom()
     mpMap->mUnsavedMap = true;
 }
 
+// TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
 void T2DMap::slot_selectRoomColor(QListWidgetItem* pI)
 {
     mChosenRoomColor = pI->text().toInt();
 }
 
+// TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
 void T2DMap::slot_defineNewColor()
 {
     auto color = QColorDialog::getColor(mpHost->mRed, this);
@@ -3942,6 +3944,7 @@ void T2DMap::slot_defineNewColor()
     mpMap->mUnsavedMap = true;
 }
 
+// TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
 void T2DMap::slot_changeColor()
 {
     auto dialog = new QDialog(this);

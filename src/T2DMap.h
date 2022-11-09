@@ -116,7 +116,7 @@ public:
     // coordinates):
     float mRoomWidth = 0.0f;
     float mRoomHeight = 0.0f;
-    int mChosenRoomColor = 5;
+    int mChosenRoomColor = 5; // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
     float xspan = 0.0f;
     float yspan = 0.0f;
 
@@ -219,8 +219,8 @@ public slots:
         QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
-    void slot_defineNewColor();
-    void slot_selectRoomColor(QListWidgetItem* pI);
+    void slot_defineNewColor(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_selectRoomColor(QListWidgetItem* pI); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_moveRoom();
     void slot_deleteRoom();
     void slot_changeColor(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
