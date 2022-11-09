@@ -2950,7 +2950,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     popup->addAction(shrinkRooms);
                 }
 
-                // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+                // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
                 if (selectionSize > 0) {
                     // TODO: https://github.com/Mudlet/Mudlet/issues/6385
                     //   Do not show both action simultaneously, if all selected rooms have same status.
@@ -4176,6 +4176,7 @@ void T2DMap::slot_setUserData()
 {
 }
 
+// TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
 void T2DMap::slot_lockRoom()
 {
     if (mMultiSelectionSet.empty()) {
@@ -4193,6 +4194,7 @@ void T2DMap::slot_lockRoom()
     }
 }
 
+// TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
 void T2DMap::slot_unlockRoom()
 {
     if (mMultiSelectionSet.empty()) {
