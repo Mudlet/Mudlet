@@ -1,5 +1,6 @@
 /***************************************************************************
 *   Copyright (C) 2022 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+*   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
 *                                                                         *
 *   This program is free software; you can redistribute it and/or modify  *
 *   it under the terms of the GNU General Public License as published by  *
@@ -22,17 +23,21 @@
 #include <QDebug>
 #include <QAccessible>
 
-InvisibleNotification::InvisibleNotification(QWidget *parent) : QWidget(parent) {
+InvisibleNotification::InvisibleNotification(QWidget *parent)
+: QWidget(parent)
+{
     setObjectName("InvisibleNotification");
     setAccessibleName("InvisibleNotification");
     setAccessibleDescription("An invisible widget used as a workaround to announce text to the screen reader");
 }
 
-void InvisibleNotification::setText(const QString &text) {
+void InvisibleNotification::setText(const QString &text)
+{
     this->mText = text;
 }
 
-QString InvisibleNotification::text() {
+QString InvisibleNotification::text()
+{
     return mText;
 }
 
@@ -41,20 +46,25 @@ InvisibleNotification* InvisibleAccessibleNotification::notification() const
     return static_cast<InvisibleNotification*>(object());
 }
 
-QString InvisibleAccessibleNotification::text(QAccessible::Text t) const {
+QString InvisibleAccessibleNotification::text(QAccessible::Text t) const
+{
     Q_UNUSED(t)
 
     // return the notifications contents regardless of the request as part of the workaround
     return notification()->text();
 }
 
-InvisibleStatusbar::InvisibleStatusbar(QWidget *parent) : QWidget(parent) {
+InvisibleStatusbar::InvisibleStatusbar(QWidget *parent)
+: QWidget(parent)
+{
     setObjectName("InvisibleStatusbar");
     setAccessibleName("InvisibleStatusbar");
     setAccessibleDescription("An invisible widget used as part as a workaround to announce text to the screen reader");
 }
 
-Announcer::Announcer(QWidget *parent): QWidget{parent}, statusbar(new InvisibleStatusbar(this))
+Announcer::Announcer(QWidget *parent)
+: QWidget{parent}
+, statusbar(new InvisibleStatusbar(this))
 {
     notification = new InvisibleNotification(statusbar);
 }

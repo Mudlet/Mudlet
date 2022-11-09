@@ -25,14 +25,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
-#    as such; the work on getting them working has been done by myself,    #
-#    and other developers, unless they have explicitly said so, are not    #
-#    able to address issues relating specifically to these Operating       #
-#    Systems. Nevertheless users of either are equally welcome to          #
-#    contribute to the development of Mudlet - bugfixes and enhancements   #
-#    are welcome from all!                                                 #
-#                         Stephen Lyons, February 2018, updated March 2021 #
+#    NOTICE: FreeBSD, OpenBSD and GNU/Hurd are not officially supported    #
+#    platforms as such; the work on getting them working has been done by  #
+#    myself, and other developers, unless they have explicitly said so,    #
+#    are not able to address issues relating specifically to these         #
+#    Operating Systems. Nevertheless users of these operating systems are  #
+#    equally welcome to contribute to the development of Mudlet - bugfixes #
+#    and enhancements are welcome from all!                                #
+#        Stephen Lyons, February 2018, updated March 2021 & October 2022   #
 #                                                                          #
 ############################################################################
 
@@ -256,6 +256,15 @@ unix:!macx {
     isEmpty( BINDIR ) BINDIR = $${PREFIX}/bin
 # Again according to FHS /usr/local/share/games is the corresponding place for locally built games documentation:
     isEmpty( DOCDIR ) DOCDIR = $${DATAROOTDIR}/doc/mudlet
+    openbsd {
+        LIBS += \
+# Some OS platforms have a hyphen (I think Cygwin does as well):
+            -llua5.1 \
+            -lhunspell-1.7
+        INCLUDEPATH += \
+            /usr/local/include \
+            /usr/local/include/lua-5.1
+    }
     freebsd {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
@@ -267,7 +276,8 @@ unix:!macx {
 # FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
-    } else {
+    }
+    linux {
         LIBS += \
             -llua5.1 \
             -lhunspell
@@ -544,6 +554,7 @@ SOURCES += \
     dlgPackageManager.cpp \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
+    dlgRoomProperties.cpp \
     dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
@@ -660,6 +671,7 @@ HEADERS += \
     dlgPackageManager.h \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
+    dlgRoomProperties.h \
     dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
@@ -774,8 +786,9 @@ win32 {
     HEADERS += uiawrapper.h
 }
 
-linux {
-    SOURCES += AnnouncerLinux.cpp
+openbsd|linux {
+    SOURCES += \
+        AnnouncerUnix.cpp
 }
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -798,6 +811,7 @@ FORMS += \
     ui/package_manager.ui \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
+    ui/room_properties.ui \
     ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \

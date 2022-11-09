@@ -4,9 +4,10 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018-2019, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2016, 2018-2019, 2022 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
+ *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,6 +27,7 @@
 
 #include "dlgMapLabel.h"
 #include "dlgRoomSymbol.h"
+#include "dlgRoomProperties.h"
 
 #include "pre_guard.h"
 #include <QCache>
@@ -205,7 +207,16 @@ public slots:
     void slot_shiftLeft();
     void slot_shiftRight();
     void slot_showSymbolSelection();
+    void slot_showPropertiesDialog();
     void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
+    void slot_setRoomProperties(
+        bool changeName, QString newName,
+        bool changeRoomColor, int newRoomColor,
+        bool changeSymbol, QString newSymbol,
+        bool changeSymbolColor, QColor newSymbolColor,
+        bool changeWeight, int newWeight,
+        bool changeLockStatus, bool newLockStatus,
+        QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
     void slot_defineNewColor();
@@ -248,7 +259,6 @@ private:
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
-
     bool mDialogLock = false;
     struct ClickPosition {
         int x;
@@ -287,6 +297,7 @@ private:
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
     dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
+    dlgRoomProperties* mpDlgRoomProperties = nullptr;
     dlgMapLabel* mpDlgMapLabel = nullptr;
 
 private slots:

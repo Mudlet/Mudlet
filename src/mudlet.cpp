@@ -84,8 +84,7 @@
 #include <QRandomGenerator>
 #include <zip.h>
 #include <QStyle>
-#ifdef Q_OS_LINUX
-#elif defined(Q_OS_WIN32)
+#if defined(Q_OS_WIN32)
 #include <QSettings>
 #endif
 
@@ -825,6 +824,8 @@ void mudlet::loadMaps()
                                   {qsl("ckb_iq"), tr("Central Kurdish (Iraq)")},
                                   {qsl("cs"), tr("Czech")},
                                   {qsl("cs_cz"), tr("Czech (Czechia)")},
+                                  {qsl("cy"), tr("Welsh")},
+                                  {qsl("cy_gb"), tr("Welsh (United Kingdom {Wales})")},
                                   {qsl("da"), tr("Danish")},
                                   {qsl("da_dk"), tr("Danish (Denmark)")},
                                   {qsl("de"), tr("German")},
@@ -899,12 +900,17 @@ void mudlet::loadMaps()
                                   {qsl("fi"), tr("Finnish")},
                                   {qsl("fi_fi"), tr("Finnish")},
                                   {qsl("fr"), tr("French")},
+                                  // On OpenBSD this seems to be the "usual spellings of French,
+                                  // with, in addition, some new spellings rectifying past
+                                  // inconsistencies":
+                                  {qsl("fr_xx_classique"), tr("French")},
                                   {qsl("fr_be"), tr("French (Belgium)")},
                                   {qsl("fr_ca"), tr("French (Catalan)")},
                                   {qsl("fr_ch"), tr("French (Switzerland)")},
                                   {qsl("fr_fr"), tr("French (France)")},
                                   {qsl("fr_lu"), tr("French (Luxemburg)")},
                                   {qsl("fr_mc"), tr("French (Monaco)")},
+                                  {qsl("ga"), tr("Irish")},
                                   {qsl("gd"), tr("Gaelic")},
                                   {qsl("gd_gb"), tr("Gaelic (United Kingdom {Scots})")},
                                   {qsl("gl"), tr("Galician")},
@@ -943,6 +949,9 @@ void mudlet::loadMaps()
                                   {qsl("ku"), tr("Kurdish")},
                                   {qsl("ku_sy"), tr("Kurdish (Syria)")},
                                   {qsl("ku_tr"), tr("Kurdish (Turkey)")},
+                                  {qsl("la"), tr("Latin")},
+                                  {qsl("lb"), tr("Luxembourgish")},
+                                  {qsl("lb_lu"), tr("Luxembourgish (Luxembourg)")},
                                   {qsl("lo"), tr("Lao")},
                                   {qsl("lo_la"), tr("Lao (Laos)")},
                                   {qsl("lt"), tr("Lithuanian")},
@@ -1029,6 +1038,10 @@ void mudlet::loadMaps()
                                   {qsl("vi_vn"), tr("Vietnamese (Vietnam)")},
                                   {qsl("vi_daucu"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
                                   {qsl("vi_daumoi"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
+                                  // OpenBSD has the old names, see:
+                                  // https://github.com/1ec5/hunspell-vi/commit/fecdb355e7c114e1d5ca22fe5b301b2d54af84c9
+                                  {qsl("vi_x_old"), tr("Vietnamese (DauCu variant - old-style diacritics)")},
+                                  {qsl("vi_x_new"), tr("Vietnamese (DauMoi variant - new-style diacritics)")},
                                   {qsl("wa"), tr("Walloon")},
                                   {qsl("xh"), tr("Xhosa")},
                                   {qsl("yi"), tr("Yiddish")},
@@ -1578,6 +1591,11 @@ void mudlet::addConsoleForNewHost(Host* pH)
         // constructor - and if it is set we now need to "click" the button
         // to immediately start logging the game output as text/HTML:
         pConsole->logButton->click();
+    }
+
+    if (pH->mTimeStampStatus) {
+        // This is similar to logging above, but for timestamps
+        pConsole->timeStampButton->click();
     }
 
     pConsole->show();
@@ -2732,8 +2750,21 @@ int64_t mudlet::getPhysicalMemoryTotal()
     int64_t memInfo{0};
     auto len = sizeof(memInfo);
 
-    if (sysctl(mib, 2, &memInfo, &len, nullptr, 0) == 0)
-    {
+    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
+        return memInfo;
+    }
+
+    return -1;
+#elif defined(Q_OS_OPENBSD)
+    // Very similar to MacOS but uses a different second level name
+    int mib[2];
+    mib[0] = CTL_HW;
+    mib[1] = HW_PHYSMEM64; // Or do we really want HW_USERMEM64?
+
+    int64_t memInfo{0};
+    auto len = sizeof(memInfo);
+
+    if (!sysctl(mib, 2, &memInfo, &len, nullptr, 0)) {
         return memInfo;
     }
 
@@ -3561,6 +3592,31 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         } else if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
             mudlet::self()->mUsingMudletDictionaries = false;
             return QLatin1String("/usr/share/hunspell/");
+        } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From debug or release subdirectory of a shadow build directory alongside the ./src one:
+            mudlet::self()->mUsingMudletDictionaries = true;
+            return qsl("%1/../../src/").arg(QCoreApplication::applicationDirPath());
+        } else if (QFile::exists(qsl("%1/../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
+            // From shadow build directory alongside the ./src one:
+            mudlet::self()->mUsingMudletDictionaries = true;
+            return qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        } else {
+            // From build within ./src
+            mudlet::self()->mUsingMudletDictionaries = true;
+            return qsl("%1/").arg(QCoreApplication::applicationDirPath());
+        }
+#elif defined(Q_OS_OPENBSD)
+        // OpenBSD uses dictionary files from Mozilla rather than direct from,
+        // Hunspell, but it does not ship a en_us one so we cannot use that on
+        // the first run to find the rest - instead try for the en_GB one
+        // - some of the entries for some of the locale/language/other parts of
+        // the filesnames seem to be a bit random:
+        if (QFile::exists(qsl("/usr/local/share/mozilla-dicts/%1.aff").arg(extra1))) {
+            mudlet::self()->mUsingMudletDictionaries = false;
+            return QLatin1String("/usr/local/share/mozilla-dicts/");
+        } else if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
+            mudlet::self()->mUsingMudletDictionaries = false;
+            return QLatin1String("/usr/share/mozilla-dicts/");
         } else if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudlet::self()->mUsingMudletDictionaries = true;
@@ -4673,7 +4729,7 @@ bool mudlet::desktopInDarkMode()
         coreMacOS::CFRelease(uiStyle);
     }
     return isDark;
-#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
+#elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD) || defined(Q_OS_OPENBSD)
     QProcess process;
     process.start(qsl("gsettings"), QStringList() << qsl("get") << qsl("org.gnome.desktop.interface") << qsl("gtk-theme"));
     process.waitForFinished();

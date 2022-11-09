@@ -4,6 +4,7 @@
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
+ *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,6 +35,7 @@
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
 #include "dlgRoomSymbol.h"
+#include "dlgRoomProperties.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
@@ -82,6 +84,7 @@ const QString& key_icon_dialog_cancel = qsl(":/icons/dialog-cancel.png");
 T2DMap::T2DMap(QWidget* parent)
 : QWidget(parent)
 {
+    mMultiSelectionListWidget.setParent(this);
     mMultiSelectionListWidget.setColumnCount(2);
     mMultiSelectionListWidget.hideColumn(1);
     QStringList headerLabels;
@@ -2892,6 +2895,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     popup->addAction(moveRoom);
                 }
 
+                if (selectionSize > 0) {
+                    auto roomProperties = new QAction(tr("Configure room...", "2D Mapper context menu (room) item"), this);
+                    roomProperties->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms", "2D Mapper context menu (room) item tooltip")));
+                    connect(roomProperties, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
+                    popup->addAction(roomProperties);
+                }
+
                 if (selectionSize == 1) {
                     auto roomExits = new QAction(tr("Set exits...", "2D Mapper context menu (room) item"), this);
                     connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
@@ -2939,8 +2949,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize > 0) {
-                    // TODO: Do not show both action simultaneously, if all selected rooms have same status.
-
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/6385
+                    //   Do not show both action simultaneously, if all selected rooms have same status.
                     auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
                     lockRoom->setToolTip(utils::richText(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip")));
                     connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
@@ -3584,12 +3594,11 @@ void T2DMap::slot_movePosition()
     pLEx->setText(QString::number(pR_start->x));
     pLEy->setText(QString::number(pR_start->y));
     pLEz->setText(QString::number(pR_start->z));
-    QLabel* pLa0 = new QLabel(tr("Move the selection, centered on\n"
-                                 "the highlighted room (%1) to:",
+    QLabel* pLa0 = new QLabel(tr("Move the selection, centered on the highlighted room (%1) to:",
                                  // Intentional comment to separate arguments
-                                 "Use linefeeds as necessary to format text into a reasonable rectangle of text, "
                                  "%1 is a room number")
                               .arg(mMultiSelectionHighlightRoomId));
+    pLa0->setWordWrap(true);
     // Record the starting coordinates - can be a help when working out how to move a block of rooms!
     QLabel* pLa1 = new QLabel(tr("x coordinate (was %1):").arg(pR_start->x));
     QLabel* pLa2 = new QLabel(tr("y coordinate (was %1):").arg(pR_start->y));
@@ -3704,6 +3713,7 @@ void T2DMap::slot_showSymbolSelection()
     }
 }
 
+
 void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
     if (newSymbol.isEmpty()) {
         QSetIterator<TRoom*> itRoomPtr(rooms);
@@ -3711,11 +3721,11 @@ void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoo
             itRoomPtr.next()->mSymbol = QString();
         }
     } else {
-        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // 10.0 is the maximum supported by all the Qt versions (5.14+) we
         // handle/use/allow - by normalising the symbol we can ensure that
         // all the entered ones are decomposed and recomposed in a
         // "standard" way and will have the same sequence of codepoints:
-        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
         QSetIterator<TRoom*> itRoomPtr(rooms);
         while (itRoomPtr.hasNext()) {
             auto room = itRoomPtr.next();
@@ -3727,10 +3737,169 @@ void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoo
     mpMap->mUnsavedMap = true;
 }
 
+
+void T2DMap::slot_showPropertiesDialog()
+{
+    // Counts and reports the existing properties used in ALL the selected rooms
+    // if more than one has been selected (and sorts by their frequency).
+    // Allows the existing symbols to be deleted (by clearing all the displayed letters)
+
+    // No need to show dialog if no rooms are selected
+    if (mMultiSelectionSet.empty()) {
+        return;
+    }
+
+    // No need to show if dialog is already shown
+    if (mpDlgRoomProperties) {
+        return;
+    }
+
+    bool isAtLeastOneRoom = false;
+    QSetIterator<int> itRoom = mMultiSelectionSet;
+    QSet<TRoom*> roomPtrsSet;
+
+    QHash<QString, int> usedNames;
+    QHash<int, int> usedColors;
+    QHash<QString, int> usedSymbols;
+    QHash<int, int> usedWeights; // key is weight, value is count of uses
+    QHash<bool, int> usedLockStatus;
+
+    while (itRoom.hasNext()) {
+        TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
+        if (!room) {
+            continue;
+        }
+        roomPtrsSet.insert(room);
+        isAtLeastOneRoom = true;
+
+        // Scan and count all the different names used
+        if (!room->name.isEmpty()) {
+            QString thisName = QString(room->name);
+            if (!thisName.isEmpty()) {
+                if (usedNames.contains(thisName)) {
+                    (usedNames[thisName])++;
+                } else {
+                    usedNames[thisName] = 1;
+                }
+            }
+        }
+
+        // Scan and count all the different room colors used
+        int thisColor = room->environment;
+        if (usedColors.contains(thisColor)) {
+            (usedColors[thisColor])++;
+        } else {
+            usedColors[thisColor] = 1;
+        }
+
+        // Scan and count all the different symbols used
+        QString thisSymbol = QString(room->mSymbol);
+        if (usedSymbols.contains(thisSymbol)) {
+            (usedSymbols[thisSymbol])++;
+        } else {
+            usedSymbols[thisSymbol] = 1;
+        }
+
+        // Scan and count all the different weights used
+        int thisWeight = room->getWeight();
+        if (thisWeight > 0) {
+            if (usedWeights.contains(thisWeight)) {
+                (usedWeights[thisWeight])++;
+            } else {
+                usedWeights[thisWeight] = 1;
+            }
+        }
+
+        // Scan and count all the different lock status used
+        bool thisLockStatus = room->isLocked;
+        if (usedLockStatus.contains(thisLockStatus)) {
+            (usedLockStatus[thisLockStatus])++;
+        } else {
+            usedLockStatus[thisLockStatus] = 1;
+        }
+    }
+
+    // No need to show dialog if no rooms were found
+    if (!isAtLeastOneRoom) {
+        return;
+    }
+
+    mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, roomPtrsSet);
+    mpDlgRoomProperties->show();
+    mpDlgRoomProperties->raise();
+    connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
+    connect(mpDlgRoomProperties, &QDialog::finished, this, [=]() {
+        mpDlgRoomProperties = nullptr;
+    });
+}
+
+
+void T2DMap::slot_setRoomProperties(
+    bool changeName, QString newName,
+    bool changeRoomColor, int newRoomColor,
+    bool changeSymbol, QString newSymbol,
+    bool changeSymbolColor, QColor newSymbolColor,
+    bool changeWeight, int newWeight,
+    bool changeLockStatus, bool newLockStatus,
+    QSet<TRoom*> rooms)
+{
+    if (newName.isEmpty()) {
+        newName = QString();
+    } else {
+        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // handle/use/allow - by normalising the symbol we can ensure that
+        // all the entered ones are decomposed and recomposed in a
+        // "standard" way and will have the same sequence of codepoints:
+        newName = newName.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+    }
+
+    if (newSymbol.isEmpty()) {
+        newSymbol = QString();
+    } else {
+        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // handle/use/allow - by normalising the symbol we can ensure that
+        // all the entered ones are decomposed and recomposed in a
+        // "standard" way and will have the same sequence of codepoints:
+        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+    }
+
+    QSetIterator<TRoom*> itpRoom(rooms);
+    TRoom* room = nullptr;
+
+    while (itpRoom.hasNext()) {
+        room = itpRoom.next();
+        if (!room) {
+            continue;
+        }
+        if (changeName) {
+            room->name = newName;
+        }
+        if (changeRoomColor) {
+            room->environment = newRoomColor;
+        }
+        if (changeSymbol || changeSymbolColor) {
+            room->mSymbol = newSymbol;
+            room->mSymbolColor = newSymbolColor;
+        }
+        if (changeWeight) {
+            room->setWeight(newWeight);
+        }
+        if (changeLockStatus) {
+            room->isLocked = newLockStatus;
+        }
+    }
+    if (changeWeight || changeLockStatus) {
+        mpMap->mMapGraphNeedsUpdate = true;
+    }
+    repaint();
+    update();
+    mpMap->mUnsavedMap = true;
+}
+
 void T2DMap::slot_setImage()
 {
 }
-
 
 void T2DMap::slot_deleteRoom()
 {
@@ -4114,15 +4283,39 @@ void T2DMap::slot_setRoomWeight()
                     itWeightsUsed.next();
                     if (itWeightsUsed.value() == weightCountsList.at(i)) {
                         if (itWeightsUsed.key() == 1) { // Indicate the "default" value which is unity weight
-                            displayStrings.append(tr("%1 {count:%2, default}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
+                            displayStrings.append(tr("1 {count:%1, default}",
+                                                     // Intentional comment to separate arguments
+                                                     "An entry into the QComboBox used to show the existing room weights in a selection "
+                                                     "of rooms for the user to choose to apply to every room in the selection. "
+                                                     "Everything after the '1' which is the default weight (and which is used by %1 "
+                                                     "rooms in the selection) will be removed by processing the entry as a "
+                                                     "QRegularExpression programmatically - the translation needs to also begin with "
+                                                     "that number '1'.")
+                                                          .arg(QString::number(itWeightsUsed.value())));
                         } else {
-                            displayStrings.append(tr("%1 {count:%2}").arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
+                            displayStrings.append(tr("%1 {count:%2}",
+                                                     // Intentional comment to separate arguments
+                                                     "An entry into the QComboBox used to show the existing room weights in a selection "
+                                                     "of rooms for the user to choose to apply to every room in the selection. "
+                                                     "Everything after the '%1' which is a number and is the weight used by a number "
+                                                     "%2 of rooms in the selection) will be removed by processing the entry as a "
+                                                     "QRegularExpression programmatically - the translation needs to also begin with "
+                                                     "that number '%1'.")
+                                                          .arg(QString::number(itWeightsUsed.key()), QString::number(itWeightsUsed.value())));
                         }
                     }
                 }
             }
-            if (!usedWeights.contains(1)) { // If unity weight was not used insert it at end of list
-                displayStrings.append(tr("1 {count 0, default}"));
+            if (!usedWeights.contains(1)) { // If unity weight was not used insert it at end of list - this should be the same Engineering English as above
+                displayStrings.append(tr("1 {count:%1, default}",
+                                         // Intentional comment to separate arguments
+                                         "An entry into the QComboBox used to show the existing room weights in a selection "
+                                         "of rooms for the user to choose to apply to every room in the selection. "
+                                         "Everything after the '1' which is the default weight (and which is used by %1 "
+                                         "rooms in the selection) will be removed by processing the entry as a "
+                                         "QRegularExpression programmatically - the translation needs to also begin with "
+                                         "that number '1'.")
+                                              .arg(QString::number(0)));
             }
             QString newWeightText = QInputDialog::getItem(this,                    // QWidget * parent
                                                           tr("Enter room weight"), // const QString & title
@@ -4144,6 +4337,12 @@ void T2DMap::slot_setRoomWeight()
                                                           Qt::ImhDigitsOnly);                                               // Qt::InputMethodHints inputMethodHints = Qt::ImhNone
             newWeight = 1;
             if (isOk) { // Don't do anything if cancel was pressed
+                // Parse an initial number out of what was selected or typed
+                QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
+                QRegularExpressionMatch match = countStripper.match(newWeightText);
+                if (match.hasMatch() && match.lastCapturedIndex() > 0) {
+                    newWeightText = match.captured(1);
+                }
                 if (newWeightText.toInt() > 0) {
                     newWeight = newWeightText.toInt();
                 } else {

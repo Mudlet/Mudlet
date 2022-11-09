@@ -68,7 +68,10 @@ class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {
 public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-    distance_heuristic(LocMap l, Vertex goal) : m_location(l), m_goal(goal) {}
+    distance_heuristic(LocMap l, Vertex goal)
+    : m_location(l)
+    , m_goal(goal)
+    {}
 
     CostType operator()(Vertex u)
     {
@@ -98,7 +101,9 @@ template <class Vertex>
 class astar_goal_visitor : public boost::default_astar_visitor
 {
 public:
-    explicit astar_goal_visitor(Vertex goal) : m_goal(goal) {}
+    explicit astar_goal_visitor(Vertex goal)
+    : m_goal(goal)
+    {}
 
     template <class Graph>
     void examine_vertex(Vertex u, Graph& g) {
