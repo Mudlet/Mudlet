@@ -425,7 +425,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
     commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
     commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
-    mpBufferSearchBox->setToolTip(utils::richText(tr("Search buffer.")));
+    mpBufferSearchBox->setToolTip(utils::richText(
+        tr("Search the buffer.", "Text will be shown as toop-tip when hovering the mouse-cursor over the search-box in Mudlet's main window")));
     connect(mpBufferSearchBox, &QLineEdit::returnPressed, this, &TConsole::slot_searchBufferUp);
 
     mpAction_searchOptions = new QAction(tr("Search Options"), this);
@@ -822,7 +823,7 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (!mUserAgreedToCloseConsole) {
     ASK:
-        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?", "Here %1 is the name of the profile.").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
             event->setAccepted(false);
             event->ignore();
@@ -1774,7 +1775,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
 
 void TConsole::printSystemMessage(const QString& msg)
 {
-    QString txt = tr("System Message: %1").arg(msg);
+    QString txt = tr("System message: %1").arg(msg);
     print(txt, mSystemMessageFgColor, mSystemMessageBgColor);
 }
 

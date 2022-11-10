@@ -440,7 +440,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     if (mudlet::self()->firstLaunch) {
         QTimer::singleShot(0, this, [this]() {
-            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
+            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game", "After starting Mudlet, this text will be a placeholder shown in the main command line to indicate where the player can start writing to the game."));
         });
     }
 
@@ -1708,13 +1708,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         auto * pLabel = pUnzipDialog->findChild<QLabel*>(qsl("label"));
         if (pLabel) {
             if (module) {
-                pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName));
+                pLabel->setText(tr("Unpacking module:\n\"%1\"\nplease wait...", "Here %1 is the name of the module.").arg(packageName));
             } else {
-                pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName));
+                pLabel->setText(tr("Unpacking package:\n\"%1\"\nplease wait...", "Here %1 is the name of the package.").arg(packageName));
             }
         }
         pUnzipDialog->hide(); // Must hide to change WindowModality
-        pUnzipDialog->setWindowTitle(tr("Unpacking"));
+        pUnzipDialog->setWindowTitle(tr("Unpacking", "This will be the title of the window shown while a package is installed and unpacked"));
         pUnzipDialog->setWindowModality(Qt::ApplicationModal);
         pUnzipDialog->show();
         qApp->processEvents();
@@ -2357,7 +2357,7 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         pMudlet->updateDiscordNamedIcon();
         QPair<bool, QString> richPresenceSupported = pMudlet->mDiscord.gameIntegrationSupported(getUrl());
         if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
-            pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
+            pMudlet->mDiscord.setDetailText(this, tr("Playing %1", "This text will be shown in Discord where %1 is the name of the game currently played").arg(richPresenceSupported.second));
             pMudlet->mDiscord.setLargeImage(this, richPresenceSupported.second);
             pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(gameName.toString(), getUrl(), QString::number(getPort())));
         } else {
@@ -2771,7 +2771,8 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
     }
 
     if (title.isEmpty()) {
-        mpDockableMapWidget->setWindowTitle(tr("Map - %1").arg(mHostName));
+        mpDockableMapWidget->setWindowTitle(tr("Map - %1",
+        "This is used as the name of the mapper window and %1 will be the profile name").arg(mHostName));
     } else {
         mpDockableMapWidget->setWindowTitle(title);
     }
@@ -3839,7 +3840,8 @@ void Host::createMapper(const bool loadDefaultMap)
 {
     auto pMap = mpMap.data();
     auto hostName(getName());
-    mpDockableMapWidget = new QDockWidget(tr("Map - %1").arg(hostName));
+    mpDockableMapWidget = new QDockWidget(tr("Map - %1",
+        "This is used as the name of the mapper window and %1 will be the profile name").arg(hostName));
     mpDockableMapWidget->setObjectName(qsl("dockMap_%1").arg(hostName));
     // Arrange for TMap member values to be copied from the Host masters so they
     // are in place when the 2D mapper is created:
@@ -3849,13 +3851,13 @@ void Host::createMapper(const bool loadDefaultMap)
                                      pMap->mPlayerRoomOuterColor,
                                      pMap->mPlayerRoomInnerColor);
 
-    pMap->mpMapper = new dlgMapper(mpDockableMapWidget, this, pMap); //FIXME: mpHost definieren
+    pMap->mpMapper = new dlgMapper(mpDockableMapWidget, this, pMap); //FIXME: define mpHost
     pMap->mpMapper->setStyleSheet(mProfileStyleSheet);
     mpDockableMapWidget->setWidget(pMap->mpMapper);
 
     if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
-        pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
+        pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report", "This will report errors happening before loading the map"), true);
         QDateTime now(QDateTime::currentDateTime());
         if (pMap->restore(QString())) {
             pMap->audit();
@@ -3865,7 +3867,7 @@ void Host::createMapper(const bool loadDefaultMap)
             pMap->mpMapper->show();
         }
 
-        pMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
+        pMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report", "%1 refers to the date/time of loading now").arg(now.toString(Qt::ISODate)), true);
 
     } else {
         if (pMap->mpMapper) {

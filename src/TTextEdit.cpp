@@ -1551,7 +1551,9 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             // killing the gdb debugger instance run by Qt Creator will restore
             // normality.
             connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
-            mpContextMenuAnalyser->setToolTip(utils::richText(tr("Hover on this item to display the Unicode codepoints in the selection <i>(only the first line!)</i>")));
+            mpContextMenuAnalyser->setToolTip(utils::richText(
+                tr("Hover on this item to display the Unicode codepoints in the selection <i>(only the first line!)</i>",
+                   "Codepoint refers to the actual unicode number of a character: https://en.wikipedia.org/wiki/Unicode#Architecture_and_terminology")));
             popup->addSeparator();
             popup->addAction(mpContextMenuAnalyser);
         }
@@ -1560,13 +1562,15 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         popup->addAction(action4);
 
         if (!mudlet::self()->isControlsVisible()) {
-            QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), this);
+            QAction* actionRestoreMainMenu = new QAction(tr("Restore main menu"), this);
             connect(actionRestoreMainMenu, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainMenu);
-            actionRestoreMainMenu->setToolTip(utils::richText(tr("Use this to restore the Main menu to get access to controls.")));
+            actionRestoreMainMenu->setToolTip(utils::richText(
+                tr("Restore the main menu and get access to its controls.")));
 
-            QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), this);
+            QAction* actionRestoreMainToolBar = new QAction(tr("Restore main toolbar"), this);
             connect(actionRestoreMainToolBar, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainToolBar);
-            actionRestoreMainToolBar->setToolTip(utils::richText(tr("Use this to restore the Main Toolbar to get access to controls.")));
+            actionRestoreMainToolBar->setToolTip(utils::richText(
+                tr("Restore the main toolbar and get access to its controls.")));
 
             popup->addSeparator();
             popup->addAction(actionRestoreMainMenu);
@@ -1663,13 +1667,13 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
 
     QString title;
     if (mpConsole->getType() == TConsole::CentralDebugConsole) {
-        title = tr("Mudlet, debug console extract");
+        title = tr("Mudlet, extract of debug console");
     } else if (mpConsole->getType() == TConsole::SubConsole) {
-        title = tr("Mudlet, %1 mini-console extract from %2 profile").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
+        title = tr("Mudlet, extract of mini-console \"%1\" from profile \"%2\"").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
     } else if (mpConsole->getType() == TConsole::UserWindow) {
-        title = tr("Mudlet, %1 user window extract from %2 profile").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
+        title = tr("Mudlet, extract of user-window \"%1\" from profile \"%2\"").arg(mpHost->mpConsole->mSubConsoleMap.key(mpConsole), mpHost->getName());
     } else {
-        title = tr("Mudlet, main console extract from %1 profile").arg(mpHost->getName());
+        title = tr("Mudlet, extract of main console from profile \"%1\"").arg(mpHost->getName());
     }
 
     QStringList fontsList;                  // List of fonts to become the font-family entry for
