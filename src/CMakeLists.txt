@@ -68,7 +68,6 @@ set(mudlet_SRCS
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
     dlgRoomProperties.cpp
-    dlgRoomSymbol.cpp
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
     dlgSourceEditorFindArea.cpp
@@ -223,7 +222,6 @@ set(mudlet_HDRS
     dlgProfilePreferences.h
     dlgRoomExits.h
     dlgRoomProperties.h
-    dlgRoomSymbol.h
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
     dlgSourceEditorFindArea.h
