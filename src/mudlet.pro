@@ -799,7 +799,6 @@ FORMS += \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
     ui/room_properties.ui \
-    ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \
