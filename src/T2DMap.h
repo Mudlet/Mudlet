@@ -230,7 +230,7 @@ public slots:
     void slot_setUserData();
     void slot_lockRoom(); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_unlockRoom(); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
-    void slot_setRoomWeight(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_setRoomWeight(); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_setArea();
     void slot_setCustomLine();
     void slot_setCustomLine2();
