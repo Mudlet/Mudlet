@@ -34,7 +34,7 @@
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
-#include "dlgRoomSymbol.h" // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+#include "dlgRoomSymbol.h" // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
 #include "dlgRoomProperties.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)

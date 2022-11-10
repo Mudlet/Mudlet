@@ -26,7 +26,7 @@
  ***************************************************************************/
 
 #include "dlgMapLabel.h"
-#include "dlgRoomSymbol.h" // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+#include "dlgRoomSymbol.h" // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
 #include "dlgRoomProperties.h"
 
 #include "pre_guard.h"
@@ -228,8 +228,8 @@ public slots:
     void slot_shrink();
     void slot_setExits();
     void slot_setUserData();
-    void slot_lockRoom(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
-    void slot_unlockRoom(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_lockRoom(); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_unlockRoom(); // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_setRoomWeight(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
     void slot_setArea();
     void slot_setCustomLine();
@@ -296,7 +296,7 @@ private:
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
-    dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
+    dlgRoomSymbol* mpDlgRoomSymbol = nullptr; // TODO: obsolete! see https://github.com/Mudlet/Mudlet/issues/6385
     dlgRoomProperties* mpDlgRoomProperties = nullptr;
     dlgMapLabel* mpDlgMapLabel = nullptr;
 
