@@ -420,7 +420,7 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
 
 void dlgRoomProperties::slot_openSymbolColorSelector()
 {
-    auto* dialog = new QColorDialog(selectedSymbolColor.isValid() ? selectedSymbolColor: defaultSymbolColor(), this);
+    auto* dialog = new QColorDialog(selectedSymbolColor.isValid() ? selectedSymbolColor : defaultSymbolColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Set symbol color"));
     dialog->open(this, SLOT(slot_symbolColorSelected(const QColor&)));

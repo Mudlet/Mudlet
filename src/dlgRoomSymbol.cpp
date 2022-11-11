@@ -198,7 +198,7 @@ QFont dlgRoomSymbol::getFontForPreview(QString text) {
 
 void dlgRoomSymbol::slot_openColorSelector()
 {
-    auto* dialog = new QColorDialog(selectedColor.isValid() ? selectedColor: defaultColor(), this);
+    auto* dialog = new QColorDialog(selectedColor.isValid() ? selectedColor : defaultColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Pick color"));
     dialog->open(this, SLOT(slot_colorSelected(const QColor&)));
