@@ -475,7 +475,7 @@ void dlgRoomProperties::slot_defineNewColor()
         slot_openRoomColorSelector();
     }
     repaint();
-    mpHost->mpMap->mUnsavedMap = true;
+    mpHost->mpMap->setUnsaved(__func__);
 }
 
 
@@ -502,7 +502,7 @@ void dlgRoomProperties::slot_openRoomColorSelector()
 
             mpHost->mpMap->mCustomEnvColors.remove(color.toInt());
             repaint();
-            mpHost->mpMap->mUnsavedMap = true;
+            mpHost->mpMap->setUnsaved(__func__);
         });
 
         menu.exec(QCursor::pos());
