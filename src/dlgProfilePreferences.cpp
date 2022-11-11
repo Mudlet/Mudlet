@@ -660,6 +660,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // On the first run for a profile this will be the "English (American)"
     // dictionary "en_US".
+    // Unfortunately OpenBSD does not ship a dictionary for THAT language which
+    // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
     // This will also set mudlet::mUsingMudletDictionaries as appropriate:
     QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);

@@ -3044,11 +3044,11 @@ void cTelnet::setKeepAlive(int socketHandle)
 
 #else // For OSes other than Windows:
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS) || defined(Q_OS_OPENBSD)
     setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
 #else
     // FreeBSD always has the Keep-alive option enabled, so the above is not
-    // needed
+    // usable
     Q_UNUSED(on)
 #endif
 
@@ -3072,15 +3072,23 @@ void cTelnet::setKeepAlive(int socketHandle)
 #if defined(Q_OS_MACOS)
     // TCP_KEEPIDLE is TCP_KEEPALIVE on MacOs
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+#elif defined(Q_OS_OPENBSD)
+    // There does not appear to be a per-socket option for TCP_KEEPALIVE on OpenBSD
+    // only a system wide one
 #else
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
 #endif
+
+#if !defined(Q_OS_OPENBSD)
+    // There does not appear to be a per-socket options for these on OpenBSD
+    // only system wide one:
 
     // Interval between keep-alives, in seconds:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
     // Number of failed keep alives before forcing a close:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
-#endif // defined(Q_OS_WIN32)
+#endif // !defined(Q_OS_OPENBSD)
+#endif // !defined(Q_OS_WIN32)
 }
 
 // Used to convert a collection of Bytes in the current MUD Server encoding

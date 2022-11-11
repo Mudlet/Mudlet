@@ -4,6 +4,7 @@
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
+ *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,6 +35,7 @@
 #include "dlgMapper.h"
 #include "dlgRoomExits.h"
 #include "dlgRoomSymbol.h"
+#include "dlgRoomProperties.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
@@ -2478,6 +2480,9 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     if (Q_LIKELY(labelId >= 0)) {
         pArea->mMapLabels.insert(labelId, label);
         update();
+        if (!label.temporary) {
+            mpMap->setUnsaved(__func__);
+        }
     }
 }
 
@@ -2893,6 +2898,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     popup->addAction(moveRoom);
                 }
 
+                if (selectionSize > 0) {
+                    auto roomProperties = new QAction(tr("Configure room...", "2D Mapper context menu (room) item"), this);
+                    roomProperties->setToolTip(utils::richText(tr("Set room's name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms", "2D Mapper context menu (room) item tooltip")));
+                    connect(roomProperties, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
+                    popup->addAction(roomProperties);
+                }
+
                 if (selectionSize == 1) {
                     auto roomExits = new QAction(tr("Set exits...", "2D Mapper context menu (room) item"), this);
                     connect(roomExits, &QAction::triggered, this, &T2DMap::slot_setExits);
@@ -2940,8 +2952,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 }
 
                 if (selectionSize > 0) {
-                    // TODO: Do not show both action simultaneously, if all selected rooms have same status.
-
+                    // TODO: https://github.com/Mudlet/Mudlet/issues/6385
+                    //   Do not show both action simultaneously, if all selected rooms have same status.
                     auto lockRoom = new QAction(tr("Lock", "2D Mapper context menu (room) item"), this);
                     lockRoom->setToolTip(utils::richText(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip")));
                     connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_lockRoom);
@@ -3212,7 +3224,7 @@ void T2DMap::slot_createRoom()
     isCenterViewCall = true;
     update();
     isCenterViewCall = false;
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 // Used both by "Properties..." context menu item for existing lines AND
@@ -3316,7 +3328,7 @@ void T2DMap::slot_customLineProperties()
             }
         }
         repaint();
-        mpMap->mUnsavedMap = true;
+        mpMap->setUnsaved(__func__);
     } else {
         qDebug("T2DMap::slot_customLineProperties() called but no line is selected...");
     }
@@ -3372,7 +3384,7 @@ void T2DMap::slot_customLineAddPoint()
     // the painting process:
     room->calcRoomDimensions();
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 
@@ -3396,7 +3408,7 @@ void T2DMap::slot_customLineRemovePoint()
     // the painting process:
     room->calcRoomDimensions();
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 
@@ -3411,7 +3423,7 @@ void T2DMap::slot_undoCustomLineLastPoint()
             room->calcRoomDimensions();
         }
         repaint();
-        mpMap->mUnsavedMap = true;
+        mpMap->setUnsaved(__func__);
     }
 }
 
@@ -3432,7 +3444,7 @@ void T2DMap::slot_doneCustomLine()
         }
     }
     update();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_deleteCustomExitLine()
@@ -3448,7 +3460,7 @@ void T2DMap::slot_deleteCustomExitLine()
             mCustomLineSelectedExit = "";
             mCustomLineSelectedPoint = -1;
             repaint();
-            mpMap->mUnsavedMap = true;
+            mpMap->setUnsaved(__func__);
             room->calcRoomDimensions();
             TArea* area = mpMap->mpRoomDB->getArea(room->getArea());
             if (area) {
@@ -3471,6 +3483,7 @@ void T2DMap::slot_deleteLabel()
     }
 
     bool updateNeeded = false;
+    bool saveNeeded = false;
     QMutableMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
@@ -3481,12 +3494,17 @@ void T2DMap::slot_deleteLabel()
         if (label.highlight) {
             itMapLabel.remove();
             updateNeeded = true;
+            if (!label.temporary) {
+                saveNeeded = true;
+            }
         }
     }
 
     if (updateNeeded) {
         update();
-        mpMap->mUnsavedMap = true;
+        if (saveNeeded) {
+            mpMap->setUnsaved(__func__);
+        }
     }
 }
 
@@ -3643,7 +3661,7 @@ void T2DMap::slot_movePosition()
         }
     }
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 
@@ -3704,6 +3722,7 @@ void T2DMap::slot_showSymbolSelection()
     }
 }
 
+
 void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms) {
     if (newSymbol.isEmpty()) {
         QSetIterator<TRoom*> itRoomPtr(rooms);
@@ -3711,11 +3730,11 @@ void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoo
             itRoomPtr.next()->mSymbol = QString();
         }
     } else {
-        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // 10.0 is the maximum supported by all the Qt versions (5.14+) we
         // handle/use/allow - by normalising the symbol we can ensure that
         // all the entered ones are decomposed and recomposed in a
         // "standard" way and will have the same sequence of codepoints:
-        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
         QSetIterator<TRoom*> itRoomPtr(rooms);
         while (itRoomPtr.hasNext()) {
             auto room = itRoomPtr.next();
@@ -3724,13 +3743,172 @@ void T2DMap::slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoo
         }
     }
     repaint();
+    mpMap->setUnsaved(__func__);
+}
+
+
+void T2DMap::slot_showPropertiesDialog()
+{
+    // Counts and reports the existing properties used in ALL the selected rooms
+    // if more than one has been selected (and sorts by their frequency).
+    // Allows the existing symbols to be deleted (by clearing all the displayed letters)
+
+    // No need to show dialog if no rooms are selected
+    if (mMultiSelectionSet.empty()) {
+        return;
+    }
+
+    // No need to show if dialog is already shown
+    if (mpDlgRoomProperties) {
+        return;
+    }
+
+    bool isAtLeastOneRoom = false;
+    QSetIterator<int> itRoom = mMultiSelectionSet;
+    QSet<TRoom*> roomPtrsSet;
+
+    QHash<QString, int> usedNames;
+    QHash<int, int> usedColors;
+    QHash<QString, int> usedSymbols;
+    QHash<int, int> usedWeights; // key is weight, value is count of uses
+    QHash<bool, int> usedLockStatus;
+
+    while (itRoom.hasNext()) {
+        TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
+        if (!room) {
+            continue;
+        }
+        roomPtrsSet.insert(room);
+        isAtLeastOneRoom = true;
+
+        // Scan and count all the different names used
+        if (!room->name.isEmpty()) {
+            QString thisName = QString(room->name);
+            if (!thisName.isEmpty()) {
+                if (usedNames.contains(thisName)) {
+                    (usedNames[thisName])++;
+                } else {
+                    usedNames[thisName] = 1;
+                }
+            }
+        }
+
+        // Scan and count all the different room colors used
+        int thisColor = room->environment;
+        if (usedColors.contains(thisColor)) {
+            (usedColors[thisColor])++;
+        } else {
+            usedColors[thisColor] = 1;
+        }
+
+        // Scan and count all the different symbols used
+        QString thisSymbol = QString(room->mSymbol);
+        if (usedSymbols.contains(thisSymbol)) {
+            (usedSymbols[thisSymbol])++;
+        } else {
+            usedSymbols[thisSymbol] = 1;
+        }
+
+        // Scan and count all the different weights used
+        int thisWeight = room->getWeight();
+        if (thisWeight > 0) {
+            if (usedWeights.contains(thisWeight)) {
+                (usedWeights[thisWeight])++;
+            } else {
+                usedWeights[thisWeight] = 1;
+            }
+        }
+
+        // Scan and count all the different lock status used
+        bool thisLockStatus = room->isLocked;
+        if (usedLockStatus.contains(thisLockStatus)) {
+            (usedLockStatus[thisLockStatus])++;
+        } else {
+            usedLockStatus[thisLockStatus] = 1;
+        }
+    }
+
+    // No need to show dialog if no rooms were found
+    if (!isAtLeastOneRoom) {
+        return;
+    }
+
+    mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, roomPtrsSet);
+    mpDlgRoomProperties->show();
+    mpDlgRoomProperties->raise();
+    connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
+    connect(mpDlgRoomProperties, &QDialog::finished, this, [=]() {
+        mpDlgRoomProperties = nullptr;
+    });
+}
+
+
+void T2DMap::slot_setRoomProperties(
+    bool changeName, QString newName,
+    bool changeRoomColor, int newRoomColor,
+    bool changeSymbol, QString newSymbol,
+    bool changeSymbolColor, QColor newSymbolColor,
+    bool changeWeight, int newWeight,
+    bool changeLockStatus, bool newLockStatus,
+    QSet<TRoom*> rooms)
+{
+    if (newName.isEmpty()) {
+        newName = QString();
+    } else {
+        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // handle/use/allow - by normalising the symbol we can ensure that
+        // all the entered ones are decomposed and recomposed in a
+        // "standard" way and will have the same sequence of codepoints:
+        newName = newName.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+    }
+
+    if (newSymbol.isEmpty()) {
+        newSymbol = QString();
+    } else {
+        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // handle/use/allow - by normalising the symbol we can ensure that
+        // all the entered ones are decomposed and recomposed in a
+        // "standard" way and will have the same sequence of codepoints:
+        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+    }
+
+    QSetIterator<TRoom*> itpRoom(rooms);
+    TRoom* room = nullptr;
+
+    while (itpRoom.hasNext()) {
+        room = itpRoom.next();
+        if (!room) {
+            continue;
+        }
+        if (changeName) {
+            room->name = newName;
+        }
+        if (changeRoomColor) {
+            room->environment = newRoomColor;
+        }
+        if (changeSymbol || changeSymbolColor) {
+            room->mSymbol = newSymbol;
+            room->mSymbolColor = newSymbolColor;
+        }
+        if (changeWeight) {
+            room->setWeight(newWeight);
+        }
+        if (changeLockStatus) {
+            room->isLocked = newLockStatus;
+        }
+    }
+    if (changeWeight || changeLockStatus) {
+        mpMap->mMapGraphNeedsUpdate = true;
+    }
+    repaint();
+    update();
     mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_setImage()
 {
 }
-
 
 void T2DMap::slot_deleteRoom()
 {
@@ -3741,7 +3919,7 @@ void T2DMap::slot_deleteRoom()
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_selectRoomColor(QListWidgetItem* pI)
@@ -3766,7 +3944,7 @@ void T2DMap::slot_defineNewColor()
         slot_changeColor();
     }
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_changeColor()
@@ -3791,7 +3969,7 @@ void T2DMap::slot_changeColor()
 
             mpMap->mCustomEnvColors.remove(colour.toInt());
             repaint();
-            mpMap->mUnsavedMap = true;
+            mpMap->setUnsaved(__func__);
         });
 
         menu.exec(QCursor::pos());
@@ -3856,7 +4034,7 @@ void T2DMap::slot_changeColor()
         }
 
         update();
-        mpMap->mUnsavedMap = true;
+        mpMap->setUnsaved(__func__);
     }
 }
 
@@ -3918,7 +4096,7 @@ void T2DMap::slot_spread()
         pMovingR->calcRoomDimensions();
     }
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_shrink()
@@ -3979,7 +4157,7 @@ void T2DMap::slot_shrink()
         pMovingR->calcRoomDimensions();
     }
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_setExits()
@@ -4195,7 +4373,7 @@ void T2DMap::slot_setRoomWeight()
         }
         mpMap->mMapGraphNeedsUpdate = true;
         repaint();
-        mpMap->mUnsavedMap = true;
+        mpMap->setUnsaved(__func__);
     }
 }
 
@@ -4251,7 +4429,7 @@ void T2DMap::slot_newMap()
     isCenterViewCall = true;
     update();
     isCenterViewCall = false;
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
     mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
 }
 
@@ -4359,7 +4537,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                     room->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = pc;
                     room->calcRoomDimensions();
                     repaint();
-                    mpMap->mUnsavedMap = true;
+                    mpMap->setUnsaved(__func__);
                     return;
                 }
             }
@@ -4373,6 +4551,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         auto pA = mpMap->mpRoomDB->getArea(mAreaID);
         if (pA && !pA->mMapLabels.isEmpty()) {
             bool needUpdate = false;
+            bool needToSave = false;
             QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
             while (itMapLabel.hasNext()) {
                 itMapLabel.next();
@@ -4389,10 +4568,15 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 mapLabel.pos = QVector3D(mx, my, static_cast<float>(mOz));
                 pA->mMapLabels[itMapLabel.key()] = mapLabel;
                 needUpdate = true;
+                if (!mapLabel.temporary) {
+                    needToSave = true;
+                }
             }
             if (needUpdate) {
                 update();
-                mpMap->mUnsavedMap = true;
+                if (needToSave) {
+                    mpMap->setUnsaved(__func__);
+                }
             }
         }
     } else {
@@ -4502,7 +4686,6 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         }
 
         update();
-        mpMap->mUnsavedMap = true;
         return;
     }
 
@@ -4552,7 +4735,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             }
         }
         repaint();
-        mpMap->mUnsavedMap = true;
+        mpMap->setUnsaved(__func__);
     }
 }
 
@@ -4700,7 +4883,7 @@ void T2DMap::setRoomSize(double f)
     }
     flushSymbolPixmapCache();
     update();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::setExitSize(double f)
@@ -5122,7 +5305,6 @@ void T2DMap::slot_createLabel()
     mSizeLabel = true;
     mMultiSelection = true;
     update();
-    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_roomSelectionChanged()
