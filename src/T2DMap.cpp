@@ -3903,7 +3903,7 @@ void T2DMap::slot_setRoomProperties(
     }
     repaint();
     update();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_setImage()
