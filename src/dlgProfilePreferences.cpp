@@ -484,7 +484,7 @@ void dlgProfilePreferences::disableHostDetails()
 
     // ===== tab security =====
     groupBox_ssl->setEnabled(false);
-    mAskTlsAvailable->setEnabled(false);
+    checkBox_ask_tls_available->setEnabled(false);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(false);
@@ -587,10 +587,10 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab security =====
 #if defined(QT_NO_SSL)
     groupBox_ssl->setEnabled(false);
-    mAskTlsAvailable->setEnabled(false);
+    checkBox_ask_tls_available->setEnabled(false);
 #else
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
-    mAskTlsAvailable->setEnabled(true);
+    checkBox_ask_tls_available->setEnabled(true);
 #endif
     checkBox_announceIncomingText->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
@@ -1103,7 +1103,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
-    mAskTlsAvailable->setChecked(pHost->mAskTlsAvailable);
+    checkBox_ask_tls_available->setChecked(pHost->mAskTlsAvailable);
 
     groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
@@ -1439,7 +1439,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
-    mAskTlsAvailable->setChecked(false);
+    checkBox_ask_tls_available->setChecked(false);
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -2692,7 +2692,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
-        pHost->mAskTlsAvailable = mAskTlsAvailable->isChecked();
+        pHost->mAskTlsAvailable = checkBox_ask_tls_available->isChecked();
 
         if (console) {
             console->changeColors();
