@@ -48,6 +48,7 @@ public:
     bool highlight = false;
     bool showOnTop = false;
     bool noScaling = false;
+    bool temporary = false;
 };
 
 #endif // MUDLET_TMAPLABEL_H
