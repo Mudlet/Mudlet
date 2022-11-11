@@ -64,6 +64,8 @@ public:
     int createLabelId() const;
     void writeJsonArea(QJsonArray&) const;
     std::pair<int, QString> readJsonArea(const QJsonArray&, const int);
+    QList<int> getPermanentLabelIds() const;
+    bool hasPermanentLabels() const;
 
 
     QSet<int> rooms; // rooms of this area

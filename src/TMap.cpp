@@ -157,19 +157,19 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
     bool result = pR->setArea(area, isToDeferAreaRelatedRecalculations);
     if (result) {
         mMapGraphNeedsUpdate = true;
-        mUnsavedMap = true;
+        setUnsaved(__func__);
     }
     return result;
 }
 
 bool TMap::addRoom(int id)
 {
-    bool ret = mpRoomDB->addRoom(id);
-    if (ret) {
+    if (mpRoomDB->addRoom(id)) {
         mMapGraphNeedsUpdate = true;
-        mUnsavedMap = true;
+        setUnsaved(__func__);
+        return true;
     }
-    return ret;
+    return false;
 }
 
 bool TMap::setRoomCoordinates(int id, int x, int y, int z)
@@ -183,7 +183,7 @@ bool TMap::setRoomCoordinates(int id, int x, int y, int z)
     pR->y = y;
     pR->z = z;
 
-    mUnsavedMap = true;
+    setUnsaved(__func__);
     return true;
 }
 
@@ -308,7 +308,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
 
         setExit(fromRoomId, minDistanceRoom, dirType);
         setExit(minDistanceRoom, fromRoomId, scmReverseDirections.value(dirType));
-        mUnsavedMap = true;
+        setUnsaved(__func__);
         return {};
     }
 
@@ -382,7 +382,7 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
     int usableStubDirection = *(usableStubDirections.constBegin());
     setExit(fromRoomId, toRoomId, usableStubDirection);
     setExit(toRoomId, fromRoomId, scmReverseDirections.value(usableStubDirection));
-    mUnsavedMap = true;
+    setUnsaved(__func__);
     return {};
 }
 
@@ -428,7 +428,7 @@ QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int 
 
     setExit(fromRoomId, toRoomId, dirType);
     setExit(toRoomId, fromRoomId, scmReverseDirections.value(dirType));
-    mUnsavedMap = true;
+    setUnsaved(__func__);
     return {};
 }
 
@@ -512,7 +512,7 @@ bool TMap::setExit(int from, int to, int dir)
     }
     pA->determineAreaExitsOfRoom(pR->getId());
     mpRoomDB->updateEntranceMap(pR);
-    mUnsavedMap = true;
+    setUnsaved(__func__);
     return ret;
 }
 
@@ -550,7 +550,7 @@ void TMap::audit()
                         // Note that two of the last three arguments here
                         // (false, 40.0) are not the defaults (true, 30.0) used
                         // now:
-                        int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, 40.0, 50, std::nullopt);
+                        int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
                                 QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
@@ -1193,12 +1193,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->mUserData;
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
-            ofs << pA->mMapLabels.size();
-            QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
-            while (itMapLabel.hasNext()) {
-                itMapLabel.next();
-                ofs << itMapLabel.key(); //label ID
-                TMapLabel label = itMapLabel.value();
+            // Also we now have temporary labels, so we need to count the
+            // permanent ones first to use as the count for ones to store:
+            const auto permanentLabelsList{pA->getPermanentLabelIds()};
+            ofs << permanentLabelsList.size();
+            QListIterator<int> itMapLabelId(permanentLabelsList);
+            while (itMapLabelId.hasNext()) {
+                const auto labelID = itMapLabelId.next();
+                const auto label = pA->mMapLabels.value(labelID);
+                ofs << labelID;
                 ofs << label.pos;
                 ofs << label.size;
                 ofs << label.text;
@@ -1222,32 +1225,35 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
 
     if (mSaveVersion < 21) {
         // Before version 21 the map labels were stored within this class:
-        // number of labels per area - we need this as there is no delimiter
-        // between each area's map labels
-        int areasWithLabels = 0;
+        // First we have the number of labels per area - we need this as there
+        // is no delimiter between each area's map labels
+        QMap<int, TArea*> areasWithPermanentLabels;
         // Need to count the areas that have mapLabels:
-        for (const auto pArea : mpRoomDB->getAreaPtrList()) {
-            if (pArea && !pArea->mMapLabels.isEmpty()) {
-                ++areasWithLabels;
-            }
-        }
-        ofs << areasWithLabels;
         QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
-        while (itArea.hasNext()) {
+        while (itArea.hasNext()){
+            // Now we have temporary labels we need to identify areas with
+            // permanent ones:
             itArea.next();
             auto pArea = itArea.value();
-            if (!pArea || pArea->mMapLabels.isEmpty()) {
-                continue;
+            if (pArea && !pArea->mMapLabels.isEmpty() && pArea->hasPermanentLabels()) {
+                areasWithPermanentLabels.insert(itArea.key(), itArea.value());
             }
-            // number of labels in this area:
-            ofs << pArea->mMapLabels.size();
+        }
+        ofs << areasWithPermanentLabels.count();
+        QMapIterator<int, TArea*> itAreaWithLabels(areasWithPermanentLabels);
+        while (itAreaWithLabels.hasNext()) {
+            itAreaWithLabels.next();
+            auto pArea = itAreaWithLabels.value();
+            auto permanentLabelIdsList = pArea->getPermanentLabelIds();
+            // number of (permanent) labels in this area:
+            ofs << permanentLabelIdsList.size();
             // only used to assign labels to the area:
-            ofs << itArea.key();
-            QMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
-            while (itMapLabel.hasNext()) {
-                itMapLabel.next();
-                ofs << itMapLabel.key(); //label ID
-                TMapLabel label = itMapLabel.value();
+            ofs << itAreaWithLabels.key();
+            QListIterator<int> itPerminentMapLabelIds(permanentLabelIdsList);
+            while (itPerminentMapLabelIds.hasNext()) {
+                auto labelID = itPerminentMapLabelIds.next();
+                ofs << labelID; //label ID
+                TMapLabel label = pArea->mMapLabels.value(labelID);
                 ofs << label.pos;
                 ofs << QPointF(); // dummy value - not actually used
                 ofs << label.size;
@@ -2122,7 +2128,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 }
 
 //NOLINT(readability-make-member-function-const)
-int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, qreal zoom, int fontSize, std::optional<QString> fontName)
+int TMap::createMapLabel(int area, const QString& text, float x, float y, float z, QColor fg, QColor bg, bool showOnTop, bool noScaling, bool temporary, qreal zoom, int fontSize, std::optional<QString> fontName)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -2141,6 +2147,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     label.pos = QVector3D(x, y, z);
     label.showOnTop = showOnTop;
     label.noScaling = noScaling;
+    label.temporary = temporary;
 
     QRectF lr = QRectF(0, 0, 1000, 1000);
     QPixmap pix(lr.size().toSize());
@@ -2170,11 +2177,13 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
         }
     }
 
-    mUnsavedMap = true;
+    if (!temporary) {
+        setUnsaved(__func__);
+    }
     return labelId;
 }
 
-int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop)
+int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary)
 {
     auto pA = mpRoomDB->getArea(area);
     if (!pA) {
@@ -2188,6 +2197,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     // This method is only called from the TLuaInterpreter class and the value
     // passed was hard-coded to this value:
     label.noScaling = false;
+    label.temporary = temporary;
 
     QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
     QPixmap imagePixmap = QPixmap(imagePath);
@@ -2206,7 +2216,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
         }
     }
 
-    mUnsavedMap = true;
+    if (!temporary) {
+        setUnsaved(__func__);
+    }
     return labelId;
 }
 
@@ -2217,8 +2229,17 @@ void TMap::deleteMapLabel(int area, int labelId)
         return;
     }
 
-    if (pA->mMapLabels.remove(labelId)) {
-        mUnsavedMap = true;
+    auto label = pA->mMapLabels.take(labelId);
+    if (!label.pos.isNull() || !label.text.isEmpty() || label.bgColor != QColorConstants::Black || label.fgColor != QColorConstants::Black) {
+        // If any of the above tests are false then we can take it that we do
+        // not have a "default constructed" label - i.e. a real one and not
+        // one that the QMap<T1, T2>::take(const T1&) has created for us in the
+        // absence of an actual TMapLabel.
+        // The TMapLabel default constructor sets the 'temporary' class member
+        // to false so we can safely rely on it being true for a temporary one:
+        if (!label.temporary) {
+            setUnsaved(__func__);
+        }
         if (mpMapper) {
             mpMapper->mp2dMap->update();
         }
@@ -2833,7 +2854,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mProgressDialogLabelsTotal = 0;
     for (const auto area : mpRoomDB->getAreaMap()) {
         if (area) {
-            mProgressDialogLabelsTotal += area->mMapLabels.size();
+            mProgressDialogLabelsTotal += area->getPermanentLabelIds().count();
         }
     }
 
@@ -3442,4 +3463,15 @@ void TMap::restore16ColorSet()
     mCustomEnvColors[270] = mpHost->mLightCyan_2;
     mCustomEnvColors[271] = mpHost->mLightWhite_2;
     mCustomEnvColors[272] = mpHost->mLightBlack_2;
+}
+
+void TMap::setUnsaved(const char* fromWhere)
+{
+#if !defined(DEBUG_MAPAUTOSAVE)
+    Q_UNUSED(fromWhere);
+#else
+    QString nowString = QDateTime::currentDateTimeUtc().toString("HH:mm:ss.zzz");
+    qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
+#endif
+    mUnsavedMap = true;
 }

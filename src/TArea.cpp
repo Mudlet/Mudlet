@@ -709,10 +709,12 @@ void TArea::writeJsonLabels(QJsonObject& obj) const
     QMapIterator<int, TMapLabel> itMapLabel(mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
-        writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value());
-        if (mpMap->incrementJsonProgressDialog(true, false, 1)) {
-            // Cancel has been hit - so give up straight away:
-            return;
+        if (!itMapLabel.value().temporary) {
+            writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value());
+            if (mpMap->incrementJsonProgressDialog(true, false, 1)) {
+                // Cancel has been hit - so give up straight away:
+                return;
+            }
         }
     }
     QJsonValue labelsValue{labelArray};
@@ -943,4 +945,29 @@ QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) co
     pixmap.loadFromData(decodedImageArray);
 
     return pixmap;
+}
+
+QList<int> TArea::getPermanentLabelIds() const
+{
+    QMapIterator<int, TMapLabel> itLabel(mMapLabels);
+    QList<int> permanentLabels;
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        if (!itLabel.value().temporary) {
+            permanentLabels.append(itLabel.key());
+        }
+    }
+    return permanentLabels;
+}
+
+bool TArea::hasPermanentLabels() const
+{
+    QMapIterator<int, TMapLabel> itLabel(mMapLabels);
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        if (!itLabel.value().temporary) {
+            return true;
+        }
+    }
+    return false;
 }

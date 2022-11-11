@@ -1235,10 +1235,12 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             out.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
-        mpHost->mpMap->serialize(out, saveVersion);
+        bool saved = mpHost->mpMap->serialize(out, saveVersion);
         file_map.close();
-        mpHost->mpMap->mUnsavedMap = false;
-        return true;
+        if (saved) {
+            mpHost->mpMap->resetUnsaved();
+        }
+        return saved;
     }
 
     return false;
