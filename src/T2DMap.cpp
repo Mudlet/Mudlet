@@ -2479,6 +2479,9 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     if (Q_LIKELY(labelId >= 0)) {
         pArea->mMapLabels.insert(labelId, label);
         update();
+        if (!label.temporary) {
+            mpMap->setUnsaved(__func__);
+        }
     }
 }
 
@@ -3223,7 +3226,7 @@ void T2DMap::slot_createRoom()
     isCenterViewCall = true;
     update();
     isCenterViewCall = false;
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 // Used both by "Properties..." context menu item for existing lines AND
@@ -3327,7 +3330,7 @@ void T2DMap::slot_customLineProperties()
             }
         }
         repaint();
-        mpMap->mUnsavedMap = true;
+        mpMap->setUnsaved(__func__);
     } else {
         qDebug("T2DMap::slot_customLineProperties() called but no line is selected...");
     }
@@ -3383,7 +3386,7 @@ void T2DMap::slot_customLineAddPoint()
     // the painting process:
     room->calcRoomDimensions();
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 
@@ -3407,7 +3410,7 @@ void T2DMap::slot_customLineRemovePoint()
     // the painting process:
     room->calcRoomDimensions();
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 
@@ -3422,7 +3425,7 @@ void T2DMap::slot_undoCustomLineLastPoint()
             room->calcRoomDimensions();
         }
         repaint();
-        mpMap->mUnsavedMap = true;
+        mpMap->setUnsaved(__func__);
     }
 }
 
@@ -3443,7 +3446,7 @@ void T2DMap::slot_doneCustomLine()
         }
     }
     update();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_deleteCustomExitLine()
@@ -3459,7 +3462,7 @@ void T2DMap::slot_deleteCustomExitLine()
             mCustomLineSelectedExit = "";
             mCustomLineSelectedPoint = -1;
             repaint();
-            mpMap->mUnsavedMap = true;
+            mpMap->setUnsaved(__func__);
             room->calcRoomDimensions();
             TArea* area = mpMap->mpRoomDB->getArea(room->getArea());
             if (area) {
@@ -3482,6 +3485,7 @@ void T2DMap::slot_deleteLabel()
     }
 
     bool updateNeeded = false;
+    bool saveNeeded = false;
     QMutableMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
@@ -3492,12 +3496,17 @@ void T2DMap::slot_deleteLabel()
         if (label.highlight) {
             itMapLabel.remove();
             updateNeeded = true;
+            if (!label.temporary) {
+                saveNeeded = true;
+            }
         }
     }
 
     if (updateNeeded) {
         update();
-        mpMap->mUnsavedMap = true;
+        if (saveNeeded) {
+            mpMap->setUnsaved(__func__);
+        }
     }
 }
 
@@ -3654,7 +3663,7 @@ void T2DMap::slot_movePosition()
         }
     }
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 
@@ -3821,7 +3830,7 @@ void T2DMap::slot_setRoomProperties(
     }
     repaint();
     update();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_setImage()
@@ -3837,7 +3846,7 @@ void T2DMap::slot_deleteRoom()
     mMultiSelectionListWidget.clear();
     mMultiSelectionListWidget.hide();
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_spread()
@@ -3898,7 +3907,7 @@ void T2DMap::slot_spread()
         pMovingR->calcRoomDimensions();
     }
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_shrink()
@@ -3959,7 +3968,7 @@ void T2DMap::slot_shrink()
         pMovingR->calcRoomDimensions();
     }
     repaint();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::slot_setExits()
@@ -4031,7 +4040,7 @@ void T2DMap::slot_newMap()
     isCenterViewCall = true;
     update();
     isCenterViewCall = false;
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
     mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
 }
 
@@ -4139,7 +4148,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                     room->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = pc;
                     room->calcRoomDimensions();
                     repaint();
-                    mpMap->mUnsavedMap = true;
+                    mpMap->setUnsaved(__func__);
                     return;
                 }
             }
@@ -4153,6 +4162,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         auto pA = mpMap->mpRoomDB->getArea(mAreaID);
         if (pA && !pA->mMapLabels.isEmpty()) {
             bool needUpdate = false;
+            bool needToSave = false;
             QMapIterator<int, TMapLabel> itMapLabel(pA->mMapLabels);
             while (itMapLabel.hasNext()) {
                 itMapLabel.next();
@@ -4169,10 +4179,15 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 mapLabel.pos = QVector3D(mx, my, static_cast<float>(mOz));
                 pA->mMapLabels[itMapLabel.key()] = mapLabel;
                 needUpdate = true;
+                if (!mapLabel.temporary) {
+                    needToSave = true;
+                }
             }
             if (needUpdate) {
                 update();
-                mpMap->mUnsavedMap = true;
+                if (needToSave) {
+                    mpMap->setUnsaved(__func__);
+                }
             }
         }
     } else {
@@ -4282,7 +4297,6 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         }
 
         update();
-        mpMap->mUnsavedMap = true;
         return;
     }
 
@@ -4332,7 +4346,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             }
         }
         repaint();
-        mpMap->mUnsavedMap = true;
+        mpMap->setUnsaved(__func__);
     }
 }
 
@@ -4480,7 +4494,7 @@ void T2DMap::setRoomSize(double f)
     }
     flushSymbolPixmapCache();
     update();
-    mpMap->mUnsavedMap = true;
+    mpMap->setUnsaved(__func__);
 }
 
 void T2DMap::setExitSize(double f)
@@ -4902,7 +4916,6 @@ void T2DMap::slot_createLabel()
     mSizeLabel = true;
     mMultiSelection = true;
     update();
-    mpMap->mUnsavedMap = true;
 }
 
 void T2DMap::slot_roomSelectionChanged()
