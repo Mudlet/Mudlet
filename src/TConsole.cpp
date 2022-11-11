@@ -811,6 +811,7 @@ void TConsole::closeEvent(QCloseEvent* event)
                 if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
                     out.setVersion(mudlet::scmQDataStreamFormat_5_12);
                 }
+                // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
                 mpHost->mpMap->serialize(out);
                 file_map.close();
             }
@@ -851,6 +852,7 @@ void TConsole::closeEvent(QCloseEvent* event)
                     if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
                         out.setVersion(mudlet::scmQDataStreamFormat_5_12);
                     }
+                    // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
                     mpHost->mpMap->serialize(out);
                     file_map.close();
                 }
