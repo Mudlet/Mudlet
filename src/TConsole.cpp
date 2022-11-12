@@ -2114,3 +2114,45 @@ void TConsole::setCaretMode(bool enabled)
 
     mUpperPane->setFocus();
 }
+
+void TConsole::createSearchOptionIcon()
+{
+    // When we add new search options we must create icons for each combination
+    // beforehand - which is simpler than having to do code to combine the
+    // QPixMaps...
+    QIcon newIcon;
+    switch (mSearchOptions) {
+    // Each combination must be handled here
+    case SearchOptionCaseSensitive:
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
+        break;
+
+    case SearchOptionNone:
+        // Use the grey icon as that is appropriate for the "No options set" case
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-none.png"));
+        break;
+
+    default:
+        // Don't grey out this one - is a diagnositic for an uncoded combination
+        newIcon.addPixmap(QPixmap(":/icons/searchOptions-unspecified.png"));
+    }
+
+    mIcon_searchOptions = newIcon;
+    mpAction_searchOptions->setIcon(newIcon);
+}
+
+void TConsole::setSearchOptions(const SearchOptions optionsState)
+{
+    mSearchOptions = optionsState;
+    mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
+    createSearchOptionIcon();
+}
+
+void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
+{
+    if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
+        mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
+        createSearchOptionIcon();
+        mpHost->mBufferSearchOptions = mSearchOptions;
+    }
+}

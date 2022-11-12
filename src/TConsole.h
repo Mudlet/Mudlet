@@ -323,6 +323,9 @@ private:
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
+    SearchOptions mSearchOptions = SearchOptionNone;
+    QAction* mpAction_searchOptions = nullptr;
+    QIcon mIcon_searchOptions;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
