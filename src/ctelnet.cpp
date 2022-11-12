@@ -2778,6 +2778,20 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
             datalen = decompressBuffer(in_buffer, amount, out_buffer);
             buffer = out_buffer;
         }
+        
+        TEvent event {};
+        event.mArgumentList.append(qsl("sysSocketDataReceived"));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        event.mArgumentList.append(QLatin1String(buffer, datalen));
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_BYTE_ARRAY);
+
+        mpHost->mSetInSocketData = false;
+        mpHost->raiseEvent(event);
+        if (mpHost->mSetInSocketData) {            
+            buffer = mpHost->mSetInSocketDataBuffer.data();
+            datalen = mpHost->mSetInSocketDataBuffer.size();
+        }
+
         // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
         buffer[static_cast<size_t>(datalen)] = '\0';
         if (mpHost->mpConsole->mRecordReplay) {
