@@ -2192,11 +2192,26 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     mpHost->mpMedia->playMedia(mediaData);
 }
 
+bool cTelnet::isIPAddress(QString& arg)
+{
+    bool isIPAddress = false;
+
+    QHostAddress address(arg);
+
+    if (QAbstractSocket::IPv4Protocol == address.protocol()) {
+        isIPAddress = true;
+    } else if (QAbstractSocket::IPv6Protocol == address.protocol()) {
+        isIPAddress = true;
+    }
+
+    return isIPAddress;
+}
+
 void cTelnet::promptTlsConnectionAvailable()
 {
     // If an SSL port is detected by MSSP and we're not using it, prompt to use on future connections
-    if (mpHost->mMSSPTlsPort && socket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable && !mpHost->mMSSPHostName.isEmpty()
-        && QString::compare(hostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0) {
+    if (mpHost->mMSSPTlsPort && socket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable && !isIPAddress(hostName)
+        && (mpHost->mMSSPHostName.isEmpty() || QString::compare(hostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
         postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
 
         QPointer msgBox = new QMessageBox();
