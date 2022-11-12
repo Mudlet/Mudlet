@@ -224,7 +224,7 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
-    void binarySearchHorizontalAdvance(const int& lineIndex, const int& indentSize, const QString& lineIndent, const int& lineWidth, const int& screenWidth, const int& subStringStart, const int& lineCharTotal, const QFontMetrics& qfm, int& lineCharIterator, const bool isBefore);
+    void binarySearchHorizontalAdvance(const int& lineIndex, const int& indentSize, const QString& lineIndent, const int& screenWidth, const int& subStringStart, const int& lineCharTotal, const QFontMetrics& qfm, int& lineCharIterator, const bool isBefore);
 
     QPointer<TConsole> mpConsole;
 
