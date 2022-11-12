@@ -433,6 +433,7 @@ public:
     bool mServerMXPenabled;
     bool mAskTlsAvailable;
     int mMSSPTlsPort;
+    QString mMSSPHostName;
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;

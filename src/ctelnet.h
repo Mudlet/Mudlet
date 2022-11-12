@@ -251,6 +251,7 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
+    void promptTlsConnectionAvailable();
     void sendNAWS(int x, int y);
     static std::pair<bool, bool> testReadReplayFile();
 
