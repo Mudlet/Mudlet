@@ -2084,15 +2084,16 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
     if (mpHost->mMSSPTlsPort && socket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable) {
         postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
 
-        QMessageBox msgBox;
+        QPointer msgBox = new QMessageBox();
 
-        msgBox.setIcon(QMessageBox::Question);
-        msgBox.setText(tr("For data transfer protection and privacy, this connection advertises a secure port."));
-        msgBox.setInformativeText(tr("Update to port %1 and connect with encryption?").arg(QString::number(mpHost->mMSSPTlsPort)));
-        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-        msgBox.setDefaultButton(QMessageBox::Yes);
+        msgBox->setIcon(QMessageBox::Question);
+        msgBox->setText(tr("For data transfer protection and privacy, this connection advertises a secure port."));
+        msgBox->setInformativeText(tr("Update to port %1 and connect with encryption?").arg(QString::number(mpHost->mMSSPTlsPort)));
+        msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox->setDefaultButton(QMessageBox::Yes);
 
-        int ret = msgBox.exec();
+        int ret = msgBox->exec();
+        delete msgBox;
 
         switch (ret) {
         case QMessageBox::Yes:
