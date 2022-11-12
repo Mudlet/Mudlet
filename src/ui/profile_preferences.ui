@@ -3396,6 +3396,9 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="text">
           <string>Allow secure connection reminder</string>
          </property>
+         <property name="toolTip">
+           <string>&lt;p&gt;To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).&lt;/p&gt;</string>
+         </property>
          <property name="checkable">
           <bool>true</bool>
          </property>
