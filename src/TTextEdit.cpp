@@ -129,8 +129,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setEnabled(true);       //test fix for MAC
 
     connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
-    
-    updateWrap();
 }
 
 void TTextEdit::forceUpdate()
@@ -301,7 +299,6 @@ void TTextEdit::updateScreenView()
         updateScrollBar(mpBuffer->mCursorY);
     }
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
-
     if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
@@ -314,16 +311,7 @@ void TTextEdit::updateScreenView()
     } else {
         mScreenWidth = currentScreenWidth;
     }
-
-    updateWrap();
-
     mOldScrollPos = mpBuffer->getLastLineNumber();
-}
-
-void TTextEdit::updateWrap() {
-    if (mpConsole->autoWrap()) {
-        mpBuffer->setWrapAt(mScreenWidth);
-    }
 }
 
 void TTextEdit::showNewLines()

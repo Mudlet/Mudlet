@@ -1192,7 +1192,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             buffer.applyLink(P, P2, func, hint, luaReference);
             if (text.indexOf("\n") != -1) {
                 int y_tmp = mUserCursor.y();
-                int down = buffer.wrapLine(mUserCursor.y(), mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
                 int y_neu = y_tmp + down;
                 int x_adjust = text.lastIndexOf("\n");
@@ -1229,7 +1229,7 @@ void TConsole::insertText(const QString& text, QPoint P)
             buffer.insertInLine(mUserCursor, text, mFormatCurrent);
             int y_tmp = mUserCursor.y();
             if (text.indexOf(QChar::LineFeed) != -1) {
-                int down = buffer.wrapLine(y_tmp, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
             } else {
                 mUpperPane->needUpdate(y_tmp, y_tmp + 1);
@@ -1404,7 +1404,7 @@ void TConsole::luaWrapLine(int line)
         return;
     }
     TChar ch(mpHost);
-    buffer.wrapLine(line, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mIndentCount, ch);
+    buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
 bool TConsole::setFontSize(int size)
@@ -1717,7 +1717,7 @@ void TConsole::printCommand(QString& msg)
                 QPoint P(promptEnd, lineBeforeNewContent);
                 TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
-                int down = buffer.wrapLine(lineBeforeNewContent, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
 
                 mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
@@ -2113,59 +2113,4 @@ void TConsole::setCaretMode(bool enabled)
     }
 
     mUpperPane->setFocus();
-}
-
-bool TConsole::autoWrap() const {
-    return mAutoWrap;
-}
-
-void TConsole::setAutoWrap(bool enabled) {
-    mAutoWrap = enabled;
-
-    if (enabled) {
-        mUpperPane->updateWrap();
-        mLowerPane->updateWrap();
-    }
-}
-
-void TConsole::createSearchOptionIcon()
-{
-    // When we add new search options we must create icons for each combination
-    // beforehand - which is simpler than having to do code to combine the
-    // QPixMaps...
-    QIcon newIcon;
-    switch (mSearchOptions) {
-    // Each combination must be handled here
-    case SearchOptionCaseSensitive:
-        newIcon.addPixmap(QPixmap(":/icons/searchOptions-caseSensitive.png"));
-        break;
-
-    case SearchOptionNone:
-        // Use the grey icon as that is appropriate for the "No options set" case
-        newIcon.addPixmap(QPixmap(":/icons/searchOptions-none.png"));
-        break;
-
-    default:
-        // Don't grey out this one - is a diagnositic for an uncoded combination
-        newIcon.addPixmap(QPixmap(":/icons/searchOptions-unspecified.png"));
-    }
-
-    mIcon_searchOptions = newIcon;
-    mpAction_searchOptions->setIcon(newIcon);
-}
-
-void TConsole::setSearchOptions(const SearchOptions optionsState)
-{
-    mSearchOptions = optionsState;
-    mpAction_searchCaseSensitive->setChecked(optionsState & SearchOptionCaseSensitive);
-    createSearchOptionIcon();
-}
-
-void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
-{
-    if ((mSearchOptions & SearchOptionCaseSensitive) != state) {
-        mSearchOptions = (mSearchOptions & ~(SearchOptionCaseSensitive)) | (state ? SearchOptionCaseSensitive : SearchOptionNone);
-        createSearchOptionIcon();
-        mpHost->mBufferSearchOptions = mSearchOptions;
-    }
 }
