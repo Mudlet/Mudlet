@@ -378,7 +378,7 @@ int dlgRoomProperties::getNewWeight()
 
 void dlgRoomProperties::slot_updatePreview()
 {
-    auto realSymbolColor = selectedSymbolColor != nullptr ? selectedSymbolColor : defaultSymbolColor();
+    auto realSymbolColor = selectedSymbolColor.isValid() ? selectedSymbolColor : defaultSymbolColor();
     QString newSymbol = getNewSymbol();
     if (newSymbol == multipleValuesPlaceholder) {
         newSymbol = QString();
@@ -420,7 +420,7 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
 
 void dlgRoomProperties::slot_openSymbolColorSelector()
 {
-    auto* dialog = (selectedSymbolColor != nullptr) ? new QColorDialog(selectedSymbolColor, this) : new QColorDialog(defaultSymbolColor(), this);
+    auto* dialog = new QColorDialog(selectedSymbolColor.isValid() ? selectedSymbolColor : defaultSymbolColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Set symbol color"));
     dialog->open(this, SLOT(slot_symbolColorSelected(const QColor&)));
