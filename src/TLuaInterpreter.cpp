@@ -17725,6 +17725,9 @@ int TLuaInterpreter::getScroll(lua_State *L) {
         return 2;
     }
 
-    lua_pushnumber(L, std:min(console->mUpperPane->mCursorY, console->getLastLineNumber()));
+    int result = console->mUpperPane->mCursorY;
+    result = std::min(result, console->getLastLineNumber());
+    result = std::max(result, 0);
+    lua_pushnumber(L, result);
     return 1;
 }
