@@ -48,11 +48,13 @@ void dlgRoomSymbol::init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms)
     mpSymbols = pSymbols;
     mpRooms = pRooms;
     if (mpSymbols.size() <= 1) {
+        // show simple text-entry box, either empty or with the (single) existing symbol pre-filled
         lineEdit_roomSymbol->setText(!mpSymbols.isEmpty() ? mpSymbols.keys().first() : QString());
         comboBox_roomSymbol->hide();
     } else {
-        comboBox_roomSymbol->addItems(getComboBoxItems());
+        // show combined dropdown & text-entry box to host all of the (multiple) existing symbols
         lineEdit_roomSymbol->hide();
+        comboBox_roomSymbol->addItems(getComboBoxItems());
     }
     initInstructionLabel();
     if (!pRooms.isEmpty()) {
@@ -164,7 +166,7 @@ QString dlgRoomSymbol::getNewSymbol()
 
 void dlgRoomSymbol::slot_updatePreview()
 {
-    auto realColor = selectedColor != nullptr ? selectedColor : defaultColor();
+    auto realColor = selectedColor.isValid() ? selectedColor : defaultColor();
     auto newSymbol = getNewSymbol();
     label_preview->setFont(getFontForPreview(newSymbol));
     label_preview->setText(newSymbol);
@@ -196,7 +198,7 @@ QFont dlgRoomSymbol::getFontForPreview(QString text) {
 
 void dlgRoomSymbol::slot_openColorSelector()
 {
-    auto* dialog = selectedColor != nullptr ? new QColorDialog(selectedColor, this) : new QColorDialog(defaultColor(), this);
+    auto* dialog = new QColorDialog(selectedColor.isValid() ? selectedColor : defaultColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Pick color"));
     dialog->open(this, SLOT(slot_colorSelected(const QColor&)));
