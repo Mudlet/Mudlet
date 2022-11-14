@@ -143,46 +143,35 @@ attendere prego...</translation>
   <context>
     <name>MapInfoContributorManager</name>
     <message>
-      <location filename="../src/mapInfoContributorManager.cpp" line="116"/>
-      <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
-</source>
+      <location filename="../src/mapInfoContributorManager.cpp" line="117"/>
+      <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation>Area:%1%2 ID:%1%3 x:%1%4%1&lt;b‑&gt;%1%5 y:%1%6%1&lt;b‑&gt;%1%7 z:%1%8%1&lt;b‑&gt;%1%9
-</translation>
+      <translation>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</translation>
     </message>
     <message>
-      <location filename="../src/mapInfoContributorManager.cpp" line="140"/>
-      <source>Room Name: %1
-</source>
-      <translation>Nome Stanza: %1
-</translation>
+      <location filename="../src/mapInfoContributorManager.cpp" line="141"/>
+      <source>Room Name: %1</source>
+      <translation>Nome Stanza: %1</translation>
     </message>
     <message>
-      <location filename="../src/mapInfoContributorManager.cpp" line="153"/>
-      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
-</source>
+      <location filename="../src/mapInfoContributorManager.cpp" line="155"/>
+      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1stanza attuale del giocatore
-</translation>
+      <translation>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1stanza corrente</translation>
     </message>
     <message>
-      <location filename="../src/mapInfoContributorManager.cpp" line="170"/>
-      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
-</source>
+      <location filename="../src/mapInfoContributorManager.cpp" line="177"/>
+      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1stanza selezionata
-</translation>
+      <translation>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1stanza selezionata</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mapInfoContributorManager.cpp" line="188"/>
-      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
-</source>
+      <location filename="../src/mapInfoContributorManager.cpp" line="200"/>
+      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
       <translation>
-        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanze selezionate
-</numerusform>
-        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanze selezionate
-</numerusform>
+        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanza selezionata</numerusform>
+        <numerusform>Stanza%1ID:%1%2 Posizione%1sulla%1Mappa: (%3,%4,%5) -%1centrata su %n stanze selezionate</numerusform>
       </translation>
     </message>
   </context>
@@ -501,7 +490,7 @@ attendere prego...</translation>
 </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="371"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="379"/>
       <source>Error parsing %1: %2 </source>
       <translation>Errore nell'analisi %1: %2 </translation>
     </message>
@@ -511,32 +500,32 @@ attendere prego...</translation>
       <translation>Errore nella lettura del file %1:%2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="438"/>
       <source>%1 ranges</source>
       <translation>%1 intervalli</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
       <source>Line %1, Column %2</source>
       <translation>Riga %1, colonna %2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="447"/>
       <source>, Offset %1</source>
       <translation>, Offset %1</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="451"/>
       <source> | %1 chars selected</source>
       <translation> | %1 caratteri selezionati</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="455"/>
       <source> | scope: </source>
       <translation> | ambito: </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="465"/>
       <source> (%1)</source>
       <translation> (%1)</translation>
     </message>
@@ -583,31 +572,31 @@ attendere prego...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3293"/>
-      <location filename="../src/T2DMap.cpp" line="4902"/>
+      <location filename="../src/T2DMap.cpp" line="4900"/>
       <source>Solid line</source>
       <translation>Linea continua</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3294"/>
-      <location filename="../src/T2DMap.cpp" line="4903"/>
+      <location filename="../src/T2DMap.cpp" line="4901"/>
       <source>Dot line</source>
       <translation>Linea punteggiata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3295"/>
-      <location filename="../src/T2DMap.cpp" line="4904"/>
+      <location filename="../src/T2DMap.cpp" line="4902"/>
       <source>Dash line</source>
       <translation>Linea tratteggiata</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3296"/>
-      <location filename="../src/T2DMap.cpp" line="4905"/>
+      <location filename="../src/T2DMap.cpp" line="4903"/>
       <source>Dash-dot line</source>
       <translation>Linea trattino-punto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3297"/>
-      <location filename="../src/T2DMap.cpp" line="4906"/>
+      <location filename="../src/T2DMap.cpp" line="4904"/>
       <source>Dash-dot-dot line</source>
       <translation>Linea trattino-punto-punto</translation>
     </message>
@@ -1159,14 +1148,14 @@ per le stanze selezionate:</translation>
       <translation>Mappa Mudlet (*.dat);;Mappa Xml (*.xml);;Tutti i file (*)</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5049"/>
-      <location filename="../src/T2DMap.cpp" line="5082"/>
+      <location filename="../src/T2DMap.cpp" line="5047"/>
+      <location filename="../src/T2DMap.cpp" line="5080"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>Click sinistro del mouse per aggiungere un punto, click destro per annulla/cambia/fine...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5092"/>
+      <location filename="../src/T2DMap.cpp" line="5090"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>Premi con il tasto sinistro del mouse e trascina il riquadro per impostare dimensione e posizione dell'etichetta</translation>
@@ -1175,15 +1164,13 @@ per le stanze selezionate:</translation>
   <context>
     <name>TAlias</name>
     <message>
-      <location filename="../src/TAlias.cpp" line="123"/>
-      <location filename="../src/TAlias.cpp" line="191"/>
-      <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
-</source>
-      <translation>[ ERROR ] - %1 superato il limite dei gruppo di cattura nell'alias, cattura meno gruppi.
-</translation>
+      <location filename="../src/TAlias.cpp" line="125"/>
+      <location filename="../src/TAlias.cpp" line="196"/>
+      <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
+      <translation>[ ERROR ] - %1 superato il limite dei gruppo di cattura nell'alias, cattura meno gruppi.</translation>
     </message>
     <message>
-      <location filename="../src/TAlias.cpp" line="260"/>
+      <location filename="../src/TAlias.cpp" line="267"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
       <translation>Errore: &quot;Pattern:&quot; con espressione regolare non valida, motivo: &quot;%1&quot;.</translation>
     </message>
@@ -1492,10 +1479,8 @@ per le stanze selezionate:</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15561"/>
-      <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
-</source>
-      <translation>[ ERROR ] - Impossibile caricare il modulo di formattazione codice, l'indentazione automatico non sarà disponibile.
-</translation>
+      <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
+      <translation>[ ERROR ] - Impossibile caricare il modulo di formattazione codice, l'indentazione automatico non sarà disponibile.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15638"/>
@@ -1543,20 +1528,6 @@ Percorsi analizzati:
       <translation>File di log</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="219"/>
-      <source>Logging has started. Log file is %1
-</source>
-      <translation>La registrazione è iniziata. File di log è %1
-</translation>
-    </message>
-    <message>
-      <location filename="../src/TMainConsole.cpp" line="229"/>
-      <source>Logging has been stopped. Log file is %1
-</source>
-      <translation>La registrazione è stata interrotta. File di log è %1
-</translation>
-    </message>
-    <message>
       <location filename="../src/TMainConsole.cpp" line="259"/>
       <source>Mudlet MUD Client version: %1%2</source>
       <translation>Mudlet MUD Client versione: %1%2</translation>
@@ -1583,6 +1554,16 @@ Percorsi analizzati:
       <location filename="../src/TMainConsole.cpp" line="323"/>
       <source>Stop logging game output to log file.</source>
       <translation>Interrompi il salvataggio dei messaggi inviati dal gioco nel file di log.</translation>
+    </message>
+    <message>
+      <location filename="../src/TMainConsole.cpp" line="219"/>
+      <source>Logging has started. Log file is %1</source>
+      <translation>La registrazione è iniziata. File di log è %1</translation>
+    </message>
+    <message>
+      <location filename="../src/TMainConsole.cpp" line="229"/>
+      <source>Logging has been stopped. Log file is %1</source>
+      <translation>La registrazione è stata interrotta. File di log è %1</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="339"/>
@@ -1691,70 +1672,68 @@ Percorsi analizzati:
       <location filename="../src/TMainConsole.cpp" line="1445"/>
       <source>+--------------------------------------------------------------+
 |                      system statistics                       |
-+--------------------------------------------------------------+
-</source>
++--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
       <translation>+ -------------------------------------------------------------- +
 |                    statistiche di sistema                      |
-+ -------------------------------------------------------------- +
-</translation>
++ -------------------------------------------------------------- +</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1454"/>
+      <location filename="../src/TMainConsole.cpp" line="1455"/>
       <source>GMCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Eventi GMCP:</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1458"/>
+      <location filename="../src/TMainConsole.cpp" line="1459"/>
       <source>ATCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Eventi ATCP:</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1462"/>
+      <location filename="../src/TMainConsole.cpp" line="1463"/>
       <source>Channel102 events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Eventi Channel102:</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1466"/>
+      <location filename="../src/TMainConsole.cpp" line="1467"/>
       <source>MSSP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Eventi MSSP:</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1471"/>
+      <location filename="../src/TMainConsole.cpp" line="1472"/>
       <source>MSDP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Eventi MSDP:</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1482"/>
+      <location filename="../src/TMainConsole.cpp" line="1483"/>
       <source>Trigger Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Report Trigger:</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1486"/>
+      <location filename="../src/TMainConsole.cpp" line="1487"/>
       <source>Timer Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Report Timer:</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1490"/>
+      <location filename="../src/TMainConsole.cpp" line="1491"/>
       <source>Alias Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Rapporto Alias:</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1494"/>
+      <location filename="../src/TMainConsole.cpp" line="1495"/>
       <source>Keybinding Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Rapporto Tasti:</translation>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1498"/>
+      <location filename="../src/TMainConsole.cpp" line="1499"/>
       <source>Script Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation>Rapporto Script:</translation>
@@ -1875,13 +1854,6 @@ Percorsi analizzati:
       <translation>fuori</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="112"/>
-      <source>[MAP ERROR:]%1
-</source>
-      <translation>[ MAP ERROR ] %1
-</translation>
-    </message>
-    <message>
       <location filename="../src/TMap.cpp" line="48"/>
       <source>Default Area</source>
       <translation>Area Predefinita</translation>
@@ -1890,6 +1862,11 @@ Percorsi analizzati:
       <location filename="../src/TMap.cpp" line="49"/>
       <source>Unnamed Area</source>
       <translation>Area Senza Nome</translation>
+    </message>
+    <message>
+      <location filename="../src/TMap.cpp" line="112"/>
+      <source>[MAP ERROR:]%1</source>
+      <translation>[ERRORE MAPPA:]%1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="526"/>
@@ -2601,43 +2578,38 @@ e l'uscita verrà trasformata in uno stub.</translation>
       <translation>[ INFO ]  - L'uscita della stanza &quot;%1&quot; punta ad uno Stanza ID non valido: %2 che non esiste.  L'uscita sarà rimossa (lo Stanza ID di destinazione sarà memorizzato nei dati utente della stanza con la chiave:&quot;%4&quot;) e l'uscita verrà trasformata in uno stub.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1635"/>
-      <source>
-It was locked, this is recorded as user data with key:
+      <location filename="../src/TRoom.cpp" line="1637"/>
+      <source>It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation>
-L'uscita è bloccata, questa informazione è registrata nei dati utenti con chiave:
+      <translation>L'uscita è bloccata, questa informazione è registrata nei dati utenti con chiave:
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1639"/>
-      <source>  It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation>  L'uscita è bloccata, questa informazione è registrata nei dati utenti con chiave: &quot;%1&quot;.</translation>
+      <location filename="../src/TRoom.cpp" line="1640"/>
+      <source>It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
+      <translation>L'uscita è bloccata, questa informazione è registrata nei dati utenti con chiave: &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1647"/>
-      <source>
-It had a weight, this is recorded as user data with key:
+      <location filename="../src/TRoom.cpp" line="1650"/>
+      <source>It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
-      <translation>
-L'uscita ha un peso, questa informazione è registrata nei dati utenti con chiave:
+      <translation>L'uscita ha un peso, questa informazione è registrata nei dati utenti con chiave:
 &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1651"/>
-      <source>  It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
-      <translation>  
- L'uscita ha un peso, questa informazione è registrata nei dati utenti con chiave: &quot;%1&quot;.</translation>
+      <location filename="../src/TRoom.cpp" line="1653"/>
+      <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
+      <translation>L'uscita ha un peso, questa informazione è registrata nei dati utenti con chiave: &quot;%1&quot;.</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1662"/>
+      <location filename="../src/TRoom.cpp" line="1664"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
       <translation>[ WARN ] - C'era una linea personalizzata associata all'uscita non valida, ma
 non è stato possibile recuperarla, è andata persa!</translation>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1667"/>
+      <location filename="../src/TRoom.cpp" line="1669"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
       <translation>[ WARN ] - C'era una linea personalizzata associata all'uscita non valida, ma non è stato possibile recuperarla, è andata persa!</translation>
     </message>
@@ -2734,6 +2706,18 @@ out what new id numbers to use.</source>
       <translation>[ ALERT ] - Molto male, ho trovato più di uno Stanza ID duplicato (conteggio: %1)
 nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
     </message>
+    <message>
+      <location filename="../src/TRoomDB.cpp" line="857"/>
+      <source>[ INFO ]  - The renumbered rooms will be:</source>
+      <translation>[ INFO ]  - Le stanze rinumerate sono:</translation>
+    </message>
+    <message>
+      <location filename="../src/TRoomDB.cpp" line="1177"/>
+      <source>[  OK  ]  - The changes made are:
+(ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
+      <translation>[  OK  ]  - Le modifiche effettuate sono:
+(ID) &quot;vecchio nome&quot; ==&gt; &quot;nuovo nome&quot;</translation>
+    </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="715"/>
       <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
@@ -2773,13 +2757,6 @@ nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
       <location filename="../src/TRoomDB.cpp" line="850"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
       <translation>[ ALERT ] - Attenzione, ho trovato più di uno Stanza ID duplicato (totale: %1) nel file di mappa. Maggiori informazioni sono presenti nei prossimi messaggi che riguardano ogni stanza interessata ...</translation>
-    </message>
-    <message>
-      <location filename="../src/TRoomDB.cpp" line="857"/>
-      <source>[ INFO ]  - The renumbered rooms will be:
-</source>
-      <translation>[ INFO ]  - Le stanze rinumerate sono:
-</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="873"/>
@@ -2869,15 +2846,6 @@ sono state cancellate.</translation>
       <location filename="../src/TRoomDB.cpp" line="1173"/>
       <source>It has been detected that &quot;_###&quot; form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way &lt;b&gt;is&lt;/b&gt; important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!&lt;/p&gt;</source>
       <translation>Ho rilevato che il suffisso &quot;_###&quot; è già in uso. Per semplicità dell'algoritmo di rinomina, tutte le corrispondenze saranno rimosse e probabilmente modificate con un nuovo valore. Se un numero assegnato in questo modo &lt;b&gt;è importante&lt;/b&gt; per te, puoi ripristinarlo successivamente, a condizione che non sia occupato da un'altra area!&lt;/p&gt;</translation>
-    </message>
-    <message>
-      <location filename="../src/TRoomDB.cpp" line="1177"/>
-      <source>[  OK  ]  - The changes made are:
-(ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
-</source>
-      <translation>[  OK  ]  - Le modifiche effettuate sono:
-(ID) &quot;vecchio nome&quot; ==&gt; &quot;nuovo nome&quot;
-</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1184"/>
@@ -3041,10 +3009,8 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1572"/>
-      <source>*** starting new session ***
-</source>
-      <translation>* * * Inizio nuova sessione * * *
-</translation>
+      <source>*** starting new session ***</source>
+      <translation>*** Inizio nuova sessione ***</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1657"/>
@@ -3067,511 +3033,511 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <translation>Mudlet, estratto della console principale dal profilo %1</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2133"/>
+      <location filename="../src/TTextEdit.cpp" line="2137"/>
       <source>{tab}</source>
       <comment>Unicode U+0009 codepoint.</comment>
       <translation>{tab}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2134"/>
+      <location filename="../src/TTextEdit.cpp" line="2138"/>
       <source>{line-feed}</source>
       <comment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</comment>
       <translation>{line-feed}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2135"/>
+      <location filename="../src/TTextEdit.cpp" line="2139"/>
       <source>{carriage-return}</source>
       <comment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</comment>
       <translation>{carriage-return}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2136"/>
+      <location filename="../src/TTextEdit.cpp" line="2140"/>
       <source>{space}</source>
       <comment>Unicode U+0020 codepoint.</comment>
       <translation>{space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2137"/>
+      <location filename="../src/TTextEdit.cpp" line="2141"/>
       <source>{non-breaking space}</source>
       <comment>Unicode U+00A0 codepoint.</comment>
       <translation>{non-breaking space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2138"/>
+      <location filename="../src/TTextEdit.cpp" line="2142"/>
       <source>{soft hyphen}</source>
       <comment>Unicode U+00AD codepoint.</comment>
       <translation>{soft hyphen}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2139"/>
+      <location filename="../src/TTextEdit.cpp" line="2143"/>
       <source>{combining grapheme joiner}</source>
       <comment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</comment>
       <translation>{combining grapheme joiner}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2140"/>
+      <location filename="../src/TTextEdit.cpp" line="2144"/>
       <source>{ogham space mark}</source>
       <comment>Unicode U+1680 codepoint.</comment>
       <translation>{ogham space mark}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2141"/>
+      <location filename="../src/TTextEdit.cpp" line="2145"/>
       <source>{&apos;n&apos; quad}</source>
       <comment>Unicode U+2000 codepoint.</comment>
       <translation>{&apos;n&apos; quad}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2142"/>
+      <location filename="../src/TTextEdit.cpp" line="2146"/>
       <source>{&apos;m&apos; quad}</source>
       <comment>Unicode U+2001 codepoint.</comment>
       <translation>{&apos;m&apos; quad}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2143"/>
+      <location filename="../src/TTextEdit.cpp" line="2147"/>
       <source>{&apos;n&apos; space}</source>
       <comment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</comment>
       <translation>{&apos;n&apos; space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2144"/>
+      <location filename="../src/TTextEdit.cpp" line="2148"/>
       <source>{&apos;m&apos; space}</source>
       <comment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</comment>
       <translation>{&apos;m&apos; space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2145"/>
+      <location filename="../src/TTextEdit.cpp" line="2149"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
       <translation>{3-per-em space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2146"/>
+      <location filename="../src/TTextEdit.cpp" line="2150"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
       <translation>{4-per-em space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2147"/>
+      <location filename="../src/TTextEdit.cpp" line="2151"/>
       <source>{6-per-em space}</source>
       <comment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</comment>
       <translation>{6-per-em space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2148"/>
+      <location filename="../src/TTextEdit.cpp" line="2152"/>
       <source>{digit space}</source>
       <comment>Unicode U+2007 codepoint - figure (digit) wide space.</comment>
       <translation>{digit space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2149"/>
+      <location filename="../src/TTextEdit.cpp" line="2153"/>
       <source>{punctuation wide space}</source>
       <comment>Unicode U+2008 codepoint.</comment>
       <translation>{punctuation wide space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2150"/>
+      <location filename="../src/TTextEdit.cpp" line="2154"/>
       <source>{5-per-em space}</source>
       <comment>Unicode U+2009 codepoint - five-per-em (&apos;m&apos;) wide space.</comment>
       <translation>{5-per-em space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2151"/>
+      <location filename="../src/TTextEdit.cpp" line="2155"/>
       <source>{hair width space}</source>
       <comment>Unicode U+200A codepoint - thinnest space.</comment>
       <translation>{hair width space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2152"/>
+      <location filename="../src/TTextEdit.cpp" line="2156"/>
       <source>{zero width space}</source>
       <comment>Unicode U+200B codepoint.</comment>
       <translation>{zero width space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2153"/>
+      <location filename="../src/TTextEdit.cpp" line="2157"/>
       <source>{Zero width non-joiner}</source>
       <comment>Unicode U+200C codepoint.</comment>
       <translation>{Zero width non-joiner}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2154"/>
+      <location filename="../src/TTextEdit.cpp" line="2158"/>
       <source>{zero width joiner}</source>
       <comment>Unicode U+200D codepoint.</comment>
       <translation>{zero width joiner}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2155"/>
+      <location filename="../src/TTextEdit.cpp" line="2159"/>
       <source>{left-to-right mark}</source>
       <comment>Unicode U+200E codepoint.</comment>
       <translation>{left-to-right mark}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2156"/>
+      <location filename="../src/TTextEdit.cpp" line="2160"/>
       <source>{right-to-left mark}</source>
       <comment>Unicode U+200F codepoint.</comment>
       <translation>{right-to-left mark}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2157"/>
+      <location filename="../src/TTextEdit.cpp" line="2161"/>
       <source>{line separator}</source>
       <comment>Unicode 0x2028 codepoint.</comment>
       <translation>{line separator}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2158"/>
+      <location filename="../src/TTextEdit.cpp" line="2162"/>
       <source>{paragraph separator}</source>
       <comment>Unicode U+2029 codepoint.</comment>
       <translation>{paragraph separator}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2159"/>
+      <location filename="../src/TTextEdit.cpp" line="2163"/>
       <source>{Left-to-right embedding}</source>
       <comment>Unicode U+202A codepoint.</comment>
       <translation>{Left-to-right embedding}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2160"/>
+      <location filename="../src/TTextEdit.cpp" line="2164"/>
       <source>{right-to-left embedding}</source>
       <comment>Unicode U+202B codepoint.</comment>
       <translation>{right-to-left embedding}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2161"/>
+      <location filename="../src/TTextEdit.cpp" line="2165"/>
       <source>{pop directional formatting}</source>
       <comment>Unicode U+202C codepoint - pop (undo last) directional formatting.</comment>
       <translation>{pop directional formatting}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2162"/>
+      <location filename="../src/TTextEdit.cpp" line="2166"/>
       <source>{Left-to-right override}</source>
       <comment>Unicode U+202D codepoint.</comment>
       <translation>{Left-to-right override}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2163"/>
+      <location filename="../src/TTextEdit.cpp" line="2167"/>
       <source>{right-to-left override}</source>
       <comment>Unicode U+202E codepoint.</comment>
       <translation>{right-to-left override}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2164"/>
+      <location filename="../src/TTextEdit.cpp" line="2168"/>
       <source>{narrow width no-break space}</source>
       <comment>Unicode U+202F codepoint.</comment>
       <translation>{narrow width no-break space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2165"/>
+      <location filename="../src/TTextEdit.cpp" line="2169"/>
       <source>{medium width mathematical space}</source>
       <comment>Unicode U+205F codepoint.</comment>
       <translation>{medium width mathematical space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2166"/>
+      <location filename="../src/TTextEdit.cpp" line="2170"/>
       <source>{zero width non-breaking space}</source>
       <comment>Unicode U+2060 codepoint.</comment>
       <translation>{zero width non-breaking space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2167"/>
+      <location filename="../src/TTextEdit.cpp" line="2171"/>
       <source>{function application}</source>
       <comment>Unicode U+2061 codepoint - function application (whatever that means!)</comment>
       <translation>{function application}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2168"/>
+      <location filename="../src/TTextEdit.cpp" line="2172"/>
       <source>{invisible times}</source>
       <comment>Unicode U+2062 codepoint.</comment>
       <translation>{invisible times}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2169"/>
+      <location filename="../src/TTextEdit.cpp" line="2173"/>
       <source>{invisible separator}</source>
       <comment>Unicode U+2063 codepoint - invisible separator or comma.</comment>
       <translation>{invisible separator}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2170"/>
+      <location filename="../src/TTextEdit.cpp" line="2174"/>
       <source>{invisible plus}</source>
       <comment>Unicode U+2064 codepoint.</comment>
       <translation>{invisible plus}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2171"/>
+      <location filename="../src/TTextEdit.cpp" line="2175"/>
       <source>{left-to-right isolate}</source>
       <comment>Unicode U+2066 codepoint.</comment>
       <translation>{left-to-right isolate}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2172"/>
+      <location filename="../src/TTextEdit.cpp" line="2176"/>
       <source>{right-to-left isolate}</source>
       <comment>Unicode U+2067 codepoint.</comment>
       <translation>{right-to-left isolate}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2173"/>
+      <location filename="../src/TTextEdit.cpp" line="2177"/>
       <source>{first strong isolate}</source>
       <comment>Unicode U+2068 codepoint.</comment>
       <translation>{first strong isolate}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2174"/>
+      <location filename="../src/TTextEdit.cpp" line="2178"/>
       <source>{pop directional isolate}</source>
       <comment>Unicode U+2069 codepoint - pop (undo last) directional isolate.</comment>
       <translation>{pop directional isolate}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2175"/>
+      <location filename="../src/TTextEdit.cpp" line="2179"/>
       <source>{inhibit symmetrical swapping}</source>
       <comment>Unicode U+206A codepoint.</comment>
       <translation>{inhibit symmetrical swapping}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2176"/>
+      <location filename="../src/TTextEdit.cpp" line="2180"/>
       <source>{activate symmetrical swapping}</source>
       <comment>Unicode U+206B codepoint.</comment>
       <translation>{activate symmetrical swapping}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2177"/>
+      <location filename="../src/TTextEdit.cpp" line="2181"/>
       <source>{inhibit arabic form-shaping}</source>
       <comment>Unicode U+206C codepoint.</comment>
       <translation>{inhibit arabic form-shaping}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2178"/>
+      <location filename="../src/TTextEdit.cpp" line="2182"/>
       <source>{activate arabic form-shaping}</source>
       <comment>Unicode U+206D codepoint.</comment>
       <translation>{activate arabic form-shaping}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2179"/>
+      <location filename="../src/TTextEdit.cpp" line="2183"/>
       <source>{national digit shapes}</source>
       <comment>Unicode U+206E codepoint.</comment>
       <translation>{national digit shapes}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2180"/>
+      <location filename="../src/TTextEdit.cpp" line="2184"/>
       <source>{nominal Digit shapes}</source>
       <comment>Unicode U+206F codepoint.</comment>
       <translation>{nominal Digit shapes}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2181"/>
+      <location filename="../src/TTextEdit.cpp" line="2185"/>
       <source>{ideographic space}</source>
       <comment>Unicode U+3000 codepoint - ideographic (CJK Wide) space</comment>
       <translation>{ideographic space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2182"/>
+      <location filename="../src/TTextEdit.cpp" line="2186"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
       <translation>{variation selector 1}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2183"/>
+      <location filename="../src/TTextEdit.cpp" line="2187"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
       <translation>{variation selector 2}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2184"/>
+      <location filename="../src/TTextEdit.cpp" line="2188"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
       <translation>{variation selector 3}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2185"/>
+      <location filename="../src/TTextEdit.cpp" line="2189"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
       <translation>{variation selector 4}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2186"/>
+      <location filename="../src/TTextEdit.cpp" line="2190"/>
       <source>{variation selector 5}</source>
       <comment>Unicode U+FE04 codepoint.</comment>
       <translation>{variation selector 5}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2187"/>
+      <location filename="../src/TTextEdit.cpp" line="2191"/>
       <source>{variation selector 6}</source>
       <comment>Unicode U+FE05 codepoint.</comment>
       <translation>{variation selector 6}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2188"/>
+      <location filename="../src/TTextEdit.cpp" line="2192"/>
       <source>{variation selector 7}</source>
       <comment>Unicode U+FE06 codepoint.</comment>
       <translation>{variation selector 7}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2189"/>
+      <location filename="../src/TTextEdit.cpp" line="2193"/>
       <source>{variation selector 8}</source>
       <comment>Unicode U+FE07 codepoint.</comment>
       <translation>{variation selector 8}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2190"/>
+      <location filename="../src/TTextEdit.cpp" line="2194"/>
       <source>{variation selector 9}</source>
       <comment>Unicode U+FE08 codepoint.</comment>
       <translation>{variation selector 9}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2191"/>
+      <location filename="../src/TTextEdit.cpp" line="2195"/>
       <source>{variation selector 10}</source>
       <comment>Unicode U+FE09 codepoint.</comment>
       <translation>{variation selector 10}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2192"/>
+      <location filename="../src/TTextEdit.cpp" line="2196"/>
       <source>{variation selector 11}</source>
       <comment>Unicode U+FE0A codepoint.</comment>
       <translation>{variation selector 11}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2193"/>
+      <location filename="../src/TTextEdit.cpp" line="2197"/>
       <source>{variation selector 12}</source>
       <comment>Unicode U+FE0B codepoint.</comment>
       <translation>{variation selector 12}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2194"/>
+      <location filename="../src/TTextEdit.cpp" line="2198"/>
       <source>{variation selector 13}</source>
       <comment>Unicode U+FE0C codepoint.</comment>
       <translation>{variation selector 13}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2195"/>
+      <location filename="../src/TTextEdit.cpp" line="2199"/>
       <source>{variation selector 14}</source>
       <comment>Unicode U+FE0D codepoint.</comment>
       <translation>{variation selector 14}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2196"/>
+      <location filename="../src/TTextEdit.cpp" line="2200"/>
       <source>{variation selector 15}</source>
       <comment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</comment>
       <translation>{variation selector 15}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2197"/>
+      <location filename="../src/TTextEdit.cpp" line="2201"/>
       <source>{variation selector 16}</source>
       <comment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</comment>
       <translation>{variation selector 16}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2198"/>
+      <location filename="../src/TTextEdit.cpp" line="2202"/>
       <source>{zero width no-break space}</source>
       <comment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</comment>
       <translation>{zero width no-break space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2204"/>
+      <location filename="../src/TTextEdit.cpp" line="2208"/>
       <source>{interlinear annotation anchor}</source>
       <comment>Unicode U+FFF9 codepoint.</comment>
       <translation>{interlinear annotation anchor}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2205"/>
+      <location filename="../src/TTextEdit.cpp" line="2209"/>
       <source>{interlinear annotation separator}</source>
       <comment>Unicode U+FFFA codepoint.</comment>
       <translation>{interlinear annotation separator}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2206"/>
+      <location filename="../src/TTextEdit.cpp" line="2210"/>
       <source>{interlinear annotation terminator}</source>
       <comment>Unicode U+FFFB codepoint.</comment>
       <translation>{interlinear annotation terminator}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2207"/>
+      <location filename="../src/TTextEdit.cpp" line="2211"/>
       <source>{object replacement character}</source>
       <comment>Unicode U+FFFC codepoint.</comment>
       <translation>{object replacement character}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2219"/>
+      <location filename="../src/TTextEdit.cpp" line="2223"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFD0 to U+FDEF - not a character.</comment>
       <translation>{noncharacter}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2221"/>
+      <location filename="../src/TTextEdit.cpp" line="2225"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFFx - not a character.</comment>
       <translation>{noncharacter}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2230"/>
+      <location filename="../src/TTextEdit.cpp" line="2234"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
       <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2231"/>
+      <location filename="../src/TTextEdit.cpp" line="2235"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
       <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2232"/>
+      <location filename="../src/TTextEdit.cpp" line="2236"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
       <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2233"/>
+      <location filename="../src/TTextEdit.cpp" line="2237"/>
       <source>{FitzPatrick modifier 5}</source>
       <comment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</comment>
       <translation>{FitzPatrick modifier 5}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2234"/>
+      <location filename="../src/TTextEdit.cpp" line="2238"/>
       <source>{FitzPatrick modifier 6}</source>
       <comment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</comment>
       <translation>{FitzPatrick modifier 6}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2238"/>
+      <location filename="../src/TTextEdit.cpp" line="2242"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</comment>
       <translation>{noncharacter}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2509"/>
-      <location filename="../src/TTextEdit.cpp" line="2571"/>
+      <location filename="../src/TTextEdit.cpp" line="2513"/>
+      <location filename="../src/TTextEdit.cpp" line="2575"/>
       <source>Index (UTF-16)</source>
       <comment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</comment>
       <translation>Indice (UTF-16)</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2512"/>
-      <location filename="../src/TTextEdit.cpp" line="2573"/>
+      <location filename="../src/TTextEdit.cpp" line="2516"/>
+      <location filename="../src/TTextEdit.cpp" line="2577"/>
       <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
       <comment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</comment>
       <translation>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2516"/>
-      <location filename="../src/TTextEdit.cpp" line="2577"/>
+      <location filename="../src/TTextEdit.cpp" line="2520"/>
+      <location filename="../src/TTextEdit.cpp" line="2581"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
       <translation>Visuale</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2520"/>
-      <location filename="../src/TTextEdit.cpp" line="2581"/>
+      <location filename="../src/TTextEdit.cpp" line="2524"/>
+      <location filename="../src/TTextEdit.cpp" line="2585"/>
       <source>Index (UTF-8)</source>
       <comment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
       <translation>Indice (UTF-8)</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2524"/>
-      <location filename="../src/TTextEdit.cpp" line="2585"/>
+      <location filename="../src/TTextEdit.cpp" line="2528"/>
+      <location filename="../src/TTextEdit.cpp" line="2589"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
       <translation>Byte</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2528"/>
-      <location filename="../src/TTextEdit.cpp" line="2589"/>
+      <location filename="../src/TTextEdit.cpp" line="2532"/>
+      <location filename="../src/TTextEdit.cpp" line="2593"/>
       <source>Lua character or code</source>
       <comment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}</comment>
       <translation>Carattere o codice Lua</translation>
@@ -3608,28 +3574,27 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <translation>Errore: nella voce %1, non sono stati impostati colori da abbinare - almeno &lt;i&gt;un&lt;/i&gt; colore carattere o di sfondo non deve essere &lt;i&gt;ignorato&lt;/i&gt;.</translation>
     </message>
     <message>
-      <location filename="../src/TTrigger.cpp" line="325"/>
-      <location filename="../src/TTrigger.cpp" line="409"/>
+      <location filename="../src/TTrigger.cpp" line="326"/>
+      <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.</source>
+      <translation>[ ERROR ] - %1 superato il limite dei gruppo di cattura nel trigger, cattura meno gruppi.</translation>
+    </message>
+    <message>
+      <location filename="../src/TTrigger.cpp" line="412"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
       <translation>[ ERROR ] - %1 superato il limite dei gruppo di cattura nel trigger, cattura meno gruppi.</translation>
     </message>
     <message>
-      <location filename="../src/TTrigger.cpp" line="1159"/>
-      <source>Trigger name=%1 expired.
-</source>
-      <translation>Trigger name=%1 scaduto.
-</translation>
+      <location filename="../src/TTrigger.cpp" line="1164"/>
+      <source>Trigger name=%1 expired.</source>
+      <translation>Nome del trigger=%1 scaduto.</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/TTrigger.cpp" line="1164"/>
-      <source>Trigger name=%1 will fire %n more time(s).
-</source>
+      <location filename="../src/TTrigger.cpp" line="1169"/>
+      <source>Trigger name=%1 will fire %n more time(s).</source>
       <translation>
-        <numerusform>Il trigger nome=%1 verrà eseguito un'altra volta.
-</numerusform>
-        <numerusform>Il trigger nome=%1 verrà eseguito altre %n volte.
-</numerusform>
+        <numerusform>Il trigger nome=%1 verrà eseguito altre %n volte.</numerusform>
+        <numerusform>Il trigger nome=%1 verrà eseguito altre %n volte.</numerusform>
       </translation>
     </message>
   </context>
@@ -3973,13 +3938,6 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
   <context>
     <name>cTelnet</name>
     <message>
-      <location filename="../src/ctelnet.cpp" line="573"/>
-      <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
-</source>
-      <translation>[ INFO ]  - L'indirizzo IP di %1 è stato trovato: %2
-</translation>
-    </message>
-    <message>
       <location filename="../src/ctelnet.cpp" line="582"/>
       <source>[ ERROR ] - Host name lookup Failure!
 Connection cannot be established.
@@ -4011,13 +3969,6 @@ o il tuo DNS non è raggiungibile.</translation>
       <location filename="../src/ctelnet.cpp" line="521"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
       <translation>Le connessioni sicure non sono supportate da questo gioco o da questa porta - prova a disattivare l'opzione.</translation>
-    </message>
-    <message>
-      <location filename="../src/ctelnet.cpp" line="566"/>
-      <source>[ INFO ]  - Trying secure connection to %1: %2 ...
-</source>
-      <translation>[ INFO ]  - Tentativo di connessione sicura a %1: %2 ...
-</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1653"/>
@@ -4072,18 +4023,24 @@ Reason: </source>
 Motivo: </translation>
     </message>
     <message>
+      <location filename="../src/ctelnet.cpp" line="566"/>
+      <source>[ INFO ]  - Trying secure connection to %1: %2 ...</source>
+      <translation>[ INFO ]  - Tentativo di connessione sicura a %1: %2 ...</translation>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="573"/>
+      <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
+      <translation>[ INFO ]  - L'indirizzo IP di %1 è stato trovato: %2</translation>
+    </message>
+    <message>
       <location filename="../src/ctelnet.cpp" line="575"/>
-      <source>[ INFO ]  - Trying to connect to %1:%2 ...
-</source>
-      <translation>[ INFO ]  - Tentativo di connessione a %1:%2 ...
-</translation>
+      <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
+      <translation>[ INFO ]  - Tentativo di connessione a %1:%2 ...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="577"/>
-      <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
-</source>
-      <translation>[ INFO ]  - Tentativo di connessione a %1:%2 tramite proxy...
-</translation>
+      <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...</source>
+      <translation>[ INFO ]  - Tentativo di connessione a %1:%2 tramite proxy...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="624"/>
@@ -7053,20 +7010,6 @@ per tutte le %n stanze selezionate:</numerusform>
   <context>
     <name>dlgTriggerEditor</name>
     <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="211"/>
-      <source>-- Enter your lua code here
-</source>
-      <translation>— Inserisci il tuo codice lua qui
-</translation>
-    </message>
-    <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="291"/>
-      <source>*** starting new session ***
-</source>
-      <translation>* * * Inizio nuova sessione * * *
-</translation>
-    </message>
-    <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="379"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5832"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8369"/>
@@ -7279,17 +7222,27 @@ per tutte le %n stanze selezionate:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="69"/>
       <source>&lt;p&gt;Alias react on user input. To add a new alias:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define an input &lt;strong&gt;pattern&lt;/strong&gt; either literally or with a Perl regular expression.&lt;/li&gt;&lt;li&gt;Define a &apos;substitution&apos; &lt;strong&gt;command&lt;/strong&gt; to send to the game in clear text &lt;strong&gt;instead of the alias pattern&lt;/strong&gt;, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the alias.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create aliases from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Gli Alias si attivano in base all'input dell'utente. Per aggiungere un alias:&lt;ol&gt;&lt;li&gt;Premi il bottone &apos;Aggiungi&apos; in alto.&lt;/li&gt;&lt;li&gt;Definisci un &lt;strong&gt;pattern&lt;/strong&gt; che puo' essere letterale o un'espressione regolare in Perl.&lt;/li&gt;&lt;li&gt;Definisci un &lt;strong&gt;commando&lt;/strong&gt; da &apos;sostituire&apos; e mandare al gioco come testo in chiaro &lt;strong&gt;invece del pattern&lt;/strong&gt;, oppure scrivi del codice Lua se hai necessita' piu' complesse.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Attiva&lt;/strong&gt; l'alias.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;Ecco Fatto! Se preferisci creare alias dalla linea di input, ci sono &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;alcuni&lt;/a&gt; differenti &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; che posso fare al caso tuo.&lt;p&gt;Leggi il manuale per &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Aliases&apos;&gt;maggiori informazioni&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="77"/>
       <source>&lt;p&gt;Triggers react on game output. To add a new trigger:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;That&apos;s it! If you&apos;d like to be able to create triggers from the input line, there are a &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;couple&lt;/a&gt; of &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; that can help you.&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;I trigger si attivano in base ai dati ricevuti dal gioco. Per aggiungere un trigger:&lt;ol&gt;&lt;li&gt;Premi il bottone &apos;Aggiungi&apos; in alto.&lt;/li&gt;&lt;li&gt;Definisci un &lt;strong&gt;pattern&lt;/strong&gt; che fara' attivare il trigger.&lt;/li&gt;&lt;li&gt;Seleziona il &lt;strong&gt;tipo&lt;/strong&gt; appropriato di pattern.&lt;/li&gt;&lt;li&gt;Definisci il testo del &lt;strong&gt;commando&lt;/strong&gt; che vuoi inviare al gioco se viene trovata la corrispondenza nel trigger, oppure scrivi del codice Lua se hai necessita' piu' complesse.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Attiva&lt;/strong&gt; il trigger.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;Se preferisci creare trigger dalla linea di input, ci sono &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=22609&apos;&gt;alcuni&lt;/a&gt; differenti &lt;a href=&apos;https://forums.mudlet.org/viewtopic.php?f=6&amp;t=16462&apos;&gt;packages&lt;/a&gt; che posso fare al caso tuo.&lt;p&gt;Leggi il manuale per &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Introduction#Triggers&apos;&gt;maggiori informazioni&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="142"/>
       <source>%1 - Editor</source>
       <translation>%1 - Editor</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="211"/>
+      <source>-- Enter your lua code here</source>
+      <translation>— Inserisci il tuo codice lua qui</translation>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="291"/>
+      <source>*** starting new session ***</source>
+      <translation>* * * Inizio nuova sessione * * *</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="425"/>
@@ -7305,7 +7258,7 @@ per tutte le %n stanze selezionate:</numerusform>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="508"/>
       <source>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Salva il profilo. (Ctrl+Maiusc+S)&lt;/p&gt;&lt;p&gt;Salva il tuo intero profilo (trigger, alias, script, timer, bottoni e tasti, ma non la mappa o le impostazioni specifiche degli script) sul disco fisso quindi in caso di un arresto anomalo del computer o del programma, tutte le modifiche che hai fatto verranno mantenute.&lt;/p&gt;&lt;p&gt;Fa anche un backup del tuo profilo così da poter caricare una versione precedente al momento della connessione.&lt;/p&gt;&lt;p&gt;Se sono presenti moduli contrassegnati come &quot;&lt;i&gt;sincronizzati&lt;/i&gt;&quot; questo causerà anche il salvataggio e l'aggiornamento degli stessi in altri profili se sono attivi.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="594"/>
@@ -7863,13 +7816,14 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="86"/>
       <source>&lt;p&gt;Scripts organize code and can react to events. To add a new script:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Enter a script in the box below. You can for example define &lt;strong&gt;functions&lt;/strong&gt; to be called by other triggers, aliases, etc.&lt;/li&gt;&lt;li&gt;If you write lua &lt;strong&gt;commands&lt;/strong&gt; without defining a function, they will be run on Mudlet startup and each time you open the script for editing.&lt;/li&gt;&lt;li&gt;If needed, you can register a list of &lt;strong&gt;events&lt;/strong&gt; with the + and - symbols. If one of these events take place, the function with the same name as the script item itself will be called.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the script.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Scripts are run automatically when viewed, even if they are deactivated.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Events can also be added to a script from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Gli Script organizzano il codice e reagiscono a degli eventi. Per aggiungere uno script:&lt;ol&gt;&lt;li&gt;Premi il bottone &apos;Aggiungi&apos; in alto.&lt;/li&gt;&lt;li&gt;Inserisci lo script nel box di testo. Puoi per esempio definire &lt;strong&gt;funzioni&lt;/strong&gt; da richiamare nei trigger, alias, ecc.&lt;/li&gt;&lt;li&gt;Se scrivi &lt;strong&gt;commandi&lt;/strong&gt; Lua senza racchiuderli in una funzione, saranno eseguiti all'avvio del profilo di Mudlet e ogni volta che lo script viene salvato.&lt;/li&gt;&lt;li&gt;Se necessario puoi registrare una lista di &lt;strong&gt;eventi&lt;/strong&gt; utilizando i bottoni + e -. Se uno di questi eventi si verifica, la funzione con il medesimo nome dell'elemento script viene eseguita.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Attiva&lt;/strong&gt; lo script.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; gli script sono eseguiti automaticamente quando visualizzati anche se sono disattivati.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Eventi possono essere aggiunti dalla riga dei comandi utilizzando un codice come il seguente:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua registerAnonymousEventHandler(&amp;quot;nameOfTheMudletEvent&amp;quot;, &amp;quot;nameOfYourFunctionToBeCalled&amp;quot;)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Leggi il manuale per &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;maggiori informazioni&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="97"/>
       <source>&lt;p&gt;Timers react after a timespan once or regularly. To add a new timer:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define the &lt;strong&gt;timespan&lt;/strong&gt; after which the timer should react in a this format: hours : minutes : seconds.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game when the time has passed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the timer.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Timers can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!
 &amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will greet you exactly 3 seconds after it was made.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;I Timer si attivano dopo un lasso di tempo, singolarmente o ripetutamente. Per aggiungere un nuovo Timer:&lt;ol&gt;&lt;li&gt;Premi il bottone &apos;Aggiungi&apos; in alto.&lt;/li&gt;&lt;li&gt;Definisci un &lt;strong&gt;tempo&lt;/strong&gt; passato il quale il timer si attiva, utilizzando il formato: ore : minuti : secondi.&lt;/li&gt;&lt;li&gt;Definisci un &lt;strong&gt;commando&lt;/strong&gt; da inviare al gioco come testo in chiaro quando il tempo e' scaduto, oppure scrivi del codice Lua se hai necessita' piu' complesse.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Attiva&lt;/strong&gt; il timer.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Se vuoi che il tuo timer scatti solo una volta e non ripetutamente, utilizza invece la funzione Lua tempTimer() function.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; I Timer possono essere configurati dalla linea dei comandi utilizzando del codice come il seguente:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua tempTimer(3, function() echo(&amp;quot;hello!
+&amp;quot;) end)&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Questo codice ti salutera' esattamente 3 secondi dopo averlo inviato.&lt;/p&gt;&lt;p&gt;Leggi il manuale per &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more informazioni&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="108"/>
@@ -7884,7 +7838,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="128"/>
       <source>&lt;p&gt;Variables store information. To make a new variable:&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above. To add a table instead click &apos;Add Group&apos;.&lt;/li&gt;&lt;li&gt;Select type of variable value (can be a string, integer, boolean)&lt;/li&gt;&lt;li&gt;Enter the value you want to store in this variable.&lt;/li&gt;&lt;li&gt;If you want to keep the variable in your next Mudlet sessions, check the checkbox in the list of variables to the left.&lt;/li&gt;&lt;li&gt;To remove a variable manually, set it to &apos;nil&apos; or click on the &apos;Delete&apos; icon above.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables created here won&apos;t be saved when Mudlet shuts down unless you check their checkbox in the list of variables to the left. You could also create scripts with the variables instead.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Variables and tables can also be defined from the command line in the main profile window like this:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;This will create a string called &apos;foo&apos; with &apos;bar&apos; as its value.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Le Variabili memorizzano informazioni. Per aggiungere una variabile:&lt;ol&gt;&lt;li&gt;Premi il bottone &apos;Aggiungi&apos; in alto. Per aggiunger una tabella, invece premi il bottone &apos;Aggiungi Gruppo&apos;.&lt;/li&gt;&lt;li&gt;Seleziona la tipologia di dati contenuti nella variabile (può essere una stringa, un interno, un booleano)&lt;/li&gt;&lt;li&gt;Inserisci il valore che vuoi memorizzare in questa variabile.&lt;/li&gt;&lt;li&gt;Se vuoi salvare questa variabile per la prossima sessione di Mudet, spunta la casella a fianco del nome della variabile nella lista sulla sinistra.&lt;/li&gt;&lt;li&gt;Per rimuovere una variabile manualmente imposta il suo valore a &apos;nil&apos; o premi il bottone &apos;Eliminare&apos; in alto.&lt;/li&gt;&lt;/ol&gt;&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Le variabili creati in questa sesione non vengono salvate per la prossima versione di mudlet a meno di seguire le istruzioni precedentemente indicate. Puoi anche creare queste variabili tramite script.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nota:&lt;/strong&gt; Variabili e tabelle possono essere definite utilizzando la linea dei comandi di questo profilo nel seguente modo:&lt;/p&gt;&lt;p&gt;&lt;code&gt;lua foo = &amp;quot;bar&amp;quot;&lt;/code&gt;&lt;/p&gt;&lt;p&gt;Questo codice crea una variabile chiamata &apos;foo&apos; con valore &apos;bar&apos;.&lt;/p&gt;&lt;p&gt;Leggi il manuale per &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more informazioni&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="201"/>
@@ -8327,22 +8281,22 @@ dalla GUI)</translation>
   <context>
     <name>edbee::TextEditorComponent</name>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="573"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="580"/>
       <source>Cut</source>
       <translation>Taglia</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="574"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="581"/>
       <source>Copy</source>
       <translation>Copia</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="575"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="582"/>
       <source>Paste</source>
       <translation>Incolla</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="577"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="584"/>
       <source>Select All</source>
       <translation>Seleziona Tutto</translation>
     </message>
@@ -8457,73 +8411,57 @@ dalla GUI)</translation>
        --profile=&lt;profile&gt;  additional profile to open
 
 There are other inherited options that arise from the Qt Libraries which are
-less likely to be useful for normal use of this application:
-</source>
-      <translation>Sintassi: %1 [OPTION...]
+less likely to be useful for normal use of this application:</source>
+      <translation>Sintassi: %1 [OPZIONE...]
        -h, --help visualizza questo messaggio.
        -v, --version visualizza le informazioni sulla versione.
        -q, --quiet nessun splash screen all'avvio.
-       --profile=&lt;profile&gt;  profilo addizionale da aprire
+        --profile=&lt;profile&gt;  profilo addizionale da aprire
 
 Ci sono altre opzioni che derivano dalle librerie Qt che sono
-meno utili per un uso normale di questa applicazione:
-</translation>
+meno utili per un uso normale di questa applicazione:</translation>
+    </message>
+    <message>
+      <location filename="../src/main.cpp" line="276"/>
+      <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues</source>
+      <translation>Segnala gli errori a: https://github.com/Mudlet/Mudlet/issues</translation>
+    </message>
+    <message>
+      <location filename="../src/main.cpp" line="277"/>
+      <source>Project home page: http://www.mudlet.org/</source>
+      <translation>Homepage progetto: https://www.mudlet.org/</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
-      <source>%1 %2%3 (with debug symbols, without optimisations)
-</source>
+      <source>%1 %2%3 (with debug symbols, without optimisations)</source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
-      <translation>%1 %2%3 (simboli di debug attivi, nessuna ottimizzazione)
-</translation>
+      <translation>%1 %2%3 (simboli di debug attivi, nessuna ottimizzazione)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="291"/>
-      <source>Qt libraries %1 (compilation) %2 (runtime)
-</source>
+      <source>Qt libraries %1 (compilation) %2 (runtime)</source>
       <comment>%1 and %2 are version numbers</comment>
-      <translation>Librerie Qt %1 (compilazione) %2 (runtime)
-</translation>
+      <translation>Librerie Qt %1 (compilazione) %2 (runtime)</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="294"/>
-      <source>Copyright © 2008-2022  Mudlet developers
-</source>
-      <translation>Copyright © 2008-2022  Mudlet developers
-</translation>
+      <source>Copyright © 2008-2022  Mudlet developers</source>
+      <translation>Copyright © 2008-2022  Mudlet developers</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="295"/>
-      <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html
-</source>
-      <translation>Licenza GPLv2+: GNU GPL versione 2 o successiva http://gnu.org/licenses/gpl.html
-</translation>
+      <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html</source>
+      <translation>Licenza GPLv2+: GNU GPL versione 2 o successiva http://gnu.org/licenses/gpl.html</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law.
-</source>
+There is NO WARRANTY, to the extent permitted by law.</source>
       <translation>Questo è software gratuito: sei libero di modificarlo e ridistribuirlo.
-Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.
-</translation>
+Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translation>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="276"/>
-      <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues
-</source>
-      <translation>Segnala gli errori a: https://github.com/Mudlet/Mudlet/issues
-</translation>
-    </message>
-    <message>
-      <location filename="../src/main.cpp" line="277"/>
-      <source>Project home page: http://www.mudlet.org/
-</source>
-      <translation>Homepage progetto: https://www.mudlet.org/
-</translation>
-    </message>
-    <message>
-      <location filename="../src/main.cpp" line="320"/>
+      <location filename="../src/main.cpp" line="321"/>
       <source>Version: %1</source>
       <translation>Versione: %1</translation>
     </message>
@@ -13449,54 +13387,54 @@ o script LUA</translation>
   <context>
     <name>vars_main_area</name>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="109"/>
+      <location filename="../src/ui/vars_main_area.ui" line="112"/>
       <source>Name:</source>
       <translation>Nome:</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="175"/>
+      <location filename="../src/ui/vars_main_area.ui" line="181"/>
       <source>⏴ Key type:</source>
       <translation>⏴ Tipo Indice:</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="125"/>
+      <location filename="../src/ui/vars_main_area.ui" line="131"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Imposta qui il nome della &lt;i&gt;variabile globale&lt;/i&gt; o della &lt;i&gt;voce nella tabella&lt;/i&gt;. Il nome deve iniziare con una lettera, ma può contenere sia lettere che numeri.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
-      <location filename="../src/ui/vars_main_area.ui" line="145"/>
+      <location filename="../src/ui/vars_main_area.ui" line="151"/>
       <source>Auto-Type</source>
       <translation>Tipo automatico</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="128"/>
+      <location filename="../src/ui/vars_main_area.ui" line="134"/>
       <source>Variable name ...</source>
       <translation>Nome variabile ...</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="138"/>
+      <location filename="../src/ui/vars_main_area.ui" line="144"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modified from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;le Tabelle possono contenere valori in lista e/o hashmap.&lt;/p&gt;&lt;p&gt;In &lt;b&gt;lista&lt;/b&gt;, le &lt;i&gt;chiavi univoche&lt;/i&gt; fanno riferimento a valori differenti per ognuna &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In una &lt;b&gt;map/hashmap&lt;/b&gt; {aka un &lt;i&gt;array associativo}&lt;/i&gt;, le &lt;i&gt;chiavi univoche&lt;/i&gt; fanno riferimento a valori di qualunque tipo (teoricamente anche funzioni o altri elementi lua anche se questa interfaccia consente solo stringhe).&lt;/p&gt;&lt;p&gt;Per una tabella (o gruppo) appena creata seleziona se desideri che sia una lista o una hashmap.&lt;/p&gt;&lt;p&gt;In alcuni casi mostra altre entita' (&lt;span style=&quot; font-style:italic;&quot;&gt;funzioni&lt;/span&gt;) che non possono essere modificate qui.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="150"/>
+      <location filename="../src/ui/vars_main_area.ui" line="156"/>
       <source>key (string)</source>
       <translation>chiave (stringa)</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="155"/>
+      <location filename="../src/ui/vars_main_area.ui" line="161"/>
       <source>index (integer)</source>
       <translation>indice (numero intero)</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="71"/>
-      <location filename="../src/ui/vars_main_area.ui" line="160"/>
+      <location filename="../src/ui/vars_main_area.ui" line="166"/>
       <source>table</source>
       <translation>tabella</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="165"/>
+      <location filename="../src/ui/vars_main_area.ui" line="171"/>
       <source>function
 (cannot create
 from GUI)</source>
@@ -13505,12 +13443,12 @@ from GUI)</source>
 dalla GUI)</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="185"/>
+      <location filename="../src/ui/vars_main_area.ui" line="194"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
       <translation>&lt;p&gt;Seleziona questa voce (e quella dei figli, se applicabile) per non mostrarla nell'area a sinistra a meno che sia attiva l'opzione &lt;b&gt;Mostra variabili nascoste&lt;/b&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="188"/>
+      <location filename="../src/ui/vars_main_area.ui" line="197"/>
       <source>hidden variable</source>
       <translation>variabile nascosta</translation>
     </message>

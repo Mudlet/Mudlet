@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>345</width>
-    <height>486</height>
+    <width>318</width>
+    <height>392</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -22,8 +22,8 @@
   <property name="layoutDirection">
    <enum>Qt::LeftToRight</enum>
   </property>
-  <layout class="QGridLayout" name="gridLayout_room_properties">
-   <item row="0" column="0" colspan="2">
+  <layout class="QVBoxLayout" name="verticalLayout_room_properties">
+   <item>
     <widget class="QWidget" name="widget_top" native="true">
      <layout class="QHBoxLayout" name="horizontalLayout_widget_top">
       <property name="sizeConstraint">
@@ -115,7 +115,7 @@
      </layout>
     </widget>
    </item>
-   <item row="1" column="0" colspan="2">
+   <item>
     <widget class="QGroupBox" name="groupBox_symbol">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -127,10 +127,19 @@
       <string>Symbol</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_groupBox_symbol">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetMinimumSize</enum>
+      </property>
       <item>
        <widget class="QLabel" name="label_symbolInstructions">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
-         <string>&lt;p&gt;Choose: &lt;br/&gt;• an existing symbol from the list below (sorted by most commonly used first)&lt;br/&gt;• enter one or more graphemes (&amp;quot;visible characters&amp;quot;) as a new symbol&lt;br/&gt;• enter a space to clear any existing symbols&lt;br/&gt;for all of the %n selected room(s):&lt;/p&gt;</string>
+         <string notr="true">&lt;p&gt;Dummy text replaced when used.&lt;/p&gt;</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -139,7 +148,7 @@
       </item>
       <item>
        <widget class="QWidget" name="widget_symbolText" native="true">
-        <layout class="QHBoxLayout" name="horizontalLayout_widget_symbolText" stretch="1,1">
+        <layout class="QHBoxLayout" name="horizontalLayout_widget_symbolText">
          <property name="leftMargin">
           <number>0</number>
          </property>
@@ -209,7 +218,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QToolButton" name="toolButton_resetSymbolColor">
+          <widget class="QPushButton" name="pushButton_resetSymbolColor">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
              <horstretch>0</horstretch>
@@ -227,16 +236,25 @@
      </layout>
     </widget>
    </item>
-   <item row="2" column="0" colspan="2">
+   <item>
     <widget class="QGroupBox" name="groupBox_pathfinding">
      <property name="title">
       <string>Pathfinding</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_pathfinding">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetMinimumSize</enum>
+      </property>
       <item>
        <widget class="QLabel" name="label_weightInstructions">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
-         <string>Enter new roomweight (= travel time), minimum is 1:</string>
+         <string notr="true">&lt;p&gt;Dummy text replaced when used.&lt;/p&gt;</string>
         </property>
         <property name="wordWrap">
          <bool>true</bool>
@@ -295,15 +313,21 @@
       </item>
       <item>
        <widget class="QCheckBox" name="checkBox_locked">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
-         <string>Lock room, so it will never be used for speedwalking</string>
+         <string notr="true">Dummy text replaced when used</string>
         </property>
        </widget>
       </item>
      </layout>
     </widget>
    </item>
-   <item row="3" column="1">
+   <item>
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -316,7 +340,7 @@
      </property>
     </spacer>
    </item>
-   <item row="4" column="1">
+   <item>
     <widget class="QDialogButtonBox" name="dialogButtonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
