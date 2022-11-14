@@ -40,6 +40,7 @@
 #include <QLabel>
 #include <QPointer>
 #include <QWidget>
+#include <QIcon>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
@@ -88,6 +89,13 @@ public:
         Buffer = 0x20 // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
+
+    enum SearchOption {
+        // Unset:
+        SearchOptionNone = 0x0,
+        SearchOptionCaseSensitive = 0x1
+    };
+    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -145,6 +153,10 @@ public:
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
+    void setCommandBgColor(const QColor&);
+    void setCommandBgColor(int, int, int, int);
+    void setCommandFgColor(const QColor&);
+    void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
     void setCmdVisible(bool);
@@ -197,6 +209,7 @@ public:
 
     void setCaretMode(bool enabled);
 
+    void setSearchOptions(const SearchOptions);
 
     QPointer<Host> mpHost;
     // Only assigned a value for user windows:
@@ -273,8 +286,10 @@ public:
     TSplitter* splitter = nullptr;
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
+    QToolButton* timeStampButton = nullptr;
     bool mUserAgreedToCloseConsole = false;
     QLineEdit* mpBufferSearchBox = nullptr;
+    QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
     QToolButton* mpBufferSearchDown = nullptr;
     int mCurrentSearchResult = 0;
@@ -294,6 +309,7 @@ public slots:
     void slot_stopAllItems(bool);
     void slot_toggleLogging();
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
+    void slot_toggleSearchCaseSensitivity(bool);
 
 
 protected:
@@ -305,10 +321,14 @@ protected:
 
 private:
     void adjustAccessibleNames();
+    void createSearchOptionIcon();
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
     bool mAutoWrap = true;
+    SearchOptions mSearchOptions = SearchOptionNone;
+    QAction* mpAction_searchOptions = nullptr;
+    QIcon mIcon_searchOptions;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

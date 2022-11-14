@@ -1,7 +1,10 @@
+#ifndef ANNOUNCER_H
+#define ANNOUNCER_H
 /***************************************************************************
  *   Copyright 2019-2022 Leonard de Ruijter, James Teh - OSARA             *
  *   Copyright 2017 The Qt Company Ltd.                                    *
  *   Copyright (C) 2022 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,9 +23,6 @@
  ***************************************************************************/
 
 
-#ifndef ANNOUNCER_H
-#define ANNOUNCER_H
-
 #include <QAccessible>
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
@@ -32,7 +32,7 @@
 #include <QLibrary>
 #endif
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) || defined(Q_OS_OPENBSD)
   // implemented per recommendation from Orca dev: https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
 class InvisibleNotification : public QWidget {
   Q_OBJECT
@@ -82,7 +82,7 @@ public:
   explicit Announcer(QWidget *parent = nullptr);
   void announce(const QString& text, const QString& processing = QString());
 
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) || defined(Q_OS_OPENBSD)
   static QAccessibleInterface *accessibleFactory(const QString &classname,
                                                  QObject *object) {
 #undef interface // mingw compilation breaks without this
@@ -102,7 +102,7 @@ public:
 #endif
 
 private:
-#if defined(Q_OS_LINUX)
+#if defined(Q_OS_LINUX) || defined(Q_OS_OPENBSD)
   InvisibleNotification *notification;
   InvisibleStatusbar *statusbar;
 #endif
