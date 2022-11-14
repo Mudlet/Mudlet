@@ -155,7 +155,7 @@ function Geyser.Gauge:echo(message, color, format)
   self.formatTable = self.text.formatTable
 end
 
--- Sets the style sheet for the gauge
+--- Sets the style sheet for the gauge
 -- @param css Style sheet for the front label
 -- @param cssback Style sheet for the back label
 -- @param cssText Style sheet for the text label
