@@ -97,7 +97,6 @@ public:
     void initializeCaret();
     void setCaretPosition(int line, int column);
     void updateCaret();
-    void updateWrap();
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
