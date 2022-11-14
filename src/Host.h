@@ -169,7 +169,7 @@ public:
     QString         getDiscordGameName()             { return mDiscordGameName; }
     void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
     int             getPort()                        { return mPort; }
-    void            setPort(const int p)                 { mPort = p; }
+    void            setPort(const int p)             { mPort = p; }
     void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
     QString &       getLogin()                       { return mLogin; }
     void            setLogin(const QString& s)       { mLogin = s; }
@@ -429,6 +429,9 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+    bool mAskTlsAvailable;
+    int mMSSPTlsPort;
+    QString mMSSPHostName;
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;

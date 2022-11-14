@@ -3375,6 +3375,22 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QCheckBox" name="checkBox_askTlsAvailable">
+         <property name="text">
+          <string>Allow secure connection reminder</string>
+         </property>
+         <property name="toolTip">
+           <string>&lt;p&gt;To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).&lt;/p&gt;</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_proxy">
          <property name="title">
           <string>Connect to the game via proxy</string>
@@ -4122,6 +4138,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_self_signed</tabstop>
   <tabstop>checkBox_ignore_all</tabstop>
   <tabstop>checkBox_expired</tabstop>
+  <tabstop>checkBox_askTlsAvailable</tabstop>
   <tabstop>groupBox_proxy</tabstop>
   <tabstop>lineEdit_proxyAddress</tabstop>
   <tabstop>lineEdit_proxyPort</tabstop>

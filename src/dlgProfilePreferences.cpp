@@ -54,8 +54,8 @@
 
 using namespace std::chrono_literals;
 
-dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
-: QDialog(pF)
+dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost)
+: QDialog(pParentWidget)
 , mpHost(pHost)
 {
     // init generated dialog
@@ -479,6 +479,7 @@ void dlgProfilePreferences::disableHostDetails()
 
     // ===== tab security =====
     groupBox_ssl->setEnabled(false);
+    checkBox_askTlsAvailable->setEnabled(false);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(false);
@@ -580,8 +581,10 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab security =====
 #if defined(QT_NO_SSL)
     groupBox_ssl->setEnabled(false);
+    checkBox_askTlsAvailable->setEnabled(false);
 #else
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
+    checkBox_askTlsAvailable->setEnabled(true);
 #endif
     checkBox_announceIncomingText->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
@@ -1095,6 +1098,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
+    checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
+
     groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
     lineEdit_proxyAddress->setText(pHost->mProxyAddress);
@@ -1428,6 +1433,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
+    checkBox_askTlsAvailable->setChecked(false);
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -2679,6 +2685,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
+        pHost->mAskTlsAvailable = checkBox_askTlsAvailable->isChecked();
 
         if (console) {
             console->changeColors();
