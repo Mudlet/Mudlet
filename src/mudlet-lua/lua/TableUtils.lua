@@ -238,7 +238,9 @@ function table.matches(tbl, ...)
     local ptype = type(pattern)
     assert(ptype == "string", string.format("table.matches: bad argument #%d type (pattern to check as string expected, got %s)", index+1, ptype))
     for key,value in pairs(tbl) do
-      if string.match(value, pattern) or (check_keys and string.match(key, pattern)) then
+      local keyType = type(key)
+      local valueType = type(value)
+      if ((valueType == "string" or valueType == "number") and string.match(value, pattern)) or (check_keys and ((keyType == "string" or keyType == "number") and string.match(key, pattern))) then
         matches[key] = value
       end
     end
@@ -262,7 +264,8 @@ function table.n_matches(tbl, ...)
     local ptype = type(pattern)
     assert(ptype == "string", string.format("table.n_matches: bad argument #%d type (pattern to check as string expected, got %s)", index+1, ptype))
     for key,value in pairs(tbl) do
-      if string.match(value, pattern) and not table.contains(matches, value) then
+      local valueType = type(value)
+      if (valueType == "string" or valueType == "number") and string.match(value, pattern) and not table.index_of(matches, value) then
         table.insert(matches, value)
       end
     end
