@@ -4647,7 +4647,7 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(id));
     }
     pR->environment = env;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4668,7 +4668,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(id));
     }
     pR->name = name;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
@@ -4702,7 +4702,7 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setWeight(w);
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
 
@@ -4816,7 +4816,7 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->isLocked = b;
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
         lua_pushboolean(L, true);
     } else {
@@ -4842,7 +4842,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setExitLock(dir, b);
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -4870,7 +4870,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     }
 
     lua_pushboolean(L, true);
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     host.mpMap->mMapGraphNeedsUpdate = true;
     return 1;
 }
@@ -8443,7 +8443,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int alpha = getVerifiedInt(L, __func__, 5, "a");
     Host& host = getHostFromLua(L);
     host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     return 0;
 }
 
@@ -8520,7 +8520,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
             if (isCurrentAreaRenamed) {
@@ -8596,7 +8596,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     // Note that adding an area name implicitly creates an underlying TArea instance
     lua_pushnumber(L, host.mpMap->mpRoomDB->addArea(name));
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
 
     if (host.mpMap->mpMapper) {
         host.mpMap->mpMapper->updateAreaComboBox();
@@ -8653,7 +8653,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
         }
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     lua_pushboolean(L, result);
@@ -8669,7 +8669,7 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
     }
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->mpRoomDB->removeRoom(id));
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     return 1;
 }
 
@@ -8747,7 +8747,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
     lua_pushboolean(L, added);
     if (added) {
         host.mpMap->setRoomArea(id, -1, false);
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 1;
@@ -8838,6 +8838,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     float zoom = 30.0;
     bool showOnTop = true;
     bool noScaling = true;
+    bool temporary = false;
     QString fontName;
     int foregroundTransparency = 255;
     int backgroundTransparency = 50;
@@ -8873,9 +8874,12 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     if (args > 17) {
         backgroundTransparency = getVerifiedInt(L, __func__, 18, "backgroundTransparency", true);
     }
+    if (args > 18) {
+        temporary = getVerifiedBool(L, __func__, 19, "temporary", true);
+    }
 
     Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, zoom, fontSize, fontName));
+    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName));
     return 1;
 }
 
@@ -8898,6 +8902,7 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapImageLabel
 int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
+    int args = lua_gettop(L);
     int area = getVerifiedInt(L, __func__, 1, "areaID");
     QString imagePathFileName = getVerifiedString(L, __func__, 2, "imagePathFileName");
     float posx = getVerifiedFloat(L, __func__, 3, "posX");
@@ -8907,9 +8912,13 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     float height = getVerifiedFloat(L, __func__, 7, "height");
     float zoom = getVerifiedFloat(L, __func__, 8, "zoom");
     bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
+    bool temporary = false;
+    if (args > 9) {
+        temporary = getVerifiedBool(L, __func__, 10, "showOnTop", true);
+    }
 
     Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop));
+    lua_pushinteger(L, host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop, temporary));
     return 1;
 }
 
@@ -8977,7 +8986,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 
     bool result = pR->setDoor(exitCmd, doorStatus);
     if (result) {
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
             host.mpMap->mpMapper->mp2dMap->update();
         }
@@ -9248,7 +9257,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     // show up properly:
     pR->calcRoomDimensions();
 
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
 
     // Better refresh the 2D map to show the new line:
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
@@ -9596,6 +9605,15 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
     lua_pushstring(L, "Pixmap");
     lua_pushstring(L, label.base64EncodePixmap().constData());
     lua_settable(L, -3);
+    lua_pushstring(L, "OnTop");
+    lua_pushboolean(L, label.showOnTop);
+    lua_settable(L, -3);
+    lua_pushstring(L, "Scaling");
+    lua_pushboolean(L, !label.noScaling);
+    lua_settable(L, -3);
+    lua_pushstring(L, "Temporary");
+    lua_pushboolean(L, label.temporary);
+    lua_settable(L, -3);
 
     lua_pushstring(L, "FgColor");
     {
@@ -9693,7 +9711,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
     }
     if (!pR->userData.isEmpty()) {
         pR->userData.clear();
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9723,7 +9741,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     //        }
     /*      else */ if (pR->userData.contains(key)) {
         pR->userData.remove(key);
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9746,7 +9764,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
     }
     if (!pA->mUserData.isEmpty()) {
         pA->mUserData.clear();
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9772,7 +9790,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
         return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
     lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     return 1;
 }
 
@@ -9786,7 +9804,7 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
 
     if (!host.mpMap->mUserData.isEmpty()) {
         host.mpMap->mUserData.clear();
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -10045,7 +10063,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(roomId));
     }
     pR->userData[key] = value;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10070,7 +10088,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid area id").arg(areaId));
     }
     pA->mUserData[key] = value;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10090,7 +10108,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     QString value = getVerifiedString(L, __func__, 2, "value");
 
     host.mpMap->mUserData[key] = value;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10343,7 +10361,7 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
         // handle/use/allow:
         pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10392,7 +10410,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10413,7 +10431,7 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10501,7 +10519,7 @@ int TLuaInterpreter::setGridMode(lua_State* L)
             }
         }
     }
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -13582,6 +13600,12 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 host.mpConsole->printSystemMessage(msg);
             }
             host.raiseEvent(event);
+
+            if (msspVAR == "HOSTNAME") {
+                host.mMSSPHostName = msspVAL;
+            } else if (msspVAR == "TLS" || msspVAR == "SSL") {
+                host.mMSSPTlsPort = msspVAL != "-1" ? msspVAL.toInt() : 0;
+            }
         }
 
         lua_pop(L, lua_gettop(L));
@@ -15946,7 +15970,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
     pT->setIsFolder((timeout == 0 && function.isEmpty()));
     pT->setTemporary(false);
     // The name should be set after isTempTimer, as that is faster.
-    // Also for perminent timers it is easier to debug if it is set before
+    // Also for permanent timers it is easier to debug if it is set before
     // registration:
     pT->setName(name);
     // This will lead to the generation of the id number:
@@ -17337,6 +17361,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("enableMSP")) {
         host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("askTlsAvailable")) {
+        host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("inputLineStrictUnixEndings")) {

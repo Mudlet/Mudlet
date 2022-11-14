@@ -235,6 +235,21 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # We should consider the XDG specifications in:
 # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
+########################### Debugging code inclusions ##########################
+# Controls the include/selection of extra code to aide developers debug various
+# features of Mudlet, generally speaking they will not be '#define'd in
+# production builds - uncomment the 'DEFINES+=DEBUG_XXX' line here to include
+# the relevant code:
+#
+# Other DEFINES+=DEBUG_XXX expected here as a result of:
+# https://github.com/Mudlet/Mudlet/issues/6314
+#
+# * Produce a timestamped message on the OS's command line when an autosave of
+# the map file gets requested and when such a request gets actioned (or
+# rejected because the profile is being loaded):
+# DEFINES+=DEBUG_MAPAUTOSAVE
+
+
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
 # destination place for local builds for software for all users:
