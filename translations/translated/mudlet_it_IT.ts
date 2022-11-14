@@ -6957,7 +6957,7 @@ cancellarlo da tutte le stanze selezionate o sostituiscilo con un nuovo simbolo 
       <location filename="../src/dlgRoomSymbol.cpp" line="90"/>
       <source>The symbol is &quot;%1&quot; in the selected room, delete this to clear the symbol or replace it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room.</comment>
-      <translation type="unfinished"/>
+      <translation>Il simbolo è &quot;%1&quot; nella stanza selezionata, elimina il valore per ripulire il simbolo o sostituiscilo con un nuovo simbolo per questa stanza:</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomSymbol.cpp" line="98"/>
