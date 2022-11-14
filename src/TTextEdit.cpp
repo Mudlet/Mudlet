@@ -181,13 +181,15 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
 {
     if (mShowTimeStamps != state) {
         mShowTimeStamps = state;
-        QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp")));
-        if (state){
-            file.open(QIODevice::WriteOnly | QIODevice::Text);
-            QTextStream out(&file);
-            file.close();
-        } else {
-            file.remove();
+        if (mpConsole->getType() == TConsole::MainConsole) {
+            QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp")));
+            if (state) {
+                file.open(QIODevice::WriteOnly | QIODevice::Text);
+                QTextStream out(&file);
+                file.close();
+            } else {
+                file.remove();
+            }
         }
         forceUpdate();
         update();
@@ -2719,7 +2721,7 @@ void TTextEdit::updateCaret()
 
     if (!mIsLowerPane) {
         if (mCaretLine < lineOffset) {
-            scrollTo(mCaretLine);
+            scrollTo(mCaretLine + 1);
         } else if (mCaretLine >= lineOffset + mScreenHeight) {
             int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine == mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {

@@ -120,7 +120,7 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.9.0
+      uses: ZedThree/clang-tidy-review@v0.10.1
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory

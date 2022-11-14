@@ -86,7 +86,16 @@ public:
     TMap(Host*, const QString&);
     ~TMap();
     void mapClear();
-    int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop);
+    int createMapImageLabel(int area,
+                            QString filePath,
+                            float x,
+                            float y,
+                            float z,
+                            float width,
+                            float height,
+                            float zoom,
+                            bool showOnTop,
+                            bool temporary);
     int createMapLabel(int area,
                        const QString& text,
                        float x,
@@ -96,6 +105,7 @@ public:
                        QColor bg,
                        bool showOnTop = true,
                        bool noScaling = true,
+                       bool temporary = false,
                        qreal zoom = 30.0,
                        int fontSize = 50,
                        std::optional<QString> fontName = std::nullopt);
@@ -180,6 +190,12 @@ public:
     static QColor readJsonColor(const QJsonObject&);
     void restore16ColorSet();
 
+    // These trivial methods are to prevent casual modification to the
+    // underlying flag (and by setting a breakpoint on setUnsave() we can
+    // determine which bit of code is responsible for changing the flag!)
+    void setUnsaved(const char*);
+    void resetUnsaved() { mUnsavedMap = false; }
+    bool isUnsaved() const { return mUnsavedMap; }
 
     TRoomDB* mpRoomDB = nullptr;
     QMap<int, int> mEnvColors;
@@ -241,8 +257,6 @@ public:
     std::vector<location> locations;
     bool mMapGraphNeedsUpdate = true;
     bool mNewMove = true;
-
-    bool mUnsavedMap = false;
 
     // Replaced CURRENT_MAP_VERSION, default map version that new maps will get:
     const int mDefaultVersion = 20;
@@ -358,6 +372,9 @@ private:
     int mProgressDialogRoomsCount = 0;
     int mProgressDialogLabelsTotal = 0;
     int mProgressDialogLabelsCount = 0;
+
+    // Used to flag whether the map auto-save needs to be done after the next interval:
+    bool mUnsavedMap = false;
 };
 
 #endif // MUDLET_TMAP_H
