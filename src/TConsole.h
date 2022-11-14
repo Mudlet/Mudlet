@@ -185,8 +185,6 @@ public:
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
     QColor getConsoleBgColor() const { return mBgColor; }
-    bool autoWrap() const;
-    void setAutoWrap(bool enabled);
 
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
@@ -325,7 +323,6 @@ private:
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
-    bool mAutoWrap = true;
     SearchOptions mSearchOptions = SearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
