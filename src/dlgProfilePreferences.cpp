@@ -54,8 +54,8 @@
 
 using namespace std::chrono_literals;
 
-dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
-: QDialog(pF)
+dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost)
+: QDialog(pParentWidget)
 , mpHost(pHost)
 {
     // init generated dialog
