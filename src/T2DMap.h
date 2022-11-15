@@ -26,7 +26,6 @@
  ***************************************************************************/
 
 #include "dlgMapLabel.h"
-#include "dlgRoomSymbol.h"
 #include "dlgRoomProperties.h"
 
 #include "pre_guard.h"
@@ -116,7 +115,6 @@ public:
     // coordinates):
     float mRoomWidth = 0.0f;
     float mRoomHeight = 0.0f;
-    int mChosenRoomColor = 5;
     float xspan = 0.0f;
     float yspan = 0.0f;
 
@@ -206,9 +204,7 @@ public slots:
     void slot_shiftDown();
     void slot_shiftLeft();
     void slot_shiftRight();
-    void slot_showSymbolSelection();
     void slot_showPropertiesDialog();
-    void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void slot_setRoomProperties(
         bool changeName, QString newName,
         bool changeRoomColor, int newRoomColor,
@@ -219,18 +215,12 @@ public slots:
         QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
-    void slot_defineNewColor();
-    void slot_selectRoomColor(QListWidgetItem* pI);
     void slot_moveRoom();
     void slot_deleteRoom();
-    void slot_changeColor();
     void slot_spread();
     void slot_shrink();
     void slot_setExits();
     void slot_setUserData();
-    void slot_lockRoom();
-    void slot_unlockRoom();
-    void slot_setRoomWeight();
     void slot_setArea();
     void slot_setCustomLine();
     void slot_setCustomLine2();
@@ -296,7 +286,7 @@ private:
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
-    dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
+
     dlgRoomProperties* mpDlgRoomProperties = nullptr;
     dlgMapLabel* mpDlgMapLabel = nullptr;
 
