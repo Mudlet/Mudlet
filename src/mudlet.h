@@ -8,6 +8,7 @@
  *   Copyright (C) 2015-2016, 2018-2019, 2021-2022 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,6 +26,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "Announcer.h"
 #include "utils.h"
 #include "HostManager.h"
 #include "FontManager.h"
@@ -39,6 +41,7 @@
 #include "ShortcutsManager.h"
 
 #include "pre_guard.h"
+#include <QAction>
 #include <QDir>
 #include <QFlags>
 #ifdef QT_GAMEPAD_LIB
@@ -81,6 +84,10 @@
 #include <array>
 #elif defined(Q_OS_HURD)
 #include <errno.h>
+#include <unistd.h>
+#elif defined(Q_OS_OPENBSD)
+// OpenBSD doesn't have a sysinfo.h
+#include <sys/sysctl.h>
 #include <unistd.h>
 #elif defined(Q_OS_UNIX)
 // Including both GNU/Linux and FreeBSD
@@ -272,6 +279,7 @@ public:
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     static bool loadLuaFunctionList();
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
+    void announce(const QString& text, const QString& processing = QString());
 
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
@@ -460,7 +468,7 @@ public:
                         "<a href='http://avalon.mud.de'>http://avalon.mud.de</a>",
                         ":/icons/avalon.png"}},
         {"Achaea", {"achaea.com", 23, false, "<a href='http://www.achaea.com/'>http://www.achaea.com</a>", ":/icons/achaea_120_30.png"}},
-        {"3Kingdoms", {"3k.org", 3200, false, "<a href='http://www.3k.org/'>http://www.3k.org</a>", ":/icons/3klogo.png"}},
+        {"3Kingdoms", {"3k.org", 3000, false, "<a href='http://www.3k.org/'>http://www.3k.org</a>", ":/icons/3klogo.png"}},
         {"3Scapes", {
             "3k.org",   // address to connect to
             3200,       // port to connect on
@@ -490,11 +498,11 @@ public:
                                  "<a href='http://www.wotmod.org/'>Forums</a>", ":/icons/wotmudicon.png"}},
         {"Midnight Sun 2", {"midnightsun2.org", 3000, false, "<a href='http://midnightsun2.org/'>http://midnightsun2.org/</a>", ":/icons/midnightsun2.png"}},
         {"Luminari", {"luminarimud.com", 4100, false, "<a href='http://www.luminarimud.com/'>http://www.luminarimud.com/</a>", ":/icons/luminari_icon.png"}},
-        {"StickMUD", {"stickmud.com", 7680, false, "<a href='http://www.stickmud.com/'>stickmud.com</a>", ":/icons/stickmud_icon.jpg"}},
+        {"StickMUD", {"stickmud.com", 7670, true, "<a href='http://www.stickmud.com/'>stickmud.com</a>", ":/icons/stickmud_icon.jpg"}},
         {"Clessidra", {"mud.clessidra.it", 4000, false, "<a href='http://www.clessidra.it/'>http://www.clessidra.it</a>", ":/icons/clessidra.jpg"}},
-        {"Reinos de Leyenda", {"reinosdeleyenda.es", 23, false, "<a href='https://www.reinosdeleyenda.es/'>Main website</a>\n"
-                                 "<a href='https://www.reinosdeleyenda.es/foro/'>Forums</a>\n"
-                                 "<a href='https://wiki.reinosdeleyenda.es/'>Wiki</a>\n", ":/icons/reinosdeleyenda_mud.png"}},
+        {"Reinos de Leyenda", {"reinosdeleyenda.es", 23, false, "<a href='https://www.reinosdeleyenda.es/'>Sitio web principal</a><br>"
+                                 "<a href='https://www.reinosdeleyenda.es/foro/'>Foros</a><br>"
+                                 "<a href='https://wiki.reinosdeleyenda.es/'>Wiki</a>", ":/icons/reinosdeleyenda_mud.png"}},
         {"Fierymud", {"fierymud.org", 4000, false, "<a href='https://www.fierymud.org/'>https://www.fierymud.org</a>", ":/icons/fiery_mud.png"}},
         {"Mudlet self-test", {"mudlet.org", 23, false, "", ""}},
         {"Carrion Fields", {"carrionfields.net", 4449, false, "<a href='http://www.carrionfields.net'>www.carrionfields.net</a>", ":/icons/carrionfields.png"}},
@@ -506,35 +514,35 @@ public:
     // clang-format on
 
 public slots:
-    void processEventLoopHack_timerRun();
+    void slot_processEventLoopHackTimerRun();
     void slot_mapper();
     void slot_replayTimeChanged();
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
-    void toggleFullScreenView();
-    void slot_show_about_dialog();
-    void slot_show_help_dialog_video();
-    void slot_show_help_dialog_forum();
-    void slot_show_help_dialog_irc();
-    void slot_open_mappingscripts_page();
-    void slot_multi_view(const bool);
-    void slot_toggle_multi_view();
-    void slot_connection_dlg_finished(const QString& profile, bool connectOnLoad);
-    void slot_timer_fires();
+    void slot_toggleFullScreenView();
+    void slot_showAboutDialog();
+    void slot_showHelpDialogVideo();
+    void slot_showHelpDialogForum();
+// Not used:    void slot_showHelpDialogIrc();
+    void slot_openMappingScriptsPage();
+    void slot_multiView(const bool);
+    void slot_toggleMultiView();
+    void slot_connectionDialogueFinished(const QString& profile, bool connectOnLoad);
+    void slot_timerFires();
     void slot_replay();
     void slot_disconnect();
     void slot_notes();
     void slot_reconnect();
-    void slot_close_current_profile();
-    void slot_close_profile_requested(int);
+    void slot_closeCurrentProfile();
+    void slot_closeProfileRequested(int);
     void slot_irc();
-    void slot_discord();
-    void slot_mudlet_discord();
-    void slot_package_manager();
-    void slot_package_exporter();
-    void slot_module_manager();
+    void slot_profileDiscord();
+    void slot_mudletDiscord();
+    void slot_packageManager();
+    void slot_packageExporter();
+    void slot_moduleManager();
 #if defined(INCLUDE_UPDATER)
-    void slot_check_manual_update();
+    void slot_manualUpdateCheck();
 #endif
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
@@ -569,20 +577,20 @@ signals:
 
 
 private slots:
-    void slot_tab_changed(int);
-    void show_help_dialog();
-    void slot_show_connection_dialog();
-    void show_editor_dialog();
-    void show_trigger_dialog();
-    void show_alias_dialog();
-    void show_script_dialog();
-    void show_timer_dialog();
-    void show_action_dialog();
-    void show_key_dialog();
-    void show_variable_dialog();
-    void slot_update_shortcuts();
-    void slot_show_options_dialog();
-    void slot_assign_shortcuts_from_profile(Host* pHost = nullptr);
+    void slot_tabChanged(int);
+    void slot_showHelpDialog();
+    void slot_showConnectionDialog();
+    void slot_showEditorDialog();
+    void slot_showTriggerDialog();
+    void slot_showAliasDialog();
+    void slot_showScriptDialog();
+    void slot_showTimerDialog();
+    void slot_showActionDialog();
+    void slot_showKeyDialog();
+    void slot_showVariableDialog();
+    void slot_updateShortcuts();
+    void slot_showPreferencesDialog();
+    void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
 #ifdef QT_GAMEPAD_LIB
     void slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value);
     void slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button);
@@ -591,13 +599,17 @@ private slots:
     void slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value);
 #endif
 #if defined(INCLUDE_UPDATER)
-    void slot_update_installed();
+    void slot_updateInstalled();
     void slot_updateAvailable(const int);
-    void slot_report_issue();
+    void slot_reportIssue();
 #endif
     void slot_toggle_compact_input_line();
     void slot_password_migrated_to_secure(QKeychain::Job *job);
     void slot_password_migrated_to_profile(QKeychain::Job *job);
+    void slot_toggleCompactInputLine();
+    void slot_compactInputLine(const bool);
+    void slot_passwordMigratedToSecureStorage(QKeychain::Job *job);
+    void slot_passwordMigratedToPortableStorage(QKeychain::Job *job);
     void slot_tabMoved(const int oldPos, const int newPos);
 
 
@@ -699,6 +711,7 @@ private:
     QPointer<QAction> mpActionVariables;
 
     HostManager mHostManager;
+    Announcer* announcer;
 
     bool mshowMapAuditErrors;
 
@@ -746,7 +759,7 @@ private:
     // use setAppearance instead
     bool mDarkMode = false;
 
-    // Used to ensure that mudlet::slot_update_shortcuts() only runs once each
+    // Used to ensure that mudlet::slot_updateShortcuts() only runs once each
     // time the main if () logic changes state - will be true if the menu is
     // supposed to be visible, false if not and not have a value initially:
     std::optional<bool> mMenuVisibleState;

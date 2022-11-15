@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -26,24 +26,24 @@
 #include "Host.h"
 
 
-dlgComposer::dlgComposer(Host* pH) : mpHost(pH)
-
+dlgComposer::dlgComposer(Host* pH)
+: mpHost(pH)
 {
     setupUi(this);
     QFont f = QFont(qsl("Bitstream Vera Sans Mono"), 10, QFont::Normal);
     edit->setFont(f);
-    connect(saveButton, &QAbstractButton::clicked, this, &dlgComposer::save);
-    connect(cancelButton, &QAbstractButton::clicked, this, &dlgComposer::cancel);
+    connect(saveButton, &QAbstractButton::clicked, this, &dlgComposer::slot_save);
+    connect(cancelButton, &QAbstractButton::clicked, this, &dlgComposer::slot_cancel);
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgComposer::cancel()
+void dlgComposer::slot_cancel()
 {
     mpHost->mTelnet.atcpComposerCancel();
     this->hide();
 }
 
-void dlgComposer::save()
+void dlgComposer::slot_save()
 {
     mpHost->mTelnet.atcpComposerSave(edit->toPlainText());
     this->hide();

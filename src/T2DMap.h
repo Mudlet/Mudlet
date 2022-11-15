@@ -4,9 +4,10 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018-2019, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2016, 2018-2019, 2022 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
+ *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,7 +26,7 @@
  ***************************************************************************/
 
 #include "dlgMapLabel.h"
-#include "dlgRoomSymbol.h"
+#include "dlgRoomProperties.h"
 
 #include "pre_guard.h"
 #include <QCache>
@@ -114,7 +115,6 @@ public:
     // coordinates):
     float mRoomWidth = 0.0f;
     float mRoomHeight = 0.0f;
-    int mChosenRoomColor = 5;
     float xspan = 0.0f;
     float yspan = 0.0f;
 
@@ -199,27 +199,28 @@ public slots:
     // This is ONLY used as a slot in older versions
     void slot_switchArea(const QString& newAreaName);
 #endif
-    void toggleShiftMode();
+// Not used: void slot_toggleShiftMode();
     void slot_shiftUp();
     void slot_shiftDown();
     void slot_shiftLeft();
     void slot_shiftRight();
-    void slot_showSymbolSelection();
-    void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
+    void slot_showPropertiesDialog();
+    void slot_setRoomProperties(
+        bool changeName, QString newName,
+        bool changeRoomColor, int newRoomColor,
+        bool changeSymbol, QString newSymbol,
+        bool changeSymbolColor, QColor newSymbolColor,
+        bool changeWeight, int newWeight,
+        bool changeLockStatus, bool newLockStatus,
+        QSet<TRoom*> rooms);
     void slot_setImage();
     void slot_movePosition();
-    void slot_defineNewColor();
-    void slot_selectRoomColor(QListWidgetItem* pI);
     void slot_moveRoom();
     void slot_deleteRoom();
-    void slot_changeColor();
     void slot_spread();
     void slot_shrink();
     void slot_setExits();
     void slot_setUserData();
-    void slot_lockRoom();
-    void slot_unlockRoom();
-    void slot_setRoomWeight();
     void slot_setArea();
     void slot_setCustomLine();
     void slot_setCustomLine2();
@@ -247,7 +248,6 @@ private:
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
-
 
     bool mDialogLock = false;
     struct ClickPosition {
@@ -286,7 +286,8 @@ private:
 
     // Holds the QRadialGradient details to use for the player room:
     QGradientStops mPlayerRoomColorGradentStops;
-    dlgRoomSymbol* mpDlgRoomSymbol = nullptr;
+
+    dlgRoomProperties* mpDlgRoomProperties = nullptr;
     dlgMapLabel* mpDlgMapLabel = nullptr;
 
 private slots:

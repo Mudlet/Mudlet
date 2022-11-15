@@ -29,22 +29,23 @@ jobs:
             triplet: x64-linux
             compiler: clang_64
             qt: '5.14.2'
-          - os: macos-10.15
+          - os: macos-11
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.2'
             deploy: 'deploy'
-#          - os: windows-2019
-#            buildname: 'windows'
-#            triplet: x64-mingw-dynamic
-#            # compiler: flag not used in windows pipeline
-#            qt: '5.14.2'
+          - os: windows-2019
+            buildname: 'windows'
+            triplet: x64-mingw-dynamic
+            # compiler: flag not used in windows pipeline
+            qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
-
+      # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
+      CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
 
     steps:
     - name: Checkout Mudlet source code
@@ -129,13 +130,6 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # workaround for https://github.com/mitchellh/gon/issues/56
-        pushd .
-        cd /usr/local/Homebrew
-        git fetch --tags
-        git checkout 3.3.9
-        popd
-
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
@@ -240,7 +234,7 @@ jobs:
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: pat-s/always-upload-cache@v3.0.1
+      uses: pat-s/always-upload-cache@v3.0.11
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
@@ -255,7 +249,7 @@ jobs:
 
     - name: (Linux/macOS) check ccache stats prior to build
       if: runner.os == 'Linux' || runner.os == 'macOS'
-      run: ccache --show-stats
+      run: ccache --zero-stats --show-stats
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3

@@ -854,7 +854,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
 
         QString infoMsg;
         if (mudlet::self()->showMapAuditErrors()) {
-            infoMsg = tr("[ INFO ]  - The renumbered rooms will be:\n");
+            infoMsg = qsl("%1\n").arg(tr("[ INFO ]  - The renumbered rooms will be:"));
         }
         QMutableHashIterator<int, int> itRenumberedRoomId(roomRemapping);
         while (itRenumberedRoomId.hasNext()) {
@@ -1174,8 +1174,8 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
                     R"(It has been detected that "_###" form suffixes have already been used, for simplicity in the renaming algorithm these will have been removed and possibly changed as Mudlet sorts this matter out, if a number assigned in this way <b>is</b> important to you, you can change it back, provided you rename the area that has been allocated the suffix that was wanted first...!</p>)");
         }
         if (!renamedMap.empty()) {
-            detailText = tr("[  OK  ]  - The changes made are:\n"
-                            "(ID) \"old name\" ==> \"new name\"\n");
+            detailText = qsl("%1\n").arg(tr("[  OK  ]  - The changes made are:\n"
+                                            "(ID) \"old name\" ==> \"new name\""));
             QMapIterator<QString, QString> itRemappedNames = renamedMap;
             itRemappedNames.toBack();
             // Seems to look better if we iterate through backwards!

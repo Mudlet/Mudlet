@@ -203,7 +203,7 @@ bool TimerUnit::registerTimer(TTimer* pT)
 
     // This has some side effects, including stopping the timer...
     pT->setTime(pT->getTime());
-    QTimer::connect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timer_fires, Qt::UniqueConnection);
+    QTimer::connect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timerFires, Qt::UniqueConnection);
     return true;
 }
 
@@ -215,7 +215,7 @@ void TimerUnit::unregisterTimer(TTimer* pT)
     // Stop the QTimer ASAP:
     pT->stop();
     pT->deactivate();
-    QTimer::disconnect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timer_fires);
+    QTimer::disconnect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timerFires);
     if (pT->getParent()) {
         _removeTimer(pT);
         return;

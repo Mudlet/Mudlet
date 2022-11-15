@@ -24,7 +24,7 @@
 #include "TBuffer.h"
 
 #include "mudlet.h"
-#include "TConsole.h"
+#include "TEvent.h"
 #include "TStringUtils.h"
 
 #include "pre_guard.h"
@@ -103,8 +103,11 @@ TChar::TChar(const TChar& copy)
 const QString timeStampFormat = qsl("hh:mm:ss.zzz ");
 const QString blankTimeStamp  = qsl("------------ ");
 
-TBuffer::TBuffer(Host* pH)
-: mBlack(pH->mBlack)
+// Store for text and attributes (such as character color) to be drawn on screen 
+// Contents are rendered by a TTextEdit
+TBuffer::TBuffer(Host* pH, TConsole* pConsole)
+: mpConsole(pConsole)
+, mBlack(pH->mBlack)
 , mLightBlack(pH->mLightBlack)
 , mRed(pH->mRed)
 , mLightRed(pH->mLightRed)
@@ -679,13 +682,36 @@ COMMIT_LINE:
             // line there should not be any changes to text before a line feed
             // which sort of seems to be implied by the current value of ch:
 
+            // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
+            // https://bugreports.qt.io/browse/QTBUG-105035
+            if (Q_UNLIKELY(mMudLine.isEmpty())) {
+                if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+                    localBufferPosition++;
+                    continue;
+                } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
+                    const TChar::AttributeFlags attributeFlags =
+                            ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
+                            | (mItalics ? TChar::Italic : TChar::None)
+                            | (mOverline ? TChar::Overline : TChar::None)
+                            | (mReverse ? TChar::Reverse : TChar::None)
+                            | (mStrikeOut ? TChar::StrikeOut : TChar::None)
+                            | (mUnderline ? TChar::Underline : TChar::None);
+
+                    // Note: we are using the background color for the
+                    // foreground color as well so that we are transparent:
+                    const TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
+                    mMudLine.append(QChar::Space);
+                    mMudBuffer.push_back(c);
+                }
+            }
+
             if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
                 qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
                               "data character and attribute data items!";
             }
 
             if (!lineBuffer.back().isEmpty()) {
-                if (mMudLine.size() > 0) {
+                if (!mMudLine.isEmpty()) {
                     lineBuffer << mMudLine;
                 } else {
                     if (ch == '\r') {
@@ -702,7 +728,7 @@ COMMIT_LINE:
                     promptBuffer.append(false);
                 }
             } else {
-                if (mMudLine.size() > 0) {
+                if (!mMudLine.isEmpty()) {
                     lineBuffer.back().append(mMudLine);
                 } else {
                     if (ch == '\r') {
@@ -1999,7 +2025,7 @@ void TBuffer::resetColors()
     }
 
     // These should match the corresponding settings in
-    // dlgProfilePreferences::resetColors() :
+    // dlgProfilePreferences::slot_resetColors() :
     pHost->mBlack = Qt::black;
     pHost->mLightBlack = Qt::darkGray;
     pHost->mRed = Qt::darkRed;
@@ -2842,6 +2868,18 @@ void TBuffer::shrinkBuffer()
         timeBuffer.pop_front();
         buffer.pop_front();
         mCursorY--;
+    }
+
+    if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole|TConsole::Buffer)) {
+        // Signal to lua subsystem that indexes into the Console will need adjusting
+        TEvent bufferShrinkEvent{};
+        bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        bufferShrinkEvent.mArgumentList.append(mpConsole->mConsoleName);
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
+        bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+        mpHost->raiseEvent(bufferShrinkEvent);
     }
 }
 

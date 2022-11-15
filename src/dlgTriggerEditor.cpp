@@ -176,11 +176,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     mpActionsMainArea = new dlgActionMainArea(this);
     layoutColumn->addWidget(mpActionsMainArea, 1);
-    connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::stateChanged, this, &dlgTriggerEditor::slot_toggle_isPushDownButton);
+    connect(mpActionsMainArea->checkBox_action_button_isPushDown, &QCheckBox::stateChanged, this, &dlgTriggerEditor::slot_toggleIsPushDownButton);
 
     mpKeysMainArea = new dlgKeysMainArea(this);
     layoutColumn->addWidget(mpKeysMainArea, 1);
-    connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_key_grab);
+    connect(mpKeysMainArea->pushButton_key_grabKey, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_keyGrab);
 
     mpVarsMainArea = new dlgVarsMainArea(this);
     layoutColumn->addWidget(mpVarsMainArea, 1);
@@ -188,8 +188,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpScriptsMainArea = new dlgScriptsMainArea(this);
     layoutColumn->addWidget(mpScriptsMainArea, 1);
 
-    connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
-    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemClicked, this, &dlgTriggerEditor::slot_script_main_area_edit_handler);
+    connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_scriptMainAreaAddHandler);
+    connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemClicked, this, &dlgTriggerEditor::slot_scriptMainAreaEditHandler);
 
     // source editor area
     mpSourceEditorArea = new dlgSourceEditorArea(this);
@@ -208,7 +208,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the editor preferences
     connect(mudlet::self(), &mudlet::signal_editorTextOptionsChanged, this, &dlgTriggerEditor::slot_changeEditorTextOptions);
-    mpSourceEditorEdbeeDocument->setText(tr("-- Enter your lua code here\n"));
+    mpSourceEditorEdbeeDocument->setText(qsl("%1\n").arg(tr("-- Enter your lua code here")));
 
     mudlet::loadEdbeeTheme(mpHost->mEditorTheme, mpHost->mEditorThemeFile);
 
@@ -218,37 +218,37 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpSourceEditorEdbee->verticalScrollBar()->installEventFilter(mpSourceEditorFindArea);
     mpSourceEditorFindArea->hide();
 
-    connect(mpSourceEditorFindArea->lineEdit_findText, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_source_find_text_changed);
-    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorMovementNecessary, this, &dlgTriggerEditor::slot_move_source_find);
-    connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_previous);
-    connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_source_find_next);
-    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_source_find_previous);
-    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_source_find_next);
-    connect(mpSourceEditorFindArea->pushButton_close, &QPushButton::clicked, this, &dlgTriggerEditor::slot_close_source_find);
+    connect(mpSourceEditorFindArea->lineEdit_findText, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_sourceFindTextChanges);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorMovementNecessary, this, &dlgTriggerEditor::slot_sourceFindMove);
+    connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceFindPrevious);
+    connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceFindNext);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_sourceFindPrevious);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_sourceFindNext);
+    connect(mpSourceEditorFindArea->pushButton_close, &QPushButton::clicked, this, &dlgTriggerEditor::slot_closeSourceFind);
 
     auto openSourceFindAction = new QAction(this);
     openSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     openSourceFindAction->setShortcut(QKeySequence(QKeySequence::Find));
     mpSourceEditorArea->addAction(openSourceFindAction);
-    connect(openSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_open_source_find);
+    connect(openSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_openSourceFind);
 
     QAction* closeSourceFindAction = new QAction(this);
     closeSourceFindAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     closeSourceFindAction->setShortcut(QKeySequence(QKeySequence::Cancel));
     mpSourceEditorArea->addAction(closeSourceFindAction);
-    connect(closeSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_close_source_find);
+    connect(closeSourceFindAction, &QAction::triggered, this, &dlgTriggerEditor::slot_closeSourceFind);
 
     QAction* sourceFindNextAction = new QAction(this);
     sourceFindNextAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     sourceFindNextAction->setShortcut(QKeySequence(QKeySequence::FindNext));
     mpSourceEditorArea->addAction(sourceFindNextAction);
-    connect(sourceFindNextAction, &QAction::triggered, this, &dlgTriggerEditor::slot_source_find_next);
+    connect(sourceFindNextAction, &QAction::triggered, this, &dlgTriggerEditor::slot_sourceFindNext);
 
     QAction* sourceFindPreviousAction = new QAction(this);
     sourceFindPreviousAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     sourceFindPreviousAction->setShortcut(QKeySequence(QKeySequence::FindPrevious));
     mpSourceEditorArea->addAction(sourceFindPreviousAction);
-    connect(sourceFindPreviousAction, &QAction::triggered, this, &dlgTriggerEditor::slot_source_find_previous);
+    connect(sourceFindPreviousAction, &QAction::triggered, this, &dlgTriggerEditor::slot_sourceFindPrevious);
 
     auto* provider = new edbee::StringTextAutoCompleteProvider();
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
@@ -288,7 +288,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
     mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);
-    mpErrorConsole->print(tr("*** starting new session ***\n"));
+    mpErrorConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
     mpErrorConsole->setMinimumHeight(100);
     mpErrorConsole->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Minimum);
     splitter_right->addWidget(mpErrorConsole);
@@ -319,7 +319,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
     treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost(mpHost);
@@ -328,7 +328,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->header()->hide();
     treeWidget_aliases->setRootIsDecorated(false);
     treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_actions->hide();
     treeWidget_actions->setHost(mpHost);
@@ -337,7 +337,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated(false);
     treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_timers->hide();
     treeWidget_timers->setHost(mpHost);
@@ -346,7 +346,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated(false);
     treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_variables->hide();
     treeWidget_variables->setHost(mpHost);
@@ -356,7 +356,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->header()->hide();
     treeWidget_variables->setRootIsDecorated(false);
     treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_keys->hide();
     treeWidget_keys->setHost(mpHost);
@@ -365,7 +365,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated(false);
     treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_scripts->hide();
     treeWidget_scripts->setHost(mpHost);
@@ -374,42 +374,42 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated(false);
     treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_save);
+    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     QAction* viewTriggerAction = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
     viewTriggerAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Triggers"), tr("Ctrl+1")));
-    connect(viewTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_triggers);
+    connect(viewTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showTriggers);
 
     QAction* viewAliasAction = new QAction(QIcon(qsl(":/icons/system-users.png")), tr("Aliases"), this);
     viewAliasAction->setStatusTip(tr("Show Aliases"));
     viewAliasAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Aliases"), tr("Ctrl+2")));
-    connect(viewAliasAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_aliases);
+    connect(viewAliasAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showAliases);
 
     QAction* viewScriptsAction = new QAction(QIcon(qsl(":/icons/document-properties.png")), tr("Scripts"), this);
     viewScriptsAction->setStatusTip(tr("Show Scripts"));
     viewScriptsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Scripts"), tr("Ctrl+3")));
-    connect(viewScriptsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_scripts);
+    connect(viewScriptsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showScripts);
 
     QAction* showTimersAction = new QAction(QIcon(qsl(":/icons/chronometer.png")), tr("Timers"), this);
     showTimersAction->setStatusTip(tr("Show Timers"));
     showTimersAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Timers"), tr("Ctrl+4")));
-    connect(showTimersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_timers);
+    connect(showTimersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showTimers);
 
     QAction* viewKeysAction = new QAction(QIcon(qsl(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     viewKeysAction->setStatusTip(tr("Show Keybindings"));
     viewKeysAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Keybindings"), tr("Ctrl+5")));
-    connect(viewKeysAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_keys);
+    connect(viewKeysAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showKeys);
 
     QAction* viewVarsAction = new QAction(QIcon(qsl(":/icons/variables.png")), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Show Variables"));
     viewVarsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Variables"), tr("Ctrl+6")));
-    connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_vars);
+    connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showVariables);
 
     QAction* viewActionAction = new QAction(QIcon(qsl(":/icons/bookmarks.png")), tr("Buttons"), this);
     viewActionAction->setStatusTip(tr("Show Buttons"));
     viewActionAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Buttons"), tr("Ctrl+7")));
-    connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_show_actions);
+    connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showActions);
 
 
     QAction* viewErrorsAction = new QAction(QIcon(qsl(":/icons/errors.png")), tr("Errors"), this);
@@ -425,23 +425,23 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QAction* showDebugAreaAction = new QAction(QIcon(qsl(":/icons/tools-report-bug.png")), tr("Debug"), this);
     showDebugAreaAction->setStatusTip(tr("Show/Hide the separate Central Debug Console - when being displayed the system will be slower."));
     showDebugAreaAction->setToolTip(utils::richText(tr("Show/Hide Debug Console (Ctrl+0) -> system will be <b><i>slower</i></b>.")));
-    connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_debug_mode);
+    connect(showDebugAreaAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleCentralDebugConsole);
 
 
     QAction* toggleActiveAction = new QAction(QIcon(qsl(":/icons/document-encrypt.png")), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
-    connect(toggleActiveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggle_active);
-    connect(treeWidget_triggers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
-    connect(treeWidget_aliases, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
-    connect(treeWidget_timers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
-    connect(treeWidget_scripts, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
-    connect(treeWidget_actions, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
-    connect(treeWidget_keys, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggle_active);
+    connect(toggleActiveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_triggers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_aliases, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_timers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_scripts, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_actions, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_keys, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
 
 
     QAction* addTriggerAction = new QAction(QIcon(qsl(":/icons/document-new.png")), tr("Add Item"), this);
     addTriggerAction->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
-    connect(addTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_add_new);
+    connect(addTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
 
     QAction* deleteTriggerAction = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), tr("Delete Item"), this);
     deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
@@ -449,18 +449,18 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     deleteTriggerAction->setShortcut(QKeySequence(QKeySequence::Delete));
     frame_left->addAction(deleteTriggerAction);
-    connect(deleteTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_delete_item);
+    connect(deleteTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
 
     QAction* addFolderAction = new QAction(QIcon(qsl(":/icons/folder-new.png")), tr("Add Group"), this);
     addFolderAction->setStatusTip(tr("Add new Group"));
-    connect(addFolderAction, &QAction::triggered, this, &dlgTriggerEditor::slot_add_new_folder);
+    connect(addFolderAction, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
     QAction* saveAction = new QAction(QIcon(qsl(":/icons/document-save-as.png")), tr("Save Item"), this);
     saveAction->setToolTip(tr("<p>Saves the selected item. (Ctrl+S)</p>"
                               "<p>Saving causes any changes to the item to take effect. It will not save to disk, "
                               "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>"));
     saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
-    connect(saveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_save_edit);
+    connect(saveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_saveEdits);
 
     QAction* copyAction = new QAction(tr("Copy"), this);
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
@@ -474,7 +474,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->addAction(copyAction);
     treeWidget_actions->addAction(copyAction);
     treeWidget_keys->addAction(copyAction);
-    connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copy_xml);
+    connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copyXml);
 
     QAction* pasteAction = new QAction(tr("Paste"), this);
     pasteAction->setShortcut(QKeySequence(QKeySequence::Paste));
@@ -488,7 +488,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->addAction(pasteAction);
     treeWidget_actions->addAction(pasteAction);
     treeWidget_keys->addAction(pasteAction);
-    connect(pasteAction, &QAction::triggered, this, &dlgTriggerEditor::slot_paste_xml);
+    connect(pasteAction, &QAction::triggered, this, &dlgTriggerEditor::slot_pasteXml);
 
     if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
         copyAction->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
@@ -523,10 +523,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
 
     auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
-    QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_next_section);
+    QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_nextSection);
 
     QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Tab), this);
-    QObject::connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previous_section);
+    QObject::connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previousSection);
 
     QShortcut *activateMainWindowAction = new QShortcut(QKeySequence((Qt::ALT | Qt::Key_E)), this);
     QObject::connect(activateMainWindowAction, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
@@ -561,7 +561,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     connect(checkBox_displayAllVariables, &QAbstractButton::toggled, this, &dlgTriggerEditor::slot_toggleHiddenVariables);
 
-    connect(mpVarsMainArea->checkBox_variable_hidden, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_toggleHiddenVar);
+    connect(mpVarsMainArea->checkBox_variable_hidden, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_hideVariable);
 
     toolBar2->addAction(viewTriggerAction);
     toolBar2->addAction(viewAliasAction);
@@ -638,22 +638,22 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->endChanges();
 
     connect(comboBox_searchTerms, qOverload<int>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
-    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_trigger_selected);
-    connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
-    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_key_selected);
-    connect(treeWidget_keys, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
-    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_timer_selected);
-    connect(treeWidget_timers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
-    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_scripts_selected);
-    connect(treeWidget_scripts, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
-    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_alias_selected);
-    connect(treeWidget_aliases, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
-    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_action_selected);
-    connect(treeWidget_actions, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
-    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_var_selected);
-    connect(treeWidget_variables, &QTreeWidget::itemChanged, this, &dlgTriggerEditor::slot_var_changed);
-    connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_tree_selection_changed);
-    connect(treeWidget_searchResults, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_item_selected_search_list);
+    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_triggerSelected);
+    connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_keySelected);
+    connect(treeWidget_keys, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_timerSelected);
+    connect(treeWidget_timers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_scriptsSelected);
+    connect(treeWidget_scripts, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_aliasSelected);
+    connect(treeWidget_aliases, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_actionSelected);
+    connect(treeWidget_actions, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_variableSelected);
+    connect(treeWidget_variables, &QTreeWidget::itemChanged, this, &dlgTriggerEditor::slot_variableChanged);
+    connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+    connect(treeWidget_searchResults, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_itemSelectedInSearchResults);
 
     // Force the size of the triangle icon button that shows/hides the search
     // results to be 3/4 of the height of the combo-box used to enter the search
@@ -712,8 +712,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     pLineEdit_searchTerm->addAction(mpAction_searchOptions, QLineEdit::LeadingPosition);
 
-    connect(mpScriptsMainArea->toolButton_script_add_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_script_main_area_add_handler);
-    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_script_main_area_delete_handler);
+    connect(mpScriptsMainArea->toolButton_script_add_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_scriptMainAreaAddHandler);
+    connect(mpScriptsMainArea->toolButton_script_remove_event_handler, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_scriptMainAreaDeleteHandler);
 
     mpTriggersMainArea->hide();
     mpTimersMainArea->hide();
@@ -810,8 +810,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pBox->setItemIcon(6, icon_color_trigger);
         pBox->setItemIcon(7, icon_prompt);
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
-        connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_color_trigger_fg);
-        connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_color_trigger_bg);
+        connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
+        connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
         HpatternList->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
@@ -837,7 +837,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
 }
 
-void dlgTriggerEditor::slot_toggleHiddenVar(bool status)
+void dlgTriggerEditor::slot_hideVariable(bool status)
 {
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
@@ -961,7 +961,7 @@ void dlgTriggerEditor::writeSettings()
     settings.setValue("mVarEditorSplitterState", mVarEditorSplitterState);
 }
 
-void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         return;
@@ -986,8 +986,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
         for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
-                slot_show_triggers();
-                slot_trigger_selected(treeWidgetItem);
+                slot_showTriggers();
+                slot_triggerSelected(treeWidgetItem);
                 treeWidget_triggers->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_triggers->scrollToItem(treeWidgetItem);
 
@@ -1039,8 +1039,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
         for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
-                slot_show_aliases();
-                slot_alias_selected(treeWidgetItem);
+                slot_showAliases();
+                slot_aliasSelected(treeWidgetItem);
                 treeWidget_aliases->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_aliases->scrollToItem(treeWidgetItem);
 
@@ -1087,8 +1087,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
         for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
-                slot_show_scripts();
-                slot_scripts_selected(treeWidgetItem);
+                slot_showScripts();
+                slot_scriptsSelected(treeWidgetItem);
                 treeWidget_scripts->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_scripts->scrollToItem(treeWidgetItem);
 
@@ -1111,7 +1111,7 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
                 case SearchResultIsEventHandler:
                     mpScriptsMainArea->listWidget_script_registered_event_handlers->setCurrentRow(pItem->data(0, PatternOrLineRole).toInt(), QItemSelectionModel::Clear);
                     mpScriptsMainArea->listWidget_script_registered_event_handlers->scrollTo(mpScriptsMainArea->listWidget_script_registered_event_handlers->currentIndex());
-                    // Taken from slot_script_main_area_edit_handler():
+                    // Taken from slot_scriptMainAreaEditHandler():
                     // Note the handler item being edited:
                     mpScriptsMainAreaEditHandlerItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
                     // Copy the event name to the entry widget:
@@ -1138,8 +1138,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
         for (auto treeWidgetitem : qAsConst(foundItemsList)) {
 
             if (treeWidgetitem->data(0, IdRole).toInt() == idSearch) {
-                slot_show_actions();
-                slot_action_selected(treeWidgetitem);
+                slot_showActions();
+                slot_actionSelected(treeWidgetitem);
                 treeWidget_actions->setCurrentItem(treeWidgetitem, 0);
                 treeWidget_actions->scrollToItem(treeWidgetitem);
 
@@ -1202,8 +1202,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
         for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
-                slot_show_timers();
-                slot_timer_selected(treeWidgetItem);
+                slot_showTimers();
+                slot_timerSelected(treeWidgetItem);
                 treeWidget_timers->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_timers->scrollToItem(treeWidgetItem);
 
@@ -1244,8 +1244,8 @@ void dlgTriggerEditor::slot_item_selected_search_list(QTreeWidgetItem* pItem)
             int idTree = treeWidgetItem->data(0, IdRole).toInt();
             int idSearch = pItem->data(0, IdRole).toInt();
             if (idTree == idSearch) {
-                slot_show_keys();
-                slot_key_selected(treeWidgetItem);
+                slot_showKeys();
+                slot_keySelected(treeWidgetItem);
                 treeWidget_keys->setCurrentItem(treeWidgetItem, 0);
                 treeWidget_keys->scrollToItem(treeWidgetItem);
 
@@ -3372,7 +3372,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     mpCurrentTriggerItem = pNewItem;
     treeWidget_triggers->setCurrentItem(pNewItem);
     showInfo(msgInfoAddTrigger);
-    slot_trigger_selected(treeWidget_triggers->currentItem());
+    slot_triggerSelected(treeWidget_triggers->currentItem());
 }
 
 
@@ -3458,7 +3458,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     mpCurrentTimerItem = pNewItem;
     treeWidget_timers->setCurrentItem(pNewItem);
     showInfo(msgInfoAddTimer);
-    slot_timer_selected(treeWidget_timers->currentItem());
+    slot_timerSelected(treeWidget_timers->currentItem());
 }
 
 void dlgTriggerEditor::addVar(bool isFolder)
@@ -3529,7 +3529,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     mpCurrentVarItem = pNewItem;
     treeWidget_variables->setCurrentItem(pNewItem);
     showInfo(msgInfoAddVar);
-    slot_var_selected(treeWidget_variables->currentItem());
+    slot_variableSelected(treeWidget_variables->currentItem());
 }
 
 void dlgTriggerEditor::addKey(bool isFolder)
@@ -3612,7 +3612,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
     mpCurrentKeyItem = pNewItem;
     treeWidget_keys->setCurrentItem(pNewItem);
     showInfo(msgInfoAddKey);
-    slot_key_selected(treeWidget_keys->currentItem());
+    slot_keySelected(treeWidget_keys->currentItem());
 }
 
 
@@ -3704,7 +3704,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem(pNewItem);
     showInfo(msgInfoAddAlias);
-    slot_alias_selected(treeWidget_aliases->currentItem());
+    slot_aliasSelected(treeWidget_aliases->currentItem());
 }
 
 void dlgTriggerEditor::addAction(bool isFolder)
@@ -3789,7 +3789,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     mpCurrentActionItem = pNewItem;
     treeWidget_actions->setCurrentItem(pNewItem);
     showInfo(msgInfoAddButton);
-    slot_action_selected(treeWidget_actions->currentItem());
+    slot_actionSelected(treeWidget_actions->currentItem());
 }
 
 
@@ -3872,16 +3872,16 @@ void dlgTriggerEditor::addScript(bool isFolder)
     clearDocument(mpSourceEditorEdbee, script);
     mpCurrentScriptItem = pNewItem;
     treeWidget_scripts->setCurrentItem(pNewItem);
-    slot_scripts_selected(treeWidget_scripts->currentItem());
+    slot_scriptsSelected(treeWidget_scripts->currentItem());
 }
 
 void dlgTriggerEditor::selectTriggerByID(int id)
 {
-    slot_show_triggers();
+    slot_showTriggers();
     QTreeWidgetItemIterator it(treeWidget_triggers);
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
-            slot_trigger_selected((*it));
+            slot_triggerSelected((*it));
             treeWidget_triggers->setCurrentItem((*it), 0);
             treeWidget_triggers->scrollToItem((*it));
             mpCurrentTriggerItem = (*it);
@@ -3893,11 +3893,11 @@ void dlgTriggerEditor::selectTriggerByID(int id)
 
 void dlgTriggerEditor::selectTimerByID(int id)
 {
-    slot_show_timers();
+    slot_showTimers();
     QTreeWidgetItemIterator it(treeWidget_timers);
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
-            slot_timer_selected((*it));
+            slot_timerSelected((*it));
             treeWidget_timers->setCurrentItem((*it), 0);
             treeWidget_timers->scrollToItem((*it));
             mpCurrentTimerItem = (*it);
@@ -3909,11 +3909,11 @@ void dlgTriggerEditor::selectTimerByID(int id)
 
 void dlgTriggerEditor::selectAliasByID(int id)
 {
-    slot_show_aliases();
+    slot_showAliases();
     QTreeWidgetItemIterator it(treeWidget_aliases);
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
-            slot_alias_selected((*it));
+            slot_aliasSelected((*it));
             treeWidget_aliases->setCurrentItem((*it), 0);
             treeWidget_aliases->scrollToItem((*it));
             mpCurrentAliasItem = (*it);
@@ -3925,11 +3925,11 @@ void dlgTriggerEditor::selectAliasByID(int id)
 
 void dlgTriggerEditor::selectScriptByID(int id)
 {
-    slot_show_scripts();
+    slot_showScripts();
     QTreeWidgetItemIterator it(treeWidget_scripts);
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
-            slot_scripts_selected((*it));
+            slot_scriptsSelected((*it));
             treeWidget_scripts->setCurrentItem((*it), 0);
             treeWidget_scripts->scrollToItem((*it));
             mpCurrentScriptItem = (*it);
@@ -3941,11 +3941,11 @@ void dlgTriggerEditor::selectScriptByID(int id)
 
 void dlgTriggerEditor::selectActionByID(int id)
 {
-    slot_show_actions();
+    slot_showActions();
     QTreeWidgetItemIterator it(treeWidget_actions);
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
-            slot_action_selected((*it));
+            slot_actionSelected((*it));
             treeWidget_actions->setCurrentItem((*it), 0);
             treeWidget_actions->scrollToItem((*it));
             mpCurrentActionItem = (*it);
@@ -3957,11 +3957,11 @@ void dlgTriggerEditor::selectActionByID(int id)
 
 void dlgTriggerEditor::selectKeyByID(int id)
 {
-    slot_show_keys();
+    slot_showKeys();
     QTreeWidgetItemIterator it(treeWidget_keys);
     while (*it) {
         if ((*it)->data(0, Qt::UserRole).toInt() == id) {
-            slot_key_selected((*it));
+            slot_keySelected((*it));
             treeWidget_keys->setCurrentItem((*it), 0);
             treeWidget_keys->scrollToItem((*it));
             mpCurrentKeyItem = (*it);
@@ -4324,6 +4324,7 @@ void dlgTriggerEditor::saveAction()
         return;
     }
 
+    mpActionsMainArea->trimName();
     QString name = mpActionsMainArea->lineEdit_action_name->text();
     QString icon = mpActionsMainArea->lineEdit_action_icon->text();
     QString commandDown = mpActionsMainArea->lineEdit_action_button_command_down->text();
@@ -4488,7 +4489,7 @@ void dlgTriggerEditor::saveScript()
     }
     QStringList handlerList;
     for (auto& listWidgetItem : itemList) {
-        if (listWidgetItem->text().size() < 1) {
+        if (listWidgetItem->text().isEmpty()) {
             continue;
         }
         handlerList << listWidgetItem->text();
@@ -4628,7 +4629,7 @@ void dlgTriggerEditor::saveVar()
     QString newName = mpVarsMainArea->lineEdit_var_name->text();
     QString newValue = mpSourceEditorEdbeeDocument->text();
     if (newName.isEmpty()) {
-        slot_var_selected(pItem);
+        slot_variableSelected(pItem);
         return;
     }
     mChangingVar = true;
@@ -4796,7 +4797,7 @@ void dlgTriggerEditor::saveVar()
     }
     pItem->setIcon(0, icon);
     mChangingVar = false;
-    slot_var_selected(pItem);
+    slot_variableSelected(pItem);
 }
 
 void dlgTriggerEditor::saveKey()
@@ -4806,6 +4807,7 @@ void dlgTriggerEditor::saveKey()
         return;
     }
 
+    mpKeysMainArea->trimName();
     QString name = mpKeysMainArea->lineEdit_key_name->text();
     if (name.isEmpty() || name == tr("New key")) {
         name = mpKeysMainArea->lineEdit_key_binding->text();
@@ -5007,7 +5009,7 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
     }
 }
 
-void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         return;
@@ -5099,7 +5101,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
                                                                   .arg(QString::number(pT->mColorPatternList.at(i)->ansiBg)));
                     }
                 } else {
-                    qWarning() << "dlgTriggerEditor::slot_trigger_selected(...) ERROR: TTrigger instance has an mColorPattern of size:"
+                    qWarning() << "dlgTriggerEditor::slot_triggerSelected(...) ERROR: TTrigger instance has an mColorPattern of size:"
                                << pT->mColorPatternList.size()
                                << "but array element:"
                                << i
@@ -5175,7 +5177,7 @@ void dlgTriggerEditor::slot_trigger_selected(QTreeWidgetItem* pItem)
     }
 }
 
-void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
@@ -5224,7 +5226,7 @@ void dlgTriggerEditor::slot_alias_selected(QTreeWidgetItem* pItem)
     }
 }
 
-void dlgTriggerEditor::slot_key_selected(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
@@ -5302,7 +5304,7 @@ void dlgTriggerEditor::recursiveSearchVariables(TVar* var, QList<TVar*>& list, b
     }
 }
 
-void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
 {
     // This handles a small case where the radio button is clicked while the item is currently selected
     // which causes the variable to not save. In places where we populate the TreeWidgetItem, we have
@@ -5365,7 +5367,7 @@ void dlgTriggerEditor::slot_var_changed(QTreeWidgetItem* pItem)
     }
 }
 
-void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
 {
     if (!pItem ||treeWidget_variables->indexOfTopLevelItem(pItem) == 0) {
         // Null item or it is for the first row of the tree
@@ -5563,7 +5565,7 @@ void dlgTriggerEditor::slot_var_selected(QTreeWidgetItem* pItem)
     mChangingVar = false;
 }
 
-void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
@@ -5684,7 +5686,7 @@ void dlgTriggerEditor::slot_action_selected(QTreeWidgetItem* pItem)
     }
 }
 
-void dlgTriggerEditor::slot_tree_selection_changed()
+void dlgTriggerEditor::slot_treeSelectionChanged()
 {
     auto * sender = qobject_cast<TTreeWidget*>(QObject::sender());
     if (sender) {
@@ -5692,26 +5694,26 @@ void dlgTriggerEditor::slot_tree_selection_changed()
         if (items.length()) {
             QTreeWidgetItem* item = items.first();
             if (sender == treeWidget_scripts) {
-                slot_scripts_selected(item);
+                slot_scriptsSelected(item);
             } else if (sender == treeWidget_keys) {
-                slot_key_selected(item);
+                slot_keySelected(item);
             } else if (sender == treeWidget_timers) {
-                slot_timer_selected(item);
+                slot_timerSelected(item);
             } else if (sender == treeWidget_aliases) {
-                slot_alias_selected(item);
+                slot_aliasSelected(item);
             } else if (sender == treeWidget_actions) {
-                slot_action_selected(item);
+                slot_actionSelected(item);
             } else if (sender == treeWidget_variables) {
-                slot_var_selected(item);
+                slot_variableSelected(item);
             } else if (sender == treeWidget_triggers) {
-                slot_trigger_selected(item);
+                slot_triggerSelected(item);
             }
         }
     }
 }
 
 
-void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
@@ -5762,7 +5764,7 @@ void dlgTriggerEditor::slot_scripts_selected(QTreeWidgetItem* pItem)
     }
 }
 
-void dlgTriggerEditor::slot_timer_selected(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         // No details to show - so show the help message:
@@ -6766,7 +6768,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     mpExportAction->setEnabled(view != EditorViewType::cmVarsView);
 }
 
-void dlgTriggerEditor::slot_show_timers()
+void dlgTriggerEditor::slot_showTimers()
 {
     changeView(EditorViewType::cmTimerView);
     QTreeWidgetItem* pI = treeWidget_timers->topLevelItem(0);
@@ -6779,7 +6781,7 @@ void dlgTriggerEditor::slot_show_timers()
     } else {
         mpTimersMainArea->show();
         mpSourceEditorArea->show();
-        slot_timer_selected(treeWidget_timers->currentItem());
+        slot_timerSelected(treeWidget_timers->currentItem());
     }
     if (!mTimerEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mTimerEditorSplitterState);
@@ -6790,7 +6792,7 @@ void dlgTriggerEditor::slot_show_timers()
     }
 }
 
-void dlgTriggerEditor::slot_show_current()
+void dlgTriggerEditor::showCurrentTriggerItem()
 {
     if (mCurrentView != EditorViewType::cmUnknownView) {
         return;
@@ -6807,11 +6809,11 @@ void dlgTriggerEditor::slot_show_current()
     } else {
         mpTriggersMainArea->show();
         mpSourceEditorArea->show();
-        slot_trigger_selected(treeWidget_triggers->currentItem());
+        slot_triggerSelected(treeWidget_triggers->currentItem());
     }
 }
 
-void dlgTriggerEditor::slot_show_triggers()
+void dlgTriggerEditor::slot_showTriggers()
 {
     changeView(EditorViewType::cmTriggerView);
     QTreeWidgetItem* pI = treeWidget_triggers->topLevelItem(0);
@@ -6824,7 +6826,7 @@ void dlgTriggerEditor::slot_show_triggers()
     } else {
         mpTriggersMainArea->show();
         mpSourceEditorArea->show();
-        slot_trigger_selected(treeWidget_triggers->currentItem());
+        slot_triggerSelected(treeWidget_triggers->currentItem());
     }
     if (!mTriggerEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mTriggerEditorSplitterState);
@@ -6835,7 +6837,7 @@ void dlgTriggerEditor::slot_show_triggers()
     }
 }
 
-void dlgTriggerEditor::slot_show_scripts()
+void dlgTriggerEditor::slot_showScripts()
 {
     changeView(EditorViewType::cmScriptView);
     QTreeWidgetItem* pI = treeWidget_scripts->topLevelItem(0);
@@ -6846,7 +6848,7 @@ void dlgTriggerEditor::slot_show_scripts()
     } else {
         mpScriptsMainArea->show();
         mpSourceEditorArea->show();
-        slot_scripts_selected(treeWidget_scripts->currentItem());
+        slot_scriptsSelected(treeWidget_scripts->currentItem());
     }
     if (!mScriptEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mScriptEditorSplitterState);
@@ -6857,7 +6859,7 @@ void dlgTriggerEditor::slot_show_scripts()
     }
 }
 
-void dlgTriggerEditor::slot_show_keys()
+void dlgTriggerEditor::slot_showKeys()
 {
     changeView(EditorViewType::cmKeysView);
     QTreeWidgetItem* pI = treeWidget_keys->topLevelItem(0);
@@ -6870,7 +6872,7 @@ void dlgTriggerEditor::slot_show_keys()
     } else {
         mpKeysMainArea->show();
         mpSourceEditorArea->show();
-        slot_key_selected(treeWidget_keys->currentItem());
+        slot_keySelected(treeWidget_keys->currentItem());
     }
     if (!mKeyEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mKeyEditorSplitterState);
@@ -6881,7 +6883,7 @@ void dlgTriggerEditor::slot_show_keys()
     }
 }
 
-void dlgTriggerEditor::slot_show_vars()
+void dlgTriggerEditor::slot_showVariables()
 {
     changeView(EditorViewType::cmVarsView);
     repopulateVars();
@@ -6898,7 +6900,7 @@ void dlgTriggerEditor::slot_show_vars()
     } else {
         mpVarsMainArea->show();
         mpSourceEditorArea->show();
-        slot_var_selected(treeWidget_variables->currentItem());
+        slot_variableSelected(treeWidget_variables->currentItem());
     }
     if (!mVarEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mVarEditorSplitterState);
@@ -6921,7 +6923,7 @@ void dlgTriggerEditor::show_vars()
     if (pI) {
         if (pI->childCount() > 0) {
             mpVarsMainArea->show();
-            slot_var_selected(treeWidget_variables->currentItem());
+            slot_variableSelected(treeWidget_variables->currentItem());
         } else {
             mpVarsMainArea->hide();
             showInfo(msgInfoAddVar);
@@ -6931,7 +6933,7 @@ void dlgTriggerEditor::show_vars()
 }
 
 
-void dlgTriggerEditor::slot_show_aliases()
+void dlgTriggerEditor::slot_showAliases()
 {
     changeView(EditorViewType::cmAliasView);
     QTreeWidgetItem* pI = treeWidget_aliases->topLevelItem(0);
@@ -6944,7 +6946,7 @@ void dlgTriggerEditor::slot_show_aliases()
     } else {
         mpAliasMainArea->show();
         mpSourceEditorArea->show();
-        slot_alias_selected(treeWidget_aliases->currentItem());
+        slot_aliasSelected(treeWidget_aliases->currentItem());
     }
     if (!mAliasEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mAliasEditorSplitterState);
@@ -6982,7 +6984,7 @@ void dlgTriggerEditor::showWarning(const QString& error)
     mpSystemMessageArea->show();
 }
 
-void dlgTriggerEditor::slot_show_actions()
+void dlgTriggerEditor::slot_showActions()
 {
     changeView(EditorViewType::cmActionView);
     QTreeWidgetItem* pI = treeWidget_actions->topLevelItem(0);
@@ -6993,7 +6995,7 @@ void dlgTriggerEditor::slot_show_actions()
     } else {
         mpActionsMainArea->show();
         mpSourceEditorArea->show();
-        slot_action_selected(treeWidget_actions->currentItem());
+        slot_actionSelected(treeWidget_actions->currentItem());
     }
     if (!mActionEditorSplitterState.isEmpty()) {
         splitter_right->restoreState(mActionEditorSplitterState);
@@ -7004,7 +7006,7 @@ void dlgTriggerEditor::slot_show_actions()
     }
 }
 
-void dlgTriggerEditor::slot_save_edit()
+void dlgTriggerEditor::slot_saveEdits()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -7029,14 +7031,14 @@ void dlgTriggerEditor::slot_save_edit()
         saveVar();
         break;
     default:
-        qWarning() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
+        qWarning() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
     }
 
     // There was a mpHost->serialize() call here, but that code was
     // "short-circuited" and returned without doing anything;
 }
 
-void dlgTriggerEditor::slot_add_new()
+void dlgTriggerEditor::slot_addNewItem()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -7061,11 +7063,11 @@ void dlgTriggerEditor::slot_add_new()
         addVar(false); //add variable
         break;
     default:
-        qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
+        qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
     }
 }
 
-void dlgTriggerEditor::slot_add_new_folder()
+void dlgTriggerEditor::slot_addNewGroup()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -7090,11 +7092,11 @@ void dlgTriggerEditor::slot_add_new_folder()
         addVar(true); // add lua table
         break;
     default:
-        qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
+        qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
     }
 }
 
-void dlgTriggerEditor::slot_toggle_active()
+void dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -7117,11 +7119,11 @@ void dlgTriggerEditor::slot_toggle_active()
         break;
 
     default:
-        qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
+        qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
     }
 }
 
-void dlgTriggerEditor::slot_move_source_find()
+void dlgTriggerEditor::slot_sourceFindMove()
 {
     int x = mpSourceEditorEdbee->width() - mpSourceEditorFindArea->width();
     int y = mpSourceEditorEdbee->height() - mpSourceEditorFindArea->height();
@@ -7135,15 +7137,15 @@ void dlgTriggerEditor::slot_move_source_find()
     mpSourceEditorFindArea->update();
 }
 
-void dlgTriggerEditor::slot_open_source_find()
+void dlgTriggerEditor::slot_openSourceFind()
 {
-    slot_move_source_find();
+    slot_sourceFindMove();
     mpSourceEditorFindArea->show();
     mpSourceEditorFindArea->lineEdit_findText->setFocus();
     mpSourceEditorFindArea->lineEdit_findText->selectAll();
 }
 
-void dlgTriggerEditor::slot_close_source_find()
+void dlgTriggerEditor::slot_closeSourceFind()
 {
     auto controller = mpSourceEditorEdbee->controller();
     controller->borderedTextRanges()->clear();
@@ -7153,7 +7155,7 @@ void dlgTriggerEditor::slot_close_source_find()
     mpSourceEditorEdbee->setFocus();
 }
 
-void dlgTriggerEditor::slot_source_find_previous()
+void dlgTriggerEditor::slot_sourceFindPrevious()
 {
     auto controller = mpSourceEditorEdbee->controller();
     auto searcher = controller->textSearcher();
@@ -7162,10 +7164,10 @@ void dlgTriggerEditor::slot_source_find_previous()
     searcher->findPrev(mpSourceEditorEdbee);
     controller->scrollCaretVisible();
     controller->update();
-    slot_move_source_find();
+    slot_sourceFindMove();
 }
 
-void dlgTriggerEditor::slot_source_find_next()
+void dlgTriggerEditor::slot_sourceFindNext()
 {
     auto controller = mpSourceEditorEdbee->controller();
     auto searcher = controller->textSearcher();
@@ -7174,10 +7176,10 @@ void dlgTriggerEditor::slot_source_find_next()
     searcher->findNext(mpSourceEditorEdbee);
     controller->scrollCaretVisible();
     controller->update();
-    slot_move_source_find();
+    slot_sourceFindMove();
 }
 
-void dlgTriggerEditor::slot_source_find_text_changed()
+void dlgTriggerEditor::slot_sourceFindTextChanges()
 {
     auto text = mpSourceEditorFindArea->lineEdit_findText->text();
     if (text.length() <= 2) {
@@ -7193,7 +7195,7 @@ void dlgTriggerEditor::slot_source_find_text_changed()
     controller->update();
 }
 
-void dlgTriggerEditor::slot_delete_item()
+void dlgTriggerEditor::slot_deleteItemOrGroup()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -7218,11 +7220,11 @@ void dlgTriggerEditor::slot_delete_item()
         delete_variable();
         break;
     default:
-        qDebug() << "ERROR: dlgTriggerEditor::slot_save_edit() undefined view";
+        qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
     }
 }
 
-void dlgTriggerEditor::slot_item_selected_save(QTreeWidgetItem* pItem)
+void dlgTriggerEditor::slot_saveSelectedItem(QTreeWidgetItem* pItem)
 {
     if (!pItem) {
         return;
@@ -7251,14 +7253,14 @@ void dlgTriggerEditor::slot_item_selected_save(QTreeWidgetItem* pItem)
         saveVar();
         break;
     case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_item_selected_save() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_saveSelectedItem() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 }
 
 // Should the functionality change in this method be sure to review the code
 // for "case SearchResultIsEventHandler" for "Scripts" in:
-// slot_item_selected_search_list(...)
-void dlgTriggerEditor::slot_script_main_area_edit_handler(QListWidgetItem*)
+// slot_itemSelectedInSearchResults(...)
+void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
 {
     QListWidgetItem* pItem = mpScriptsMainArea->listWidget_script_registered_event_handlers->currentItem();
     if (!pItem) {
@@ -7267,19 +7269,19 @@ void dlgTriggerEditor::slot_script_main_area_edit_handler(QListWidgetItem*)
     mIsScriptsMainAreaEditHandler = true;
     mpScriptsMainAreaEditHandlerItem = pItem;
     QString regex = pItem->text();
-    if (regex.size() < 1) {
+    if (regex.isEmpty()) {
         mIsScriptsMainAreaEditHandler = false;
         return;
     }
     mpScriptsMainArea->lineEdit_script_event_handler_entry->setText(regex);
 }
 
-void dlgTriggerEditor::slot_script_main_area_delete_handler()
+void dlgTriggerEditor::slot_scriptMainAreaDeleteHandler()
 {
     mpScriptsMainArea->listWidget_script_registered_event_handlers->takeItem(mpScriptsMainArea->listWidget_script_registered_event_handlers->currentRow());
 }
 
-void dlgTriggerEditor::slot_script_main_area_add_handler()
+void dlgTriggerEditor::slot_scriptMainAreaAddHandler()
 {
     auto addEventHandler = [&] () {
         auto pItem = new QListWidgetItem;
@@ -7306,7 +7308,7 @@ void dlgTriggerEditor::slot_script_main_area_add_handler()
     mpScriptsMainArea->lineEdit_script_event_handler_entry->clear();
 }
 
-void dlgTriggerEditor::slot_debug_mode()
+void dlgTriggerEditor::slot_toggleCentralDebugConsole()
 {
     mudlet::self()->attachDebugArea(mpHost->getName());
 
@@ -7321,31 +7323,32 @@ void dlgTriggerEditor::slot_debug_mode()
     mudlet::self()->refreshTabBar();
 }
 
-void dlgTriggerEditor::slot_next_section()
+void dlgTriggerEditor::slot_nextSection()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             treeWidget_triggers->setFocus();
             return;
-        } else if (treeWidget_triggers->hasFocus()) {
+        }
+        if (treeWidget_triggers->hasFocus()) {
             mpTriggersMainArea->lineEdit_trigger_name->setFocus();
             return;
-        } else if (mpTriggersMainArea->hasFocus()) {
+        }
+        if (mpTriggersMainArea->hasFocus()) {
             mTriggerPatternEdit[0]->lineEdit_pattern->setFocus();
             return;
-        } else {
-            for (auto child : mpTriggersMainArea->scrollArea->findChildren<QWidget*>()) {
-                if (child->hasFocus()) {
-                    mpSourceEditorEdbee->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpTriggersMainArea->scrollArea->findChildren<QWidget*>()) {
+            if (child->hasFocus()) {
+                mpSourceEditorEdbee->setFocus();
+                return;
             }
-            for (auto child : mpTriggersMainArea->findChildren<QWidget*>()) {
-                if (child->hasFocus()) {
-                    mTriggerPatternEdit[0]->lineEdit_pattern->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpTriggersMainArea->findChildren<QWidget*>()) {
+            if (child->hasFocus()) {
+                mTriggerPatternEdit[0]->lineEdit_pattern->setFocus();
+                return;
             }
         }
         break;
@@ -7353,15 +7356,15 @@ void dlgTriggerEditor::slot_next_section()
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             treeWidget_timers->setFocus();
             return;
-        } else if (treeWidget_timers->hasFocus()) {
+        }
+        if (treeWidget_timers->hasFocus()) {
             mpTimersMainArea->lineEdit_timer_name->setFocus();
             return;
-        } else {
-            for (auto child : mpTimersMainArea->findChildren<QWidget*>()) {
-                if (child->hasFocus()) {
-                    mpSourceEditorEdbee->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpTimersMainArea->findChildren<QWidget*>()) {
+            if (child->hasFocus()) {
+                mpSourceEditorEdbee->setFocus();
+                return;
             }
         }
         break;
@@ -7369,15 +7372,15 @@ void dlgTriggerEditor::slot_next_section()
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             treeWidget_aliases->setFocus();
             return;
-        } else if (treeWidget_aliases->hasFocus()) {
+        }
+        if (treeWidget_aliases->hasFocus()) {
             mpAliasMainArea->lineEdit_alias_name->setFocus();
             return;
-        } else {
-            for (auto child : mpAliasMainArea->findChildren<QWidget*>()) {
-                if (child->hasFocus()) {
-                    mpSourceEditorEdbee->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpAliasMainArea->findChildren<QWidget*>()) {
+            if (child->hasFocus()) {
+                mpSourceEditorEdbee->setFocus();
+                return;
             }
         }
         break;
@@ -7385,15 +7388,15 @@ void dlgTriggerEditor::slot_next_section()
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             treeWidget_scripts->setFocus();
             return;
-        } else if (treeWidget_scripts->hasFocus()) {
+        }
+        if (treeWidget_scripts->hasFocus()) {
             mpScriptsMainArea->lineEdit_script_name->setFocus();
             return;
-        } else {
-            for (auto child : mpScriptsMainArea->findChildren<QWidget*>()) {
-                if (child->hasFocus()) {
-                    mpSourceEditorEdbee->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpScriptsMainArea->findChildren<QWidget*>()) {
+            if (child->hasFocus()) {
+                mpSourceEditorEdbee->setFocus();
+                return;
             }
         }
         break;
@@ -7401,15 +7404,15 @@ void dlgTriggerEditor::slot_next_section()
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             treeWidget_actions->setFocus();
             return;
-        } else if (treeWidget_actions->hasFocus()) {
+        }
+        if (treeWidget_actions->hasFocus()) {
             mpActionsMainArea->lineEdit_action_name->setFocus();
             return;
-        } else {
-            for (auto child : mpActionsMainArea->findChildren<QWidget*>()) {
-                if (child->hasFocus()) {
-                    mpSourceEditorEdbee->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpActionsMainArea->findChildren<QWidget*>()) {
+            if (child->hasFocus()) {
+                mpSourceEditorEdbee->setFocus();
+                return;
             }
         }
         break;
@@ -7417,15 +7420,15 @@ void dlgTriggerEditor::slot_next_section()
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             treeWidget_keys->setFocus();
             return;
-        } else if (treeWidget_keys->hasFocus()) {
+        }
+        if (treeWidget_keys->hasFocus()) {
             mpKeysMainArea->lineEdit_key_name->setFocus();
             return;
-        } else {
-            for (auto child : mpKeysMainArea->findChildren<QWidget*>()) {
-                if (child->hasFocus()) {
-                    mpSourceEditorEdbee->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpKeysMainArea->findChildren<QWidget*>()) {
+            if (child->hasFocus()) {
+                mpSourceEditorEdbee->setFocus();
+                return;
             }
         }
         break;
@@ -7433,15 +7436,15 @@ void dlgTriggerEditor::slot_next_section()
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             treeWidget_variables->setFocus();
             return;
-        } else if (treeWidget_variables->hasFocus()) {
+        }
+        if (treeWidget_variables->hasFocus()) {
             mpVarsMainArea->lineEdit_var_name->setFocus();
             return;
-        } else {
-            for (auto child : mpVarsMainArea->findChildren<QWidget*>()) {
-                if (child->hasFocus()) {
-                    mpSourceEditorEdbee->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpVarsMainArea->findChildren<QWidget*>()) {
+            if (child->hasFocus()) {
+                mpSourceEditorEdbee->setFocus();
+                return;
             }
         }
         break;
@@ -7450,28 +7453,28 @@ void dlgTriggerEditor::slot_next_section()
     }
 }
 
-void dlgTriggerEditor::slot_previous_section()
+void dlgTriggerEditor::slot_previousSection()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             mTriggerPatternEdit[0]->lineEdit_pattern->setFocus();
             return;
-        } else if (treeWidget_triggers->hasFocus()) {
+        }
+        if (treeWidget_triggers->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
-        } else {
-            for (auto child : mpTriggersMainArea->scrollArea->findChildren<QWidget *>()) {
-                if (child->hasFocus()){
-                    mpTriggersMainArea->lineEdit_trigger_name->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpTriggersMainArea->scrollArea->findChildren<QWidget *>()) {
+            if (child->hasFocus()){
+                mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+                return;
             }
-            for (auto child : mpTriggersMainArea->findChildren<QWidget *>()) {
-                if (child->hasFocus()){
-                    treeWidget_triggers->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpTriggersMainArea->findChildren<QWidget *>()) {
+            if (child->hasFocus()){
+                treeWidget_triggers->setFocus();
+                return;
             }
         }
         break;
@@ -7479,15 +7482,15 @@ void dlgTriggerEditor::slot_previous_section()
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             mpTimersMainArea->lineEdit_timer_name->setFocus();
             return;
-        } else if (treeWidget_timers->hasFocus()) {
+        }
+        if (treeWidget_timers->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
-        } else {
-            for (auto child : mpTimersMainArea->findChildren<QWidget *>()) {
-                if (child->hasFocus()){
-                    treeWidget_timers->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpTimersMainArea->findChildren<QWidget *>()) {
+            if (child->hasFocus()){
+                treeWidget_timers->setFocus();
+                return;
             }
         }
         break;
@@ -7495,15 +7498,15 @@ void dlgTriggerEditor::slot_previous_section()
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             mpAliasMainArea->lineEdit_alias_name->setFocus();
             return;
-        } else if (treeWidget_aliases->hasFocus()) {
+        }
+        if (treeWidget_aliases->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
-        } else {
-            for (auto child : mpAliasMainArea->findChildren<QWidget *>()) {
-                if (child->hasFocus()){
-                    treeWidget_aliases->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpAliasMainArea->findChildren<QWidget *>()) {
+            if (child->hasFocus()){
+                treeWidget_aliases->setFocus();
+                return;
             }
         }
         break;
@@ -7511,15 +7514,15 @@ void dlgTriggerEditor::slot_previous_section()
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             mpScriptsMainArea->lineEdit_script_name->setFocus();
             return;
-        } else if (treeWidget_scripts->hasFocus()) {
+        }
+        if (treeWidget_scripts->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
-        } else {
-            for (auto child : mpScriptsMainArea->findChildren<QWidget *>()) {
-                if (child->hasFocus()){
-                    treeWidget_scripts->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpScriptsMainArea->findChildren<QWidget *>()) {
+            if (child->hasFocus()){
+                treeWidget_scripts->setFocus();
+                return;
             }
         }
         break;
@@ -7527,15 +7530,15 @@ void dlgTriggerEditor::slot_previous_section()
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             mpActionsMainArea->lineEdit_action_name->setFocus();
             return;
-        } else if (treeWidget_actions->hasFocus()) {
+        }
+        if (treeWidget_actions->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
-        } else {
-            for (auto child : mpActionsMainArea->findChildren<QWidget *>()) {
-                if (child->hasFocus()){
-                    treeWidget_actions->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpActionsMainArea->findChildren<QWidget *>()) {
+            if (child->hasFocus()){
+                treeWidget_actions->setFocus();
+                return;
             }
         }
         break;
@@ -7543,15 +7546,15 @@ void dlgTriggerEditor::slot_previous_section()
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             mpKeysMainArea->lineEdit_key_name->setFocus();
             return;
-        } else if (treeWidget_keys->hasFocus()) {
+        }
+        if (treeWidget_keys->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
-        } else {
-            for (auto child : mpKeysMainArea->findChildren<QWidget *>()) {
-                if (child->hasFocus()){
-                    treeWidget_keys->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpKeysMainArea->findChildren<QWidget *>()) {
+            if (child->hasFocus()){
+                treeWidget_keys->setFocus();
+                return;
             }
         }
         break;
@@ -7559,15 +7562,15 @@ void dlgTriggerEditor::slot_previous_section()
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
             mpVarsMainArea->lineEdit_var_name->setFocus();
             return;
-        } else if (treeWidget_variables->hasFocus()) {
+        }
+        if (treeWidget_variables->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
-        } else {
-            for (auto child : mpVarsMainArea->findChildren<QWidget *>()) {
-                if (child->hasFocus()){
-                    treeWidget_variables->setFocus();
-                    return;
-                }
+        }
+        for (auto child : mpVarsMainArea->findChildren<QWidget *>()) {
+            if (child->hasFocus()){
+                treeWidget_variables->setFocus();
+                return;
             }
         }
         break;
@@ -7921,7 +7924,7 @@ void dlgTriggerEditor::slot_export()
     }
 }
 
-void dlgTriggerEditor::slot_copy_xml()
+void dlgTriggerEditor::slot_copyXml()
 {
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -7943,16 +7946,16 @@ void dlgTriggerEditor::slot_copy_xml()
         exportKeyToClipboard();
         break;
     case EditorViewType::cmVarsView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_copy_xml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_copyXml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
         break;
     case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_copy_xml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_copyXml() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
         break;
     }
 }
 
 // FIXME: The switch cases in here need to handle EditorViewType::cmVarsView but how is not clear
-void dlgTriggerEditor::slot_paste_xml()
+void dlgTriggerEditor::slot_pasteXml()
 {
     XMLimport reader(mpHost);
     EditorViewType importedItemType = EditorViewType::cmUnknownView;
@@ -7978,10 +7981,10 @@ void dlgTriggerEditor::slot_paste_xml()
         saveKey();
         break;
     case EditorViewType::cmVarsView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 1 not expected to be called for \"EditorViewType::cmVarsView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 1 not expected to be called for \"EditorViewType::cmVarsView!\"";
         break;
     case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 1 not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 1 not expected to be called for \"EditorViewType::cmUnknownView!\"";
         break;
     }
 
@@ -8053,10 +8056,10 @@ void dlgTriggerEditor::slot_paste_xml()
         break;
     }
     case EditorViewType::cmVarsView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmVarsView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmVarsView!\"";
         break;
     case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 2 not expected to be called for \"EditorViewType::cmUnknownView!\"";
         break;
     }
 
@@ -8120,10 +8123,10 @@ void dlgTriggerEditor::slot_paste_xml()
         break;
     }
     case EditorViewType::cmVarsView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 3 not expected to be called for \"EditorViewType::cmVarsView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 3 not expected to be called for \"EditorViewType::cmVarsView!\"";
         break;
     case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_paste_xml() WARNING - switch(EditorViewType) number 3 not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_pasteXml() WARNING - switch(EditorViewType) number 3 not expected to be called for \"EditorViewType::cmUnknownView!\"";
         break;
     }
 }
@@ -8181,7 +8184,7 @@ void dlgTriggerEditor::slot_import()
     mpCurrentActionItem = nullptr;
     mpCurrentKeyItem = nullptr;
 
-    slot_show_triggers();
+    slot_showTriggers();
 }
 
 void dlgTriggerEditor::doCleanReset()
@@ -8242,7 +8245,7 @@ void dlgTriggerEditor::runScheduledCleanReset()
     mpCurrentScriptItem = nullptr;
     mpCurrentActionItem = nullptr;
     mpCurrentKeyItem = nullptr;
-    slot_show_triggers();
+    slot_showTriggers();
 }
 
 void dlgTriggerEditor::slot_profileSaveAction()
@@ -8334,11 +8337,11 @@ void dlgTriggerEditor::resizeEvent(QResizeEvent* event)
 {
     Q_UNUSED(event)
     if (mpSourceEditorArea->isVisible()) {
-        slot_move_source_find();
+        slot_sourceFindMove();
     }
 }
 
-void dlgTriggerEditor::slot_key_grab()
+void dlgTriggerEditor::slot_keyGrab()
 {
     mIsGrabKey = true;
     setShortcuts(false);
@@ -8347,16 +8350,16 @@ void dlgTriggerEditor::slot_key_grab()
 
 // Activate shortcuts for editor menu items like Ctrl+S for "Save Item" etc.
 // Deactivate instead with optional "false" - to allow these for keybindings
-void dlgTriggerEditor::setShortcuts(const bool setNotUnset)
+void dlgTriggerEditor::setShortcuts(const bool active)
 {
     QList<QAction*> actionList = toolBar->actions();
     QString actionText;
     for (auto& action : actionList) {
         actionText = action->text();
         if (actionText ==  tr("Save Item")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+S") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+S") : QString());
         } else if (actionText == tr("Save Profile")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+Shift+S") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+Shift+S") : QString());
         }
     }
     actionList = toolBar2->actions();
@@ -8364,25 +8367,25 @@ void dlgTriggerEditor::setShortcuts(const bool setNotUnset)
         actionText = action->text();
         // TODO: Refactor into nice list to iterate
         if (actionText == tr("Triggers")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+1") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+1") : QString());
         } else if (actionText == tr("Aliases")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+2") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+2") : QString());
         } else if (actionText == tr("Scripts")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+3") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+3") : QString());
         } else if (actionText == tr("Timers")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+4") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+4") : QString());
         } else if (actionText == tr("Keys")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+5") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+5") : QString());
         } else if (actionText == tr("Variables")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+6") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+6") : QString());
         } else if (actionText == tr("Buttons")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+7") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+7") : QString());
         } else if (actionText == tr("Errors")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+8") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+8") : QString());
         } else if (actionText == tr("Statistics")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+9") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+9") : QString());
         } else if (actionText == tr("Debug")) {
-            action->setShortcut((setNotUnset) ? tr("Ctrl+0") : tr(""));
+            action->setShortcut((active) ? tr("Ctrl+0") : QString());
         }
     }
 }
@@ -8407,13 +8410,14 @@ void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardMo
     }
 }
 
-void dlgTriggerEditor::slot_chose_action_icon()
-{
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
-    mpActionsMainArea->lineEdit_action_icon->setText(fileName);
-}
+// Not used:
+//void dlgTriggerEditor::slot_choseActionIcon()
+//{
+//    QString fileName = QFileDialog::getOpenFileName(this, tr("Select Icon"), QDir::homePath(), tr("Images (*.png *.xpm *.jpg)"));
+//    mpActionsMainArea->lineEdit_action_icon->setText(fileName);
+//}
 
-void dlgTriggerEditor::slot_toggle_isPushDownButton(const int state)
+void dlgTriggerEditor::slot_toggleIsPushDownButton(const int state)
 {
     if (state == Qt::Checked) {
         mpActionsMainArea->lineEdit_action_button_command_up->show();
@@ -8499,7 +8503,7 @@ void dlgTriggerEditor::slot_soundTrigger()
 
 // Get the color from the user to use as that to look for as the foreground in
 // a color trigger:
-void dlgTriggerEditor::slot_color_trigger_fg()
+void dlgTriggerEditor::slot_colorTriggerFg()
 {
     QTreeWidgetItem* pItem = mpCurrentTriggerItem;
     if (!pItem) {
@@ -8563,7 +8567,7 @@ void dlgTriggerEditor::slot_color_trigger_fg()
 
 // Get the color from the user to use as that to look for as the background in
 // a color trigger:
-void dlgTriggerEditor::slot_color_trigger_bg()
+void dlgTriggerEditor::slot_colorTriggerBg()
 {
     QTreeWidgetItem* pItem = mpCurrentTriggerItem;
     if (!pItem) {
@@ -9041,7 +9045,7 @@ void dlgTriggerEditor::slot_rightSplitterMoved(const int, const int)
         mVarEditorSplitterState = splitter_right->saveState();
     }
     if (mpSourceEditorFindArea->isVisible()) {
-        slot_move_source_find();
+        slot_sourceFindMove();
     }
 }
 

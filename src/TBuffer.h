@@ -51,6 +51,7 @@
 
 class Host;
 class QTextCodec;
+class TConsole;
 
 class TChar
 {
@@ -143,7 +144,7 @@ class TBuffer
     inline static const int MAX_CHARACTERS_PER_ECHO = 1000000;
 
 public:
-    explicit TBuffer(Host* pH);
+    explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -153,6 +154,7 @@ public:
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0,  int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
+    bool isEmpty() const { return buffer.size() == 0; }
     QString& line(int n);
     int find(int line, const QString& what, int pos);
     int wrap(int);
@@ -193,9 +195,13 @@ public:
 
 
     std::deque<TChar> bufferLine;
+    // stores the text attributes (TChars) that make up each line of text in the buffer
     std::deque<std::deque<TChar>> buffer;
-    QStringList timeBuffer;
+    // stores the actual content of lines
     QStringList lineBuffer;
+    // stores timestamps associated with lines
+    QStringList timeBuffer;
+    // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
@@ -219,6 +225,8 @@ private:
     void decodeOSC(const QString&);
     void resetColors();
 
+
+    QPointer<TConsole> mpConsole;
 
     // First stage in decoding SGR/OCS sequences - set true when we see the
     // ASCII ESC character:

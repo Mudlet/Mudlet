@@ -42,8 +42,8 @@ public:
     void init(const QString &title, const QString &newText);
 
 public slots:
-    void save();
-    void cancel();
+    void slot_save();
+    void slot_cancel();
 
 private:
     QPointer<Host> mpHost;
