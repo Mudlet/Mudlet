@@ -604,7 +604,7 @@ please wait...</translation>
       <location filename="../src/T2DMap.cpp" line="3587"/>
       <source>Move the selection, centered on the highlighted room (%1) to:</source>
       <comment>%1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>Move the selection, centred on the highlighted room (%1) to:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3593"/>
@@ -1014,7 +1014,7 @@ please wait...</translation>
       <location filename="../src/T2DMap.cpp" line="4140"/>
       <source>1 {count:%1, default}</source>
       <comment>An entry into the QComboBox used to show the existing room weights in a selection of rooms for the user to choose to apply to every room in the selection. Everything after the &apos;1&apos; which is the default weight (and which is used by %1 rooms in the selection) will be removed by processing the entry as a QRegularExpression programmatically - the translation needs to also begin with that number &apos;1&apos;.</comment>
-      <translation type="unfinished"/>
+      <translation>1 {count:%1, default}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4126"/>
@@ -6869,13 +6869,16 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomSymbol.cpp" line="80"/>
       <source>The only used symbol is &quot;%1&quot; in one or more of the selected %n room(s), delete this to clear it from all selected rooms or replace with a new symbol to use for all the rooms:</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. </comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>The only used symbol is &quot;%1&quot; in one or more of the selected %n room(s), delete this to clear it from all selected rooms or replace with a new symbol to use for all the rooms:</numerusform>
+        <numerusform>The only used symbol is &quot;%1&quot; in one or more of the selected %n room(s), delete this to clear it from all selected rooms or replace with a new symbol to use for all the rooms:</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomSymbol.cpp" line="90"/>
       <source>The symbol is &quot;%1&quot; in the selected room, delete this to clear the symbol or replace it with a new symbol for this room:</source>
       <comment>This is for when applying a new room symbol to one room.</comment>
-      <translation type="unfinished"/>
+      <translation>The symbol is &quot;%1&quot; in the selected room, delete this to clear the symbol or replace it with a new symbol for this room:</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomSymbol.cpp" line="98"/>
