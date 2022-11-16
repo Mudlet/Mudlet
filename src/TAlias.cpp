@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2021-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,11 +32,6 @@
 TAlias::TAlias(TAlias* parent, Host* pHost)
 : Tree<TAlias>( parent )
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
-, mModuleMember(false)
-, mModuleMasterFolder(false)
-, exportItem(true)
-, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -43,11 +39,6 @@ TAlias::TAlias(const QString& name, Host* pHost)
 : Tree<TAlias>(nullptr)
 , mName(name)
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
-, mModuleMember(false)
-, mModuleMasterFolder(false)
-, exportItem(true)
-, mRegisteredAnonymousLuaFunction(false)
 {
 }
 
@@ -119,17 +110,21 @@ bool TAlias::match(const QString& toMatch)
     int ovector[MAX_CAPTURE_GROUPS * 3];
 
     //cout <<" LINE="<<subject<<endl;
-    if (mRegexCode.size() > 0) {
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
-    } else {
+    if (mRegexCode.isEmpty()) {
         goto MUD_ERROR;
     }
+    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
 
     if (rc < 0) {
         goto MUD_ERROR;
-    } else if (rc == 0) {
+    }
+
+    if (rc == 0) {
         if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+            mpHost->mpEditorDialog->mpErrorConsole->print(
+                qsl("%1\n").arg(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
+                QColor(255, 128, 0),
+                QColor(Qt::black));
         }
         qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     } else {
@@ -197,7 +192,10 @@ bool TAlias::match(const QString& toMatch)
             goto END;
         } else if (rc == 0) {
             if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+                mpHost->mpEditorDialog->mpErrorConsole->print(
+                    qsl("%1\n").arg(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
+                    QColor(255, 128, 0),
+                    QColor(Qt::black));
             }
             qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
         }
@@ -341,7 +339,7 @@ bool TAlias::compileScript()
 
 void TAlias::execute()
 {
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {

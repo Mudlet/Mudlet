@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -48,17 +48,7 @@ static const int kPixmapDataLineSize = 64;
 
 
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
-: min_x(0)
-, min_y(0)
-, min_z(0)
-, max_x(0)
-, max_y(0)
-, max_z(0)
-, gridMode(false)
-, isZone(false)
-, zoneAreaRef(0)
-, mpRoomDB(pRDB)
-, mIsDirty(false)
+: mpRoomDB(pRDB)
 , mpMap(pMap)
 {
 }
@@ -607,11 +597,7 @@ void TArea::writeJsonArea(QJsonArray& array) const
 
     writeJsonUserData(areaObj);
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QList<int> roomList{rooms.begin(), rooms.end()};
-#else
-    QList<int> roomList = rooms.toList();
-#endif
     int roomCount = roomList.count();
     if (roomCount > 1) {
         std::sort(roomList.begin(), roomList.end());
@@ -723,10 +709,12 @@ void TArea::writeJsonLabels(QJsonObject& obj) const
     QMapIterator<int, TMapLabel> itMapLabel(mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
-        writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value());
-        if (mpMap->incrementJsonProgressDialog(true, false, 1)) {
-            // Cancel has been hit - so give up straight away:
-            return;
+        if (!itMapLabel.value().temporary) {
+            writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value());
+            if (mpMap->incrementJsonProgressDialog(true, false, 1)) {
+                // Cancel has been hit - so give up straight away:
+                return;
+            }
         }
     }
     QJsonValue labelsValue{labelArray};
@@ -957,4 +945,29 @@ QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) co
     pixmap.loadFromData(decodedImageArray);
 
     return pixmap;
+}
+
+QList<int> TArea::getPermanentLabelIds() const
+{
+    QMapIterator<int, TMapLabel> itLabel(mMapLabels);
+    QList<int> permanentLabels;
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        if (!itLabel.value().temporary) {
+            permanentLabels.append(itLabel.key());
+        }
+    }
+    return permanentLabels;
+}
+
+bool TArea::hasPermanentLabels() const
+{
+    QMapIterator<int, TMapLabel> itLabel(mMapLabels);
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        if (!itLabel.value().temporary) {
+            return true;
+        }
+    }
+    return false;
 }

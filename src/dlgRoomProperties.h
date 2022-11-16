@@ -1,9 +1,10 @@
-#ifndef MUDLET_DLGROOMSYMBOL_H
-#define MUDLET_DLGROOMSYMBOL_H
+#ifndef MUDLET_DLGROOMPROPERTIES_H
+#define MUDLET_DLGROOMPROPERTIES_H
 
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
  *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -24,45 +25,68 @@
 #include "Host.h"
 
 #include "pre_guard.h"
-#include "ui_room_symbol.h"
+#include "ui_room_properties.h"
 #include "post_guard.h"
 
 
-class dlgRoomSymbol : public QDialog, public Ui::room_symbol
+class dlgRoomProperties : public QDialog, public Ui::room_properties
 {
     Q_OBJECT
 
 public:
-    Q_DISABLE_COPY(dlgRoomSymbol)
-    explicit dlgRoomSymbol(Host*, QWidget* parent = nullptr);
-    void init(QHash<QString, int>& pSymbols, QSet<TRoom*>& pRooms);
+    Q_DISABLE_COPY(dlgRoomProperties)
+    explicit dlgRoomProperties(Host*, QWidget* parent = nullptr);
+    void init(
+        QHash<QString, int> usedNames,
+        QHash<int, int>& pColors,
+        QHash<QString, int>& pSymbols,
+        QHash<int, int>& pWeights,
+        QHash<bool, int> lockStatus,
+        QSet<TRoom*>& pRooms);
     void accept() override;
 
 signals:
-    void signal_save_symbol(QString symbol, QColor color, QSet<TRoom*> rooms);
+    void signal_save_symbol(
+        bool changeName, QString newName,
+        bool mChangeRoomColor, int mRoomColorNumber,
+        bool changeSymbol, QString newSymbol,
+        bool changeSymbolColor, QColor newSymbolColor,
+        bool changeWeight, int newWeight,
+        bool changeLockStatus, bool newLockStatus,
+        QSet<TRoom*> mpRooms);
 
 private:
     QColor backgroundBasedColor(QColor);
-    QColor defaultColor();
+    QColor defaultSymbolColor();
     QString getNewSymbol();
-    void initInstructionLabel();
-    QStringList getComboBoxItems();
+    void initSymbolInstructions();
+    QStringList getComboBoxSymbolItems();
     QFont getFontForPreview(QString);
 
-    Host* mpHost;
+    int getNewWeight();
+    void initWeightInstructions();
+    QStringList getComboBoxWeightItems();
+    void initLockInstructions();
+
+    Host* mpHost = nullptr;
     QSet<TRoom*> mpRooms;
     QHash<QString, int> mpSymbols;
-    QColor selectedColor;
-    QColor previewColor;
-    QColor roomColor;
+    QHash<int, int> mpWeights;
+    QColor selectedSymbolColor;
+    QColor mRoomColor;
+    int mRoomColorNumber = -1;
+    bool mChangeRoomColor = false;
+    QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:
-    void openColorSelector();
-    void currentColorChanged(const QColor&);
-    void colorSelected(const QColor&);
-    void colorRejected();
-    void updatePreview();
-    void resetColor();
+    void slot_openSymbolColorSelector();
+    void slot_symbolColorSelected(const QColor&);
+    void slot_updatePreview();
+    void slot_resetSymbolColor();
+
+    void slot_selectRoomColor(QListWidgetItem*);
+    void slot_defineNewColor();
+    void slot_openRoomColorSelector();
 };
 
-#endif // MUDLET_DLGROOMSYMBOL_H
+#endif // MUDLET_DLGROOMPROPERTIES_H

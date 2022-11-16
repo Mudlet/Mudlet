@@ -14,7 +14,9 @@ if (-not $(Test-Path "$workingBaseDir")) {
 }
 
 $64Bit = (Get-WmiObject Win32_OperatingSystem).OSArchitecture -eq "64-bit"
-if($64Bit){
+# Appveyor's CMake is in C:\Program Files\CMake
+
+if($64Bit -and ($Env:APPVEYOR -ne "True")){
   $CMakePath = "C:\Program Files (x86)\CMake\bin"
 } else {
   $CMakePath = "C:\Program Files\CMake\bin"
@@ -319,9 +321,9 @@ function InstallSqlite() {
 }
 
 function InstallZlib() {
-  DownloadFile "http://zlib.net/zlib-1.2.12.tar.gz" "zlib-1.2.12.tar.gz"
-  ExtractTar "$workingBaseDir\zlib-1.2.12.tar.gz" "$workingBaseDir\zlib"
-  Set-Location "$workingBaseDir\zlib\zlib-1.2.12"
+  DownloadFile "http://zlib.net/fossils/zlib-1.2.13.tar.gz" "zlib-1.2.13.tar.gz"
+  ExtractTar "$workingBaseDir\zlib-1.2.13.tar.gz" "$workingBaseDir\zlib"
+  Set-Location "$workingBaseDir\zlib\zlib-1.2.13"
   RunMake "win32/Makefile.gcc"
   $Env:INCLUDE_PATH = "$Env:MINGW_BASE_DIR\include"
   $Env:LIBRARY_PATH = "$Env:MINGW_BASE_DIR\lib"
@@ -443,6 +445,15 @@ function InstallLuaZip () {
   Copy-Item "zip.dll" "$Env:MINGW_BASE_DIR\lib\lua\5.1"
 }
 
+function InstallCcache() {
+    Step "installing ccache"
+    DownloadFile "https://github.com/ccache/ccache/releases/download/v4.6.1/ccache-4.6.1-windows-x86_64.zip" "ccache.zip"
+    ExtractZip "ccache.zip" "ccache"
+    Set-Location "ccache/ccache-4.6.1-windows-x86_64"
+    New-Item "C:\Program Files\ccache" -ItemType "directory" -Force
+    Copy-Item "ccache.exe" "C:\Program Files\ccache\ccache.exe" -Force
+}
+
 function InstallLuaModules(){
   CheckAndInstall "lfs" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lfs.dll" { InstallLfs }
   CheckAndInstall "luasql.sqlite3" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\luasql\sqlite3.dll" { InstallLuasql }
@@ -452,6 +463,11 @@ function InstallLuaModules(){
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
   CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
   CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
+}
+
+function CheckAndInstallCcache(){
+  CheckAndInstall "ccache" "C:\Program Files\ccache\ccache.exe" { InstallCcache }
+
 }
 
 function CheckAndInstall7z(){

@@ -234,6 +234,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSslIgnoreExpired(false)
 , mSslIgnoreSelfSigned(false)
 , mSslIgnoreAll(false)
+, mAskTlsAvailable(true)
+, mMSSPTlsPort(0)
 , mUseProxy(false)
 , mProxyPort(0)
 , mIsGoingDown(false)
@@ -263,7 +265,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEditorThemeFile(QLatin1String("Mudlet.tmTheme"))
 , mThemePreviewItemID(-1)
 , mThemePreviewType(QString())
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
 , mBlack(QColorConstants::Black)
 , mLightBlack(QColorConstants::DarkGray)
 , mRed(QColorConstants::DarkRed)
@@ -303,47 +304,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFgColor_2(QColorConstants::LightGray)
 , mBgColor_2(QColorConstants::Black)
 , mRoomBorderColor(QColorConstants::LightGray)
-#else
-, mBlack(Qt::black)
-, mLightBlack(Qt::darkGray)
-, mRed(Qt::darkRed)
-, mLightRed(Qt::red)
-, mLightGreen(Qt::green)
-, mGreen(Qt::darkGreen)
-, mLightBlue(Qt::blue)
-, mBlue(Qt::darkBlue)
-, mLightYellow(Qt::yellow)
-, mYellow(Qt::darkYellow)
-, mLightCyan(Qt::cyan)
-, mCyan(Qt::darkCyan)
-, mLightMagenta(Qt::magenta)
-, mMagenta(Qt::darkMagenta)
-, mLightWhite(Qt::white)
-, mWhite(Qt::lightGray)
-, mFgColor(Qt::lightGray)
-, mBgColor(Qt::black)
-, mCommandBgColor(Qt::black)
-, mCommandFgColor(QColor(113, 113, 0))
-, mBlack_2(Qt::black)
-, mLightBlack_2(Qt::darkGray)
-, mRed_2(Qt::darkRed)
-, mLightRed_2(Qt::red)
-, mLightGreen_2(Qt::green)
-, mGreen_2(Qt::darkGreen)
-, mLightBlue_2(Qt::blue)
-, mBlue_2(Qt::darkBlue)
-, mLightYellow_2(Qt::yellow)
-, mYellow_2(Qt::darkYellow)
-, mLightCyan_2(Qt::cyan)
-, mCyan_2(Qt::darkCyan)
-, mLightMagenta_2(Qt::magenta)
-, mMagenta_2(Qt::darkMagenta)
-, mLightWhite_2(Qt::white)
-, mWhite_2(Qt::lightGray)
-, mFgColor_2(Qt::lightGray)
-, mBgColor_2(Qt::black)
-, mRoomBorderColor(Qt::lightGray)
-#endif
 , mMapStrongHighlight(false)
 , mEnableSpellCheck(true)
 , mDiscordDisableServerSide(true)
@@ -368,8 +328,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
+, mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
 , mpDlgIRC(nullptr)
 , mpDlgProfilePreferences(nullptr)
+, mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
 , mTriggerUnit(this)
@@ -391,7 +353,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mWideAmbigousWidthGlyphs(false)
 , mSGRCodeHasColSpaceId(false)
 , mServerMayRedefineColors(false)
-, mSpellDic(qsl("en_US"))
 // DISABLED: - Prevent "None" option for user dictionary - changed to true and not changed anywhere else
 , mEnableUserDictionary(true)
 , mUseSharedDictionary(false)
@@ -402,7 +363,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
-, mTutorialForCompactLineAlreadyShown(false)
 {
     TDebug::addHost(this);
 
@@ -411,6 +371,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // confuse it with the "autologin" item, which controls whether the profile
     // is automatically started when the Mudlet application is run!
     mLogStatus = QFile::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("autolog")));
+    // "autotimestamp" determines if profile loads with timestamps enabled
+    mTimeStampStatus = QFile::exists(mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("autotimestamp")));
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));
 
     // Copy across the details needed for the "color_table":
@@ -529,8 +491,21 @@ void Host::timerEvent(QTimerEvent *event)
 
 void Host::autoSaveMap()
 {
-    if (mpMap->mUnsavedMap) {
-        mpConsole->saveMap(mudlet::getMudletPath(mudlet::profileMapPathFileName, mHostName, qsl("autosave.dat")));
+    if (mpMap->isUnsaved()) {
+#if defined(DEBUG_MAPAUTOSAVE)
+        QString nowString = QDateTime::currentDateTimeUtc().toString("HH:mm:ss.zzz");
+#endif
+        if (!mIsProfileLoadingSequence) {
+#if defined(DEBUG_MAPAUTOSAVE)
+            qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save initiated at:" << nowString << ".";
+#endif
+            // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
+            mpConsole->saveMap(mudlet::getMudletPath(mudlet::profileMapPathFileName, mHostName, qsl("autosave.dat")));
+#if defined(DEBUG_MAPAUTOSAVE)
+        } else {
+            qDebug().nospace().noquote() << "Host::autoSaveMap() INFO - map auto save requested at:" << nowString << " but declined whilst \"Host::mIsProfileLoadingSequence\" flag set.";
+#endif
+        }
     }
 }
 
@@ -1074,7 +1049,7 @@ void Host::check_for_mappingscript()
             return;
         }
 
-        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_open_mappingscripts_page);
+        connect(dialog, &QDialog::accepted, mudlet::self(), &mudlet::slot_openMappingScriptsPage);
 
         dialog->show();
         dialog->raise();
@@ -1159,11 +1134,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
     }
     QStringList commandList;
     if (!mCommandSeparator.isEmpty()) {
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
         commandList = cmd.split(QString(mCommandSeparator), Qt::SkipEmptyParts);
-#else
-        commandList = cmd.split(QString(mCommandSeparator), QString::SkipEmptyParts);
-#endif
     } else if (!cmd.isEmpty()) {
         // don't split command if the command separator is blank
         commandList << cmd;
@@ -1672,11 +1643,6 @@ void Host::disableTrigger(const QString& name)
 bool Host::killTrigger(const QString& name)
 {
     return mTriggerUnit.killTrigger(name);
-}
-
-void Host::connectToServer()
-{
-    mTelnet.connectIt(mUrl, mPort);
 }
 
 void Host::closingDown()
@@ -2585,6 +2551,20 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
     }
 }
 
+QString  Host::getSpellDic()
+{
+    if (!mSpellDic.isEmpty()) {
+        return mSpellDic;
+    }
+#if defined(Q_OS_OPENBSD)
+    // OpenBSD does not ship a USA dictionary so we will have to use
+    // a different starting one to try and locate system ones
+    return (qsl("en-GB"));
+#else
+    return (qsl("en_US"));
+#endif
+}
+
 void Host::setSpellDic(const QString& newDict)
 {
     bool isChanged = false;
@@ -2792,6 +2772,11 @@ void Host::setSearchOptions(const dlgTriggerEditor::SearchOptions optionsState)
     if (mpEditorDialog) {
         mpEditorDialog->setSearchOptions(optionsState);
     }
+}
+
+void Host::setBufferSearchOptions(const TConsole::SearchOptions optionsState)
+{
+    mBufferSearchOptions = optionsState;
 }
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
@@ -3806,6 +3791,34 @@ bool Host::resetBackgroundImage(const QString &name)
     return false;
 }
 
+bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setCommandBgColor(r, g, b, alpha);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha)
+{
+    if (!mpConsole) {
+        return false;
+    }
+
+    auto pC = mpConsole->mSubConsoleMap.value(name);
+    if (pC) {
+        pC->setCommandFgColor(r, g, b, alpha);
+        return true;
+    }
+    return false;
+}
+
 // Needed to extract into a separate method from mudlet::slot_mapper() so that
 // we can use it WITHOUT loading a file - at least for the
 // TConsole::importMap(...) case that may need to create a map widget before it
@@ -3871,6 +3884,10 @@ void Host::createMapper(const bool loadDefaultMap)
 
     } else {
         if (pMap->mpMapper) {
+            // Needed to set the area selector widget to right area when map is
+            // loaded by clicking on Map main toolbar button:
+            pMap->mpMapper->updateAreaComboBox();
+            pMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
             pMap->mpMapper->show();
         }
     }
@@ -3913,7 +3930,7 @@ bool Host::commitLayoutUpdates(bool flush)
     if (mpConsole && !flush) {
         // commit changes (or rather clear the layout changed flags) for dockwidget
         // consoles (user windows)
-        for (auto dockedConsoleName : mDockLayoutChanges) {
+        for (auto dockedConsoleName : qAsConst(mDockLayoutChanges)) {
             auto pD = mpConsole->mDockWidgetMap.value(dockedConsoleName);
             if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
                 pD->setProperty("layoutChanged", QVariant(false));
@@ -3926,10 +3943,11 @@ bool Host::commitLayoutUpdates(bool flush)
     // commit changes (or rather clear the layout changed flags) for
     // dockable/floating toolbars across all profiles:
     if (!flush) {
-        for (auto pToolBar : mToolbarLayoutChanges) {
-            // Under some circumstances there is NOT a
-            // pToolBar->property("layoutChanged") and examining that
-            // non-existent variant to see if it was true or false causes seg. faults!
+        for (auto pToolBar : qAsConst(mToolbarLayoutChanges)) {
+            if (!pToolBar || pToolBar.isNull()) {
+                // This can happen when a TToolBar is deleted
+                continue;
+            }
             if (Q_UNLIKELY(!pToolBar->property("layoutChanged").isValid())) {
                 qWarning().nospace().noquote() << "host::commitLayoutUpdates() WARNING - was about to check for \"layoutChanged\" meta-property on a toolbar without that property!";
             } else if (pToolBar->property("layoutChanged").toBool()) {
@@ -4027,4 +4045,13 @@ void Host::setEditorShowBidi(const bool state)
             mpEditorDialog->setEditorShowBidi(state);
         }
     }
+}
+
+bool Host::caretEnabled() const {
+    return mCaretEnabled;
+}
+
+void Host::setCaretEnabled(bool enabled) {
+    mCaretEnabled = enabled;
+    mpConsole->setCaretMode(enabled);
 }

@@ -22,12 +22,13 @@
 #include "dlgTimersMainArea.h"
 
 
-dlgTimersMainArea::dlgTimersMainArea(QWidget* pF) : QWidget(pF)
+dlgTimersMainArea::dlgTimersMainArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_timer_name, &QLineEdit::editingFinished, this, &dlgTimersMainArea::slot_editing_name_finished);
+    connect(lineEdit_timer_name, &QLineEdit::editingFinished, this, &dlgTimersMainArea::slot_editingNameFinished);
 }
 
 void dlgTimersMainArea::trimName()
@@ -35,7 +36,7 @@ void dlgTimersMainArea::trimName()
     lineEdit_timer_name->setText(lineEdit_timer_name->text().trimmed());
 }
 
-void dlgTimersMainArea::slot_editing_name_finished()
+void dlgTimersMainArea::slot_editingNameFinished()
 {
     trimName();
 }

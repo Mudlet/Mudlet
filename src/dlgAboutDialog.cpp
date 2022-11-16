@@ -34,7 +34,8 @@
 #include <QDebug>
 #include "post_guard.h"
 
-dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
+dlgAboutDialog::dlgAboutDialog(QWidget* parent)
+: QDialog(parent)
 {
     setupUi(this);
 
@@ -1042,7 +1043,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
     QStringList mightier_than_swords = {"Joshua C. Burt", "Maiyannah Bishop", "Qwindor Rousseau", "Stick In the MUD 🎙"};
-    QStringList on_a_plaque = {"Vadim Peretokin"};
+    QStringList on_a_plaque = {"demonnic", "Henry Hsiao"};
     int image_counter{1};
 
     if (!supportersDocument) {

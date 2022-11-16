@@ -3,6 +3,7 @@
 #    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
 #    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -66,7 +67,7 @@ set(mudlet_SRCS
     dlgPackageManager.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
-    dlgRoomSymbol.cpp
+    dlgRoomProperties.cpp
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
     dlgSourceEditorFindArea.cpp
@@ -90,6 +91,7 @@ set(mudlet_SRCS
     ShortcutsManager.cpp
     ScriptUnit.cpp
     T2DMap.cpp
+    TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
@@ -155,6 +157,15 @@ set(mudlet_SRCS
     XMLexport.cpp
     XMLimport.cpp)
 
+if(APPLE)
+  list(APPEND mudlet_SRCS AnnouncerMac.mm)
+elseif(UNIX AND NOT APPLE)
+  list(APPEND mudlet_SRCS AnnouncerUnix.cpp)
+elseif(WIN32)
+  list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
+  list(APPEND mudlet_SRCS uiawrapper.cpp)
+endif()
+
 # This is for compiled UI files, not those used at runtime
 set(mudlet_UIS
     ui/about_dialog.ui
@@ -174,7 +185,7 @@ set(mudlet_UIS
     ui/package_manager.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
-    ui/room_symbol.ui
+    ui/room_properties.ui
     ui/scripts_main_area.ui
     ui/source_editor_area.ui
     ui/source_editor_find_area.ui
@@ -187,6 +198,7 @@ set(mudlet_UIS
 
 set(mudlet_HDRS
     ActionUnit.h
+    Announcer.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
     ctelnet.h
@@ -208,7 +220,7 @@ set(mudlet_HDRS
     dlgPackageManager.h
     dlgProfilePreferences.h
     dlgRoomExits.h
-    dlgRoomSymbol.h
+    dlgRoomProperties.h
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
     dlgSourceEditorFindArea.h
@@ -233,6 +245,8 @@ set(mudlet_HDRS
     ShortcutsManager.h
     ScriptUnit.h
     T2DMap.h
+    TAccessibleConsole.h
+    TAccessibleTextEdit.h
     TAction.h
     TAlias.h
     TArea.h
@@ -307,6 +321,10 @@ set(mudlet_HDRS
     XMLexport.h
     XMLimport.h)
 
+if(WIN32)
+  list(APPEND mudlet_HDRS uiawrapper.h)
+endif()
+
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
   list(APPEND mudlet_HDRS updater.h)
@@ -338,7 +356,7 @@ endif()
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
 
 find_package(
-  Qt5 5.11 REQUIRED
+  Qt5 5.14 REQUIRED
   COMPONENTS Core
              Multimedia
              Network
@@ -349,9 +367,9 @@ find_package(
 find_package(Qt5 COMPONENTS Gamepad QUIET)
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
-if(Qt5Core_VERSION VERSION_LESS 5.11)
+if(Qt5Core_VERSION VERSION_LESS 5.14)
   message(
-    FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
+    FATAL_ERROR "Mudlet requires Qt 5.14 or later, yours is ${Qt5Core_VERSION}")
 else()
   # Qt Speech (or at least the TTS part) was officially release in 5.10
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
@@ -386,6 +404,22 @@ endif()
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
+
+########################### Debugging code inclusions ##########################
+# Controls the include/selection of extra code to aide developers debug various
+# features of Mudlet, generally speaking they will not be '#define'd in
+# production builds - uncomment the
+# 'target_compile_definitions(mudlet PRIVATE DEBUG__XXX)'
+# line here to include the relevant code:
+#
+# Other DEFINES+=DEBUG_XXX expected here as a result of:
+# https://github.com/Mudlet/Mudlet/issues/6314
+#
+# * Produce a timestamped message on the OS's command line when an autosave of
+# the map file gets requested and when such a request gets actioned (or
+# rejected because the profile is being loaded):
+# target_compile_definitions(mudlet PRIVATE DEBUG_MAPAUTOSAVE)
+
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(mudlet PROPERTIES
@@ -413,6 +447,14 @@ target_compile_definitions(mudlet
 
 if(USE_OWN_QT5KEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
+
+# Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# for an #ifdef because we need a symbol that is defined BEFORE we include
+# any Qt header file!
+if(WIN32)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_WINSOCK2)
 endif()
 
 # One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library

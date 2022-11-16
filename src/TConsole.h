@@ -8,6 +8,7 @@
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2020 by Matthias Urlichs matthias@urlichs.de            *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,6 +40,7 @@
 #include <QLabel>
 #include <QPointer>
 #include <QWidget>
+#include <QIcon>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
@@ -47,7 +49,7 @@
 #include <map>
 
 
-enum ControlCharacterMode {
+enum class ControlCharacterMode {
     AsIs = 0x0,
     Picture = 0x1,
     OEM = 0x2
@@ -87,6 +89,13 @@ public:
         Buffer = 0x20 // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
+
+    enum SearchOption {
+        // Unset:
+        SearchOptionNone = 0x0,
+        SearchOptionCaseSensitive = 0x1
+    };
+    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -144,6 +153,10 @@ public:
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
+    void setCommandBgColor(const QColor&);
+    void setCommandBgColor(int, int, int, int);
+    void setCommandFgColor(const QColor&);
+    void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
     void setCmdVisible(bool);
@@ -192,6 +205,9 @@ public:
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
 
+    void setCaretMode(bool enabled);
+
+    void setSearchOptions(const SearchOptions);
 
     QPointer<Host> mpHost;
     // Only assigned a value for user windows:
@@ -209,17 +225,10 @@ public:
     QWidget* layerCommandLine = nullptr;
     QHBoxLayout* layoutLayer2 = nullptr;
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-#else
-    QColor mBgColor = Qt::black;
-    QColor mFgColor = Qt::lightGray;
-    QColor mSystemMessageFgColor = Qt::red;
-    QColor mCommandBgColor = Qt::black;
-#endif
     QColor mSystemMessageBgColor = mBgColor;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
@@ -275,8 +284,10 @@ public:
     TSplitter* splitter = nullptr;
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
+    QToolButton* timeStampButton = nullptr;
     bool mUserAgreedToCloseConsole = false;
     QLineEdit* mpBufferSearchBox = nullptr;
+    QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
     QToolButton* mpBufferSearchDown = nullptr;
     int mCurrentSearchResult = 0;
@@ -286,16 +297,17 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
-    ControlCharacterMode mControlCharacter = AsIs;
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
 
 public slots:
     void slot_searchBufferUp();
     void slot_searchBufferDown();
     void slot_toggleReplayRecording();
-    void slot_stop_all_triggers(bool);
+    void slot_stopAllItems(bool);
     void slot_toggleLogging();
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
+    void slot_toggleSearchCaseSensitivity(bool);
 
 
 protected:
@@ -306,8 +318,14 @@ protected:
 
 
 private:
+    void adjustAccessibleNames();
+    void createSearchOptionIcon();
+
     ConsoleType mType = UnknownType;
     QSize mOldSize;
+    SearchOptions mSearchOptions = SearchOptionNone;
+    QAction* mpAction_searchOptions = nullptr;
+    QIcon mIcon_searchOptions;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

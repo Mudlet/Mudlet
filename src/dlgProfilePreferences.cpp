@@ -54,8 +54,8 @@
 
 using namespace std::chrono_literals;
 
-dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
-: QDialog(pF)
+dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost)
+: QDialog(pParentWidget)
 , mpHost(pHost)
 {
     // init generated dialog
@@ -244,7 +244,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
-    connect(closeButton, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_save_and_exit);
+    connect(closeButton, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_saveAndClose);
     connect(pMudlet, &mudlet::signal_hostCreated, this, &dlgProfilePreferences::slot_handleHostAddition);
     connect(pMudlet, &mudlet::signal_hostDestroyed, this, &dlgProfilePreferences::slot_handleHostDeletion);
     // Because QComboBox::currentIndexChanged has multiple (overloaded) forms we
@@ -374,7 +374,7 @@ void dlgProfilePreferences::setupPasswordsMigration()
         comboBox_store_passwords_in->setCurrentIndex(1);
     }
 
-    connect(comboBox_store_passwords_in, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_passwords_location_changed);
+    connect(comboBox_store_passwords_in, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_passwordStorageLocationChanged);
 }
 
 void dlgProfilePreferences::disableHostDetails()
@@ -479,6 +479,7 @@ void dlgProfilePreferences::disableHostDetails()
 
     // ===== tab security =====
     groupBox_ssl->setEnabled(false);
+    checkBox_askTlsAvailable->setEnabled(false);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(false);
@@ -499,9 +500,12 @@ void dlgProfilePreferences::disableHostDetails()
     // This acts on a label within this groupBox:
     hidePasswordMigrationLabel();
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
+    checkBox_announceIncomingText->setEnabled(false);
+    comboBox_blankLinesBehaviour->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
+    comboBox_caretModeKey->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -577,9 +581,13 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab security =====
 #if defined(QT_NO_SSL)
     groupBox_ssl->setEnabled(false);
+    checkBox_askTlsAvailable->setEnabled(false);
 #else
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
+    checkBox_askTlsAvailable->setEnabled(true);
 #endif
+    checkBox_announceIncomingText->setEnabled(true);
+    comboBox_blankLinesBehaviour->setEnabled(true);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(true);
@@ -597,6 +605,7 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
+    comboBox_caretModeKey->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -645,6 +654,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // On the first run for a profile this will be the "English (American)"
     // dictionary "en_US".
+    // Unfortunately OpenBSD does not ship a dictionary for THAT language which
+    // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
     // This will also set mudlet::mUsingMudletDictionaries as appropriate:
     QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);
@@ -667,7 +678,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // while populating the widget, it reduces noise about:
     // "qt.accessibility.core: Cannot create accessible child interface for object:  QListWidget(0x############, name = "dictList")  index:  ##
     dictList->blockSignals(true);
-    if (entries.count()) {
+    if (!entries.isEmpty()) {
         QListWidgetItem* scrollToItem = nullptr;
         for (int i = 0, total = entries.size(); i < total; ++i) {
             // This is a file name and to support macOs platforms should not be case sensitive:
@@ -719,7 +730,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
-        connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::downloadMap);
+        connect(buttonDownloadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_downloadMap);
     } else {
         groupBox_downloadMapOptions->setVisible(false);
     }
@@ -737,6 +748,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_debugShowAllCodepointProblems->setChecked(pHost->debugShowAllProblemCodepoints());
     // the GMCP warning is hidden by default and is only enabled when the value is toggled
     need_reconnect_for_data_protocol->hide();
+
+    checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
@@ -1003,10 +1016,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
 
-    comboBox_controlCharacterHandling->setItemData(0, ControlCharacterMode::AsIs);
-    comboBox_controlCharacterHandling->setItemData(1, ControlCharacterMode::Picture);
-    comboBox_controlCharacterHandling->setItemData(2, ControlCharacterMode::OEM);
-    auto cch_index = comboBox_controlCharacterHandling->findData(pHost->getControlCharacterMode());
+    comboBox_controlCharacterHandling->setItemData(0, QVariant::fromValue(ControlCharacterMode::AsIs));
+    comboBox_controlCharacterHandling->setItemData(1, QVariant::fromValue(ControlCharacterMode::Picture));
+    comboBox_controlCharacterHandling->setItemData(2, QVariant::fromValue(ControlCharacterMode::OEM));
+    auto cch_index = comboBox_controlCharacterHandling->findData(static_cast<int>(pHost->getControlCharacterMode()));
     comboBox_controlCharacterHandling->setCurrentIndex((cch_index > 0) ? cch_index : 0);
     connect(comboBox_controlCharacterHandling, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeControlCharacterHandling);
 
@@ -1085,6 +1098,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
+    checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
+
     groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
     lineEdit_proxyAddress->setText(pHost->mProxyAddress);
@@ -1097,7 +1112,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
+    comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
+    comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -1109,58 +1126,58 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // CHECKME: Have moved ALL the connects, where possible, to the end so that
     // none are triggered by the setup operations...
-    connect(pushButton_command_line_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandLineFgColor);
-    connect(pushButton_command_line_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandLineBgColor);
+    connect(pushButton_command_line_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setCommandLineFgColor);
+    connect(pushButton_command_line_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setCommandLineBgColor);
 
-    connect(pushButton_black, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlack);
-    connect(pushButton_lBlack, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlack);
-    connect(pushButton_red, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorRed);
-    connect(pushButton_lRed, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightRed);
-    connect(pushButton_green, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorGreen);
-    connect(pushButton_lGreen, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightGreen);
-    connect(pushButton_yellow, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorYellow);
-    connect(pushButton_lYellow, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightYellow);
-    connect(pushButton_blue, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlue);
-    connect(pushButton_lBlue, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlue);
-    connect(pushButton_magenta, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorMagenta);
-    connect(pushButton_lMagenta, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightMagenta);
-    connect(pushButton_cyan, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorCyan);
-    connect(pushButton_lCyan, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightCyan);
-    connect(pushButton_white, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorWhite);
-    connect(pushButton_lWhite, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightWhite);
+    connect(pushButton_black, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorBlack);
+    connect(pushButton_lBlack, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorLightBlack);
+    connect(pushButton_red, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorRed);
+    connect(pushButton_lRed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorLightRed);
+    connect(pushButton_green, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorGreen);
+    connect(pushButton_lGreen, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorLightGreen);
+    connect(pushButton_yellow, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorYellow);
+    connect(pushButton_lYellow, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorLightYellow);
+    connect(pushButton_blue, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorBlue);
+    connect(pushButton_lBlue, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorLightBlue);
+    connect(pushButton_magenta, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorMagenta);
+    connect(pushButton_lMagenta, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorLightMagenta);
+    connect(pushButton_cyan, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorCyan);
+    connect(pushButton_lCyan, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorLightCyan);
+    connect(pushButton_white, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorWhite);
+    connect(pushButton_lWhite, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setColorLightWhite);
 
-    connect(pushButton_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setFgColor);
-    connect(pushButton_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor);
-    connect(pushButton_command_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandFgColor);
-    connect(pushButton_command_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::setCommandBgColor);
+    connect(pushButton_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setFgColor);
+    connect(pushButton_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setBgColor);
+    connect(pushButton_command_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setCommandFgColor);
+    connect(pushButton_command_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setCommandBgColor);
 
-    connect(pushButton_resetColors, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors);
-    connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::resetColors2);
+    connect(pushButton_resetColors, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetColors);
+    connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetMapColors);
 
-    connect(fontComboBox, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::setDisplayFont);
-    connect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::setFontSize);
+    connect(fontComboBox, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setDisplayFont);
+    connect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setFontSize);
 
-    connect(pushButton_black_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlack2);
-    connect(pushButton_Lblack_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlack2);
-    connect(pushButton_green_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorGreen2);
-    connect(pushButton_Lgreen_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightGreen2);
-    connect(pushButton_red_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorRed2);
-    connect(pushButton_Lred_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightRed2);
-    connect(pushButton_blue_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorBlue2);
-    connect(pushButton_Lblue_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightBlue2);
-    connect(pushButton_yellow_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorYellow2);
-    connect(pushButton_Lyellow_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightYellow2);
-    connect(pushButton_cyan_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorCyan2);
-    connect(pushButton_Lcyan_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightCyan2);
-    connect(pushButton_magenta_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorMagenta2);
-    connect(pushButton_Lmagenta_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightMagenta2);
-    connect(pushButton_white_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorWhite2);
-    connect(pushButton_Lwhite_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setColorLightWhite2);
+    connect(pushButton_black_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorBlack);
+    connect(pushButton_Lblack_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightBlack);
+    connect(pushButton_green_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorGreen);
+    connect(pushButton_Lgreen_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightGreen);
+    connect(pushButton_red_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorRed);
+    connect(pushButton_Lred_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightRed);
+    connect(pushButton_blue_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorBlue);
+    connect(pushButton_Lblue_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightBlue);
+    connect(pushButton_yellow_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorYellow);
+    connect(pushButton_Lyellow_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightYellow);
+    connect(pushButton_cyan_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorCyan);
+    connect(pushButton_Lcyan_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightCyan);
+    connect(pushButton_magenta_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorMagenta);
+    connect(pushButton_Lmagenta_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightMagenta);
+    connect(pushButton_white_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorWhite);
+    connect(pushButton_Lwhite_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightWhite);
 
-    connect(pushButton_foreground_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setFgColor2);
-    connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::setBgColor2);
-    connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::setRoomBorderColor);
-    connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::setMapInfoBackground);
+    connect(pushButton_foreground_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapExitsColor);
+    connect(pushButton_background_color_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapBgColor);
+    connect(pushButton_roomBorderColor, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapRoomBorderColor);
+    connect(pushButton_mapInfoBg, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapInfoBgColor);
 
     connect(mEnableGMCP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
@@ -1169,11 +1186,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
-    connect(mpMenu.data(), &QMenu::triggered, this, &dlgProfilePreferences::slot_chooseProfilesChanged);
+    connect(mpMenu.data(), &QMenu::triggered, this, &dlgProfilePreferences::slot_chosenProfilesChanged);
 
-    connect(pushButton_copyMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::copyMap);
-    connect(pushButton_loadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::loadMap);
-    connect(pushButton_saveMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::saveMap);
+    connect(pushButton_copyMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_copyMap);
+    connect(pushButton_loadMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_loadMap);
+    connect(pushButton_saveMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_saveMap);
     connect(comboBox_encoding, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setEncoding);
 
     connect(pushButton_whereToLog, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setLogDir);
@@ -1411,9 +1428,12 @@ void dlgProfilePreferences::clearHostDetails()
     lineEdit_discordUserDiscriminator->clear();
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
+    checkBox_announceIncomingText->setChecked(false);
+    comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
+    checkBox_askTlsAvailable->setChecked(false);
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -1427,7 +1447,7 @@ void dlgProfilePreferences::loadEditorTab()
         return;
     }
 
-    connect(tabWidget, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_editor_tab_selected);
+    connect(tabWidget, &QTabWidget::currentChanged, this, &dlgProfilePreferences::slot_tabChanged);
 
     auto config = edbeePreviewWidget->config();
     config->beginChanges();
@@ -1458,7 +1478,7 @@ void dlgProfilePreferences::loadEditorTab()
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
     auto themeIndex = code_editor_theme_selection_combobox->findText(pHost->mEditorTheme);
     code_editor_theme_selection_combobox->setCurrentIndex(themeIndex);
-    slot_theme_selected(themeIndex);
+    slot_themeSelected(themeIndex);
 
     code_editor_theme_selection_combobox->setInsertPolicy(QComboBox::NoInsert);
     code_editor_theme_selection_combobox->setMaxVisibleItems(20);
@@ -1467,7 +1487,7 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->lineEdit()->setPlaceholderText(qsl("Select script to preview"));
     auto scriptIndex = script_preview_combobox->findData(QVariant::fromValue(QPair<QString, int>(pHost->mThemePreviewType, pHost->mThemePreviewItemID)));
     script_preview_combobox->setCurrentIndex(scriptIndex == -1 ? 1 : scriptIndex);
-    slot_script_selected(scriptIndex == -1 ? 1 : scriptIndex);
+    slot_scriptSelected(scriptIndex == -1 ? 1 : scriptIndex);
 
     script_preview_combobox->setInsertPolicy(QComboBox::NoInsert);
     script_preview_combobox->setMaxVisibleItems(20);
@@ -1479,14 +1499,14 @@ void dlgProfilePreferences::loadEditorTab()
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
 
     // changes the theme being previewed
-    connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_theme_selected);
+    connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_themeSelected);
 
     // allows people to select a script of theirs to preview
-    connect(script_preview_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_script_selected);
+    connect(script_preview_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_scriptSelected);
 
     // fire tab selection event manually should the dialog open on it by default
     if (tabWidget->currentIndex() == 3) {
-        slot_editor_tab_selected(3);
+        slot_tabChanged(3);
     }
 }
 
@@ -1603,7 +1623,7 @@ void dlgProfilePreferences::setTab(QString tab)
     tabWidget->setCurrentIndex(0);
 }
 
-void dlgProfilePreferences::resetColors()
+void dlgProfilePreferences::slot_resetColors()
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -1643,7 +1663,7 @@ void dlgProfilePreferences::resetColors()
     pHost->updateAnsi16ColorsInTable();
 }
 
-void dlgProfilePreferences::resetColors2()
+void dlgProfilePreferences::slot_resetMapColors()
 {
     Host* pHost = mpHost;
 
@@ -1675,7 +1695,7 @@ void dlgProfilePreferences::resetColors2()
     setColors2();
 }
 
-void dlgProfilePreferences::setColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
+void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor& presentColor, bool allowAlpha)
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -1719,61 +1739,61 @@ void dlgProfilePreferences::setColor(QPushButton* button, QColor& presentColor, 
     }
 }
 
-void dlgProfilePreferences::setFgColor()
+void dlgProfilePreferences::slot_setFgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_foreground_color, pHost->mFgColor);
+        setButtonAndProfileColor(pushButton_foreground_color, pHost->mFgColor);
     }
 }
 
-void dlgProfilePreferences::setBgColor()
+void dlgProfilePreferences::slot_setBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_background_color, pHost->mBgColor);
+        setButtonAndProfileColor(pushButton_background_color, pHost->mBgColor);
     }
 }
 
-void dlgProfilePreferences::setCommandFgColor()
+void dlgProfilePreferences::slot_setCommandFgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_command_foreground_color, pHost->mCommandFgColor);
+        setButtonAndProfileColor(pushButton_command_foreground_color, pHost->mCommandFgColor);
     }
 }
 
-void dlgProfilePreferences::setCommandLineFgColor()
+void dlgProfilePreferences::slot_setCommandLineFgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_command_line_foreground_color, pHost->mCommandLineFgColor);
+        setButtonAndProfileColor(pushButton_command_line_foreground_color, pHost->mCommandLineFgColor);
     }
 }
 
-void dlgProfilePreferences::setCommandLineBgColor()
+void dlgProfilePreferences::slot_setCommandLineBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_command_line_background_color, pHost->mCommandLineBgColor);
+        setButtonAndProfileColor(pushButton_command_line_background_color, pHost->mCommandLineBgColor);
     }
 }
 
-void dlgProfilePreferences::setCommandBgColor()
+void dlgProfilePreferences::slot_setCommandBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_command_background_color, pHost->mCommandBgColor);
+        setButtonAndProfileColor(pushButton_command_background_color, pHost->mCommandBgColor);
     }
 }
 
-void dlgProfilePreferences::setFontSize()
+void dlgProfilePreferences::slot_setFontSize()
 {
     mFontSize = fontSize->currentIndex() + 1;
-    setDisplayFont();
+    slot_setDisplayFont();
 }
 
-void dlgProfilePreferences::setDisplayFont()
+void dlgProfilePreferences::slot_setDisplayFont()
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -1821,312 +1841,312 @@ void dlgProfilePreferences::setDisplayFont()
 }
 
 // Currently UNUSED!
-void dlgProfilePreferences::setCommandLineFont()
-{
-    Host* pHost = mpHost;
-    if (!pHost) {
-        return;
-    }
-    bool ok;
-    QFont font = QFontDialog::getFont(&ok, pHost->mCommandLineFont, this);
-    pHost->mCommandLineFont = font;
-    if (pHost->mpConsole) {
-        pHost->mpConsole->changeColors();
-    }
-}
+//void dlgProfilePreferences::slot_setCommandLineFont()
+//{
+//    Host* pHost = mpHost;
+//    if (!pHost) {
+//        return;
+//    }
+//    bool ok;
+//    QFont font = QFontDialog::getFont(&ok, pHost->mCommandLineFont, this);
+//    pHost->mCommandLineFont = font;
+//    if (pHost->mpConsole) {
+//        pHost->mpConsole->changeColors();
+//    }
+//}
 
-void dlgProfilePreferences::setColorBlack()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_black, pHost->mBlack);
-    }
-}
-
-void dlgProfilePreferences::setColorLightBlack()
+void dlgProfilePreferences::slot_setColorBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lBlack, pHost->mLightBlack);
+        setButtonAndProfileColor(pushButton_black, pHost->mBlack);
     }
 }
 
-void dlgProfilePreferences::setColorRed()
+void dlgProfilePreferences::slot_setColorLightBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_red, pHost->mRed);
+        setButtonAndProfileColor(pushButton_lBlack, pHost->mLightBlack);
     }
 }
 
-void dlgProfilePreferences::setColorLightRed()
+void dlgProfilePreferences::slot_setColorRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lRed, pHost->mLightRed);
+        setButtonAndProfileColor(pushButton_red, pHost->mRed);
     }
 }
 
-void dlgProfilePreferences::setColorGreen()
+void dlgProfilePreferences::slot_setColorLightRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_green, pHost->mGreen);
+        setButtonAndProfileColor(pushButton_lRed, pHost->mLightRed);
     }
 }
 
-void dlgProfilePreferences::setColorLightGreen()
+void dlgProfilePreferences::slot_setColorGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lGreen, pHost->mLightGreen);
+        setButtonAndProfileColor(pushButton_green, pHost->mGreen);
     }
 }
 
-void dlgProfilePreferences::setColorYellow()
-
+void dlgProfilePreferences::slot_setColorLightGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_yellow, pHost->mYellow);
+        setButtonAndProfileColor(pushButton_lGreen, pHost->mLightGreen);
     }
 }
 
-void dlgProfilePreferences::setColorLightYellow()
-{
-    Host* pHost = mpHost;
-    if (pHost) {
-        setColor(pushButton_lYellow, pHost->mLightYellow);
-    }
-}
-
-void dlgProfilePreferences::setColorBlue()
+void dlgProfilePreferences::slot_setColorYellow()
 
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_blue, pHost->mBlue);
+        setButtonAndProfileColor(pushButton_yellow, pHost->mYellow);
     }
 }
 
-void dlgProfilePreferences::setColorLightBlue()
+void dlgProfilePreferences::slot_setColorLightYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lBlue, pHost->mLightBlue);
+        setButtonAndProfileColor(pushButton_lYellow, pHost->mLightYellow);
     }
 }
 
-void dlgProfilePreferences::setColorMagenta()
+void dlgProfilePreferences::slot_setColorBlue()
 
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_magenta, pHost->mMagenta);
+        setButtonAndProfileColor(pushButton_blue, pHost->mBlue);
     }
 }
 
-void dlgProfilePreferences::setColorLightMagenta()
+void dlgProfilePreferences::slot_setColorLightBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lMagenta, pHost->mLightMagenta);
+        setButtonAndProfileColor(pushButton_lBlue, pHost->mLightBlue);
     }
 }
 
-void dlgProfilePreferences::setColorCyan()
+void dlgProfilePreferences::slot_setColorMagenta()
+
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_cyan, pHost->mCyan);
+        setButtonAndProfileColor(pushButton_magenta, pHost->mMagenta);
     }
 }
 
-void dlgProfilePreferences::setColorLightCyan()
+void dlgProfilePreferences::slot_setColorLightMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lCyan, pHost->mLightCyan);
+        setButtonAndProfileColor(pushButton_lMagenta, pHost->mLightMagenta);
     }
 }
 
-void dlgProfilePreferences::setColorWhite()
+void dlgProfilePreferences::slot_setColorCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_white, pHost->mWhite);
+        setButtonAndProfileColor(pushButton_cyan, pHost->mCyan);
     }
 }
 
-void dlgProfilePreferences::setColorLightWhite()
+void dlgProfilePreferences::slot_setColorLightCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_lWhite, pHost->mLightWhite);
+        setButtonAndProfileColor(pushButton_lCyan, pHost->mLightCyan);
     }
 }
 
-void dlgProfilePreferences::setFgColor2()
+void dlgProfilePreferences::slot_setColorWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_foreground_color_2, pHost->mFgColor_2);
+        setButtonAndProfileColor(pushButton_white, pHost->mWhite);
     }
 }
 
-void dlgProfilePreferences::setBgColor2()
+void dlgProfilePreferences::slot_setColorLightWhite()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_background_color_2, pHost->mBgColor_2);
+        setButtonAndProfileColor(pushButton_lWhite, pHost->mLightWhite);
     }
 }
 
-void dlgProfilePreferences::setRoomBorderColor()
+void dlgProfilePreferences::slot_setMapExitsColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
+        setButtonAndProfileColor(pushButton_foreground_color_2, pHost->mFgColor_2);
     }
 }
 
-void dlgProfilePreferences::setMapInfoBackground()
+void dlgProfilePreferences::slot_setMapBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
+        setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2);
     }
 }
 
-void dlgProfilePreferences::setColorBlack2()
+void dlgProfilePreferences::slot_setMapRoomBorderColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_black_2, pHost->mBlack_2);
+        setButtonAndProfileColor(pushButton_roomBorderColor, pHost->mRoomBorderColor);
     }
 }
 
-void dlgProfilePreferences::setColorLightBlack2()
+void dlgProfilePreferences::slot_setMapInfoBgColor()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lblack_2, pHost->mLightBlack_2);
+        setButtonAndProfileColor(pushButton_mapInfoBg, pHost->mMapInfoBg, true);
     }
 }
 
-void dlgProfilePreferences::setColorRed2()
+void dlgProfilePreferences::slot_setMapColorBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_red_2, pHost->mRed_2);
+        setButtonAndProfileColor(pushButton_black_2, pHost->mBlack_2);
     }
 }
 
-void dlgProfilePreferences::setColorLightRed2()
+void dlgProfilePreferences::slot_setMapColorLightBlack()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lred_2, pHost->mLightRed_2);
+        setButtonAndProfileColor(pushButton_Lblack_2, pHost->mLightBlack_2);
     }
 }
 
-void dlgProfilePreferences::setColorGreen2()
+void dlgProfilePreferences::slot_setMapColorRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_green_2, pHost->mGreen_2);
+        setButtonAndProfileColor(pushButton_red_2, pHost->mRed_2);
     }
 }
 
-void dlgProfilePreferences::setColorLightGreen2()
+void dlgProfilePreferences::slot_setMapColorLightRed()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lgreen_2, pHost->mLightGreen_2);
+        setButtonAndProfileColor(pushButton_Lred_2, pHost->mLightRed_2);
     }
 }
 
-void dlgProfilePreferences::setColorBlue2()
+void dlgProfilePreferences::slot_setMapColorGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_blue_2, pHost->mBlue_2);
+        setButtonAndProfileColor(pushButton_green_2, pHost->mGreen_2);
     }
 }
 
-void dlgProfilePreferences::setColorLightBlue2()
+void dlgProfilePreferences::slot_setMapColorLightGreen()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lblue_2, pHost->mLightBlue_2);
+        setButtonAndProfileColor(pushButton_Lgreen_2, pHost->mLightGreen_2);
     }
 }
 
-void dlgProfilePreferences::setColorYellow2()
+void dlgProfilePreferences::slot_setMapColorBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_yellow_2, pHost->mYellow_2);
+        setButtonAndProfileColor(pushButton_blue_2, pHost->mBlue_2);
     }
 }
 
-void dlgProfilePreferences::setColorLightYellow2()
+void dlgProfilePreferences::slot_setMapColorLightBlue()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lyellow_2, pHost->mLightYellow_2);
+        setButtonAndProfileColor(pushButton_Lblue_2, pHost->mLightBlue_2);
     }
 }
 
-void dlgProfilePreferences::setColorCyan2()
+void dlgProfilePreferences::slot_setMapColorYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_cyan_2, pHost->mCyan_2);
+        setButtonAndProfileColor(pushButton_yellow_2, pHost->mYellow_2);
     }
 }
 
-void dlgProfilePreferences::setColorLightCyan2()
+void dlgProfilePreferences::slot_setMapColorLightYellow()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lcyan_2, pHost->mLightCyan_2);
+        setButtonAndProfileColor(pushButton_Lyellow_2, pHost->mLightYellow_2);
     }
 }
 
-void dlgProfilePreferences::setColorMagenta2()
+void dlgProfilePreferences::slot_setMapColorCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_magenta_2, pHost->mMagenta_2);
+        setButtonAndProfileColor(pushButton_cyan_2, pHost->mCyan_2);
     }
 }
 
-void dlgProfilePreferences::setColorLightMagenta2()
+void dlgProfilePreferences::slot_setMapColorLightCyan()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2);
+        setButtonAndProfileColor(pushButton_Lcyan_2, pHost->mLightCyan_2);
     }
 }
 
-void dlgProfilePreferences::setColorWhite2()
+void dlgProfilePreferences::slot_setMapColorMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_white_2, pHost->mWhite_2);
+        setButtonAndProfileColor(pushButton_magenta_2, pHost->mMagenta_2);
     }
 }
 
-void dlgProfilePreferences::setColorLightWhite2()
+void dlgProfilePreferences::slot_setMapColorLightMagenta()
 {
     Host* pHost = mpHost;
     if (pHost) {
-        setColor(pushButton_Lwhite_2, pHost->mLightWhite_2);
+        setButtonAndProfileColor(pushButton_Lmagenta_2, pHost->mLightMagenta_2);
     }
 }
 
-void dlgProfilePreferences::downloadMap()
+void dlgProfilePreferences::slot_setMapColorWhite()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setButtonAndProfileColor(pushButton_white_2, pHost->mWhite_2);
+    }
+}
+
+void dlgProfilePreferences::slot_setMapColorLightWhite()
+{
+    Host* pHost = mpHost;
+    if (pHost) {
+        setButtonAndProfileColor(pushButton_Lwhite_2, pHost->mLightWhite_2);
+    }
+}
+
+void dlgProfilePreferences::slot_downloadMap()
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2140,7 +2160,7 @@ void dlgProfilePreferences::downloadMap()
     pHost->mpMap->downloadMap();
 }
 
-void dlgProfilePreferences::loadMap()
+void dlgProfilePreferences::slot_loadMap()
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2190,7 +2210,7 @@ void dlgProfilePreferences::loadMap()
             label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
         }
 
-        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
 
         // Restore setting immediately before we used it
         mudlet::self()->setShowMapAuditErrors(showAuditErrors);
@@ -2198,7 +2218,7 @@ void dlgProfilePreferences::loadMap()
     dialog->open();
 }
 
-void dlgProfilePreferences::saveMap()
+void dlgProfilePreferences::slot_saveMap()
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2255,7 +2275,7 @@ void dlgProfilePreferences::saveMap()
         }
         mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
-        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
     });
     dialog->open();
 }
@@ -2266,7 +2286,7 @@ QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost) {
     return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName());
 }
 
-void dlgProfilePreferences::hideActionLabel()
+void dlgProfilePreferences::slot_hideActionLabel()
 {
     label_mapFileActionResult->hide();
 }
@@ -2276,7 +2296,7 @@ void dlgProfilePreferences::hidePasswordMigrationLabel()
     label_password_migration_notification->hide();
 }
 
-void dlgProfilePreferences::slot_passwords_location_changed(int index)
+void dlgProfilePreferences::slot_passwordStorageLocationChanged(int index)
 {
     // index 0 = use secure storage, index 1 = use profile storage
     if (index == 0) {
@@ -2296,7 +2316,7 @@ void dlgProfilePreferences::slot_passwords_location_changed(int index)
     }
 }
 
-void dlgProfilePreferences::copyMap()
+void dlgProfilePreferences::slot_copyMap()
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2364,7 +2384,7 @@ void dlgProfilePreferences::copyMap()
         if (itOtherProfile.value() > 0) {
             // Skip the ones where we have already got the player room from the
             // active profile
-            qDebug() << "dlgProfilePreference::copyMap() in other ACTIVE profile:" << itOtherProfile.key() << "\n    the player was located in:" << itOtherProfile.value();
+            qDebug() << "dlgProfilePreference::slot_copyMap() in other ACTIVE profile:" << itOtherProfile.key() << "\n    the player was located in:" << itOtherProfile.value();
             if (pHost->mpMap->mpRoomDB->getRoom(itOtherProfile.value())) {
                 // That room IS in the map we are copying across, so update the
                 // local record of it for the map for that profile:
@@ -2386,7 +2406,7 @@ void dlgProfilePreferences::copyMap()
                                                &otherProfileAreaCount,
                                                &otherProfileRoomCount)) {
 
-            qDebug() << "dlgProfilePreference::copyMap() in other INACTIVE profile:"
+            qDebug() << "dlgProfilePreference::slot_copyMap() in other INACTIVE profile:"
                      << itOtherProfile.key()
                      << "\n    the file examined was:"
                      << otherProfileFileUsed
@@ -2422,7 +2442,7 @@ void dlgProfilePreferences::copyMap()
 
     if (!pHost->mpConsole->saveMap(QString())) {
         label_mapFileActionResult->setText(tr("Could not backup the map - saving it failed."));
-        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
         return;
     }
 
@@ -2447,7 +2467,7 @@ void dlgProfilePreferences::copyMap()
 
     if (thisProfileLatestMapFile.fileName().isEmpty()) {
         label_mapFileActionResult->setText(tr("Could not copy the map - failed to work out which map file we just saved the map as!"));
-        QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+        QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
         return;
     }
 
@@ -2465,7 +2485,7 @@ void dlgProfilePreferences::copyMap()
 
         if (!thisProfileLatestMapFile.copy(mudlet::getMudletPath(mudlet::profileMapPathFileName, otherHostName, thisProfileLatestMapPathFileName))) {
             label_mapFileActionResult->setText(tr("Could not copy the map to %1 - unable to copy the new map file over.").arg(otherHostName));
-            QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+            QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
             continue; // Try again with next profile
         } else {
             label_mapFileActionResult->setText(tr("Map copied successfully to other profile %1.").arg(otherHostName));
@@ -2481,7 +2501,7 @@ void dlgProfilePreferences::copyMap()
     // QStringList in many ways, the SLOT/SIGNAL system treats them as different
     // - I thinK - so use QList<QString> throughout the SIGNAL/SLOT links Slysven!
     label_mapFileActionResult->setText(tr("Map copied, now signalling other profiles to reload it."));
-    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
 
     // CHECK: Race condition? We might be changing this while other profile
     // are accessing it...
@@ -2574,7 +2594,7 @@ void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
     label_logFileNameExtension->setVisible(isShown);
 }
 
-void dlgProfilePreferences::slot_save_and_exit()
+void dlgProfilePreferences::slot_saveAndClose()
 {
     if (mpDialogMapGlyphUsage) {
         mpDialogMapGlyphUsage->close();
@@ -2665,6 +2685,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
+        pHost->mAskTlsAvailable = checkBox_askTlsAvailable->isChecked();
 
         if (console) {
             console->changeColors();
@@ -2715,11 +2736,7 @@ void dlgProfilePreferences::slot_save_and_exit()
         }
 
         if (!newIrcChannels.isEmpty()) {
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-#else
-            QStringList tL = newIrcChannels.split(" ", QString::SkipEmptyParts);
-#endif
             for (QString s : tL) {
                 if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                     newChanList << s;
@@ -2768,7 +2785,7 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->mpDlgIRC->ircRestart();
         }
 
-        setDisplayFont();
+        slot_setDisplayFont();
 
         if (console) {
             int x = console->width();
@@ -2795,6 +2812,8 @@ void dlgProfilePreferences::slot_save_and_exit()
         pHost->mSearchEngineName = search_engine_combobox->currentText();
 
         pHost->mTimerDebugOutputSuppressionInterval = timeEdit_timerDebugOutputMinimumInterval->time();
+
+        pHost->mBlankLineBehaviour = static_cast<Host::BlankLineBehaviour>(comboBox_blankLinesBehaviour->currentIndex());
 
         auto hideSmallIcon = false, hideSmallIconText = false;
         if (comboBox_discordSmallIconPrivacy->currentIndex() == 0) {
@@ -2839,9 +2858,12 @@ void dlgProfilePreferences::slot_save_and_exit()
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
 
+        pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
+
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
+        pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
 
         if (widget_playerRoomStyle->isVisible()) {
             // Although the controls have been interactively modifying the
@@ -2910,7 +2932,7 @@ void dlgProfilePreferences::slot_save_and_exit()
     close();
 }
 
-void dlgProfilePreferences::slot_chooseProfilesChanged(QAction* _action)
+void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
 {
     Q_UNUSED(_action);
 
@@ -3112,7 +3134,7 @@ void dlgProfilePreferences::addActionsToPreview(TAction* pActionParent, std::vec
 }
 
 // updates latest edbee themes when the user opens up the editor tab
-void dlgProfilePreferences::slot_editor_tab_selected(int tabIndex)
+void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 {
     // bail out if this is not the editor tab - or if the Host has gone away
     Host* pHost = mpHost;
@@ -3261,7 +3283,7 @@ void dlgProfilePreferences::populateThemesList()
 }
 
 // user has picked a different theme to preview, so apply it
-void dlgProfilePreferences::slot_theme_selected(int index)
+void dlgProfilePreferences::slot_themeSelected(int index)
 {
     auto themeFileName = code_editor_theme_selection_combobox->itemData(index).toString();
     auto themeName = code_editor_theme_selection_combobox->itemText(index);
@@ -3277,7 +3299,7 @@ void dlgProfilePreferences::slot_theme_selected(int index)
 }
 
 // user has picked a different script to preview, so show it
-void dlgProfilePreferences::slot_script_selected(int index)
+void dlgProfilePreferences::slot_scriptSelected(int index)
 {
     Host* pHost = mpHost;
     if (!pHost) {
@@ -4211,7 +4233,7 @@ void dlgProfilePreferences::slot_deleteMap()
     label_mapFileActionResult->setText(tr("Deleted map."));
     qApp->processEvents(); // Allow the above message to show up when erasing big maps
 
-    QTimer::singleShot(10s, this, &dlgProfilePreferences::hideActionLabel);
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
 }
 
 void dlgProfilePreferences::slot_changeLargeAreaExitArrows(const bool state)
