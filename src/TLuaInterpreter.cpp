@@ -10357,9 +10357,9 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
         // Allow an empty string to be used to clear the symbol:
         pR->mSymbol.clear();
     } else {
-        // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+        // 10.0 is the maximum supported by the Qt versions (5.14+) we
         // handle/use/allow:
-        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
     host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
