@@ -103,7 +103,7 @@ jobs:
         echo "Skipping generation of translation stats, so not installing lua-yajl."
 
     - name: Generate compile_commands.json
-      uses: lukka/run-cmake@v3
+      uses: lukka/run-cmake@v10
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
         cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
