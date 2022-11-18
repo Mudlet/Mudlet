@@ -59,7 +59,7 @@ jobs:
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        arch: win64_mingw73 # this key is relevant only for windows
+        # arch: win64_mingw73 # this key is relevant only for windows
         cache: true
 
     - name: Restore Boost cache
