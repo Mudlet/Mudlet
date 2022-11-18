@@ -17649,28 +17649,25 @@ int TLuaInterpreter::announce(lua_State *L) {
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollTo
-int TLuaInterpreter::scrollTo(lua_State *L) {
+int TLuaInterpreter::scrollTo(lua_State* L)
+{
     QString windowName;
     int targetLine;
     bool stopScrolling = false;
 
     int n = lua_gettop(L);
-    if (n > 2) {
-        lua_pushstring(L, "scrollTo: wrong number of arguments");
-        return lua_error(L);
-    } else if (n == 2) {
+    if (n == 2) {
         windowName = getVerifiedString(L, __func__, 1, "window name", true);
         targetLine = getVerifiedInt(L, __func__, 2, "line to scroll to");
-    } else if (n == 1){
-        if (lua_isnumber(L, 1)){
+    } else if (n == 1) {
+        if (lua_isnumber(L, 1)) {
             windowName = QLatin1String("main");
             targetLine = getVerifiedInt(L, __func__, 1, "line to scroll to");
         } else {
             windowName = getVerifiedString(L, __func__, 1, "window name", true);
             stopScrolling = true;
         }
-    }
-    else if (n == 0) {
+    } else if (n == 0) {
         windowName = QLatin1String("main");
         stopScrolling = true;
     }
@@ -17685,12 +17682,12 @@ int TLuaInterpreter::scrollTo(lua_State *L) {
     int numLines = console->getLastLineNumber();
     if (targetLine >= numLines) { // larger than buffer or at end
         stopScrolling = true;
-    } else if ( targetLine < 0 ){ // negative, count from end of buffer
-        targetLine = std::max((numLines + targetLine),0);
+    } else if (targetLine < 0) { // negative, count from end of buffer
+        targetLine = std::max((numLines + targetLine), 0);
     }
 
-    if ( stopScrolling ){
-        if ( !console->mUpperPane->mIsTailMode ) {
+    if (stopScrolling) {
+        if (!console->mUpperPane->mIsTailMode) {
             console->mLowerPane->mCursorY = console->buffer.size();
             console->mLowerPane->hide();
             console->buffer.mCursorY = console->buffer.size();
@@ -17708,7 +17705,8 @@ int TLuaInterpreter::scrollTo(lua_State *L) {
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScroll
-int TLuaInterpreter::getScroll(lua_State *L) {
+int TLuaInterpreter::getScroll(lua_State* L)
+{
     QString windowName;
 
     int n = lua_gettop(L);
