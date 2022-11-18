@@ -54,21 +54,13 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: Restore Qt cache
-      uses: actions/cache@v3
-      id: cache-qt
-      with:
-        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
-
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         arch: win64_mingw73 # this key is relevant only for windows
-        cached: ${{steps.cache-qt.outputs.cache-hit}}
-        aqtversion: '==1.1.2'
+        cache: true
 
     - name: Restore Boost cache
       uses: actions/cache@v3
