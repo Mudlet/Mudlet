@@ -2672,3 +2672,27 @@ function closestColor(r,g,b)
   end
   return cname
 end
+
+--- Scrolls the given window up a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to scroll
+function scrollUp(window, lines)
+  if type(window) ~= "string" then window, lines = "main", window end
+  lines = tonumber(lines) or 1
+  local numLines = getLastLineNumber(window)
+  if not numLines then return nil, "window does not exist" end
+  local curScroll = getScroll(window)
+  scrollTo(window, math.max(curScroll - lines, 0))
+end
+
+--- Scrolls the given window down a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to scroll
+function scrollDown(window, lines)
+  if type(window) ~= "string" then window, lines = "main", window end
+  lines = tonumber(lines) or 1
+  local numLines = getLastLineNumber(window)
+  if not numLines then return nil, "window does not exist" end
+  local curScroll = getScroll(window)
+  scrollTo(window, math.min(curScroll + lines, numLines))
+end
