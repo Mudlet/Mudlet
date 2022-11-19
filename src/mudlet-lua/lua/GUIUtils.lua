@@ -2009,7 +2009,7 @@ function hecho2string(text)
   return x2string(text, "Hex")
 end
 
-local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
+local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
@@ -2060,7 +2060,7 @@ function ansi2decho(text, ansi_default_color)
       local code = t[i]
       local formatCodeHandled = false
 
-      if code == '0' or code == '00' then
+      if code == '0' or code == '00' or code == '' then
         -- reset attributes
         output[#output + 1] = "<r>"
         fg, bg = nil, nil
