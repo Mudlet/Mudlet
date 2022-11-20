@@ -2409,12 +2409,33 @@ int TLuaInterpreter::setConsoleBufferSize(lua_State* L)
         windowName = WINDOW_NAME(L, s++);
     }
 
-    int luaFrom = getVerifiedInt(L, __func__, s++, "linesLimit");
-    int luaTo = getVerifiedInt(L, __func__, s, "sizeOfBatchDeletion");
+    auto linesLimit = getVerifiedInt(L, __func__, s++, "linesLimit");
+    auto sizeOfBatchDeletion = getVerifiedInt(L, __func__, s, "sizeOfBatchDeletion");
 
+    // The macro will have returned with a nil + error message if the windowName
+    // was not found:
     auto console = CONSOLE(L, windowName);
-    console->buffer.setBufferSize(luaFrom, luaTo);
-    return 0;
+    console->buffer.setBufferSize(linesLimit, sizeOfBatchDeletion);
+    // Indicate success with a true return value:
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConsoleBufferSize
+int TLuaInterpreter::getConsoleBufferSize(lua_State* L)
+{
+    QString windowName;
+    if (lua_gettop(L)) {
+        windowName = WINDOW_NAME(L, 1);
+    }
+
+    // The macro will have returned with a nil + error message if the windowName
+    // was not found:
+    auto console = CONSOLE(L, windowName);
+    // Indicate success with two numeric return values:
+    lua_pushnumber(L, console->buffer.mLinesLimit);
+    lua_pushnumber(L, console->buffer.mBatchDeleteSize);
+    return 2;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrollBar
@@ -3950,6 +3971,120 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
     return 4;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandBackgroundColor
+int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString windowName;
+    int r, alpha;
+    int s = 1;
+
+    auto validRange = [](int number) {
+        return number >= 0 && number <= 255;
+    };
+
+    if (lua_type(L, s) == LUA_TSTRING) {
+        windowName = WINDOW_NAME(L, s++);
+        r = getVerifiedInt(L, __func__, s, "red value 0-255");
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, qsl("red value %1 needs to be between 0-255").arg(r));
+        }
+    } else if (lua_isnumber(L, s)) {
+        r = static_cast<int>(lua_tonumber(L, s));
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, qsl("red value %1 needs to be between 0-255").arg(r));
+        }
+    } else {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+
+    int g = getVerifiedInt(L, __func__, ++s, "green value 0-255");
+    if (!validRange(g)) {
+        return warnArgumentValue(L, __func__, qsl("green value %1 needs to be between 0-255").arg(g));
+    }
+
+    int b = getVerifiedInt(L, __func__, ++s, "blue value 0-255");
+    if (!validRange(b)) {
+        return warnArgumentValue(L, __func__, qsl("blue value %1 needs to be between 0-255").arg(b));
+    }
+
+    // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
+    alpha = 255;
+    if (lua_gettop(L) > s) {
+        alpha = getVerifiedInt(L, __func__, ++s, "alpha value 0-255", true);
+        if (!validRange(alpha)) {
+            return warnArgumentValue(L, __func__, qsl("alpha value %1 needs to be between 0-255").arg(alpha));
+        }
+    }
+
+    if (isMain(windowName)) {
+        host.mCommandBgColor.setRgb(r, g, b, alpha);
+        host.mpConsole->setCommandBgColor(r, g, b, alpha);
+    } else if (!host.setCommandBackgroundColor(windowName, r, g, b, alpha)) {
+        return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandForegroundColor
+int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    QString windowName;
+    int r, alpha;
+    int s = 1;
+
+    auto validRange = [](int number) {
+        return number >= 0 && number <= 255;
+    };
+
+    if (lua_type(L, s) == LUA_TSTRING) {
+        windowName = WINDOW_NAME(L, s++);
+        r = getVerifiedInt(L, __func__, s, "red value 0-255");
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, qsl("red value %1 needs to be between 0-255").arg(r));
+        }
+    } else if (lua_isnumber(L, s)) {
+        r = static_cast<int>(lua_tonumber(L, s));
+        if (!validRange(r)) {
+            return warnArgumentValue(L, __func__, qsl("red value %1 needs to be between 0-255").arg(r));
+        }
+    } else {
+        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        return lua_error(L);
+    }
+
+    int g = getVerifiedInt(L, __func__, ++s, "green value 0-255");
+    if (!validRange(g)) {
+        return warnArgumentValue(L, __func__, qsl("green value %1 needs to be between 0-255").arg(g));
+    }
+
+    int b = getVerifiedInt(L, __func__, ++s, "blue value 0-255");
+    if (!validRange(b)) {
+        return warnArgumentValue(L, __func__, qsl("blue value %1 needs to be between 0-255").arg(b));
+    }
+
+    // if we get nothing for the alpha value, assume it is 255. If we get a non-number value, complain.
+    alpha = 255;
+    if (lua_gettop(L) > s) {
+        alpha = getVerifiedInt(L, __func__, ++s, "alpha value 0-255", true);
+        if (!validRange(alpha)) {
+            return warnArgumentValue(L, __func__, qsl("alpha value %1 needs to be between 0-255").arg(alpha));
+        }
+    }
+
+    if (isMain(windowName)) {
+        host.mCommandFgColor.setRgb(r, g, b, alpha);
+        host.mpConsole->setCommandFgColor(r, g, b, alpha);
+    } else if (!host.setCommandForegroundColor(windowName, r, g, b, alpha)) {
+        return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#calcFontSize
 int TLuaInterpreter::calcFontSize(lua_State* L)
 {
@@ -4512,7 +4647,7 @@ int TLuaInterpreter::setRoomEnv(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(id));
     }
     pR->environment = env;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -4533,7 +4668,7 @@ int TLuaInterpreter::setRoomName(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(id));
     }
     pR->name = name;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     updateMap(L);
     lua_pushboolean(L, true);
     return 1;
@@ -4567,7 +4702,7 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setWeight(w);
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
 
@@ -4681,7 +4816,7 @@ int TLuaInterpreter::lockRoom(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->isLocked = b;
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
         lua_pushboolean(L, true);
     } else {
@@ -4707,7 +4842,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->setExitLock(dir, b);
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 0;
@@ -4735,7 +4870,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     }
 
     lua_pushboolean(L, true);
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     host.mpMap->mMapGraphNeedsUpdate = true;
     return 1;
 }
@@ -8308,7 +8443,7 @@ int TLuaInterpreter::setCustomEnvColor(lua_State* L)
     int alpha = getVerifiedInt(L, __func__, 5, "a");
     Host& host = getHostFromLua(L);
     host.mpMap->mCustomEnvColors[id] = QColor(r, g, b, alpha);
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     return 0;
 }
 
@@ -8385,7 +8520,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
 
     bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
             if (isCurrentAreaRenamed) {
@@ -8461,7 +8596,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     // Note that adding an area name implicitly creates an underlying TArea instance
     lua_pushnumber(L, host.mpMap->mpRoomDB->addArea(name));
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
 
     if (host.mpMap->mpMapper) {
         host.mpMap->mpMapper->updateAreaComboBox();
@@ -8518,7 +8653,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
         }
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     lua_pushboolean(L, result);
@@ -8534,7 +8669,7 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
     }
     Host& host = getHostFromLua(L);
     lua_pushboolean(L, host.mpMap->mpRoomDB->removeRoom(id));
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     return 1;
 }
 
@@ -8612,7 +8747,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
     lua_pushboolean(L, added);
     if (added) {
         host.mpMap->setRoomArea(id, -1, false);
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
     return 1;
@@ -8703,6 +8838,7 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     float zoom = 30.0;
     bool showOnTop = true;
     bool noScaling = true;
+    bool temporary = false;
     QString fontName;
     int foregroundTransparency = 255;
     int backgroundTransparency = 50;
@@ -8738,9 +8874,12 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     if (args > 17) {
         backgroundTransparency = getVerifiedInt(L, __func__, 18, "backgroundTransparency", true);
     }
+    if (args > 18) {
+        temporary = getVerifiedBool(L, __func__, 19, "temporary", true);
+    }
 
     Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, zoom, fontSize, fontName));
+    lua_pushinteger(L, host.mpMap->createMapLabel(area, text, posx, posy, posz, QColor(fgr, fgg, fgb, foregroundTransparency), QColor(bgr, bgg, bgb, backgroundTransparency), showOnTop, noScaling, temporary, zoom, fontSize, fontName));
     return 1;
 }
 
@@ -8763,6 +8902,7 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapImageLabel
 int TLuaInterpreter::createMapImageLabel(lua_State* L)
 {
+    int args = lua_gettop(L);
     int area = getVerifiedInt(L, __func__, 1, "areaID");
     QString imagePathFileName = getVerifiedString(L, __func__, 2, "imagePathFileName");
     float posx = getVerifiedFloat(L, __func__, 3, "posX");
@@ -8772,9 +8912,13 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     float height = getVerifiedFloat(L, __func__, 7, "height");
     float zoom = getVerifiedFloat(L, __func__, 8, "zoom");
     bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
+    bool temporary = false;
+    if (args > 9) {
+        temporary = getVerifiedBool(L, __func__, 10, "showOnTop", true);
+    }
 
     Host& host = getHostFromLua(L);
-    lua_pushinteger(L, host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop));
+    lua_pushinteger(L, host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop, temporary));
     return 1;
 }
 
@@ -8842,7 +8986,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
 
     bool result = pR->setDoor(exitCmd, doorStatus);
     if (result) {
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
             host.mpMap->mpMapper->mp2dMap->update();
         }
@@ -9113,7 +9257,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     // show up properly:
     pR->calcRoomDimensions();
 
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
 
     // Better refresh the 2D map to show the new line:
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
@@ -9461,6 +9605,15 @@ void TLuaInterpreter::pushMapLabelPropertiesToLua(lua_State* L, const TMapLabel&
     lua_pushstring(L, "Pixmap");
     lua_pushstring(L, label.base64EncodePixmap().constData());
     lua_settable(L, -3);
+    lua_pushstring(L, "OnTop");
+    lua_pushboolean(L, label.showOnTop);
+    lua_settable(L, -3);
+    lua_pushstring(L, "Scaling");
+    lua_pushboolean(L, !label.noScaling);
+    lua_settable(L, -3);
+    lua_pushstring(L, "Temporary");
+    lua_pushboolean(L, label.temporary);
+    lua_settable(L, -3);
 
     lua_pushstring(L, "FgColor");
     {
@@ -9558,7 +9711,7 @@ int TLuaInterpreter::clearRoomUserData(lua_State* L)
     }
     if (!pR->userData.isEmpty()) {
         pR->userData.clear();
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9588,7 +9741,7 @@ int TLuaInterpreter::clearRoomUserDataItem(lua_State* L)
     //        }
     /*      else */ if (pR->userData.contains(key)) {
         pR->userData.remove(key);
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9611,7 +9764,7 @@ int TLuaInterpreter::clearAreaUserData(lua_State* L)
     }
     if (!pA->mUserData.isEmpty()) {
         pA->mUserData.clear();
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9637,7 +9790,7 @@ int TLuaInterpreter::clearAreaUserDataItem(lua_State* L)
         return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
     lua_pushboolean(L, (pA->mUserData.remove(key) > 0));
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     return 1;
 }
 
@@ -9651,7 +9804,7 @@ int TLuaInterpreter::clearMapUserData(lua_State* L)
 
     if (!host.mpMap->mUserData.isEmpty()) {
         host.mpMap->mUserData.clear();
-        host.mpMap->mUnsavedMap = true;
+        host.mpMap->setUnsaved(__func__);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -9910,7 +10063,7 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid room id").arg(roomId));
     }
     pR->userData[key] = value;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9935,7 +10088,7 @@ int TLuaInterpreter::setAreaUserData(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid area id").arg(areaId));
     }
     pA->mUserData[key] = value;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9955,7 +10108,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
     QString value = getVerifiedString(L, __func__, 2, "value");
 
     host.mpMap->mUserData[key] = value;
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10204,11 +10357,11 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
         // Allow an empty string to be used to clear the symbol:
         pR->mSymbol.clear();
     } else {
-        // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+        // 10.0 is the maximum supported by the Qt versions (5.14+) we
         // handle/use/allow:
-        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10257,7 +10410,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10278,7 +10431,7 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
     if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
         host.mpMap->mpMapper->mp2dMap->update();
     }
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -10366,7 +10519,7 @@ int TLuaInterpreter::setGridMode(lua_State* L)
             }
         }
     }
-    host.mpMap->mUnsavedMap = true;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -13447,6 +13600,12 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 host.mpConsole->printSystemMessage(msg);
             }
             host.raiseEvent(event);
+
+            if (msspVAR == "HOSTNAME") {
+                host.mMSSPHostName = msspVAL;
+            } else if (msspVAR == "TLS" || msspVAR == "SSL") {
+                host.mMSSPTlsPort = msspVAL != "-1" ? msspVAL.toInt() : 0;
+            }
         }
 
         lua_pop(L, lua_gettop(L));
@@ -14888,6 +15047,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setBackgroundImage", TLuaInterpreter::setBackgroundImage);
     lua_register(pGlobalLua, "resetBackgroundImage", TLuaInterpreter::resetBackgroundImage);
     lua_register(pGlobalLua, "setBackgroundColor", TLuaInterpreter::setBackgroundColor);
+    lua_register(pGlobalLua, "setCommandBackgroundColor", TLuaInterpreter::setCommandBackgroundColor);
+    lua_register(pGlobalLua, "setCommandForegroundColor", TLuaInterpreter::setCommandForegroundColor);
     lua_register(pGlobalLua, "setCmdLineAction", TLuaInterpreter::setCmdLineAction);
     lua_register(pGlobalLua, "resetCmdLineAction", TLuaInterpreter::resetCmdLineAction);
     lua_register(pGlobalLua, "setCmdLineStyleSheet", TLuaInterpreter::setCmdLineStyleSheet);
@@ -14963,6 +15124,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getBorderBottom", TLuaInterpreter::getBorderBottom);
     lua_register(pGlobalLua, "getBorderLeft", TLuaInterpreter::getBorderLeft);
     lua_register(pGlobalLua, "getBorderSizes", TLuaInterpreter::getBorderSizes);
+    lua_register(pGlobalLua, "getConsoleBufferSize", TLuaInterpreter::getConsoleBufferSize);
     lua_register(pGlobalLua, "setConsoleBufferSize", TLuaInterpreter::setConsoleBufferSize);
     lua_register(pGlobalLua, "enableScrollBar", TLuaInterpreter::enableScrollBar);
     lua_register(pGlobalLua, "disableScrollBar", TLuaInterpreter::disableScrollBar);
@@ -15276,6 +15438,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
+    lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
+    lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -15558,7 +15722,7 @@ void TLuaInterpreter::initIndenterGlobals()
         if (lua_isstring(pIndenterState.get(), -1)) {
             e = tr("Lua error: %1.").arg(lua_tostring(pIndenterState.get(), -1));
         }
-        QString msg = tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available.\n");
+        QString msg = qsl("%1\n").arg(tr("[ ERROR ] - Cannot load code formatter, indenting functionality won't be available."));
         msg.append(e);
         mpHost->postMessage(msg);
     }
@@ -15808,7 +15972,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
     pT->setIsFolder((timeout == 0 && function.isEmpty()));
     pT->setTemporary(false);
     // The name should be set after isTempTimer, as that is faster.
-    // Also for perminent timers it is easier to debug if it is set before
+    // Also for permanent timers it is easier to debug if it is set before
     // registration:
     pT->setName(name);
     // This will lead to the generation of the id number:
@@ -17201,6 +17365,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("askTlsAvailable")) {
+        host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("inputLineStrictUnixEndings")) {
         host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -17478,4 +17646,86 @@ int TLuaInterpreter::announce(lua_State *L) {
 
     mudlet::self()->announce(text, processing);
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollTo
+int TLuaInterpreter::scrollTo(lua_State* L)
+{
+    QString windowName;
+    int targetLine;
+    bool stopScrolling = false;
+
+    int n = lua_gettop(L);
+    if (n == 2) {
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
+        targetLine = getVerifiedInt(L, __func__, 2, "line to scroll to");
+    } else if (n == 1) {
+        if (lua_isnumber(L, 1)) {
+            windowName = QLatin1String("main");
+            targetLine = getVerifiedInt(L, __func__, 1, "line to scroll to");
+        } else {
+            windowName = getVerifiedString(L, __func__, 1, "window name", true);
+            stopScrolling = true;
+        }
+    } else if (n == 0) {
+        windowName = QLatin1String("main");
+        stopScrolling = true;
+    }
+
+    auto console = getHostFromLua(L).findConsole(windowName);
+    if (!console) {
+        lua_pushnil(L);
+        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+        return 2;
+    }
+
+    int numLines = console->getLastLineNumber();
+    if (targetLine >= numLines) { // larger than buffer or at end
+        stopScrolling = true;
+    } else if (targetLine < 0) { // negative, count from end of buffer
+        targetLine = std::max((numLines + targetLine), 0);
+    }
+
+    if (stopScrolling) {
+        if (!console->mUpperPane->mIsTailMode) {
+            console->mLowerPane->mCursorY = console->buffer.size();
+            console->mLowerPane->hide();
+            console->buffer.mCursorY = console->buffer.size();
+            console->mUpperPane->mCursorY = console->buffer.size();
+            console->mUpperPane->mCursorX = 0;
+            console->mUpperPane->mIsTailMode = true;
+            console->mUpperPane->updateScreenView();
+            console->mUpperPane->forceUpdate();
+        }
+    } else {
+        console->scrollUp(console->mUpperPane->mCursorY - targetLine);
+    }
+
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScroll
+int TLuaInterpreter::getScroll(lua_State* L)
+{
+    QString windowName;
+
+    int n = lua_gettop(L);
+    if (n == 1) {
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
+    } else {
+        windowName = QLatin1String("main");
+    }
+
+    auto console = getHostFromLua(L).findConsole(windowName);
+    if (!console) {
+        lua_pushnil(L);
+        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+        return 2;
+    }
+
+    int result = console->mUpperPane->mCursorY;
+    result = std::min(result, console->getLastLineNumber());
+    result = std::max(result, 0);
+    lua_pushnumber(L, result);
+    return 1;
 }

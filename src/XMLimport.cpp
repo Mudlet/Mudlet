@@ -882,14 +882,6 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->setEditorShowBidi(true);
     }
-    bool autoWrap = false;
-    if (attributes().hasAttribute("mAutoWrap")) {
-        autoWrap = attributes().value(qsl("mAutoWrap")) == YES;
-    }
-    // don't call wrap function during profile load as the console won't exist yet
-    QTimer::singleShot(0, pHost, [autoWrap, pHost]() {
-        pHost->setAutoWrap(autoWrap);
-    });
     if (attributes().hasAttribute("announceIncomingText")) {
         pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;
     } else {
@@ -1017,6 +1009,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mSslIgnoreExpired = attributes().value(qsl("mSslIgnoreExpired")) == YES;
     pHost->mSslIgnoreSelfSigned = attributes().value(qsl("mSslIgnoreSelfSigned")) == YES;
     pHost->mSslIgnoreAll = attributes().value(qsl("mSslIgnoreAll")) == YES;
+    pHost->mAskTlsAvailable = attributes().value(qsl("mAskTlsAvailable")) == YES;
     bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
@@ -1783,14 +1776,35 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                 bool ok = false;
                 int num = numberText.toInt(&ok, 10);
                 if (Q_LIKELY(!numberText.isEmpty() && ok)) {
-                    list << num;
+                    switch (num) {
+                    case REGEX_SUBSTRING:
+                        [[fallthrough]];
+                    case REGEX_PERL:
+                        [[fallthrough]];
+                    case REGEX_BEGIN_OF_LINE_SUBSTRING:
+                        [[fallthrough]];
+                    case REGEX_EXACT_MATCH:
+                        [[fallthrough]];
+                    case REGEX_LUA_CODE:
+                        [[fallthrough]];
+                    case REGEX_LINE_SPACER:
+                        [[fallthrough]];
+                    case REGEX_COLOR_PATTERN:
+                        [[fallthrough]];
+                    case REGEX_PROMPT:
+                        list << num;
+                        break;
+                    default:
+                        mpHost->postMessage(qsl("[ ERROR ] - \"%1\" as a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\" cannot be understood by this version of Mudlet, is it from a later version? Converting it to a SUBSTRING type so the data can be shown but it will probably not work as expected.").arg(numberText, parentName));
+                        list << REGEX_SUBSTRING; //Set it to the default type
+                    }                        
+
                 } else {
-                    // Using qFatal() seems a little, erm, fatalistic but it
-                    // seems no lesser one will always be detectable on the
-                    // RELEASE version on Windows? - Slysven
-                    qFatal(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
+                    qWarning(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
                            numberText.toUtf8().constData(),
                            parentName.toUtf8().constData());
+                    mpHost->postMessage(qsl("[ ERROR ] - Unable to convert: \"%1\" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\"!").arg(numberText, parentName));
+                    list << REGEX_SUBSTRING; //Just assume most common one
                 }
             } else {
                 readUnknownTriggerElement();

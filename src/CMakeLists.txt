@@ -67,7 +67,7 @@ set(mudlet_SRCS
     dlgPackageManager.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
-    dlgRoomSymbol.cpp
+    dlgRoomProperties.cpp
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
     dlgSourceEditorFindArea.cpp
@@ -160,7 +160,7 @@ set(mudlet_SRCS
 if(APPLE)
   list(APPEND mudlet_SRCS AnnouncerMac.mm)
 elseif(UNIX AND NOT APPLE)
-  list(APPEND mudlet_SRCS AnnouncerLinux.cpp)
+  list(APPEND mudlet_SRCS AnnouncerUnix.cpp)
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
@@ -185,7 +185,7 @@ set(mudlet_UIS
     ui/package_manager.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
-    ui/room_symbol.ui
+    ui/room_properties.ui
     ui/scripts_main_area.ui
     ui/source_editor_area.ui
     ui/source_editor_find_area.ui
@@ -220,7 +220,7 @@ set(mudlet_HDRS
     dlgPackageManager.h
     dlgProfilePreferences.h
     dlgRoomExits.h
-    dlgRoomSymbol.h
+    dlgRoomProperties.h
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
     dlgSourceEditorFindArea.h
@@ -404,6 +404,22 @@ endif()
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
+
+########################### Debugging code inclusions ##########################
+# Controls the include/selection of extra code to aide developers debug various
+# features of Mudlet, generally speaking they will not be '#define'd in
+# production builds - uncomment the
+# 'target_compile_definitions(mudlet PRIVATE DEBUG__XXX)'
+# line here to include the relevant code:
+#
+# Other DEFINES+=DEBUG_XXX expected here as a result of:
+# https://github.com/Mudlet/Mudlet/issues/6314
+#
+# * Produce a timestamped message on the OS's command line when an autosave of
+# the map file gets requested and when such a request gets actioned (or
+# rejected because the profile is being loaded):
+# target_compile_definitions(mudlet PRIVATE DEBUG_MAPAUTOSAVE)
+
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(mudlet PROPERTIES

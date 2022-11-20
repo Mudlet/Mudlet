@@ -169,7 +169,7 @@ public:
     QString         getDiscordGameName()             { return mDiscordGameName; }
     void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
     int             getPort()                        { return mPort; }
-    void            setPort(const int p)                 { mPort = p; }
+    void            setPort(const int p)             { mPort = p; }
     void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
     QString &       getLogin()                       { return mLogin; }
     void            setLogin(const QString& s)       { mLogin = s; }
@@ -196,7 +196,7 @@ public:
     void            setDiscordInviteURL(const QString& s);
     const QString&  getDiscordInviteURL() const { return mDiscordInviteURL; }
     void            setSpellDic(const QString&);
-    const QString&  getSpellDic() { return mSpellDic; }
+    QString         getSpellDic();
     void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
@@ -339,6 +339,7 @@ public:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
+    void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
     void setDebugShowAllProblemCodepoints(const bool);
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
@@ -379,6 +380,8 @@ public:
     bool setLabelOnLeave(const QString&, const int);
     std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
@@ -396,8 +399,6 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
-    bool autoWrap() const;
-    void setAutoWrap(bool enabled);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -428,6 +429,9 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+    bool mAskTlsAvailable;
+    int mMSSPTlsPort;
+    QString mMSSPHostName;
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
@@ -517,9 +521,7 @@ public:
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
-    // wrap at a specific amount of characters if not autowrapping:
     int mWrapAt;
-    // after wrapping a line, intent it by how many spaces:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
@@ -588,6 +590,7 @@ public:
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;
+    bool mTimeStampStatus = false;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
@@ -637,10 +640,11 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
+    TConsole::SearchOptions mBufferSearchOptions;
     QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
-    QList<TToolBar*> mToolbarLayoutChanges;
+    QList<QPointer<TToolBar>> mToolbarLayoutChanges;
 
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
@@ -717,9 +721,6 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
-
-    // automatically calculate wrapping?
-    bool mAutoWrap = true;
 
     QFile mErrorLogFile;
 

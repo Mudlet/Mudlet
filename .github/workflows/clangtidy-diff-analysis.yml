@@ -36,20 +36,22 @@ jobs:
         # https://github.community/t/github-actions-are-severely-limited-on-prs/18179/17?u=vadi2
         repository: ${{github.event.pull_request.head.repo.full_name}}
 
-    - name: Restore Qt cache
-      uses: actions/cache@v3
-      id: cache-qt
-      with:
-        path: ${{github.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+    - name: (Windows) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Windows'
       with:
         version: ${{matrix.qt}}
-        dir: ${{github.workspace}}
-        cached: ${{steps.cache-qt.outputs.cache-hit}}
-        aqtversion: '==1.1.2'
+        dir: ${{runner.workspace}}
+        arch: win64_mingw73
+        cache: true
+
+    - name: (Linux/macOS) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        cache: true
 
     - name: Restore Boost cache
       uses: actions/cache@v3
@@ -120,7 +122,7 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.9.0
+      uses: ZedThree/clang-tidy-review@v0.10.1
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory

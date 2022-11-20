@@ -129,8 +129,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     setEnabled(true);       //test fix for MAC
 
     connect(mpHost, &Host::signal_changeIsAmbigousWidthGlyphsToBeWide, this, &TTextEdit::slot_changeIsAmbigousWidthGlyphsToBeWide, Qt::UniqueConnection);
-    
-    updateWrap();
 }
 
 void TTextEdit::forceUpdate()
@@ -181,6 +179,16 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
 {
     if (mShowTimeStamps != state) {
         mShowTimeStamps = state;
+        if (mpConsole->getType() == TConsole::MainConsole) {
+            QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp")));
+            if (state) {
+                file.open(QIODevice::WriteOnly | QIODevice::Text);
+                QTextStream out(&file);
+                file.close();
+            } else {
+                file.remove();
+            }
+        }
         forceUpdate();
         update();
     }
@@ -293,7 +301,6 @@ void TTextEdit::updateScreenView()
         updateScrollBar(mpBuffer->mCursorY);
     }
     int currentScreenWidth = visibleRegion().boundingRect().width() / mFontWidth;
-
     if (mpConsole->getType() == TConsole::MainConsole) {
         // This is the MAIN console - we do not want it to ever disappear!
         mScreenWidth = qMax(40, currentScreenWidth);
@@ -306,16 +313,7 @@ void TTextEdit::updateScreenView()
     } else {
         mScreenWidth = currentScreenWidth;
     }
-
-    updateWrap();
-
     mOldScrollPos = mpBuffer->getLastLineNumber();
-}
-
-void TTextEdit::updateWrap() {
-    if (mpConsole->autoWrap()) {
-        mpBuffer->setWrapAt(mScreenWidth);
-    }
 }
 
 void TTextEdit::showNewLines()
@@ -1569,7 +1567,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             QAction* clearErrorConsole = new QAction(tr("Clear console"), this);
             connect(clearErrorConsole, &QAction::triggered, this, [=]() {
                 mpConsole->buffer.clear();
-                mpConsole->print(tr("*** starting new session ***\n"));
+                mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
             });
             popup->addAction(clearErrorConsole);
         }
@@ -1579,11 +1577,12 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
+            const QString &uniqueName = it.key();
             const QString &actionName = actionInfo.at(1);
-            QAction * action = new QAction(actionName, this);
-            action->setToolTip(actionInfo.at(2));
-            popup->addAction(action);
-            connect(action, &QAction::triggered, this, [this, actionName] { slot_mouseAction(actionName); });
+            QAction * mouseAction = new QAction(actionName, this);
+            mouseAction->setToolTip(actionInfo.at(2));
+            popup->addAction(mouseAction);
+            connect(mouseAction, &QAction::triggered, this, [this, uniqueName] { slot_mouseAction(uniqueName); });
         }
         popup->popup(mapToGlobal(event->pos()), action);
         event->accept();
@@ -2710,7 +2709,7 @@ void TTextEdit::updateCaret()
 
     if (!mIsLowerPane) {
         if (mCaretLine < lineOffset) {
-            scrollTo(mCaretLine);
+            scrollTo(mCaretLine + 1);
         } else if (mCaretLine >= lineOffset + mScreenHeight) {
             int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine == mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
