@@ -18,11 +18,13 @@ end
 
 function GeyserRepaint(event, gainedNotLostFocus)
   if event == "sysProfileFocusChangeEvent" then
-    for _, window in pairs(Geyser.windowList) do
---      if window.type ~= "userwindow" then
-        window:reposition()
---      end
-    end
+    tempTimer(0.0, [[
+for _, window in pairs(Geyser.windowList) do
+  if window.type == "container" then
+    window:reposition()
+  end
+end
+]], false)
   end
 end
 
