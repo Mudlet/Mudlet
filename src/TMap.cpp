@@ -2693,9 +2693,10 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         return;
     }
 
+    QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
+    postMessage(infoMsg);
+
     if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
-        QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
-        postMessage(infoMsg);
         if (pHost->mpConsole->loadMap(file.fileName())) {
             TEvent mapDownloadEvent {};
             mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
@@ -2717,8 +2718,6 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         return;
     }
 
-    QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
-    postMessage(infoMsg);
 
     // Since the download is complete but we do not offer to
     // cancel the required post-processing we should now hide
