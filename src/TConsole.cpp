@@ -628,16 +628,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
-    // don't call event in lua if size didn't change
-    bool preventLuaEvent = (getMainWindowSize() == mOldSize);
-    QWidget::resizeEvent(event);
-    mOldSize = getMainWindowSize();
-
-    if (preventLuaEvent) {
-        return;
-    }
-
     if (mType & MainConsole) {
+        // don't call event in lua if size didn't change
+        bool preventLuaEvent = (getMainWindowSize() == mOldSize);
+        QWidget::resizeEvent(event);
+        mOldSize = getMainWindowSize();
+
+        if (preventLuaEvent) {
+            return;
+        }
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
         QString func = "handleWindowResizeEvent";
         QString n = "WindowResizeEvent";
