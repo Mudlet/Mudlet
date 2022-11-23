@@ -2663,81 +2663,82 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
             // Don't post an error for the cancel case - it has already been done
             QString alertMsg = tr("[ ALERT ] - Map download failed, error reported was:\n%1.").arg(reply->errorString());
             postMessage(alertMsg);
+            cleanup();
+            return;
         }
         // else was QNetworkReply::OperationCanceledError and we already handle
         // THAT in slot_downloadCancel()
+    }
+    QFile file(mLocalMapFileName);
+    if (!file.open(QFile::WriteOnly)) {
+        QString alertMsg = tr("[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg(mLocalMapFileName);
+        postMessage(alertMsg);
     } else {
-        QFile file(mLocalMapFileName);
-        if (!file.open(QFile::WriteOnly)) {
-            QString alertMsg = tr("[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg(mLocalMapFileName);
+        // The QNetworkReply is Ok here:
+        if (file.write(reply->readAll()) == -1) {
+            QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
             postMessage(alertMsg);
         } else {
-            // The QNetworkReply is Ok here:
-            if (file.write(reply->readAll()) == -1) {
-                QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
-                postMessage(alertMsg);
-            } else {
-                file.flush();
-                file.close();
+            file.flush();
+            file.close();
 
-                if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
-                    auto pHost = mpHost;
-                    if (!pHost) {
-                        cleanup();
-                        return;
-                    }
-
-                    QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
-                    postMessage(infoMsg);
-                    if (pHost->mpConsole->loadMap(file.fileName())) {
-                        TEvent mapDownloadEvent {};
-                        mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
-                        mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                        pHost->raiseEvent(mapDownloadEvent);
-                    } else {
-                        QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(file.fileName());
-                        postMessage(alertMsg);
-                    }
-
+            if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
+                auto pHost = mpHost;
+                if (!pHost) {
                     cleanup();
                     return;
                 }
 
-                if (file.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
-                    QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
-                    postMessage(infoMsg);
-
-                    Host* pHost = mpHost;
-                    if (!pHost) {
-                        qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - NULL Host pointer - something is really wrong!";
-                        cleanup();
-                        return;
-                    }
-
-                    // Since the download is complete but we do not offer to
-                    // cancel the required post-processing we should now hide
-                    // the cancel/abort button:
-                    mpProgressDialog->setCancelButton(nullptr);
-
-                    // The action to parse the XML file has been refactored to
-                    // a separate method so that it can be shared with the
-                    // direct importation of a local copy of a map file.
-
-                    if (readXmlMapFile(file)) {
-                        TEvent mapDownloadEvent {};
-                        mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
-                        mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-                        pHost->raiseEvent(mapDownloadEvent);
-                    } else {
-                        // Failure in parse file...
-                        QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(mLocalMapFileName);
-                        postMessage(alertMsg);
-                    }
-                    file.close();
+                QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
+                postMessage(infoMsg);
+                if (pHost->mpConsole->loadMap(file.fileName())) {
+                    TEvent mapDownloadEvent {};
+                    mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
+                    mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                    pHost->raiseEvent(mapDownloadEvent);
                 } else {
-                    QString alertMsg = tr("[ ERROR ] - Map download problem, unable to read destination file:\n%1.").arg(mLocalMapFileName);
+                    QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(file.fileName());
                     postMessage(alertMsg);
                 }
+
+                cleanup();
+                return;
+            }
+
+            if (file.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
+                QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
+                postMessage(infoMsg);
+
+                Host* pHost = mpHost;
+                if (!pHost) {
+                    qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - NULL Host pointer - something is really wrong!";
+                    cleanup();
+                    return;
+                }
+
+                // Since the download is complete but we do not offer to
+                // cancel the required post-processing we should now hide
+                // the cancel/abort button:
+                mpProgressDialog->setCancelButton(nullptr);
+
+                // The action to parse the XML file has been refactored to
+                // a separate method so that it can be shared with the
+                // direct importation of a local copy of a map file.
+
+                if (readXmlMapFile(file)) {
+                    TEvent mapDownloadEvent {};
+                    mapDownloadEvent.mArgumentList.append(qsl("sysMapDownloadEvent"));
+                    mapDownloadEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+                    pHost->raiseEvent(mapDownloadEvent);
+                } else {
+                    // Failure in parse file...
+                    QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(mLocalMapFileName);
+                    postMessage(alertMsg);
+                }
+                file.close();
+            } else {
+                QString alertMsg = tr("[ ERROR ] - Map download problem, unable to read destination file:\n%1.").arg(mLocalMapFileName);
+                postMessage(alertMsg);
             }
         }
     }
