@@ -341,6 +341,7 @@ public:
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
     void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
+    std::pair<bool, QString> setVideoPlayerTitle(const QString&);
     void setDebugShowAllProblemCodepoints(const bool);
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
     void setCompactInputLine(const bool state);
@@ -365,6 +366,8 @@ public:
     std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
     std::pair<bool, QString> closeMapWidget();
+    std::pair<bool, QString> openVideoPlayerWidget(const QString& area, int x, int y, int width, int height);
+    std::pair<bool, QString> closeVideoPlayerWidget();
     bool closeWindow(const QString&);
     bool echoWindow(const QString&, const QString&);
     bool pasteWindow(const QString& name);
@@ -386,6 +389,7 @@ public:
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
     void showHideOrCreateMapper(const bool loadDefaultMap);
+    void showHideOrCreateVideoPlayer();
     bool setProfileStyleSheet(const QString& styleSheet);
     void check_for_mappingscript();
     void setupIreDriverBugfix();
@@ -619,7 +623,8 @@ public:
     bool mBubbleMode;
     bool mMapViewOnly = true;
     bool mShowRoomID;
-    bool mShowPanel;
+    bool mShowPanel; // Mapper
+    bool mShowVideoPlayerPanel;
     QString mServerGUI_Package_version;
     QString mServerGUI_Package_name;
     bool mAcceptServerGUI;
@@ -632,6 +637,7 @@ public:
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
+    QPointer<QDockWidget> mpDockableVideoPlayerWidget;
     bool mEnableTextAnalyzer;
     bool mWritingHostAndModules = false;
     // Set from profile preferences, if the timer interval is less
@@ -704,6 +710,8 @@ private:
     void thankForUsingPTB();
     void toggleMapperVisibility();
     void createMapper(const bool);
+    void createVideoPlayer();
+    void toggleVideoPlayerVisibility();
     void removePackageInfo(const QString &packageName, const bool);
     static void createModuleBackup(const QString &filename, const QString& saveName);
     void writeModule(const QString &moduleName, const QString &filename);

@@ -64,6 +64,7 @@ class QScrollBar;
 class QToolButton;
 
 class dlgMapper;
+class dlgVideoPlayer;
 class Host;
 class TTextEdit;
 class TCommandLine;
@@ -266,6 +267,7 @@ public:
     QWidget* mpMainDisplay = nullptr;
 
     dlgMapper* mpMapper = nullptr;
+    dlgVideoPlayer* mpVideoPlayer = nullptr;
 
     QScrollBar* mpScrollBar = nullptr;
     QScrollBar* mpHScrollBar = nullptr;

@@ -27,6 +27,7 @@
 #include "Host.h"
 #include "TEvent.h"
 #include "mudlet.h"
+#include "dlgVideoPlayer.h"
 #include "TMediaData.h"
 
 #include "pre_guard.h"
@@ -73,6 +74,8 @@ public:
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
+
+    QPointer<dlgVideoPlayer> mpVideoPlayer;
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);
@@ -123,8 +126,10 @@ private:
     QList<TMediaPlayer> mMSPMusicList;
     QList<TMediaPlayer> mGMCPSoundList;
     QList<TMediaPlayer> mGMCPMusicList;
+    QList<TMediaPlayer> mGMCPVideoList;
     QList<TMediaPlayer> mAPISoundList;
     QList<TMediaPlayer> mAPIMusicList;
+    QList<TMediaPlayer> mAPIVideoList;
 
     QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;

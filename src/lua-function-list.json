@@ -62,6 +62,7 @@
     "createRoomID": "usableId = createRoomID([minimumStartingRoomId])",
     "createScrollBox": "createScrollBox([name of parent window], name, x, y, width, height)",
     "createStopWatch": "createStopWatch([name], [start immediately])",
+    "createVideoPlayer": "createVideoPlayer([name of userwindow], x, y, width, height)",
     "creplace": "creplace([window, ]text)",
     "creplaceLine": "creplaceLine ([window], text)",
     "customHTTP": "customHTTP(method, url, headersTable)",

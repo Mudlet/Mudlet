@@ -277,6 +277,7 @@ public:
     static int searchRoom(lua_State*);
     static int resetProfile(lua_State*);
     static int createMapper(lua_State*);
+    static int createVideoPlayer(lua_State*);
     static int createCommandLine(lua_State*);
     static int sendTelnetChannel102(lua_State*);
     static int isPrompt(lua_State*);
@@ -443,10 +444,13 @@ public:
     static int receiveMSP(lua_State*);
     static int loadMusicFile(lua_State*);
     static int loadSoundFile(lua_State*);
+    static int loadVideoFile(lua_State*);
     static int playMusicFile(lua_State*);
     static int playSoundFile(lua_State*);
+    static int playVideoFile(lua_State*);
     static int stopMusic(lua_State*);
     static int stopSounds(lua_State*);
+    static int stopVideos(lua_State*);
     static int purgeMediaCache(lua_State*);
     static void setBorderSize(lua_State*, int, int, bool resizeMudlet = true);
     static int setBorderSizes(lua_State*);
@@ -615,6 +619,7 @@ public:
     static int getConnectionInfo(lua_State*);
     static int unzipAsync(lua_State*);
     static int setMapWindowTitle(lua_State*);
+    static int setVideoPlayerWindowTitle(lua_State*);
     static int getMudletInfo(lua_State*);
     static int getMapBackgroundColor(lua_State*);
     static int setMapBackgroundColor(lua_State*);
@@ -723,10 +728,14 @@ private:
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
     static int loadMediaFileAsOrderedArguments(lua_State*);
     static int loadMediaFileAsTableArgument(lua_State*);
+    static int playVideoFileAsOrderedArguments(lua_State*);
+    static int playVideoFileAsTableArgument(lua_State*);
     static int playMusicFileAsOrderedArguments(lua_State*);
     static int playMusicFileAsTableArgument(lua_State*);
     static int playSoundFileAsOrderedArguments(lua_State*);
     static int playSoundFileAsTableArgument(lua_State*);
+    static int stopVideosAsOrderedArguments(lua_State*);
+    static int stopVideosAsTableArgument(lua_State*);
     static int stopMusicAsOrderedArguments(lua_State*);
     static int stopMusicAsTableArgument(lua_State*);
     static int stopSoundsAsOrderedArguments(lua_State*);

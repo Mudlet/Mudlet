@@ -516,6 +516,7 @@ public:
 public slots:
     void slot_processEventLoopHackTimerRun();
     void slot_mapper();
+    void slot_videoPlayer();
     void slot_replayTimeChanged();
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
@@ -650,6 +651,7 @@ private:
 
     QPointer<QShortcut> triggersShortcut;
     QPointer<QShortcut> showMapShortcut;
+    QPointer<QShortcut> showVideoPlayerShortcut;
     QPointer<QShortcut> inputLineShortcut;
     QPointer<QShortcut> optionsShortcut;
     QPointer<QShortcut> notepadShortcut;
@@ -662,6 +664,7 @@ private:
     QPointer<QShortcut> closeProfileShortcut;
     QKeySequence triggersKeySequence;
     QKeySequence showMapKeySequence;
+    QKeySequence showVideoPlayerKeySequence;
     QKeySequence inputLineKeySequence;
     QKeySequence optionsKeySequence;
     QKeySequence notepadKeySequence;
@@ -691,6 +694,7 @@ private:
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QAction> mpActionKeys;
     QPointer<QAction> mpActionMapper;
+    QPointer<QAction> mpActionVideoPlayer;
     QPointer<QAction> mpActionMultiView;
     QPointer<QAction> mpActionReportIssue;
     QPointer<QAction> mpActionNotes;

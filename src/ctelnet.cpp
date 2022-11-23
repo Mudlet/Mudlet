@@ -39,6 +39,7 @@
 #include "TTextCodec.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
+#include "dlgVideoPlayer.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"

@@ -137,8 +137,11 @@ void TMedia::stopMedia(TMediaData& mediaData)
         case TMediaData::MediaTypeMusic:
             mTMediaPlayerList = mGMCPMusicList;
             break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mGMCPVideoList;
+            break;
         case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList);
+            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList + mGMCPVideoList);
             break;
         }
         break;
@@ -152,8 +155,11 @@ void TMedia::stopMedia(TMediaData& mediaData)
         case TMediaData::MediaTypeMusic:
             mTMediaPlayerList = mAPIMusicList;
             break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mAPIVideoList;
+            break;
         case TMediaData::MediaTypeNotSet:
-            mTMediaPlayerList = (mAPISoundList + mAPIMusicList);
+            mTMediaPlayerList = (mAPISoundList + mAPIMusicList + mAPIVideoList);
             break;
         }
         break;
@@ -258,7 +264,7 @@ bool TMedia::purgeMediaCache()
 // Private
 void TMedia::stopAllMediaPlayers()
 {
-    QList<TMediaPlayer> mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList);
+    QList<TMediaPlayer> mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mGMCPVideoList + mAPISoundList + mAPIMusicList + mAPIVideoList);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
@@ -652,6 +658,9 @@ QList<TMediaPlayer> TMedia::getMediaPlayerList(TMediaData& mediaData)
         case TMediaData::MediaTypeMusic:
             mTMediaPlayerList = mGMCPMusicList;
             break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mGMCPVideoList;
+            break;
         }
         break;
 
@@ -662,6 +671,9 @@ QList<TMediaPlayer> TMedia::getMediaPlayerList(TMediaData& mediaData)
             break;
         case TMediaData::MediaTypeMusic:
             mTMediaPlayerList = mAPIMusicList;
+            break;
+        case TMediaData::MediaTypeVideo:
+            mTMediaPlayerList = mAPIVideoList;
             break;
         }
         break;
@@ -721,6 +733,13 @@ void TMedia::updateMediaPlayerList(TMediaPlayer& player)
                 mGMCPMusicList.replace(matchedMediaPlayerIndex, player);
             }
             break;
+        case TMediaData::MediaTypeVideo:
+            if (matchedMediaPlayerIndex == -1) {
+                mGMCPVideoList.append(player);
+            } else {
+                mGMCPVideoList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
         }
         break;
 
@@ -738,6 +757,13 @@ void TMedia::updateMediaPlayerList(TMediaPlayer& player)
                 mAPIMusicList.append(player);
             } else {
                 mAPIMusicList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        case TMediaData::MediaTypeVideo:
+            if (matchedMediaPlayerIndex == -1) {
+                mAPIVideoList.append(player);
+            } else {
+                mAPIVideoList.replace(matchedMediaPlayerIndex, player);
             }
             break;
         }
@@ -1074,6 +1100,16 @@ void TMedia::play(TMediaData& mediaData)
 
     if (mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet || mediaData.getMediaFadeOut() != TMediaData::MediaFadeNotSet) {
         pPlayer.getMediaPlayer()->setNotifyInterval(50); // Smoother volume changes with the tighter interval (default = 1000).
+    }
+
+    if (mediaData.getMediaType() == TMediaData::MediaTypeVideo) {
+        if (!mpHost->mpMedia->mpVideoPlayer.data()) {
+            mpHost->showHideOrCreateVideoPlayer();
+        }
+
+        auto videoWidget = mpHost->mpMedia->mpVideoPlayer->mpVideoPlayer;
+        pPlayer.getMediaPlayer()->setVideoOutput(videoWidget);
+        videoWidget->show();
     }
 
     pPlayer.getMediaPlayer()->play();

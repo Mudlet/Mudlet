@@ -16,6 +16,7 @@
 --    GeyserGauge.lua
 --    GeyserMiniConsole.lua
 --    GeyserMapper.lua
+--    GeyserVideoPlayer.lua
 --    GeyserReposition.lua
 --    GeyserTests.lua
 

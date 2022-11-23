@@ -84,7 +84,7 @@ win32 {
     DEFINES += INCLUDE_WINSOCK2
 }
 
-QT += network uitools multimedia gui concurrent
+QT += network uitools multimedia multimediawidgets gui concurrent
 qtHaveModule(gamepad) {
     QT += gamepad
     !build_pass : message("Using Gamepad module")
@@ -580,6 +580,7 @@ SOURCES += \
     dlgTriggerPatternEdit.cpp \
     dlgTriggersMainArea.cpp \
     dlgVarsMainArea.cpp \
+    dlgVideoPlayer.cpp \
     EAction.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
@@ -656,6 +657,7 @@ SOURCES += \
     TTreeWidget.cpp \
     TTrigger.cpp \
     TVar.cpp \
+    TVideoPlayer.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp
@@ -697,6 +699,7 @@ HEADERS += \
     dlgTriggerPatternEdit.h \
     dlgTriggersMainArea.h \
     dlgVarsMainArea.h \
+    dlgVideoPlayer.h \
     EAction.h \
     exitstreewidget.h \
     Host.h \
@@ -782,6 +785,7 @@ HEADERS += \
     TTreeWidget.h \
     TTrigger.h \
     TVar.h \
+    TVideoPlayer.h \
     VarUnit.h \
     utils.h \
     XMLexport.h \
@@ -836,7 +840,9 @@ FORMS += \
     ui/triggers_main_area.ui \
     ui/trigger_editor.ui \
     ui/trigger_pattern_edit.ui \
-    ui/vars_main_area.ui
+    ui/vars_main_area.ui \
+    ui/videoplayer.ui
+
 
 RESOURCES += \
     mudlet.qrc \
@@ -971,6 +977,7 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserHBox.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserLabel.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserMapper.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserVideoPlayer.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserMiniConsole.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserReposition.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserScrollBox.lua \

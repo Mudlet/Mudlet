@@ -38,7 +38,8 @@ public:
     enum MediaType {
         MediaTypeNotSet = 0,
         MediaTypeSound = 1,
-        MediaTypeMusic = 2};
+        MediaTypeMusic = 2,
+        MediaTypeVideo = 3};
 
     enum MediaVolume {
         MediaVolumePreload = 0,

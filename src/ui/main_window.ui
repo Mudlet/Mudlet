@@ -97,6 +97,7 @@
     <addaction name="dactionScriptEditor"/>
     <addaction name="dactionShowErrors"/>
     <addaction name="dactionShowMap"/>
+    <addaction name="dactionShowVideo"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
     <addaction name="dactionLiveHelpChat"/>
@@ -271,6 +272,14 @@
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Show or hide the game map.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionShowVideoPlayer">
+   <property name="text">
+    <string>Show video</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Show or hide the video player.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionPackageManager">

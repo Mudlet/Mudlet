@@ -994,6 +994,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapViewOnly = attributes().value(qsl("mMapViewOnly")) == YES;
     pHost->mShowRoomID = attributes().value(qsl("mShowRoomIDs")) == YES;
     pHost->mShowPanel = attributes().value(qsl("mShowPanel")) == YES;
+    pHost->mShowVideoPlayerPanel = attributes().value(qsl("mShowVideoPlayerPanel")) == YES;
     pHost->mHaveMapperScript = attributes().value(qsl("mHaveMapperScript")) == YES;
     QStringRef ignore = attributes().value(qsl("mDoubleClickIgnore"));
     for (auto character : ignore) {

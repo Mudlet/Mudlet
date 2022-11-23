@@ -49,6 +49,7 @@
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
+#include "dlgVideoPlayer.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 #if defined(INCLUDE_3DMAPPER)
@@ -3213,6 +3214,23 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setVideoPlayerWindowTitle
+int TLuaInterpreter::setVideoPlayerWindowTitle(lua_State* L)
+{
+    QString title;
+    if (lua_gettop(L)) {
+        title = getVerifiedString(L, __func__, 1, "title", true);
+    }
+
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.setVideoPlayerTitle(title); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 int TLuaInterpreter::getMudletInfo(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -3540,6 +3558,47 @@ int TLuaInterpreter::createMapper(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (auto [success, message] = host.mpConsole->createMapper(windowName, x, y, width, height); !success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createVideoPlayer
+int TLuaInterpreter::createVideoPlayer(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString windowName = "";
+    int counter = 1;
+
+    if (n > 4) {
+        if (lua_type(L, 1) != LUA_TSTRING) {
+            lua_pushfstring(L, "createVideoPlayer: bad argument #1 type (parent window name as string expected, got %s!)", luaL_typename(L, 1));
+            return lua_error(L);
+        }
+
+        windowName = lua_tostring(L, 1);
+
+        counter++;
+
+        if (isMain(windowName)) {
+            // createVideoPlayer only accepts the empty name as the main window
+            windowName.clear();
+        }
+    }
+
+    int x = getVerifiedInt(L, __func__, counter, "video player x-coordinate");
+    counter++;
+    int y = getVerifiedInt(L, __func__, counter, "video player y-coordinate");
+    counter++;
+    int width = getVerifiedInt(L, __func__, counter, "video player width");
+    counter++;
+    int height = getVerifiedInt(L, __func__, counter, "video player height");
+
+    Host& host = getHostFromLua(L);
+
+    if (auto [success, message] = host.mpConsole->createVideoPlayer(windowName, x, y, width, height); !success) {
         return warnArgumentValue(L, __func__, message);
     }
 
@@ -5682,7 +5741,7 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
     }
 
     if (mediaData.getMediaFileName().isEmpty()) {
-        lua_pushstring(L, R"(loadMusicFile: missing name (add name = "file to play"))");
+        lua_pushstring(L, R"(loadMediaFile: missing name (add name = "file to play"))");
         return lua_error(L);
     }
 
@@ -5692,6 +5751,21 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
     host.mpMedia->playMedia(mediaData);
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadVideoFile
+int TLuaInterpreter::loadVideoFile(lua_State* L)
+{
+    if (!lua_gettop(L)) {
+        lua_pushfstring(L, "%s: need at least one argument", __func__);
+        return lua_error(L);
+    }
+
+    if (lua_istable(L, 1)) {
+        return loadMediaFileAsTableArgument(L);
+    }
+
+    return loadMediaFileAsOrderedArguments(L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadMusicFile
@@ -5722,6 +5796,197 @@ int TLuaInterpreter::loadSoundFile(lua_State* L)
     }
 
     return loadMediaFileAsOrderedArguments(L);
+}
+
+// Private
+int TLuaInterpreter::playVideoFileAsOrderedArguments(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+    int numArgs = lua_gettop(L);
+    QString stringValue;
+    int intValue = 0;
+    bool boolValue = 0;
+
+    // name[,volume][,start][,loops][,key][,tag][,continue][,url])
+    for (int i = 1; i <= numArgs; i++) {
+        if (lua_isnil(L, i)) {
+            continue;
+        }
+
+        switch (i) {
+        case 1:
+            stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
+            mediaData.setMediaFileName(stringValue);
+            break;
+        case 2:
+            intValue = getVerifiedInt(L, __func__, i, "volume");
+
+            if (intValue == TMediaData::MediaVolumePreload) {
+                {
+                } // Volume of 0 supports preloading
+            } else if (intValue > TMediaData::MediaVolumeMax) {
+                intValue = TMediaData::MediaVolumeMax;
+            } else if (intValue < TMediaData::MediaVolumeMin) {
+                intValue = TMediaData::MediaVolumeMin;
+            }
+
+            mediaData.setMediaVolume(intValue);
+            break;
+        case 3:
+            intValue = getVerifiedInt(L, __func__, i, "start");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playVideoFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaStart(intValue);
+            break;
+        case 4:
+            intValue = getVerifiedInt(L, __func__, i, "loops");
+
+            if (intValue < TMediaData::MediaLoopsRepeat || intValue == 0) {
+                intValue = TMediaData::MediaLoopsDefault;
+            }
+
+            mediaData.setMediaLoops(intValue);
+            break;
+        case 5:
+            stringValue = getVerifiedString(L, __func__, i, "key");
+            mediaData.setMediaKey(stringValue);
+            break;
+        case 6:
+            stringValue = getVerifiedString(L, __func__, i, "tag");
+            mediaData.setMediaTag(stringValue);
+            break;
+        case 7:
+            boolValue = getVerifiedBool(L, __func__, i, "continue");
+            mediaData.setMediaContinue(boolValue);
+            break;
+        case 8:
+            stringValue = getVerifiedString(L, __func__, i, "url");
+            mediaData.setMediaUrl(stringValue);
+            break;
+        }
+    }
+
+    if (mediaData.getMediaFileName().isEmpty()) {
+        return warnArgumentValue(L, __func__, QLatin1String("missing argument 1 (file to play)"));
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
+    host.mpMedia->playMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+        key = key.toLower();
+
+        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+            QString value = getVerifiedString(L,
+                                              __func__,
+                                              -1,
+                                              key == QLatin1String("name")  ? "value for name"
+                                              : key == QLatin1String("key") ? "value for key"
+                                              : key == QLatin1String("tag") ? "value for tag"
+                                                                            : "value for url");
+
+            if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (key == QLatin1String("url") && !value.isEmpty()) {
+                mediaData.setMediaUrl(value);
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                mediaData.setMediaKey(value);
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                mediaData.setMediaTag(value);
+            }
+        } else if (key == QLatin1String("volume") || key == QLatin1String("start") || key == QLatin1String("loops")) {
+            int value = getVerifiedInt(L, __func__, -1, key == QLatin1String("volume") ? "value for volume" : key == QLatin1String("start") ? "value for start" : "value for loops");
+
+            if (key == QLatin1String("volume")) {
+                if (value == TMediaData::MediaVolumePreload) {
+                    {
+                    } // Volume of 0 supports preloading
+                } else if (value > TMediaData::MediaVolumeMax) {
+                    value = TMediaData::MediaVolumeMax;
+                } else if (value < TMediaData::MediaVolumeMin) {
+                    value = TMediaData::MediaVolumeMin;
+                }
+
+                mediaData.setMediaVolume(value);
+            } else if (key == QLatin1String("start")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playVideoFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaStart(value);
+            } else if (key == QLatin1String("loops")) {
+                if (value < TMediaData::MediaLoopsRepeat || value == 0) {
+                    value = TMediaData::MediaLoopsDefault;
+                }
+
+                mediaData.setMediaLoops(value);
+            }
+        } else if (key == QLatin1String("continue")) {
+            bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
+            mediaData.setMediaContinue(value);
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    if (mediaData.getMediaFileName().isEmpty()) {
+        lua_pushstring(L, R"(playVideoFile: missing name (add name = "file to play"))");
+        return lua_error(L);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
+    host.mpMedia->playMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playVideoFile
+int TLuaInterpreter::playVideoFile(lua_State* L)
+{
+    if (!lua_gettop(L)) {
+        lua_pushfstring(L, "%s: need at least one argument", __func__);
+        return lua_error(L);
+    }
+
+    if (lua_istable(L, 1)) {
+        return playVideoFileAsTableArgument(L);
+    }
+
+    return playVideoFileAsOrderedArguments(L);
 }
 
 // Private
@@ -6242,6 +6507,116 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
     mediaData.setMediaType(TMediaData::MediaTypeMusic);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::stopVideosAsOrderedArguments(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+    int numArgs = lua_gettop(L);
+    QString stringValue;
+
+    // values as ordered args: name[,key][,tag])
+    for (int i = 1; i <= numArgs; i++) {
+        if (lua_isnil(L, i)) {
+            continue;
+        }
+
+        switch (i) {
+        case 1:
+            stringValue = getVerifiedString(L, __func__, i, "name");
+
+            if (QDir::homePath().contains('\\')) {
+                stringValue.replace('/', R"(\)");
+            } else {
+                stringValue.replace('\\', "/");
+            }
+
+            mediaData.setMediaFileName(stringValue);
+            break;
+        case 2:
+            stringValue = getVerifiedString(L, __func__, i, "key");
+            mediaData.setMediaKey(stringValue);
+            break;
+        case 3:
+            stringValue = getVerifiedString(L, __func__, i, "tag");
+            mediaData.setMediaTag(stringValue);
+            break;
+        }
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Private
+int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    lua_pushnil(L);
+    while (lua_next(L, 1) != 0) {
+        // key at index -2 and value at index -1
+        QString key = getVerifiedString(L, __func__, -2, "table keys");
+        key = key.toLower();
+
+        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+
+            if (key == QLatin1String("name") && !value.isEmpty()) {
+                if (QDir::homePath().contains('\\')) {
+                    value.replace('/', R"(\)");
+                } else {
+                    value.replace('\\', "/");
+                }
+
+                mediaData.setMediaFileName(value);
+            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                mediaData.setMediaKey(value);
+            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                mediaData.setMediaTag(value);
+            }
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(L, 1);
+    }
+
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
+
+    host.mpMedia->stopMedia(mediaData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#stopVideos
+int TLuaInterpreter::stopVideos(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    TMediaData mediaData{};
+
+    if (lua_gettop(L)) {
+        if (lua_istable(L, 1)) {
+            return stopVideosAsTableArgument(L);
+        }
+
+        return stopVideosAsOrderedArguments(L);
+    }
+
+    // no args
+    mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+    mediaData.setMediaType(TMediaData::MediaTypeVideo);
 
     host.mpMedia->stopMedia(mediaData);
     lua_pushboolean(L, true);
@@ -15108,8 +15483,11 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "receiveMSP", TLuaInterpreter::receiveMSP);
     lua_register(pGlobalLua, "loadSoundFile", TLuaInterpreter::loadSoundFile);
     lua_register(pGlobalLua, "loadMusicFile", TLuaInterpreter::loadMusicFile);
+    lua_register(pGlobalLua, "loadVideoFile", TLuaInterpreter::loadVideoFile);
     lua_register(pGlobalLua, "playSoundFile", TLuaInterpreter::playSoundFile);
     lua_register(pGlobalLua, "playMusicFile", TLuaInterpreter::playMusicFile);
+    lua_register(pGlobalLua, "playVideoFile", TLuaInterpreter::playVideoFile);
+    lua_register(pGlobalLua, "stopVideos", TLuaInterpreter::stopVideos);
     lua_register(pGlobalLua, "stopMusic", TLuaInterpreter::stopMusic);
     lua_register(pGlobalLua, "stopSounds", TLuaInterpreter::stopSounds);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
@@ -15175,6 +15553,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getRoomExits", TLuaInterpreter::getRoomExits);
     lua_register(pGlobalLua, "lockRoom", TLuaInterpreter::lockRoom);
     lua_register(pGlobalLua, "createMapper", TLuaInterpreter::createMapper);
+    lua_register(pGlobalLua, "createVideoPlayer", TLuaInterpreter::createVideoPlayer);
     lua_register(pGlobalLua, "createCommandLine", TLuaInterpreter::createCommandLine);
     lua_register(pGlobalLua, "getMainConsoleWidth", TLuaInterpreter::getMainConsoleWidth);
     lua_register(pGlobalLua, "resetProfile", TLuaInterpreter::resetProfile);

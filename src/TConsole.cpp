@@ -38,6 +38,7 @@
 #include "TSplitter.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
+#include "dlgVideoPlayer.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"

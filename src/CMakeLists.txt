@@ -78,6 +78,7 @@ set(mudlet_SRCS
     dlgTriggerPatternEdit.cpp
     dlgTriggersMainArea.cpp
     dlgVarsMainArea.cpp
+    dlgVideoPlayer.cpp
     EAction.cpp
     exitstreewidget.cpp
     FontManager.cpp
@@ -154,6 +155,7 @@ set(mudlet_SRCS
     TTreeWidget.cpp
     TTrigger.cpp
     TVar.cpp
+    TVideoPlayer.cpp
     VarUnit.cpp
     XMLexport.cpp
     XMLimport.cpp)
@@ -196,7 +198,8 @@ set(mudlet_UIS
     ui/triggers_main_area.ui
     ui/trigger_editor.ui
     ui/trigger_pattern_edit.ui
-    ui/vars_main_area.ui)
+    ui/vars_main_area.ui
+    ui/videoplayer.ui)
 
 set(mudlet_HDRS
     ActionUnit.h
@@ -233,6 +236,7 @@ set(mudlet_HDRS
     dlgTriggerPatternEdit.h
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
+    dlgVideoPlayer.h
     EAction.h
     exitstreewidget.h
     FontManager.h
@@ -318,6 +322,7 @@ set(mudlet_HDRS
     TTreeWidget.h
     TTrigger.h
     TVar.h
+    TVideoPlayer.h
     VarUnit.h
     utils.h
     widechar_width.h
@@ -362,6 +367,7 @@ find_package(
   Qt5 5.14 REQUIRED
   COMPONENTS Core
              Multimedia
+             MultimediaWidgets
              Network
              OpenGL
              UiTools
@@ -476,6 +482,7 @@ target_link_libraries(
   Qt5::Core
   Qt5::Network
   Qt5::Multimedia
+  Qt5::MultimediaWidgets
   Qt5::OpenGL
   Qt5::UiTools
   Qt5::Widgets

@@ -123,6 +123,7 @@ local packages = {
   "geyser/GeyserGauge.lua",
   "geyser/GeyserMiniConsole.lua",
   "geyser/GeyserMapper.lua",
+  "geyser/GeyserVideoPlayer.lua",
   "geyser/GeyserReposition.lua",
   "geyser/GeyserScrollBox.lua",
   "geyser/GeyserHBox.lua",

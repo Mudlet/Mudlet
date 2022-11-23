@@ -33,6 +33,7 @@
 #include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgTriggerEditor.h"
+#include "dlgVideoPlayer.h"
 #include "edbee/views/texteditorscrollarea.h"
 
 #include "pre_guard.h"

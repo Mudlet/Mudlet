@@ -28,6 +28,7 @@
 #include "mudlet.h"
 
 #include "AltFocusMenuBarDisable.h"
+#include "DarkTheme.h"
 #include "EAction.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
@@ -42,8 +43,8 @@
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
+#include "VarUnit.h"
 #include "XMLimport.h"
-#include "DarkTheme.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
@@ -54,7 +55,7 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
-#include "VarUnit.h"
+#include "dlgVideoPlayer.h"
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -213,6 +214,7 @@ mudlet::mudlet()
 , mpToolBarReplay(nullptr)
 , triggersShortcut(nullptr)
 , showMapShortcut(nullptr)
+, showVideoPlayerShortcut(nullptr)
 , inputLineShortcut(nullptr)
 , optionsShortcut(nullptr)
 , notepadShortcut(nullptr)
@@ -236,6 +238,7 @@ mudlet::mudlet()
 , mpButtonDiscord(nullptr)
 , mpActionKeys(nullptr)
 , mpActionMapper(nullptr)
+, mpActionVideoPlayer(nullptr)
 , mpActionMultiView(nullptr)
 , mpActionReportIssue(nullptr)
 , mpActionNotes(nullptr)
@@ -251,8 +254,7 @@ mudlet::mudlet()
 , mpActionTriggers(nullptr)
 , mpActionVariables(nullptr)
 , mshowMapAuditErrors(false)
-, mTimeFormat(tr("hh:mm:ss",
-                 "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
+, mTimeFormat(tr("hh:mm:ss", "Formatting string for elapsed time display in replay playback - see QDateTime::toString(const QString&) for the gory details...!"))
 , mHunspell_sharedDictionary(nullptr)
 , mMultiView(false)
 {
@@ -449,6 +451,12 @@ mudlet::mudlet()
     mpActionMapper->setObjectName(qsl("map_action"));
     mpMainToolBar->widgetForAction(mpActionMapper)->setObjectName(mpActionMapper->objectName());
 
+    mpActionVideoPlayer = new QAction(QIcon(qsl(":/icons/video_icon.png")), tr("Video"), this);
+    mpActionVideoPlayer->setToolTip(utils::richText(tr("Show/hide the video player")));
+    mpMainToolBar->addAction(mpActionVideoPlayer);
+    mpActionVideoPlayer->setObjectName(qsl("videoplayer_action"));
+    mpMainToolBar->widgetForAction(mpActionVideoPlayer)->setObjectName(mpActionVideoPlayer->objectName());
+
     mpActionHelp = new QAction(QIcon(qsl(":/icons/help-hint.png")), tr("Manual"), this);
     mpActionHelp->setToolTip(utils::richText(tr("Browse reference material and documentation")));
     mpMainToolBar->addAction(mpActionHelp);
@@ -573,6 +581,7 @@ mudlet::mudlet()
     connect(mpActionReplay.data(), &QAction::triggered, this, &mudlet::slot_replay);
     connect(mpActionNotes.data(), &QAction::triggered, this, &mudlet::slot_notes);
     connect(mpActionMapper.data(), &QAction::triggered, this, &mudlet::slot_mapper);
+    connect(mpActionVideoPlayer.data(), &QAction::triggered, this, &mudlet::slot_videoPlayer);
     connect(mpActionIRC.data(), &QAction::triggered, this, &mudlet::slot_irc);
     connect(mpActionDiscord.data(), &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(mpActionMudletDiscord.data(), &QAction::triggered, this, &mudlet::slot_mudletDiscord);
@@ -636,6 +645,7 @@ mudlet::mudlet()
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::slot_showTriggerDialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::slot_showEditorDialog);
     connect(dactionShowMap, &QAction::triggered, this, &mudlet::slot_mapper);
+    connect(dactionShowVideoPlayer, &QAction::triggered, this, &mudlet::slot_videoPlayer);
     connect(dactionOptions, &QAction::triggered, this, &mudlet::slot_showPreferencesDialog);
     connect(dactionAbout, &QAction::triggered, this, &mudlet::slot_showAboutDialog);
 
@@ -643,6 +653,7 @@ mudlet::mudlet()
 #if defined(Q_OS_MACOS)
     triggersKeySequence = QKeySequence(Qt::CTRL | Qt::Key_E);
     showMapKeySequence = QKeySequence(Qt::CTRL | Qt::Key_M);
+    showVideoPlayerKeySequence = QKeySequence(Qt::CTRL | Qt::Key_J);
     inputLineKeySequence = QKeySequence(Qt::CTRL | Qt::Key_L);
     optionsKeySequence = QKeySequence(Qt::CTRL | Qt::Key_P);
     notepadKeySequence = QKeySequence(Qt::CTRL | Qt::Key_N);
@@ -656,6 +667,7 @@ mudlet::mudlet()
 #else
     triggersKeySequence = QKeySequence(Qt::ALT | Qt::Key_E);
     showMapKeySequence = QKeySequence(Qt::ALT | Qt::Key_M);
+    showVideoPlayerKeySequence = QKeySequence(Qt::ALT | Qt::Key_J);
     inputLineKeySequence = QKeySequence(Qt::ALT | Qt::Key_L);
     optionsKeySequence = QKeySequence(Qt::ALT | Qt::Key_P);
     notepadKeySequence = QKeySequence(Qt::ALT | Qt::Key_N);
@@ -677,6 +689,7 @@ mudlet::mudlet()
     mShortcutsManager = new ShortcutsManager();
     mShortcutsManager->registerShortcut(qsl("Script editor"), tr("Script editor"), &triggersKeySequence);
     mShortcutsManager->registerShortcut(qsl("Show Map"), tr("Show Map"), &showMapKeySequence);
+    mShortcutsManager->registerShortcut(qsl("Show Video Player"), tr("Show Video Player"), &showVideoPlayerKeySequence);
     mShortcutsManager->registerShortcut(qsl("Compact input line"), tr("Compact input line"), &inputLineKeySequence);
     mShortcutsManager->registerShortcut(qsl("Preferences"), tr("Preferences"), &optionsKeySequence);
     mShortcutsManager->registerShortcut(qsl("Notepad"), tr("Notepad"), &notepadKeySequence);
@@ -1679,6 +1692,7 @@ void mudlet::disableToolbarButtons()
     mpActionVariables->setEnabled(false);
     mpActionMudletDiscord->setEnabled(false);
     mpActionMapper->setEnabled(false);
+    mpActionVideoPlayer->setEnabled(false);
     mpActionNotes->setEnabled(false);
     mpButtonPackageManagers->setEnabled(false);
     mpActionIRC->setEnabled(false);
@@ -1710,6 +1724,7 @@ void mudlet::enableToolbarButtons()
     mpActionVariables->setEnabled(true);
     mpActionMudletDiscord->setEnabled(true);
     mpActionMapper->setEnabled(true);
+    mpActionVideoPlayer->setEnabled(true);
     mpActionNotes->setEnabled(true);
     mpButtonPackageManagers->setEnabled(true);
     mpActionIRC->setEnabled(true);
@@ -2393,6 +2408,11 @@ void mudlet::assignKeySequences()
         connect(showMapShortcut.data(), &QShortcut::activated, this, &mudlet::slot_mapper);
         dactionShowMap->setShortcut(QKeySequence());
 
+        delete showVideoPlayerShortcut.data();
+        showVideoPlayerShortcut = new QShortcut(showVideoPlayerKeySequence, this);
+        connect(showVideoPlayerShortcut.data(), &QShortcut::activated, this, &mudlet::slot_videoPlayer);
+        dactionShowVideoPlayer->setShortcut(QKeySequence());
+
         delete inputLineShortcut.data();
         inputLineShortcut = new QShortcut(inputLineKeySequence, this);
         connect(inputLineShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggleCompactInputLine);
@@ -2453,6 +2473,9 @@ void mudlet::assignKeySequences()
 
         delete showMapShortcut.data();
         dactionShowMap->setShortcut(showMapKeySequence);
+
+        delete showVideoPlayerShortcut.data();
+        dactionShowVideoPlayer->setShortcut(showVideoPlayerKeySequence);
 
         delete inputLineShortcut.data();
         dactionInputLine->setShortcut(inputLineKeySequence);
@@ -2524,6 +2547,17 @@ void mudlet::slot_mapper()
 void mudlet::slot_openMappingScriptsPage()
 {
     QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
+}
+
+void mudlet::slot_videoPlayer()
+{
+    Host* pHost = getActiveHost();
+
+    if (!pHost) {
+        return;
+    }
+
+    pHost->showHideOrCreateVideoPlayer();
 }
 
 void mudlet::slot_showAboutDialog()

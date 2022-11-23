@@ -26,14 +26,13 @@
 
 
 #include "LuaInterface.h"
-#include "TConsole.h"
-#include "TDebug.h"
-#include "TMainConsole.h"
 #include "TCommandLine.h"
+#include "TConsole.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -42,12 +41,13 @@
 #include "TToolBar.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
+#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
-#include "dlgIRC.h"
+#include "dlgVideoPlayer.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -314,6 +314,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
+, mShowVideoPlayerPanel(true)
 , mServerGUI_Package_version(QLatin1String("-1"))
 , mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
@@ -325,6 +326,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
+, mpDockableVideoPlayerWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
@@ -467,6 +469,11 @@ Host::~Host()
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
+
+    if (mpDockableVideoPlayerWidget) {
+        mpDockableVideoPlayerWidget->deleteLater();
+    }
+
     mIsGoingDown = true;
     mIsClosingDown = true;
     mErrorLogStream.flush();
@@ -2794,6 +2801,21 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
     return {true, QString()};
 }
 
+std::pair<bool, QString> Host::setVideoPlayerTitle(const QString& title)
+{
+    if (!mpDockableVideoPlayerWidget) {
+        return {false, "no floating/dockable type video player window found"};
+    }
+
+    if (title.isEmpty()) {
+        mpDockableVideoPlayerWidget->setWindowTitle(tr("Video Player - %1").arg(mHostName));
+    } else {
+        mpDockableVideoPlayerWidget->setWindowTitle(title);
+    }
+
+    return {true, QString()};
+}
+
 void Host::setDebugShowAllProblemCodepoints(const bool state)
 {
     if (mDebugShowAllProblemCodepoints != state) {
@@ -3432,6 +3454,88 @@ std::pair<bool, QString> Host::closeMapWidget()
     return {true, QString()};
 }
 
+std::pair<bool, QString> Host::openVideoPlayerWidget(const QString& area, int x, int y, int width, int height)
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = mpDockableVideoPlayerWidget;
+    auto pVideoPlayer = mpMedia->mpVideoPlayer;
+
+    if (!pM && !pVideoPlayer) {
+        showHideOrCreateVideoPlayer();
+        pM = mpDockableVideoPlayerWidget;
+    }
+
+    if (!pM) {
+        return {false, qsl("cannot create video player widget. Do you already use an embedded video player?")};
+    }
+
+    pM->show();
+
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (!pM->isFloating()) {
+            // Undock a docked window
+            // Change of position or size is only possible when floating
+            pM->setFloating(true);
+        }
+
+        if ((x != -1) && (y != -1)) {
+            pM->move(x, y);
+        }
+
+        if ((width != -1) && (height != -1)) {
+            pM->resize(width, height);
+        }
+        return {true, QString()};
+    } else {
+        if (area == QLatin1String("r") || area == QLatin1String("right")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("l") || area == QLatin1String("left")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("t") || area == QLatin1String("top")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, pM);
+            return {true, QString()};
+        } else if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
+            pM->setFloating(false);
+            mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, pM);
+            return {true, QString()};
+        } else {
+            return {false, qsl(R"("docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating")").arg(area)};
+        }
+    }
+}
+
+std::pair<bool, QString> Host::closeVideoPlayerWidget()
+{
+    if (!mpConsole) {
+        return {false, QString()};
+    }
+
+    auto pM = mpDockableVideoPlayerWidget;
+
+    if (!pM) {
+        return {false, qsl("no video player widget found to close")};
+    }
+
+    if (!pM->isVisible()) {
+        return {false, qsl("video player widget already closed")};
+    }
+
+    pM->hide();
+    return {true, QString()};
+}
+
 bool Host::closeWindow(const QString& name)
 {
     if (!mpConsole) {
@@ -3675,17 +3779,24 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     if (mpDlgProfilePreferences) {
         mpDlgProfilePreferences->setStyleSheet(styleSheet);
     }
+
     if (mpNotePad) {
         mpNotePad->setStyleSheet(styleSheet);
         mpNotePad->notesEdit->setStyleSheet(styleSheet);
     }
+
     if (mpDockableMapWidget) {
         mpDockableMapWidget->setStyleSheet(styleSheet);
+    }
+
+    if (mpDockableVideoPlayerWidget) {
+        mpDockableVideoPlayerWidget->setStyleSheet(styleSheet);
     }
 
     for (auto& dockWidget : mpConsole->mDockWidgetMap) {
         dockWidget->setStyleSheet(styleSheet);
     }
+
     if (this == mudlet::self()->mpCurrentActiveHost) {
         mudlet::self()->setGlobalStyleSheet(styleSheet);
     }
@@ -3901,6 +4012,48 @@ void Host::createMapper(const bool loadDefaultMap)
     mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
     mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(mapOpenEvent);
+}
+
+void Host::showHideOrCreateVideoPlayer()
+{
+    if (mpMedia->mpVideoPlayer) {
+        toggleVideoPlayerVisibility();
+        return;
+    }
+
+    createVideoPlayer();
+}
+
+void Host::toggleVideoPlayerVisibility()
+{
+    bool visStatus = mpMedia->mpVideoPlayer->isVisible();
+
+    if (mpMedia->mpVideoPlayer->isFloatAndDockable()) {
+        mpMedia->mpVideoPlayer->parentWidget()->setVisible(!visStatus);
+    } else {
+        mpMedia->mpVideoPlayer->setVisible(!visStatus);
+    }
+}
+
+void Host::createVideoPlayer()
+{
+    auto pMedia = mpMedia.data();
+    auto hostName(getName());
+
+    mpDockableVideoPlayerWidget = new QDockWidget(tr("Video Player - %1").arg(hostName));
+    mpDockableVideoPlayerWidget->setObjectName(qsl("dockVideoPlayer_%1").arg(hostName));
+
+    pMedia->mpVideoPlayer = new dlgVideoPlayer(mpDockableVideoPlayerWidget, this, pMedia);
+    pMedia->mpVideoPlayer->setStyleSheet(mProfileStyleSheet);
+    mpDockableVideoPlayerWidget->setWidget(pMedia->mpVideoPlayer);
+
+    mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpDockableVideoPlayerWidget);
+    mudlet::self()->loadWindowLayout();
+
+    TEvent videoPlayerOpenEvent{};
+    videoPlayerOpenEvent.mArgumentList.append(QLatin1String("videoPlayerOpenEvent"));
+    videoPlayerOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(videoPlayerOpenEvent);
 }
 
 void Host::setDockLayoutUpdated(const QString& name)

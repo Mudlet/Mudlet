@@ -31,10 +31,12 @@
 #include "TEvent.h"
 #include "TLabel.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
 #include "TSplitter.h"
 #include "TTextEdit.h"
 #include "dlgMapper.h"
+#include "dlgVideoPlayer.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -730,6 +732,54 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
     return {true, QString()};
 }
 
+// Called from TLuaInterpreter::createMapper(...) to create a map in a TConsole,
+// Host::showHideOrCreateMapper(...) {formerly also called
+// createMapper(...)} is used in other cases to make a map in a QDockWidget:
+std::pair<bool, QString> TMainConsole::createVideoPlayer(const QString& windowname, int x, int y, int width, int height)
+{
+    auto pW = mDockWidgetMap.value(windowname);
+    auto pM = mpHost->mpDockableVideoPlayerWidget;
+
+    if (pM) {
+        return {false, qsl("cannot create video player. Do you already use a video player window?")};
+    }
+
+    if (!mpVideoPlayer) {
+        if (!pW) {
+            mpVideoPlayer = new dlgVideoPlayer(mpMainFrame, mpHost, mpHost->mpMedia.data());
+        } else {
+            mpVideoPlayer = new dlgVideoPlayer(pW->widget(), mpHost, mpHost->mpMedia.data());
+        }
+
+        mpHost->mpMedia->mpVideoPlayer = mpVideoPlayer;
+
+        TEvent videoPlayerOpenEvent{};
+        videoPlayerOpenEvent.mArgumentList.append(QLatin1String("videoPlayerOpenEvent"));
+        videoPlayerOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(videoPlayerOpenEvent);
+    }
+
+    mpVideoPlayer->resize(width, height);
+    mpVideoPlayer->move(x, y);
+
+    // Qt bug workaround: on Windows and during profile load only, if the video player widget is created
+    // it gives a height and width to mpLeftToolBar, mpRightToolBar, and mpTopToolBar for
+    // some reason. Those widgets size back down immediately after on their own (?!), however if
+    // getMainWindowSize() is called right after map create, the sizes reported will be wrong
+#if defined(Q_OS_WIN32)
+    mpLeftToolBar->setHidden(true);
+    mpRightToolBar->setHidden(true);
+    mpTopToolBar->setHidden(true);
+    mpVideoPlayer->show();
+    mpLeftToolBar->setVisible(true);
+    mpRightToolBar->setVisible(true);
+    mpTopToolBar->setVisible(true);
+#else
+    mpVideoPlayer->show();
+#endif
+    return {true, QString()};
+}
+
 std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (name.isEmpty()) {
@@ -806,6 +856,7 @@ bool TMainConsole::raiseWindow(const QString& name)
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
+    auto pV = mpVideoPlayer;
     auto pN = mSubCommandLineMap.value(name);
     auto pS = mScrollBoxMap.value(name);
 
@@ -819,6 +870,10 @@ bool TMainConsole::raiseWindow(const QString& name)
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->raise();
+        return true;
+    }
+    if (pV && !name.compare(QLatin1String("videoplayer"), Qt::CaseInsensitive)) {
+        pV->raise();
         return true;
     }
     if (pS) {
@@ -838,6 +893,7 @@ bool TMainConsole::lowerWindow(const QString& name)
     auto pC = mSubConsoleMap.value(name);
     auto pL = mLabelMap.value(name);
     auto pM = mpMapper;
+    auto pV = mpVideoPlayer;
     auto pN = mSubCommandLineMap.value(name);
     auto pS = mScrollBoxMap.value(name);
 
@@ -853,6 +909,11 @@ bool TMainConsole::lowerWindow(const QString& name)
     }
     if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->lower();
+        mpMainDisplay->lower();
+        return true;
+    }
+    if (pV && !name.compare(QLatin1String("videoplayer"), Qt::CaseInsensitive)) {
+        pV->lower();
         mpMainDisplay->lower();
         return true;
     }
