@@ -2601,7 +2601,7 @@ void TMap::slot_setDownloadProgress(qint64 got, qint64 total)
         // First call, range has not been set;
         mpProgressDialog->setRange(0, mExpectedFileSize);
     } else if (total != -1 && mpProgressDialog->maximum() != static_cast<int>(total)) {
-        // total will stuck at -1 when we do not know how big the download is
+        // total will stick at -1 when we do not know how big the download is
         // which seems to be the case for the IRE MUDS - *sigh* - Slysven
         mpProgressDialog->setRange(0, static_cast<int>(total));
     }
