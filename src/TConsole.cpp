@@ -629,9 +629,9 @@ void TConsole::resizeEvent(QResizeEvent* event)
     }
 
     // don't call event in lua if size didn't change
-    bool preventLuaEvent = (mpMainDisplay->size() == mOldSize);
+    bool preventLuaEvent = (getMainWindowSize() == mOldSize);
     QWidget::resizeEvent(event);
-    mOldSize = mpMainDisplay->size();
+    mOldSize = getMainWindowSize();
 
     if (preventLuaEvent) {
         return;
@@ -1928,6 +1928,9 @@ void TConsole::slot_searchBufferDown()
 
 QSize TConsole::getMainWindowSize() const
 {
+    if (isHidden()){
+        return mOldSize;
+    }
     QSize consoleSize = size();
     int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     int toolbarHeight = mpTopToolBar->height();
