@@ -53,6 +53,7 @@ TMap::TMap(Host* pH, const QString& profileName)
 {
     restore16ColorSet();
 
+    // TODO: https://github.com/Mudlet/Mudlet/issues/6436
     // According to Qt Docs we should really only have one of these
     // (QNetworkAccessManager) for the whole application, but: each profile's
     // TLuaInterpreter; each profile's ctelnet and now each profile's TMap
