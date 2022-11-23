@@ -2590,7 +2590,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     return result;
 }
 
-void TMap::slot_setDownloadProgress(qint64 got, qint64 tot)
+void TMap::slot_setDownloadProgress(qint64 got, qint64 total)
 {
     if (!mpProgressDialog) {
         return;
@@ -2599,10 +2599,10 @@ void TMap::slot_setDownloadProgress(qint64 got, qint64 tot)
     if (!mpProgressDialog->maximum()) {
         // First call, range has not been set;
         mpProgressDialog->setRange(0, mExpectedFileSize);
-    } else if (tot != -1 && mpProgressDialog->maximum() != static_cast<int>(tot)) {
-        // tot will stuck at -1 when we do not know how big the download is
+    } else if (total != -1 && mpProgressDialog->maximum() != static_cast<int>(total)) {
+        // total will stuck at -1 when we do not know how big the download is
         // which seems to be the case for the IRE MUDS - *sigh* - Slysven
-        mpProgressDialog->setRange(0, static_cast<int>(tot));
+        mpProgressDialog->setRange(0, static_cast<int>(total));
     }
 
     mpProgressDialog->setValue(static_cast<int>(got));
