@@ -2696,6 +2696,11 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
     postMessage(infoMsg);
 
+    // Since the download is complete but we do not offer to
+    // cancel the required post-processing we should now hide
+    // the cancel/abort button:
+    mpProgressDialog->setCancelButton(nullptr);
+
     if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
         if (pHost->mpConsole->loadMap(file.fileName())) {
             TEvent mapDownloadEvent {};
@@ -2717,12 +2722,6 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         cleanup();
         return;
     }
-
-
-    // Since the download is complete but we do not offer to
-    // cancel the required post-processing we should now hide
-    // the cancel/abort button:
-    mpProgressDialog->setCancelButton(nullptr);
 
     // The action to parse the XML file has been refactored to
     // a separate method so that it can be shared with the
