@@ -2686,13 +2686,14 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     file.flush();
     file.close();
 
-    if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
-        auto pHost = mpHost;
-        if (!pHost) {
-            cleanup();
-            return;
-        }
+    Host* pHost = mpHost;
+    if (!pHost) {
+        qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - NULL Host pointer - something is really wrong!";
+        cleanup();
+        return;
+    }
 
+    if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
         QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
         postMessage(infoMsg);
         if (pHost->mpConsole->loadMap(file.fileName())) {
@@ -2718,13 +2719,6 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 
     QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
     postMessage(infoMsg);
-
-    Host* pHost = mpHost;
-    if (!pHost) {
-        qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - NULL Host pointer - something is really wrong!";
-        cleanup();
-        return;
-    }
 
     // Since the download is complete but we do not offer to
     // cancel the required post-processing we should now hide
