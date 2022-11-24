@@ -648,6 +648,8 @@ public:
     static int getLabelStyleSheet(lua_State*);
     static int getLabelSizeHint(lua_State*);
     static int announce(lua_State*);
+    static int scrollTo(lua_State*);
+    static int getScroll(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
