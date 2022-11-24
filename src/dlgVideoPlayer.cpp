@@ -24,7 +24,7 @@
 #include "TMedia.h"
 
 #include "pre_guard.h"
-#include "ui_videoplayer.h"
+#include "ui_video_player.h"
 #include "post_guard.h"
 
 dlgVideoPlayer::dlgVideoPlayer(QWidget* parent, Host* pH, TMedia* pM)

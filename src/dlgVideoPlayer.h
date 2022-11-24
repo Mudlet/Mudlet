@@ -24,13 +24,13 @@
 #include "pre_guard.h"
 #include <QPointer>
 #include <QWidget>
-#include "ui_videoplayer.h"
+#include "ui_video_player.h"
 #include "post_guard.h"
 
 class Host;
 class TMedia;
 
-class dlgVideoPlayer : public QWidget, public Ui::videoplayer
+class dlgVideoPlayer : public QWidget, public Ui::video_player
 {
     Q_OBJECT
 

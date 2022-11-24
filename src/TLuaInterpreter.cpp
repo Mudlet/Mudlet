@@ -5826,11 +5826,8 @@ int TLuaInterpreter::playVideoFileAsOrderedArguments(lua_State* L)
         case 2:
             intValue = getVerifiedInt(L, __func__, i, "volume");
 
-            if (intValue == TMediaData::MediaVolumePreload) {
-                {
-                } // Volume of 0 supports preloading
-            } else {
-                intValue = qBound(TMediaData::MediaVolumeMin, intValue, TMediaData::MediaVolumeMax);
+            if (intValue != TMediaData::MediaVolumePreload) {
+                intValue = qBound(static_cast<int>(TMediaData::MediaVolumeMin), intValue, static_cast<int>(TMediaData::MediaVolumeMax));
             }
 
             mediaData.setMediaVolume(intValue);
@@ -5924,13 +5921,8 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L)
             int value = getVerifiedInt(L, __func__, -1, key == QLatin1String("volume") ? "value for volume" : key == QLatin1String("start") ? "value for start" : "value for loops");
 
             if (key == QLatin1String("volume")) {
-                if (value == TMediaData::MediaVolumePreload) {
-                    {
-                    } // Volume of 0 supports preloading
-                } else if (value > TMediaData::MediaVolumeMax) {
-                    value = TMediaData::MediaVolumeMax;
-                } else if (value < TMediaData::MediaVolumeMin) {
-                    value = TMediaData::MediaVolumeMin;
+                if (value != TMediaData::MediaVolumePreload) {
+                    value = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
                 }
 
                 mediaData.setMediaVolume(value);
@@ -6015,13 +6007,8 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
         case 2:
             intValue = getVerifiedInt(L, __func__, i, "volume");
 
-            if (intValue == TMediaData::MediaVolumePreload) {
-                {
-                } // Volume of 0 supports preloading
-            } else if (intValue > TMediaData::MediaVolumeMax) {
-                intValue = TMediaData::MediaVolumeMax;
-            } else if (intValue < TMediaData::MediaVolumeMin) {
-                intValue = TMediaData::MediaVolumeMin;
+            if (intValue != TMediaData::MediaVolumePreload) {
+                intValue = qBound(static_cast<int>(TMediaData::MediaVolumeMin), intValue, static_cast<int>(TMediaData::MediaVolumeMax));
             }
 
             mediaData.setMediaVolume(intValue);
@@ -6142,13 +6129,8 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                                                                          : "value for loops");
 
             if (key == QLatin1String("volume")) {
-                if (value == TMediaData::MediaVolumePreload) {
-                    {
-                    } // Volume of 0 supports preloading
-                } else if (value > TMediaData::MediaVolumeMax) {
-                    value = TMediaData::MediaVolumeMax;
-                } else if (value < TMediaData::MediaVolumeMin) {
-                    value = TMediaData::MediaVolumeMin;
+                if (value != TMediaData::MediaVolumePreload) {
+                    value = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
                 }
 
                 mediaData.setMediaVolume(value);
@@ -6246,13 +6228,8 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
         case 2:
             intValue = getVerifiedInt(L, __func__, i, "volume");
 
-            if (intValue == TMediaData::MediaVolumePreload) {
-                {
-                } // Volume of 0 supports preloading
-            } else if (intValue > TMediaData::MediaVolumeMax) {
-                intValue = TMediaData::MediaVolumeMax;
-            } else if (intValue < TMediaData::MediaVolumeMin) {
-                intValue = TMediaData::MediaVolumeMin;
+            if (intValue != TMediaData::MediaVolumePreload) {
+                intValue = qBound(static_cast<int>(TMediaData::MediaVolumeMin), intValue, static_cast<int>(TMediaData::MediaVolumeMax));
             }
 
             mediaData.setMediaVolume(intValue);
@@ -6383,13 +6360,8 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
                                                                          : "value for priority");
 
             if (key == QLatin1String("volume")) {
-                if (value == TMediaData::MediaVolumePreload) {
-                    {
-                    } // Volume of 0 supports preloading
-                } else if (value > TMediaData::MediaVolumeMax) {
-                    value = TMediaData::MediaVolumeMax;
-                } else if (value < TMediaData::MediaVolumeMin) {
-                    value = TMediaData::MediaVolumeMin;
+                if (value != TMediaData::MediaVolumePreload) {
+                    value = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
                 }
 
                 mediaData.setMediaVolume(value);
