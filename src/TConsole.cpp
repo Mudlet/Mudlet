@@ -1927,7 +1927,7 @@ void TConsole::slot_searchBufferDown()
 
 QSize TConsole::getMainWindowSize() const
 {
-    if (isHidden()){
+    if (isHidden()) {
         return mOldSize;
     }
     QSize consoleSize = size();
