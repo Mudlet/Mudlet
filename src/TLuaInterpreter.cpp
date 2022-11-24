@@ -3569,8 +3569,13 @@ int TLuaInterpreter::createMapper(lua_State* L)
 int TLuaInterpreter::createVideoPlayer(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName;
+    QString windowName = ""; // Defaults to main window
     int s = 1;
+
+    if (n < 4) {
+        lua_pushfstring(L, "%s: need at least four arguments [console_name | \"main\"], x, y, width, height", __func__);
+        return lua_error(L);
+    }
 
     if (n > 4) {
         if (lua_type(L, 1) != LUA_TSTRING) {
