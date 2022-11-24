@@ -869,7 +869,7 @@ bool TMainConsole::raiseWindow(const QString& name)
         pM->raise();
         return true;
     }
-    if (pV && !name.compare(QLatin1String("videoplayer"), Qt::CaseInsensitive)) {
+    if (pV && !name.compare(QLatin1String("video_player"), Qt::CaseInsensitive)) {
         pV->raise();
         return true;
     }
@@ -909,7 +909,7 @@ bool TMainConsole::lowerWindow(const QString& name)
         mpMainDisplay->lower();
         return true;
     }
-    if (pV && !name.compare(QLatin1String("videoplayer"), Qt::CaseInsensitive)) {
+    if (pV && !name.compare(QLatin1String("video_player"), Qt::CaseInsensitive)) {
         pV->lower();
         mpMainDisplay->lower();
         return true;

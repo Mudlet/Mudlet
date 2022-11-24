@@ -2,7 +2,7 @@
 -- The Geyser Layout Manager by guy --
 --------------------------------------
 
---- Represents a videoplayer primitive
+--- Represents a video_player primitive
 -- @class table
 -- @name Geyser.VideoPlayer
 -- @field wrapAt Where line wrapping occurs. Default is 300 characters.
@@ -64,11 +64,11 @@ end
 
 -- Overridden raise and lower functions
 function Geyser.VideoPlayer:raise()
-	raiseWindow("videoplayer")
+	raiseWindow("video_player")
 end
 
 function Geyser.VideoPlayer:lower()
-	lowerWindow("videoplayer")
+	lowerWindow("video_player")
 end
 
 function Geyser.VideoPlayer:setDockPosition(pos)
@@ -90,7 +90,7 @@ end
 -- Overridden constructor
 function Geyser.VideoPlayer:new (cons, container)
   cons = cons or {}
-  cons.type = cons.type or "videoplayer"
+  cons.type = cons.type or "video_player"
 
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
