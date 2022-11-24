@@ -732,9 +732,6 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
     return {true, QString()};
 }
 
-// Called from TLuaInterpreter::createVideoPlayer(...) to play videos in a TConsole,
-// Host::showHideOrVideoPlayer(...) {formerly also called
-// createVideoPlayer(...)} is used in other cases to play videos in a QDockWidget:
 std::pair<bool, QString> TMainConsole::createVideoPlayer(const QString& windowname, int x, int y, int width, int height)
 {
     auto pW = mDockWidgetMap.value(windowname);
