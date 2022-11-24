@@ -410,7 +410,7 @@ public:
              23,
              false,
              qsl("<a href='https://www.mudlet.org'>www.mudlet.org"),
-             qsl(":/icons/generic_mud.jpg"),
+             QString(), // TODO: https://github.com/Mudlet/Mudlet/issues/6443
              qsl("This isn't a game profile, but a special one for testing Mudlet itself using "
                  "Busted. You can also use it as a starting point to create automated tests for your "
                  "own profiles!")},
