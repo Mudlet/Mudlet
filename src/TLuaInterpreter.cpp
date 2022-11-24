@@ -3569,7 +3569,7 @@ int TLuaInterpreter::createMapper(lua_State* L)
 int TLuaInterpreter::createVideoPlayer(lua_State* L)
 {
     int n = lua_gettop(L);
-    QString windowName = "";
+    QString windowName;
     int counter = 1;
 
     if (n > 4) {
@@ -3589,12 +3589,9 @@ int TLuaInterpreter::createVideoPlayer(lua_State* L)
     }
 
     int x = getVerifiedInt(L, __func__, counter, "video player x-coordinate");
-    counter++;
-    int y = getVerifiedInt(L, __func__, counter, "video player y-coordinate");
-    counter++;
-    int width = getVerifiedInt(L, __func__, counter, "video player width");
-    counter++;
-    int height = getVerifiedInt(L, __func__, counter, "video player height");
+    int y = getVerifiedInt(L, __func__, ++counter, "video player y-coordinate");
+    int width = getVerifiedInt(L, __func__, ++counter, "video player width");
+    int height = getVerifiedInt(L, __func__, ++counter, "video player height");
 
     Host& host = getHostFromLua(L);
 
@@ -5806,7 +5803,7 @@ int TLuaInterpreter::playVideoFileAsOrderedArguments(lua_State* L)
     int numArgs = lua_gettop(L);
     QString stringValue;
     int intValue = 0;
-    bool boolValue = 0;
+    bool boolValue = false;
 
     // name[,volume][,start][,loops][,key][,tag][,continue][,url])
     for (int i = 1; i <= numArgs; i++) {
@@ -5832,10 +5829,8 @@ int TLuaInterpreter::playVideoFileAsOrderedArguments(lua_State* L)
             if (intValue == TMediaData::MediaVolumePreload) {
                 {
                 } // Volume of 0 supports preloading
-            } else if (intValue > TMediaData::MediaVolumeMax) {
-                intValue = TMediaData::MediaVolumeMax;
-            } else if (intValue < TMediaData::MediaVolumeMin) {
-                intValue = TMediaData::MediaVolumeMin;
+            } else {
+                intValue = qBound(TMediaData::MediaVolumeMin, intValue, TMediaData::MediaVolumeMax);
             }
 
             mediaData.setMediaVolume(intValue);

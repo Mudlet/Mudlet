@@ -624,7 +624,7 @@ public:
     bool mMapViewOnly = true;
     bool mShowRoomID;
     bool mShowPanel; // Mapper
-    bool mShowVideoPlayerPanel;
+    bool mShowVideoPlayerPanel = true;
     QString mServerGUI_Package_version;
     QString mServerGUI_Package_name;
     bool mAcceptServerGUI;

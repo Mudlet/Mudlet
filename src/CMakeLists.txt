@@ -199,7 +199,7 @@ set(mudlet_UIS
     ui/trigger_editor.ui
     ui/trigger_pattern_edit.ui
     ui/vars_main_area.ui
-    ui/videoplayer.ui)
+    ui/video_player.ui)
 
 set(mudlet_HDRS
     ActionUnit.h

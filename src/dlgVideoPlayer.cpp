@@ -27,7 +27,10 @@
 #include "ui_videoplayer.h"
 #include "post_guard.h"
 
-dlgVideoPlayer::dlgVideoPlayer(QWidget* parent, Host* pH, TMedia* pM) : QWidget(parent), mpHost(pH), mpMedia(pM)
+dlgVideoPlayer::dlgVideoPlayer(QWidget* parent, Host* pH, TMedia* pM)
+: QWidget(parent)
+, mpHost(pH)
+, mpMedia(pM)
 {
     setupUi(this);
 

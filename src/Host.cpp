@@ -314,7 +314,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBubbleMode(false)
 , mShowRoomID(false)
 , mShowPanel(true)
-, mShowVideoPlayerPanel(true)
 , mServerGUI_Package_version(QLatin1String("-1"))
 , mServerGUI_Package_name(QLatin1String("nothing"))
 , mAcceptServerGUI(true)
@@ -326,7 +325,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mFORCE_MXP_NEGOTIATION_OFF(false)
 , mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
-, mpDockableVideoPlayerWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
@@ -4026,6 +4024,9 @@ void Host::showHideOrCreateVideoPlayer()
 
 void Host::toggleVideoPlayerVisibility()
 {
+    if (!mpMedia || !mpMedia->mpVideoPlayer) {
+        return;
+    }
     bool visStatus = mpMedia->mpVideoPlayer->isVisible();
 
     if (mpMedia->mpVideoPlayer->isFloatAndDockable()) {
@@ -4051,7 +4052,7 @@ void Host::createVideoPlayer()
     mudlet::self()->loadWindowLayout();
 
     TEvent videoPlayerOpenEvent{};
-    videoPlayerOpenEvent.mArgumentList.append(QLatin1String("videoPlayerOpenEvent"));
+    videoPlayerOpenEvent.mArgumentList.append(QLatin1String("sysVideoPlayerOpenEvent"));
     videoPlayerOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(videoPlayerOpenEvent);
 }
