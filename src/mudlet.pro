@@ -840,7 +840,6 @@ FORMS += \
     ui/vars_main_area.ui \
     ui/video_player.ui
 
-
 RESOURCES += \
     mudlet.qrc \
     ../translations/translated/qm.qrc
