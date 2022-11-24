@@ -1129,6 +1129,8 @@ TMediaData::MediaType TMedia::parseJSONByMediaType(QJsonObject& json)
             mediaType = TMediaData::MediaTypeSound;
         } else if (mediaTypeJSON.toString().toLower() == "music") {
             mediaType = TMediaData::MediaTypeMusic;
+        } else if (mediaTypeJSON.toString().toLower() == "video") {
+            mediaType = TMediaData::MediaTypeVideo;
         }
     }
 
