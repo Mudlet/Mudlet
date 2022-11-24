@@ -4051,6 +4051,7 @@ void Host::toggleVideoPlayerVisibility()
     if (!mpMedia || !mpMedia->mpVideoPlayer) {
         return;
     }
+
     bool visStatus = mpMedia->mpVideoPlayer->isVisible();
 
     if (mpMedia->mpVideoPlayer->isFloatAndDockable()) {

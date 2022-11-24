@@ -3570,7 +3570,7 @@ int TLuaInterpreter::createVideoPlayer(lua_State* L)
 {
     int n = lua_gettop(L);
     QString windowName;
-    int counter = 1;
+    int s = 1;
 
     if (n > 4) {
         if (lua_type(L, 1) != LUA_TSTRING) {
@@ -3580,7 +3580,7 @@ int TLuaInterpreter::createVideoPlayer(lua_State* L)
 
         windowName = lua_tostring(L, 1);
 
-        counter++;
+        s++;
 
         if (isMain(windowName)) {
             // createVideoPlayer only accepts the empty name as the main window
@@ -3588,10 +3588,10 @@ int TLuaInterpreter::createVideoPlayer(lua_State* L)
         }
     }
 
-    int x = getVerifiedInt(L, __func__, counter, "video player x-coordinate");
-    int y = getVerifiedInt(L, __func__, ++counter, "video player y-coordinate");
-    int width = getVerifiedInt(L, __func__, ++counter, "video player width");
-    int height = getVerifiedInt(L, __func__, ++counter, "video player height");
+    int x = getVerifiedInt(L, __func__, s, "video player x-coordinate");
+    int y = getVerifiedInt(L, __func__, ++s, "video player y-coordinate");
+    int width = getVerifiedInt(L, __func__, ++s, "video player width");
+    int height = getVerifiedInt(L, __func__, ++s, "video player height");
 
     Host& host = getHostFromLua(L);
 
@@ -5665,11 +5665,11 @@ int TLuaInterpreter::loadMediaFileAsOrderedArguments(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TMediaData mediaData{};
-    int numArgs = lua_gettop(L);
+    int n = lua_gettop(L);
     QString stringValue;
 
     // name[,url])
-    for (int i = 1; i <= numArgs; i++) {
+    for (int i = 1; i <= n; i++) {
         if (lua_isnil(L, i)) {
             continue;
         }
@@ -5715,12 +5715,11 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
         QString key = getVerifiedString(L, __func__, -2, "table keys");
-        key = key.toLower();
 
-        if (key == QLatin1String("name") || key == QLatin1String("url")) {
-            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : "value for url");
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive)) {
+            QString value = getVerifiedString(L, __func__, -1, !key.compare(QLatin1String("name"), Qt::CaseInsensitive) ? "value for name" : "value for url");
 
-            if (key == QLatin1String("name") && !value.isEmpty()) {
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
                     value.replace('/', R"(\)");
                 } else {
@@ -5728,7 +5727,7 @@ int TLuaInterpreter::loadMediaFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("url") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
             }
         }
@@ -5800,13 +5799,13 @@ int TLuaInterpreter::playVideoFileAsOrderedArguments(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TMediaData mediaData{};
-    int numArgs = lua_gettop(L);
+    int n = lua_gettop(L);
     QString stringValue;
     int intValue = 0;
     bool boolValue = false;
 
     // name[,volume][,start][,loops][,key][,tag][,continue][,url])
-    for (int i = 1; i <= numArgs; i++) {
+    for (int i = 1; i <= n; i++) {
         if (lua_isnil(L, i)) {
             continue;
         }
@@ -5891,18 +5890,18 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L)
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
         QString key = getVerifiedString(L, __func__, -2, "table keys");
-        key = key.toLower();
 
-        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)
+            || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
             QString value = getVerifiedString(L,
                                               __func__,
                                               -1,
-                                              key == QLatin1String("name")  ? "value for name"
-                                              : key == QLatin1String("key") ? "value for key"
-                                              : key == QLatin1String("tag") ? "value for tag"
-                                                                            : "value for url");
+                                              !key.compare(QLatin1String("name"), Qt::CaseInsensitive)  ? "value for name"
+                                              : !key.compare(QLatin1String("key"), Qt::CaseInsensitive) ? "value for key"
+                                              : !key.compare(QLatin1String("tag"), Qt::CaseInsensitive) ? "value for tag"
+                                                                                                        : "value for url");
 
-            if (key == QLatin1String("name") && !value.isEmpty()) {
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
                     value.replace('/', R"(\)");
                 } else {
@@ -5910,37 +5909,43 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("url") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("start") || key == QLatin1String("loops")) {
-            int value = getVerifiedInt(L, __func__, -1, key == QLatin1String("volume") ? "value for volume" : key == QLatin1String("start") ? "value for start" : "value for loops");
+        } else if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive) || !key.compare(QLatin1String("start"), Qt::CaseInsensitive)
+                   || !key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
+            int value = getVerifiedInt(L,
+                                       __func__,
+                                       -1,
+                                       !key.compare(QLatin1String("volume"), Qt::CaseInsensitive)  ? "value for volume"
+                                       : !key.compare(QLatin1String("start"), Qt::CaseInsensitive) ? "value for start"
+                                                                                                   : "value for loops");
 
-            if (key == QLatin1String("volume")) {
+            if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive)) {
                 if (value != TMediaData::MediaVolumePreload) {
                     value = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
                 }
 
                 mediaData.setMediaVolume(value);
-            } else if (key == QLatin1String("start")) {
+            } else if (!key.compare(QLatin1String("start"), Qt::CaseInsensitive)) {
                 if (value < 0) {
                     lua_pushfstring(L, "playVideoFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", value);
                     return lua_error(L);
                 }
 
                 mediaData.setMediaStart(value);
-            } else if (key == QLatin1String("loops")) {
+            } else if (!key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
                 }
 
                 mediaData.setMediaLoops(value);
             }
-        } else if (key == QLatin1String("continue")) {
+        } else if (!key.compare(QLatin1String("continue"), Qt::CaseInsensitive)) {
             bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
             mediaData.setMediaContinue(value);
         }
@@ -5981,13 +5986,13 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TMediaData mediaData{};
-    int numArgs = lua_gettop(L);
+    int n = lua_gettop(L);
     QString stringValue;
     int intValue = 0;
     bool boolValue = 0;
 
     // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url])
-    for (int i = 1; i <= numArgs; i++) {
+    for (int i = 1; i <= n; i++) {
         if (lua_isnil(L, i)) {
             continue;
         }
@@ -6092,18 +6097,18 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
         QString key = getVerifiedString(L, __func__, -2, "table keys");
-        key = key.toLower();
 
-        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)
+            || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
             QString value = getVerifiedString(L,
                                               __func__,
                                               -1,
-                                              key == QLatin1String("name")  ? "value for name"
-                                              : key == QLatin1String("key") ? "value for key"
-                                              : key == QLatin1String("tag") ? "value for tag"
-                                                                            : "value for url");
+                                              !key.compare(QLatin1String("name"), Qt::CaseInsensitive)  ? "value for name"
+                                              : !key.compare(QLatin1String("key"), Qt::CaseInsensitive) ? "value for key"
+                                              : !key.compare(QLatin1String("tag"), Qt::CaseInsensitive) ? "value for tag"
+                                                                                                        : "value for url");
 
-            if (key == QLatin1String("name") && !value.isEmpty()) {
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
                     value.replace('/', R"(\)");
                 } else {
@@ -6111,58 +6116,60 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("url") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("loops")) {
+        } else if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fadein"), Qt::CaseInsensitive)
+                   || !key.compare(QLatin1String("fadeout"), Qt::CaseInsensitive) || !key.compare(QLatin1String("start"), Qt::CaseInsensitive)
+                   || !key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
             int value = getVerifiedInt(L,
                                        __func__,
                                        -1,
-                                       key == QLatin1String("volume")    ? "value for volume"
-                                       : key == QLatin1String("fadein")  ? "value for fadein"
-                                       : key == QLatin1String("fadeout") ? "value for fadeout"
-                                       : key == QLatin1String("start")   ? "value for start"
-                                                                         : "value for loops");
+                                       !key.compare(QLatin1String("volume"), Qt::CaseInsensitive)    ? "value for volume"
+                                       : !key.compare(QLatin1String("fadein"), Qt::CaseInsensitive)  ? "value for fadein"
+                                       : !key.compare(QLatin1String("fadeout"), Qt::CaseInsensitive) ? "value for fadeout"
+                                       : !key.compare(QLatin1String("start"), Qt::CaseInsensitive)   ? "value for start"
+                                                                                                     : "value for loops");
 
-            if (key == QLatin1String("volume")) {
+            if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive)) {
                 if (value != TMediaData::MediaVolumePreload) {
                     value = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
                 }
 
                 mediaData.setMediaVolume(value);
-            } else if (key == QLatin1String("fadein")) {
+            } else if (!key.compare(QLatin1String("fadein"), Qt::CaseInsensitive)) {
                 if (value < 0) {
                     lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadein", value);
                     return lua_error(L);
                 }
 
                 mediaData.setMediaFadeIn(value);
-            } else if (key == QLatin1String("fadeout")) {
+            } else if (!key.compare(QLatin1String("fadeout"), Qt::CaseInsensitive)) {
                 if (value < 0) {
                     lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
                     return lua_error(L);
                 }
 
                 mediaData.setMediaFadeOut(value);
-            } else if (key == QLatin1String("start")) {
+            } else if (!key.compare(QLatin1String("start"), Qt::CaseInsensitive)) {
                 if (value < 0) {
                     lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", value);
                     return lua_error(L);
                 }
 
                 mediaData.setMediaStart(value);
-            } else if (key == QLatin1String("loops")) {
+            } else if (!key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
                 }
 
                 mediaData.setMediaLoops(value);
             }
-        } else if (key == QLatin1String("continue")) {
+        } else if (!key.compare(QLatin1String("continue"), Qt::CaseInsensitive)) {
             bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
             mediaData.setMediaContinue(value);
         }
@@ -6203,12 +6210,12 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TMediaData mediaData{};
-    int numArgs = lua_gettop(L);
+    int n = lua_gettop(L);
     QString stringValue;
     int intValue = 0;
 
     // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,priority][,url])
-    for (int i = 1; i <= numArgs; i++) {
+    for (int i = 1; i <= n; i++) {
         if (lua_isnil(L, i)) {
             continue;
         }
@@ -6283,13 +6290,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
             break;
         case 9:
             intValue = getVerifiedInt(L, __func__, i, "priority");
-
-            if (intValue > TMediaData::MediaPriorityMax) {
-                intValue = TMediaData::MediaPriorityMax;
-            } else if (intValue < TMediaData::MediaPriorityMin) {
-                intValue = TMediaData::MediaPriorityMin;
-            }
-
+            intValue = qBound(static_cast<int>(TMediaData::MediaPriorityMin), intValue, static_cast<int>(TMediaData::MediaPriorityMax));
             mediaData.setMediaPriority(intValue);
             break;
         case 10:
@@ -6321,18 +6322,18 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
         QString key = getVerifiedString(L, __func__, -2, "table keys");
-        key = key.toLower();
 
-        if (key == QLatin1String("name") || key == QLatin1String("url") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("url"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive)
+            || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
             QString value = getVerifiedString(L,
                                               __func__,
                                               -1,
-                                              key == QLatin1String("name")  ? "value for name"
-                                              : key == QLatin1String("key") ? "value for key"
-                                              : key == QLatin1String("tag") ? "value for tag"
-                                                                            : "value for url");
+                                              !key.compare(QLatin1String("name"), Qt::CaseInsensitive)  ? "value for name"
+                                              : !key.compare(QLatin1String("key"), Qt::CaseInsensitive) ? "value for key"
+                                              : !key.compare(QLatin1String("tag"), Qt::CaseInsensitive) ? "value for tag"
+                                                                                                        : "value for url");
 
-            if (key == QLatin1String("name") && !value.isEmpty()) {
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
                     value.replace('/', R"(\)");
                 } else {
@@ -6340,65 +6341,61 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("url") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("loops")
-                   || key == QLatin1String("priority")) {
+        } else if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive) || !key.compare(QLatin1String("fadein"), Qt::CaseInsensitive)
+                   || !key.compare(QLatin1String("fadeout"), Qt::CaseInsensitive) || !key.compare(QLatin1String("start"), Qt::CaseInsensitive)
+                   || !key.compare(QLatin1String("loops"), Qt::CaseInsensitive) || !key.compare(QLatin1String("priority"), Qt::CaseInsensitive)) {
             int value = getVerifiedInt(L,
                                        __func__,
                                        -1,
-                                       key == QLatin1String("volume")    ? "value for volume"
-                                       : key == QLatin1String("fadein")  ? "value for fadein"
-                                       : key == QLatin1String("fadeout") ? "value for fadeout"
-                                       : key == QLatin1String("start")   ? "value for start"
-                                       : key == QLatin1String("loops")   ? "value for loops"
-                                                                         : "value for priority");
+                                       !key.compare(QLatin1String("volume"), Qt::CaseInsensitive)    ? "value for volume"
+                                       : !key.compare(QLatin1String("fadein"), Qt::CaseInsensitive)  ? "value for fadein"
+                                       : !key.compare(QLatin1String("fadeout"), Qt::CaseInsensitive) ? "value for fadeout"
+                                       : !key.compare(QLatin1String("start"), Qt::CaseInsensitive)   ? "value for start"
+                                       : !key.compare(QLatin1String("loops"), Qt::CaseInsensitive)   ? "value for loops"
+                                                                                                     : "value for priority");
 
-            if (key == QLatin1String("volume")) {
+            if (!key.compare(QLatin1String("volume"), Qt::CaseInsensitive)) {
                 if (value != TMediaData::MediaVolumePreload) {
                     value = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
                 }
 
                 mediaData.setMediaVolume(value);
-            } else if (key == QLatin1String("fadein")) {
+            } else if (!key.compare(QLatin1String("fadein"), Qt::CaseInsensitive)) {
                 if (value < 0) {
                     lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadein", value);
                     return lua_error(L);
                 }
 
                 mediaData.setMediaFadeIn(value);
-            } else if (key == QLatin1String("fadeout")) {
+            } else if (!key.compare(QLatin1String("fadeout"), Qt::CaseInsensitive)) {
                 if (value < 0) {
                     lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
                     return lua_error(L);
                 }
 
                 mediaData.setMediaFadeOut(value);
-            } else if (key == QLatin1String("start")) {
+            } else if (!key.compare(QLatin1String("start"), Qt::CaseInsensitive)) {
                 if (value < 0) {
                     lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "start", value);
                     return lua_error(L);
                 }
 
                 mediaData.setMediaStart(value);
-            } else if (key == QLatin1String("loops")) {
+            } else if (!key.compare(QLatin1String("loops"), Qt::CaseInsensitive)) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
                 }
 
                 mediaData.setMediaLoops(value);
-            } else if (key == QLatin1String("priority")) {
-                if (value > TMediaData::MediaPriorityMax) {
-                    value = TMediaData::MediaPriorityMax;
-                } else if (value < TMediaData::MediaPriorityMin) {
-                    value = TMediaData::MediaPriorityMin;
-                }
-
+            } else if (!key.compare(QLatin1String("priority"), Qt::CaseInsensitive)) {
+                value = qBound(static_cast<int>(TMediaData::MediaPriorityMin), value, static_cast<int>(TMediaData::MediaPriorityMax));
                 mediaData.setMediaPriority(value);
             }
         }
@@ -6440,11 +6437,11 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TMediaData mediaData{};
-    int numArgs = lua_gettop(L);
+    int n = lua_gettop(L);
     QString stringValue;
 
     // values as ordered args: name[,key][,tag])
-    for (int i = 1; i <= numArgs; i++) {
+    for (int i = 1; i <= n; i++) {
         if (lua_isnil(L, i)) {
             continue;
         }
@@ -6485,11 +6482,11 @@ int TLuaInterpreter::stopVideosAsOrderedArguments(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TMediaData mediaData{};
-    int numArgs = lua_gettop(L);
+    int n = lua_gettop(L);
     QString stringValue;
 
     // values as ordered args: name[,key][,tag])
-    for (int i = 1; i <= numArgs; i++) {
+    for (int i = 1; i <= n; i++) {
         if (lua_isnil(L, i)) {
             continue;
         }
@@ -6535,12 +6532,16 @@ int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L)
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
         QString key = getVerifiedString(L, __func__, -2, "table keys");
-        key = key.toLower();
 
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive) || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
+            QString value = getVerifiedString(L,
+                                              __func__,
+                                              -1,
+                                              !key.compare(QLatin1String("name"), Qt::CaseInsensitive)  ? "value for name"
+                                              : !key.compare(QLatin1String("key"), Qt::CaseInsensitive) ? "value for key"
+                                                                                                        : "value for tag");
 
-            if (key == QLatin1String("name") && !value.isEmpty()) {
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
                     value.replace('/', R"(\)");
                 } else {
@@ -6548,9 +6549,9 @@ int TLuaInterpreter::stopVideosAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
         }
@@ -6600,12 +6601,16 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L)
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
         QString key = getVerifiedString(L, __func__, -2, "table keys");
-        key = key.toLower();
 
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive) || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
+            QString value = getVerifiedString(L,
+                                              __func__,
+                                              -1,
+                                              !key.compare(QLatin1String("name"), Qt::CaseInsensitive)  ? "value for name"
+                                              : !key.compare(QLatin1String("key"), Qt::CaseInsensitive) ? "value for key"
+                                                                                                        : "value for tag");
 
-            if (key == QLatin1String("name") && !value.isEmpty()) {
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
                     value.replace('/', R"(\)");
                 } else {
@@ -6613,9 +6618,9 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
         }
@@ -6660,12 +6665,12 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     TMediaData mediaData{};
-    int numArgs = lua_gettop(L);
+    int n = lua_gettop(L);
     QString stringValue;
     int intValue = 0;
 
     // values as ordered args: name[,key][,tag][,priority])
-    for (int i = 1; i <= numArgs; i++) {
+    for (int i = 1; i <= n; i++) {
         if (lua_isnil(L, i)) {
             continue;
         }
@@ -6692,13 +6697,7 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
             break;
         case 4:
             intValue = getVerifiedInt(L, __func__, i, "priority");
-
-            if (intValue > TMediaData::MediaPriorityMax) {
-                intValue = TMediaData::MediaPriorityMax;
-            } else if (intValue < TMediaData::MediaPriorityMin) {
-                intValue = TMediaData::MediaPriorityMin;
-            }
-
+            intValue = qBound(static_cast<int>(TMediaData::MediaPriorityMin), intValue, static_cast<int>(TMediaData::MediaPriorityMax));
             mediaData.setMediaPriority(intValue);
             break;
         }
@@ -6722,12 +6721,16 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L)
     while (lua_next(L, 1) != 0) {
         // key at index -2 and value at index -1
         QString key = getVerifiedString(L, __func__, -2, "table keys");
-        key = key.toLower();
 
-        if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
-            QString value = getVerifiedString(L, __func__, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag");
+        if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) || !key.compare(QLatin1String("key"), Qt::CaseInsensitive) || !key.compare(QLatin1String("tag"), Qt::CaseInsensitive)) {
+            QString value = getVerifiedString(L,
+                                              __func__,
+                                              -1,
+                                              !key.compare(QLatin1String("name"), Qt::CaseInsensitive)  ? "value for name"
+                                              : !key.compare(QLatin1String("key"), Qt::CaseInsensitive) ? "value for key"
+                                                                                                        : "value for tag");
 
-            if (key == QLatin1String("name") && !value.isEmpty()) {
+            if (!key.compare(QLatin1String("name"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 if (QDir::homePath().contains('\\')) {
                     value.replace('/', R"(\)");
                 } else {
@@ -6735,23 +6738,15 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaFileName(value);
-            } else if (key == QLatin1String("key") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
-            } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+            } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("priority")) {
+        } else if (!key.compare(QLatin1String("priority"), Qt::CaseInsensitive)) {
             int value = getVerifiedInt(L, __func__, -1, "value for priority must be integer");
-
-            if (key == QLatin1String("priority")) {
-                if (value > TMediaData::MediaPriorityMax) {
-                    value = TMediaData::MediaPriorityMax;
-                } else if (value < TMediaData::MediaPriorityMin) {
-                    value = TMediaData::MediaPriorityMin;
-                }
-
-                mediaData.setMediaPriority(value);
-            }
+            value = qBound(static_cast<int>(TMediaData::MediaPriorityMin), value, static_cast<int>(TMediaData::MediaPriorityMax));
+            mediaData.setMediaPriority(value);
         }
 
         // removes value, but keeps key for next iteration

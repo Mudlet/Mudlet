@@ -39,8 +39,6 @@ public:
 
     TMedia* mpMedia = nullptr;
     QPointer<Host> mpHost;
-
-private:
 };
 
 #endif // MUDLET_TVIDEOPLAYER_H
