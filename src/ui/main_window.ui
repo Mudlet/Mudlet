@@ -97,7 +97,7 @@
     <addaction name="dactionScriptEditor"/>
     <addaction name="dactionShowErrors"/>
     <addaction name="dactionShowMap"/>
-    <addaction name="dactionShowVideo"/>
+    <addaction name="dactionShowVideoPlayer"/>
     <addaction name="dactionInputLine"/>
     <addaction name="dactionNotepad"/>
     <addaction name="dactionLiveHelpChat"/>
