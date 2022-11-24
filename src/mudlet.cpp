@@ -454,7 +454,7 @@ mudlet::mudlet()
     mpActionVideoPlayer = new QAction(QIcon(qsl(":/icons/video_icon.png")), tr("Video"), this);
     mpActionVideoPlayer->setToolTip(utils::richText(tr("Show/hide the video player")));
     mpMainToolBar->addAction(mpActionVideoPlayer);
-    mpActionVideoPlayer->setObjectName(qsl("videoplayer_action"));
+    mpActionVideoPlayer->setObjectName(qsl("video_player_action"));
     mpMainToolBar->widgetForAction(mpActionVideoPlayer)->setObjectName(mpActionVideoPlayer->objectName());
 
     mpActionHelp = new QAction(QIcon(qsl(":/icons/help-hint.png")), tr("Manual"), this);

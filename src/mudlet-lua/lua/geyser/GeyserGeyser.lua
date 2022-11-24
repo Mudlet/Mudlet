@@ -163,7 +163,7 @@ local function setMyWindow(self, windowname)
   windowname = windowname or "main"
   local name
   name = self.name
-  if self.type == "mapper" or self.type == "videoplayer" then
+  if self.type == "mapper" or self.type == "video_player" then
     name = self.type
   end
 
