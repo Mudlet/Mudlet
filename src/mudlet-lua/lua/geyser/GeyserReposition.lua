@@ -16,18 +16,5 @@ function GeyserReposition(event, w, h, arg)
   end
 end
 
-function GeyserRepaint(event, gainedNotLostFocus)
-  if event == "sysProfileFocusChangeEvent" then
-    tempTimer(0.0, [[
-for _, window in pairs(Geyser.windowList) do
-  if window.type == "container" then
-    window:reposition()
-  end
-end
-]], false)
-  end
-end
-
 registerAnonymousEventHandler("sysWindowResizeEvent", "GeyserReposition")
 registerAnonymousEventHandler("sysUserWindowResizeEvent", "GeyserReposition")
-registerAnonymousEventHandler("sysProfileFocusChangeEvent", "GeyserRepaint")
