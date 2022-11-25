@@ -68,7 +68,9 @@ void TMedia::playMedia(TMediaData& mediaData)
         return;
     }
 
-    if (mediaData.getMediaInput() == TMediaData::MediaInputFile) {
+    if (mediaData.getMediaInput() == TMediaData::MediaInputStream) {
+        mediaData.setMediaAbsolutePathFileName(mediaData.getMediaFileName());
+    } else if (mediaData.getMediaInput() == TMediaData::MediaInputFile) {
         bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
@@ -1148,7 +1150,7 @@ void TMedia::play(TMediaData& mediaData)
             mpHost->showHideOrCreateVideoPlayer();
         }
 
-        auto videoWidget = mpHost->mpMedia->mpVideoPlayer->mpVideoPlayer;
+        auto videoWidget = mpHost->mpMedia->mpVideoPlayer->widget_video;
         pPlayer.getMediaPlayer()->setVideoOutput(videoWidget);
         videoWidget->show();
     }

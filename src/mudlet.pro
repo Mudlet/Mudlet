@@ -656,7 +656,6 @@ SOURCES += \
     TTreeWidget.cpp \
     TTrigger.cpp \
     TVar.cpp \
-    TVideoPlayer.cpp \
     VarUnit.cpp \
     XMLexport.cpp \
     XMLimport.cpp
@@ -783,7 +782,6 @@ HEADERS += \
     TTreeWidget.h \
     TTrigger.h \
     TVar.h \
-    TVideoPlayer.h \
     VarUnit.h \
     utils.h \
     XMLexport.h \

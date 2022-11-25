@@ -33,7 +33,7 @@
     <number>0</number>
    </property>
    <item>
-    <widget class="TVideoPlayer" name="mpVideoPlayer" native="true">
+    <widget class="QVideoWidget" name="widget_video" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -105,14 +105,6 @@
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>TVideoPlayer</class>
-   <extends>QVideoWidget</extends>
-   <header location="global">TVideoPlayer.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
