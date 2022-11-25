@@ -1,6 +1,4 @@
 const {danger, fail, message, warn} = require('danger');
-const ISSUE_REGEX = /https?:\/\/(?:www\.)?github\.com\/Mudlet\/Mudlet\/issues\/(\d+)/i
-const ISSUE_URL = "https://github.com/Mudlet/Mudlet/issues"
 const SOURCE_REGEX = /.*\.(cpp|c|h|lua)$/i
 const TITLE_REGEX = /^(fix|improve|add|infra)/i
 const touched_files = [...danger.git.created_files, ...danger.git.modified_files]
