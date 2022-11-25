@@ -70,6 +70,11 @@ Don't:
                                           "<p>Another paragraph, maybe in a different style, e.g. <i>italics</i> or <b>bold</b>.")));
 ```
 
+# TODO's
+In Mudlet's decade of existence, TODO's get added to the codebase but almost never resolved. Having them in the codebase does not add any value if they are just sitting there and not acted upon. This raises the question, why have them around at all if they are not adding any value? To this effect, we decided not to add future TODOs to the code and work on removing existing ones.
+
+In case the TODO is an improvement, it's better to add it right away instead of kicking the can down the road. In case it's a legitimate problem, it should be fixed right away also.
+
 # Git commit guidelines for core team
 
 ## Refactoring
