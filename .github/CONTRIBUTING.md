@@ -73,7 +73,7 @@ Don't:
 # TODO's
 In Mudlet's decade of existence, TODO's get added to the codebase but almost never resolved. Having them in the codebase does not add any value if they are just sitting there and not acted upon. This raises the question, why have them around at all if they are not adding any value? To this effect, we decided not to add future TODOs to the code and work on removing existing ones.
 
-In case the TODO is an improvement, it's better to add it right away instead of kicking the can down the road. In case it's a legitimate problem, it should be fixed right away also.
+In case the TODO is an improvement, a pull request implementing the idea or an issue suggesting it can be added - no TODO necessary. In case it's a legitimate problem, it's better to fix it right away instead of kicking the can down the road.
 
 # Git commit guidelines for core team
 
@@ -88,11 +88,6 @@ In case the TODO is an improvement, it's better to add it right away instead of 
 * PR Title must start with `fix`, `improve`, `add`, or `infra`
   * This facilitates automatic changelog gathering and categorization
   * Cannot merge until it is fixed: core team can always adjust it before merging
-* Any new TODO in a source file must have a Mudlet github issue on the same line
-  * good:
-    * //TODO: https://github.com/Mudlet/Mudlet/issues/1234
-  * bad:
-    * //TODO: a thing we aren't actually tracking with an issue
 
 Danger will also give a heads up if the PR title is long, or if more than 10 source files are changed in a single PR. These are not blocked but the warnings should serve to draw attention to something which may require a double check. More info below.
 
