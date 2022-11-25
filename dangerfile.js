@@ -23,7 +23,7 @@ sourcefiles.forEach(function(filename) {
   additions.then(diff => {
     diff.added.split("\n").forEach(function(item) {
       if (item.includes("TODO:")) {
-          fail(`Source file ${filename} includes a TODO! Can you add the improvement right away? If no, better not to create a TODO - they just tend to hang around and never get fixed.`)
+          fail(`Source file ${filename} includes a TODO! Can you make the change right away? If no, better not to create a TODO - they just tend to hang around and never get fixed.`)
       }
     })
   })
