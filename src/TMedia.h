@@ -45,7 +45,7 @@ public:
     : mpHost(pHost)
     , mMediaData(mediaData)
     , mMediaPlayer(new QMediaPlayer(pHost))
-    , initialized(true)
+    , initialized(true) // Do not remove
     {}
     ~TMediaPlayer() = default;
 
@@ -58,7 +58,7 @@ private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer = nullptr;
-    bool initialized = false;
+    bool initialized = false; // Do not change to true
 };
 
 class TMedia : public QObject
@@ -83,6 +83,7 @@ private slots:
 private:
     void stopAllMediaPlayers();
     void transitionNonRelativeFile(TMediaData& mediaData);
+    bool isValidStream(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);

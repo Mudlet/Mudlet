@@ -730,18 +730,18 @@ private:
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
     static int loadMediaFileAsOrderedArguments(lua_State*);
     static int loadMediaFileAsTableArgument(lua_State*);
-    static int playVideoFileAsOrderedArguments(lua_State*);
-    static int playVideoFileAsTableArgument(lua_State*);
-    static int playMusicFileAsOrderedArguments(lua_State*);
-    static int playMusicFileAsTableArgument(lua_State*);
     static int playSoundFileAsOrderedArguments(lua_State*);
     static int playSoundFileAsTableArgument(lua_State*);
-    static int stopVideosAsOrderedArguments(lua_State*);
-    static int stopVideosAsTableArgument(lua_State*);
-    static int stopMusicAsOrderedArguments(lua_State*);
-    static int stopMusicAsTableArgument(lua_State*);
+    static int playMusicFileAsOrderedArguments(lua_State*);
+    static int playMusicFileAsTableArgument(lua_State*);
+    static int playVideoFileAsOrderedArguments(lua_State*);
+    static int playVideoFileAsTableArgument(lua_State*);
     static int stopSoundsAsOrderedArguments(lua_State*);
     static int stopSoundsAsTableArgument(lua_State*);
+    static int stopMusicAsOrderedArguments(lua_State*);
+    static int stopMusicAsTableArgument(lua_State*);
+    static int stopVideosAsOrderedArguments(lua_State*);
+    static int stopVideosAsTableArgument(lua_State*);
     struct lua_state_deleter {
         void operator()(lua_State* ptr) const noexcept {
             lua_close(ptr);

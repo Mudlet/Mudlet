@@ -39,8 +39,12 @@ public:
         MediaTypeNotSet = 0,
         MediaTypeSound = 1,
         MediaTypeMusic = 2,
-        MediaTypeVideo = 3,
-        MediaTypeStream = 4};
+        MediaTypeVideo = 3};
+
+    enum MediaInput {
+        MediaInputNotSet = 0,
+        MediaInputFile = 1,
+        MediaInputStream = 2};
 
     enum MediaVolume {
         MediaVolumePreload = 0,
@@ -73,14 +77,15 @@ public:
     void setMediaProtocol(int mediaProtocol) { mMediaProtocol = mediaProtocol; }
     int getMediaType() const { return mMediaType; }
     void setMediaType(int mediaType) { mMediaType = mediaType; }
+    int getMediaInput() const { return mMediaInput; }
+    void setMediaInput(int mediaInput) { mMediaInput = mediaInput; }
     QString getMediaFileName() const { return mMediaFileName; }
     void setMediaFileName(QString mediaFileName) { mMediaFileName = mediaFileName; }
     int getMediaVolume() const { return mMediaVolume; }
     void setMediaVolume(int mediaVolume)
     {
         if (mediaVolume == TMediaData::MediaVolumePreload) {
-            // Support preloading
-            mMediaVolume = TMediaData::MediaVolumePreload;
+            mMediaVolume = TMediaData::MediaVolumePreload; // Support preloading
         } else {
             mMediaVolume = qBound(static_cast<int>(TMediaData::MediaVolumeMin), mediaVolume, static_cast<int>(TMediaData::MediaVolumeMax));
         }
@@ -144,6 +149,7 @@ public:
 private:
     int mMediaProtocol = MediaProtocolNotSet;
     int mMediaType = MediaTypeNotSet;
+    int mMediaInput = MediaInputNotSet;
     QString mMediaFileName;
     int mMediaVolume = MediaVolumeDefault;
     int mMediaFadeIn = MediaFadeNotSet;
