@@ -137,6 +137,10 @@ void HostManager::changeAllHostColour(const Host* pHost)
         if (mapper) {
             mapper->setPalette(QApplication::palette());
         }
+        auto videoPlayer = hostList.at(i)->mpMedia->mpVideoPlayer;
+        if (videoPlayer) {
+            videoPlayer->setPalette(QApplication::palette());
+        }
         QMutableMapIterator<QString, TConsole*> itSubConsole(hostList.at(i)->mpConsole->mSubConsoleMap);
         while (itSubConsole.hasNext()) {
             itSubConsole.next();

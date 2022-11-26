@@ -3318,6 +3318,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
     auto pM = mpConsole->mpMapper;
+    auto pV = mpConsole->mpVideoPlayer;
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     auto pS = mpConsole->mScrollBoxMap.value(name);
     //parents
@@ -3372,6 +3373,13 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         pM->move(x1, y1);
         if (show) {
             pM->show();
+        }
+        return {true, QString()};
+    } else if (pV && name.toLower() == QLatin1String("video_player")) {
+        pV->setParent(pW);
+        pV->move(x1, y1);
+        if (show) {
+            pV->show();
         }
         return {true, QString()};
     }
@@ -3476,7 +3484,7 @@ std::pair<bool, QString> Host::openVideoPlayerWidget(const QString& area, int x,
     }
 
     auto pM = mpDockableVideoPlayerWidget;
-    auto pVideoPlayer = mpMedia->mpVideoPlayer;
+    auto pVideoPlayer = mpMedia.data()->mpVideoPlayer;
 
     if (!pM && !pVideoPlayer) {
         showHideOrCreateVideoPlayer();
