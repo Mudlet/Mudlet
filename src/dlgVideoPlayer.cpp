@@ -35,6 +35,7 @@ dlgVideoPlayer::dlgVideoPlayer(QWidget* parent, Host* pH, TMedia* pM)
     setupUi(this);
 
     widget_panel->setVisible(mpHost->mShowVideoPlayerPanel);
+    connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgVideoPlayer::slot_togglePanel);
 }
 
 void dlgVideoPlayer::slot_togglePanel()

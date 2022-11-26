@@ -261,6 +261,7 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
     }
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Miscellaneous_Functions#purgeMediaCache
 bool TMedia::purgeMediaCache()
 {
     QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
