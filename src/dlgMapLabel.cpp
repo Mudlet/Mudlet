@@ -25,7 +25,10 @@
 
 static QString BUTTON_STYLESHEET = QStringLiteral("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
 
-dlgMapLabel::dlgMapLabel(QWidget* pF) : QDialog(pF), fgColor(QColor(255, 255, 50, 255)), bgColor(QColor(50, 50, 150, 100))
+dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
+: QDialog(pParentWidget)
+, fgColor(QColor(255, 255, 50, 255))
+, bgColor(QColor(50, 50, 150, 100))
 {
     setupUi(this);
 
