@@ -22,7 +22,9 @@
 
 #include "HostManager.h"
 
+#include "TMedia.h"
 #include "dlgMapper.h"
+#include "dlgVideoPlayer.h"
 #include "mudlet.h"
 
 bool HostManager::deleteHost(const QString& hostname)
