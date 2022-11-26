@@ -6,6 +6,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -4490,7 +4491,7 @@ int TLuaInterpreter::setMovieSpeed(lua_State* L)
     return movieFunc(L, qsl("setMovieSpeed"));
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scaleMovie
 int TLuaInterpreter::scaleMovie(lua_State* L)
 {
     return movieFunc(L, qsl("scaleMovie"));
