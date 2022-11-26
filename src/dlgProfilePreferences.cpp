@@ -54,8 +54,8 @@
 
 using namespace std::chrono_literals;
 
-dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
-: QDialog(pF)
+dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost)
+: QDialog(pParentWidget)
 , mpHost(pHost)
 {
     // init generated dialog
@@ -99,9 +99,6 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pF, Host* pHost)
     groupBox_discordPrivacy->hide();
 
     checkBox_USE_SMALL_SCREEN->setChecked(pMudlet->mEnableFullScreenMode);
-
-    connect(checkBox_autoWrap, &QAbstractButton::toggled, wrap_at_spinBox, &QWidget::setDisabled);
-    connect(checkBox_autoWrap, &QAbstractButton::toggled, label_wrapCharacters, &QWidget::setDisabled);
 
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
@@ -421,8 +418,6 @@ void dlgProfilePreferences::disableHostDetails()
 
     groupBox_doubleClick->setEnabled(false);
 
-    checkBox_autoWrap->setEnabled(false);
-
     // Some of groupBox_displayOptions are usable, so must pick out and
     // disable the others:
     // ----- groupBox_displayOptions -----
@@ -484,6 +479,7 @@ void dlgProfilePreferences::disableHostDetails()
 
     // ===== tab security =====
     groupBox_ssl->setEnabled(false);
+    checkBox_askTlsAvailable->setEnabled(false);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(false);
@@ -543,7 +539,6 @@ void dlgProfilePreferences::enableHostDetails()
 
     groupBox_doubleClick->setEnabled(true);
 
-    checkBox_autoWrap->setEnabled(true);
     // ----- groupBox_displayOptions -----
     checkBox_USE_IRE_DRIVER_BUGFIX->setEnabled(true);
     checkBox_enableTextAnalyzer->setEnabled(true);
@@ -586,8 +581,10 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab security =====
 #if defined(QT_NO_SSL)
     groupBox_ssl->setEnabled(false);
+    checkBox_askTlsAvailable->setEnabled(false);
 #else
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
+    checkBox_askTlsAvailable->setEnabled(true);
 #endif
     checkBox_announceIncomingText->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
@@ -783,7 +780,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     command_separator_lineedit->setText(pHost->mCommandSeparator);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
-    checkBox_autoWrap->setChecked(pHost->autoWrap());
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(pHost->mUSE_FORCE_LF_AFTER_PROMPT);
     USE_UNIX_EOL->setChecked(pHost->mUSE_UNIX_EOL);
@@ -1102,6 +1098,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_expired->setChecked(pHost->mSslIgnoreExpired);
     checkBox_ignore_all->setChecked(pHost->mSslIgnoreAll);
 
+    checkBox_askTlsAvailable->setChecked(pHost->mAskTlsAvailable);
+
     groupBox_proxy->setEnabled(true);
     groupBox_proxy->setChecked(pHost->mUseProxy);
     lineEdit_proxyAddress->setText(pHost->mProxyAddress);
@@ -1373,7 +1371,6 @@ void dlgProfilePreferences::clearHostDetails()
     command_separator_lineedit->clear();
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(false);
-    checkBox_autoWrap->setChecked(false);
     checkBox_enableTextAnalyzer->setChecked(false);
     checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(false);
     USE_UNIX_EOL->setChecked(false);
@@ -1436,6 +1433,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     groupBox_ssl_certificate->hide();
     frame_notificationArea->hide();
+    checkBox_askTlsAvailable->setChecked(false);
     groupBox_proxy->setDisabled(true);
 
     // Remove the reference to the Host/profile in the title:
@@ -2627,7 +2625,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
-        pHost->setAutoWrap(checkBox_autoWrap->isChecked());
         pHost->mEnableTextAnalyzer = checkBox_enableTextAnalyzer->isChecked();
         pHost->mUSE_FORCE_LF_AFTER_PROMPT = checkBox_mUSE_FORCE_LF_AFTER_PROMPT->isChecked();
         pHost->mUSE_UNIX_EOL = USE_UNIX_EOL->isChecked();
@@ -2688,6 +2685,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
         pHost->mSslIgnoreSelfSigned = checkBox_self_signed->isChecked();
         pHost->mSslIgnoreAll = checkBox_ignore_all->isChecked();
+        pHost->mAskTlsAvailable = checkBox_askTlsAvailable->isChecked();
 
         if (console) {
             console->changeColors();

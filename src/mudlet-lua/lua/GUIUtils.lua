@@ -2009,7 +2009,7 @@ function hecho2string(text)
   return x2string(text, "Hex")
 end
 
-local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
+local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
@@ -2060,7 +2060,7 @@ function ansi2decho(text, ansi_default_color)
       local code = t[i]
       local formatCodeHandled = false
 
-      if code == '0' or code == '00' then
+      if code == '0' or code == '00' or code == '' then
         -- reset attributes
         output[#output + 1] = "<r>"
         fg, bg = nil, nil
@@ -2671,4 +2671,28 @@ function closestColor(r,g,b)
     end
   end
   return cname
+end
+
+--- Scrolls the given window up a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to scroll
+function scrollUp(window, lines)
+  if type(window) ~= "string" then window, lines = "main", window end
+  lines = tonumber(lines) or 1
+  local numLines = getLastLineNumber(window)
+  if not numLines then return nil, "window does not exist" end
+  local curScroll = getScroll(window)
+  scrollTo(window, math.max(curScroll - lines, 0))
+end
+
+--- Scrolls the given window down a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to scroll
+function scrollDown(window, lines)
+  if type(window) ~= "string" then window, lines = "main", window end
+  lines = tonumber(lines) or 1
+  local numLines = getLastLineNumber(window)
+  if not numLines then return nil, "window does not exist" end
+  local curScroll = getScroll(window)
+  scrollTo(window, math.min(curScroll + lines, numLines))
 end

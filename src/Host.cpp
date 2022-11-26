@@ -234,6 +234,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSslIgnoreExpired(false)
 , mSslIgnoreSelfSigned(false)
 , mSslIgnoreAll(false)
+, mAskTlsAvailable(true)
+, mMSSPTlsPort(0)
 , mUseProxy(false)
 , mProxyPort(0)
 , mIsGoingDown(false)
@@ -4052,13 +4054,4 @@ bool Host::caretEnabled() const {
 void Host::setCaretEnabled(bool enabled) {
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
-}
-
-bool Host::autoWrap() const {
-    return mAutoWrap;
-}
-
-void Host::setAutoWrap(bool enabled) {
-    mAutoWrap = enabled;
-    mpConsole->setAutoWrap(enabled);
 }

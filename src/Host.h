@@ -169,7 +169,7 @@ public:
     QString         getDiscordGameName()             { return mDiscordGameName; }
     void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
     int             getPort()                        { return mPort; }
-    void            setPort(const int p)                 { mPort = p; }
+    void            setPort(const int p)             { mPort = p; }
     void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
     QString &       getLogin()                       { return mLogin; }
     void            setLogin(const QString& s)       { mLogin = s; }
@@ -399,8 +399,6 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
-    bool autoWrap() const;
-    void setAutoWrap(bool enabled);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -431,6 +429,9 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+    bool mAskTlsAvailable;
+    int mMSSPTlsPort;
+    QString mMSSPHostName;
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
@@ -520,9 +521,7 @@ public:
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
-    // wrap at a specific amount of characters if not autowrapping:
     int mWrapAt;
-    // after wrapping a line, intent it by how many spaces:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
@@ -722,9 +721,6 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
-
-    // automatically calculate wrapping?
-    bool mAutoWrap = true;
 
     QFile mErrorLogFile;
 

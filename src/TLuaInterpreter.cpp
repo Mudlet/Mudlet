@@ -6,6 +6,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -4514,7 +4515,7 @@ int TLuaInterpreter::setMovieSpeed(lua_State* L)
     return movieFunc(L, qsl("setMovieSpeed"));
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scaleMovie
 int TLuaInterpreter::scaleMovie(lua_State* L)
 {
     return movieFunc(L, qsl("scaleMovie"));
@@ -10478,9 +10479,9 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
         // Allow an empty string to be used to clear the symbol:
         pR->mSymbol.clear();
     } else {
-        // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+        // 10.0 is the maximum supported by the Qt versions (5.14+) we
         // handle/use/allow:
-        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
     host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
@@ -13721,6 +13722,12 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 host.mpConsole->printSystemMessage(msg);
             }
             host.raiseEvent(event);
+
+            if (msspVAR == "HOSTNAME") {
+                host.mMSSPHostName = msspVAL;
+            } else if (msspVAR == "TLS" || msspVAR == "SSL") {
+                host.mMSSPTlsPort = msspVAL != "-1" ? msspVAL.toInt() : 0;
+            }
         }
 
         lua_pop(L, lua_gettop(L));
@@ -15553,6 +15560,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
+    lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
+    lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -17478,6 +17487,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("askTlsAvailable")) {
+        host.mAskTlsAvailable = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("inputLineStrictUnixEndings")) {
         host.mUSE_UNIX_EOL = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -17755,4 +17768,86 @@ int TLuaInterpreter::announce(lua_State *L) {
 
     mudlet::self()->announce(text, processing);
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollTo
+int TLuaInterpreter::scrollTo(lua_State* L)
+{
+    QString windowName;
+    int targetLine;
+    bool stopScrolling = false;
+
+    int n = lua_gettop(L);
+    if (n == 2) {
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
+        targetLine = getVerifiedInt(L, __func__, 2, "line to scroll to");
+    } else if (n == 1) {
+        if (lua_isnumber(L, 1)) {
+            windowName = QLatin1String("main");
+            targetLine = getVerifiedInt(L, __func__, 1, "line to scroll to");
+        } else {
+            windowName = getVerifiedString(L, __func__, 1, "window name", true);
+            stopScrolling = true;
+        }
+    } else if (n == 0) {
+        windowName = QLatin1String("main");
+        stopScrolling = true;
+    }
+
+    auto console = getHostFromLua(L).findConsole(windowName);
+    if (!console) {
+        lua_pushnil(L);
+        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+        return 2;
+    }
+
+    int numLines = console->getLastLineNumber();
+    if (targetLine >= numLines) { // larger than buffer or at end
+        stopScrolling = true;
+    } else if (targetLine < 0) { // negative, count from end of buffer
+        targetLine = std::max((numLines + targetLine), 0);
+    }
+
+    if (stopScrolling) {
+        if (!console->mUpperPane->mIsTailMode) {
+            console->mLowerPane->mCursorY = console->buffer.size();
+            console->mLowerPane->hide();
+            console->buffer.mCursorY = console->buffer.size();
+            console->mUpperPane->mCursorY = console->buffer.size();
+            console->mUpperPane->mCursorX = 0;
+            console->mUpperPane->mIsTailMode = true;
+            console->mUpperPane->updateScreenView();
+            console->mUpperPane->forceUpdate();
+        }
+    } else {
+        console->scrollUp(console->mUpperPane->mCursorY - targetLine);
+    }
+
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScroll
+int TLuaInterpreter::getScroll(lua_State* L)
+{
+    QString windowName;
+
+    int n = lua_gettop(L);
+    if (n == 1) {
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
+    } else {
+        windowName = QLatin1String("main");
+    }
+
+    auto console = getHostFromLua(L).findConsole(windowName);
+    if (!console) {
+        lua_pushnil(L);
+        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+        return 2;
+    }
+
+    int result = console->mUpperPane->mCursorY;
+    result = std::min(result, console->getLastLineNumber());
+    result = std::max(result, 0);
+    lua_pushnumber(L, result);
+    return 1;
 }

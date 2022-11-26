@@ -882,14 +882,6 @@ void XMLimport::readHostPackage(Host* pHost)
     } else {
         pHost->setEditorShowBidi(true);
     }
-    bool autoWrap = false;
-    if (attributes().hasAttribute("mAutoWrap")) {
-        autoWrap = attributes().value(qsl("mAutoWrap")) == YES;
-    }
-    // don't call wrap function during profile load as the console won't exist yet
-    QTimer::singleShot(0, pHost, [autoWrap, pHost]() {
-        pHost->setAutoWrap(autoWrap);
-    });
     if (attributes().hasAttribute("announceIncomingText")) {
         pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;
     } else {
@@ -1017,6 +1009,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mSslIgnoreExpired = attributes().value(qsl("mSslIgnoreExpired")) == YES;
     pHost->mSslIgnoreSelfSigned = attributes().value(qsl("mSslIgnoreSelfSigned")) == YES;
     pHost->mSslIgnoreAll = attributes().value(qsl("mSslIgnoreAll")) == YES;
+    pHost->mAskTlsAvailable = attributes().value(qsl("mAskTlsAvailable")) == YES;
     bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
     if (mudlet::self()->mpCurrentActiveHost == pHost) {

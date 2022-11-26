@@ -28,8 +28,8 @@
 #include <QDebug>
 #include "post_guard.h"
 
-dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pF)
-: QWidget(pF)
+dlgTriggerPatternEdit::dlgTriggerPatternEdit(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
