@@ -89,10 +89,6 @@ TMainConsole::~TMainConsole()
         qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
         mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
     }
-
-    if (mpVideoPlayer) {
-        mpVideoPlayer->widget_video->deleteLater();
-    }
 }
 
 void TMainConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
