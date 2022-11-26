@@ -34,7 +34,6 @@ dlgVideoPlayer::dlgVideoPlayer(QWidget* parent, Host* pH, TMedia* pM)
 {
     setupUi(this);
 
-    mpMedia->mpVideoPlayer = this;
     widget_panel->setVisible(mpHost->mShowVideoPlayerPanel);
 }
 

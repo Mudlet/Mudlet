@@ -310,7 +310,7 @@ void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 
 bool TMedia::isValidStream(TMediaData& mediaData)
 {
-    return mediaData.getMediaFileName().startsWith("http", Qt::CaseInsensitive); // TODO: regular expression
+    return mediaData.getMediaFileName().startsWith("http", Qt::CaseInsensitive);
 }
 
 QUrl TMedia::parseUrl(TMediaData& mediaData)

@@ -4076,10 +4076,10 @@ void Host::createVideoPlayer()
     mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpDockableVideoPlayerWidget);
     mudlet::self()->loadWindowLayout();
 
-    TEvent videoPlayerOpenEvent{};
-    videoPlayerOpenEvent.mArgumentList.append(QLatin1String("sysVideoPlayerOpenEvent"));
-    videoPlayerOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    raiseEvent(videoPlayerOpenEvent);
+    TEvent sysVideoPlayerOpenEvent{};
+    sysVideoPlayerOpenEvent.mArgumentList.append(QLatin1String("sysVideoPlayerOpenEvent"));
+    sysVideoPlayerOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(sysVideoPlayerOpenEvent);
 }
 
 void Host::setDockLayoutUpdated(const QString& name)

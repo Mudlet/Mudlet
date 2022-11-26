@@ -89,6 +89,10 @@ TMainConsole::~TMainConsole()
         qDebug() << "TCommandLine::~TConsole(...) INFO - Saving profile's own Hunspell dictionary...";
         mudlet::self()->saveDictionary(mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mProfileName, qsl("profile")), mWordSet_profile);
     }
+
+    if (mpVideoPlayer) {
+        mpVideoPlayer->widget_video->deleteLater();
+    }
 }
 
 void TMainConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
@@ -750,10 +754,10 @@ std::pair<bool, QString> TMainConsole::createVideoPlayer(const QString& windowna
 
         mpHost->mpMedia->mpVideoPlayer = mpVideoPlayer;
 
-        TEvent videoPlayerOpenEvent{};
-        videoPlayerOpenEvent.mArgumentList.append(QLatin1String("videoPlayerOpenEvent"));
-        videoPlayerOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(videoPlayerOpenEvent);
+        TEvent sysVideoPlayerOpenEvent{};
+        sysVideoPlayerOpenEvent.mArgumentList.append(QLatin1String("sysVideoPlayerOpenEvent"));
+        sysVideoPlayerOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(sysVideoPlayerOpenEvent);
     }
 
     mpVideoPlayer->resize(width, height);
