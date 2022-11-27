@@ -38,6 +38,7 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
@@ -2694,7 +2695,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 void mudlet::startAutoLogin(const QString& cliProfile)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-    hostList += mudlet::scmDefaultGames.keys();
+    hostList += TGameDetails::keys();
     hostList << qsl("Mudlet self-test");
     hostList.removeDuplicates();
     bool openedProfile = false;
@@ -2841,11 +2842,11 @@ void mudlet::doAutoLogin(const QString& profile_name)
     if (entries.isEmpty()) {
         preInstallPackages = true;
 
-        const auto it = mudlet::scmDefaultGames.find(profile_name);
-        if (it != mudlet::scmDefaultGames.end()) {
-            pHost->setUrl(it.value().hostUrl);
-            pHost->setPort(it.value().port);
-            pHost->mSslTsl = it.value().tlsEnabled;
+        const auto it = TGameDetails::findGame(profile_name);
+        if (it != TGameDetails::scmDefaultGames.end()) {
+            pHost->setUrl((*it).hostUrl);
+            pHost->setPort((*it).port);
+            pHost->mSslTsl = (*it).tlsEnabled;
         }
     } else {
         QFile file(qsl("%1/%2").arg(folder, entries.at(0)));
