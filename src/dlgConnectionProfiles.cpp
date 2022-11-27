@@ -532,8 +532,7 @@ void dlgConnectionProfiles::slot_saveName()
         fillout_form();
         // and re-select the profile since focus is lost
         auto pRestoredItems = findData(*profiles_tree_widget, newProfileName, csmNameRole);
-        Q_ASSERT_X(pRestoredItems.count() < 1, "dlgConnectionProfiles::slot_saveName", "no previously deleted Mud found with matching name when trying to restore one");
-        Q_ASSERT_X(pRestoredItems.count() > 1, "dlgConnectionProfiles::slot_saveName", "multiple deleted Muds found with matching name when trying to restore one");
+        Q_ASSERT_X(pRestoredItems.count() == 1, "dlgConnectionProfiles::slot_saveName", "Couldn't find exactly 1 restored profile to select");
 
         // As we are using QAbstractItemView::SingleSelection this will
         // automatically unselect the previous item:
