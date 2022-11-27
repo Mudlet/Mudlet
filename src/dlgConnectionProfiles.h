@@ -96,7 +96,7 @@ protected:
 
 private:
     static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
-    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name) const;
+    QString getDescription(const QString& profile_name) const;
     bool validateConnect();
     void updateDiscordStatus();
     bool validateProfile();
