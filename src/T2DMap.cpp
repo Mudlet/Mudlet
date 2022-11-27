@@ -4102,7 +4102,7 @@ void T2DMap::slot_setArea()
             return;
         }
         mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
-        mpMap->mUnsavedMap = true;
+        mpMap->setUnsaved(__func__);
 
         mpMap->mpMapper->updateAreaComboBox();
     }
