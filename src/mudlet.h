@@ -757,7 +757,7 @@ private:
     // Whether multi-view is in effect:
     bool mMultiView;
 
-    // Whether multi-view is in effect:
+    // Whether video player is in effect:
     bool mVideoPlayer = false;
 
     // read-only value to see if the interface is light or dark. To set the value,
