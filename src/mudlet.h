@@ -333,6 +333,7 @@ public:
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     void refreshTabBar();
     void updateDiscordNamedIcon();
+    void updateVideoPlayerControls();
     void updateMultiViewControls();
     QSettings* getQSettings();
 
@@ -516,7 +517,8 @@ public:
 public slots:
     void slot_processEventLoopHackTimerRun();
     void slot_mapper();
-    void slot_videoPlayer();
+    void slot_videoPlayer(const bool);
+    void slot_toggleVideoPlayer();
     void slot_replayTimeChanged();
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
@@ -754,6 +756,9 @@ private:
 
     // Whether multi-view is in effect:
     bool mMultiView;
+
+    // Whether multi-view is in effect:
+    bool mVideoPlayer = false;
 
     // read-only value to see if the interface is light or dark. To set the value,
     // use setAppearance instead

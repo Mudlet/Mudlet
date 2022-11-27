@@ -281,6 +281,12 @@
    <property name="toolTip">
     <string>&lt;p&gt;Show or hide the video player.&lt;/p&gt;</string>
    </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
   </action>
   <action name="dactionPackageManager">
    <property name="text">

@@ -749,6 +749,7 @@ std::pair<bool, QString> TMainConsole::createVideoPlayer(const QString& windowna
         }
 
         mpHost->mpMedia->mpVideoPlayer = mpVideoPlayer;
+        mudlet::self()->updateVideoPlayerControls();
 
         TEvent sysVideoPlayerOpenEvent{};
         sysVideoPlayerOpenEvent.mArgumentList.append(QLatin1String("sysVideoPlayerOpenEvent"));

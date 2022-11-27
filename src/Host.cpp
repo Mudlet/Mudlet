@@ -4081,6 +4081,7 @@ void Host::createVideoPlayer()
     pMedia->mpVideoPlayer->setStyleSheet(mProfileStyleSheet);
     mpDockableVideoPlayerWidget->setWidget(pMedia->mpVideoPlayer);
 
+    mudlet::self()->updateVideoPlayerControls();
     mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, mpDockableVideoPlayerWidget);
     mudlet::self()->loadWindowLayout();
 

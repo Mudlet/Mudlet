@@ -39,6 +39,7 @@
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
@@ -454,6 +455,7 @@ mudlet::mudlet()
     mpActionVideoPlayer = new QAction(QIcon(qsl(":/icons/video_icon.png")), tr("Video"), this);
     mpActionVideoPlayer->setToolTip(utils::richText(tr("Show/hide the video player")));
     mpMainToolBar->addAction(mpActionVideoPlayer);
+    mpActionVideoPlayer->setEnabled(false);
     mpActionVideoPlayer->setObjectName(qsl("video_player_action"));
     mpMainToolBar->widgetForAction(mpActionVideoPlayer)->setObjectName(mpActionVideoPlayer->objectName());
 
@@ -503,7 +505,6 @@ mudlet::mudlet()
     mpButtonPackageManagers->addAction(mpActionModuleManager);
     mpButtonPackageManagers->addAction(mpActionPackageExporter);
     mpButtonPackageManagers->setDefaultAction(mpActionPackageManager);
-
 
     mpActionReplay = new QAction(QIcon(qsl(":/icons/media-optical.png")), tr("Replay"), this);
     mpActionReplay->setObjectName(qsl("replay_action"));
@@ -1724,7 +1725,6 @@ void mudlet::enableToolbarButtons()
     mpActionVariables->setEnabled(true);
     mpActionMudletDiscord->setEnabled(true);
     mpActionMapper->setEnabled(true);
-    mpActionVideoPlayer->setEnabled(true);
     mpActionNotes->setEnabled(true);
     mpButtonPackageManagers->setEnabled(true);
     mpActionIRC->setEnabled(true);
@@ -2410,7 +2410,7 @@ void mudlet::assignKeySequences()
 
         delete showVideoPlayerShortcut.data();
         showVideoPlayerShortcut = new QShortcut(showVideoPlayerKeySequence, this);
-        connect(showVideoPlayerShortcut.data(), &QShortcut::activated, this, &mudlet::slot_videoPlayer);
+        connect(showVideoPlayerShortcut.data(), &QShortcut::activated, this, &mudlet::slot_toggleVideoPlayer);
         dactionShowVideoPlayer->setShortcut(QKeySequence());
 
         delete inputLineShortcut.data();
@@ -2549,7 +2549,13 @@ void mudlet::slot_openMappingScriptsPage()
     QDesktopServices::openUrl(QUrl("https://forums.mudlet.org/search.php?keywords=mapping+script&terms=all&author=&sc=1&sf=titleonly&sr=topics&sk=t&sd=d&st=0&ch=400&t=0&submit=Search"));
 }
 
-void mudlet::slot_videoPlayer()
+void mudlet::slot_toggleVideoPlayer()
+{
+    const bool newState = !mVideoPlayer;
+    slot_videoPlayer(newState);
+}
+
+void mudlet::slot_videoPlayer(const bool state)
 {
     Host* pHost = getActiveHost();
 
@@ -2557,7 +2563,31 @@ void mudlet::slot_videoPlayer()
         return;
     }
 
+    mVideoPlayer = state;
     pHost->showHideOrCreateVideoPlayer();
+}
+
+void mudlet::updateVideoPlayerControls()
+{
+    Host* pHost = getActiveHost();
+
+    if (!pHost) {
+        return;
+    }
+
+    const bool isEnabled = (pHost->mpMedia && pHost->mpMedia->mpVideoPlayer != nullptr) ? true : false;
+
+    if (mpActionVideoPlayer->isEnabled() != isEnabled) {
+        mpActionVideoPlayer->setEnabled(isEnabled);
+    }
+
+    if (dactionShowVideoPlayer->isEnabled() != isEnabled) {
+        dactionShowVideoPlayer->setEnabled(isEnabled);
+    }
+
+    if (!mVideoPlayer != isEnabled) {
+        slot_toggleVideoPlayer();
+    }
 }
 
 void mudlet::slot_showAboutDialog()
