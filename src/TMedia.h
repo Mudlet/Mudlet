@@ -83,7 +83,7 @@ private slots:
 private:
     void stopAllMediaPlayers();
     void transitionNonRelativeFile(TMediaData& mediaData);
-    bool isValidStream(TMediaData& mediaData);
+    QString getStreamUrl(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
     static bool isFileRelative(TMediaData& mediaData);
@@ -96,7 +96,7 @@ private:
     QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
     void updateMediaPlayerList(TMediaPlayer& player);
     TMediaPlayer getMediaPlayer(TMediaData& mediaData);
-    TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
+    TMediaPlayer matchMediaPlayer(TMediaData& mediaData);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
 
@@ -104,6 +104,7 @@ private:
 
     static TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
     static QString parseJSONByMediaFileName(QJsonObject& json);
+    static int parseJSONByMediaInput(QJsonObject& json);
     static int parseJSONByMediaVolume(QJsonObject& json);
     static int parseJSONByMediaFadeIn(QJsonObject& json);
     static int parseJSONByMediaFadeOut(QJsonObject& json);

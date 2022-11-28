@@ -5834,7 +5834,7 @@ int TLuaInterpreter::playVideoFileAsOrderedArguments(lua_State* L)
     int intValue = 0;
     bool boolValue = false;
 
-    // name[,volume][,start][,loops][,key][,tag][,continue][,url])
+    // name[,volume][,start][,loops][,key][,tag][,continue][,url][,stream])
     for (int i = 1; i <= n; i++) {
         if (lua_isnil(L, i)) {
             continue;
@@ -5896,6 +5896,10 @@ int TLuaInterpreter::playVideoFileAsOrderedArguments(lua_State* L)
             stringValue = getVerifiedString(L, __func__, i, "url");
             mediaData.setMediaUrl(stringValue);
             break;
+        case 9:
+            boolValue = getVerifiedBool(L, __func__, i, "stream");
+            mediaData.setMediaInput(boolValue ? TMediaData::MediaInputStream : TMediaData::MediaInputNotSet);
+            break;
         }
     }
 
@@ -5941,6 +5945,7 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L)
                 mediaData.setMediaFileName(value);
             } else if (!key.compare(QLatin1String("url"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaUrl(value);
+
             } else if (!key.compare(QLatin1String("key"), Qt::CaseInsensitive) && !value.isEmpty()) {
                 mediaData.setMediaKey(value);
             } else if (!key.compare(QLatin1String("tag"), Qt::CaseInsensitive) && !value.isEmpty()) {
@@ -5978,6 +5983,9 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L)
         } else if (!key.compare(QLatin1String("continue"), Qt::CaseInsensitive)) {
             bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
             mediaData.setMediaContinue(value);
+        } else if (!key.compare(QLatin1String("stream"), Qt::CaseInsensitive)) {
+            bool value = getVerifiedBool(L, __func__, -1, "value for stream must be boolean");
+            mediaData.setMediaInput(value ? TMediaData::MediaInputStream : TMediaData::MediaInputNotSet);
         }
 
         // removes value, but keeps key for next iteration
