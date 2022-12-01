@@ -1996,12 +1996,25 @@ void TConsole::dropEvent(QDropEvent* e)
     }
 }
 
+// Ensure that the correct TConsole is selected in a multi-view situation:
+void TConsole::setFocusOnAppropriateConsole()
+{
+    if (mType & (SubConsole|UserWindow) && mpCommandLine && mpCommandLine->isVisible()) {
+        // The activateProfile will tend to move the focus to the TCommandLine
+        // in the TMainConsole, but if we have a TCommandLine visible in this
+        // TConsole then we want the focus to stay there:
+        mudlet::self()->activateProfile(mpHost);
+        mpCommandLine->setFocus(Qt::OtherFocusReason);
+    } else {
+        // Otherwise return focus to the main TConsole command line
+        mpHost->setFocusOnHostMainConsole();
+    }
+}
+
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    // Ensure that this profile is the one that has its tab selected in a
-    // multi-view situation:
-    mudlet::self()->activateProfile(mpHost);
+    setFocusOnAppropriateConsole();
 
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));

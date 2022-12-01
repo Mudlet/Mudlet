@@ -486,6 +486,7 @@ public slots:
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_handleToolbarVisibilityChanged(bool);
     void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
+    void slot_tabChanged(int);
 
 
 protected:
@@ -514,7 +515,6 @@ signals:
 
 
 private slots:
-    void slot_tabChanged(int);
     void slot_showHelpDialog();
     void slot_showConnectionDialog();
     void slot_showEditorDialog();

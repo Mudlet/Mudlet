@@ -323,6 +323,7 @@ mudlet::mudlet()
     mpTabBar->setAutoHide(true);
     connect(mpTabBar, &QTabBar::tabCloseRequested, this, &mudlet::slot_closeProfileRequested);
     mpTabBar->setMovable(true);
+    // This only reports changing the tab by the user clicking on the tab
     connect(mpTabBar, &QTabBar::currentChanged, this, &mudlet::slot_tabChanged);
     connect(mpTabBar, &QTabBar::tabMoved, this, &mudlet::slot_tabMoved);
     auto layoutTopLevel = new QVBoxLayout(frame);
@@ -671,9 +672,6 @@ mudlet::mudlet()
     connect(this, &mudlet::signal_menuBarVisibilityChanged, this, &mudlet::slot_updateShortcuts);
     connect(this, &mudlet::signal_hostCreated, this, &mudlet::slot_assignShortcutsFromProfile);
     connect(this, &mudlet::signal_profileActivated, this, &mudlet::slot_assignShortcutsFromProfile);
-    connect(this, &mudlet::signal_tabChanged, this, [=]() {
-        slot_assignShortcutsFromProfile(getActiveHost());
-    });
 
     mShortcutsManager = new ShortcutsManager();
     mShortcutsManager->registerShortcut(qsl("Script editor"), tr("Script editor"), &triggersKeySequence);
@@ -1470,98 +1468,11 @@ void mudlet::reshowRequiredMainConsoles()
     }
 }
 
+// Moved as much as possible to activateProfile()...
 void mudlet::slot_tabChanged(int tabID)
 {
     QString hostName = mpTabBar->tabData(tabID).toString();
-    auto pHost = mHostManager.getHost(hostName);
-    if (!pHost || !pHost->mpConsole) {
-        mpCurrentActiveHost = nullptr;
-        return;
-    }
-    if (mpCurrentActiveHost && (mpCurrentActiveHost.data() == pHost)) {
-        return;
-    }
-
-    // Reset the tab back to "normal" to undo the effect of it having its style
-    // changed on new data:
-    mpTabBar->setTabBold(tabID, false);
-    mpTabBar->setTabItalic(tabID, false);
-    mpTabBar->setTabUnderline(tabID, false);
-
-    if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
-        // Tell the profile that it is losing focus:
-        TEvent focusLostEvent {};
-        focusLostEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
-        // Boolean arguments are carried as "0" for false or "1" for true,
-        // This is for the profile that is losing focus:
-        focusLostEvent.mArgumentList << QLatin1String("0");
-        focusLostEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
-        mpCurrentActiveHost->raiseEvent(focusLostEvent);
-
-        if (!mMultiView) {
-            // We only have to hide the current tab if NOT in multi-view mode:
-            mpCurrentActiveHost->mpConsole->hide();
-        }
-        mpCurrentActiveHost = &*pHost;
-
-    } else {
-        // no Host or it's TMainConsole instance - so it is maybe being
-        // destroyed or something like that, it cannot be valid so forget it
-        // being the "current" profile in focus:
-        mpCurrentActiveHost = nullptr;
-        for (auto pH : mHostManager) {
-            if (pH->mpConsole) {
-                mpCurrentActiveHost = &*pH;
-                break;
-            }
-        }
-        if (!mpCurrentActiveHost) {
-            // No profiles (Host instances) left - so bail out:
-            return;
-        }
-    }
-
-    // CHECK: This *seems* to be redundant - further investigation needed to be sure:
-    if (!mpCurrentActiveHost->mpConsole) {
-        mpCurrentActiveHost = nullptr;
-        return;
-    }
-
-    mpCurrentActiveHost->mpConsole->show();
-    mpCurrentActiveHost->mpConsole->repaint();
-    mpCurrentActiveHost->mpConsole->refresh();
-    mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-    mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
-
-    // This is a Mudlet event:
-    TEvent focusGainedEvent {};
-    focusGainedEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
-    focusGainedEvent.mArgumentList << QLatin1String("1");
-    focusGainedEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
-    mpCurrentActiveHost->raiseEvent(focusGainedEvent);
-
-    // And this is a Qt event:
-    int x = mpCurrentActiveHost->mpConsole->width();
-    int y = mpCurrentActiveHost->mpConsole->height();
-    QSize s = QSize(x, y);
-    QResizeEvent event(s, s);
-    QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
-    mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-    mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-    menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
-
-    // update the window title for the currently selected profile
-    setWindowTitle(mpCurrentActiveHost->getName() + " - " + version);
-
-    dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
-
-    updateDiscordNamedIcon();
-
-    updateMultiViewControls();
-    // Regenerate the multi-view mode if it is enabled:
-    reshowRequiredMainConsoles();
-
-    emit signal_tabChanged(mpCurrentActiveHost->getName());
+    activateProfile(mHostManager.getHost(hostName));
 }
 
 void mudlet::addConsoleForNewHost(Host* pH)
@@ -1596,13 +1507,16 @@ void mudlet::addConsoleForNewHost(Host* pH)
     mpTabBar->setTabData(newTabID, tabName);
 
     //update the main window title when we spawn a new tab
-    setWindowTitle(pH->getName() + " - " + version);
+    setWindowTitle(tr("%1 - %2",
+                      // Intentional comment to separate arguments
+                      "Title for the main window when a profile is loaded or active, %1 is the name "
+                      "of the profile and %2 is the Mudlet version string.")
+                           .arg(pH->getName(), version));
 
     mpSplitter_profileContainer->addWidget(pConsole);
     if (mpCurrentActiveHost && !mMultiView) {
         mpCurrentActiveHost->mpConsole->hide();
     }
-    mpCurrentActiveHost = pH;
 
     if (pH->mLogStatus) {
         // The above flag is set/reset at the start of the TMainConsole
@@ -1625,20 +1539,22 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pEditor->fillout_form();
 
     pH->getActionUnit()->updateToolbar();
-    mpCurrentActiveHost->mpConsole->show();
-    mpCurrentActiveHost->mpConsole->repaint();
-    mpCurrentActiveHost->mpConsole->refresh();
-    mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-    mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
-    mpCurrentActiveHost->mpConsole->show();
-    mpTabBar->setCurrentIndex(newTabID);
 
-    int x = mpCurrentActiveHost->mpConsole->width();
-    int y = mpCurrentActiveHost->mpConsole->height();
+    pH->mpConsole->show();
+    pH->mpConsole->repaint();
+    pH->mpConsole->refresh();
+    pH->mpConsole->mpCommandLine->repaint();
+    pH->mpConsole->mpCommandLine->setFocus();
+    pH->mpConsole->show();
+    // Setting mpCurrentActiveHost to pH is now done by the following
+    slot_tabChanged(newTabID);
+
+    int x = pH->mpConsole->width();
+    int y = pH->mpConsole->height();
     QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     updateDiscordNamedIcon();
-    QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
+    QApplication::sendEvent(pH->mpConsole, &event);
 }
 
 
@@ -4610,26 +4526,102 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 
 void mudlet::activateProfile(Host* pHost)
 {
-    if (!pHost) {
+    QMap<QString, int> hostNameToTabMap;
+    for (int i = 0, total = mpTabBar->count(); i < total; ++i) {
+        hostNameToTabMap.insert(mpTabBar->tabData(i).toString(), i);
+    }
+    QString oldActiveHostName;
+    if (mpCurrentActiveHost) {
+        oldActiveHostName = mpCurrentActiveHost->getName();
+    }
+
+    if (!pHost || !pHost->mpConsole) {
+        // Ah, we do not seem to have a profile anymore:
+        mpCurrentActiveHost = nullptr;
+        // Nothing else to do if the host to activate doesn't exist
+        return;
+    }
+
+    if (mpCurrentActiveHost && mpCurrentActiveHost == pHost) {
+        // Nothing to do if the caller was the current foreground host, but on
+        // the initial start up mpCurrentActiveHost WILL be a nullptr
         return;
     }
 
     const QString newActiveHostName{pHost->getName()};
-    if (mpCurrentActiveHost != pHost) {
-        // Need to switch mpCurrentActiveHost to be the given pHost and change
-        // the tab to match - without triggering slot_tabChanged(int)
-        int tabToBeActive = mpTabBar->tabIndex(newActiveHostName);
-        if (tabToBeActive >= 0) {
-            mpTabBar->blockSignals(true);
-            mpTabBar->setCurrentIndex(tabToBeActive);
-            mpTabBar->blockSignals(false);
+    int newActiveTabIndex = hostNameToTabMap.value(newActiveHostName, -1);
+
+    if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
+        // Tell the old profile that it is losing focus:
+        TEvent focusLostEvent {};
+        focusLostEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
+        // Boolean arguments are carried as "0" for false or "1" for true,
+        // This is for the profile that is losing focus:
+        focusLostEvent.mArgumentList << QLatin1String("0");
+        focusLostEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
+        mpCurrentActiveHost->raiseEvent(focusLostEvent);
+
+        if (!mMultiView) {
+            // We only have to hide the current profile under the tab if NOT
+            // in multi-view mode:
+            mpCurrentActiveHost->mpConsole->hide();
         }
-        mpCurrentActiveHost = pHost;
-        updateDiscordNamedIcon();
-        dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
-        pHost->updateDisplayDimensions();
-        emit signal_profileActivated(pHost, tabToBeActive);
     }
+
+    // Need to change to the right tab without triggering slot_tabChanged(int)
+    // as that might even be the caller of this method!
+    if (newActiveTabIndex >= 0) {
+        mpTabBar->blockSignals(true);
+        mpTabBar->setCurrentIndex(newActiveTabIndex);
+        mpTabBar->blockSignals(false);
+    }
+
+    mpCurrentActiveHost = pHost;
+    mpCurrentActiveHost->mpConsole->show();
+    mpCurrentActiveHost->mpConsole->repaint();
+    mpCurrentActiveHost->mpConsole->refresh();
+    mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
+    mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
+
+    // Regenerate the multi-view mode if it is enabled:
+    reshowRequiredMainConsoles();
+
+    // Reset the styles to reflect those of the now active profile:
+    mpMainToolBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+    mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+    menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
+
+    // Tell the old profile that it is losing focus via a Mudlet event:
+    TEvent focusGainedEvent {};
+    focusGainedEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
+    focusGainedEvent.mArgumentList << QLatin1String("1");
+    focusGainedEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_BOOLEAN;
+    mpCurrentActiveHost->raiseEvent(focusGainedEvent);
+
+    // Tell the new profile's main window that it might be resize via a Qt event:
+    int x = mpCurrentActiveHost->mpConsole->width();
+    int y = mpCurrentActiveHost->mpConsole->height();
+    QSize s = QSize(x, y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
+
+    // update the main application window title for the currently selected profile
+    setWindowTitle(tr("%1 - %2",
+                      // Intentional comment to separate arguments
+                      "Title for the main window when a profile is loaded or active, %1 is the name "
+                      "of the profile and %2 is the Mudlet version string.")
+                           .arg(mpCurrentActiveHost->getName(), version));
+
+    dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
+
+    updateDiscordNamedIcon();
+
+    updateMultiViewControls();
+
+    mpCurrentActiveHost->updateDisplayDimensions();
+
+    emit signal_tabChanged(mpCurrentActiveHost->getName());
+    emit signal_profileActivated(pHost, newActiveTabIndex);
 }
 
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
