@@ -856,8 +856,9 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
         mPopupPosition = event->pos();
         popup->popup(event->globalPos());
-        // The use of accept here prevents this event from reaching any parent
-        // widget - like the TConsole containing this TCommandLine...
+        // The use of accept here is supposed to prevents this event from
+        // reaching any parent widget - like the TConsole containing this
+        // TCommandLine...
         event->accept();
     }
 
@@ -866,8 +867,36 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
     QPlainTextEdit::mousePressEvent(event);
     mudlet::self()->activateProfile(mpHost);
     if (mType & (SubCommandLine|ConsoleCommandLine)) {
-        // This is NOT the main TMainConsole so keep the focus in this TConsole/TCommandLine
-        setFocus(Qt::OtherFocusReason);
+        // This is NOT the main TMainConsole so keep the focus in this
+        // TConsole/TCommandLine - but due to the way things happen we
+        // need to do it after other things have happened - by using a zero
+        // time-out timer:
+        QTimer::singleShot(0, this, [this]() {
+            if (mpConsole) {
+                mpConsole->setFocusOnAppropriateConsole();
+                this->setFocus(Qt::OtherFocusReason);
+            }
+        });
+    }
+}
+
+void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
+{
+    // Process any other possible mousePressEvent - which is default popup
+    // handling - and which accepts the event:
+    QPlainTextEdit::mousePressEvent(event);
+    mudlet::self()->activateProfile(mpHost);
+    if (mType & (SubCommandLine|ConsoleCommandLine)) {
+        // This is NOT the main TMainConsole so keep the focus in this
+        // TConsole/TCommandLine - but due to the way things happen we
+        // need to do it after other things have happened - by using a zero
+        // time-out timer:
+        QTimer::singleShot(0, this, [this]() {
+            if (mpConsole) {
+                mpConsole->setFocusOnAppropriateConsole();
+                this->setFocus(Qt::OtherFocusReason);
+            }
+        });
     }
 }
 
