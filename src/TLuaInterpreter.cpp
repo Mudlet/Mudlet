@@ -6,6 +6,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
+ *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -219,7 +220,11 @@ TLuaInterpreter::~TLuaInterpreter()
 // With reduced repetition like that:
 //    bool showOnTop = getVerifiedBool(L, "createMapLabel", 14, "showOnTop", true);
 //
-// The "isOptional" parameter is optional, and will default to not-optional parameters! :)
+// The "isOptional" parameter is optional but modifies the error message to say
+// that an argument is optional and it will default to not-optional parameters!
+// HOWEVER it does not actually handle the absence of an argument that is
+// supposed to BE optional - that has to be done by the caller before it
+// makes the call... 8-P
 //
 // See also: getVerifiedString, getVerifiedInt, getVerifiedFloat, errorArgumentType
 bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
@@ -231,6 +236,26 @@ bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, co
         return false;
     }
     return lua_toboolean(L, pos);
+}
+
+// No documentation available in wiki - internal function
+// See also: getVerifiedBool
+/*static*/ std::pair<bool, QString> TLuaInterpreter::getVerifiedStringOrInteger(lua_State* L, const char* functionName, const int pos, const char* publicName, const bool isOptional)
+{
+    if (lua_type(L, pos) == LUA_TNUMBER) {
+        // use lua_tonumber(...) and round because lua_tointeger(...) can return
+        // oversized values (long long int?) on Windows which do not always fit
+        // into an int:
+        return {true, QString::number(qRound(lua_tonumber(L, pos)))};
+    }
+
+    if (lua_type(L, pos) == LUA_TSTRING) {
+        return {false, lua_tostring(L, pos)};
+    }
+
+    errorArgumentType(L, functionName, pos, publicName, "string or integer", isOptional);
+    lua_error(L);
+    Q_UNREACHABLE();
 }
 
 // No documentation available in wiki - internal function
@@ -4490,7 +4515,7 @@ int TLuaInterpreter::setMovieSpeed(lua_State* L)
     return movieFunc(L, qsl("setMovieSpeed"));
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovieSpeed
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scaleMovie
 int TLuaInterpreter::scaleMovie(lua_State* L)
 {
     return movieFunc(L, qsl("scaleMovie"));
@@ -7921,27 +7946,78 @@ int TLuaInterpreter::tempAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exists
 int TLuaInterpreter::exists(lua_State* L)
 {
-    QString name = getVerifiedString(L, __func__, 1, "name");
-    QString type = getVerifiedString(L, __func__, 2, "type");
+    auto [isId, nameOrId] = getVerifiedStringOrInteger(L, __func__, 1, "item name or ID");
+    // Although we only use 4 ASCII strings the user may not enter a purely
+    // ASCII value which we might have to report...
+    QString type = getVerifiedString(L, __func__, 2, "item type").toLower();
+    bool isOk = false;
+    int id = nameOrId.toInt(&isOk);
+    if (isId && (!isOk || id < 0)) {
+        // Must be zero or more but doesn't seem to be, must return the
+        // original supplied argument as a string (rather than the nameOrId
+        // "number" as the latter will have been rounded to an integer) to
+        // show what was entered:
+        return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
+    }
+
     Host& host = getHostFromLua(L);
     int count = 0;
     type = type.toLower();
-    if (type == qsl("timer")) {
-        count = host.getTimerUnit()->mLookupTable.count(name);
-    } else if (type == qsl("trigger")) {
-        count = host.getTriggerUnit()->mLookupTable.count(name);
-    } else if (type == qsl("alias")) {
-        count = host.getAliasUnit()->mLookupTable.count(name);
-    } else if (type == qsl("keybind")) {
-        count = host.getKeyUnit()->mLookupTable.count(name);
-    } else if (type == qsl("button")) {
-        count = host.getActionUnit()->findActionsByName(name).size();
-    } else if (type == qsl("script")) {
-        count = host.getScriptUnit()->findScriptId(name).size();
+    if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getTimerUnit()->getTimer(id);
+            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            return 1;
+        }
+
+        count = host.getTimerUnit()->mLookupTable.count(nameOrId);
+    } else if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getTriggerUnit()->getTrigger(id);
+            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            return 1;
+        }
+
+        count = host.getTriggerUnit()->mLookupTable.count(nameOrId);
+    } else if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getAliasUnit()->getAlias(id);
+            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            return 1;
+        }
+
+        count = host.getAliasUnit()->mLookupTable.count(nameOrId);
+    } else if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getKeyUnit()->getKey(id);
+            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            return 1;
+        }
+
+        count = host.getKeyUnit()->mLookupTable.count(nameOrId);
+    } else if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getActionUnit()->getAction(id);
+            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            return 1;
+        }
+
+        count = host.getActionUnit()->findActionsByName(nameOrId).size();
+    } else if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getScriptUnit()->getScript(id);
+            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            return 1;
+        }
+
+        count = host.getScriptUnit()->findScriptId(nameOrId).size();
     } else {
         return warnArgumentValue(L, __func__, qsl(
             "invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
     }
+    // If we get here we have successfully identified a type and have looked for
+    // the item type with a specific NAME - so now just return the count of
+    // those found:
     lua_pushnumber(L, count);
     return 1;
 }
@@ -7949,59 +8025,105 @@ int TLuaInterpreter::exists(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isActive
 int TLuaInterpreter::isActive(lua_State* L)
 {
-    QString name = getVerifiedString(L, __func__, 1, "item name");
+    auto [isId, nameOrId] = getVerifiedStringOrInteger(L, __func__, 1, "item name or ID");
     // Although we only use 4 ASCII strings the user may not enter a purely
     // ASCII value which we might have to report...
     QString type = getVerifiedString(L, __func__, 2, "item type");
+    bool isOk = false;
+    int id = nameOrId.toInt(&isOk);
+    if (isId && (!isOk || id < 0)) {
+        // Must be zero or more but doesn't seem to be, must return the
+        // original supplied argument as a string (rather than the nameOrId
+        // "number" as the latter will have been rounded to an integer) to
+        // show what was entered:
+        return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
+    }
 
     Host& host = getHostFromLua(L);
     int cnt = 0;
-    if (type.compare(QLatin1String("timer"), Qt::CaseInsensitive) == 0) {
-        QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.constFind(name);
-        while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == name) {
-            if (it1.value()->isActive()) {
-                cnt++;
-            }
-            it1++;
-        }
-    } else if (type.compare(QLatin1String("trigger"), Qt::CaseInsensitive) == 0) {
-        QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.constFind(name);
-        while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == name) {
-            if (it1.value()->isActive()) {
-                cnt++;
-            }
-            it1++;
-        }
-    } else if (type.compare(QLatin1String("alias"), Qt::CaseInsensitive) == 0) {
-        QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.constFind(name);
-        while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == name) {
-            if (it1.value()->isActive()) {
-                cnt++;
-            }
-            it1++;
-        }
-    } else if (type.compare(QLatin1String("keybind"), Qt::CaseInsensitive) == 0) {
-        QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.constFind(name);
-        while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == name) {
-            if (it1.value()->isActive()) {
-                cnt++;
-            }
-            it1++;
-        }
-    } else if (type.compare(QLatin1String("button"), Qt::CaseInsensitive) == 0) {
-        QMap<int, TAction*> actions = host.getActionUnit()->getActionList();
-        for (auto action : actions) {
-            if (action->getName() == name && action->isActive()) {
-                ++cnt;
+    // Remember, QString::compare(...) returns zero for a match:
+    if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getTimerUnit()->getTimer(id);
+            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+        } else {
+            QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
+            while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
+                if (it1.value()->isActive()) {
+                    ++cnt;
+                }
+                ++it1;
             }
         }
-    } else if (type.compare(QLatin1String("script"), Qt::CaseInsensitive) == 0) {
-        QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
-        for (auto script : scripts) {
-            if (script->getName() == name && script->isActive()) {
-                ++cnt;
+
+    } else if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getTriggerUnit()->getTrigger(id);
+            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+        } else {
+            QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
+            while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
+                if (it1.value()->isActive()) {
+                    ++cnt;
+                }
+                ++it1;
             }
         }
+
+    } else if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getAliasUnit()->getAlias(id);
+            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+        } else {
+            QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
+            while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
+                if (it1.value()->isActive()) {
+                    ++cnt;
+                }
+                ++it1;
+            }
+        }
+
+    } else if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getKeyUnit()->getKey(id);
+            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+        } else {
+            QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
+            while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
+                if (it1.value()->isActive()) {
+                    ++cnt;
+                }
+                ++it1;
+            }
+        }
+
+    } else if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getActionUnit()->getAction(id);
+            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+        } else {
+            QMap<int, TAction*> actions = host.getActionUnit()->getActionList();
+            for (auto action : actions) {
+                if (action->getName() == nameOrId && action->isActive()) {
+                    ++cnt;
+                }
+            }
+        }
+
+    } else if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+        if (isId) {
+            auto pT = host.getScriptUnit()->getScript(id);
+            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+        } else {
+            QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
+            for (auto script : scripts) {
+                if (script->getName() == nameOrId && script->isActive()) {
+                    ++cnt;
+                }
+            }
+        }
+
     } else {
         return warnArgumentValue(L, __func__, qsl(
             "invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
@@ -10357,9 +10479,9 @@ int TLuaInterpreter::setRoomChar(lua_State* L)
         // Allow an empty string to be used to clear the symbol:
         pR->mSymbol.clear();
     } else {
-        // 8.0 is the maximum supported by the Qt versions (5.6 to 5.10) we
+        // 10.0 is the maximum supported by the Qt versions (5.14+) we
         // handle/use/allow:
-        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        pR->mSymbol = symbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
     host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
@@ -15438,6 +15560,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getLabelStyleSheet", TLuaInterpreter::getLabelStyleSheet);
     lua_register(pGlobalLua, "getLabelSizeHint", TLuaInterpreter::getLabelSizeHint);
     lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
+    lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
+    lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -17644,4 +17768,86 @@ int TLuaInterpreter::announce(lua_State *L) {
 
     mudlet::self()->announce(text, processing);
     return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollTo
+int TLuaInterpreter::scrollTo(lua_State* L)
+{
+    QString windowName;
+    int targetLine;
+    bool stopScrolling = false;
+
+    int n = lua_gettop(L);
+    if (n == 2) {
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
+        targetLine = getVerifiedInt(L, __func__, 2, "line to scroll to");
+    } else if (n == 1) {
+        if (lua_isnumber(L, 1)) {
+            windowName = QLatin1String("main");
+            targetLine = getVerifiedInt(L, __func__, 1, "line to scroll to");
+        } else {
+            windowName = getVerifiedString(L, __func__, 1, "window name", true);
+            stopScrolling = true;
+        }
+    } else if (n == 0) {
+        windowName = QLatin1String("main");
+        stopScrolling = true;
+    }
+
+    auto console = getHostFromLua(L).findConsole(windowName);
+    if (!console) {
+        lua_pushnil(L);
+        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+        return 2;
+    }
+
+    int numLines = console->getLastLineNumber();
+    if (targetLine >= numLines) { // larger than buffer or at end
+        stopScrolling = true;
+    } else if (targetLine < 0) { // negative, count from end of buffer
+        targetLine = std::max((numLines + targetLine), 0);
+    }
+
+    if (stopScrolling) {
+        if (!console->mUpperPane->mIsTailMode) {
+            console->mLowerPane->mCursorY = console->buffer.size();
+            console->mLowerPane->hide();
+            console->buffer.mCursorY = console->buffer.size();
+            console->mUpperPane->mCursorY = console->buffer.size();
+            console->mUpperPane->mCursorX = 0;
+            console->mUpperPane->mIsTailMode = true;
+            console->mUpperPane->updateScreenView();
+            console->mUpperPane->forceUpdate();
+        }
+    } else {
+        console->scrollUp(console->mUpperPane->mCursorY - targetLine);
+    }
+
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getScroll
+int TLuaInterpreter::getScroll(lua_State* L)
+{
+    QString windowName;
+
+    int n = lua_gettop(L);
+    if (n == 1) {
+        windowName = getVerifiedString(L, __func__, 1, "window name", true);
+    } else {
+        windowName = QLatin1String("main");
+    }
+
+    auto console = getHostFromLua(L).findConsole(windowName);
+    if (!console) {
+        lua_pushnil(L);
+        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+        return 2;
+    }
+
+    int result = console->mUpperPane->mCursorY;
+    result = std::min(result, console->getLastLineNumber());
+    result = std::max(result, 0);
+    lua_pushnumber(L, result);
+    return 1;
 }

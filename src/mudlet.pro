@@ -449,10 +449,6 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
-        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qt-ordered-map")
-    }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
@@ -467,10 +463,6 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
-    }
-    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
-        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qt-ordered-map")
     }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
@@ -514,10 +506,6 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
-}
-
-!exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
-    error("Cannot locate Qt ordered map submodule source code, build abandoned!")
 }
 
 contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
@@ -570,7 +558,6 @@ SOURCES += \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomProperties.cpp \
-    dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSourceEditorFindArea.cpp \
@@ -595,6 +582,7 @@ SOURCES += \
     ScriptUnit.cpp \
     ShortcutsManager.cpp \
     T2DMap.cpp \
+    TAccessibleTextEdit.cpp \
     TAction.cpp \
     TAlias.cpp \
     TArea.cpp \
@@ -650,7 +638,6 @@ SOURCES += \
     TTabBar.cpp \
     TTextCodec.cpp \
     TTextEdit.cpp \
-    TAccessibleTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
     TTreeWidget.cpp \
@@ -687,7 +674,6 @@ HEADERS += \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomProperties.h \
-    dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
     dlgSourceEditorFindArea.h \
@@ -712,6 +698,8 @@ HEADERS += \
     ScriptUnit.h \
     ShortcutsManager.h \
     T2DMap.h \
+    TAccessibleConsole.h \
+    TAccessibleTextEdit.h \
     TAction.h \
     TAlias.h \
     TArea.h \
@@ -719,7 +707,6 @@ HEADERS += \
     TBuffer.h \
     TCommandLine.h \
     TConsole.h \
-    TAccessibleConsole.h \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
@@ -730,6 +717,7 @@ HEADERS += \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
+    TGameDetails.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
@@ -776,7 +764,6 @@ HEADERS += \
     TTabBar.h \
     TTextCodec.h \
     TTextEdit.h \
-    TAccessibleTextEdit.h \
     TTimer.h \
     TToolBar.h \
     TTreeWidget.h \
@@ -827,7 +814,6 @@ FORMS += \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
     ui/room_properties.ui \
-    ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \

@@ -6,60 +6,6 @@ the free [Github for Desktop](https://desktop.github.com) app to contribute code
 
 If you're a first-timer, you're excluded, we'll go easy on you :wink:
 
-## Use QLatin1String over qsl (a *shorter* preprocessor macro we define for Qt's own `QStringLiteral` macro) if the function takes it
-
-Some methods in the Qt API have overloads for either taking a QString, or a QLatin1String object.
-This is because Latin1 is simpler to parse than UTF-16, and therefore the QLatin1String version can
-be faster, and use less memory. For example, QString::startsWith() has the following declarations:
-
-```
-bool	startsWith(const QString &s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
-bool	startsWith(const QStringRef &s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
-bool	startsWith(QLatin1String s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
-bool	startsWith(QChar c, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
-```
-
-Notice how the 3rd variant accepts a `QLatin1String`? That means you can use it. `==` and `+=` also
-accept it, so here are some examples:
-
-```cpp
-bool same = (str == QLatin1String("Hello"));
-str.startsWith(QLatin1String("Hello"));
-str += QLatin1String("World");
-```
-
-Examples above are more efficient than:
-
-```cpp
-bool same = (str == qsl("Hello"));
-str.startsWith(qsl("Hello"));
-str += qsl("World");
-```
-
-And even more than:
-
-```cpp
-bool same = (str == "Hello");
-str.startsWith("Hello");
-str += "World";
-```
-
-Not all functions are going to accept `QLatin1String` - `QIcon` constructors for example are the following:
-
-```
-QIcon()
-QIcon(const QPixmap &pixmap)
-QIcon(const QIcon &other)
-QIcon(QIcon &&other)
-QIcon(const QString &fileName)
-QIcon(QIconEngine *engine)
-```
-
-No `QLatin1String` - mentioned - so use `qsl` instead, which creates us a `QString()` at compile-time so at least creating the object is faster.
-
-([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/),
- [additional reading](https://woboq.com/blog/qstringliteral.html))
-
 ## Do not use ``qsl("")``
 
 Prefer ``QString()`` over ``qsl("")`` for  for empty strings - the default constructor
@@ -124,6 +70,11 @@ Don't:
                                           "<p>Another paragraph, maybe in a different style, e.g. <i>italics</i> or <b>bold</b>.")));
 ```
 
+# TODO's
+In Mudlet's decade of existence, TODO's get added to the codebase but almost never resolved. Having them in the codebase does not add any value if they are just sitting there and not acted upon. This raises the question, why have them around at all if they are not adding any value? To this effect, the project decided not to add future TODOs to the code and work on removing existing ones.
+
+In case the TODO is an improvement, a pull request implementing the idea or an issue suggesting it can be added - no TODO necessary. In case it's a legitimate problem, it's better to fix it right away instead of kicking the can down the road.
+
 # Git commit guidelines for core team
 
 ## Refactoring
@@ -137,11 +88,6 @@ Don't:
 * PR Title must start with `fix`, `improve`, `add`, or `infra`
   * This facilitates automatic changelog gathering and categorization
   * Cannot merge until it is fixed: core team can always adjust it before merging
-* Any new TODO in a source file must have a Mudlet github issue on the same line
-  * good:
-    * //TODO: https://github.com/Mudlet/Mudlet/issues/1234
-  * bad:
-    * //TODO: a thing we aren't actually tracking with an issue
 
 Danger will also give a heads up if the PR title is long, or if more than 10 source files are changed in a single PR. These are not blocked but the warnings should serve to draw attention to something which may require a double check. More info below.
 
