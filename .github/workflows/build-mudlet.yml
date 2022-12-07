@@ -21,6 +21,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
+            gcc_compiler_version: 8
             qt: '5.14.2'
             deploy: 'deploy'
             run_tests: 'true'
@@ -28,6 +29,8 @@ jobs:
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
+            # We still need a gcc for some sub-stages - and it ain't always the same one:
+            gcc_compiler_version: 9
             qt: '5.14.2'
           - os: macos-11
             buildname: 'macos / c++ tests'
@@ -178,14 +181,18 @@ jobs:
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-8 \
+        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-$${{gcc_compiler_version}} \
           libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 8
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 8
-        sudo update-alternatives --set gcc /usr/bin/gcc-8
-        sudo update-alternatives --set g++ /usr/bin/g++-8
+        # Ubuntu-18.06.4 and Ubuntu-22.04.1 do have a gcc-8 - it is the default
+        # now for the former but not the latter and for the "Ubuntu / clang"
+        # job it seems a bit suspect to have to force a gcc version given that
+        # we should not be intending to use it! Slysven 2022/12
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$${{gcc_compiler_version}} $${{gcc_compiler_version}}
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$${{gcc_compiler_version}} $${{gcc_compiler_version}}
+        sudo update-alternatives --set gcc /usr/bin/gcc-$${{gcc_compiler_version}}
+        sudo update-alternatives --set g++ /usr/bin/g++-$${{gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
