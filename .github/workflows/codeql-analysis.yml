@@ -121,17 +121,17 @@ jobs:
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-$${{matrix.gcc_compiler_version}} -y
+        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
         # Ubuntu-18.06.4 and Ubuntu-22.04.1 do have a gcc-8 - it is the default
         # now for the former but not the latter and for the "Ubuntu / clang"
         # job it seems a bit suspect to have to force a gcc version given that
         # we should not be intending to use it! Slysven 2022/12
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-$${{matrix.gcc_compiler_version}} $${{matrix.gcc_compiler_version}}
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-$${{matrix.gcc_compiler_version}} $${{matrix.gcc_compiler_version}}
-        sudo update-alternatives --set gcc /usr/bin/gcc-$${{matrix.gcc_compiler_version}}
-        sudo update-alternatives --set g++ /usr/bin/g++-$${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
