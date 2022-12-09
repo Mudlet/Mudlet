@@ -472,23 +472,23 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionNotes)->setObjectName(mpActionNotes->objectName());
 
     mpButtonPackageManagers = new QToolButton(this);
-    mpButtonPackageManagers->setText(tr("Packages (exp.)"));
+    mpButtonPackageManagers->setText(tr("Packages"));
     mpButtonPackageManagers->setObjectName(qsl("package_manager"));
     mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonPackageManagers->setAutoRaise(true);
     mpMainToolBar->addWidget(mpButtonPackageManagers);
 
-    mpActionPackageManager = new QAction(tr("Package Manager (experimental)"), this);
+    mpActionPackageManager = new QAction(tr("Package Manager"), this);
     mpActionPackageManager->setIcon(QIcon(qsl(":/icons/package-manager.png")));
-    mpActionPackageManager->setIconText(tr("Packages (exp.)", "exp. stands for experimental; shortened so it doesn't make buttons huge in the main interface"));
+    mpActionPackageManager->setIconText(tr("Packages"));
     mpActionPackageManager->setObjectName(qsl("package_manager"));
 
     mpActionModuleManager = new QAction(tr("Module Manager"), this);
     mpActionModuleManager->setIcon(QIcon(qsl(":/icons/module-manager.png")));
     mpActionModuleManager->setObjectName(qsl("module_manager"));
 
-    mpActionPackageExporter = new QAction(tr("Package Exporter"), this);
+    mpActionPackageExporter = new QAction(tr("Package Exporter (experimental)"), this);
     mpActionPackageExporter->setIcon(QIcon(qsl(":/icons/package-exporter.png")));
     mpActionPackageExporter->setObjectName(qsl("package_exporter"));
 

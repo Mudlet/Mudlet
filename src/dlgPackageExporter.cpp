@@ -124,6 +124,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     listScripts();
     listActions();
     listTimers();
+
+    setWindowTitle(tr("Package Exporter (experimental) - %1").arg(mpHost->getName()));
 }
 
 dlgPackageExporter::~dlgPackageExporter()
