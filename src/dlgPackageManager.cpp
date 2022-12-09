@@ -48,7 +48,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     connect(mPackageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_itemClicked);
     connect(mPackageTable, &QTableWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleRemoveButton);
 
-    setWindowTitle(tr("Package Manager (experimental) - %1").arg(mpHost->getName()));
+    setWindowTitle(tr("Package Manager - %1").arg(mpHost->getName()));
     mDetailsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
     mDetailsTable->setFocusPolicy(Qt::NoFocus);
     mDetailsTable->setSelectionMode(QAbstractItemView::NoSelection);
