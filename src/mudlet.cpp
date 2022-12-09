@@ -488,7 +488,7 @@ mudlet::mudlet()
     mpActionModuleManager->setIcon(QIcon(qsl(":/icons/module-manager.png")));
     mpActionModuleManager->setObjectName(qsl("module_manager"));
 
-    mpActionPackageExporter = new QAction(tr("Package Exporter (experimental)"), this);
+    mpActionPackageExporter = new QAction(tr("Package Exporter"), this);
     mpActionPackageExporter->setIcon(QIcon(qsl(":/icons/package-exporter.png")));
     mpActionPackageExporter->setObjectName(qsl("package_exporter"));
 
@@ -2864,7 +2864,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     pHost->setLogin(readProfileData(profile_name, qsl("login")));
     pHost->setPass(readProfileData(profile_name, qsl("password")));
-    
+
     QString val = readProfileData(profile_name, qsl("autoreconnect"));
     if (!val.isEmpty() && val.toInt() == Qt::Checked) {
         pHost->setAutoReconnect(true);
