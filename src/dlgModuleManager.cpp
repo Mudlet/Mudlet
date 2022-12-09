@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2011 by Chris Mitchell                                  *
  *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
- *   Copyright (C) 2021-2022 by Stephen Lyons - slysven@virginmedia..com   *
+ *   Copyright (C) 2021-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
