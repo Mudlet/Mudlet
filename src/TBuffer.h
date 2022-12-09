@@ -83,11 +83,11 @@ public:
     };
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
-    // Default constructor - the default argument means it can be used with no
-    // supplied arguments, but it must NOT be marked 'explicit' so as to allow
+    // Not a default constructor - the defaulted argument means it could have
+    // been used if supplied with no arguments, but the 'explicit' prevents
     // this:
-    explicit TChar(Host* pH = nullptr);
-    // A non-default constructor:
+    explicit TChar(TConsole* pC = nullptr);
+    // Another non-default constructor:
     TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
     // User defined copy-constructor:
     TChar(const TChar&);

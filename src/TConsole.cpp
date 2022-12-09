@@ -129,8 +129,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         }
     }
     setContentsMargins(0, 0, 0, 0);
-    mFormatSystemMessage.setBackground(mBgColor);
-    mFormatSystemMessage.setForeground(Qt::red);
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
 
@@ -1402,7 +1400,7 @@ void TConsole::luaWrapLine(int line)
     if (!mpHost) {
         return;
     }
-    TChar ch(mpHost);
+    TChar ch(this);
     buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
