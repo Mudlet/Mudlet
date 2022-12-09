@@ -1097,11 +1097,19 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     textBrowser_supporters->setOpenExternalLinks(true);
 }
 
-QString dlgAboutDialog::createBuildInfo() const {
-    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
-        .append(qsl("<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>").arg(tr("Technical information:")))
-        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version"), mudlet::self()->version))
-        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS"), QSysInfo::prettyProductName()))
-        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU"), QSysInfo::currentCpuArchitecture()))
-        .append(qsl("</table>"));
+QString dlgAboutDialog::createBuildInfo() const
+{
+    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
+               "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
+               "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
+               "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
+               "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
+               "</table>")
+            .arg(tr("Technical information:"), // %1
+                 tr("Version"), // %2
+                 mudlet::self()->scmVersion, // %3
+                 tr("OS"), // %4
+                 QSysInfo::prettyProductName(), // %5
+                 tr("CPU"), // %6
+                 QSysInfo::currentCpuArchitecture()); // %7
 }

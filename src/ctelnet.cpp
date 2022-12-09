@@ -529,7 +529,7 @@ void cTelnet::slot_socketDisconnected()
     }
 
     if (sslerr) {
-        mudlet::self()->show_options_dialog(qsl("tab_connection"));
+        mudlet::self()->showOptionsDialog(qsl("tab_connection"));
     }
 #endif
 
