@@ -20,15 +20,19 @@
 
 #include "Announcer.h"
 
+#include "pre_guard.h"
 #include <QDebug>
 #include <QAccessible>
+#include "post_guard.h"
 
 InvisibleNotification::InvisibleNotification(QWidget *parent)
 : QWidget(parent)
 {
-    setObjectName("InvisibleNotification");
-    setAccessibleName("InvisibleNotification");
-    setAccessibleDescription("An invisible widget used as a workaround to announce text to the screen reader");
+    setObjectName(qsl("InvisibleNotification"));
+    // This class should not be "visible" to anyone, but it should be localised
+    // in case it does show up:
+    setAccessibleName(tr("InvisibleNotification"));
+    setAccessibleDescription(tr("An invisible widget used as a workaround to announce text to the screen reader"));
 }
 
 void InvisibleNotification::setText(const QString &text)
@@ -57,9 +61,11 @@ QString InvisibleAccessibleNotification::text(QAccessible::Text t) const
 InvisibleStatusbar::InvisibleStatusbar(QWidget *parent)
 : QWidget(parent)
 {
-    setObjectName("InvisibleStatusbar");
-    setAccessibleName("InvisibleStatusbar");
-    setAccessibleDescription("An invisible widget used as part as a workaround to announce text to the screen reader");
+    setObjectName(qsl("InvisibleStatusbar"));
+    // This class should not be "visible" to anyone, but it should be localised
+    // in case it does show up:
+    setAccessibleName(tr("InvisibleStatusbar"));
+    setAccessibleDescription(tr("An invisible widget used as part as a workaround to announce text to the screen reader"));
 }
 
 Announcer::Announcer(QWidget *parent)
@@ -71,7 +77,7 @@ Announcer::Announcer(QWidget *parent)
 
 void Announcer::announce(const QString& text, const QString& processing)
 {
-    Q_UNUSED(processing);
+    Q_UNUSED(processing)
     notification->setText(text);
 
     QAccessibleEvent event(notification, QAccessible::ObjectShow);
