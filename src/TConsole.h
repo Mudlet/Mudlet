@@ -238,8 +238,6 @@ public:
     int mDisplayFontSize = 14;
     QFont mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     int mEngineCursor = -1;
-    TChar mFormatBasic;
-    TChar mFormatSystemMessage;
 
     int mIndentCount = 0;
     int mMainFrameBottomHeight = 0;
