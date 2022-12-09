@@ -1,7 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Chris Mitchell                                  *
- *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia..com        *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2021-2022 by Stephen Lyons - slysven@virginmedia..com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,30 +21,27 @@
 
 
 #include "dlgModuleManager.h"
-#include "ui_module_manager.h"
+
 #include "mudlet.h"
 
+#include "pre_guard.h"
 #include <QFileDialog>
 #include <QMessageBox>
+#include "post_guard.h"
 
 
 dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
 : QDialog(parent)
-, ui(new Ui::module_manager)
 , mpHost(pHost)
 {
-    ui->setupUi(this);
-    mModuleTable = ui->moduleTable;
-    mModuleUninstallButton = ui->uninstallButton;
-    mModuleInstallButton = ui->installButton;
-    mModuleHelpButton = ui->helpButton;
+    setupUi(this);
 
     layoutModules();
-    connect(mModuleUninstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_uninstallModule);
-    connect(mModuleInstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
-    connect(mModuleHelpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
-    connect(mModuleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
-    connect(mModuleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
+    connect(uninstallButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_uninstallModule);
+    connect(installButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_installModule);
+    connect(helpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
+    connect(moduleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
+    connect(moduleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgModuleManager::close);
     setWindowTitle(tr("Module Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
@@ -53,7 +50,6 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
 dlgModuleManager::~dlgModuleManager()
 {
     mpHost->mpModuleManager = nullptr;
-    delete ui;
 }
 
 void dlgModuleManager::layoutModules()
@@ -65,13 +61,13 @@ void dlgModuleManager::layoutModules()
     QMapIterator<QString, QStringList> it(mpHost->mInstalledModules);
     QStringList sl;
     sl << tr("Module Name") << tr("Priority") << tr("Sync") << tr("Module Location");
-    mModuleTable->setHorizontalHeaderLabels(sl);
-    mModuleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-    mModuleTable->verticalHeader()->hide();
-    mModuleTable->setShowGrid(true);
+    moduleTable->setHorizontalHeaderLabels(sl);
+    moduleTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    moduleTable->verticalHeader()->hide();
+    moduleTable->setShowGrid(true);
     //clear everything
-    for (int i = 0; i <= mModuleTable->rowCount(); i++) {
-        mModuleTable->removeRow(i);
+    for (int i = 0; i <= moduleTable->rowCount(); i++) {
+        moduleTable->removeRow(i);
     }
     //order modules by priority and then alphabetically
     QMap<int, QStringList> mOrder;
@@ -90,8 +86,8 @@ void dlgModuleManager::layoutModules()
         QStringList pModules = it2.value();
         pModules.sort();
         for (int i = 0; i < pModules.size(); i++) {
-            int row = mModuleTable->rowCount();
-            mModuleTable->insertRow(row);
+            int row = moduleTable->rowCount();
+            moduleTable->insertRow(row);
             auto masterModule = new QTableWidgetItem();
             auto itemEntry = new QTableWidgetItem();
             auto itemLocation = new QTableWidgetItem();
@@ -119,13 +115,13 @@ void dlgModuleManager::layoutModules()
             itemLocation->setToolTip(utils::richText(moduleInfo[0]));     // show the full path in a tooltip, in case it doesn't fit in the table
             itemLocation->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled); // disallow editing of module path, because that is not saved
             itemPriority->setData(Qt::EditRole, mpHost->mModulePriorities[moduleName]);
-            mModuleTable->setItem(row, 0, itemEntry);
-            mModuleTable->setItem(row, 1, itemPriority);
-            mModuleTable->setItem(row, 2, masterModule);
-            mModuleTable->setItem(row, 3, itemLocation);
+            moduleTable->setItem(row, 0, itemEntry);
+            moduleTable->setItem(row, 1, itemPriority);
+            moduleTable->setItem(row, 2, masterModule);
+            moduleTable->setItem(row, 3, itemLocation);
         }
     }
-    mModuleTable->resizeColumnsToContents();
+    moduleTable->resizeColumnsToContents();
 }
 
 void dlgModuleManager::slot_installModule()
@@ -146,8 +142,8 @@ void dlgModuleManager::slot_installModule()
     }
 
     mpHost->installPackage(fileName, 1);
-    for (int i = mModuleTable->rowCount() - 1; i >= 0; --i) {
-        mModuleTable->removeRow(i);
+    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
+        moduleTable->removeRow(i);
     }
 
     layoutModules();
@@ -159,13 +155,13 @@ void dlgModuleManager::slot_uninstallModule()
         return;
     }
 
-    int cRow = mModuleTable->currentRow();
-    QTableWidgetItem* pI = mModuleTable->item(cRow, 0);
+    int cRow = moduleTable->currentRow();
+    QTableWidgetItem* pI = moduleTable->item(cRow, 0);
     if (pI) {
         mpHost->uninstallPackage(pI->text(), 1);
     }
-    for (int i = mModuleTable->rowCount() - 1; i >= 0; --i) {
-        mModuleTable->removeRow(i);
+    for (int i = moduleTable->rowCount() - 1; i >= 0; --i) {
+        moduleTable->removeRow(i);
     }
     layoutModules();
 }
@@ -178,12 +174,12 @@ void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
 
     int i = pItem->row();
 
-    QTableWidgetItem* entry = mModuleTable->item(i, 0);
-    QTableWidgetItem* checkStatus = mModuleTable->item(i, 2);
-    QTableWidgetItem* itemPriority = mModuleTable->item(i, 1);
+    QTableWidgetItem* entry = moduleTable->item(i, 0);
+    QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
+    QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
     //  Not used programmatically now: QTableWidgetItem* itemPath = moduleTable->item(i, 3);
     if (!entry || !checkStatus || !itemPriority || !mpHost->mInstalledModules.contains(entry->text())) {
-        mModuleHelpButton->setDisabled(true);
+        helpButton->setDisabled(true);
         if (checkStatus) {
             checkStatus->setCheckState(Qt::Unchecked);
             checkStatus->setFlags(Qt::NoItemFlags);
@@ -192,10 +188,10 @@ void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
     }
 
     if (mpHost->moduleHelp.contains(entry->text())) {
-        mModuleHelpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL"))
-                                       || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
+        helpButton->setDisabled((!mpHost->moduleHelp.value(entry->text()).contains(qsl("helpURL"))
+                                || mpHost->moduleHelp.value(entry->text()).value(qsl("helpURL")).isEmpty()));
     } else {
-        mModuleHelpButton->setDisabled(true);
+        helpButton->setDisabled(true);
     }
 }
 
@@ -208,9 +204,9 @@ void dlgModuleManager::slot_moduleChanged(QTableWidgetItem* pItem)
     int i = pItem->row();
 
     QStringList moduleStringList;
-    QTableWidgetItem* entry = mModuleTable->item(i, 0);
-    QTableWidgetItem* checkStatus = mModuleTable->item(i, 2);
-    QTableWidgetItem* itemPriority = mModuleTable->item(i, 1);
+    QTableWidgetItem* entry = moduleTable->item(i, 0);
+    QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
+    QTableWidgetItem* itemPriority = moduleTable->item(i, 1);
     if (!entry || !checkStatus || !itemPriority || !mpHost->mInstalledModules.contains(entry->text())) {
         return;
     }
@@ -229,15 +225,15 @@ void dlgModuleManager::slot_helpModule()
     if (!mpHost) {
         return;
     }
-    int cRow = mModuleTable->currentRow();
-    QTableWidgetItem* pI = mModuleTable->item(cRow, 0);
+    int cRow = moduleTable->currentRow();
+    QTableWidgetItem* pI = moduleTable->item(cRow, 0);
     if (!pI) {
         return;
     }
     if (mpHost->moduleHelp.value(pI->text()).contains(QLatin1String("helpURL")) && !mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")).isEmpty()) {
         if (!mudlet::self()->openWebPage(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")))) {
             //failed first open, try for a module related path
-            QTableWidgetItem* item = mModuleTable->item(cRow, 3);
+            QTableWidgetItem* item = moduleTable->item(cRow, 3);
             QString itemPath = item->text();
             QStringList path = itemPath.split(QDir::separator());
             path.pop_back();
@@ -245,7 +241,7 @@ void dlgModuleManager::slot_helpModule()
             path.append(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")));
             QString path2 = path.join(QString());
             if (!mudlet::self()->openWebPage(path2)) {
-                mModuleHelpButton->setDisabled(true);
+                helpButton->setDisabled(true);
             }
         }
     }
