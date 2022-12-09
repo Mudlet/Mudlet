@@ -11982,7 +11982,7 @@ int TLuaInterpreter::installModule(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
     auto moduleManager = host.mpModuleManager;
-    if (moduleManager && moduleManager->mModuleTable->isVisible()) {
+    if (moduleManager && moduleManager->moduleTable->isVisible()) {
         moduleManager->layoutModules();
     }
     lua_pushboolean(L, true);
@@ -11999,7 +11999,7 @@ int TLuaInterpreter::uninstallModule(lua_State* L)
         return 1;
     }
     auto moduleManager = host.mpModuleManager;
-    if (moduleManager && moduleManager->mModuleTable->isVisible()) {
+    if (moduleManager && moduleManager->moduleTable->isVisible()) {
         moduleManager->layoutModules();
     }
     lua_pushboolean(L, true);
@@ -12025,9 +12025,9 @@ int TLuaInterpreter::enableModuleSync(lua_State* L)
     }
 
     auto moduleManager = host.mpModuleManager;
-    if (moduleManager && !moduleManager->mModuleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        int row = moduleManager->mModuleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleManager->mModuleTable->item(row, 2);
+    if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleManager->moduleTable->item(row, 2);
         checkItem->setCheckState(Qt::Checked);
     }
 
@@ -12045,9 +12045,9 @@ int TLuaInterpreter::disableModuleSync(lua_State* L)
     }
 
     auto moduleManager = host.mpModuleManager;
-    if (moduleManager && !moduleManager->mModuleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
-        int row = moduleManager->mModuleTable->findItems(module, Qt::MatchExactly)[0]->row();
-        auto checkItem = moduleManager->mModuleTable->item(row, 2);
+    if (moduleManager && !moduleManager->moduleTable->findItems(module, Qt::MatchExactly).isEmpty()) {
+        int row = moduleManager->moduleTable->findItems(module, Qt::MatchExactly)[0]->row();
+        auto checkItem = moduleManager->moduleTable->item(row, 2);
         checkItem->setCheckState(Qt::Unchecked);
     }
 

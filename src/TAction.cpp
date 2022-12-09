@@ -240,11 +240,8 @@ void TAction::expandToolbar(TToolBar* pT)
 void TAction::insertActions(TToolBar* pT, QMenu* menu)
 {
     mpToolBar = pT;
-    QIcon icon(mIcon);
-    auto action = new EAction(icon, mName);
+    auto action = new EAction(mpHost, QIcon(mIcon), mName, mID);
     action->setCheckable(mIsPushDownButton);
-    action->mID = mID;
-    action->mpHost = mpHost;
     action->setStatusTip(mName);
     if (mpEButton) {
         mpEButton->deleteLater();
@@ -339,10 +336,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
             continue;
         }
         mpEasyButtonBar = pT;
-        QIcon icon(mIcon);
-        auto newAction = new EAction(icon, action->mName);
-        newAction->mID = action->mID;
-        newAction->mpHost = mpHost;
+        auto newAction = new EAction(mpHost, QIcon(mIcon), action->mName, mID);
         newAction->setStatusTip(action->mName);
         newAction->setCheckable(action->mIsPushDownButton);
         if (action->mIsPushDownButton) {
@@ -386,11 +380,8 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
 void TAction::insertActions(TEasyButtonBar* pT, QMenu* menu)
 {
     mpEasyButtonBar = pT;
-    QIcon icon(mIcon);
-    auto action = new EAction(icon, mName);
+    auto action = new EAction(mpHost, QIcon(mIcon), mName, mID);
     action->setCheckable(mIsPushDownButton);
-    action->mID = mID;
-    action->mpHost = mpHost;
     action->setStatusTip(mName);
     if (mpEButton) {
         mpEButton->deleteLater();
