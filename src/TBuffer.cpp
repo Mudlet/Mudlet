@@ -797,7 +797,7 @@ COMMIT_LINE:
                 return;
             }
         } else if (mEncoding == "EUC-KR") {
-            if (!processEUC_KRSequence(localBuffer, isFromServer, true, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
+            if (!processEUC_KRSequence(localBuffer, isFromServer, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
                 // ones but we need to bail out NOW!
                 return;
@@ -4060,7 +4060,7 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
     } else {
         // We have two bytes
         eucSequenceLength = 2;
-        if ((pos + big5SequenceLength - 1) >= len) {
+        if ((pos + eucSequenceLength - 1) >= len) {
             // Not enough bytes to process yet - so store what we have and return
             if (isFromServer) {
 #if defined(DEBUG_EUC_KR_PROCESSING)
