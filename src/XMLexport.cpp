@@ -594,7 +594,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         }
     }
     {
-        auto iterator = mudlet::self()->mShortcutsManager->iterator();
+        auto iterator = mudlet::self()->mpShortcutsManager->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
             auto shortcut = host.append_child("profileShortcut");
