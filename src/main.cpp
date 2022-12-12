@@ -465,8 +465,6 @@ int main(int argc, char* argv[])
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
-    mudlet::debugMode = false;
-
     QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
 #if defined(Q_OS_WIN32)
     /*
@@ -522,7 +520,7 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
-    mudlet::self()->mMirrorToStdOut = parser.isSet(mirrorToStdout);
+    mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::self()->show();
 
     mudlet::self()->startAutoLogin(cliProfile);

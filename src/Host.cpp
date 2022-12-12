@@ -440,7 +440,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         thankForUsingPTB();
     }
 
-    if (mudlet::self()->firstLaunch) {
+    if (mudlet::self()->smFirstLaunch) {
         QTimer::singleShot(0, this, [this]() {
             mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
         });
@@ -453,10 +453,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // enable by default in case of offline connection; if the profile connects - timer will be disabled
     purgeTimer.start(1min);
 
-    auto i = mudlet::self()->mShortcutsManager->iterator();
+    auto i = mudlet::self()->mpShortcutsManager->iterator();
     while (i.hasNext()) {
         auto entry = i.next();
-        profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mShortcutsManager->getSequence(entry)));
+        profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mpShortcutsManager->getSequence(entry)));
     }
 
     startMapAutosave();
@@ -628,7 +628,7 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     int xmlIndex = zip_name_locate(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
-    if (mudlet::debugMode && s == nullptr) {
+    if (mudlet::smDebugMode && s == nullptr) {
         TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".",
                                                          // Intentional comment to separate arguments
                                                          "This error message will appear when the xml file inside the module zip cannot be updated for some reason.")
@@ -640,7 +640,7 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
         err = zip_close(zipFile);
     }
 
-    if (mudlet::debugMode && err == -1) {
+    if (mudlet::smDebugMode && err == -1) {
         TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".",
                                                          // Intentional comment to separate arguments
                                                          "This error message will appear when a module is saved as package but cannot be done for some reason.")
@@ -921,9 +921,9 @@ void Host::updateConsolesFont()
         mpEditorDialog->mpErrorConsole->setFont(mDisplayFont.family());
         mpEditorDialog->mpErrorConsole->setFontSize(mDisplayFont.pointSize());
     }
-    if (mudlet::self()->mpDebugArea) {
-        mudlet::self()->mpDebugConsole->setFont(mDisplayFont.family());
-        mudlet::self()->mpDebugConsole->setFontSize(mDisplayFont.pointSize());
+    if (mudlet::self()->smpDebugArea) {
+        mudlet::self()->smpDebugConsole->setFont(mDisplayFont.family());
+        mudlet::self()->smpDebugConsole->setFontSize(mDisplayFont.pointSize());
     }
 }
 
@@ -2118,7 +2118,7 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
         break;
     }
 
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(QColor(Qt::white), QColor(Qt::red)) << "LUA: " << reason.c_str() << " in " << luaConfig << " ERROR:" << e.c_str() << "\n" >> 0;
     }
 
