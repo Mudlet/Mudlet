@@ -40,7 +40,7 @@ TDebug::TDebug(const QColor& c, const QColor& d)
 // came, which is deduced from the supplied Host pointer.
 TDebug& TDebug::operator>>(Host* pHost)
 {
-    if (Q_UNLIKELY(!mudlet::mpDebugConsole)) {
+    if (Q_UNLIKELY(!mudlet::smpDebugConsole)) {
         if (Q_LIKELY(!msg.isEmpty())) {
             // Don't enqueue empty messages
             auto tag = deduceProfileTag(msg, pHost);
@@ -50,14 +50,14 @@ TDebug& TDebug::operator>>(Host* pHost)
 
     } else {
         if (Q_UNLIKELY(!smMessageQueue.isEmpty())) {
-            // The mpDebugConsole must have just come on-line - so unload all
+            // The smpDebugConsole must have just come on-line - so unload all
             // the stacked up messages:
             while (!smMessageQueue.isEmpty()) {
                 const auto& message = smMessageQueue.dequeue();
                 if (message.mTag.isNull()) {
-                    mudlet::mpDebugConsole->print(message.mMessage, message.mForeground, message.mBackground);
+                    mudlet::smpDebugConsole->print(message.mMessage, message.mForeground, message.mBackground);
                 } else {
-                    mudlet::mpDebugConsole->print(message.mTag % message.mMessage, message.mForeground, message.mBackground);
+                    mudlet::smpDebugConsole->print(message.mTag % message.mMessage, message.mForeground, message.mBackground);
                 }
             }
         }
@@ -69,14 +69,14 @@ TDebug& TDebug::operator>>(Host* pHost)
             // case we will already done everything needed in previous chunk
             // of code. Otherwise just print the message without a tag marking:
             if (!msg.isEmpty()) {
-                mudlet::mpDebugConsole->print(msg, fgColor, bgColor);
+                mudlet::smpDebugConsole->print(msg, fgColor, bgColor);
             }
         } else if (tag == csmTagSystemMessage || Q_UNLIKELY(tag == csmTagFault) || TDebug::smIdentifierMap.count() > 1) {
             // This is a system message or something went wrong in identifying the profile or more than one profile is active
-            mudlet::mpDebugConsole->print(tag % msg, fgColor, bgColor);
+            mudlet::smpDebugConsole->print(tag % msg, fgColor, bgColor);
         } else {
             // Only one profile active - so don't print the tag:
-            mudlet::mpDebugConsole->print(msg, fgColor, bgColor);
+            mudlet::smpDebugConsole->print(msg, fgColor, bgColor);
         }
     }
     return *this;
@@ -198,7 +198,7 @@ void TDebug::changeHostName(const Host* pHost, const QString& newName)
     localMessage << qsl("Profile '%1' started.\n").arg(hostName) >> nullptr;
     TDebug tableMessage(Qt::white, Qt::black);
     tableMessage << TDebug::displayNewTable() >> nullptr;
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         // Can't use TTabBar::applyPrefixToDisplayedText(hostName, newIdentifier.second)
         // here as the profile's tab has not been added to the tabbar yet.
         // Instead arrange for all the tabs to be refreshed when we are next

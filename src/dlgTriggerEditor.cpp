@@ -254,8 +254,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
     // Add lua functions and reserved lua terms to an AutoComplete provider
-    for (QString key : mudlet::mLuaFunctionNames.keys()) {
-        provider->add(key, 3, mudlet::mLuaFunctionNames.value(key).toString());
+    for (QString key : mudlet::smLuaFunctionNames.keys()) {
+        provider->add(key, 3, mudlet::smLuaFunctionNames.value(key).toString());
     }
 
     provider->add(qsl("and"), 14);
@@ -7312,10 +7312,10 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
 {
     mudlet::self()->attachDebugArea(mpHost->getName());
 
-    mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
-    mudlet::debugMode = !mudlet::debugMode;
-    mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
-    if (mudlet::debugMode) {
+    mudlet::smpDebugArea->setVisible(!mudlet::smDebugMode);
+    mudlet::smDebugMode = !mudlet::smDebugMode;
+    mudlet::smpDebugArea->setWindowTitle(tr("Central Debug Console"));
+    if (mudlet::smDebugMode) {
         // If this is the first time the window is shown we want any previously
         // enqueued messages to be painted onto the central debug console:
         TDebug::flushMessageQueue();
