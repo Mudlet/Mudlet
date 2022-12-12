@@ -4596,7 +4596,7 @@ void mudlet::activateProfile(Host* pHost)
     mpTabBar->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
     menuBar()->setStyleSheet(mpCurrentActiveHost->mProfileStyleSheet);
 
-    // Tell the old profile that it is losing focus via a Mudlet event:
+    // Tell the new profile that it is gaining focus via a Mudlet event:
     TEvent focusGainedEvent {};
     focusGainedEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
     focusGainedEvent.mArgumentList << QLatin1String("1");
