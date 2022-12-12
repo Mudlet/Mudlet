@@ -1,6 +1,7 @@
 /***************************************************************************
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -20,50 +21,45 @@
 
 
 #include "dlgPackageManager.h"
-#include "ui_package_manager.h"
+
 #include "mudlet.h"
 
+#include "pre_guard.h"
 #include <QFileDialog>
 #include <QScrollBar>
 #include <QMessageBox>
+#include "post_guard.h"
 
 
 dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
 : QDialog(parent)
-, ui(new Ui::package_manager)
 , mpHost(pHost)
 {
-    ui->setupUi(this);
-    mPackageTable = ui->packageTable;
-    mInstallButton = ui->installButton;
-    mRemoveButton = ui->removeButton;
-    mDetailsTable = ui->additionalDetails;
-    mDescription = ui->packageDescription;
+    setupUi(this);
     resetPackageTable();
-    connect(mPackageTable, &QTableWidget::itemClicked, this, &dlgPackageManager::slot_item_clicked);
-    connect(mInstallButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_install_package);
-    connect(mRemoveButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_remove_packages);
+    connect(packageTable, &QTableWidget::itemClicked, this, &dlgPackageManager::slot_itemClicked);
+    connect(installButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_installPackage);
+    connect(removeButton, &QAbstractButton::clicked, this, &dlgPackageManager::slot_removePackages);
     connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
-    connect(mPackageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_item_clicked);
-    connect(mPackageTable, &QTableWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggle_remove_button);
+    connect(packageTable, &QTableWidget::currentItemChanged, this, &dlgPackageManager::slot_itemClicked);
+    connect(packageTable, &QTableWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleRemoveButton);
 
-    setWindowTitle(tr("Package Manager (experimental) - %1").arg(mpHost->getName()));
-    mDetailsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    mDetailsTable->setFocusPolicy(Qt::NoFocus);
-    mDetailsTable->setSelectionMode(QAbstractItemView::NoSelection);
-    mPackageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    mPackageTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    mPackageTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    mDetailsTable->hide();
-    ui->detailsLabel->hide();
-    mDescription->hide();
+    setWindowTitle(tr("Package Manager - %1").arg(mpHost->getName()));
+    additionalDetails->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    additionalDetails->setFocusPolicy(Qt::NoFocus);
+    additionalDetails->setSelectionMode(QAbstractItemView::NoSelection);
+    packageTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    packageTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    packageTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    additionalDetails->hide();
+    detailsLabel->hide();
+    packageDescription->hide();
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
 dlgPackageManager::~dlgPackageManager()
 {
     mpHost->mpPackageManager = nullptr;
-    delete ui;
 }
 
 void dlgPackageManager::resetPackageTable()
@@ -71,13 +67,13 @@ void dlgPackageManager::resetPackageTable()
     if (!mpHost) {
         return;
     }
-    for (int i =  mPackageTable->rowCount() - 1; i >= 0; --i) {
-        mPackageTable->removeRow(i);
+    for (int i =  packageTable->rowCount() - 1; i >= 0; --i) {
+        packageTable->removeRow(i);
     }
 
-    mPackageTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    packageTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     for (int i = 0; i < mpHost->mInstalledPackages.size(); i++) {
-        mPackageTable->insertRow(i);
+        packageTable->insertRow(i);
         auto packageName = new QTableWidgetItem();
         auto shortDescription = new QTableWidgetItem();
         packageName->setTextAlignment(Qt::AlignCenter);
@@ -93,13 +89,13 @@ void dlgPackageManager::resetPackageTable()
         packageName->setIcon(QIcon(iconDir));
         auto title = packageInfo.value(qsl("title"));
         shortDescription->setText(title);
-        mPackageTable->setItem(i, 0, packageName);
-        mPackageTable->setItem(i, 1, shortDescription);
+        packageTable->setItem(i, 0, packageName);
+        packageTable->setItem(i, 1, shortDescription);
     }
-    mPackageTable->resizeColumnsToContents();
+    packageTable->resizeColumnsToContents();
 }
 
-void dlgPackageManager::slot_install_package()
+void dlgPackageManager::slot_installPackage()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
     if (fileName.isEmpty()) {
@@ -115,13 +111,13 @@ void dlgPackageManager::slot_install_package()
     mpHost->installPackage(fileName, 0);
 }
 
-void dlgPackageManager::slot_remove_packages()
+void dlgPackageManager::slot_removePackages()
 {
-    QModelIndexList selection = mPackageTable->selectionModel()->selectedRows();
+    QModelIndexList selection = packageTable->selectionModel()->selectedRows();
     QStringList removePackages;
     for (int i = 0; i < selection.count(); i++) {
         QModelIndex index = selection.at(i);
-        auto package = mPackageTable->item(index.row(), 0);
+        auto package = packageTable->item(index.row(), 0);
         removePackages << package->text();
     }
 
@@ -129,28 +125,28 @@ void dlgPackageManager::slot_remove_packages()
         mpHost->uninstallPackage(removePackages.at(i), 0);
     }
 
-    mDetailsTable->hide();
-    ui->detailsLabel->hide();
-    mDescription->hide();
+    additionalDetails->hide();
+    detailsLabel->hide();
+    packageDescription->hide();
 }
 
-void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
+void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
 {
     if (!pItem) {
         return;
     }
 
     //clear details Table
-    for (int i = mDetailsTable->rowCount() - 1; i >= 0; --i) {
-        mDetailsTable->removeRow(i);
+    for (int i = additionalDetails->rowCount() - 1; i >= 0; --i) {
+        additionalDetails->removeRow(i);
     }
-    QString packageName = mPackageTable->item(pItem->row(), 0)->text();
+    QString packageName = packageTable->item(pItem->row(), 0)->text();
     auto packageInfo{mpHost->mPackageInfo.value(packageName)};
     if (packageInfo.isEmpty()) {
-        mDescription->clear();
-        mDetailsTable->hide();
-        ui->detailsLabel->hide();
-        mDescription->hide();
+        packageDescription->clear();
+        additionalDetails->hide();
+        detailsLabel->hide();
+        packageDescription->hide();
         return;
     }
     packageInfo.remove(qsl("mpackage"));
@@ -159,16 +155,12 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
 
     QString description = packageInfo.take(qsl("description"));
     if (description.isEmpty()) {
-        mDescription->hide();
+        packageDescription->hide();
     } else {
-        mDescription->show();
+        packageDescription->show();
         QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
         description.replace(QLatin1String("$packagePath"), packageDir);
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
-        mDescription->setMarkdown(description);
-#else
-        mDescription->setText(description);
-#endif
+        packageDescription->setMarkdown(description);
     }
 
     QStringList labelText, details;
@@ -183,9 +175,9 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
         QLabel* info = new QLabel();
         QLabel* value = new QLabel();
         info->setEnabled(false);
-        mDetailsTable->insertRow(counter);
-        mDetailsTable->setCellWidget(counter, 0, info);
-        mDetailsTable->setCellWidget(counter++, 1, value);
+        additionalDetails->insertRow(counter);
+        additionalDetails->setCellWidget(counter, 0, info);
+        additionalDetails->setCellWidget(counter++, 1, value);
         info->setText(labelText.at(i));
         info->setAlignment(Qt::AlignLeft);
         value->setText(valueText);
@@ -196,34 +188,34 @@ void dlgPackageManager::slot_item_clicked(QTableWidgetItem* pItem)
     if (!packageInfo.isEmpty()) {
         fillAdditionalDetails(packageInfo);
     }
-    mDetailsTable->resizeColumnsToContents();
-    mDetailsTable->resizeRowsToContents();
-    mDetailsTable->horizontalHeader()->resizeSection(0, mDetailsTable->horizontalHeader()->sectionSize(0) + 10);
-    if (mDetailsTable->rowCount() == 0) {
-        mDetailsTable->hide();
-        ui->detailsLabel->hide();
+    additionalDetails->resizeColumnsToContents();
+    additionalDetails->resizeRowsToContents();
+    additionalDetails->horizontalHeader()->resizeSection(0, additionalDetails->horizontalHeader()->sectionSize(0) + 10);
+    if (additionalDetails->rowCount() == 0) {
+        additionalDetails->hide();
+        detailsLabel->hide();
     } else {
-        mDetailsTable->show();
-        ui->detailsLabel->show();
+        additionalDetails->show();
+        detailsLabel->show();
     }
-    int maxHeight = mDetailsTable->rowCount() * mDetailsTable->rowHeight(0);
-    mDetailsTable->setMaximumHeight(maxHeight);
-    mDetailsTable->verticalScrollBar()->hide();
-    mPackageTable->scrollToItem(pItem);
-    mPackageTable->selectRow(pItem->row());
+    int maxHeight = additionalDetails->rowCount() * additionalDetails->rowHeight(0);
+    additionalDetails->setMaximumHeight(maxHeight);
+    additionalDetails->verticalScrollBar()->hide();
+    packageTable->scrollToItem(pItem);
+    packageTable->selectRow(pItem->row());
 }
 
 void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& packageInfo)
 {
     QMap<QString, QString>::const_iterator iter = packageInfo.constBegin();
-    int counter = mDetailsTable->rowCount();
+    int counter = additionalDetails->rowCount();
     while (iter != packageInfo.constEnd()) {
         QLabel* info = new QLabel();
         QLabel* value = new QLabel();
         info->setEnabled(false);
-        mDetailsTable->insertRow(counter);
-        mDetailsTable->setCellWidget(counter, 0, info);
-        mDetailsTable->setCellWidget(counter++, 1, value);
+        additionalDetails->insertRow(counter);
+        additionalDetails->setCellWidget(counter, 0, info);
+        additionalDetails->setCellWidget(counter++, 1, value);
         info->setText(iter.key());
         info->setAlignment(Qt::AlignLeft);
         value->setText(iter.value());
@@ -234,15 +226,19 @@ void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& pack
     }
 }
 
-void dlgPackageManager::slot_toggle_remove_button()
+void dlgPackageManager::slot_toggleRemoveButton()
 {
-    QModelIndexList selection = mPackageTable->selectionModel()->selectedRows();
+    QModelIndexList selection = packageTable->selectionModel()->selectedRows();
     int selectionCount = selection.count();
-    bool haveSelection = selectionCount != 0;
-
-    mRemoveButton->setEnabled(haveSelection);
-    if (selectionCount > 1) {
-        // let the translations decide whenever it should be 'Remove package', 'Remove packages', or whatever is language-appropriate
-        mRemoveButton->setText(tr("Remove packages", "Button in package manager to remove selected package(s)", selectionCount));
+    removeButton->setEnabled(selectionCount);
+    if (selectionCount) {
+        removeButton->setText(tr("Remove %n package(s)",
+                                  // Intentional comment to separate arguments
+                                  "Message on button in package manager to remove one or more (%n is the count of) selected package(s).",
+                                  selectionCount));
+    } else {
+        removeButton->setText(tr("Remove package",
+                                  // Intentional comment to separate arguments
+                                  "Message on button in package manager initially and when there is no packages to remove."));
     }
 }

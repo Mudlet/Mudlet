@@ -65,29 +65,29 @@ signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
 
 public slots:
-    void slot_update_name(const QString&);
-    void slot_save_name();
-    void slot_update_url(const QString&);
-    void slot_update_port(const QString&);
-    void slot_update_SSL_TSL_port(int state);
-    void slot_update_login(const QString&);
-    void slot_update_pass(const QString&);
-    void slot_update_website(const QString&);
-    void slot_deleteprofile_check(const QString&);
-    void slot_update_description();
+    void slot_updateName(const QString&);
+    void slot_saveName();
+    void slot_updateUrl(const QString&);
+    void slot_updatePort(const QString&);
+    void slot_updateSslTslPort(int state);
+    void slot_updateLogin(const QString&);
+    void slot_updatePassword(const QString&);
+// Not used:    void slot_updateWebsite(const QString&);
+    void slot_deleteProfileCheck(const QString&);
+    void slot_updateDescription();
 
-    void slot_item_clicked(QListWidgetItem*);
+    void slot_itemClicked(QListWidgetItem*);
     void slot_addProfile();
     void slot_deleteProfile();
     void slot_reallyDeleteProfile();
 
-    void slot_update_autologin(int state);
-    void slot_update_autoreconnect(int state);
-    void slot_update_discord_optin(int state);
+    void slot_updateAutoConnect(int state);
+    void slot_updateAutoReconnect(int state);
+    void slot_updateDiscordOptIn(int state);
     void slot_load();
     void slot_cancel();
-    void slot_copy_profile();
-    void slot_copy_profilesettings_only();
+    void slot_copyProfile();
+    void slot_copyOnlySettingsOfProfile();
 
 
 protected:
@@ -95,8 +95,8 @@ protected:
 
 
 private:
-    void copyFolder(const QString& sourceFolder, const QString& destFolder);
-    QString getDescription(const QString& hostUrl, quint16 port, const QString& profile_name) const;
+    static bool copyFolder(const QString& sourceFolder, const QString& destFolder);
+    QString getDescription(const QString& profile_name) const;
     bool validateConnect();
     void updateDiscordStatus();
     bool validateProfile();
@@ -125,24 +125,25 @@ private:
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
     // to be valid, but other properties don't have to be
-    bool validName;
-    bool validUrl;
-    bool validPort;
+    bool validName = false;
+    bool validUrl = false;
+    bool validPort = false;
 
     QStringList mProfileList;
     QPalette mRegularPalette;
     QPalette mOKPalette;
     QPalette mErrorPalette;
     QPalette mReadOnlyPalette;
-    QPushButton* offline_button;
-    QPushButton* connect_button;
-    QLineEdit* delete_profile_lineedit;
-    QPushButton* delete_button;
+    QAction* mpCopyProfile = nullptr;
+    QPushButton* offline_button = nullptr;
+    QPushButton* connect_button = nullptr;
+    QLineEdit* delete_profile_lineedit = nullptr;
+    QPushButton* delete_button  = nullptr;
     QString mDiscordApplicationId;
     QString mDiscordInviteURL;
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
-    bool mCopyingProfile{};
+    bool mCopyingProfile = false;
     QString mDateTimeFormat;
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;
@@ -150,13 +151,13 @@ private:
 
 
 private slots:
-    void slot_profile_menu(QPoint pos);
-    void slot_set_custom_icon();
-    void slot_set_custom_color();
-    void slot_reset_custom_icon();
+    void slot_profileContextMenu(QPoint pos);
+    void slot_setCustomIcon();
+    void slot_setCustomColor();
+    void slot_resetCustomIcon();
     void slot_togglePasswordVisibility(const bool);
-    void slot_password_saved(QKeychain::Job* job);
-    void slot_password_deleted(QKeychain::Job* job);
+    void slot_passwordSaved(QKeychain::Job* job);
+    void slot_passwordDeleted(QKeychain::Job* job);
     void slot_reenableAllProfileItems();
 };
 

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2021 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -28,6 +28,7 @@
 #include "TConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "TRoom.h"
 #include "VarUnit.h"
 #include "mudlet.h"
 
@@ -373,12 +374,8 @@ void XMLimport::readMap()
     QListIterator<int> itAreaWithRooms(tempAreaRoomsHash.uniqueKeys());
     while (itAreaWithRooms.hasNext()) {
         int areaId = itAreaWithRooms.next();
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
         auto values = tempAreaRoomsHash.values(areaId);
         QSet<int> areaRoomsSet{values.begin(), values.end()};
-#else
-        QSet<int> areaRoomsSet{tempAreaRoomsHash.values(areaId).toSet()};
-#endif
 
         if (!mpHost->mpMap->mpRoomDB->areas.contains(areaId)) {
             // It is known for map files to have rooms with area Ids that are
@@ -447,9 +444,33 @@ void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
             } else {
                 readUnknownMapElement();
             }
-        } else if (isEndElement()) {
+        } else if (isEndElement() && name() == qsl("rooms")) {
             break;
         }
+    }
+}
+
+void XMLimport::readRoomFeatures(TRoom* pR)
+{
+    while (!atEnd()) {
+        readNext();
+
+        if (Q_LIKELY(isStartElement())) {
+            if (name() == qsl("features")) {
+                continue;
+            } else if (Q_LIKELY(name() == qsl("feature"))) {
+                readRoomFeature(pR);
+            }
+        } else if (isEndElement() && name() == qsl("features")) {
+            break;
+        }
+    }
+}
+
+void XMLimport::readRoomFeature(TRoom* pR)
+{
+    if (Q_LIKELY(attributes().hasAttribute(qsl("type")))) {
+        pR->userData.insert(qsl("feature-%1").arg(attributes().value(qsl("type"))), qsl("true"));
     }
 }
 
@@ -474,32 +495,62 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
         } else if (Q_LIKELY(name() == qsl("exit"))) {
             QString dir = attributes().value(qsl("direction")).toString();
             int e = attributes().value(qsl("target")).toString().toInt();
+            // If there is a "hidden" exit mark it as a locked door, otherwise
+            // if there is a "door" mark it as an open/closed/locked door
+            // depending on the value (I.R.E. MUD maps always uses "1" for "door"
+            // and/or "hidden" - though the latter does not always appear with
+            // former):
+            int door = (attributes().hasAttribute(qsl("hidden")) && attributes().value(qsl("hidden")).toString().toInt() == 1)
+                    ? 3
+                    : (attributes().hasAttribute(qsl("door")) && attributes().value(qsl("door")).toString().toInt() >= 0 && attributes().value(qsl("door")).toString().toInt() <= 3)
+                      ? attributes().value(qsl("door")).toString().toInt()
+                      : 0;
             if (dir.isEmpty()) {
-                continue;
+                if (attributes().value(qsl("special")).toString().toInt() == 1 && !attributes().value(qsl("command")).toString().isEmpty()) {
+                    // This is how IRE XML maps mark special exits, rather than
+                    // by just using a different string for the direction!
+                    dir = attributes().value(qsl("command")).toString();
+                    pT->setSpecialExit(e, dir);
+                    pT->setDoor(dir, door);
+                } else {
+                    continue;
+                }
             } else if (dir == qsl("north")) {
                 pT->north = e;
+                pT->setDoor(qsl("n"), door);
             } else if (dir == qsl("east")) {
                 pT->east = e;
+                pT->setDoor(qsl("e"), door);
             } else if (dir == qsl("south")) {
                 pT->south = e;
+                pT->setDoor(qsl("s"), door);
             } else if (dir == qsl("west")) {
                 pT->west = e;
+                pT->setDoor(qsl("w"), door);
             } else if (dir == qsl("up")) {
                 pT->up = e;
+                pT->setDoor(qsl("up"), door);
             } else if (dir == qsl("down")) {
                 pT->down = e;
+                pT->setDoor(qsl("down"), door);
             } else if (dir == qsl("northeast")) {
                 pT->northeast = e;
+                pT->setDoor(qsl("ne"), door);
             } else if (dir == qsl("southwest")) {
                 pT->southwest = e;
+                pT->setDoor(qsl("sw"), door);
             } else if (dir == qsl("southeast")) {
                 pT->southeast = e;
+                pT->setDoor(qsl("se"), door);
             } else if (dir == qsl("northwest")) {
                 pT->northwest = e;
+                pT->setDoor(qsl("nw"), door);
             } else if (dir == qsl("in")) {
                 pT->in = e;
+                pT->setDoor(qsl("in"), door);
             } else if (dir == qsl("out")) {
                 pT->out = e;
+                pT->setDoor(qsl("out"), door);
             } else {
                 // TODO: Handle Special Exits
             }
@@ -512,11 +563,13 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             pT->y = attributes().value(qsl("y")).toString().toInt();
             pT->z = attributes().value(qsl("z")).toString().toInt();
             continue;
+        } else if (name() == qsl("features")) {
+            readRoomFeatures(pT);
         } else if (Q_UNLIKELY(name().isEmpty())) {
             continue;
         }
 
-        if (isEndElement()) {
+        if (isEndElement() && name() == qsl("room")) {
             break;
         }
     }
@@ -783,7 +836,6 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mEnableMSSP = attributes().value(qsl("mEnableMSSP")) == YES;
     pHost->mEnableMSP = attributes().value(qsl("mEnableMSP")) == YES;
     pHost->mMapStrongHighlight = attributes().value(qsl("mMapStrongHighlight")) == YES;
-    pHost->mLogStatus = attributes().value(qsl("mLogStatus")) == YES;
     pHost->mEnableSpellCheck = attributes().value(qsl("mEnableSpellCheck")) == YES;
     bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
     bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
@@ -793,8 +845,37 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mMapperUseAntiAlias = attributes().value(qsl("mMapperUseAntiAlias")) == YES;
     pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
     pHost->mEditorAutoComplete = (attributes().value(qsl("mEditorAutoComplete")) == YES);
-    if (!attributes().hasAttribute("mEditorShowBidi") || (attributes().value(qsl("mEditorShowBidi")) == YES)) {
-        pHost->mEditorShowBidi = true;
+    if (attributes().hasAttribute("mEditorShowBidi")) {
+        pHost->setEditorShowBidi(attributes().value(qsl("mEditorShowBidi")) == YES);
+    } else {
+        pHost->setEditorShowBidi(true);
+    }
+    if (attributes().hasAttribute("announceIncomingText")) {
+        pHost->mAnnounceIncomingText = attributes().value(qsl("announceIncomingText")) == YES;
+    } else {
+        pHost->mAnnounceIncomingText = true;
+    }
+    if (attributes().hasAttribute("caretShortcut")) {
+        const QStringRef caretShortcut(attributes().value(qsl("caretShortcut")));
+        if (caretShortcut == qsl("None")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::None;
+        } else if (caretShortcut == qsl("Tab")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        } else if (caretShortcut == qsl("CtrlTab")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        } else if (caretShortcut == qsl("F6")) {
+            pHost->mCaretShortcut = Host::CaretShortcut::F6;
+        }
+    }
+    if (attributes().hasAttribute("blankLineBehaviour")) {
+        const QStringRef blankLineBehaviour(attributes().value(qsl("blankLineBehaviour")));
+        if (blankLineBehaviour == qsl("Hide")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Hide;
+        } else if (blankLineBehaviour == qsl("Show")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
+        } else if (blankLineBehaviour == qsl("ReplaceWithSpace")) {
+            pHost->mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
+        }
     }
     pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
     pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
@@ -896,6 +977,7 @@ void XMLimport::readHostPackage(Host* pHost)
     pHost->mSslIgnoreExpired = attributes().value(qsl("mSslIgnoreExpired")) == YES;
     pHost->mSslIgnoreSelfSigned = attributes().value(qsl("mSslIgnoreSelfSigned")) == YES;
     pHost->mSslIgnoreAll = attributes().value(qsl("mSslIgnoreAll")) == YES;
+    pHost->mAskTlsAvailable = attributes().value(qsl("mAskTlsAvailable")) == YES;
     bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
@@ -914,20 +996,31 @@ void XMLimport::readHostPackage(Host* pHost)
     if (attributes().hasAttribute(QLatin1String("ControlCharacterHandling"))) {
         switch (attributes().value(QLatin1String("ControlCharacterHandling")).toInt()) {
         case 1:
-            pHost->setControlCharacterMode(TConsole::PictureControlCharacterReplacement);
+            pHost->setControlCharacterMode(ControlCharacterMode::Picture);
             break;
         case 2:
-            pHost->setControlCharacterMode(TConsole::OEMFontControlCharacterReplacement);
+            pHost->setControlCharacterMode(ControlCharacterMode::OEM);
             break;
         case 0:
             [[fallthrough]];
         default:
-            pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+            pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
         }
 
     } else {
         // The default value, also used up to Mudlet 4.14.1:
-        pHost->setControlCharacterMode(TConsole::NoControlCharacterReplacement);
+        pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
+    }
+
+    if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
+        pHost->setLargeAreaExitArrows(attributes().value(qsl("Large2DMapAreaExitArrows")) == YES);
+    } else {
+        // The default (and for map/profile files from before 4.15.0):
+        pHost->setLargeAreaExitArrows(false);
+    }
+
+    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
+        mpHost->mMapInfoContributors.clear();
     }
 
     while (!atEnd()) {
@@ -935,7 +1028,8 @@ void XMLimport::readHostPackage(Host* pHost)
 
         if (isEndElement()) {
             break;
-        } else if (isStartElement()) {
+        }
+        if (isStartElement()) {
             if (name() == "name") {
                 pHost->mHostName = readElementText();
             } else if (name() == "mInstalledModules") {
@@ -1045,6 +1139,10 @@ void XMLimport::readHostPackage(Host* pHost)
                 pHost->mBgColor_2.setNamedColor(readElementText());
             } else if (name() == "mRoomBorderColor") {
                 pHost->mRoomBorderColor.setNamedColor(readElementText());
+            } else if (name() == "mMapInfoBg") {
+                auto alpha = (attributes().hasAttribute(qsl("alpha"))) ? attributes().value(qsl("alpha")).toInt() : 255;
+                pHost->mMapInfoBg.setNamedColor(readElementText());
+                pHost->mMapInfoBg.setAlpha(alpha);
             } else if (name() == "mBlack2") {
                 pHost->mBlack_2.setNamedColor(readElementText());
             } else if (name() == "mLightBlack2") {
@@ -1091,9 +1189,11 @@ void XMLimport::readHostPackage(Host* pHost)
                 // readUnknownHostElement() for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
             } else if (name() == "mMapInfoContributors") {
-                readMapInfoContributors();
-            } else if (name() == "profileShortcuts") {
-                readProfileShortcuts();
+                readLegacyMapInfoContributors();
+            } else if (name() == "mapInfoContributor") {
+                readMapInfoContributor();
+            } else if (name() == "profileShortcut") {
+                readProfileShortcut();
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
@@ -1434,7 +1534,8 @@ int XMLimport::readActionGroup(TAction* pParent)
                 // or "2" (true) for backward compatibility
                 pT->mButtonState = (readElementText().toInt() == 2);
             } else if (name() == "buttonColor") {
-                pT->mButtonColor.setNamedColor(readElementText());
+                // Not longer present/used, skip over it if it is still in file:
+                skipCurrentElement();
             } else if (name() == "buttonColumn") {
                 pT->mButtonColumns = readElementText().toInt();
             } else if (name() == "posX") {
@@ -1643,14 +1744,35 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                 bool ok = false;
                 int num = numberText.toInt(&ok, 10);
                 if (Q_LIKELY(!numberText.isEmpty() && ok)) {
-                    list << num;
+                    switch (num) {
+                    case REGEX_SUBSTRING:
+                        [[fallthrough]];
+                    case REGEX_PERL:
+                        [[fallthrough]];
+                    case REGEX_BEGIN_OF_LINE_SUBSTRING:
+                        [[fallthrough]];
+                    case REGEX_EXACT_MATCH:
+                        [[fallthrough]];
+                    case REGEX_LUA_CODE:
+                        [[fallthrough]];
+                    case REGEX_LINE_SPACER:
+                        [[fallthrough]];
+                    case REGEX_COLOR_PATTERN:
+                        [[fallthrough]];
+                    case REGEX_PROMPT:
+                        list << num;
+                        break;
+                    default:
+                        mpHost->postMessage(qsl("[ ERROR ] - \"%1\" as a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\" cannot be understood by this version of Mudlet, is it from a later version? Converting it to a SUBSTRING type so the data can be shown but it will probably not work as expected.").arg(numberText, parentName));
+                        list << REGEX_SUBSTRING; //Set it to the default type
+                    }                        
+
                 } else {
-                    // Using qFatal() seems a little, erm, fatalistic but it
-                    // seems no lesser one will always be detectable on the
-                    // RELEASE version on Windows? - Slysven
-                    qFatal(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
+                    qWarning(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",
                            numberText.toUtf8().constData(),
                            parentName.toUtf8().constData());
+                    mpHost->postMessage(qsl("[ ERROR ] - Unable to convert: \"%1\" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\"!").arg(numberText, parentName));
+                    list << REGEX_SUBSTRING; //Just assume most common one
                 }
             } else {
                 readUnknownTriggerElement();
@@ -1840,9 +1962,13 @@ void XMLimport::readStopWatchMap()
 
 }
 
-void XMLimport::readMapInfoContributors()
+void XMLimport::readMapInfoContributor()
 {
-    mpHost->mMapInfoContributors.clear();
+    mpHost->mMapInfoContributors.insert(readElementText());
+}
+
+void XMLimport::readLegacyMapInfoContributors()
+{
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1856,23 +1982,13 @@ void XMLimport::readMapInfoContributors()
     }
 }
 
-void XMLimport::readProfileShortcuts() {
-    while (!atEnd()) {
-        readNext();
-        if (isEndElement()) {
-            break;
-        }
-        if (isStartElement()) {
-            if (name() == "profileShortcut") {
-                auto key = attributes().value(qsl("key"));
-                auto sequenceString = readElementText();
-                if (mpHost->profileShortcuts.value(key.toString())) {
-                    QKeySequence *sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString)
-                                                                       : new QKeySequence();
-                    mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
-                    delete sequence;
-                }
-            }
-        }
+void XMLimport::readProfileShortcut()
+{
+    auto key = attributes().value(qsl("key"));
+    auto sequenceString = readElementText();
+    if (mpHost->profileShortcuts.value(key.toString())) {
+        QKeySequence* sequence = !sequenceString.isEmpty() ? new QKeySequence(sequenceString) : new QKeySequence();
+        mpHost->profileShortcuts.value(key.toString())->swap(*sequence);
+        delete sequence;
     }
 }

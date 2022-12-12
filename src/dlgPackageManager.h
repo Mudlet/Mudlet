@@ -2,8 +2,9 @@
 #define MUDLET_DLGPACKAGEMANAGER_H
 
 /***************************************************************************
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Heiko Koehn - KoehnHeiko@googlemail.com         *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -25,41 +26,35 @@
 #include "Host.h"
 
 #include "pre_guard.h"
+#include "ui_package_manager.h"
 #include <QDialog>
 #include <QTableWidget>
 #include <QTextBrowser>
 #include "post_guard.h"
 
 class Host;
-namespace Ui {
-class package_manager;
-}
 
-class dlgPackageManager : public QDialog
+
+class dlgPackageManager : public QDialog, public Ui::package_manager
 {
     Q_OBJECT
 
 public:
     Q_DISABLE_COPY(dlgPackageManager)
     explicit dlgPackageManager(QWidget* parent, Host*);
-    ~dlgPackageManager();
+    ~dlgPackageManager() override;
     void resetPackageTable();
 
 private slots:
-    void slot_install_package();
-    void slot_remove_packages();
-    void slot_item_clicked(QTableWidgetItem*);
-    void slot_toggle_remove_button();
+    void slot_installPackage();
+    void slot_removePackages();
+    void slot_itemClicked(QTableWidgetItem*);
+    void slot_toggleRemoveButton();
 
 private:
-    Ui::package_manager* ui;
-    Host* mpHost;
-    QTableWidget* mPackageTable;
-    QTableWidget* mDetailsTable;
-    QTextBrowser* mDescription;
-    QPushButton* mInstallButton;
-    QPushButton* mRemoveButton;
     void fillAdditionalDetails(const QMap<QString, QString>&);
+
+    Host* mpHost = nullptr;
 };
 
 #endif

@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017-2020 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2015-2018, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2018, 2020, 2022 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -217,86 +217,93 @@ public:
     void delete_trigger();
     void delete_variable();
     void setSearchOptions(const SearchOptions);
+    void setEditorShowBidi(const bool);
+    void showCurrentTriggerItem();
 
 public slots:
     void slot_toggleHiddenVariables(bool);
-    void slot_toggleHiddenVar(bool);
-    void slot_var_selected(QTreeWidgetItem*);
-    void slot_var_changed(QTreeWidgetItem*);
-    void slot_show_vars();
+    void slot_hideVariable(bool);
+    void slot_variableSelected(QTreeWidgetItem*);
+    void slot_variableChanged(QTreeWidgetItem*);
+    void slot_showVariables();
     void slot_viewErrorsAction();
     void slot_setupPatternControls(const int);
     void slot_soundTrigger();
     void slot_colorizeTriggerSetBgColor();
     void slot_colorizeTriggerSetFgColor();
-    void slot_item_selected_save(QTreeWidgetItem* pItem);
+    void slot_saveSelectedItem(QTreeWidgetItem* pItem);
     void slot_export();
     void slot_import();
     void slot_viewStatsAction();
-    void slot_debug_mode();
-    void slot_next_section();
-    void slot_previous_section();
-    void slot_show_current();
-    void slot_show_timers();
-    void slot_show_triggers();
-    void slot_show_scripts();
-    void slot_show_aliases();
-    void slot_show_actions();
-    void slot_show_keys();
+    void slot_toggleCentralDebugConsole();
+    void slot_nextSection();
+    void slot_previousSection();
+    void slot_showTimers();
+    void slot_showTriggers();
+    void slot_showScripts();
+    void slot_showAliases();
+    void slot_showActions();
+    void slot_showKeys();
     void slot_activateMainWindow();
-    void slot_tree_selection_changed();
-    void slot_trigger_selected(QTreeWidgetItem* pItem);
-    void slot_timer_selected(QTreeWidgetItem* pItem);
-    void slot_scripts_selected(QTreeWidgetItem* pItem);
-    void slot_alias_selected(QTreeWidgetItem* pItem);
-    void slot_action_selected(QTreeWidgetItem* pItem);
-    void slot_key_selected(QTreeWidgetItem* pItem);
-    void slot_add_new();
-    void slot_add_new_folder();
-    void slot_toggle_active();
+    void slot_treeSelectionChanged();
+    void slot_triggerSelected(QTreeWidgetItem* pItem);
+    void slot_timerSelected(QTreeWidgetItem* pItem);
+    void slot_scriptsSelected(QTreeWidgetItem* pItem);
+    void slot_aliasSelected(QTreeWidgetItem* pItem);
+    void slot_actionSelected(QTreeWidgetItem* pItem);
+    void slot_keySelected(QTreeWidgetItem* pItem);
+    void slot_addNewItem();
+    void slot_addNewGroup();
+    void slot_toggleItemOrGroupActiveFlag();
     void slot_searchMudletItems(const int);
-    void slot_item_selected_search_list(QTreeWidgetItem*);
-    void slot_delete_item();
-    void slot_open_source_find();
-    void slot_close_source_find();
-    void slot_move_source_find();
-    void slot_source_find_previous();
-    void slot_source_find_next();
-    void slot_source_find_text_changed();
-    void slot_save_edit();
-    void slot_copy_xml();
-    void slot_paste_xml();
-    void slot_chose_action_icon();
+    void slot_itemSelectedInSearchResults(QTreeWidgetItem*);
+    void slot_deleteItemOrGroup();
+    void slot_openSourceFind();
+    void slot_closeSourceFind();
+    void slot_sourceFindMove();
+    void slot_sourceFindPrevious();
+    void slot_sourceFindNext();
+    void slot_sourceFindTextChanges();
+    void slot_saveEdits();
+    void slot_copyXml();
+    void slot_pasteXml();
+// Not used:    void slot_choseActionIcon();
     void slot_showSearchAreaResults(bool);
     void slot_showAllTriggerControls(const bool);
     void slot_rightSplitterMoved(const int pos, const int handle);
-    void slot_script_main_area_delete_handler();
-    void slot_script_main_area_add_handler();
-    void slot_script_main_area_edit_handler(QListWidgetItem*);
-    void slot_key_grab();
+    void slot_scriptMainAreaDeleteHandler();
+    void slot_scriptMainAreaAddHandler();
+    void slot_scriptMainAreaEditHandler(QListWidgetItem*);
+    void slot_keyGrab();
     void slot_profileSaveAction();
     void slot_profileSaveAsAction();
     void slot_setToolBarIconSize(int);
     void slot_setTreeWidgetIconSize(int);
-    void slot_color_trigger_fg();
-    void slot_color_trigger_bg();
+    void slot_colorTriggerFg();
+    void slot_colorTriggerBg();
     void slot_updateStatusBar(const QString& statusText); // For the source code editor
     void slot_profileSaveStarted();
     void slot_profileSaveFinished();
 
 private slots:
     void slot_changeEditorTextOptions(QTextOption::Flags);
-    void slot_toggle_isPushDownButton(int);
+    void slot_toggleIsPushDownButton(int);
     void slot_toggleSearchCaseSensitivity(bool);
     void slot_toggleSearchIncludeVariables(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
+    void slot_visibilityChangedEditorActionsToolbar();
+    void slot_visibilityChangedEditorItemsToolbar();
+    void slot_floatingChangedEditorActionsToolbar();
+    void slot_floatingChangedEditorItemsToolbar();
+    void slot_restoreEditorActionsToolbar();
+    void slot_restoreEditorItemsToolbar();
 
 public:
-    TConsole* mpErrorConsole;
-    bool mNeedUpdateData;
+    TConsole* mpErrorConsole = nullptr;
+    bool mNeedUpdateData = false;
 
 private:
     void populateTriggers();
@@ -424,87 +431,97 @@ private:
     void autoSave();
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
-    void setShortcuts(const bool setNotUnset = true);
+    void setShortcuts(const bool active = true);
 
-    QToolBar* toolBar;
-    QToolBar* toolBar2;
-    bool showHiddenVars;
+    void showOrHideRestoreEditorActionsToolbarAction();
+    void showOrHideRestoreEditorItemsToolbarAction();
 
-    QTreeWidgetItem* mpAliasBaseItem;
-    QTreeWidgetItem* mpTriggerBaseItem;
-    QTreeWidgetItem* mpScriptsBaseItem;
-    QTreeWidgetItem* mpTimerBaseItem;
-    QTreeWidgetItem* mpActionBaseItem;
-    QTreeWidgetItem* mpKeyBaseItem;
-    QTreeWidgetItem* mpVarBaseItem;
 
-    QTreeWidgetItem* mpCurrentActionItem;
-    QTreeWidgetItem* mpCurrentKeyItem;
-    QTreeWidgetItem* mpCurrentTimerItem;
-    QTreeWidgetItem* mpCurrentScriptItem;
-    QTreeWidgetItem* mpCurrentTriggerItem;
-    QTreeWidgetItem* mpCurrentAliasItem;
-    QTreeWidgetItem* mpCurrentVarItem;
+    QToolBar* toolBar = nullptr;
+    QToolBar* toolBar2 = nullptr;
+    bool showHiddenVars = false;
 
-    EditorViewType mCurrentView;
+    QTreeWidgetItem* mpActionBaseItem = nullptr;
+    QTreeWidgetItem* mpAliasBaseItem = nullptr;
+    QTreeWidgetItem* mpKeyBaseItem = nullptr;
+    QTreeWidgetItem* mpScriptsBaseItem = nullptr;
+    QTreeWidgetItem* mpTimerBaseItem = nullptr;
+    QTreeWidgetItem* mpTriggerBaseItem = nullptr;
+    QTreeWidgetItem* mpVarBaseItem = nullptr;
 
-    QScrollArea* mpScrollArea;
-    QWidget* HpatternList;
+    QTreeWidgetItem* mpCurrentActionItem = nullptr;
+    QTreeWidgetItem* mpCurrentAliasItem = nullptr;
+    QTreeWidgetItem* mpCurrentKeyItem = nullptr;
+    QTreeWidgetItem* mpCurrentScriptItem = nullptr;
+    QTreeWidgetItem* mpCurrentTimerItem = nullptr;
+    QTreeWidgetItem* mpCurrentTriggerItem = nullptr;
+    QTreeWidgetItem* mpCurrentVarItem = nullptr;
+
+    EditorViewType mCurrentView = EditorViewType::cmUnknownView;
+
+    QScrollArea* mpScrollArea = nullptr;
+    QWidget* HpatternList = nullptr;
     // this widget holds the errors, trigger patterns, and all other widgets that aren't edbee
     // in it, as a workaround for an extra splitter getting created by Qt below the error msg otherwise
-    QWidget *mpNonCodeWidgets;
-    dlgTriggersMainArea* mpTriggersMainArea;
-    dlgTimersMainArea* mpTimersMainArea;
-    dlgSystemMessageArea* mpSystemMessageArea;
-    dlgSourceEditorArea* mpSourceEditorArea;
-    dlgSourceEditorFindArea* mpSourceEditorFindArea;
-    dlgAliasMainArea* mpAliasMainArea;
-    dlgActionMainArea* mpActionsMainArea;
-    dlgScriptsMainArea* mpScriptsMainArea;
-    dlgKeysMainArea* mpKeysMainArea;
-    bool mIsScriptsMainAreaEditHandler;
-    QListWidgetItem* mpScriptsMainAreaEditHandlerItem;
-    bool mIsGrabKey;
+    QWidget *mpNonCodeWidgets = nullptr;
+    dlgActionMainArea* mpActionsMainArea = nullptr;
+    dlgAliasMainArea* mpAliasMainArea = nullptr;
+    dlgKeysMainArea* mpKeysMainArea = nullptr;
+    dlgScriptsMainArea* mpScriptsMainArea = nullptr;
+    dlgTriggersMainArea* mpTriggersMainArea = nullptr;
+    dlgTimersMainArea* mpTimersMainArea = nullptr;
+    dlgVarsMainArea* mpVarsMainArea = nullptr;
+
+    dlgSourceEditorArea* mpSourceEditorArea = nullptr;
+    dlgSourceEditorFindArea* mpSourceEditorFindArea = nullptr;
+    dlgSystemMessageArea* mpSystemMessageArea = nullptr;
+
+    bool mIsScriptsMainAreaEditHandler = false;
+    QListWidgetItem* mpScriptsMainAreaEditHandlerItem = nullptr;
+    bool mIsGrabKey = false;
     QPointer<Host> mpHost;
     QList<dlgTriggerPatternEdit*> mTriggerPatternEdit;
-    dlgVarsMainArea* mpVarsMainArea;
-    bool mChangingVar;
+    bool mChangingVar = false;
 
-    QTextDocument *             mpSourceEditorDocument;
-    edbee::TextEditorWidget *   mpSourceEditorEdbee;
-    edbee::TextDocument *       mpSourceEditorEdbeeDocument;
-    edbee::TextSearcher *       mpSourceEditorSearcher;
+    QTextDocument* mpSourceEditorDocument = nullptr;
+    edbee::TextEditorWidget* mpSourceEditorEdbee = nullptr;
+    edbee::TextDocument* mpSourceEditorEdbeeDocument = nullptr;
+    edbee::TextSearcher* mpSourceEditorSearcher = nullptr;
 
-    QRegularExpression* simplifyEdbeeStatusBarRegex;
+    QRegularExpression* simplifyEdbeeStatusBarRegex = nullptr;
 
-    SearchOptions mSearchOptions;
+    SearchOptions mSearchOptions = SearchOptionNone;
 
     // This has a menu which the following QActions are inserted into:
-    QAction* mpAction_searchOptions;
+    QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
 
-    QAction* mpAction_searchCaseSensitive;
-    QAction* mpAction_searchIncludeVariables;
+    QAction* mpAction_searchCaseSensitive = nullptr;
+    QAction* mpAction_searchIncludeVariables = nullptr;
     // TODO: Add other searchOptions
     // QAction* mpAction_searchWholeWords;
     // QAction* mpAction_searchRegExp;
 
-    QAction* mProfileSaveAction;
-    QAction* mProfileSaveAsAction;
+    QAction* mProfileSaveAction = nullptr;
+    QAction* mProfileSaveAsAction = nullptr;
+
+    // Enables the toolbars to be unhidden if they get hid:
+    QAction* mpAction_restoreEditorActionsToolbar = nullptr;
+    QAction* mpAction_restoreEditorItemsToolbar = nullptr;
 
     // We need to keep a record of this button as we have to disable it
     // for the "Variables" view:
-    QAction* mpExportAction;
+    QAction* mpExportAction = nullptr;
 
     // tracks the duration of the "Save Profile As" action so
     // autosave doesn't kick in
-    bool mSavingAs;
+    bool mSavingAs = false;
 
     // keeps track of the dialog reset being queued
-    bool mCleanResetQueued;
+    bool mCleanResetQueued = false;
 
     // profile autosave interval in minutes
-    int mAutosaveInterval;
+    int mAutosaveInterval = 2;
 
     // tracks location of the splitter in the trigger editor for each tab
     QByteArray mTriggerEditorSplitterState;
@@ -516,7 +533,7 @@ private:
     QByteArray mVarEditorSplitterState;
 
     // approximate max duration "Copy as image" can take in seconds
-    int mCopyAsImageMax;
+    int mCopyAsImageMax = 0;
 
     QString msgInfoAddAlias;
     QString msgInfoAddTrigger;

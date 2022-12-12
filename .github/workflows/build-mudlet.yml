@@ -21,6 +21,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
+            gcc_compiler_version: 8
             qt: '5.14.2'
             deploy: 'deploy'
             run_tests: 'true'
@@ -28,55 +29,53 @@ jobs:
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
+            # We still need a gcc for some sub-stages - and it ain't always the same one:
+            gcc_compiler_version: 9
             qt: '5.14.2'
-          - os: ubuntu-latest
-            buildname: 'ubuntu / qt 5.11'
-            triplet: x64-linux
-            compiler: gcc_64
-            qt: '5.11.0'
-          - os: macos-10.15
+          - os: macos-11
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.2'
             deploy: 'deploy'
-#          - os: windows-2019
-#            buildname: 'windows'
-#            triplet: x64-mingw-dynamic
-#            # compiler: flag not used in windows pipeline
-#            qt: '5.14.2'
+          - os: windows-2019
+            buildname: 'windows'
+            triplet: x64-mingw-dynamic
+            # compiler: flag not used in windows pipeline
+            qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
-
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
+      # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
+      CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
 
-    - name: Restore Qt cache
-      uses: actions/cache@v2.1.7
-      id: cache-qt
-      with:
-        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+    - name: (Windows) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Windows'
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        arch: win64_mingw73 # this key is relevant only for windows
-        cached: ${{steps.cache-qt.outputs.cache-hit}}
-        aqtversion: '==1.1.2'
+        arch: win64_mingw73
+        cache: true
 
+    - name: (Linux/macOS) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        cache: true
 
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -115,7 +114,7 @@ jobs:
     - name: (Linux) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'Linux'
       run: |
-        # dependencies needed for vcpkg specifically
+        # gettext is needed for vcpkg
         sudo apt-get install gettext -y
 
     - name: Restore from cache and run vcpkg
@@ -135,8 +134,6 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # add new tap to brew for installing gon
-        brew tap mitchellh/gon
         # these aren't available or don't work well in vcpkg
         brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
@@ -163,6 +160,19 @@ jobs:
         # Use latest available XCode
         echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
 
+      # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
+      # so install it in a format that works
+    - name: (Linux) Install Lua
+      uses: leafo/gh-actions-lua@v9
+      if: runner.os == 'Linux'
+      with:
+        luaVersion: "5.1.5"
+        buildCache: false
+
+    - name: (Linux) Install latest Luarocks
+      uses: leafo/gh-actions-luarocks@v4
+      if: runner.os == 'Linux'
+
     - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
       run: |
@@ -171,14 +181,14 @@ jobs:
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
+        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
-        sudo update-alternatives --set gcc /usr/bin/gcc-7
-        sudo update-alternatives --set g++ /usr/bin/g++-7
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -218,21 +228,17 @@ jobs:
         CheckAndInstallZlib
         CheckAndInstallLibzip
 
-    - name: (Linux Clang) change compiler
+    - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
          echo "CXX=clang++" >> $GITHUB_ENV
          echo "CC=clang" >> $GITHUB_ENV
-
-    - name: (Qt 5.11) disable optional components
-      if: matrix.qt == '5.11.0'
-      run: |
-        echo "WITH_UPDATER=no" >> $GITHUB_ENV
-        echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
-        echo "WITH_FONTS=no" >> $GITHUB_ENV
+         echo "WITH_UPDATER=no" >> $GITHUB_ENV
+         echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
+         echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: pat-s/always-upload-cache@v2.1.5
+      uses: pat-s/always-upload-cache@v3.0.11
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
@@ -247,7 +253,7 @@ jobs:
 
     - name: (Linux/macOS) check ccache stats prior to build
       if: runner.os == 'Linux' || runner.os == 'macOS'
-      run: ccache --show-stats
+      run: ccache --zero-stats --show-stats
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
@@ -267,7 +273,7 @@ jobs:
 
     - name: Upload GitHub Actions artifact of vcpkg build logs
       if: failure()
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: vcpkg-logs-${{ runner.os }}
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
@@ -282,7 +288,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
@@ -305,7 +311,7 @@ jobs:
         run-luarocks install --local luautf8
         run-luarocks install --local lua-zip
         run-luarocks install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
-        run-luarocks install --local lrexlib-pcre
+        run-luarocks install PCRE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lrexlib-pcre
 
         # CI changelog generation dependencies
         run-luarocks install --local argparse
@@ -338,7 +344,7 @@ jobs:
         AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}

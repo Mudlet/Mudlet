@@ -45,11 +45,12 @@
 #endif
 
 #include "pre_guard.h"
+#include <QTextCodec>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMessageBox>
 #include <QNetworkProxy>
 #include <QProgressDialog>
-#include <QTextCodec>
 #include <QSslError>
 #include "post_guard.h"
 
@@ -70,48 +71,9 @@ QFile replayFile;
 
 
 cTelnet::cTelnet(Host* pH, const QString& profileName)
-: mResponseProcessed(true)
-, networkLatencyTime(0.0)
-, mAlertOnNewData(true)
-, mGA_Driver(false)
-, mFORCE_GA_OFF(false)
-, mpComposer(nullptr)
-, mpDownloader()
-, mpProgressDialog()
-, mProfileName(profileName)
+: mProfileName(profileName)
 , mpHost(pH)
-, mpOutOfBandDataIncomingCodec()
-, outgoingDataCodec()
-, outgoingDataEncoder()
-, hostPort()
-, mWaitingForResponse()
-, mZstream()
-, mNeedDecompression()
-, iac()
-, iac2()
-, insb()
-, recvdGA()
-, mEncoding()
 , mpPostingTimer(new QTimer(this))
-, mUSE_IRE_DRIVER_BUGFIX(false)
-, mCommands(0)
-, mMCCP_version_1(false)
-, mMCCP_version_2(false)
-, mIsTimerPosting()
-, enableCHARSET(false)
-, enableATCP(false)
-, enableGMCP(false)
-, enableMSSP(false)
-, enableMSP(false)
-, enableChannel102(false)
-, mDontReconnect(false)
-, mAutoReconnect(false)
-, loadingReplay(false)
-, mIsReplayRunFromLua(false)
-, mEncodingWarningIssued(false)
-, mEncoderFailureNoticeIssued(false)
-, mConnectViaProxy(false)
-, mIncompleteSB(false)
 {
     // initialize encoding to a sensible default - needs to be a different value
     // than that in the initialisation list so that it is processed as a change
@@ -138,16 +100,16 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     QTimer::singleShot(0, this, [this]() {
 #if !defined(QT_NO_SSL)
         if (mpHost->mSslTsl) {
-            connect(&socket, &QSslSocket::encrypted, this, &cTelnet::handle_socket_signal_connected);
+            connect(&socket, &QSslSocket::encrypted, this, &cTelnet::slot_socketConnected);
         } else {
-            connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+            connect(&socket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
         }
-        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::handle_socket_signal_sslError);
+        connect(&socket, qOverload<const QList<QSslError>&>(&QSslSocket::sslErrors), this, &cTelnet::slot_socketSslError);
 #else
-        connect(&socket, &QAbstractSocket::connected, this, &cTelnet::handle_socket_signal_connected);
+        connect(&socket, &QAbstractSocket::connected, this, &cTelnet::slot_socketConnected);
 #endif
-        connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::handle_socket_signal_disconnected);
-        connect(&socket, &QIODevice::readyRead, this, &cTelnet::handle_socket_signal_readyRead);
+        connect(&socket, &QAbstractSocket::disconnected, this, &cTelnet::slot_socketDisconnected);
+        connect(&socket, &QIODevice::readyRead, this, &cTelnet::slot_socketReadyToBeRead);
     });
 
 
@@ -419,7 +381,7 @@ void cTelnet::connectIt(const QString& address, int port)
     hostPort = port;
     postMessage(tr("[ INFO ]  - Looking up the IP address of server: %1:%2 ...").arg(address, QString::number(port)));
     // don't use a compile-time slot for this: https://bugreports.qt.io/browse/QTBUG-67646
-    QHostInfo::lookupHost(address, this, SLOT(handle_socket_signal_hostFound(QHostInfo)));
+    QHostInfo::lookupHost(address, this, SLOT(slot_socketHostFound(QHostInfo)));
 }
 
 void cTelnet::reconnect()
@@ -446,11 +408,12 @@ void cTelnet::abortConnection()
     socket.abort();
 }
 
-void cTelnet::handle_socket_signal_error()
-{
-    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
-    postMessage(err);
-}
+// Not used:
+//void cTelnet::slot_socketError()
+//{
+//    QString err = tr("[ ERROR ] - TCP/IP socket ERROR:") % socket.errorString();
+//    postMessage(err);
+//}
 
 void cTelnet::slot_send_login()
 {
@@ -466,7 +429,7 @@ void cTelnet::slot_send_pass()
     }
 }
 
-void cTelnet::handle_socket_signal_connected()
+void cTelnet::slot_socketConnected()
 {
     QString msg;
 
@@ -496,7 +459,7 @@ void cTelnet::handle_socket_signal_connected()
     mpHost->raiseEvent(event);
 }
 
-void cTelnet::handle_socket_signal_disconnected()
+void cTelnet::slot_socketDisconnected()
 {
     QString msg;
     TEvent event {};
@@ -577,7 +540,7 @@ void cTelnet::handle_socket_signal_disconnected()
 }
 
 #if !defined(QT_NO_SSL)
-void cTelnet::handle_socket_signal_sslError(const QList<QSslError>& errors)
+void cTelnet::slot_socketSslError(const QList<QSslError>& errors)
 {
     QSslCertificate cert = socket.peerCertificate();
     QList<QSslError> ignoreErrorList;
@@ -597,22 +560,22 @@ void cTelnet::handle_socket_signal_sslError(const QList<QSslError>& errors)
 }
 #endif
 
-void cTelnet::handle_socket_signal_hostFound(QHostInfo hostInfo)
+void cTelnet::slot_socketHostFound(QHostInfo hostInfo)
 {
 #if !defined(QT_NO_SSL)
     if (mpHost->mSslTsl) {
-        postMessage(tr("[ INFO ]  - Trying secure connection to %1: %2 ...\n").arg(hostInfo.hostName(), QString::number(hostPort)));
+        postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying secure connection to %1: %2 ...").arg(hostInfo.hostName(), QString::number(hostPort))));
         socket.connectToHostEncrypted(hostInfo.hostName(), hostPort, QIODevice::ReadWrite);
 
     } else {
 #endif
         if (!hostInfo.addresses().isEmpty()) {
             mHostAddress = hostInfo.addresses().constFirst();
-            postMessage(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2\n").arg(hostName, mHostAddress.toString()));
+            postMessage(qsl("%1\n").arg(tr("[ INFO ]  - The IP address of %1 has been found. It is: %2").arg(hostName, mHostAddress.toString())));
             if (!mConnectViaProxy) {
-                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 ...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 ...").arg(mHostAddress.toString(), QString::number(hostPort))));
             } else {
-                postMessage(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...\n").arg(mHostAddress.toString(), QString::number(hostPort)));
+                postMessage(qsl("%1\n").arg(tr("[ INFO ]  - Trying to connect to %1:%2 via proxy...").arg(mHostAddress.toString(), QString::number(hostPort))));
             }
             socket.connectToHost(mHostAddress, hostPort);
         } else {
@@ -859,7 +822,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
     }
 }
 
-void cTelnet::setDownloadProgress(qint64 got, qint64 tot)
+void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
 {
     mpProgressDialog->setRange(0, static_cast<int>(tot));
     mpProgressDialog->setValue(static_cast<int>(got));
@@ -1418,9 +1381,9 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
 
         if (option == OPT_TIMING_MARK) {
-            qDebug() << "We ARE willing to enable TIMING_MARK";
-            // send WILL TIMING_MARK
-            sendTelnetOption(TN_WILL, option);
+            // See https://www.rfc-editor.org/rfc/rfc860.txt
+            qDebug() << "We have received a DO TIMING_MARK request, sending a WONT as we do not actually do anything with it but even that can be useful to the sender.";
+            sendTelnetOption(TN_WONT, option);
         } else if (!myOptionState[idxOption]) {
             // only if the option is currently disabled
 
@@ -1622,11 +1585,14 @@ void cTelnet::processTelnetCommand(const std::string& command)
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
             QByteArray rawData = command.c_str();
+
             if (command.size() < 6) {
                 return;
             }
 
-            rawData = rawData.replace(TN_BELL, QByteArray("\\\\7"));
+            rawData = rawData.replace(TN_BELL, QByteArray("\\\\007"));
+
+            rawData = rawData.replace("\x1b", QByteArray("\\\\027"));
 
             // rawData is in the Mud Server's encoding, trim off the Telnet suboption
             // bytes from beginning (3) and end (2):
@@ -1706,7 +1672,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 mudlet::self()->setNetworkRequestDefaults(url, request);
                 mpPackageDownloadReply = mpDownloader->get(request);
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-                connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+                connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
                 connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
                 mpProgressDialog->show();
             }
@@ -2068,7 +2034,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mudlet::self()->setNetworkRequestDefaults(url, request);
         mpPackageDownloadReply = mpDownloader->get(request);
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-        connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::setDownloadProgress);
+        connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
         connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
         mpProgressDialog->show();
         return;
@@ -2113,6 +2079,8 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
     transcodedMsg.remove(QChar::CarriageReturn);
 
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
+
+    promptTlsConnectionAvailable();
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#MSP
@@ -2189,14 +2157,6 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
 
                 if (mspVAR == "V") {
                     mediaData.setMediaVolume(mspVAL.toInt());
-
-                    if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
-                        continue; // Support preloading
-                    } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
-                        mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
-                    } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
-                        mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
-                    }
                 } else if (mspVAR == "L") {
                     mediaData.setMediaLoops(mspVAL.toInt());
 
@@ -2230,6 +2190,61 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     mpHost->mpMedia->playMedia(mediaData);
+}
+
+bool cTelnet::isIPAddress(QString& arg)
+{
+    bool isIPAddress = false;
+
+    QHostAddress address(arg);
+
+    if (QAbstractSocket::IPv4Protocol == address.protocol()) {
+        isIPAddress = true;
+    } else if (QAbstractSocket::IPv6Protocol == address.protocol()) {
+        isIPAddress = true;
+    }
+
+    return isIPAddress;
+}
+
+void cTelnet::promptTlsConnectionAvailable()
+{
+    // If an SSL port is detected by MSSP and we're not using it, prompt to use on future connections
+    if (mpHost->mMSSPTlsPort && socket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable && !isIPAddress(hostName)
+        && (mpHost->mMSSPHostName.isEmpty() || QString::compare(hostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
+        postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
+
+        QPointer msgBox = new QMessageBox();
+
+        msgBox->setIcon(QMessageBox::Question);
+        msgBox->setText(tr("For data transfer protection and privacy, this connection advertises a secure port."));
+        msgBox->setInformativeText(tr("Update to port %1 and connect with encryption?").arg(QString::number(mpHost->mMSSPTlsPort)));
+        msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox->setDefaultButton(QMessageBox::Yes);
+
+        int ret = msgBox->exec();
+        delete msgBox;
+
+        switch (ret) {
+        case QMessageBox::Yes:
+            cTelnet::disconnectIt();
+            hostPort = mpHost->mMSSPTlsPort;
+            mpHost->setPort(hostPort);
+            mpHost->mSslTsl = true;
+            mpHost->writeProfileData(QLatin1String("port"), QString::number(hostPort));
+            mpHost->writeProfileData(QLatin1String("ssl_tsl"), QString::number(Qt::Checked));
+            cTelnet::connectIt(mpHost->getUrl(), hostPort);
+            break;
+        case QMessageBox::No:
+            cTelnet::disconnectIt();
+            mpHost->mAskTlsAvailable = false; // Don't ask next time
+            cTelnet::reconnect();             // A no-op (;) is desired, but read buffer does not flush
+            break;
+        default:
+            // should never be reached
+            break;
+        }
+    }
 }
 
 bool cTelnet::purgeMediaCache()
@@ -2785,7 +2800,7 @@ void cTelnet::slot_processReplayChunk()
     }
 }
 
-void cTelnet::handle_socket_signal_readyRead()
+void cTelnet::slot_socketReadyToBeRead()
 {
     if (mWaitingForResponse) {
         networkLatencyTime = networkLatencyTimer.elapsed() / 1000.0;
@@ -3051,11 +3066,11 @@ void cTelnet::setKeepAlive(int socketHandle)
 
 #else // For OSes other than Windows:
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS) || defined(Q_OS_OPENBSD)
     setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
 #else
     // FreeBSD always has the Keep-alive option enabled, so the above is not
-    // needed
+    // usable
     Q_UNUSED(on)
 #endif
 
@@ -3079,15 +3094,23 @@ void cTelnet::setKeepAlive(int socketHandle)
 #if defined(Q_OS_MACOS)
     // TCP_KEEPIDLE is TCP_KEEPALIVE on MacOs
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+#elif defined(Q_OS_OPENBSD)
+    // There does not appear to be a per-socket option for TCP_KEEPALIVE on OpenBSD
+    // only a system wide one
 #else
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
 #endif
+
+#if !defined(Q_OS_OPENBSD)
+    // There does not appear to be a per-socket options for these on OpenBSD
+    // only system wide one:
 
     // Interval between keep-alives, in seconds:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
     // Number of failed keep alives before forcing a close:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
-#endif // defined(Q_OS_WIN32)
+#endif // !defined(Q_OS_OPENBSD)
+#endif // !defined(Q_OS_WIN32)
 }
 
 // Used to convert a collection of Bytes in the current MUD Server encoding
@@ -3208,7 +3231,7 @@ void cTelnet::setPostingTimeout(const int timeout)
 
     if (readableAsOriginalFormat | readableAsModifiedFormat) {
         qDebug().nospace().noquote() << "cTelnet::testReadReplayFile() INFO - The " << (readableAsOriginalFormat ? "original" : "modified") << " format replay has: " << replayChunks
-                                     << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(QStringLiteral("hh:mm:ss.zzz")) << " (hh:mm:ss).";
+                                     << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(qsl("hh:mm:ss.zzz")) << " (hh:mm:ss).";
 
         return {true, readableAsModifiedFormat};
     }

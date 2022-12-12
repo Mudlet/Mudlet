@@ -3,7 +3,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2017-2018, 2020 by Stephen Lyons                        *
+ *   Copyright (C) 2017-2018, 2020, 2022 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -34,33 +34,12 @@
 #include <QScrollBar>
 #include <QShortcut>
 #include "post_guard.h"
-#include "utils.h"
 
-
-QString dlgIRC::HostNameCfgItem = qsl("irc_host");
-QString dlgIRC::HostPortCfgItem = qsl("irc_port");
-QString dlgIRC::HostSecureCfgItem = qsl("irc_secure");
-QString dlgIRC::NickNameCfgItem = qsl("irc_nick");
-QString dlgIRC::PasswordCfgItem = qsl("irc_password");
-QString dlgIRC::ChannelsCfgItem = qsl("irc_channels");
-QString dlgIRC::DefaultHostName = qsl("irc.libera.chat");
-int dlgIRC::DefaultHostPort = 6667;
-bool dlgIRC::DefaultHostSecure = false;
-QString dlgIRC::DefaultNickName = qsl("Mudlet");
-QStringList dlgIRC::DefaultChannels = QStringList() << qsl("#mudlet");
-int dlgIRC::DefaultMessageBufferLimit = 5000;
 
 dlgIRC::dlgIRC(Host* pHost)
-: mReadyForSending(false)
-, mpHost(pHost)
-, mIrcStarted(false)
-, mInputHistoryMax(8)
-, mConnectedHostName()
+: mpHost(pHost)
+, mRealName(mudlet::self()->version)
 {
-    mInputHistoryMax = 8;
-    mInputHistoryIdxNext = 0;
-    mInputHistoryIdxCurrent = 0;
-
     setupUi(this);
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));
 
@@ -99,8 +78,6 @@ dlgIRC::dlgIRC(Host* pHost)
     connect(connection, &IrcConnection::numericMessageReceived, this, &dlgIRC::slot_receiveNumericMessage);
 
     mPassword = readIrcPassword(mpHost);
-    mUserName = qsl("mudlet");
-    mRealName = mudlet::self()->version;
     mHostName = readIrcHostName(mpHost);
     mHostPort = readIrcHostPort(mpHost);
     mHostSecure = readIrcHostSecure(mpHost);
@@ -319,7 +296,7 @@ void dlgIRC::setupBuffers()
 
 bool dlgIRC::processCustomCommand(IrcCommand* cmd)
 {
-    if (cmd->type() != IrcCommand::Custom || cmd->parameters().count() < 1) {
+    if (cmd->type() != IrcCommand::Custom || cmd->parameters().isEmpty()) {
         return false;
     }
 
@@ -502,11 +479,7 @@ void dlgIRC::slot_onTextEntered()
         lineEdit->clear();
     } else if (input.length() > 1) {
         QString error;
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
         QString command = lineEdit->text().mid(1).split(" ", Qt::SkipEmptyParts).value(0).toUpper();
-#else
-        QString command = lineEdit->text().mid(1).split(" ", QString::SkipEmptyParts).value(0).toUpper();
-#endif
         if (commandParser->commands().contains(command)) {
             error = tr("[ERROR] Syntax: %1").arg(commandParser->syntax(command).replace(qsl("<"), qsl("&lt;")).replace(qsl(">"), qsl("&gt;")));
         } else {
@@ -534,7 +507,7 @@ void dlgIRC::slot_onHistoryCompletion()
         mInputHistoryIdxCurrent = 0;
     }
 
-    if (mInputHistory.count() == 0) {
+    if (mInputHistory.isEmpty()) {
         return;
     }
 
@@ -828,11 +801,7 @@ QStringList dlgIRC::readIrcChannels(Host* pH)
     if (channelstr.isEmpty()) {
         channels << dlgIRC::DefaultChannels;
     } else {
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
         channels = channelstr.split(qsl(" "), Qt::SkipEmptyParts);
-#else
-        channels = channelstr.split(qsl(" "), QString::SkipEmptyParts);
-#endif
     }
     return channels;
 }

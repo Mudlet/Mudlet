@@ -11,11 +11,11 @@ jobs:
     if: ${{ github.repository_owner == 'Mudlet' }}
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: leafo/gh-actions-lua@v8
+    - uses: actions/checkout@v3
+    - uses: leafo/gh-actions-lua@v9
       with:
         luaVersion: "5.1.5"
-    - uses: actions/setup-node@v2.5.1
+    - uses: actions/setup-node@v3
     - uses: leafo/gh-actions-luarocks@v4
 
     - name: Retrieve latest PTB version
@@ -68,14 +68,14 @@ jobs:
         bold=$(tput bold)
         normal=$(tput sgr0)
         EXIT_CODE_LINUX=0
-        LINUX_OUTPUT=$(mktemp)
         EXIT_CODE_MACOS=0
-        MACOS_OUTPUT=$(mktemp)
 
         echo "Linking ${bold}Linux PTB${normal} ${PTB_VERSION}..."
-        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${LINUX_PTB_URL}" 1>$LINUX_OUTPUT || EXIT_CODE_LINUX=$?
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${LINUX_PTB_URL}" || EXIT_CODE_LINUX=$?
         echo "Linking ${bold}macOS PTB${normal} ${PTB_VERSION}..."
-        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_PTB_URL}" 1>$MACOS_OUTPUT || EXIT_CODE_MACOS=$?
+        dblsqd push -a mudlet -c public-test-build -r "${PTB_VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${MACOS_PTB_URL}" || EXIT_CODE_MACOS=$?
 
-        [ -z "$EXIT_CODE_LINUX" ] || [ "$LINUX_OUTPUT" != *"This combination of os:arch and type exists already for this release."* ] && exit 1
-        [ -z "$EXIT_CODE_MACOS" ] || [ "$MACOS_OUTPUT" != *"This combination of os:arch and type exists already for this release."* ] && exit 1
+        if [ "${EXIT_CODE_LINUX}" != 0 ] && [ "${EXIT_CODE_MACOS}" != 0 ]; then
+          exit 1
+        fi
+

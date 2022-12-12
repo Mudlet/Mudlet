@@ -100,6 +100,17 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals(expected, actual)
     end)
 
+    it("Should handle bold, before or after colours", function()
+      local sequences = {
+        {"\27[31m\27[1m", "<128,0,0><255,0,0>"},
+        {"\27[1m\27[31m", "<255,0,0>"},
+      }
+      for _, seq in ipairs(sequences) do
+          local actualResult = ansi2decho(seq[1])
+          assert.are.same(seq[2], actualResult)
+      end
+    end)
+
     it("Should leave normal text and other escape sequences alone", function()
       local sequences = {
         {"Hello World", "Hello World"},
@@ -143,7 +154,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local sequences = {
         {"\27[4z<PROMPT>\27[0;32;40m4876h, \27[0;1;33;40m3539m, \27[0;1;31;40m22200e, \27[0;1;32;40m21648w \27[0;37;40mcexkdb-\27[4z</PROMPT>", "\27[4z<PROMPT><r><0,128,0:0,0,0>4876h, <r><255,255,0:0,0,0>3539m, <r><255,0,0:0,0,0>22200e, <r><0,255,0:0,0,0>21648w <r><192,192,192:0,0,0>cexkdb-\27[4z</PROMPT>"},
         {'\27[0;1;36;40mYou say in a baritone voice, "Test."\27[0;37;40m', '<r><0,255,255:0,0,0>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'},
-        {'\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m', '<215,175,95:255,255,215>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'}
+        {'\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m', '<215,175,95:255,255,215>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'},
+        {'* \27[35m(a338f71)\27[m - \27[33m[Update release.yml]\27[m  \27[1;34m<TheLastDarkthorne>\27[m', '* <128,0,128>(a338f71)<r> - <128,128,0>[Update release.yml]<r>  <0,0,255><TheLastDarkthorne><r>'}
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
@@ -533,6 +545,96 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         _Echos.Process('<o>Overline</o>', 'Color'),
         { "", "\27overline", "Overline", "\27overlineoff", "" }
       )
+    end)
+  end)
+
+  describe("Tests the functionality of cecho2string", function()
+    it("Should be able to handle stripping colors", function()
+      local testCases = {
+        {"<red>This is<blue> a simple test", "This is a simple test"},
+        {"<purple>This<reset> is a <more> complicated test", "This is a <more> complicated test"},
+        {"This <ansiBlack>should also be easy", "This should also be easy"}
+      }
+      for _, case in ipairs(testCases) do
+        local expected = case[2]
+        local actual = cecho2string(case[1])
+        assert.equals(expected, actual)
+      end
+    end)
+
+    it("Should be able to strip formatting codes as well", function()
+      local testCases = {
+        {"<b>Bold</b>", "Bold"},
+        {"<u>Underline</u>", "Underline"},
+        {"<i>Italics</i>", "Italics"},
+        {"<s>Strikethrough</s>", "Strikethrough"},
+        {"<o>Overline</o>", "Overline"}
+      }
+      for _, case in ipairs(testCases) do
+        local expected = case[2]
+        local actual = cecho2string(case[1])
+        assert.equals(expected, actual)
+      end
+    end)
+  end)
+
+  describe("Tests the functionality of decho2string", function()
+    it("Should be able to handle stripping colors", function()
+      local testCases = {
+        {"<255,0,0>This is<0,255,0> a simple test", "This is a simple test"},
+        {"<128,128,0>This<r> is a <more> complicated test", "This is a <more> complicated test"},
+        {"This <0,0,0>should also be easy", "This should also be easy"}
+      }
+      for _, case in ipairs(testCases) do
+        local expected = case[2]
+        local actual = decho2string(case[1])
+        assert.equals(expected, actual)
+      end
+    end)
+
+    it("Should be able to strip formatting codes as well", function()
+      local testCases = {
+        {"<b>Bold</b>", "Bold"},
+        {"<u>Underline</u>", "Underline"},
+        {"<i>Italics</i>", "Italics"},
+        {"<s>Strikethrough</s>", "Strikethrough"},
+        {"<o>Overline</o>", "Overline"}
+      }
+      for _, case in ipairs(testCases) do
+        local expected = case[2]
+        local actual = decho2string(case[1])
+        assert.equals(expected, actual)
+      end
+    end)
+  end)
+
+  describe("Tests the functionality of hecho2string", function()
+    it("Should be able to handle stripping colors", function()
+      local testCases = {
+        {"#ff0000This is#00ff00 a simple test", "This is a simple test"},
+        {"#777700This#r is a #more complicated test", "This is a #more complicated test"},
+        {"This |c000000should also be easy", "This should also be easy"}
+      }
+      for _, case in ipairs(testCases) do
+        local expected = case[2]
+        local actual = hecho2string(case[1])
+        assert.equals(expected, actual)
+      end
+    end)
+
+    it("Should be able to strip formatting codes as well", function()
+      local testCases = {
+        {"#bBold#/b", "Bold"},
+        {"#uUnderline#/u", "Underline"},
+        {"#iItalics#/i", "Italics"},
+        {"#sStrikethrough#/s", "Strikethrough"},
+        {"#oOverline#/o", "Overline"}
+      }
+      for _, case in ipairs(testCases) do
+        local expected = case[2]
+        local actual = hecho2string(case[1])
+        assert.equals(expected, actual)
+      end
     end)
   end)
 

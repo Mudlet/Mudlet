@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2020, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -168,7 +169,7 @@ public:
     QString         getDiscordGameName()             { return mDiscordGameName; }
     void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
     int             getPort()                        { return mPort; }
-    void            setPort(const int p)                 { mPort = p; }
+    void            setPort(const int p)             { mPort = p; }
     void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
     QString &       getLogin()                       { return mLogin; }
     void            setLogin(const QString& s)       { mLogin = s; }
@@ -195,13 +196,15 @@ public:
     void            setDiscordInviteURL(const QString& s);
     const QString&  getDiscordInviteURL() const { return mDiscordInviteURL; }
     void            setSpellDic(const QString&);
-    const QString&  getSpellDic() { return mSpellDic; }
+    QString         getSpellDic();
     void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
                         useShared = mUseSharedDictionary; }
-    void            setControlCharacterMode(const TConsole::ControlCharacterMode mode);
-    TConsole::ControlCharacterMode  getControlCharacterMode() const { return mControlCharacterMode; }
+    void            setControlCharacterMode(const ControlCharacterMode mode);
+    ControlCharacterMode  getControlCharacterMode() const { return mControlCharacter; }
+    bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
+    void            setLargeAreaExitArrows(const bool);
 
     void closingDown();
     bool isClosingDown();
@@ -216,7 +219,6 @@ public:
     KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
     ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
 
-    void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
     int getHostID()
@@ -337,6 +339,7 @@ public:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
+    void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
     void setDebugShowAllProblemCodepoints(const bool);
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
@@ -377,6 +380,8 @@ public:
     bool setLabelOnLeave(const QString&, const int);
     std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
@@ -390,6 +395,10 @@ public:
     bool commitLayoutUpdates(bool flush = false);
     void setScreenDimensions(const int width, const int height) { mScreenWidth = width; mScreenHeight = height; }
     std::optional<QString> windowType(const QString& name) const;
+    bool getEditorShowBidi() const { return mEditorShowBidi; }
+    void setEditorShowBidi(const bool);
+    bool caretEnabled() const;
+    void setCaretEnabled(bool enabled);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -420,6 +429,9 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+    bool mAskTlsAvailable;
+    int mMSSPTlsPort;
+    QString mMSSPHostName;
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
@@ -513,7 +525,6 @@ public:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
-    bool mEditorShowBidi = true;
 
     // code editor theme (human-friendly name)
     QString mEditorTheme;
@@ -575,9 +586,11 @@ public:
     QColor mFgColor_2;
     QColor mBgColor_2;
     QColor mRoomBorderColor;
+    QColor mMapInfoBg = QColor(150, 150, 150, 120);
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
-    bool mLogStatus;
+    bool mLogStatus = false;
+    bool mTimeStampStatus = false;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
@@ -627,10 +640,11 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
+    TConsole::SearchOptions mBufferSearchOptions;
     QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
-    QList<TToolBar*> mToolbarLayoutChanges;
+    QList<QPointer<TToolBar>> mToolbarLayoutChanges;
 
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
@@ -638,6 +652,26 @@ public:
     QMap<QString, QKeySequence*> profileShortcuts;
 
     bool mTutorialForCompactLineAlreadyShown;
+
+    bool mAnnounceIncomingText = true;
+    enum class BlankLineBehaviour {
+        Show,
+        Hide,
+        ReplaceWithSpace
+    };
+    Q_ENUM(BlankLineBehaviour)
+    BlankLineBehaviour mBlankLineBehaviour = BlankLineBehaviour::Show;
+
+    // shortcuts options visually impaired players have to switch between the input line and the main window
+    enum class CaretShortcut {
+        None,
+        Tab,
+        CtrlTab,
+        F6
+    };
+    Q_ENUM(CaretShortcut)
+    // shortcut to switch between the input line and the main window
+    CaretShortcut mCaretShortcut = CaretShortcut::None;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
@@ -651,7 +685,7 @@ signals:
     void signal_changeDebugShowAllProblemCodepoints(const bool);
     // Tells all consoles associated with this Host (but NOT the Central Debug
     // one) to change the way they show  control characters:
-    void signal_controlCharacterHandlingChanged(const TConsole::ControlCharacterMode);
+    void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
 
 private slots:
     void slot_purgeTemps();
@@ -673,6 +707,9 @@ private:
     void saveModules(bool backup = true);
     void updateModuleZips(const QString &zipName, const QString &moduleName);
     void reloadModules();
+    void startMapAutosave();
+    void timerEvent(QTimerEvent *event) override;
+    void autoSaveMap();
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
@@ -796,17 +833,21 @@ private:
     QTimer purgeTimer;
 
     // How to display (most) incoming control characters in TConsoles:
-    // TConsole::NoControlCharacterReplacement (0x0) = as is, no replacement
-    // TConsole::PictureControlCharacterReplacement (0x1) = as Unicode "Control
+    // ControlCharacterMode::AsIs (0x0) = as is, no replacement
+    // ControlCharacterMode::Picture (0x1) = as Unicode "Control
     //   Pictures" - use Unicode codepoints in range U+2400 to U+2421
-    // TConsole::PictureControlCharacterReplacement (0x2) = as "OEM Font"
+    // ControlCharacterMode::OEM (0x2) = as "OEM Font"
     //   characters (most often seen as a part of CP437
     //   encoding), see the corresponding Wikipedia page, e.g.
     //   EN: https://en.wikipedia.org/wiki/Code_page_437
     //   DE: https://de.wikipedia.org/wiki/Codepage_437
     //   RU: https://ru.wikipedia.org/wiki/CP437
-    TConsole::ControlCharacterMode mControlCharacterMode;
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
+    bool mLargeAreaExitArrows = false;
+    bool mEditorShowBidi = true;
+    // should focus should be on the main window with the caret enabled?
+    bool mCaretEnabled = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

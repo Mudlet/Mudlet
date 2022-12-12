@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019, 2022 by Stephen Lyons                        *
+ *                                            - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -37,19 +38,15 @@ class TMediaPlayer
 {
 public:
     TMediaPlayer()
-        : mpHost(nullptr)
-        , mMediaData()
-        , mMediaPlayer(nullptr)
-        , initialized(false)
-        {}
-    ~TMediaPlayer() {}
-
+    : mMediaData()
+    {}
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
-        : mpHost(pHost)
-        , mMediaData(mediaData)
-        , mMediaPlayer(new QMediaPlayer(pHost))
-        , initialized(true)
-        {}
+    : mpHost(pHost)
+    , mMediaData(mediaData)
+    , mMediaPlayer(new QMediaPlayer(pHost))
+    , initialized(true)
+    {}
+    ~TMediaPlayer() = default;
 
     TMediaData getMediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
@@ -59,8 +56,8 @@ public:
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
-    QMediaPlayer* mMediaPlayer;
-    bool initialized;
+    QMediaPlayer* mMediaPlayer = nullptr;
+    bool initialized = false;
 };
 
 class TMedia : public QObject
@@ -70,12 +67,15 @@ class TMedia : public QObject
 public:
     Q_DISABLE_COPY(TMedia)
     TMedia(Host* pHost, const QString& profileName);
-    ~TMedia();
+    ~TMedia() = default;
 
     void playMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
+
+private slots:
+    void slot_writeFile(QNetworkReply* reply);
 
 private:
     void stopAllMediaPlayers();
@@ -87,10 +87,10 @@ private:
     QStringList getFileNameList(TMediaData& mediaData);
     QUrl getFileUrl(TMediaData& mediaData);
     bool processUrl(TMediaData& mediaData);
-    void writeFile(QNetworkReply* reply);
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
+    void updateMediaPlayerList(TMediaPlayer& player);
     TMediaPlayer getMediaPlayer(TMediaData& mediaData);
     TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
@@ -126,7 +126,7 @@ private:
     QList<TMediaPlayer> mAPISoundList;
     QList<TMediaPlayer> mAPIMusicList;
 
-    QNetworkAccessManager* mpNetworkAccessManager;
+    QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
 };
 #endif // MUDLET_TMEDIA_H

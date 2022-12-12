@@ -41,6 +41,8 @@
 #include <QPointer>
 #include "post_guard.h"
 
+#include "utils.h"
+
 class Host;
 
 class dlgIRC : public QMainWindow, public Ui::irc
@@ -52,18 +54,19 @@ public:
     explicit dlgIRC(Host*);
     ~dlgIRC();
 
-    static QString HostNameCfgItem;
-    static QString HostPortCfgItem;
-    static QString HostSecureCfgItem;
-    static QString NickNameCfgItem;
-    static QString PasswordCfgItem;
-    static QString ChannelsCfgItem;
-    static QString DefaultHostName;
-    static int DefaultHostPort;
-    static bool DefaultHostSecure;
-    static QString DefaultNickName;
-    static QStringList DefaultChannels;
-    static int DefaultMessageBufferLimit;
+    inline static QString HostNameCfgItem = qsl("irc_host");
+    inline static QString HostPortCfgItem = qsl("irc_port");
+    inline static QString HostSecureCfgItem = qsl("irc_secure");
+    inline static QString NickNameCfgItem = qsl("irc_nick");
+    inline static QString PasswordCfgItem = qsl("irc_password");
+    inline static QString ChannelsCfgItem = qsl("irc_channels");
+    inline static QString DefaultHostName = qsl("irc.libera.chat");
+    inline static int DefaultHostPort = 6667;
+    inline static bool DefaultHostSecure = false;
+    inline static QString DefaultNickName = qsl("Mudlet");
+    inline static QStringList DefaultChannels = QStringList() << qsl("#mudlet");
+    inline static int DefaultMessageBufferLimit = 5000;
+
 
     static QString readIrcHostName(Host* pH);
     static int readIrcHostPort(Host* pH);
@@ -78,8 +81,8 @@ public:
     static QPair<bool, QString> writeIrcPassword(Host* pH, const QString& password);
     static QPair<bool, QString> writeIrcChannels(Host* pH, const QStringList& channels);
 
-    IrcConnection* connection;
-    bool mReadyForSending;
+    IrcConnection* connection = nullptr;
+    bool mReadyForSending = false;
     QPair<bool, QString> sendMsg(const QString& target, const QString& message);
     QString getHostName() const { return mHostName; }
     int getHostPort() const { return mHostPort; }
@@ -126,29 +129,29 @@ private:
 
     void showEvent(QShowEvent* event) override;
 
-    Host* mpHost;
-    bool mIrcStarted;
-    IrcCompleter* completer;
-    IrcCommandParser* commandParser;
-    IrcBufferModel* bufferModel;
+    Host* mpHost = nullptr;
+    bool mIrcStarted = false;
+    IrcCompleter* completer = nullptr;
+    IrcCommandParser* commandParser = nullptr;
+    IrcBufferModel* bufferModel = nullptr;
     QHash<IrcBuffer*, IrcUserModel*> userModels;
     QHash<IrcBuffer*, QTextDocument*> bufferTexts;
     QPointer<IrcBuffer> serverBuffer;
     QStringList mInputHistory;
-    int mInputHistoryMax;
-    int mInputHistoryIdxNext;
-    int mInputHistoryIdxCurrent;
-    quint64 mPingStarted;
+    int mInputHistoryMax = 8;
+    int mInputHistoryIdxNext = 0;
+    int mInputHistoryIdxCurrent = 0;
+    quint64 mPingStarted = 0;
     QString mConnectedHostName;
     QString mHostName;
-    int mHostPort;
-    bool mHostSecure;
+    int mHostPort = 0;
+    bool mHostSecure = false;
     QString mNickName;
-    QString mUserName;
+    QString mUserName = qsl("mudlet");
     QString mPassword;
     QString mRealName;
     QStringList mChannels;
-    int mMessageBufferLimit;
+    int mMessageBufferLimit = 0;
 };
 
 #endif // MUDLET_DLGIRC_H

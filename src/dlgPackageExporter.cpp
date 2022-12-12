@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2021 by Stephen Lyons                        *
+ *   Copyright (C) 2015, 2017-2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -93,14 +93,14 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mPackagePathFileName.clear();
     mXmlPathFileName.clear();
     connect(ui->addFiles, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_addFiles);
-    connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_export_package);
+    connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_exportPackage);
     connect(ui->pushButton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
     connect(ui->addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
-    connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_import_icon);
+    connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_importIcon);
     connect(mCancelButton, &QPushButton::clicked, this, &dlgPackageExporter::slot_cancelExport);
 
     ui->listWidget_addedFiles->installEventFilter(this);
@@ -124,6 +124,10 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     listScripts();
     listActions();
     listTimers();
+
+    setWindowTitle(tr("Package Exporter - %1",
+        "Title of the window. The %1 will be replaced by the current profile's name.")
+        .arg(mpHost->getName()));
 }
 
 dlgPackageExporter::~dlgPackageExporter()
@@ -289,9 +293,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     mPlainDescription = packageInfo.value(qsl("description"));
     QString description{mPlainDescription};
     description.replace(QLatin1String("$packagePath"), qsl("%1/%2").arg(packagePath, packageName));
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
     ui->textEdit_description->setMarkdown(description);
-#endif
     QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
     QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
@@ -342,7 +344,7 @@ void dlgPackageExporter::checkToEnableExportButton()
     }
 }
 
-void dlgPackageExporter::slot_import_icon()
+void dlgPackageExporter::slot_importIcon()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), QDir::currentPath(), tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
     if (fileName.isEmpty()) {
@@ -380,7 +382,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
 
         if (evt->type() == QEvent::FocusOut) {
             mPlainDescription = ui->textEdit_description->toPlainText();
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             //$packagePath allows to put images in a package which will then be displayed in the description
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
@@ -400,7 +401,6 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
                 plainText.replace(qsl("$%1").arg(info.fileName()), fname);
             }
             ui->textEdit_description->setMarkdown(plainText);
-#endif
             return false;
         }
     }
@@ -459,7 +459,7 @@ void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& t
     }
 }
 
-void dlgPackageExporter::slot_export_package()
+void dlgPackageExporter::slot_exportPackage()
 {
     // The native windows dialog does not support displaying files - and as this
     // code will clobber/overwrite an existing package with the same
@@ -920,12 +920,12 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
         QFileInfo stagingFileInfo(stagingFile.fileInfo());
         if (!stagingFileInfo.isReadable()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << stagingFile.fileName() << "it is NOT readable!";
+            qWarning() << "dlgPackageExporter::slot_exportPackage() skipping file: " << stagingFile.fileName() << "it is NOT readable!";
             continue;
         }
 
         if (stagingFileInfo.isSymLink()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << stagingFile.fileName() << "it is a Symlink - avoided to prevent file-system loops!";
+            qWarning() << "dlgPackageExporter::slot_exportPackage() skipping file: " << stagingFile.fileName() << "it is a Symlink - avoided to prevent file-system loops!";
             continue;
         }
 
@@ -1455,10 +1455,15 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
         debounce = true;
         QTimer::singleShot(0, this, [this]() {
             int itemsToExport = countCheckedItems();
-            if (itemsToExport == 0) {
-                mpSelectionText->setTitle(tr("Select what to export"));
+            if (itemsToExport) {
+                mpSelectionText->setTitle(tr("Select what to export (%n item(s))",
+                                             // Intentional comment to separate arguments
+                                             "This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.",
+                                             itemsToExport));
             } else {
-                mpSelectionText->setTitle(tr("Select what to export (%1 items)", "Package exporter selection", itemsToExport).arg(itemsToExport));
+                mpSelectionText->setTitle(tr("Select what to export",
+                                             // Intentional comment to separate arguments
+                                             "This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue."));
             }
             debounce = false;
         });
@@ -1548,9 +1553,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
                 fname = QUrl::toPercentEncoding(fname).constData();
                 plainText.replace(qsl("$%1").arg(info.fileName()), fname);
             }
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
             setMarkdown(plainText);
-#endif
         }
     } else {
         QTextEdit::insertFromMimeData(source);

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -64,6 +64,8 @@ public:
     int createLabelId() const;
     void writeJsonArea(QJsonArray&) const;
     std::pair<int, QString> readJsonArea(const QJsonArray&, const int);
+    QList<int> getPermanentLabelIds() const;
+    bool hasPermanentLabels() const;
 
 
     QSet<int> rooms; // rooms of this area
@@ -71,23 +73,23 @@ public:
     // - maybe they can go?
     QVector3D pos;   // pos auf der map und 0 punkt des area internen koordinatensystems
     QVector3D span;
-    int min_x;
-    int min_y;
-    int min_z;
-    int max_x;
-    int max_y;
-    int max_z;
+    int min_x = 0;
+    int min_y = 0;
+    int min_z = 0;
+    int max_x = 0;
+    int max_y = 0;
+    int max_z = 0;
     // Key = z-level, Value = the relevant x or y extreme:
     QMap<int, int> xminForZ;
     QMap<int, int> xmaxForZ;
     QMap<int, int> yminForZ;
     QMap<int, int> ymaxForZ;
     QList<int> zLevels; // The z-levels that ARE used, not guaranteed to be in order
-    bool gridMode;
-    bool isZone;
-    int zoneAreaRef;
-    TRoomDB* mpRoomDB;
-    bool mIsDirty;
+    bool gridMode = false;
+    bool isZone = false;
+    int zoneAreaRef = 0;
+    TRoomDB* mpRoomDB = nullptr;
+    bool mIsDirty = false;
     QMap<QString, QString> mUserData;
     QMap<int, TMapLabel> mMapLabels;
 
@@ -117,11 +119,12 @@ private:
     QPixmap convertBase64DataToImage(const QList<QByteArray> &) const;
 
 
-    TMap* mpMap; // Supplied by C'tor and now needed to pass an error message upwards
-    QMultiMap<int, QPair<int, int>> mAreaExits;
-    // rooms that border on this area:
+    // Supplied by C'tor and now needed to pass an error message upwards:
+    TMap* mpMap = nullptr;
+    // Rooms that border on this area:
     // key=in_area room id, pair.first=out_of_area room id pair.second=direction
     // Made private as we may change implementation detail
+    QMultiMap<int, QPair<int, int>> mAreaExits;
 };
 
 #endif // MUDLET_TAREA_H

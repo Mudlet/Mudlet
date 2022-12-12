@@ -30,3 +30,11 @@ cmake-build-debug
 #Docker
 docker/docker-compose.override.yml
 docker/.env
+
+# Build information for Clang-based tools
+compile_commands.json
+
+#Visual Studio
+.vs
+out
+CMakeSettings.json

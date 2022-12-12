@@ -44,7 +44,9 @@ class ActionUnit
     friend class XMLimport;
 
 public:
-    explicit ActionUnit(Host* pHost) : mpHost(pHost), mMaxID(0), mpToolBar(), mpEasyButtonBar(), mModuleMember() {}
+    explicit ActionUnit(Host* pHost)
+    : mpHost(pHost)
+    {}
 
     std::list<TAction*> getActionRootNodeList()
     {
@@ -67,10 +69,11 @@ public:
     void uninstall(const QString&);
     void _uninstall(TAction* pChild, const QString& packageName);
     void updateToolbar();
-    std::list<QPointer<TToolBar>> getToolBarList();
-    std::list<QPointer<TEasyButtonBar>> getEasyButtonBarList();
+    std::list<QPointer<TToolBar>> getToolBarList() { return mToolBarList; }
     TAction* getHeadAction(TToolBar*);
     TAction* getHeadAction(TEasyButtonBar*);
+    void regenerateToolBars();
+    void regenerateEasyButtonBars();
     void constructToolbar(TAction*, TToolBar* pTB);
     void constructToolbar(TAction*, TEasyButtonBar* pTB);
     void showToolBar(const QString&);
@@ -89,10 +92,8 @@ private:
     QPointer<Host> mpHost;
     QMap<int, TAction*> mActionMap;
     std::list<TAction*> mActionRootNodeList;
-    int mMaxID;
-    QPointer<TToolBar> mpToolBar;
-    QPointer<TEasyButtonBar> mpEasyButtonBar;
-    bool mModuleMember;
+    int mMaxID = 0;
+    bool mModuleMember = false;
     std::list<QPointer<TToolBar>> mToolBarList;
     std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
 };

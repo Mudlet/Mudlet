@@ -53,13 +53,6 @@
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 : TConsole(pH, TConsole::MainConsole, parent)
 , mClipboard(pH)
-, mLogToLogFile(false)
-, mEnableUserDictionary(true)
-, mUseSharedDictionary(false)
-, mpHunspell_system(nullptr)
-, mpHunspell_shared(nullptr)
-, mpHunspell_profile(nullptr)
-, mpHunspellCodec_system(nullptr)
 {
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
@@ -162,9 +155,7 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
 
 void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
-    // CHECKME: This path seems suspicious, it is shared amongst ALL profiles
-    // but the action is "Per Profile"...!
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("autolog")));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autolog")));
     QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
         file.open(QIODevice::WriteOnly | QIODevice::Text);
@@ -225,7 +216,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         QTextCodec* pLogCodec = QTextCodec::codecForName("UTF-8");
         mLogStream.setCodec(pLogCodec);
         if (isMessageEnabled) {
-            QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());
+            QString message = qsl("%1\n").arg(tr("Logging has started. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
             // This puts text onto console that is IMMEDIATELY POSTED into log file so
             // must be done BEFORE logging starts - or actually mLogToLogFile gets set!
@@ -235,7 +226,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         file.remove();
         mLogToLogFile = false;
         if (isMessageEnabled) {
-            QString message = tr("Logging has been stopped. Log file is %1\n").arg(mLogFile.fileName());
+            QString message = qsl("%1\n").arg(tr("Logging has been stopped. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
             // This puts text onto console that is IMMEDIATELY POSTED into log file so
             // must be done AFTER logging ends - or actually mLogToLogFile gets reset!
@@ -1244,9 +1235,12 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             out.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
-        mpHost->mpMap->serialize(out, saveVersion);
+        bool saved = mpHost->mpMap->serialize(out, saveVersion);
         file_map.close();
-        return true;
+        if (saved) {
+            mpHost->mpMap->resetUnsaved();
+        }
+        return saved;
     }
 
     return false;
@@ -1450,10 +1444,11 @@ void TMainConsole::showStatistics()
         return;
     }
 
-    QString header = tr("+--------------------------------------------------------------+\n"
-                        "|                      system statistics                       |\n"
-                        "+--------------------------------------------------------------+\n",
-                        "Header for the system's statistics information displayed in the console, it is 64 'narrow' characters wide");
+    QString header = qsl("%1\n").arg(tr(
+        "+--------------------------------------------------------------+\n"
+        "|                      system statistics                       |\n"
+        "+--------------------------------------------------------------+",
+        "Header for the system's statistics information displayed in the console, it is 64 'narrow' characters wide"));
     print(header, QColor(150, 120, 0), Qt::black);
 
     QStringList subjects;
@@ -1482,7 +1477,7 @@ void TMainConsole::showStatistics()
 
     Q_ASSERT_X(subjects.count() == tables.count(), "TMainConsole::showStatistics()", "mismatch in titles and built-in tables to show");
     for (int i = 0, total = subjects.count(); i < total; ++i) {
-        mpHost->mLuaInterpreter.compileAndExecuteScript(QStringLiteral("setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]);setUnderline(false);setFgColor(150,120,0);display( %2 );")
+        mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]);setUnderline(false);setFgColor(150,120,0);display( %2 );")
                                                         .arg(subjects.at(i), tables.at(i)));
     }
 
@@ -1508,7 +1503,7 @@ void TMainConsole::showStatistics()
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
     // Footer for the system's statistics information displayed in the console, it should be 64 'narrow' characters wide
-    QString footer = QStringLiteral("\n+--------------------------------------------------------------+\n");
+    QString footer = qsl("\n+--------------------------------------------------------------+\n");
     mpHost->mpConsole->print(footer, QColor(150, 120, 0), Qt::black);
 
     mpHost->mLuaInterpreter.compileAndExecuteScript(QLatin1String("resetFormat();"));

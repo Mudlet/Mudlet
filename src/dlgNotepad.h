@@ -44,14 +44,14 @@ public:
     void restore();
 
 private slots:
-    void slot_text_written();
+    void slot_textWritten();
 
 private:
     void timerEvent(QTimerEvent *event) override;
     void restoreFile(const QString&, const bool);
 
     QPointer<Host> mpHost;
-    bool mNeedToSave{};
+    bool mNeedToSave = false;
 };
 
 #endif // MUDLET_DLGNOTEPAD_H

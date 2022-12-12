@@ -49,17 +49,17 @@ public:
     void finalize();
     void recordMove() { mRecordMove = true; }
 
-    TAction* mpTAction;
+    TAction* mpTAction = nullptr;
 
 public slots:
     void slot_pressed(bool);
 
 private:
-    bool mVerticalOrientation;
-    QWidget* mpWidget;
-    bool mRecordMove;
-    QGridLayout* mpLayout;
-    int mItemCount;
+    bool mVerticalOrientation = false;
+    QWidget* mpWidget = nullptr;
+    bool mRecordMove = false;
+    QGridLayout* mpLayout = nullptr;
+    int mItemCount = 0;
     std::list<TFlipButton*> mButtonList;
 };
 

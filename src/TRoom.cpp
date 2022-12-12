@@ -205,6 +205,7 @@ void TRoom::setExitStub(int direction, bool status)
     } else {
         exitStubs.removeAll(direction);
     }
+    mpRoomDB->mpMap->setUnsaved(__func__);
 }
 
 int TRoom::getExitWeight(const QString& cmd)
@@ -237,22 +238,19 @@ void TRoom::setWeight(int w)
         w = 1;
     }
     weight = w;
+    mpRoomDB->mpMap->setUnsaved(__func__);
 }
 
-// Previous implementations did not allow for REMOVAL of an exit weight (by
-// setting it to zero)
 void TRoom::setExitWeight(const QString& cmd, int w)
 {
     if (w > 0) {
         exitWeights[cmd] = w;
-        if (mpRoomDB && mpRoomDB->mpMap) {
-            mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
-        }
+        mpRoomDB->mpMap->setUnsaved(__func__);
+        mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
     } else if (exitWeights.contains(cmd)) {
         exitWeights.remove(cmd);
-        if (mpRoomDB && mpRoomDB->mpMap) {
-            mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
-        }
+        mpRoomDB->mpMap->setUnsaved(__func__);
+        mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
     }
 }
 
@@ -266,12 +264,14 @@ bool TRoom::setDoor(const QString& cmd, const int doorStatus)
         if (doors.value(cmd, 0) != doorStatus) {
             // .value will return 0 if there ISN'T a door for this cmd
             doors[cmd] = doorStatus;
+            mpRoomDB->mpMap->setUnsaved(__func__);
             return true; // As we have changed things
         } else {
             return false; // Valid but ineffective
         }
     } else if (doors.contains(cmd) && !doorStatus) {
         doors.remove(cmd);
+        mpRoomDB->mpMap->setUnsaved(__func__);
         return true; // As we have changed things
     } else {
         return false; // As we have not changed things
@@ -350,6 +350,7 @@ bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
         dirtyAreas.clear();
     }
 
+    mpRoomDB->mpMap->setUnsaved(__func__);
     return true;
 }
 
@@ -373,6 +374,7 @@ bool TRoom::setExit(const int to, const int direction)
         return false;
     }
     mpRoomDB->updateEntranceMap(this);
+    mpRoomDB->mpMap->setUnsaved(__func__);
     return true;
 }
 
@@ -521,6 +523,7 @@ void TRoom::setExitLock(int exit, bool state)
     } else {
         exitLocks.removeAll(exit);
     }
+    mpRoomDB->mpMap->setUnsaved(__func__);
 }
 
 bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
@@ -535,6 +538,7 @@ bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
         mSpecialExitLocks.remove(cmd);
     }
 
+    mpRoomDB->mpMap->setUnsaved(__func__);
     return true;
 }
 
@@ -556,7 +560,7 @@ bool TRoom::hasSpecialExitLock(const QString& cmd) const
 void TRoom::setSpecialExit(const int to, const QString& cmd)
 {
     if (cmd.isEmpty()) {
-        return; // Refuse to create an unnamed special exit!!!
+        return;
     }
 
     if (to > 0) {
@@ -580,12 +584,12 @@ void TRoom::setSpecialExit(const int to, const QString& cmd)
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+    mpRoomDB->mpMap->setUnsaved(__func__);
 }
 
 void TRoom::clearSpecialExits()
 {
     if (mSpecialExits.isEmpty()) {
-        // Nothing to do:
         return;
     }
 
@@ -604,6 +608,7 @@ void TRoom::clearSpecialExits()
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+    mpRoomDB->mpMap->setUnsaved(__func__);
 }
 
 void TRoom::removeAllSpecialExitsToRoom(const int roomId)
@@ -635,6 +640,7 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
         }
         mpRoomDB->updateEntranceMap(this);
         mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+        mpRoomDB->mpMap->setUnsaved(__func__);
     }
 }
 
@@ -866,7 +872,6 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             // operation we want to perform (obtain the directions of all custom
             // exit lines and remove those which are already included in the
             // colours) is much easier to perform on a QSet rather than a QList:
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             auto customLineKeys = customLines.keys();
             QSet<QString> missingKeys{customLineKeys.begin(), customLineKeys.end()};
             if (!customLinesColor.isEmpty()) {
@@ -874,9 +879,6 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
                 QSet<QString> customLinesColorKeysSet{customLinesColorKeys.begin(), customLinesColorKeys.end()};
                 missingKeys.subtract(customLinesColorKeysSet);
             }
-#else
-            QSet<QString> missingKeys{customLines.keys().toSet().subtract(customLinesColor.keys().toSet())};
-#endif
             QSetIterator<QString> itMissingCustomLineColourKey(missingKeys);
             while (itMissingCustomLineColourKey.hasNext()) {
                 customLinesColor.insert(itMissingCustomLineColourKey.next(), QColor(Qt::red));
@@ -943,13 +945,8 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
     // members from to identify any rogue members before removing them:
 
     QMap<QString, int> exitWeightsCopy = exitWeights;
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QSet<int> exitStubsCopy{exitStubs.begin(), exitStubs.end()};
     QSet<int> exitLocksCopy{exitLocks.begin(), exitLocks.end()};
-#else
-    QSet<int> exitStubsCopy{exitStubs.toSet()};
-    QSet<int> exitLocksCopy{exitLocks.toSet()};
-#endif
     QMap<QString, int> doorsCopy = doors;
     QMap<QString, QList<QPointF>> customLinesCopy = customLines;
     QMap<QString, QColor> customLinesColorCopy = customLinesColor;
@@ -1635,11 +1632,12 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             QString auditKeyLocked = qsl("audit.invalid_exit.%1.isLocked").arg(dirCode);
             userData.insert(auditKeyLocked, qsl("true"));
             if (mudlet::self()->showMapAuditErrors()) {
-                infoMsg.append(tr("\nIt was locked, this is recorded as user data with key:\n"
-                                  "\"%1\".")
-                                       .arg(auditKeyLocked));
+                infoMsg.append(
+                    qsl("\n%1").arg(
+                        tr("It was locked, this is recorded as user data with key:\n\"%1\".")
+                        .arg(auditKeyLocked)));
             }
-            logMsg.append(tr(R"(  It was locked, this is recorded as user data with key: "%1".)").arg(auditKeyLocked));
+            logMsg.append(qsl("  %1").arg(tr(R"(It was locked, this is recorded as user data with key: "%1".)").arg(auditKeyLocked)));
             exitLocks.removeAll(dirCode);
         }
 
@@ -1647,11 +1645,12 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             QString auditKeyWeight = qsl("audit.invalid_exit.%1.weight").arg(dirCode);
             userData.insert(auditKeyWeight, QString::number(exitWeights.value(exitKey)));
             if (mudlet::self()->showMapAuditErrors()) {
-                infoMsg.append(tr("\nIt had a weight, this is recorded as user data with key:\n"
-                                  "\"%1\".")
-                                       .arg(auditKeyWeight));
+                infoMsg.append(
+                    qsl("\n%1").arg(
+                        tr("It had a weight, this is recorded as user data with key:\n\"%1\".")
+                        .arg(auditKeyWeight)));
             }
-            logMsg.append(tr(R"(  It had a weight, this is recorded as user data with key: "%1".)").arg(auditKeyWeight));
+            logMsg.append(qsl("  %1").arg(tr(R"(It had a weight, this is recorded as user data with key: "%1".)").arg(auditKeyWeight)));
             exitWeights.remove(exitKey);
         }
         if (mudlet::self()->showMapAuditErrors()) {

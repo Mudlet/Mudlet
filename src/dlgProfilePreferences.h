@@ -55,63 +55,64 @@ public:
 
 public slots:
     // Fonts.
-    void setFontSize();
-    void setDisplayFont();
-    void setCommandLineFont();
+    void slot_setFontSize();
+    void slot_setDisplayFont();
+// Not used: slot_setCommandLineFont();
 
     // Terminal colors.
-    void setColorBlack();
-    void setColorLightBlack();
-    void setColorRed();
-    void setColorLightRed();
-    void setColorBlue();
-    void setColorLightBlue();
-    void setColorGreen();
-    void setColorLightGreen();
-    void setColorYellow();
-    void setColorLightYellow();
-    void setColorCyan();
-    void setColorLightCyan();
-    void setColorMagenta();
-    void setColorLightMagenta();
-    void setColorWhite();
-    void setColorLightWhite();
-    void setFgColor();
-    void setBgColor();
-    void setCommandLineBgColor();
-    void setCommandLineFgColor();
-    void setCommandFgColor();
-    void setCommandBgColor();
-    void resetColors();
+    void slot_setColorBlack();
+    void slot_setColorLightBlack();
+    void slot_setColorRed();
+    void slot_setColorLightRed();
+    void slot_setColorBlue();
+    void slot_setColorLightBlue();
+    void slot_setColorGreen();
+    void slot_setColorLightGreen();
+    void slot_setColorYellow();
+    void slot_setColorLightYellow();
+    void slot_setColorCyan();
+    void slot_setColorLightCyan();
+    void slot_setColorMagenta();
+    void slot_setColorLightMagenta();
+    void slot_setColorWhite();
+    void slot_setColorLightWhite();
+    void slot_setFgColor();
+    void slot_setBgColor();
+    void slot_setCommandLineBgColor();
+    void slot_setCommandLineFgColor();
+    void slot_setCommandBgColor();
+    void slot_setCommandFgColor();
+    void slot_resetColors();
 
     // Mapper colors.
-    void setColorBlack2();
-    void setColorLightBlack2();
-    void setColorRed2();
-    void setColorLightRed2();
-    void setColorBlue2();
-    void setColorLightBlue2();
-    void setColorGreen2();
-    void setColorLightGreen2();
-    void setColorYellow2();
-    void setColorLightYellow2();
-    void setColorCyan2();
-    void setColorLightCyan2();
-    void setColorMagenta2();
-    void setColorLightMagenta2();
-    void setColorWhite2();
-    void setColorLightWhite2();
-    void setFgColor2();
-    void setBgColor2();
-    void setRoomBorderColor();
-    void resetColors2();
+    void slot_setMapColorBlack();
+    void slot_setMapColorLightBlack();
+    void slot_setMapColorRed();
+    void slot_setMapColorLightRed();
+    void slot_setMapColorBlue();
+    void slot_setMapColorLightBlue();
+    void slot_setMapColorGreen();
+    void slot_setMapColorLightGreen();
+    void slot_setMapColorYellow();
+    void slot_setMapColorLightYellow();
+    void slot_setMapColorCyan();
+    void slot_setMapColorLightCyan();
+    void slot_setMapColorMagenta();
+    void slot_setMapColorLightMagenta();
+    void slot_setMapColorWhite();
+    void slot_setMapColorLightWhite();
+    void slot_setMapExitsColor();
+    void slot_setMapBgColor();
+    void slot_setMapRoomBorderColor();
+    void slot_setMapInfoBgColor();
+    void slot_resetMapColors();
 
     // Map.
-    void downloadMap();
-    void loadMap();
-    void saveMap();
-    void copyMap();
-    void slot_chooseProfilesChanged(QAction*);
+    void slot_downloadMap();
+    void slot_loadMap();
+    void slot_saveMap();
+    void slot_copyMap();
+    void slot_chosenProfilesChanged(QAction*);
     void slot_showMapGlyphUsage();
 
 
@@ -122,9 +123,9 @@ public slots:
     void slot_changeLogFileAsHtml(bool isHtml);
 
     // Save.
-    void slot_save_and_exit();
+    void slot_saveAndClose();
 
-    void hideActionLabel();
+    void slot_hideActionLabel();
     void slot_setEncoding(const int);
 
     void slot_handleHostAddition(Host*, quint8);
@@ -135,9 +136,9 @@ public slots:
 private slots:
     void slot_changeShowSpacesAndTabs(bool);
     void slot_changeShowLineFeedsAndParagraphs(bool);
-    void slot_script_selected(int index);
-    void slot_editor_tab_selected(int tabIndex);
-    void slot_theme_selected(int index);
+    void slot_scriptSelected(int index);
+    void slot_tabChanged(int tabIndex);
+    void slot_themeSelected(int index);
     void slot_setMapSymbolFont(const QFont&);
     void slot_setMapSymbolFontStrategy(bool);
     void slot_changeShowMenuBar(int);
@@ -153,7 +154,7 @@ private slots:
     void slot_changeToolBarVisibility(const mudlet::controlsVisibility);
     void slot_changeShowIconsOnMenus(const Qt::CheckState);
     void slot_changeGuiLanguage(int);
-    void slot_passwords_location_changed(int);
+    void slot_passwordStorageLocationChanged(int);
     void slot_changePlayerRoomStyle(const int);
     void slot_setPlayerRoomPrimaryColor();
     void slot_setPlayerRoomSecondaryColor();
@@ -164,6 +165,7 @@ private slots:
     void slot_enableDarkEditor(const QString&);
     void slot_toggleMapDeleteButton(const bool);
     void slot_deleteMap();
+    void slot_changeLargeAreaExitArrows(const bool);
 
 signals:
     void signal_themeUpdateCompleted();
@@ -173,7 +175,7 @@ signals:
 private:
     void setColors();
     void setColors2();
-    void setColor(QPushButton*, QColor&);
+    void setButtonAndProfileColor(QPushButton*, QColor&, bool allowAlpha = false);
     void setPlayerRoomColor(QPushButton*, QColor&);
     void setButtonColor(QPushButton*, const QColor&);
     void loadEditorTab();
@@ -196,7 +198,7 @@ private:
     void setupPasswordsMigration();
     QString mapSaveLoadDirectory(Host* pHost);
 
-    int mFontSize;
+    int mFontSize = 10;
     QPointer<Host> mpHost;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
@@ -211,7 +213,7 @@ private:
     // flag back for Host::mUseSharedDictionary even if we turn-off
     // Host::mEnableUserDictionary: - although, following review THAT has been
     // disallowed...
-    bool mUseSharedDictionary;
+    bool mUseSharedDictionary = false;
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

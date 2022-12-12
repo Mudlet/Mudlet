@@ -23,11 +23,11 @@ jobs:
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.72.0/boost_1_72_0.tar.bz2/download
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
@@ -36,23 +36,25 @@ jobs:
         # https://github.community/t/github-actions-are-severely-limited-on-prs/18179/17?u=vadi2
         repository: ${{github.event.pull_request.head.repo.full_name}}
 
-    - name: Restore Qt cache
-      uses: actions/cache@v2.1.7
-      id: cache-qt
-      with:
-        path: ${{github.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+    - name: (Windows) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Windows'
       with:
         version: ${{matrix.qt}}
-        dir: ${{github.workspace}}
-        cached: ${{steps.cache-qt.outputs.cache-hit}}
-        aqtversion: '==1.1.2'
+        dir: ${{runner.workspace}}
+        arch: win64_mingw73
+        cache: true
+
+    - name: (Linux/macOS) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        cache: true
 
     - name: Restore Boost cache
-      uses: actions/cache@v2.1.7
+      uses: actions/cache@v3
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -77,6 +79,12 @@ jobs:
     - name: Use CMake 3.20.1
       uses: lukka/get-cmake@v3.20.1
 
+    - name: (Linux) Install non-vcpkg dependencies (1/2)
+      if: runner.os == 'Linux'
+      run: |
+        # gettext is needed for vcpkg
+        sudo apt-get install gettext -y
+
     # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
@@ -87,7 +95,7 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
 
-    - name: (Linux) Install non-vcpkg dependencies
+    - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
       run: |
         # Install from vcpkg everything we can for cross-platform consistency
@@ -114,13 +122,12 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.7.1
+      uses: ZedThree/clang-tidy-review@v0.10.1
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory
         exclude: '3rdparty'
-        # PLACEMARKER: list of clang-tidy checks
-        clang_tidy_checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguidelines-*,mpi-*,misc-*,-readability-implicit-bool-conversion,-readability-qualified-auto,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-readability-static-accessed-through-instance,-cppcoreguidelines-pro-type-static-cast-downcast,-bugprone-suspicious-enum-usage,-readability-uppercase-literal-suffix,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-pro-bounds-array-to-pointer-decay,-misc-no-recursion,-readability-isolate-declaration,-cppcoreguidelines-pro-type-vararg,-misc-non-private-member-variables-in-classes,-performance-no-automatic-move,-readability-avoid-const-params-in-decls,-cppcoreguidelines-non-private-member-variables-in-classes'
+        config_file: '.clang-tidy'
         # the action doesn't see system-level libraries, need to replicate them here
         apt_packages: 'pkg-config,libzip-dev,libglu1-mesa-dev,libpulse-dev'
 

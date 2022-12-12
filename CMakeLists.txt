@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#    Copyright (C) 2015-2018, 2020, 2022 by Stephen Lyons                  #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -21,14 +21,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
-#    as such; the work on getting them working has been done by myself,    #
-#    and other developers, unless they have explicitly said so, are not    #
-#    able to address issues relating specifically to these Operating       #
-#    Systems. Nevertheless users of either are equally welcome to          #
-#    contribute to the development of Mudlet - bugfixes and enhancements   #
-#    are welcome from all!                                                 #
-#                         Stephen Lyons, February 2018, updated March 2021 #
+#    NOTICE: FreeBSD, OpenBSD and GNU/Hurd are not officially supported    #
+#    platforms as such; the work on getting them working has been done by  #
+#    myself, and other developers, unless they have explicitly said so,    #
+#    are not able to address issues relating specifically to these         #
+#    Operating Systems. Nevertheless users of these operating systems are  #
+#    equally welcome to contribute to the development of Mudlet - bugfixes #
+#    and enhancements are welcome from all!                                #
+#        Stephen Lyons, February 2018, updated March 2021 & October 2022   #
 #                                                                          #
 ############################################################################
 
@@ -40,6 +40,15 @@ if(APPLE)
   cmake_minimum_required(VERSION 3.18)
   # minimum supported version by Apple
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
+endif()
+
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake)
+  # In cases where VCPkg is NOT being used we need to skip this
+  set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake
+    CACHE STRING "Vcpkg toolchain file")
+  message(STATUS "Using Vcpkg toolchain file: ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake .")
+else()
+  message(STATUS "Vcpkg toolchain file ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake NOT found, proceeding without it.")
 endif()
 
 project(mudlet)
@@ -87,7 +96,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.14.1)
+set(APP_VERSION 4.16.0)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
@@ -140,10 +149,6 @@ endif()
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
-
-git_submodule_init(
-  CHECK_FILE "3rdparty/qt-ordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
-  READABLE_NAME "Qt ordered map source code")
 
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
