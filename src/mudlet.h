@@ -315,6 +315,7 @@ public:
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
     void deleteProfileData(const QString &profile, const QString &item);
+    void deprioritiseProfile();
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
@@ -348,6 +349,7 @@ public:
     // loaded:
     Hunhandle* prepareProfileDictionary(const QString&, QSet<QString>&);
     Hunhandle* prepareSharedDictionary();
+    void prioritiseProfile(const QString&);
     void processEventLoopHack();
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
