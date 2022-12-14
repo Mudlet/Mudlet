@@ -106,7 +106,7 @@ private:
     void saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const;
     bool copyProfileWidget(QString& profile_name, QString& oldname, QListWidgetItem*& pItem) const;
     bool hasCustomIcon(const QString&) const;
-    void createNonPredefinedProfileItems() const;
+    void setProfileIcon() const;
     void loadCustomProfile(const QString&) const;
     void generateCustomProfile(const QString&) const;
     void setCustomIcon(const QString&, QListWidgetItem*) const;

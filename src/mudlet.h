@@ -315,7 +315,6 @@ public:
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
     void deleteProfileData(const QString &profile, const QString &item);
-    void deprioritiseProfile();
     void disableToolbarButtons();
     void doAutoLogin(const QString&);
     void enableToolbarButtons();
@@ -341,6 +340,7 @@ public:
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
+    void onlyShowProfile(const QString&);
     bool openWebPage(const QString&);
     // Both of these revises the contents of the .aff file and handle a .dic
     // file that has been updated externally/manually (to add or remove words)
@@ -349,7 +349,6 @@ public:
     // loaded:
     Hunhandle* prepareProfileDictionary(const QString&, QSet<QString>&);
     Hunhandle* prepareSharedDictionary();
-    void prioritiseProfile(const QString&);
     void processEventLoopHack();
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
@@ -430,6 +429,7 @@ public:
     FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
+    QString mOnlyShownPredefinedProfile;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QStringList mPackagesToInstallList;
     QPointer<dlgConnectionProfiles> mpConnectionDialog;

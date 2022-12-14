@@ -122,25 +122,6 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
     return smpSelf;
 }
 
-// Keys for the QSettings:
-const QString settingsKey_appearance = qsl("appearance");
-const QString settingsKey_applicationPosition = qsl("pos");
-const QString settingsKey_applicationSize = qsl("size");
-const QString settingsKey_editorIconSize = qsl("tefoldericonsize");
-const QString settingsKey_editorOptions = qsl("editorTextOptions");
-const QString settingsKey_enabledFullScreen = qsl("enableFullScreenMode");
-const QString settingsKey_imageCopyTimeout = qsl("copyAsImageTimeout");
-const QString settingsKey_maximized = qsl("maximized");
-const QString settingsKey_menuVisibility = qsl("menuBarVisibility");
-const QString settingsKey_oldDarkTheme = qsl("darkTheme");
-const QString settingsKey_reportMapIssues = qsl("reportMapIssuesToConsole");
-const QString settingsKey_securePasswords = qsl("storePasswordsSecurely");
-const QString settingsKey_showMenuIcons = qsl("showIconsInMenus");
-const QString settingsKey_toolbarIconSize = qsl("mainiconsize");
-const QString settingsKey_toolbarVisibility = qsl("toolBarVisibility");
-const QString settingsKey_UILanguage = qsl("interfaceLanguage");
-const QString settingsKey_priorityMud = qsl("priorityMud");
-
 mudlet::mudlet()
 : QMainWindow()
 {
@@ -582,6 +563,7 @@ mudlet::mudlet()
     mpShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &mKeySequenceReconnect);
     mpShortcutsManager->registerShortcut(qsl("Close profile"), tr("Close profile"), &mKeySequenceCloseProfile);
 
+    mpSettings = getQSettings();
     readLateSettings(*mpSettings);
     // The previous line will set an option used in the slot method:
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
@@ -1859,12 +1841,12 @@ void mudlet::readEarlySettings(const QSettings& settings)
     // In the near future the user's locale preferences will need to be read
     // as soon as possible as well!
 
-    mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value(settingsKey_showMenuIcons, QVariant(Qt::PartiallyChecked)).toInt());
+    mShowIconsOnMenuCheckedState = static_cast<Qt::CheckState>(settings.value("showIconsInMenus", QVariant(Qt::PartiallyChecked)).toInt());
 
     // PLACEMARKER: Full-screen mode controlled by File (1 of 2) At some point we might removal this "if" and only consider the QSetting - dropping consideration of the sentinel file:
-    if (settings.contains(settingsKey_enabledFullScreen)) {
+    if (settings.contains(qsl("enableFullScreenMode"))) {
         // We have a setting stored for this
-        mEnableFullScreenMode = settings.value(settingsKey_enabledFullScreen, QVariant(false)).toBool();
+        mEnableFullScreenMode = settings.value(qsl("enableFullScreenMode"), QVariant(false)).toBool();
     } else {
         // We do not have a QSettings value stored so check for the sentinel file:
         QFile file_use_smallscreen(getMudletPath(mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
@@ -1872,15 +1854,16 @@ void mudlet::readEarlySettings(const QSettings& settings)
     }
 
     // PTBs had a boolean setting, migrate it to one that can respect the system setting as well
-    auto oldDarkTheme = settings.value(settingsKey_oldDarkTheme, QVariant(false)).toBool();
-    auto appearance = settings.value(settingsKey_appearance, QVariant(0)).toInt();
-    if (!appearance) {
-        mAppearance = settings.contains(settingsKey_oldDarkTheme) ? (oldDarkTheme ? Appearance::dark : Appearance::light) : Appearance::systemSetting;
+    auto oldDarkTheme = settings.value(qsl("darkTheme"), QVariant(false)).toBool();
+
+    auto appearance = settings.value(qsl("appearance"), QVariant(0)).toInt();
+    if (appearance == 0) {
+        mAppearance = settings.contains(qsl("darkTheme")) ? (oldDarkTheme ? Appearance::dark : Appearance::light) : Appearance::systemSetting;
     } else {
         mAppearance = static_cast<Appearance>(appearance);
     }
 
-    mInterfaceLanguage = settings.value(settingsKey_UILanguage, autodetectPreferredLanguage()).toString();
+    mInterfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     mUserLocale = QLocale(mInterfaceLanguage);
     if (mUserLocale == QLocale::c()) {
         qWarning().nospace().noquote() << "mudlet::readEarlySettings(...) WARNING - Unable to convert language code \"" << mInterfaceLanguage << "\" to a recognised locale, reverting to the POSIX 'C' one.";
@@ -1892,32 +1875,33 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
 void mudlet::readLateSettings(const QSettings& settings)
 {
-    QPoint pos = settings.value(settingsKey_applicationPosition, QPoint(0, 0)).toPoint();
-    QSize size = settings.value(settingsKey_applicationSize, QSize(750, 550)).toSize();
+    QPoint pos = settings.value(qsl("pos"), QPoint(0, 0)).toPoint();
+    QSize size = settings.value(qsl("size"), QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
     // a netbook or not before this gets called so only change if there is a
     // setting stored:
-    if (settings.contains(settingsKey_toolbarIconSize)) {
-        setToolBarIconSize(settings.value(settingsKey_toolbarIconSize).toInt());
+    if (settings.contains(qsl("mainiconsize"))) {
+        setToolBarIconSize(settings.value(qsl("mainiconsize")).toInt());
     }
-    setEditorTreeWidgetIconSize(settings.value(settingsKey_editorIconSize, QVariant(3)).toInt());
+    setEditorTreeWidgetIconSize(settings.value("tefoldericonsize", QVariant(3)).toInt());
     // We have abandoned previous "showMenuBar" / "showToolBar" booleans
     // although we provide a backwards compatible value
     // of: (bool) showXXXXBar = (XXXXBarVisibilty != visibleNever) for, until,
     // it is suggested Mudlet 4.x:
-    setMenuBarVisibility(static_cast<controlsVisibilityFlag>(settings.value(settingsKey_menuVisibility, static_cast<int>(visibleAlways)).toInt()));
-    setToolBarVisibility(static_cast<controlsVisibilityFlag>(settings.value(settingsKey_toolbarVisibility, static_cast<int>(visibleAlways)).toInt()));
-    mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value(settingsKey_editorOptions, QVariant(0)).toInt());
-    mShowMapAuditErrors = settings.value(settingsKey_reportMapIssues, QVariant(false)).toBool();
-    mStorePasswordsSecurely = settings.value(settingsKey_securePasswords, QVariant(true)).toBool();
+    setMenuBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("menuBarVisibility", static_cast<int>(visibleAlways)).toInt()));
+    setToolBarVisibility(static_cast<controlsVisibilityFlag>(settings.value("toolBarVisibility", static_cast<int>(visibleAlways)).toInt()));
+    mEditorTextOptions = static_cast<QTextOption::Flags>(settings.value("editorTextOptions", QVariant(0)).toInt());
+
+    mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
+    mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
 
 
     resize(size);
     move(pos);
-    if (settings.value(settingsKey_maximized, false).toBool()) {
+    if (settings.value("maximized", false).toBool()) {
         showMaximized();
     }
-    mCopyAsImageTimeout = settings.value(settingsKey_imageCopyTimeout, mCopyAsImageTimeout).toInt();
+    mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2031,29 +2015,28 @@ void mudlet::writeSettings()
       were used: "Mudlet" for QSettings, and "mudlet" anywhere else. We change the QSettings directory to "mudlet".
       Furthermore, we skip the version from the application name to follow the convention.*/
     QSettings settings("mudlet", "Mudlet");
-    settings.setValue(settingsKey_applicationPosition, pos());
-    settings.setValue(settingsKey_applicationSize, size());
-    settings.setValue(settingsKey_toolbarIconSize, mToolbarIconSize);
-    settings.setValue(settingsKey_editorIconSize, mEditorTreeWidgetIconSize);
+    settings.setValue("pos", pos());
+    settings.setValue("size", size());
+    settings.setValue("mainiconsize", mToolbarIconSize);
+    settings.setValue("tefoldericonsize", mEditorTreeWidgetIconSize);
     // This pair are only for backwards compatibility and will be ignored for
     // this and future Mudlet versions - suggest they get removed in Mudlet 4.x
-    settings.setValue(qsl("showMenuBar"), mMenuBarVisibility != visibleNever);
-    settings.setValue(qsl("showToolbar"), mToolbarVisibility != visibleNever);
+    settings.setValue("showMenuBar", mMenuBarVisibility != visibleNever);
+    settings.setValue("showToolbar", mToolbarVisibility != visibleNever);
 
-    settings.setValue(settingsKey_menuVisibility, static_cast<int>(mMenuBarVisibility));
-    settings.setValue(settingsKey_toolbarVisibility, static_cast<int>(mToolbarVisibility));
-    settings.setValue(settingsKey_maximized, isMaximized());
-    settings.setValue(settingsKey_editorOptions, static_cast<int>(mEditorTextOptions));
-    settings.setValue(settingsKey_reportMapIssues, mShowMapAuditErrors);
-    settings.setValue(settingsKey_securePasswords, mStorePasswordsSecurely);
-    settings.setValue(settingsKey_showMenuIcons, mShowIconsOnMenuCheckedState);
-    settings.setValue(settingsKey_enabledFullScreen, mEnableFullScreenMode);
-    settings.setValue(settingsKey_imageCopyTimeout, mCopyAsImageTimeout);
-    settings.setValue(settingsKey_UILanguage, mInterfaceLanguage);
+    settings.setValue("menuBarVisibility", static_cast<int>(mMenuBarVisibility));
+    settings.setValue("toolBarVisibility", static_cast<int>(mToolbarVisibility));
+    settings.setValue("maximized", isMaximized());
+    settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
+    settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
+    settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
+    settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
+    settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
+    settings.setValue("copyAsImageTimeout", mCopyAsImageTimeout);
+    settings.setValue("interfaceLanguage", mInterfaceLanguage);
     // value only used during PTBs, remove it to reduce confusion in the future
-    settings.remove(settingsKey_oldDarkTheme);
-    settings.setValue(settingsKey_appearance, mAppearance);
-    settings.sync();
+    settings.remove("darkTheme");
+    settings.setValue("appearance", mAppearance);
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -4624,14 +4607,15 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
 bool mudlet::desktopInDarkMode()
 {
 #if defined(Q_OS_WIN32)
-    QSettings settings(qsl(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)"), QSettings::NativeFormat);
-    return settings.value(qsl("AppsUseLightTheme"), 1).toInt() == 0;
+    QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
+    return settings.value("AppsUseLightTheme", 1).toInt() == 0;
 #elif defined(Q_OS_MAC)
     bool isDark = false;
     CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
     CFStringRef uiStyle = nullptr;
     CFStringRef darkUiStyle = CFSTR("Dark");
-    if (uiStyle = (CFStringRef) coreMacOS::CFPreferencesCopyAppValue(uiStyleKey, coreMacOS::kCFPreferencesCurrentApplication); uiStyle) {
+    if (uiStyle = (CFStringRef) coreMacOS::CFPreferencesCopyAppValue(uiStyleKey, coreMacOS::kCFPreferencesCurrentApplication); uiStyle)
+    {
         isDark = (coreMacOS::kCFCompareEqualTo == coreMacOS::CFStringCompare(uiStyle, darkUiStyle, 0));
         coreMacOS::CFRelease(uiStyle);
     }
@@ -4652,17 +4636,7 @@ void mudlet::announce(const QString& text, const QString& processing)
     mpAnnouncer->announce(text, processing);
 }
 
-void mudlet::deprioritiseProfile()
-{
-    Q_ASSERT_X(mpSettings, "mudlet::deprioritiseProfile()", "pointer to main QSettings is a nullptr");
-
-    if (mpSettings->contains(settingsKey_priorityMud)) {
-        mpSettings->remove(settingsKey_priorityMud);
-        mpSettings->sync();
-    }
-}
-
-void mudlet::prioritiseProfile(const QString& predefinedProfile)
+void mudlet::onlyShowProfile(const QString& predefinedProfile)
 {
     // As we are processing an argument passed on the command line check in a
     // non-case sensitive manner:
@@ -4672,8 +4646,6 @@ void mudlet::prioritiseProfile(const QString& predefinedProfile)
     }
 
     auto details = TGameDetails::findGame(predefinedProfile, Qt::CaseInsensitive);
-    Q_ASSERT_X(details != TGameDetails::scmDefaultGames.constEnd(), "mudlet::prioritiseProfile(const QString&)", "failed to find matching game after initial search said there was a match");
-    const QString validatedProfileName = (*details).name;
-    mpSettings->setValue(settingsKey_priorityMud, validatedProfileName);
-    mpSettings->sync();
+    Q_ASSERT_X(details != TGameDetails::scmDefaultGames.constEnd(), "mudlet::onlyShowProfile(const QString&)", "failed to find matching game after initial search said there was a match");
+    mOnlyShownPredefinedProfile = (*details).name;
 }

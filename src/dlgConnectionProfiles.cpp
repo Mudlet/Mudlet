@@ -44,9 +44,6 @@
 
 using namespace std::chrono_literals;
 
-const QString settingsKey_deletedMuds = qsl("deletedDefaultMuds");
-const QString settingsKey_priorityMud = qsl("priorityMud");
-
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 : QDialog(parent)
 {
@@ -527,10 +524,10 @@ void dlgConnectionProfiles::slot_saveName()
 
     // if this was a previously deleted profile, restore it
     auto& settings = *mudlet::self()->mpSettings;
-    auto deletedDefaultMuds = settings.value(settingsKey_deletedMuds, QStringList()).toStringList();
+    auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (deletedDefaultMuds.contains(newProfileName)) {
         deletedDefaultMuds.removeOne(newProfileName);
-        settings.setValue(settingsKey_deletedMuds, deletedDefaultMuds);
+        settings.setValue(qsl("deletedDefaultMuds"), deletedDefaultMuds);
         // run fillout_form to re-create the default profile icon and description
         fillout_form();
         // and re-select the profile since focus is lost
@@ -618,11 +615,11 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
 
     // record the deleted default profile so it does not get re-created in the future
     auto& settings = *mudlet::self()->mpSettings;
-    auto deletedDefaultMuds = settings.value(settingsKey_deletedMuds, QStringList()).toStringList();
+    auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
     if (!deletedDefaultMuds.contains(profile)) {
         deletedDefaultMuds.append(profile);
     }
-    settings.setValue(settingsKey_deletedMuds, deletedDefaultMuds);
+    settings.setValue(qsl("deletedDefaultMuds"), deletedDefaultMuds);
 
     fillout_form();
     profiles_tree_widget->setFocus();
@@ -637,9 +634,8 @@ void dlgConnectionProfiles::slot_deleteProfile()
     }
 
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
-    auto& settings = *mudlet::self()->mpSettings;
-    auto prioritisedDefaultMud = settings.value(settingsKey_priorityMud).toString();
-    if (!prioritisedDefaultMud.isEmpty() && !profile.compare(prioritisedDefaultMud)) {
+    const QString& onlyShownPredefinedProfile{mudlet::self()->mOnlyShownPredefinedProfile};
+    if (!onlyShownPredefinedProfile.isEmpty() && !profile.compare(onlyShownPredefinedProfile)) {
         // Do NOT allow deletion of the prioritised predefined MUD:
         return;
     }
@@ -982,9 +978,9 @@ void dlgConnectionProfiles::fillout_form()
     QListWidgetItem* pItem;
 
     auto& settings = *mudlet::self()->mpSettings;
-    auto deletedDefaultMuds = settings.value(settingsKey_deletedMuds, QStringList()).toStringList();
-    auto prioritisedDefaultMud = settings.value(settingsKey_priorityMud).toString();
-    if (prioritisedDefaultMud.isEmpty()) {
+    auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
+    const QString& onlyShownPredefinedProfile{mudlet::self()->mOnlyShownPredefinedProfile};
+    if (onlyShownPredefinedProfile.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         for (auto& game : defaultGames) {
             if (!deletedDefaultMuds.contains(game)) {
@@ -1011,11 +1007,11 @@ void dlgConnectionProfiles::fillout_form()
 #endif
     } else {
         pItem = new QListWidgetItem();
-        auto details = TGameDetails::findGame(prioritisedDefaultMud);
-        setupMudProfile(pItem, prioritisedDefaultMud, (*details).description, (*details).icon);
+        auto details = TGameDetails::findGame(onlyShownPredefinedProfile);
+        setupMudProfile(pItem, onlyShownPredefinedProfile, (*details).description, (*details).icon);
     }
 
-    createNonPredefinedProfileItems();
+    setProfileIcon();
 
     QDateTime test_date;
     QString toselectProfileName;
@@ -1042,13 +1038,13 @@ void dlgConnectionProfiles::fillout_form()
                 toselectRow = i;
             }
         }
-        if (!prioritisedDefaultMud.isEmpty() && profileName == prioritisedDefaultMud) {
+        if (!onlyShownPredefinedProfile.isEmpty() && profileName == onlyShownPredefinedProfile) {
             predefined_profile_row = i;
         }
     }
 
     if (firstMudletLaunch) {
-        if (prioritisedDefaultMud.isEmpty()) {
+        if (onlyShownPredefinedProfile.isEmpty()) {
             // Select a random pre-defined profile to give all MUDs a fair go first time
             // make sure not to select the test_profile though
             if (profiles_tree_widget->count() > 1) {
@@ -1070,7 +1066,7 @@ void dlgConnectionProfiles::fillout_form()
     updateDiscordStatus();
 }
 
-void dlgConnectionProfiles::createNonPredefinedProfileItems() const
+void dlgConnectionProfiles::setProfileIcon() const
 {
     const QStringList defaultGames = TGameDetails::keys();
 

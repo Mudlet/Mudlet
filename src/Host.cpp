@@ -476,7 +476,7 @@ Host::~Host()
 
 void Host::startMapAutosave()
 {
-    auto settings = mudlet::self()->mpSettings;
+    auto settings = mudlet::self()->getQSettings();
     if (auto interval = settings->value("autosaveIntervalMinutes", 2).toInt(); interval > 0) {
         startTimer(interval * 1min);
     }

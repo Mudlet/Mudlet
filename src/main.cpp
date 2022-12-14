@@ -202,38 +202,24 @@ int main(int argc, char* argv[])
         app->setApplicationVersion(APP_VERSION APP_BUILD);
     }
 
-    const QString appendOneLf = qsl("%1\n");
-    const QString appendTwoLf = qsl("%1\n\n");
     QCommandLineParser parser;
-    QCommandLineOption profileToOpen(QStringList{QLatin1String("p"), QLatin1String("profile")},
-                                     QCoreApplication::translate("main", "Profile to open automatically."),
-                                     QCoreApplication::translate("main", "profile"));
+    QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
     parser.addOption(profileToOpen);
 
-    QCommandLineOption showHelp(QStringList{QLatin1String("h"), QLatin1String("help")},
-                                QCoreApplication::translate("main", "Display help and exit."));
+    QCommandLineOption showHelp(QStringList() << "h" <<"help", QCoreApplication::translate("main", "Display help and exit"));
     parser.addOption(showHelp);
 
-    QCommandLineOption showVersion(QStringList{QLatin1String("v"), QLatin1String("version")},
-                                   QCoreApplication::translate("main", "Display version and exit."));
+    QCommandLineOption showVersion(QStringList() << "v" << "version", QCoreApplication::translate("main", "Display version and exit"));
     parser.addOption(showVersion);
 
-    QCommandLineOption beQuiet(QStringList{QLatin1String("q"), QLatin1String("quiet")},
-                               QCoreApplication::translate("main", "Do not show the splash screen when starting."));
+    QCommandLineOption beQuiet(QStringList() << "q" << "quiet", QCoreApplication::translate("main", "Don't show the splash screen when starting"));
     parser.addOption(beQuiet);
 
-    QCommandLineOption mirrorToStdout(QStringList{QLatin1String("m"), QLatin1String("mirror")},
-                                      QCoreApplication::translate("main", "Mirror output of all consoles to STDOUT."));
+    QCommandLineOption mirrorToStdout(QStringList() << "m" << "mirror", QCoreApplication::translate("main", "Mirror output of all consoles to STDOUT"));
     parser.addOption(mirrorToStdout);
 
-    QCommandLineOption prioritiseProfileToOpen(QStringList{QLatin1String("o"), QLatin1String("only")},
-                                               QCoreApplication::translate("main", "Set Mudlet to only offer this predefined profile and hide all other predefined ones."),
-                                               QCoreApplication::translate("main", "profile"));
-    parser.addOption(prioritiseProfileToOpen);
-
-    QCommandLineOption deprioritiseProfile(QStringList{QLatin1String("a"), QLatin1String("all")},
-                                           QCoreApplication::translate("main", "Undo the effect of --only."));
-    parser.addOption(deprioritiseProfile);
+    QCommandLineOption onlyPredefinedProfileToShow(QStringList() << "o" << "only", QCoreApplication::translate("main", "Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."), QCoreApplication::translate("main", "predefined_game"));
+    parser.addOption(onlyPredefinedProfileToShow);
 
     bool parsedCommandLineOk = parser.parse(app->arguments());
 
@@ -242,64 +228,62 @@ int main(int argc, char* argv[])
     QStringList texts;
     if (!parsedCommandLineOk || parser.isSet(showHelp)) {
         if (!parsedCommandLineOk) {
-            texts << appendTwoLf.arg(QCoreApplication::translate("main", "Error: %1.").arg(parser.errorText()));
+            texts << qsl("%1\n\n").arg(QCoreApplication::translate("main", "Error: %1").arg(parser.errorText()));
         }
         // Do "help" action
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]",
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]",
                                                                      // Comment to separate arguments
                                                                      "%1 is the name of the executable as it is on this OS.")
                                          .arg(QLatin1String(APP_TARGET)));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       -h, --help                   displays this message."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       -v, --version                displays version information."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       -q, --quiet                  no splash screen on startup."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       -o, --only=<profile>         make Mudlet only offer the specific\n"
-                                                                     "                                    predefine MUD from now onwards."));
-        texts << appendTwoLf.arg(QCoreApplication::translate("main", "       -a, --all                    undo the effect of -o/-only from now onwards."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which are\n"
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -h, --help                   displays this message."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -v, --version                displays version information."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -q, --quiet                  no splash screen on startup."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific predefined game."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which are\n"
                                                                      "less likely to be useful for normal use of this application:"));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --dograb                     ignore any implicit or explicit -nograb.\n"
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --dograb                     ignore any implicit or explicit -nograb.\n"
                                                                      "                                    --dograb wins over --nograb even when --nograb is last on\n"
                                                                      "                                    the command line."));
 #if defined(Q_OS_LINUX)
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --nograb                     the application should never grab the mouse or the\n"
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --nograb                     the application should never grab the mouse or the\n"
                                                                      "                                    keyboard. This option is set by default when Mudlet is\n"
                                                                      "                                    running in the gdb debugger under Linux."));
 #else // ! defined(Q_OS_LINUX)
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --nograb                     the application should never grab the mouse or the\n"
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --nograb                     the application should never grab the mouse or the\n"
                                                                      "                                    keyboard.");
 #endif // ! defined(Q_OS_LINUX)
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --reverse                    sets the application's layout direction to right to left."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --style=style                sets the application GUI style. Possible values depend on\n"
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --reverse                    sets the application's layout direction to right to left."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --style=style                sets the application GUI style. Possible values depend on\n"
                                                                      "                                    your system configuration. If Qt was compiled with\n"
                                                                      "                                    additional styles or has additional styles as plugins\n"
                                                                      "                                    these will be available to the -style command line\n"
                                                                      "                                    option. You can also set the style for all Qt\n"
                                                                      "                                    applications by setting the QT_STYLE_OVERRIDE environment\n"
                                                                      "                                    variable."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --style style                is the same as listed above."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --stylesheet=stylesheet      sets the application styleSheet.\n"
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --style style                is the same as listed above."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --stylesheet=stylesheet      sets the application styleSheet.\n"
                                                                      "                                    The value must be a path to a file that contains the\n"
                                                                      "                                    Style Sheet. Note: Relative URLs in the Style Sheet file\n"
                                                                      "                                    are relative to the Style Sheet file's path."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --stylesheet stylesheet      is the same as listed above."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --stylesheet stylesheet      is the same as listed above."));
 // Not sure about MacOS case as that does not use X
 #if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --sync                       forces the X server to perform each X client request\n"
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --sync                       forces the X server to perform each X client request\n"
                                                                      "                                    immediately and not use buffer optimization. It makes the\n"
                                                                      "                                    program easier to debug and often much slower. The --sync\n"
                                                                      "                                    option is only valid for the X11 version of Qt."));
 #endif // defined(Q_OS_UNIX) and not defined(Q_OS_MACOS)
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "       --widgetcount                prints debug message at the end about number of widgets\n"
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --widgetcount                prints debug message at the end about number of widgets\n"
                                                                      "                                    left undestroyed and maximum number of widgets existing\n"
                                                                      "                                    at the same time."));
-        texts << appendTwoLf.arg(QCoreApplication::translate("main", "       --qmljsdebugger=1234[,block] activates the QML/JS debugger with a\n"
+        texts << qsl("%1\n\n").arg(QCoreApplication::translate("main", "       --qmljsdebugger=1234[,block] activates the QML/JS debugger with a\n"
                                                                      "                                    specified port. The number is the port value and block is\n"
                                                                      "                                    optional and will make the application wait until a\n"
                                                                      "                                    debugger connects to it."));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
         return parsedCommandLineOk ? -1 : 0;
     }
@@ -307,22 +291,20 @@ int main(int argc, char* argv[])
     if (parser.isSet(showVersion)) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
-        texts << appendOneLf.arg(QCoreApplication::translate("main",
-                                                             "%1 %2%3 (with debug symbols, without optimisations)",
-                                                             // Intentional comment to separate arguments
-                                                             "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the "
-                                                             "version number like 4.16.0 and %3 is a (possibly empty) build suffix like -dev")
-                                         .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD)));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)",
+         "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
+                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD)));
 #else // ! defined(QT_DEBUG)
         texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
 #endif // ! defined(QT_DEBUG)
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "Copyright © 2008-2022  Mudlet developers"));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
-        texts << appendOneLf.arg(QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
-                                                                     "There is NO WARRANTY, to the extent permitted by law."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Copyright © 2008-2022  Mudlet developers"));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main",
+            "This is free software: you are free to change and redistribute it.\n"
+            "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }
@@ -330,14 +312,8 @@ int main(int argc, char* argv[])
     /*******************************************************************
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
-
-    QString cliProfile = parser.value(prioritiseProfileToOpen);
-    bool prioritiseProfile = false;
-    if (!parser.isSet(deprioritiseProfile) && !cliProfile.isEmpty()) {
-        prioritiseProfile = true;
-    } else {
-        cliProfile = parser.value(profileToOpen);
-    }
+    QString cliProfile = parser.value(profileToOpen);
+    QString onlyProfile = parser.value(onlyPredefinedProfileToShow);
 
     bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
 #if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
@@ -554,12 +530,8 @@ int main(int argc, char* argv[])
     }
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
-    if (parser.isSet(deprioritiseProfile)) {
-        mudlet::self()->deprioritiseProfile();
-    } else {
-        if (prioritiseProfile) {
-            mudlet::self()->prioritiseProfile(cliProfile);
-        }
+    if (!onlyProfile.isEmpty()) {
+        mudlet::self()->onlyShowProfile(onlyProfile);
     }
     mudlet::self()->show();
 
