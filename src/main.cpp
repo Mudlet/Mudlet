@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
                                                                      "                                    running in the gdb debugger under Linux."));
 #else // ! defined(Q_OS_LINUX)
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --nograb                     the application should never grab the mouse or the\n"
-                                                                     "                                    keyboard.");
+                                                                     "                                    keyboard."));
 #endif // ! defined(Q_OS_LINUX)
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --reverse                    sets the application's layout direction to right to left."));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       --style=style                sets the application GUI style. Possible values depend on\n"
