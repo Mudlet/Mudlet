@@ -285,7 +285,7 @@ int main(int argc, char* argv[])
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
-        return parsedCommandLineOk ? -1 : 0;
+        return parsedCommandLineOk ? 0 :-1;
     }
 
     if (parser.isSet(showVersion)) {
