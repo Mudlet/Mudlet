@@ -4489,7 +4489,7 @@ void mudlet::activateProfile(Host* pHost)
                       // Intentional comment to separate arguments
                       "Title for the main window when a profile is loaded or active, %1 is the name "
                       "of the profile and %2 is the Mudlet version string.")
-                           .arg(mpCurrentActiveHost->getName(), version));
+                           .arg(mpCurrentActiveHost->getName(), scmVersion));
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 
