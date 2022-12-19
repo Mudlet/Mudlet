@@ -1384,7 +1384,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // Potential to be translated in the future if the need arises, with the following disambiguation:
     // "Title for the main window when a profile is loaded or active, %1 is the name "
     // "of the profile and %2 is the Mudlet version string."
-    setWindowTitle(qsl("%1 - %2"))
+    setWindowTitle(qsl("%1 - %2")
                            .arg(pH->getName(), scmVersion));
 
     mpSplitter_profileContainer->addWidget(pConsole);
@@ -4488,7 +4488,7 @@ void mudlet::activateProfile(Host* pHost)
     // Potential to be translated in the future if the need arises, with the following disambiguation:
     // "Title for the main window when a profile is loaded or active, %1 is the name "
     // "of the profile and %2 is the Mudlet version string."
-    setWindowTitle(qsl("%1 - %2"))
+    setWindowTitle(qsl("%1 - %2")
                            .arg(mpCurrentActiveHost->getName(), scmVersion));
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
