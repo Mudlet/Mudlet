@@ -4455,12 +4455,7 @@ void mudlet::activateProfile(Host* pHost)
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
     mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-    // CHECKME: Although we no longer force the focus to the profiles main
-    // console's command line here (because it isn't always appropriate) we are
-    // redrawing the main main console AND it's primary command line. That
-    // being the case should we perhaps also be repainting any "mini consoles"
-    // and/or any additional command lines, that have either been added to the
-    // main console or enabled on any mini console or "user window"?
+    // CHECKME: Why are we only repainting the main command line, what about the others?
 
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();
