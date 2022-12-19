@@ -1381,10 +1381,10 @@ void mudlet::addConsoleForNewHost(Host* pH)
     mpTabBar->setTabData(newTabID, tabName);
 
     // update the window title for the currently selected profile
-    setWindowTitle(tr("%1 - %2",
-                      // Intentional comment to separate arguments
-                      "Title for the main window when a profile is loaded or active, %1 is the name "
-                      "of the profile and %2 is the Mudlet version string.")
+    // Potential to be translated in the future if the need arises, with the following disambiguation:
+    // "Title for the main window when a profile is loaded or active, %1 is the name "
+    // "of the profile and %2 is the Mudlet version string."
+    setWindowTitle(qsl("%1 - %2"))
                            .arg(pH->getName(), scmVersion));
 
     mpSplitter_profileContainer->addWidget(pConsole);
@@ -4485,10 +4485,10 @@ void mudlet::activateProfile(Host* pHost)
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 
     // update the main application window title for the currently selected profile
-    setWindowTitle(tr("%1 - %2",
-                      // Intentional comment to separate arguments
-                      "Title for the main window when a profile is loaded or active, %1 is the name "
-                      "of the profile and %2 is the Mudlet version string.")
+    // Potential to be translated in the future if the need arises, with the following disambiguation:
+    // "Title for the main window when a profile is loaded or active, %1 is the name "
+    // "of the profile and %2 is the Mudlet version string."
+    setWindowTitle(qsl("%1 - %2"))
                            .arg(mpCurrentActiveHost->getName(), scmVersion));
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
