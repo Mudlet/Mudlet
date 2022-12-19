@@ -87,6 +87,7 @@ public slots:
 private:
     bool event(QEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
+    void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion();
     void spellCheck();
     void handleTabCompletion(bool);

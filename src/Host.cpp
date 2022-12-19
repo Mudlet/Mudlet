@@ -4055,3 +4055,10 @@ void Host::setCaretEnabled(bool enabled) {
     mCaretEnabled = enabled;
     mpConsole->setCaretMode(enabled);
 }
+
+void Host::setFocusOnHostMainConsole()
+{
+    mudlet::self()->activateProfile(this);
+    mpConsole->activateWindow();
+    mpConsole->setFocus();
+}

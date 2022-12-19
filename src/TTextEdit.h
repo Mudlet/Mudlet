@@ -192,7 +192,8 @@ private:
     // bottom-right point of the selection
     QPoint mPB;
     TBuffer* mpBuffer;
-    TConsole* mpConsole;
+    // Needs to be a QPointer as is used in a couple of lambda functions:
+    QPointer<TConsole> mpConsole;
     QPointer<Host> mpHost;
     // screen height in characters
     int mScreenHeight;

@@ -30,11 +30,12 @@
 #include "mudlet.h"
 
 
-TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
+TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 : QDockWidget(pW)
 , mpTAction(pA)
 , mVerticalOrientation(false)
 , mpWidget( new QWidget( this ) )
+, mpHost(pHost)
 , mRecordMove(false)
 , mpLayout(nullptr)
 , mItemCount(0)
@@ -61,13 +62,13 @@ TToolBar::TToolBar(TAction* pA, const QString& name, QWidget* pW)
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e)
-    mpTAction->mpHost->setToolbarLayoutUpdated(this);
+    mpHost->setToolbarLayoutUpdated(this);
 }
 
 void TToolBar::setName(const QString& name)
 {
     mName = name;
-    QString hostName(mpTAction->mpHost->getName());
+    QString hostName(mpHost->getName());
     setObjectName(qsl("dockToolBar_%1_%2").arg(hostName, name));
     // Actually put something in as the title so that the main window context
     // menu no longer has empty entries which are disabled:
@@ -80,7 +81,7 @@ void TToolBar::moveEvent(QMoveEvent* e)
         return;
     }
 
-    mpTAction->mpHost->setToolbarLayoutUpdated(this);
+    mpHost->setToolbarLayoutUpdated(this);
 
     if (mRecordMove) {
         mpTAction->mPosX = e->pos().x();
@@ -202,11 +203,11 @@ void TToolBar::slot_pressed(const bool isChecked)
 
     if (pA->mIsPushDownButton) {
         pA->mButtonState = isChecked;
-        pA->mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
+        mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
     } else {
         pA->mButtonState = false;
         pB->setChecked(false);                   // This does NOT invoke the clicked()!
-        pA->mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
+        mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
     }
 
     pA->execute();
@@ -232,4 +233,13 @@ void TToolBar::clear()
     mpWidget->setStyleSheet(mpTAction->css);
 
     mudlet::self()->removeDockWidget(this);
+}
+
+// Needed to detect mouse clicking on areas not covered by a button or menu:
+void TToolBar::mousePressEvent(QMouseEvent* e)
+{
+    if (e->button() & Qt::AllButtons) {
+        mudlet::self()->activateProfile(mpHost);
+        mpHost->setFocusOnHostMainConsole();
+    }
 }

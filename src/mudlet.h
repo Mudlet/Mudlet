@@ -506,6 +506,7 @@ public slots:
     void slot_showHelpDialogForum();
 // Not used:    void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
+    void slot_tabChanged(int);
     void slot_timerFires();
     void slot_toggleFullScreenView();
     void slot_toggleMultiView();
@@ -563,7 +564,6 @@ private slots:
     void slot_showTimerDialog();
     void slot_showTriggerDialog();
     void slot_showVariableDialog();
-    void slot_tabChanged(int);
     void slot_tabMoved(const int oldPos, const int newPos);
     void slot_toggleCompactInputLine();
 #if defined(INCLUDE_UPDATER)
