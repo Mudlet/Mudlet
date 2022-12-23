@@ -439,21 +439,21 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(treeWidget_keys, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
 
 
-    QAction* addTriggerAction = new QAction(QIcon(qsl(":/icons/document-new.png")), tr("Add Item"), this);
-    addTriggerAction->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
-    connect(addTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
+    mAddItemAction = new QAction(QIcon(qsl(":/icons/document-new.png")), tr("Add Item"), this);
+    mAddItemAction->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
+    connect(mAddItemAction, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
 
-    QAction* deleteTriggerAction = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), tr("Delete Item"), this);
-    deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
-    deleteTriggerAction->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
-    deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
-    deleteTriggerAction->setShortcut(QKeySequence(QKeySequence::Delete));
-    frame_left->addAction(deleteTriggerAction);
-    connect(deleteTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
+    mDeleteItemAction = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), tr("Delete Item"), this);
+    mDeleteItemAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
+    mDeleteItemAction->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
+    mDeleteItemAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mDeleteItemAction->setShortcut(QKeySequence(QKeySequence::Delete));
+    frame_left->addAction(mDeleteItemAction);
+    connect(mDeleteItemAction, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
 
-    QAction* addFolderAction = new QAction(QIcon(qsl(":/icons/folder-new.png")), tr("Add Group"), this);
-    addFolderAction->setStatusTip(tr("Add new Group"));
-    connect(addFolderAction, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
+    mAddGroupAction = new QAction(QIcon(qsl(":/icons/folder-new.png")), tr("Add Group"), this);
+    mAddGroupAction->setStatusTip(tr("Add new Group"));
+    connect(mAddGroupAction, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
     QAction* saveAction = new QAction(QIcon(qsl(":/icons/document-save-as.png")), tr("Save Item"), this);
     saveAction->setToolTip(tr("<p>Saves the selected item. (Ctrl+S)</p>"
@@ -549,11 +549,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     toolBar->addSeparator();
 
-    toolBar->addAction(addTriggerAction);
-    toolBar->addAction(addFolderAction);
+    toolBar->addAction(mAddItemAction);
+    toolBar->addAction(mAddGroupAction);
 
     toolBar->addSeparator();
-    toolBar->addAction(deleteTriggerAction);
+    toolBar->addAction(mDeleteItemAction);
     toolBar->addAction(importAction);
     toolBar->addAction(mpExportAction);
     toolBar->addAction(mProfileSaveAsAction);
@@ -6766,6 +6766,48 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     checkBox_displayAllVariables->setVisible(view == EditorViewType::cmVarsView);
 
     mpExportAction->setEnabled(view != EditorViewType::cmVarsView);
+
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView:
+        mAddItemAction->setIconText(tr("Add Trigger"));
+        mAddGroupAction->setIconText(tr("Add Trigger Group"));
+        mDeleteItemAction->setIconText(tr("Delete Trigger"));
+        break;
+    case EditorViewType::cmTimerView:
+        mAddItemAction->setIconText(tr("Add Timer"));
+        mAddGroupAction->setIconText(tr("Add Timer Group"));
+        mDeleteItemAction->setIconText(tr("Delete Timer"));
+        break;
+    case EditorViewType::cmAliasView:
+        mAddItemAction->setIconText(tr("Add Alias"));
+        mAddGroupAction->setIconText(tr("Add Alias Group"));
+        mDeleteItemAction->setIconText(tr("Delete Alias"));
+        break;
+    case EditorViewType::cmScriptView:
+        mAddItemAction->setIconText(tr("Add Script"));
+        mAddGroupAction->setIconText(tr("Add Script Group"));
+        mDeleteItemAction->setIconText(tr("Delete Script"));
+        break;
+    case EditorViewType::cmActionView:
+        mAddItemAction->setIconText(tr("Add Button"));
+        mAddGroupAction->setIconText(tr("Add Button Group"));
+        mDeleteItemAction->setIconText(tr("Delete Button"));
+        break;
+    case EditorViewType::cmKeysView:
+        mAddItemAction->setIconText(tr("Add Key"));
+        mAddGroupAction->setIconText(tr("Add Key Group"));
+        mDeleteItemAction->setIconText(tr("Delete Key"));
+        break;
+    case EditorViewType::cmVarsView:
+        mAddItemAction->setIconText(tr("Add Variable"));
+        mAddGroupAction->setIconText(tr("Add Variable Group"));
+        mDeleteItemAction->setIconText(tr("Delete Variable"));
+        break;
+    default:
+        qDebug() << "ERROR: dlgTriggerEditor::changeView() undefined view";
+    }
+
+    
 }
 
 void dlgTriggerEditor::slot_showTimers()
