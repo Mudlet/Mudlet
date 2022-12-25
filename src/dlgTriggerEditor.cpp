@@ -6769,46 +6769,46 @@ void dlgTriggerEditor::changeView(EditorViewType view)
 
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
-        mAddItem->setIconText(tr("Add Trigger"));
-        mAddGroup->setIconText(tr("Add Trigger Group"));
-        mDeleteItem->setIconText(tr("Delete Trigger"));
-        mSaveItem->setIconText(tr("Save Trigger"));
+        mAddItem->setText(tr("Add Trigger"));
+        mAddGroup->setText(tr("Add Trigger Group"));
+        mDeleteItem->setText(tr("Delete Trigger"));
+        mSaveItem->setText(tr("Save Trigger"));
         break;
     case EditorViewType::cmTimerView:
-        mAddItem->setIconText(tr("Add Timer"));
-        mAddGroup->setIconText(tr("Add Timer Group"));
-        mDeleteItem->setIconText(tr("Delete Timer"));
-        mSaveItem->setIconText(tr("Save Timer"));
+        mAddItem->setText(tr("Add Timer"));
+        mAddGroup->setText(tr("Add Timer Group"));
+        mDeleteItem->setText(tr("Delete Timer"));
+        mSaveItem->setText(tr("Save Timer"));
         break;
     case EditorViewType::cmAliasView:
-        mAddItem->setIconText(tr("Add Alias"));
-        mAddGroup->setIconText(tr("Add Alias Group"));
-        mDeleteItem->setIconText(tr("Delete Alias"));
-        mSaveItem->setIconText(tr("Save Alias"));
+        mAddItem->setText(tr("Add Alias"));
+        mAddGroup->setText(tr("Add Alias Group"));
+        mDeleteItem->setText(tr("Delete Alias"));
+        mSaveItem->setText(tr("Save Alias"));
         break;
     case EditorViewType::cmScriptView:
-        mAddItem->setIconText(tr("Add Script"));
-        mAddGroup->setIconText(tr("Add Script Group"));
-        mDeleteItem->setIconText(tr("Delete Script"));
-        mSaveItem->setIconText(tr("Save Script"));
+        mAddItem->setText(tr("Add Script"));
+        mAddGroup->setText(tr("Add Script Group"));
+        mDeleteItem->setText(tr("Delete Script"));
+        mSaveItem->setText(tr("Save Script"));
         break;
     case EditorViewType::cmActionView:
-        mAddItem->setIconText(tr("Add Button"));
-        mAddGroup->setIconText(tr("Add Button Group"));
-        mDeleteItem->setIconText(tr("Delete Button"));
-        mSaveItem->setIconText(tr("Save Button"));
+        mAddItem->setText(tr("Add Button"));
+        mAddGroup->setText(tr("Add Button Group"));
+        mDeleteItem->setText(tr("Delete Button"));
+        mSaveItem->setText(tr("Save Button"));
         break;
     case EditorViewType::cmKeysView:
-        mAddItem->setIconText(tr("Add Key"));
-        mAddGroup->setIconText(tr("Add Key Group"));
-        mDeleteItem->setIconText(tr("Delete Key"));
-        mSaveItem->setIconText(tr("Save Key"));
+        mAddItem->setText(tr("Add Key"));
+        mAddGroup->setText(tr("Add Key Group"));
+        mDeleteItem->setText(tr("Delete Key"));
+        mSaveItem->setText(tr("Save Key"));
         break;
     case EditorViewType::cmVarsView:
-        mAddItem->setIconText(tr("Add Variable"));
-        mAddGroup->setIconText(tr("Add Variable Group"));
-        mDeleteItem->setIconText(tr("Delete Variable"));
-        mSaveItem->setIconText(tr("Save Variable"));
+        mAddItem->setText(tr("Add Variable"));
+        mAddGroup->setText(tr("Add Variable Group"));
+        mDeleteItem->setText(tr("Delete Variable"));
+        mSaveItem->setText(tr("Save Variable"));
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::changeView() undefined view";
