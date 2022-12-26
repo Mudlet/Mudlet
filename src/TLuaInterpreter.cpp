@@ -17414,6 +17414,7 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
 int TLuaInterpreter::setConfig(lua_State * L)
 {
     auto& host = getHostFromLua(L);
+    const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
     QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {
         return warnArgumentValue(L, __func__, "you must provide key");
@@ -17521,6 +17522,15 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("specialForceMxpNegotiationOff")) {
         host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("compactInputLine")) {
+        const bool value = getVerifiedBool(L, __func__, 2, "value");
+        host.setCompactInputLine(value);
+        if (currentHost) {
+            mudlet::self()->dactionInputLine->setChecked(value);
+        }
+
         return success();
     }
     if (key == qsl("announceIncomingText")) {
