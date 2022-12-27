@@ -303,7 +303,7 @@ int main(int argc, char* argv[])
     /*******************************************************************
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
-    QString cliProfile = parser.value(profileToOpen);
+    QStringList cliProfiles = parser.values(profileToOpen);
 
 
     bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
@@ -523,7 +523,7 @@ int main(int argc, char* argv[])
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin(cliProfile);
+    mudlet::self()->startAutoLogin(cliProfiles);
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();
