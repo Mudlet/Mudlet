@@ -3012,9 +3012,8 @@ void mudlet::replayOver()
 void mudlet::slot_replaySpeedUp()
 {
     if (mpLabelReplaySpeedDisplay) {
-        mReplaySpeed = mReplaySpeed * 2;
+        mReplaySpeed = qMin(1024, mReplaySpeed * 2);
         mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
-
         mpLabelReplaySpeedDisplay->show();
     }
 }
@@ -3022,10 +3021,7 @@ void mudlet::slot_replaySpeedUp()
 void mudlet::slot_replaySpeedDown()
 {
     if (mpLabelReplaySpeedDisplay) {
-        mReplaySpeed = mReplaySpeed / 2;
-        if (mReplaySpeed < 1) {
-            mReplaySpeed = 1;
-        }
+        mReplaySpeed = qMax(1, mReplaySpeed / 2);
         mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
         mpLabelReplaySpeedDisplay->show();
     }
