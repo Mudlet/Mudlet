@@ -732,8 +732,8 @@ void TConsole::closeEvent(QCloseEvent* event)
             return;
         } else {
             hide();
-            mudlet::mpDebugArea->setVisible(false);
-            mudlet::debugMode = false;
+            mudlet::smpDebugArea->setVisible(false);
+            mudlet::smDebugMode = false;
             mudlet::self()->refreshTabBar();
             event->ignore();
             return;
@@ -1531,7 +1531,7 @@ int TConsole::select(const QString& text, int numOfMatch)
         return -1;
     }
 
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkMagenta, Qt::black) << "line under current user cursor: " >> mpHost;
         TDebug(Qt::red, Qt::black) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
         TDebug(Qt::gray, Qt::black) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >>  mpHost;
@@ -1560,7 +1560,7 @@ int TConsole::select(const QString& text, int numOfMatch)
     P_end.setX(end);
     P_end.setY(mUserCursor.y());
 
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkRed, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
                                                        << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
                 >> mpHost;
@@ -1570,7 +1570,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 
 bool TConsole::selectSection(int from, int to)
 {
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkMagenta, Qt::black) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
     if (from < 0) {
@@ -1588,7 +1588,7 @@ bool TConsole::selectSection(int from, int to)
     P_end.setX(from + to);
     P_end.setY(mUserCursor.y());
 
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkMagenta, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
                                            << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
                 >> mpHost;
@@ -1753,7 +1753,7 @@ void TConsole::print(const QString& msg)
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
+    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
         qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
     }
 }
@@ -1766,7 +1766,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
+    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
         qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
     }
 }
@@ -1994,12 +1994,25 @@ void TConsole::dropEvent(QDropEvent* e)
     }
 }
 
+// Ensure that the correct TConsole is selected in a multi-view situation:
+void TConsole::setFocusOnAppropriateConsole()
+{
+    if (mType & (SubConsole|UserWindow) && mpCommandLine && mpCommandLine->isVisible()) {
+        // The activateProfile will tend to move the focus to the TCommandLine
+        // in the TMainConsole, but if we have a TCommandLine visible in this
+        // TConsole then we want the focus to stay there:
+        mudlet::self()->activateProfile(mpHost);
+        mpCommandLine->setFocus(Qt::OtherFocusReason);
+    } else {
+        // Otherwise return focus to the main TConsole command line
+        mpHost->setFocusOnHostMainConsole();
+    }
+}
+
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    // Ensure that this profile is the one that has its tab selected in a
-    // multi-view situation:
-    mudlet::self()->activateProfile(mpHost);
+    setFocusOnAppropriateConsole();
 
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
@@ -2044,8 +2057,6 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     mpHost->raiseEvent(mudletEvent);
 }
 
-// This does not tend to get the leftButton press events as they tend to be
-// captured by the TTextEdit or TCommandLine or other widgets within this class:
 void TConsole::mousePressEvent(QMouseEvent* event)
 {
     raiseMudletMousePressOrReleaseEvent(event, true);
