@@ -6763,6 +6763,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
 
     mpExportAction->setEnabled(view != EditorViewType::cmVarsView);
 
+    // texts are duplicated here so that translators can work with the full string
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         mAddItem->setText(tr("Add Trigger"));
@@ -6776,39 +6777,63 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         break;
     case EditorViewType::cmTimerView:
         mAddItem->setText(tr("Add Timer"));
+        mAddItem->setStatusTip(tr("Add new timer"));
         mAddGroup->setText(tr("Add Timer Group"));
+        mAddGroup->setStatusTip(tr("Add new group of timers"));
         mDeleteItem->setText(tr("Delete Timer"));
+        mDeleteItem->setStatusTip(tr("Delete the selected timer"));
         mSaveItem->setText(tr("Save Timer"));
+        mSaveItem->setStatusTip(tr("Saves the selected timer, causing new changes to take effect - does not save to disk though..."));
         break;
     case EditorViewType::cmAliasView:
         mAddItem->setText(tr("Add Alias"));
+        mAddItem->setStatusTip(tr("Add new alias"));
         mAddGroup->setText(tr("Add Alias Group"));
+        mAddGroup->setStatusTip(tr("Add new group of aliases"));
         mDeleteItem->setText(tr("Delete Alias"));
+        mDeleteItem->setStatusTip(tr("Delete the selected alias"));
         mSaveItem->setText(tr("Save Alias"));
+        mSaveItem->setStatusTip(tr("Saves the selected alias, causing new changes to take effect - does not save to disk though..."));
         break;
     case EditorViewType::cmScriptView:
         mAddItem->setText(tr("Add Script"));
+        mAddItem->setStatusTip(tr("Add new script"));
         mAddGroup->setText(tr("Add Script Group"));
+        mAddGroup->setStatusTip(tr("Add new group of scripts"));
         mDeleteItem->setText(tr("Delete Script"));
+        mDeleteItem->setStatusTip(tr("Delete the selected script"));
         mSaveItem->setText(tr("Save Script"));
+        mSaveItem->setStatusTip(tr("Saves the selected script, causing new changes to take effect - does not save to disk though..."));
         break;
     case EditorViewType::cmActionView:
         mAddItem->setText(tr("Add Button"));
+        mAddItem->setStatusTip(tr("Add new button"));
         mAddGroup->setText(tr("Add Button Group"));
+        mAddGroup->setStatusTip(tr("Add new group of buttons"));
         mDeleteItem->setText(tr("Delete Button"));
+        mDeleteItem->setStatusTip(tr("Delete the selected button"));
         mSaveItem->setText(tr("Save Button"));
+        mSaveItem->setStatusTip(tr("Saves the selected button, causing new changes to take effect - does not save to disk though..."));
         break;
     case EditorViewType::cmKeysView:
         mAddItem->setText(tr("Add Key"));
+        mAddItem->setStatusTip(tr("Add new key"));
         mAddGroup->setText(tr("Add Key Group"));
+        mAddGroup->setStatusTip(tr("Add new group of keys"));
         mDeleteItem->setText(tr("Delete Key"));
+        mDeleteItem->setStatusTip(tr("Delete the selected key"));
         mSaveItem->setText(tr("Save Key"));
+        mSaveItem->setStatusTip(tr("Saves the selected key, causing new changes to take effect - does not save to disk though..."));
         break;
     case EditorViewType::cmVarsView:
         mAddItem->setText(tr("Add Variable"));
+        mAddItem->setStatusTip(tr("Add new variable"));
         mAddGroup->setText(tr("Add Lua table"));
+        mAddGroup->setStatusTip(tr("Add new Lua table"));
         mDeleteItem->setText(tr("Delete Variable"));
+        mDeleteItem->setStatusTip(tr("Delete the selected variable"));
         mSaveItem->setText(tr("Save Variable"));
+        mSaveItem->setStatusTip(tr("Saves the selected variable, causing new changes to take effect - does not save to disk though..."));
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::changeView() undefined view";
