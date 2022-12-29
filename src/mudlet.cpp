@@ -2499,7 +2499,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
-void mudlet::startAutoLogin(const QString& cliProfile)
+void mudlet::startAutoLogin(const QStringList& cliProfiles)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
@@ -2507,10 +2507,18 @@ void mudlet::startAutoLogin(const QString& cliProfile)
     hostList.removeDuplicates();
     bool openedProfile = false;
 
-    for (auto& pHost : hostList) {
-        QString val = readProfileData(pHost, qsl("autologin"));
-        if (val.toInt() == Qt::Checked || pHost == cliProfile) {
-            doAutoLogin(pHost);
+    for (auto& hostName : cliProfiles){
+        if (hostList.contains(hostName)) {
+            doAutoLogin(hostName);
+            openedProfile = true;
+            hostList.removeOne(hostName);
+        }
+    }
+
+    for (auto& hostName : hostList) {
+        QString val = readProfileData(hostName, qsl("autologin"));
+        if (val.toInt() == Qt::Checked) {
+            doAutoLogin(hostName);
             openedProfile = true;
         }
     }
