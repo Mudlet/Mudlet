@@ -2507,18 +2507,18 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
     hostList.removeDuplicates();
     bool openedProfile = false;
 
-    for (auto& pHost : cliProfiles){
-        if (hostList.contains(pHost)) {
-            doAutoLogin(pHost);
+    for (auto& hostName : cliProfiles){
+        if (hostList.contains(hostName)) {
+            doAutoLogin(hostName);
             openedProfile = true;
-            hostList.removeOne(pHost);
+            hostList.removeOne(hostName);
         }
     }
 
-    for (auto& pHost : hostList) {
-        QString val = readProfileData(pHost, qsl("autologin"));
+    for (auto& hostName : hostList) {
+        QString val = readProfileData(hostName, qsl("autologin"));
         if (val.toInt() == Qt::Checked) {
-            doAutoLogin(pHost);
+            doAutoLogin(hostName);
             openedProfile = true;
         }
     }
