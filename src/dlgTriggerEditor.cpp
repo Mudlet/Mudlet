@@ -439,27 +439,23 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(treeWidget_keys, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
 
 
-    mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), tr("Add Item"), this);
-    mAddItem->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
+    mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), QString(), this);
     connect(mAddItem, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
 
-    mDeleteItem = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), tr("Delete Item"), this);
-    mDeleteItem->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
+    mDeleteItem = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), QString(), this);
     mDeleteItem->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
     mDeleteItem->setShortcutContext(Qt::WidgetWithChildrenShortcut);
     mDeleteItem->setShortcut(QKeySequence(QKeySequence::Delete));
     frame_left->addAction(mDeleteItem);
     connect(mDeleteItem, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
 
-    mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), tr("Add Group"), this);
-    mAddGroup->setStatusTip(tr("Add new Group"));
+    mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
-    mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), tr("Save Item"), this);
+    mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), QString(), this);
     mSaveItem->setToolTip(tr("<p>Saves the selected item. (Ctrl+S)</p>"
                               "<p>Saving causes any changes to the item to take effect. It will not save to disk, "
                               "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>"));
-    mSaveItem->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
     connect(mSaveItem, &QAction::triggered, this, &dlgTriggerEditor::slot_saveEdits);
 
     QAction* copyAction = new QAction(tr("Copy"), this);
@@ -6770,9 +6766,13 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         mAddItem->setText(tr("Add Trigger"));
+        mAddItem->setStatusTip(tr("Add new trigger"));
         mAddGroup->setText(tr("Add Trigger Group"));
+        mAddGroup->setStatusTip(tr("Add new group of triggers"));
         mDeleteItem->setText(tr("Delete Trigger"));
+        mDeleteItem->setStatusTip(tr("Delete the selected trigger"));
         mSaveItem->setText(tr("Save Trigger"));
+        mSaveItem->setStatusTip(tr("Saves the selected trigger, causing new changes to take effect - does not save to disk though..."));
         break;
     case EditorViewType::cmTimerView:
         mAddItem->setText(tr("Add Timer"));
@@ -6806,7 +6806,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         break;
     case EditorViewType::cmVarsView:
         mAddItem->setText(tr("Add Variable"));
-        mAddGroup->setText(tr("Add Variable Group"));
+        mAddGroup->setText(tr("Add Lua table"));
         mDeleteItem->setText(tr("Delete Variable"));
         mSaveItem->setText(tr("Save Variable"));
         break;
@@ -6814,7 +6814,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         qDebug() << "ERROR: dlgTriggerEditor::changeView() undefined view";
     }
 
-    
+
 }
 
 void dlgTriggerEditor::slot_showTimers()
