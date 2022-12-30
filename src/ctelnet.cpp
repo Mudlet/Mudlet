@@ -2707,7 +2707,7 @@ void cTelnet::loadNextReplayChunk()
 void cTelnet::slot_processReplayChunk()
 {
     int datalen = mReplayChunksList.at(mReplayCurrentChunk).size();
-    const QTime elapsedDisplayTime = QTime::fromMSecsSinceStartOfDay( mReplayChunkOffsetsList.at(mReplayCurrentChunk));
+    const QTime elapsedDisplayTime = QTime::fromMSecsSinceStartOfDay(mReplayChunkOffsetsList.at(mReplayCurrentChunk));
     mudlet::self()->showReplayTime(elapsedDisplayTime);
     std::string cleandata;
     recvdGA = false;
