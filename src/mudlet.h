@@ -249,6 +249,9 @@ public:
     inline static const bool scmIsPublicTestVersion = QByteArray(APP_BUILD).startsWith("-ptb");
     // used by developers in everyday coding:
     inline static const bool scmIsDevelopmentVersion = !mudlet::scmIsReleaseVersion && !mudlet::scmIsPublicTestVersion;
+    // These two need to be integer powers of 2:
+    inline static const double scmMaxReplaySpeed = 1024.0;
+    inline static const double scmMinReplaySpeed = 0.125;
     // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
     // (1000ths, range 0 to 999) that is used as a "version" attribute number when
     // writing the <MudletPackage ...> element of all (but maps if I ever get around
@@ -291,6 +294,8 @@ public:
     // as well as encourage translators to maintain it;
     static const int scmTranslationGoldStar = 95;
     inline static const QString scmVersion = qsl("Mudlet " APP_VERSION APP_BUILD);
+
+
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;
@@ -390,6 +395,7 @@ public:
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
     void showOptionsDialog(const QString&);
+    void showReplayTime(const QTime&);
     void startAutoLogin(const QStringList&);
     bool storingPasswordsSecurely() const { return mStorePasswordsSecurely; }
     controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
@@ -438,12 +444,12 @@ public:
     QPointer<QSettings> mpSettings;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
-    int mReplaySpeed = 1;
+    double mReplaySpeed = 1.0;
+    QTime mReplayTime;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
     // does use them - use this flag to determine whether we should apply our
     // icons to override some of them:
-    QTime mReplayTime;
     bool mShowIconsOnDialogs = true;
     // This is the state for the tri-state control on the preferences and
     // means:
@@ -499,7 +505,6 @@ public slots:
     void slot_replay();
     void slot_replaySpeedUp();
     void slot_replaySpeedDown();
-    void slot_replayTimeChanged();
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_showAboutDialog();
@@ -529,6 +534,10 @@ signals:
     void signal_passwordsMigratedToSecure();
     void signal_profileActivated(Host *, quint8);
     void signal_profileMapReloadRequested(QList<QString>);
+    void signal_replayAbort();
+    void signal_replayPaused(bool);
+    void signal_replayRewind();
+    void signal_replaySpeedChanged(double newSpeed, double oldSpeed);
     void signal_setToolBarIconSize(int);
     void signal_setTreeIconSize(int);
     void signal_shortcutsChanged();
@@ -550,6 +559,9 @@ private slots:
 #endif
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
+    void slot_replayRewind();
+    void slot_replayPlayPause(const bool);
+    void slot_replayAbort();
 #if defined(INCLUDE_UPDATER)
     void slot_reportIssue();
 #endif
@@ -654,6 +666,9 @@ private:
     QPointer<QAction> mpActionPackageManager;
     QPointer<QAction> mpActionReconnect;
     QPointer<QAction> mpActionReplay;
+    QPointer<QAction> mpActionReplayEject;
+    QPointer<QAction> mpActionReplayPlayPause;
+    QPointer<QAction> mpActionReplayRewind;
     QPointer<QAction> mpActionReplaySpeedDown;
     QPointer<QAction> mpActionReplaySpeedUp;
     QPointer<QAction> mpActionReplayTime;

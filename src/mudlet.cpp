@@ -2867,12 +2867,6 @@ void mudlet::slot_compactInputLine(const bool state)
 
 mudlet::~mudlet()
 {
-    // There may be a corner case if a replay is running AND the application is
-    // closing down AND the updater on a particular platform pauses the
-    // application destruction...?
-    delete (mpTimerReplay);
-    mpTimerReplay = nullptr;
-
     if (mpHunspell_sharedDictionary) {
         saveDictionary(getMudletPath(mainDataItemPath, qsl("mudlet")), mWordSet_shared);
         mpHunspell_sharedDictionary = nullptr;
@@ -2924,7 +2918,7 @@ bool mudlet::replayStart()
     mpToolBarReplay->setIconSize(QSize(8 * mToolbarIconSize, 8 * mToolbarIconSize));
     mpToolBarReplay->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
 
-    mReplaySpeed = 1;
+    mReplaySpeed = 1.0;
     mReplayTime.setHMS(0, 0, 0, 1); // Since Qt5.0 adding anything to a zero
                                     // (invalid) time leaves the time value
                                     // STILL being regarded as invalid - so to
@@ -2935,31 +2929,51 @@ bool mudlet::replayStart()
     mpActionReplayTime = mpToolBarReplay->addWidget(mpLabelReplayTime);
 
     mpActionReplaySpeedUp = new QAction(QIcon(qsl(":/icons/export.png")), tr("Faster"), this);
-    mpActionReplaySpeedUp->setObjectName(qsl("replay_speed_up_action"));
-    mpActionReplaySpeedUp->setToolTip(utils::richText(tr("Replay each step with a shorter time interval between steps.")));
-    mpToolBarReplay->addAction(mpActionReplaySpeedUp);
-    mpToolBarReplay->widgetForAction(mpActionReplaySpeedUp)->setObjectName(mpActionReplaySpeedUp->objectName());
-
     mpActionReplaySpeedDown = new QAction(QIcon(qsl(":/icons/import.png")), tr("Slower"), this);
+    mpActionReplayRewind = new QAction(QIcon(qsl(":/icons/media-skip-backward.png")), tr("Rewind", "This text is shown under the skip back icon used to pause and return a replay to it's start."), this);
+    mpActionReplayPlayPause = new QAction(tr("Pause", "This text is shown under the play/pause icon used when a replay is running."), this);
+    QIcon iconPausePlay;
+    iconPausePlay.addPixmap(qsl(":/icons/media-playback-pause.png"), QIcon::Normal, QIcon::Off);
+    iconPausePlay.addPixmap(qsl(":/icons/media-playback-start.png"), QIcon::Normal, QIcon::On);
+    mpActionReplayPlayPause->setIcon(iconPausePlay);
+    mpActionReplayPlayPause->setCheckable(true);
+    mpActionReplayEject = new QAction(QIcon(qsl(":/icons/media-eject.png")), tr("Eject", "This text is shown under the eject icon used to abort a replay."), this);
+
+    mpActionReplaySpeedUp->setObjectName(qsl("replay_speed_up_action"));
     mpActionReplaySpeedDown->setObjectName(qsl("replay_speed_down_action"));
+    mpActionReplayRewind->setObjectName(qsl("replay_rewind_action"));
+    mpActionReplayPlayPause->setObjectName(qsl("replay_play&pause_action"));
+    mpActionReplayEject->setObjectName(qsl("replay_stop_action"));
+
+    mpActionReplaySpeedUp->setToolTip(utils::richText(tr("Replay each step with a shorter time interval between steps.")));
     mpActionReplaySpeedDown->setToolTip(utils::richText(tr("Replay each step with a longer time interval between steps.")));
+    mpActionReplayRewind->setToolTip(utils::richText(tr("Restart the replay.")));
+    mpActionReplayPlayPause->setToolTip(utils::richText(tr("Pause the replay.")));
+    mpActionReplayEject->setToolTip(utils::richText(tr("End the replay.")));
+
+    mpToolBarReplay->addAction(mpActionReplaySpeedUp);
     mpToolBarReplay->addAction(mpActionReplaySpeedDown);
+    mpToolBarReplay->addAction(mpActionReplayRewind);
+    mpToolBarReplay->addAction(mpActionReplayPlayPause);
+    mpToolBarReplay->addAction(mpActionReplayEject);
+    mpToolBarReplay->widgetForAction(mpActionReplaySpeedUp)->setObjectName(mpActionReplaySpeedUp->objectName());
     mpToolBarReplay->widgetForAction(mpActionReplaySpeedDown)->setObjectName(mpActionReplaySpeedDown->objectName());
+    mpToolBarReplay->widgetForAction(mpActionReplayRewind)->setObjectName(mpActionReplayRewind->objectName());
+    mpToolBarReplay->widgetForAction(mpActionReplayPlayPause)->setObjectName(mpActionReplayPlayPause->objectName());
+    mpToolBarReplay->widgetForAction(mpActionReplayEject)->setObjectName(mpActionReplayEject->objectName());
 
     mpLabelReplaySpeedDisplay = new QLabel(this);
     mpActionSpeedDisplay = mpToolBarReplay->addWidget(mpLabelReplaySpeedDisplay);
 
     connect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
     connect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
+    connect(mpActionReplayRewind.data(), &QAction::triggered, this, &mudlet::slot_replayRewind);
+    connect(mpActionReplayPlayPause.data(), &QAction::triggered, this, &mudlet::slot_replayPlayPause);
+    connect(mpActionReplayEject.data(), &QAction::triggered, this, &mudlet::slot_replayAbort);
 
     mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
 
-    mpTimerReplay = new QTimer(this);
-    mpTimerReplay->setInterval(1000);
-    mpTimerReplay->setSingleShot(false);
-    connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::slot_replayTimeChanged);
-
-    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
+    showReplayTime(QTime());
 
     mpLabelReplaySpeedDisplay->show();
     mpLabelReplayTime->show();
@@ -2967,18 +2981,7 @@ bool mudlet::replayStart()
     insertToolBar(mpMainToolBar, mpToolBarReplay);
 
     mpToolBarReplay->show();
-    mpTimerReplay->start();
     return true;
-}
-
-void mudlet::slot_replayTimeChanged()
-{
-    // This can get called by a QTimer after mpLabelReplayTime has been destroyed:
-    if (mpLabelReplayTime) {
-        mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>")
-                                   .arg(tr("Time: %1").arg(mReplayTime.toString(mTimeFormat))));
-        mpLabelReplayTime->show();
-    }
 }
 
 void mudlet::replayOver()
@@ -2989,11 +2992,21 @@ void mudlet::replayOver()
 
     disconnect(mpActionReplaySpeedUp.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedUp);
     disconnect(mpActionReplaySpeedDown.data(), &QAction::triggered, this, &mudlet::slot_replaySpeedDown);
+    mpToolBarReplay->removeAction(mpActionReplayPlayPause);
+    mpToolBarReplay->removeAction(mpActionReplayEject);
+    mpToolBarReplay->removeAction(mpActionReplayRewind);
     mpToolBarReplay->removeAction(mpActionReplaySpeedUp);
     mpToolBarReplay->removeAction(mpActionReplaySpeedDown);
     mpToolBarReplay->removeAction(mpActionSpeedDisplay);
+    mpToolBarReplay->removeAction(mpActionReplayTime);
     removeToolBar(mpToolBarReplay);
-    mpActionReplaySpeedUp->deleteLater(); // Had previously omitted these, causing a resource leak!
+    mpActionReplayPlayPause->deleteLater();
+    mpActionReplayPlayPause = nullptr;
+    mpActionReplayEject->deleteLater();
+    mpActionReplayEject = nullptr;
+    mpActionReplayRewind->deleteLater();
+    mpActionReplayRewind = nullptr;
+    mpActionReplaySpeedUp->deleteLater();
     mpActionReplaySpeedUp = nullptr;
     mpActionReplaySpeedDown->deleteLater();
     mpActionReplaySpeedDown = nullptr;
@@ -3020,18 +3033,50 @@ void mudlet::replayOver()
 void mudlet::slot_replaySpeedUp()
 {
     if (mpLabelReplaySpeedDisplay) {
-        mReplaySpeed = qMin(1024, mReplaySpeed * 2);
-        mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
-        mpLabelReplaySpeedDisplay->show();
+        auto oldSpeed = mReplaySpeed;
+        if (oldSpeed > 1.0) {
+            oldSpeed = qRound(oldSpeed);
+        }
+        mReplaySpeed = qMin(scmMaxReplaySpeed, mReplaySpeed * 2.0);
+        if (mReplaySpeed > 1.0) {
+            mReplaySpeed = qRound(mReplaySpeed);
+        }
+        if (qFuzzyCompare(1.0 + scmMaxReplaySpeed, 1.0 + mReplaySpeed) || mReplaySpeed > scmMaxReplaySpeed) {
+            mpActionReplaySpeedUp->setEnabled(false);
+        }
+        // By definition if we are increasing the replay speed then it cannot be
+        // at the minimum so we can always enable this control:
+        mpActionReplaySpeedDown->setEnabled(true);
+        if (!qFuzzyCompare(1.0 + oldSpeed, 1.0 + mReplaySpeed)) {
+            mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
+            mpLabelReplaySpeedDisplay->show();
+            emit signal_replaySpeedChanged(mReplaySpeed, oldSpeed);
+        }
     }
 }
 
 void mudlet::slot_replaySpeedDown()
 {
     if (mpLabelReplaySpeedDisplay) {
-        mReplaySpeed = qMax(1, mReplaySpeed / 2);
-        mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
-        mpLabelReplaySpeedDisplay->show();
+        auto oldSpeed = mReplaySpeed;
+        if (oldSpeed > 1.0) {
+            oldSpeed = qRound(oldSpeed);
+        }
+        mReplaySpeed = qMax(scmMinReplaySpeed, mReplaySpeed / 2.0);
+        if (mReplaySpeed > 1.0) {
+            mReplaySpeed = qRound(mReplaySpeed);
+        }
+        if (qFuzzyCompare(1.0 + scmMinReplaySpeed, 1.0 + mReplaySpeed) || mReplaySpeed < scmMinReplaySpeed) {
+            mpActionReplaySpeedDown->setEnabled(false);
+        }
+        // By definition if we are reducing the replay speed then it cannot be
+        // at the maximum so we can always enable that control:
+        mpActionReplaySpeedUp->setEnabled(true);
+        if (!qFuzzyCompare(1.0 + oldSpeed, 1.0 + mReplaySpeed)) {
+            mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
+            mpLabelReplaySpeedDisplay->show();
+            emit signal_replaySpeedChanged(mReplaySpeed, oldSpeed);
+        }
     }
 }
 
@@ -4631,4 +4676,62 @@ bool mudlet::desktopInDarkMode()
 void mudlet::announce(const QString& text, const QString& processing)
 {
     mpAnnouncer->announce(text, processing);
+}
+
+void mudlet::slot_replayRewind()
+{
+    // First pause the replay:
+    slot_replayPlayPause(true);
+    // And put the play/pause button down:
+    mpActionReplayPlayPause->setChecked(true);
+    // Now rewind the replay back to the start
+    emit signal_replayRewind();
+}
+
+void mudlet::slot_replayPlayPause(const bool isChecked)
+{
+    if (isChecked) {
+        mpActionReplayPlayPause->setText(tr("Play", "This text is shown under the play/pause icon used when a replay is NOT running."));
+        mpActionReplayPlayPause->setToolTip(utils::richText(tr("Resume the replay.")));
+        // Don't allow the speed to be changed whilst paused - as it will throw
+        // off the remaining time for the cTelnet::mReplayChunkTimer QTimer
+        mpActionReplaySpeedUp->setEnabled(false);
+        mpActionReplaySpeedDown->setEnabled(false);
+        emit signal_replayPaused(true);
+    } else {
+        mpActionReplayPlayPause->setText(tr("Pause", "This text is shown under the play/pause icon used when a replay is running."));
+        mpActionReplayPlayPause->setToolTip(utils::richText(tr("Pause the replay.")));
+        if (qFuzzyCompare(1.0 + scmMinReplaySpeed, 1.0 + mReplaySpeed) || mReplaySpeed < scmMinReplaySpeed) {
+            mpActionReplaySpeedDown->setEnabled(false);
+        } else {
+            mpActionReplaySpeedDown->setEnabled(true);
+        }
+        if (qFuzzyCompare(1.0 + scmMaxReplaySpeed, 1.0 + mReplaySpeed) || mReplaySpeed > scmMaxReplaySpeed) {
+            mpActionReplaySpeedUp->setEnabled(false);
+        } else {
+            mpActionReplaySpeedUp->setEnabled(true);
+        }
+        emit signal_replayPaused(false);
+    }
+}
+
+void mudlet::slot_replayAbort()
+{
+    // First pause the replay:
+    slot_replayPlayPause(true);
+    // And put the play/pause button down:
+    mpActionReplayPlayPause->setChecked(true);
+    // Now kill the replay:
+    emit signal_replayAbort();
+}
+
+void mudlet::showReplayTime(const QTime& time)
+{
+    if (mpLabelReplayTime) {
+        // An invalid (including zero since Qt5) does not produce any
+        // QTime::toString() output - so force it to be a very small positive
+        // value to produce a reasonable 0:00:00 - just don't show the single
+        // milli-seconds digit:
+        mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg((time.isValid() ? time : QTime::fromMSecsSinceStartOfDay(1)).toString(mTimeFormat))));
+    }
 }
