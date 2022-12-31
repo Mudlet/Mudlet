@@ -313,7 +313,7 @@ int main(int argc, char* argv[])
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
     QStringList cliProfiles = parser.values(profileToOpen);
-    QString onlyProfile = parser.value(onlyPredefinedProfileToShow);
+    QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
     bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
 #if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
@@ -530,8 +530,8 @@ int main(int argc, char* argv[])
     }
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
-    if (!onlyProfile.isEmpty()) {
-        mudlet::self()->onlyShowProfile(onlyProfile);
+    if (!onlyProfiles.isEmpty()) {
+        mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
     mudlet::self()->show();
 

@@ -634,8 +634,8 @@ void dlgConnectionProfiles::slot_deleteProfile()
     }
 
     QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
-    const QString& onlyShownPredefinedProfile{mudlet::self()->mOnlyShownPredefinedProfile};
-    if (!onlyShownPredefinedProfile.isEmpty() && !profile.compare(onlyShownPredefinedProfile)) {
+    const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
+    if (!onlyShownPredefinedProfiles.isEmpty() && onlyShownPredefinedProfiles.contains(profile)) {
         // Do NOT allow deletion of the prioritised predefined MUD:
         return;
     }
@@ -979,8 +979,8 @@ void dlgConnectionProfiles::fillout_form()
 
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
-    const QString& onlyShownPredefinedProfile{mudlet::self()->mOnlyShownPredefinedProfile};
-    if (onlyShownPredefinedProfile.isEmpty()) {
+    const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
+    if (onlyShownPredefinedProfiles.isEmpty()) {
         const auto defaultGames = TGameDetails::keys();
         for (auto& game : defaultGames) {
             if (!deletedDefaultMuds.contains(game)) {
@@ -1007,8 +1007,10 @@ void dlgConnectionProfiles::fillout_form()
 #endif
     } else {
         pItem = new QListWidgetItem();
-        auto details = TGameDetails::findGame(onlyShownPredefinedProfile);
-        setupMudProfile(pItem, onlyShownPredefinedProfile, (*details).description, (*details).icon);
+        for (const QString& onlyShownPredefinedProfile : onlyShownPredefinedProfiles) {
+            auto details = TGameDetails::findGame(onlyShownPredefinedProfile);
+            setupMudProfile(pItem, onlyShownPredefinedProfile, (*details).description, (*details).icon);
+        }
     }
 
     setProfileIcon();
@@ -1038,13 +1040,13 @@ void dlgConnectionProfiles::fillout_form()
                 toselectRow = i;
             }
         }
-        if (!onlyShownPredefinedProfile.isEmpty() && profileName == onlyShownPredefinedProfile) {
+        if (!onlyShownPredefinedProfiles.isEmpty() && profileName == onlyShownPredefinedProfiles.first()) {
             predefined_profile_row = i;
         }
     }
 
     if (firstMudletLaunch) {
-        if (onlyShownPredefinedProfile.isEmpty()) {
+        if (onlyShownPredefinedProfiles.isEmpty()) {
             // Select a random pre-defined profile to give all MUDs a fair go first time
             // make sure not to select the test_profile though
             if (profiles_tree_widget->count() > 1) {
@@ -1053,8 +1055,8 @@ void dlgConnectionProfiles::fillout_form()
                 }
             }
         } else if (predefined_profile_row >= 0) {
-            // If the user is starting a MUD's "dedicated" Mudlet version then
-            // select THAT predefined one on first launch:
+            // If the user is starting one of a MUD's "dedicated" Mudlet versions then
+            // select the first of THAT/THOSE predefined one(s) on first launch:
             toselectRow = predefined_profile_row;
         }
     }

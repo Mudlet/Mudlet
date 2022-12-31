@@ -4633,16 +4633,16 @@ void mudlet::announce(const QString& text, const QString& processing)
     mpAnnouncer->announce(text, processing);
 }
 
-void mudlet::onlyShowProfile(const QString& predefinedProfile)
+void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 {
-    // As we are processing an argument passed on the command line check in a
+    // As we are processing argument(s) passed on the command line check in a
     // non-case sensitive manner:
-    if (!TGameDetails::keys().contains(predefinedProfile, Qt::CaseInsensitive)) {
+    for (const QString& predefinedProfile : predefinedProfiles) {
+        if (TGameDetails::keys().contains(predefinedProfile, Qt::CaseInsensitive)) {
+            auto details = TGameDetails::findGame(predefinedProfile, Qt::CaseInsensitive);
+            Q_ASSERT_X(details != TGameDetails::scmDefaultGames.constEnd(), "mudlet::onlyShowProfiles(const QStringList&)", "failed to find matching game after initial search said there was a match");
+            mOnlyShownPredefinedProfiles.append((*details).name);
+        }
         // Don't do anything if it was NOT found
-        return;
     }
-
-    auto details = TGameDetails::findGame(predefinedProfile, Qt::CaseInsensitive);
-    Q_ASSERT_X(details != TGameDetails::scmDefaultGames.constEnd(), "mudlet::onlyShowProfile(const QString&)", "failed to find matching game after initial search said there was a match");
-    mOnlyShownPredefinedProfile = (*details).name;
 }
