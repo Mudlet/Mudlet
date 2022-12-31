@@ -1337,6 +1337,11 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
     QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
+        QTimer::singleShot(0, this, [this]() {
+            if (mpConsole) {
+                mpConsole->setFocusOnAppropriateConsole();
+            }
+        });
     }
 
     if (mpConsole->getType() == TConsole::MainConsole || mpConsole->getType() == TConsole::UserWindow) {
@@ -1830,6 +1835,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                     QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
+                        popup->setAttribute(Qt::WA_DeleteOnClose);
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;
                             if (i < hint.size()) {
@@ -1884,6 +1890,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         }
 
         auto popup = new QMenu(this);
+        popup->setAttribute(Qt::WA_DeleteOnClose);
         popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
         popup->addAction(action2);
@@ -1950,24 +1957,17 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     }
 
     QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
-
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
-        auto subConsoleParent = qobject_cast<TConsole*>(mpConsole->parent());
-        if (subConsoleParent && subConsoleParent->mpDockWidget && subConsoleParent->mpDockWidget->isFloating()) {
-            mpHost->mpConsole->activateWindow();
-            mpHost->mpConsole->setFocus();
-        }
+        QTimer::singleShot(0, this, [this]() {
+            if (mpConsole) {
+                mpConsole->setFocusOnAppropriateConsole();
+            }
+        });
     }
 
     if (mpConsole->getType() == TConsole::MainConsole || mpConsole->getType() == TConsole::UserWindow) {
         mpConsole->raiseMudletMousePressOrReleaseEvent(&newEvent, false);
-    }
-    if (mpConsole->getType() == TConsole::UserWindow && mpConsole->mpDockWidget && mpConsole->mpDockWidget->isFloating()) {
-        // Need to take an extra step to return focus to main profile TConsole's
-        // instance - using same method as TAction::execute():
-        mpHost->mpConsole->activateWindow();
-        mpHost->mpConsole->setFocus();
     }
 }
 

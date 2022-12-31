@@ -15,7 +15,7 @@ on:
         default: 'HEAD'
 
 jobs:
-  generate-changelog:
+  generate-attribution:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
 
@@ -52,12 +52,12 @@ jobs:
             TO_RELEASE=${{ github.event.inputs.to }}
         fi
 
-        echo "Generating a changelog from $FROM_RELEASE until $TO_RELEASE"
+        echo "Generating attributions from $FROM_RELEASE until $TO_RELEASE"
 
         echo "FROM_RELEASE=$FROM_RELEASE" >> $GITHUB_ENV
         echo "TO_RELEASE=$TO_RELEASE" >> $GITHUB_ENV
 
-    - name: Generate changelog
+    - name: Generate attributions
       run: |
         # get list of authors
         authors=$(git log $FROM_RELEASE..$TO_RELEASE --format="%aN" --reverse | sort -u)

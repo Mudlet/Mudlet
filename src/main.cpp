@@ -238,7 +238,7 @@ int main(int argc, char* argv[])
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -h, --help                   displays this message."));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -v, --version                displays version information."));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -q, --quiet                  no splash screen on startup."));
-        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open."));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open, may be repeated."));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific predefined game."));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which are\n"
                                                                      "less likely to be useful for normal use of this application:"));
@@ -312,7 +312,7 @@ int main(int argc, char* argv[])
     /*******************************************************************
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
-    QString cliProfile = parser.value(profileToOpen);
+    QStringList cliProfiles = parser.values(profileToOpen);
     QString onlyProfile = parser.value(onlyPredefinedProfileToShow);
 
     bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
@@ -535,7 +535,7 @@ int main(int argc, char* argv[])
     }
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin(cliProfile);
+    mudlet::self()->startAutoLogin(cliProfiles);
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

@@ -158,16 +158,14 @@ void TAction::execute()
 
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            mpHost->mpConsole->activateWindow();
-            mpHost->mpConsole->setFocus();
+            mpHost->setFocusOnHostMainConsole();
             return;
         }
     }
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
     // move focus back to the active console / command line:
-    mpHost->mpConsole->activateWindow();
-    mpHost->mpConsole->setFocus();
+    mpHost->setFocusOnHostMainConsole();
 }
 
 void TAction::expandToolbar(TToolBar* pT)
