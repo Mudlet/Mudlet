@@ -1835,6 +1835,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                     QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
                         auto popup = new QMenu(this);
+                        popup->setAttribute(Qt::WA_DeleteOnClose);
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;
                             if (i < hint.size()) {
@@ -1889,6 +1890,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         }
 
         auto popup = new QMenu(this);
+        popup->setAttribute(Qt::WA_DeleteOnClose);
         popup->setToolTipsVisible(true); // Not the default...
         popup->addAction(action);
         popup->addAction(action2);
