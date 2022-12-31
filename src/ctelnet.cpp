@@ -3197,8 +3197,8 @@ std::pair<bool, bool> cTelnet::testReadReplayFile(QDataStream& dataStream)
                     ++replayChunks;
                     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (6 of 7) - investigate switching from using `char[]` to `std::array<char>`
                     replayBuffer[replayloadedBytes] = '\0';
-                    tempChunkMap.insert(totalElapsed, QByteArray(replayBuffer, replayloadedBytes));
                     totalElapsed += static_cast<quint64>(offset);
+                    tempChunkMap.insert(totalElapsed, QByteArray(replayBuffer, replayloadedBytes));
                 }
             }
         }
