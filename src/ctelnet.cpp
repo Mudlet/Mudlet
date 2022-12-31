@@ -2683,24 +2683,19 @@ void cTelnet::loadNextReplayChunk()
 {
     qint64 oldOffset = (mReplayCurrentChunk >= 0 && mReplayCurrentChunk < mReplayChunksList.count()) ? mReplayChunkOffsetsList.at(mReplayCurrentChunk) : 0;
     if (++mReplayCurrentChunk < mReplayChunksList.count()) {
+        // mReplayChunk (which has been incremented - is still valid, so when
+        // the timer fires it is still safe to use it:
         mReplayCurrentOffset = mReplayChunkOffsetsList.at(mReplayCurrentChunk);
         mReplayChunkTimer.setSingleShot(true);
         mReplayChunkTimer.setInterval((mReplayCurrentOffset - oldOffset) / mudlet::self()->mReplaySpeed);
         mReplayChunkTimer.start();
-    } else {
-        disconnect(&mReplayChunkTimer, &QTimer::timeout, this, &cTelnet::slot_processReplayChunk);
-        disconnect(mudlet::self(), &mudlet::signal_replaySpeedChanged, this, &cTelnet::slot_replaySpeedChanged);
-        disconnect(mudlet::self(), &mudlet::signal_replayPaused, this, &cTelnet::slot_replayPaused);
-        disconnect(mudlet::self(), &mudlet::signal_replayAbort, this, &cTelnet::slot_replayAbort);
-        disconnect(mudlet::self(), &mudlet::signal_replayRewind, this, &cTelnet::slot_replayRewind);
-        mPerformingReplay = false;
-        if (!mIsReplayRunFromLua) {
-            postMessage(tr("[  OK  ]  - The replay has ended."));
-        }
-        mReplayCurrentChunk = -1;
-        mReplayChunksList.clear();
-        mReplayChunkOffsetsList.clear();
-        mudlet::self()->replayOver();
+    }
+    if ((mReplayCurrentChunk + 1) == mReplayChunksList.count()) {
+        // mReplayCurrentChunk is now indexing the last one but we cannot
+        // disconnect everything and clean up until that last one has played
+        // out (i.e. the timer has expired and the chunk put through the
+        // trigger engine and any simulated MUD Server text output).
+        mReplayCleanup = true;
     }
 }
 
@@ -2795,6 +2790,25 @@ void cTelnet::slot_processReplayChunk()
     }
 
     if (mPerformingReplay) {
+        if (mReplayCleanup) {
+            mReplayCleanup = false;
+            disconnect(&mReplayChunkTimer, &QTimer::timeout, this, &cTelnet::slot_processReplayChunk);
+            disconnect(mudlet::self(), &mudlet::signal_replaySpeedChanged, this, &cTelnet::slot_replaySpeedChanged);
+            disconnect(mudlet::self(), &mudlet::signal_replayPaused, this, &cTelnet::slot_replayPaused);
+            disconnect(mudlet::self(), &mudlet::signal_replayAbort, this, &cTelnet::slot_replayAbort);
+            disconnect(mudlet::self(), &mudlet::signal_replayRewind, this, &cTelnet::slot_replayRewind);
+            mPerformingReplay = false;
+            if (!mIsReplayRunFromLua) {
+                postMessage(tr("[  OK  ]  - The replay has ended."));
+            }
+            mReplayCurrentChunk = -1;
+            mReplayChunksList.clear();
+            mReplayChunkOffsetsList.clear();
+            mudlet::self()->replayOver();
+            return;
+        }
+
+        // else:
         loadNextReplayChunk();
     }
 }

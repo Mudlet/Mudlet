@@ -368,6 +368,9 @@ private:
     // Stores the real-time (i.e. unity playback speed) elasped time for when to
     // playback a chunk in a replay:
     QVector<qint64> mReplayChunkOffsetsList;
+    // Flag set before the last replay chunk is processed so that the replay
+    // gets cleaned up after it has run:
+    bool mReplayCleanup = false;
 };
 
 #endif // MUDLET_CTELNET_H
