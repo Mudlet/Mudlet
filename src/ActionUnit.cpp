@@ -310,7 +310,7 @@ void ActionUnit::regenerateToolBars()
                     }
                 }
                 if (!pTB) {
-                    pTB = new TToolBar(childAction, childAction->getName(), mudlet::self());
+                    pTB = new TToolBar(mpHost, childAction, childAction->getName(), mudlet::self());
                     mToolBarList.push_back(pTB);
                 }
                 if (childAction->mOrientation == 1) {
@@ -333,7 +333,7 @@ void ActionUnit::regenerateToolBars()
             }
         }
         if (!pTB) {
-            pTB = new TToolBar(action, action->getName(), mudlet::self());
+            pTB = new TToolBar(mpHost, action, action->getName(), mudlet::self());
             mToolBarList.push_back(pTB);
         }
         if (action->mOrientation == 1) {
@@ -436,7 +436,7 @@ void ActionUnit::showToolBar(const QString& name)
         }
     }
     mudlet::self()->processEventLoopHack();
-    mpHost->mpConsole->mpCommandLine->setFocus();
+    mpHost->setFocusOnHostMainConsole();
 }
 
 void ActionUnit::hideToolBar(const QString& name)
