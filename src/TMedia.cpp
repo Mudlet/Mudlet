@@ -538,6 +538,10 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 mpHost->raiseEvent(event);
 
                 TMedia::play(mediaData);
+
+                QUrl fileUrl = getFileUrl(mediaData);
+                auto diskCache = mpNetworkAccessManager->cache();
+                diskCache->remove(fileUrl);
             } else {
                 event.mArgumentList << QLatin1String("sysDownloadError");
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
