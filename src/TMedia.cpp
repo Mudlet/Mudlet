@@ -538,10 +538,6 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 mpHost->raiseEvent(event);
 
                 TMedia::play(mediaData);
-
-                QUrl fileUrl = getFileUrl(mediaData);
-                auto diskCache = mpNetworkAccessManager->cache();
-                diskCache->remove(fileUrl);
             } else {
                 event.mArgumentList << QLatin1String("sysDownloadError");
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -593,14 +589,9 @@ void TMedia::downloadFile(TMediaData& mediaData)
     if (!TMedia::isValidUrl(fileUrl)) {
         return;
     } else {
-        auto diskCache = new QNetworkDiskCache(this);
-        diskCache->setCacheDirectory(cacheDir);
-        mpNetworkAccessManager->setCache(diskCache);
-
         QNetworkRequest request = QNetworkRequest(fileUrl);
         request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-        request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
 #if !defined(QT_NO_SSL)
         if (fileUrl.scheme() == qsl("https")) {
             QSslConfiguration config(QSslConfiguration::defaultConfiguration());
