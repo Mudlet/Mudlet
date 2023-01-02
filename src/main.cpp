@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Copyright © 2008-2022  Mudlet developers"));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Copyright © 2008-2023  Mudlet developers"));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main",
             "This is free software: you are free to change and redistribute it.\n"
@@ -359,7 +359,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2022");
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
         QFont font(qsl("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
