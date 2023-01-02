@@ -2785,9 +2785,9 @@ void cTelnet::slot_processReplayChunk()
 
     if (!cleandata.empty()) {
         gotRest(cleandata);
-
-        mpHost->mpConsole->finalize();
     }
+
+    mpHost->mpConsole->finalize();
 
     if (mPerformingReplay) {
         if (mReplayCleanup) {
