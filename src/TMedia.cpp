@@ -589,9 +589,14 @@ void TMedia::downloadFile(TMediaData& mediaData)
     if (!TMedia::isValidUrl(fileUrl)) {
         return;
     } else {
+        auto diskCache = new QNetworkDiskCache(this);
+        diskCache->setCacheDirectory(cacheDir);
+        mpNetworkAccessManager->setCache(diskCache);
+
         QNetworkRequest request = QNetworkRequest(fileUrl);
         request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
+        request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
 #if !defined(QT_NO_SSL)
         if (fileUrl.scheme() == qsl("https")) {
             QSslConfiguration config(QSslConfiguration::defaultConfiguration());
@@ -751,6 +756,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
 
         if (pTestPlayer.getMediaPlayer()->state() != QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
             pPlayer = pTestPlayer;
+            pPlayer.getMediaPlayer()->setMedia(nullptr); // Discard all information relating to the current media source
             pPlayer.setMediaData(mediaData);
             break;
         }
