@@ -866,6 +866,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMSSP->setChecked(pHost->mEnableMSSP);
     mEnableMSP->setChecked(pHost->mEnableMSP);
 
+    groupBox_purgeMediaCache->setVisible(true);
+    connect(buttonPurgeMediaCache, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_purgeMediaCache);
+
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
     QStringList profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
@@ -1621,6 +1624,16 @@ void dlgProfilePreferences::setTab(QString tab)
         }
     }
     tabWidget->setCurrentIndex(0);
+}
+
+void dlgProfilePreferences::slot_purgeMediaCache()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mpMedia->purgeMediaCache();
 }
 
 void dlgProfilePreferences::slot_resetColors()
