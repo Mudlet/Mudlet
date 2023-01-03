@@ -39,7 +39,7 @@
 #include <uiautomationcoreapi.h>
 
 // mingw 7.30's uiautomationclient.h is outdated, lacks this define
-#if ! defined(UIA_CustomControlTypeId)
+#if !defined(UIA_CustomControlTypeId)
 #define UIA_CustomControlTypeId (50025)
 #endif
 
