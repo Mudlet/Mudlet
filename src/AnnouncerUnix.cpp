@@ -66,6 +66,10 @@ InvisibleStatusbar::InvisibleStatusbar(QWidget *parent)
     // in case it does show up:
     setAccessibleName(tr("InvisibleStatusbar"));
     setAccessibleDescription(tr("An invisible widget used as part as a workaround to announce text to the screen reader"));
+    // Needed to prevent this (invisible) widget from being seen by itself in
+    // the top left corner of the main application window where it masks part of
+    // the main menu bar:
+    setVisible(false);
 }
 
 Announcer::Announcer(QWidget *parent)
