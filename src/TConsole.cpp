@@ -129,8 +129,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         }
     }
     setContentsMargins(0, 0, 0, 0);
-    mFormatSystemMessage.setBackground(mBgColor);
-    mFormatSystemMessage.setForeground(Qt::red);
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
 
@@ -628,16 +626,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
         layerCommandLine->move(0, mpBaseVFrame->height() - layerCommandLine->height());
     }
 
-    // don't call event in lua if size didn't change
-    bool preventLuaEvent = (mpMainDisplay->size() == mOldSize);
     QWidget::resizeEvent(event);
-    mOldSize = mpMainDisplay->size();
-
-    if (preventLuaEvent) {
-        return;
-    }
 
     if (mType & MainConsole) {
+        // don't call event in lua if size didn't change
+        bool preventLuaEvent = (getMainWindowSize() == mOldSize);
+        mOldSize = getMainWindowSize();
+        if (preventLuaEvent) {
+            return;
+        }
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
         QString func = "handleWindowResizeEvent";
         QString n = "WindowResizeEvent";
@@ -735,8 +732,8 @@ void TConsole::closeEvent(QCloseEvent* event)
             return;
         } else {
             hide();
-            mudlet::mpDebugArea->setVisible(false);
-            mudlet::debugMode = false;
+            mudlet::smpDebugArea->setVisible(false);
+            mudlet::smDebugMode = false;
             mudlet::self()->refreshTabBar();
             event->ignore();
             return;
@@ -1192,7 +1189,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
             buffer.applyLink(P, P2, func, hint, luaReference);
             if (text.indexOf("\n") != -1) {
                 int y_tmp = mUserCursor.y();
-                int down = buffer.wrapLine(mUserCursor.y(), mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
                 int y_neu = y_tmp + down;
                 int x_adjust = text.lastIndexOf("\n");
@@ -1229,7 +1226,7 @@ void TConsole::insertText(const QString& text, QPoint P)
             buffer.insertInLine(mUserCursor, text, mFormatCurrent);
             int y_tmp = mUserCursor.y();
             if (text.indexOf(QChar::LineFeed) != -1) {
-                int down = buffer.wrapLine(y_tmp, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
             } else {
                 mUpperPane->needUpdate(y_tmp, y_tmp + 1);
@@ -1403,8 +1400,8 @@ void TConsole::luaWrapLine(int line)
     if (!mpHost) {
         return;
     }
-    TChar ch(mpHost);
-    buffer.wrapLine(line, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mIndentCount, ch);
+    TChar ch(this);
+    buffer.wrapLine(line, mWrapAt, mIndentCount, ch);
 }
 
 bool TConsole::setFontSize(int size)
@@ -1534,7 +1531,7 @@ int TConsole::select(const QString& text, int numOfMatch)
         return -1;
     }
 
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkMagenta, Qt::black) << "line under current user cursor: " >> mpHost;
         TDebug(Qt::red, Qt::black) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
         TDebug(Qt::gray, Qt::black) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >>  mpHost;
@@ -1563,7 +1560,7 @@ int TConsole::select(const QString& text, int numOfMatch)
     P_end.setX(end);
     P_end.setY(mUserCursor.y());
 
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkRed, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
                                                        << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
                 >> mpHost;
@@ -1573,7 +1570,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 
 bool TConsole::selectSection(int from, int to)
 {
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkMagenta, Qt::black) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
     if (from < 0) {
@@ -1591,7 +1588,7 @@ bool TConsole::selectSection(int from, int to)
     P_end.setX(from + to);
     P_end.setY(mUserCursor.y());
 
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkMagenta, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
                                            << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
                 >> mpHost;
@@ -1717,7 +1714,7 @@ void TConsole::printCommand(QString& msg)
                 QPoint P(promptEnd, lineBeforeNewContent);
                 TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
-                int down = buffer.wrapLine(lineBeforeNewContent, mWrapAt * QFontMetrics(mpHost->getDisplayFont()).averageCharWidth(), mpHost->mWrapIndentCount, mFormatCurrent);
+                int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
 
                 mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
@@ -1756,7 +1753,7 @@ void TConsole::print(const QString& msg)
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
+    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
         qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
     }
 }
@@ -1769,7 +1766,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
     mUpperPane->showNewLines();
     mLowerPane->showNewLines();
 
-    if (Q_UNLIKELY(mudlet::self()->mMirrorToStdOut)) {
+    if (Q_UNLIKELY(mudlet::self()->smMirrorToStdOut)) {
         qDebug().nospace().noquote() << qsl("%1| %2").arg(mConsoleName, msg);
     }
 }
@@ -1928,6 +1925,9 @@ void TConsole::slot_searchBufferDown()
 
 QSize TConsole::getMainWindowSize() const
 {
+    if (isHidden()) {
+        return mOldSize;
+    }
     QSize consoleSize = size();
     int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     int toolbarHeight = mpTopToolBar->height();
@@ -1994,12 +1994,25 @@ void TConsole::dropEvent(QDropEvent* e)
     }
 }
 
+// Ensure that the correct TConsole is selected in a multi-view situation:
+void TConsole::setFocusOnAppropriateConsole()
+{
+    if (mType & (SubConsole|UserWindow) && mpCommandLine && mpCommandLine->isVisible()) {
+        // The activateProfile will tend to move the focus to the TCommandLine
+        // in the TMainConsole, but if we have a TCommandLine visible in this
+        // TConsole then we want the focus to stay there:
+        mudlet::self()->activateProfile(mpHost);
+        mpCommandLine->setFocus(Qt::OtherFocusReason);
+    } else {
+        // Otherwise return focus to the main TConsole command line
+        mpHost->setFocusOnHostMainConsole();
+    }
+}
+
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    // Ensure that this profile is the one that has its tab selected in a
-    // multi-view situation:
-    mudlet::self()->activateProfile(mpHost);
+    setFocusOnAppropriateConsole();
 
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
@@ -2044,8 +2057,6 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     mpHost->raiseEvent(mudletEvent);
 }
 
-// This does not tend to get the leftButton press events as they tend to be
-// captured by the TTextEdit or TCommandLine or other widgets within this class:
 void TConsole::mousePressEvent(QMouseEvent* event)
 {
     raiseMudletMousePressOrReleaseEvent(event, true);
@@ -2197,19 +2208,6 @@ void TConsole::setCaretMode(bool enabled)
     }
 
     mUpperPane->setFocus();
-}
-
-bool TConsole::autoWrap() const {
-    return mAutoWrap;
-}
-
-void TConsole::setAutoWrap(bool enabled) {
-    mAutoWrap = enabled;
-
-    if (enabled) {
-        mUpperPane->updateWrap();
-        mLowerPane->updateWrap();
-    }
 }
 
 void TConsole::createSearchOptionIcon()

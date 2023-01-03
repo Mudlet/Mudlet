@@ -83,11 +83,11 @@ public:
     };
     Q_DECLARE_FLAGS(AttributeFlags, AttributeFlag)
 
-    // Default constructor - the default argument means it can be used with no
-    // supplied arguments, but it must NOT be marked 'explicit' so as to allow
+    // Not a default constructor - the defaulted argument means it could have
+    // been used if supplied with no arguments, but the 'explicit' prevents
     // this:
-    explicit TChar(Host* pH = nullptr);
-    // A non-default constructor:
+    explicit TChar(TConsole* pC = nullptr);
+    // Another non-default constructor:
     TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
     // User defined copy-constructor:
     TChar(const TChar&);
@@ -148,7 +148,7 @@ public:
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
-    int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format, bool onlyWrapOneLine = true, bool containsNewLine = false);
+    int wrapLine(int startLine, int screenWidth, int indentSize, TChar& format);
     void log(int, int);
     int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference = QVector<int>());
@@ -224,7 +224,7 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
-    void binarySearchHorizontalAdvance(const int& lineIndex, const int& indentSize, const QString& lineIndent, const int& lineWidth, const int& screenWidth, const int& subStringStart, const int& lineCharTotal, const QFontMetrics& qfm, int& lineCharIterator, const bool isBefore);
+
 
     QPointer<TConsole> mpConsole;
 

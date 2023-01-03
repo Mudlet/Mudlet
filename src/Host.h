@@ -399,8 +399,7 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
-    bool autoWrap() const;
-    void setAutoWrap(bool enabled);
+    void setFocusOnHostMainConsole();
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -523,9 +522,7 @@ public:
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
-    // wrap at a specific amount of characters if not autowrapping:
     int mWrapAt;
-    // after wrapping a line, intent it by how many spaces:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
@@ -725,9 +722,6 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
-
-    // automatically calculate wrapping?
-    bool mAutoWrap = true;
 
     QFile mErrorLogFile;
 

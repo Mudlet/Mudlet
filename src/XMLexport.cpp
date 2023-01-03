@@ -426,7 +426,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
-    host.append_attribute("mAutoWrap") = pHost->autoWrap() ? "yes" : "no";
     host.append_attribute("mEditorTheme") = pHost->mEditorTheme.toUtf8().constData();
     host.append_attribute("mEditorThemeFile") = pHost->mEditorThemeFile.toUtf8().constData();
     host.append_attribute("mThemePreviewItemID") = QString::number(pHost->mThemePreviewItemID).toUtf8().constData();
@@ -595,7 +594,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         }
     }
     {
-        auto iterator = mudlet::self()->mShortcutsManager->iterator();
+        auto iterator = mudlet::self()->mpShortcutsManager->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
             auto shortcut = host.append_child("profileShortcut");

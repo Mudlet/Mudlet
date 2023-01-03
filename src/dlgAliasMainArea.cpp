@@ -22,14 +22,15 @@
 #include "dlgAliasMainArea.h"
 #include "mudlet.h"
 
-dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
+dlgAliasMainArea::dlgAliasMainArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
 
     connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editingNameFinished);
 
-    if (mudlet::self()->firstLaunch) {
+    if (mudlet::self()->smFirstLaunch) {
         lineEdit_alias_pattern->setPlaceholderText(tr("for example, ^myalias$ to match 'myalias'", "This text is shown as placeholder in the pattern box when no real pattern was entered, yet."));
     }
 }

@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
     }
 
     QCommandLineParser parser;
-    QCommandLineOption profileToOpen(qsl("profile"), QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
+    QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
     parser.addOption(profileToOpen);
 
     QCommandLineOption showHelp(QStringList() << "h" <<"help", QCoreApplication::translate("main", "Display help and exit"));
@@ -218,18 +218,21 @@ int main(int argc, char* argv[])
     QCommandLineOption mirrorToStdout(QStringList() << "m" << "mirror", QCoreApplication::translate("main", "Mirror output of all consoles to STDOUT"));
     parser.addOption(mirrorToStdout);
 
-    parser.parse(app->arguments());
+    bool parsedCommandLineOk = parser.parse(app->arguments());
 
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
     QStringList texts;
-    if (parser.isSet(showHelp)) {
+    if (!parsedCommandLineOk || parser.isSet(showHelp)) {
+        if (!parsedCommandLineOk) {
+            texts << qsl("%1\n\n").arg(QCoreApplication::translate("main", "Error: %1").arg(parser.errorText()));
+        }
         // Do "help" action
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]\n"
                                "       -h, --help           displays this message.\n"
                                "       -v, --version        displays version information.\n"
                                "       -q, --quiet          no splash screen on startup.\n"
-                               "       --profile=<profile>  additional profile to open\n\n"
+                               "       -p, --profile=<profile>  additional profile to open, may be repeated\n\n"
                                "There are other inherited options that arise from the Qt Libraries which are\n"
                                "less likely to be useful for normal use of this application:")
                  .arg(QLatin1String(APP_TARGET)));
@@ -276,7 +279,7 @@ int main(int argc, char* argv[])
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
-        return 0;
+        return parsedCommandLineOk ? 0 :-1;
     }
 
     if (parser.isSet(showVersion)) {
@@ -291,7 +294,7 @@ int main(int argc, char* argv[])
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Copyright © 2008-2022  Mudlet developers"));
+        texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Copyright © 2008-2023  Mudlet developers"));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
         texts << qsl("%1\n").arg(QCoreApplication::translate("main",
             "This is free software: you are free to change and redistribute it.\n"
@@ -303,7 +306,7 @@ int main(int argc, char* argv[])
     /*******************************************************************
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
-    QString cliProfile = parser.value(profileToOpen);
+    QStringList cliProfiles = parser.values(profileToOpen);
 
 
     bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
@@ -356,7 +359,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2022");
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
         QFont font(qsl("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -465,8 +468,6 @@ int main(int argc, char* argv[])
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
-    mudlet::debugMode = false;
-
     QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
 #if defined(Q_OS_WIN32)
     /*
@@ -522,10 +523,10 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
-    mudlet::self()->mMirrorToStdOut = parser.isSet(mirrorToStdout);
+    mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin(cliProfile);
+    mudlet::self()->startAutoLogin(cliProfiles);
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

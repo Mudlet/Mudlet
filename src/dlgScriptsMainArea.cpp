@@ -22,7 +22,8 @@
 #include "dlgScriptsMainArea.h"
 
 
-dlgScriptsMainArea::dlgScriptsMainArea(QWidget* pF) : QWidget(pF)
+dlgScriptsMainArea::dlgScriptsMainArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);

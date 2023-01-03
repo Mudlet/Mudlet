@@ -22,7 +22,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "utils.h"
 
+#include "pre_guard.h"
 #include <QAccessible>
 #include <QAccessibleInterface>
 #include <QAccessibleWidget>
@@ -31,89 +33,94 @@
 #if defined(Q_OS_WIN32)
 #include <QLibrary>
 #endif
+#include "post_guard.h"
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_OPENBSD)
-  // implemented per recommendation from Orca dev: https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
-class InvisibleNotification : public QWidget {
-  Q_OBJECT
+// implemented per recommendation from Orca dev: https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
+class InvisibleNotification : public QWidget
+{
+    Q_OBJECT
 
 public:
-  Q_DISABLE_COPY(InvisibleNotification)
-  explicit InvisibleNotification(QWidget *parent);
+    Q_DISABLE_COPY(InvisibleNotification)
+    explicit InvisibleNotification(QWidget* parent);
 
-  void setText(const QString &text);
-  QString text();
+    void setText(const QString& text);
+    QString text();
 
 private:
-  QString mText;
+    QString mText;
 };
 
-class InvisibleStatusbar : public QWidget {
-  Q_OBJECT
+class InvisibleStatusbar : public QWidget
+{
+    Q_OBJECT
 
 public:
-  Q_DISABLE_COPY(InvisibleStatusbar)
-  explicit InvisibleStatusbar(QWidget *parent);
+    Q_DISABLE_COPY(InvisibleStatusbar)
+    explicit InvisibleStatusbar(QWidget* parent);
 };
 
-class InvisibleAccessibleNotification : public QAccessibleWidget {
+class InvisibleAccessibleNotification : public QAccessibleWidget
+{
 public:
-  explicit InvisibleAccessibleNotification(QWidget *w)
-      : QAccessibleWidget(w, QAccessible::Role::Notification) {}
+    explicit InvisibleAccessibleNotification(QWidget* w)
+    : QAccessibleWidget(w, QAccessible::Role::Notification)
+    {}
 
 private:
-  InvisibleNotification *notification() const;
+    InvisibleNotification* notification() const;
 
 protected:
-  QString text(QAccessible::Text t) const override;
+    QString text(QAccessible::Text t) const override;
 };
 
-class FakeAccessibleStatusbar : public QAccessibleWidget {
+class FakeAccessibleStatusbar : public QAccessibleWidget
+{
 public:
-  explicit FakeAccessibleStatusbar(QWidget *w)
-      : QAccessibleWidget(w, QAccessible::Role::StatusBar) {}
+    explicit FakeAccessibleStatusbar(QWidget* w)
+    : QAccessibleWidget(w, QAccessible::Role::StatusBar)
+    {}
 };
 #endif
 
-class Announcer : public QWidget {
-  Q_OBJECT
+class Announcer : public QWidget
+{
+    Q_OBJECT
 public:
-  Q_DISABLE_COPY_MOVE(Announcer)
-  explicit Announcer(QWidget *parent = nullptr);
-  void announce(const QString& text, const QString& processing = QString());
+    Q_DISABLE_COPY_MOVE(Announcer)
+    explicit Announcer(QWidget* parent = nullptr);
+    void announce(const QString& text, const QString& processing = QString());
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_OPENBSD)
-  static QAccessibleInterface *accessibleFactory(const QString &classname,
-                                                 QObject *object) {
+    static QAccessibleInterface* accessibleFactory(const QString& classname, QObject* object)
+    {
 #undef interface // mingw compilation breaks without this
-    QAccessibleInterface *interface = nullptr;
+        QAccessibleInterface* interface = nullptr;
 
-    if (classname == QLatin1String("InvisibleNotification") && object &&
-        object->isWidgetType()) {
-      interface =
-          new InvisibleAccessibleNotification(static_cast<QWidget *>(object));
-    } else if (classname == QLatin1String("InvisibleStatusbar") && object &&
-               object->isWidgetType()) {
-      interface = new FakeAccessibleStatusbar(static_cast<QWidget *>(object));
+        if (classname == QLatin1String("InvisibleNotification") && object && object->isWidgetType()) {
+            interface = new InvisibleAccessibleNotification(static_cast<QWidget*>(object));
+        } else if (classname == QLatin1String("InvisibleStatusbar") && object && object->isWidgetType()) {
+            interface = new FakeAccessibleStatusbar(static_cast<QWidget*>(object));
+        }
+
+        return interface;
     }
-
-    return interface;
-  }
 #endif
 
 private:
 #if defined(Q_OS_LINUX) || defined(Q_OS_OPENBSD)
-  InvisibleNotification *notification;
-  InvisibleStatusbar *statusbar;
+    InvisibleNotification* notification;
+    InvisibleStatusbar* statusbar;
 #endif
 
 #if defined(Q_OS_WIN)
-  QScopedPointer<QLibrary> mpUiaLibrary;
+    QScopedPointer<QLibrary> mpUiaLibrary;
 
-  bool initializeUia();
+    bool initializeUia();
 
-  class UiaProvider;
-  UiaProvider *uiaProvider{};
+    class UiaProvider;
+    UiaProvider* uiaProvider{};
 #endif
 };
 #endif // ANNOUNCER_H

@@ -185,8 +185,6 @@ public:
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
     QColor getConsoleBgColor() const { return mBgColor; }
-    bool autoWrap() const;
-    void setAutoWrap(bool enabled);
 
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
@@ -194,27 +192,24 @@ public:
     void luaWrapLine(int line);
     QString getCurrentLine();
     void selectCurrentLine();
-
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
-
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
-    // In the next pair of functions the first element in the return is an
+    // In the next function the first element in the return is an
     // error code:
     // 0 = Okay
     // 1 = Window not found
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
-
     void setCaretMode(bool enabled);
-
     void setSearchOptions(const SearchOptions);
+    void setFocusOnAppropriateConsole();
+
 
     QPointer<Host> mpHost;
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
-    // Only on a MainConsole type instance:
     QPointer<TCommandLine> mpCommandLine;
 
     TBuffer buffer;
@@ -243,8 +238,6 @@ public:
     int mDisplayFontSize = 14;
     QFont mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     int mEngineCursor = -1;
-    TChar mFormatBasic;
-    TChar mFormatSystemMessage;
 
     int mIndentCount = 0;
     int mMainFrameBottomHeight = 0;
@@ -325,7 +318,6 @@ private:
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
-    bool mAutoWrap = true;
     SearchOptions mSearchOptions = SearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;

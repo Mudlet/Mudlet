@@ -21,6 +21,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
+            gcc_compiler_version: 8
             qt: '5.14.2'
             deploy: 'deploy'
             run_tests: 'true'
@@ -28,6 +29,8 @@ jobs:
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
+            # We still need a gcc for some sub-stages - and it ain't always the same one:
+            gcc_compiler_version: 9
             qt: '5.14.2'
           - os: macos-11
             buildname: 'macos / c++ tests'
@@ -54,21 +57,22 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: Restore Qt cache
-      uses: actions/cache@v3
-      id: cache-qt
-      with:
-        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+    - name: (Windows) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Windows'
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        arch: win64_mingw73 # this key is relevant only for windows
-        cached: ${{steps.cache-qt.outputs.cache-hit}}
-        aqtversion: '==1.1.2'
+        arch: win64_mingw73
+        cache: true
+
+    - name: (Linux/macOS) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        cache: true
 
     - name: Restore Boost cache
       uses: actions/cache@v3
@@ -177,14 +181,14 @@ jobs:
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
+        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
-        sudo update-alternatives --set gcc /usr/bin/gcc-7
-        sudo update-alternatives --set g++ /usr/bin/g++-7
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -307,7 +311,7 @@ jobs:
         run-luarocks install --local luautf8
         run-luarocks install --local lua-zip
         run-luarocks install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
-        run-luarocks install --local lrexlib-pcre
+        run-luarocks install PCRE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lrexlib-pcre
 
         # CI changelog generation dependencies
         run-luarocks install --local argparse
