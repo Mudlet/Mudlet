@@ -490,6 +490,11 @@ private:
 
     QRegularExpression* simplifyEdbeeStatusBarRegex = nullptr;
 
+    QAction* mAddItem = nullptr;
+    QAction* mDeleteItem = nullptr;
+    QAction* mAddGroup = nullptr;
+    QAction* mSaveItem = nullptr;
+
     SearchOptions mSearchOptions = SearchOptionNone;
 
     // This has a menu which the following QActions are inserted into:
