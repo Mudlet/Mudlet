@@ -28,6 +28,7 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TMedia.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -115,6 +116,8 @@ public slots:
     void slot_chosenProfilesChanged(QAction*);
     void slot_showMapGlyphUsage();
 
+    // Media
+    void slot_purgeMediaCache();
 
     // Log.
     void slot_setLogDir();
