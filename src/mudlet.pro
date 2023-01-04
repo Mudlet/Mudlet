@@ -778,7 +778,7 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
 macx {
-    OBJECTIVE_SOURCES += AnnouncerMac.mm
+    SOURCES += AnnouncerMac.mm
 }
 
 win32 {

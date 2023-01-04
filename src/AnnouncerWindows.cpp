@@ -2,6 +2,7 @@
  *   Copyright 2019-2022 Leonard de Ruijter, James Teh - OSARA             *
  *   Copyright 2017 The Qt Company Ltd.                                    *
  *   Copyright (C) 2022 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
