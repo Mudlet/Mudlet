@@ -345,6 +345,7 @@ public:
     controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool migratePasswordsToProfileStorage();
     bool migratePasswordsToSecureStorage();
+    void onlyShowProfiles(const QStringList&);
     bool openWebPage(const QString&);
     // Both of these revises the contents of the .aff file and handle a .dic
     // file that has been updated externally/manually (to add or remove words)
@@ -434,6 +435,7 @@ public:
     FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
+    QStringList mOnlyShownPredefinedProfiles;
     QPointer<dlgAboutDialog> mpAboutDlg;
     QStringList mPackagesToInstallList;
     QPointer<dlgConnectionProfiles> mpConnectionDialog;

@@ -4735,3 +4735,17 @@ void mudlet::showReplayTime(const QTime& time)
         mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Time: %1").arg((time.isValid() ? time : QTime::fromMSecsSinceStartOfDay(1)).toString(mTimeFormat))));
     }
 }
+
+void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
+{
+    // As we are processing argument(s) passed on the command line check in a
+    // non-case sensitive manner:
+    for (const QString& predefinedProfile : predefinedProfiles) {
+        if (TGameDetails::keys().contains(predefinedProfile, Qt::CaseInsensitive)) {
+            auto details = TGameDetails::findGame(predefinedProfile, Qt::CaseInsensitive);
+            Q_ASSERT_X(details != TGameDetails::scmDefaultGames.constEnd(), "mudlet::onlyShowProfiles(const QStringList&)", "failed to find matching game after initial search said there was a match");
+            mOnlyShownPredefinedProfiles.append((*details).name);
+        }
+        // Don't do anything if it was NOT found
+    }
+}
