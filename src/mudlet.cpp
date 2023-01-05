@@ -2499,7 +2499,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
-void mudlet::startAutoLogin(const QString& cliProfile)
+void mudlet::startAutoLogin(const QStringList& cliProfiles)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
@@ -2507,10 +2507,18 @@ void mudlet::startAutoLogin(const QString& cliProfile)
     hostList.removeDuplicates();
     bool openedProfile = false;
 
-    for (auto& pHost : hostList) {
-        QString val = readProfileData(pHost, qsl("autologin"));
-        if (val.toInt() == Qt::Checked || pHost == cliProfile) {
-            doAutoLogin(pHost);
+    for (auto& hostName : cliProfiles){
+        if (hostList.contains(hostName)) {
+            doAutoLogin(hostName);
+            openedProfile = true;
+            hostList.removeOne(hostName);
+        }
+    }
+
+    for (auto& hostName : hostList) {
+        QString val = readProfileData(hostName, qsl("autologin"));
+        if (val.toInt() == Qt::Checked) {
+            doAutoLogin(hostName);
             openedProfile = true;
         }
     }
@@ -3012,9 +3020,8 @@ void mudlet::replayOver()
 void mudlet::slot_replaySpeedUp()
 {
     if (mpLabelReplaySpeedDisplay) {
-        mReplaySpeed = mReplaySpeed * 2;
+        mReplaySpeed = qMin(1024, mReplaySpeed * 2);
         mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
-
         mpLabelReplaySpeedDisplay->show();
     }
 }
@@ -3022,10 +3029,7 @@ void mudlet::slot_replaySpeedUp()
 void mudlet::slot_replaySpeedDown()
 {
     if (mpLabelReplaySpeedDisplay) {
-        mReplaySpeed = mReplaySpeed / 2;
-        if (mReplaySpeed < 1) {
-            mReplaySpeed = 1;
-        }
+        mReplaySpeed = qMax(1, mReplaySpeed / 2);
         mpLabelReplaySpeedDisplay->setText(qsl("<font size=25><b>%1</b></font>").arg(tr("Speed: X%1").arg(mReplaySpeed)));
         mpLabelReplaySpeedDisplay->show();
     }

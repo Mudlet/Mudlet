@@ -16,6 +16,7 @@ jobs:
         ref: development
         submodules: true
         fetch-depth: 0
+        persist-credentials: false
 
     - name: update text for translation
       uses: Mudlet/lupdate-action@master

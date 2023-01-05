@@ -128,7 +128,7 @@ bool TCommandLine::event(QEvent* event)
         }
 
         if (ke->matches(QKeySequence::Find)){ // Find is Ctrl+F
-            if (mudlet::self()->dactionInputLine->isChecked()){
+            if (mudlet::self()->dactionInputLine->isChecked()) {
                 // If hidden then reveal as if pressed Alt-L
                 mudlet::self()->dactionInputLine->setChecked(false);
                 mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
