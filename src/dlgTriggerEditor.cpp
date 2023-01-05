@@ -254,8 +254,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
     // Add lua functions and reserved lua terms to an AutoComplete provider
-    for (QString key : mudlet::mLuaFunctionNames.keys()) {
-        provider->add(key, 3, mudlet::mLuaFunctionNames.value(key).toString());
+    for (QString key : mudlet::smLuaFunctionNames.keys()) {
+        provider->add(key, 3, mudlet::smLuaFunctionNames.value(key).toString());
     }
 
     provider->add(qsl("and"), 14);
@@ -439,28 +439,24 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(treeWidget_keys, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
 
 
-    QAction* addTriggerAction = new QAction(QIcon(qsl(":/icons/document-new.png")), tr("Add Item"), this);
-    addTriggerAction->setStatusTip(tr("Add new Trigger, Script, Alias or Filter"));
-    connect(addTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
+    mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), QString(), this);
+    connect(mAddItem, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
 
-    QAction* deleteTriggerAction = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), tr("Delete Item"), this);
-    deleteTriggerAction->setStatusTip(tr("Delete Trigger, Script, Alias or Filter"));
-    deleteTriggerAction->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
-    deleteTriggerAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
-    deleteTriggerAction->setShortcut(QKeySequence(QKeySequence::Delete));
-    frame_left->addAction(deleteTriggerAction);
-    connect(deleteTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
+    mDeleteItem = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), QString(), this);
+    mDeleteItem->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Delete Item"), QKeySequence(QKeySequence::Delete).toString()));
+    mDeleteItem->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mDeleteItem->setShortcut(QKeySequence(QKeySequence::Delete));
+    frame_left->addAction(mDeleteItem);
+    connect(mDeleteItem, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
 
-    QAction* addFolderAction = new QAction(QIcon(qsl(":/icons/folder-new.png")), tr("Add Group"), this);
-    addFolderAction->setStatusTip(tr("Add new Group"));
-    connect(addFolderAction, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
+    mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
+    connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
-    QAction* saveAction = new QAction(QIcon(qsl(":/icons/document-save-as.png")), tr("Save Item"), this);
-    saveAction->setToolTip(tr("<p>Saves the selected item. (Ctrl+S)</p>"
+    mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), QString(), this);
+    mSaveItem->setToolTip(tr("<p>Saves the selected item. (Ctrl+S)</p>"
                               "<p>Saving causes any changes to the item to take effect. It will not save to disk, "
                               "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>"));
-    saveAction->setStatusTip(tr("Saves the selected trigger, script, alias, etc, causing new changes to take effect - does not save to disk though..."));
-    connect(saveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_saveEdits);
+    connect(mSaveItem, &QAction::triggered, this, &dlgTriggerEditor::slot_saveEdits);
 
     QAction* copyAction = new QAction(tr("Copy"), this);
     copyAction->setShortcut(QKeySequence(QKeySequence::Copy));
@@ -541,7 +537,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
-    toolBar->addAction(saveAction);
+    toolBar->addAction(mSaveItem);
     toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions",
                                // Intentional comment to separate arguments
                                "This is the toolbar that is initially placed at the top of the editor.")
@@ -549,11 +545,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     toolBar->addSeparator();
 
-    toolBar->addAction(addTriggerAction);
-    toolBar->addAction(addFolderAction);
+    toolBar->addAction(mAddItem);
+    toolBar->addAction(mAddGroup);
 
     toolBar->addSeparator();
-    toolBar->addAction(deleteTriggerAction);
+    toolBar->addAction(mDeleteItem);
     toolBar->addAction(importAction);
     toolBar->addAction(mpExportAction);
     toolBar->addAction(mProfileSaveAsAction);
@@ -6766,6 +6762,84 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     checkBox_displayAllVariables->setVisible(view == EditorViewType::cmVarsView);
 
     mpExportAction->setEnabled(view != EditorViewType::cmVarsView);
+
+    // texts are duplicated here so that translators can work with the full string
+    switch (mCurrentView) {
+    case EditorViewType::cmTriggerView:
+        mAddItem->setText(tr("Add Trigger"));
+        mAddItem->setStatusTip(tr("Add new trigger"));
+        mAddGroup->setText(tr("Add Trigger Group"));
+        mAddGroup->setStatusTip(tr("Add new group of triggers"));
+        mDeleteItem->setText(tr("Delete Trigger"));
+        mDeleteItem->setStatusTip(tr("Delete the selected trigger"));
+        mSaveItem->setText(tr("Save Trigger"));
+        mSaveItem->setStatusTip(tr("Saves the selected trigger, causing new changes to take effect - does not save to disk though..."));
+        break;
+    case EditorViewType::cmTimerView:
+        mAddItem->setText(tr("Add Timer"));
+        mAddItem->setStatusTip(tr("Add new timer"));
+        mAddGroup->setText(tr("Add Timer Group"));
+        mAddGroup->setStatusTip(tr("Add new group of timers"));
+        mDeleteItem->setText(tr("Delete Timer"));
+        mDeleteItem->setStatusTip(tr("Delete the selected timer"));
+        mSaveItem->setText(tr("Save Timer"));
+        mSaveItem->setStatusTip(tr("Saves the selected timer, causing new changes to take effect - does not save to disk though..."));
+        break;
+    case EditorViewType::cmAliasView:
+        mAddItem->setText(tr("Add Alias"));
+        mAddItem->setStatusTip(tr("Add new alias"));
+        mAddGroup->setText(tr("Add Alias Group"));
+        mAddGroup->setStatusTip(tr("Add new group of aliases"));
+        mDeleteItem->setText(tr("Delete Alias"));
+        mDeleteItem->setStatusTip(tr("Delete the selected alias"));
+        mSaveItem->setText(tr("Save Alias"));
+        mSaveItem->setStatusTip(tr("Saves the selected alias, causing new changes to take effect - does not save to disk though..."));
+        break;
+    case EditorViewType::cmScriptView:
+        mAddItem->setText(tr("Add Script"));
+        mAddItem->setStatusTip(tr("Add new script"));
+        mAddGroup->setText(tr("Add Script Group"));
+        mAddGroup->setStatusTip(tr("Add new group of scripts"));
+        mDeleteItem->setText(tr("Delete Script"));
+        mDeleteItem->setStatusTip(tr("Delete the selected script"));
+        mSaveItem->setText(tr("Save Script"));
+        mSaveItem->setStatusTip(tr("Saves the selected script, causing new changes to take effect - does not save to disk though..."));
+        break;
+    case EditorViewType::cmActionView:
+        mAddItem->setText(tr("Add Button"));
+        mAddItem->setStatusTip(tr("Add new button"));
+        mAddGroup->setText(tr("Add Button Group"));
+        mAddGroup->setStatusTip(tr("Add new group of buttons"));
+        mDeleteItem->setText(tr("Delete Button"));
+        mDeleteItem->setStatusTip(tr("Delete the selected button"));
+        mSaveItem->setText(tr("Save Button"));
+        mSaveItem->setStatusTip(tr("Saves the selected button, causing new changes to take effect - does not save to disk though..."));
+        break;
+    case EditorViewType::cmKeysView:
+        mAddItem->setText(tr("Add Key"));
+        mAddItem->setStatusTip(tr("Add new key"));
+        mAddGroup->setText(tr("Add Key Group"));
+        mAddGroup->setStatusTip(tr("Add new group of keys"));
+        mDeleteItem->setText(tr("Delete Key"));
+        mDeleteItem->setStatusTip(tr("Delete the selected key"));
+        mSaveItem->setText(tr("Save Key"));
+        mSaveItem->setStatusTip(tr("Saves the selected key, causing new changes to take effect - does not save to disk though..."));
+        break;
+    case EditorViewType::cmVarsView:
+        mAddItem->setText(tr("Add Variable"));
+        mAddItem->setStatusTip(tr("Add new variable"));
+        mAddGroup->setText(tr("Add Lua table"));
+        mAddGroup->setStatusTip(tr("Add new Lua table"));
+        mDeleteItem->setText(tr("Delete Variable"));
+        mDeleteItem->setStatusTip(tr("Delete the selected variable"));
+        mSaveItem->setText(tr("Save Variable"));
+        mSaveItem->setStatusTip(tr("Saves the selected variable, causing new changes to take effect - does not save to disk though..."));
+        break;
+    default:
+        qDebug() << "ERROR: dlgTriggerEditor::changeView() undefined view";
+    }
+
+
 }
 
 void dlgTriggerEditor::slot_showTimers()
@@ -7312,10 +7386,10 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
 {
     mudlet::self()->attachDebugArea(mpHost->getName());
 
-    mudlet::mpDebugArea->setVisible(!mudlet::debugMode);
-    mudlet::debugMode = !mudlet::debugMode;
-    mudlet::mpDebugArea->setWindowTitle("Central Debug Console");
-    if (mudlet::debugMode) {
+    mudlet::smpDebugArea->setVisible(!mudlet::smDebugMode);
+    mudlet::smDebugMode = !mudlet::smDebugMode;
+    mudlet::smpDebugArea->setWindowTitle(tr("Central Debug Console"));
+    if (mudlet::smDebugMode) {
         // If this is the first time the window is shown we want any previously
         // enqueued messages to be painted onto the central debug console:
         TDebug::flushMessageQueue();

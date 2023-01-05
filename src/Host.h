@@ -399,6 +399,7 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
+    void setFocusOnHostMainConsole();
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;

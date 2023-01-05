@@ -124,6 +124,10 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     listScripts();
     listActions();
     listTimers();
+
+    setWindowTitle(tr("Package Exporter - %1",
+        "Title of the window. The %1 will be replaced by the current profile's name.")
+        .arg(mpHost->getName()));
 }
 
 dlgPackageExporter::~dlgPackageExporter()
