@@ -40,11 +40,11 @@ struct GameDetail
 class TGameDetails
 {
 public:
-    inline static const QList<GameDetail>::const_iterator findGame(const QString& key)
+    inline static const QList<GameDetail>::const_iterator findGame(const QString& key, const Qt::CaseSensitivity sensitivity = Qt::CaseSensitive)
     {
         QList<GameDetail>::const_iterator i;
         for (i = scmDefaultGames.constBegin(); i != scmDefaultGames.constEnd(); ++i) {
-            if ((*i).name == key) {
+            if (!(*i).name.compare(key, sensitivity)) {
                 return i;
             }
         }
