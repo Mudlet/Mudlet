@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -40,6 +40,8 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setupUi(this);
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
+    connect(comboBox_roomSymbol, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgRoomProperties::slot_symbolComboBoxItemChanged);
+    connect(comboBox_weight, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgRoomProperties::slot_weightComboBoxItemChanged);
     connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomProperties::slot_updatePreview);
     connect(pushButton_setSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openSymbolColorSelector);
     connect(pushButton_resetSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_resetSymbolColor);
@@ -440,7 +442,6 @@ void dlgRoomProperties::slot_resetSymbolColor()
     slot_updatePreview();
 }
 
-
 QColor dlgRoomProperties::backgroundBasedColor(QColor background)
 {
     return background.lightness() > 127 ? Qt::black : Qt::white;
@@ -554,4 +555,22 @@ void dlgRoomProperties::slot_openRoomColorSelector()
         mRoomColor = mpHost->mpMap->mCustomEnvColors.value(mRoomColorNumber);
         slot_updatePreview();
     }
+}
+
+void dlgRoomProperties::slot_symbolComboBoxItemChanged(const int index)
+{
+    if (index < 0 || index >= comboBox_roomSymbol->count() || !comboBox_roomSymbol->lineEdit()) {
+        return;
+    }
+
+    comboBox_roomSymbol->lineEdit()->selectAll();
+}
+
+void dlgRoomProperties::slot_weightComboBoxItemChanged(const int index)
+{
+    if (index < 0 || index >= comboBox_weight->count() || !comboBox_weight->lineEdit()) {
+        return;
+    }
+
+    comboBox_weight->lineEdit()->selectAll();
 }
