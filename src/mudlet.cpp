@@ -2499,7 +2499,7 @@ void mudlet::deleteProfileData(const QString& profile, const QString& item)
 }
 
 // this slot is called via a timer in the constructor of mudlet::mudlet()
-void mudlet::startAutoLogin(const QString& cliProfile)
+void mudlet::startAutoLogin(const QStringList& cliProfiles)
 {
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
     hostList += TGameDetails::keys();
@@ -2507,10 +2507,18 @@ void mudlet::startAutoLogin(const QString& cliProfile)
     hostList.removeDuplicates();
     bool openedProfile = false;
 
-    for (auto& pHost : hostList) {
-        QString val = readProfileData(pHost, qsl("autologin"));
-        if (val.toInt() == Qt::Checked || pHost == cliProfile) {
-            doAutoLogin(pHost);
+    for (auto& hostName : cliProfiles){
+        if (hostList.contains(hostName)) {
+            doAutoLogin(hostName);
+            openedProfile = true;
+            hostList.removeOne(hostName);
+        }
+    }
+
+    for (auto& hostName : hostList) {
+        QString val = readProfileData(hostName, qsl("autologin"));
+        if (val.toInt() == Qt::Checked) {
+            doAutoLogin(hostName);
             openedProfile = true;
         }
     }
@@ -4623,4 +4631,18 @@ bool mudlet::desktopInDarkMode()
 void mudlet::announce(const QString& text, const QString& processing)
 {
     mpAnnouncer->announce(text, processing);
+}
+
+void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
+{
+    // As we are processing argument(s) passed on the command line check in a
+    // non-case sensitive manner:
+    for (const QString& predefinedProfile : predefinedProfiles) {
+        if (TGameDetails::keys().contains(predefinedProfile, Qt::CaseInsensitive)) {
+            auto details = TGameDetails::findGame(predefinedProfile, Qt::CaseInsensitive);
+            Q_ASSERT_X(details != TGameDetails::scmDefaultGames.constEnd(), "mudlet::onlyShowProfiles(const QStringList&)", "failed to find matching game after initial search said there was a match");
+            mOnlyShownPredefinedProfiles.append((*details).name);
+        }
+        // Don't do anything if it was NOT found
+    }
 }
