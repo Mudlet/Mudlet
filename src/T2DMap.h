@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018-2019, 2022 by Stephen Lyons                  *
+ *   Copyright (C) 2016, 2018-2019, 2022-2023 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
  *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
@@ -204,7 +204,7 @@ public slots:
     void slot_shiftDown();
     void slot_shiftLeft();
     void slot_shiftRight();
-    void slot_showPropertiesDialog();
+    void slot_showPropertiesDialog(const int);
     void slot_setRoomProperties(
         bool changeName, QString newName,
         bool changeRoomColor, int newRoomColor,
@@ -234,6 +234,17 @@ public slots:
     void slot_cancelCustomLineDialog();
     void slot_loadMap();
     void slot_newMap();
+
+
+signals:
+    // Key:
+    // 0 = focus on Room Name
+    // 1 = focus on Room Color
+    // 2 = focus on Room Symbol
+    // 3 = focus on Room Lock/Unlock
+    // 4 = focus on Room Weight
+    void signal_showPropertiesDialogue(const int what);
+
 
 private:
     void updateSelectionWidget();
