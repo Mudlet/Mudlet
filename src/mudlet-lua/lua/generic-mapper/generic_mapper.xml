@@ -1434,6 +1434,7 @@ local function config()
     end
     saves.prompt_pattern = saves.prompt_pattern or {}
     saves.ignore_patterns = saves.ignore_patterns or {}
+    saves.move_methods = saves.move_methods or {}
     saves.recall = saves.recall or {}
     map.save = saves
 
