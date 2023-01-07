@@ -4135,7 +4135,11 @@ void T2DMap::slot_setArea()
             }
             auto& targetAreaName = areaNamesMap.value(newAreaId);
             mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+            switchArea(targetAreaName);
+#else
             slot_switchArea(targetAreaName);
+#endif
         }
     }
     update();
