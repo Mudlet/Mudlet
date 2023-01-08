@@ -13726,7 +13726,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
             if (msspVAR == "HOSTNAME") {
                 host.mMSSPHostName = msspVAL;
             } else if (msspVAR == "TLS" || msspVAR == "SSL") {
-                host.mMSSPTlsPort = msspVAL != "-1" && msspVAL != "1" ? msspVAL.toInt() : 0;
+                host.mMSSPTlsPort = (msspVAL != "-1" && msspVAL != "1") ? msspVAL.toInt() : 0;
             }
         }
 
