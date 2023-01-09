@@ -119,6 +119,7 @@ modules:
     cleanup:
       - /bin/luarocks*
       - /share/luarocks
+      - /etc/luarocks*
 
   - name: sqlite3
     config-opts:
@@ -182,7 +183,9 @@ modules:
   - name: mudlet
     buildsystem: cmake-ninja
     config-opts:
-      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      # pending https://github.com/Mudlet/Mudlet/pull/6493
+      # - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DCMAKE_BUILD_TYPE=Release
     sources:
 # commented out for testing
 #      - type: archive
