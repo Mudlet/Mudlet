@@ -15,9 +15,8 @@ finish-args:
   - --filesystem=home
 
 cleanup:
-  - /bin/luarocks*
-  - /share/luarocks
-  - /bin/sqlite3
+  - /bin/json_reformat
+  - /bin/json_verify
 
 modules:
 # TODO - check that all library versions are up to date...
@@ -62,6 +61,8 @@ modules:
         tag: 0.20.4
         type: git
         url: https://gitlab.gnome.org/GNOME/libsecret.git
+    cleanup:
+      - /bin/secret-tool
 
   - name: libzip
     buildsystem: cmake-ninja
@@ -114,6 +115,9 @@ modules:
       - type: archive
         url: 'https://github.com/luarocks/luarocks/archive/refs/tags/v3.9.2.tar.gz'
         sha256: a0b36cd68586cd79966d0106bb2e5a4f5523327867995fd66bee4237062b3e3b
+    cleanup:
+      - /bin/luarocks*
+      - /share/luarocks
 
   - name: sqlite3
     config-opts:
@@ -122,6 +126,8 @@ modules:
       - type: archive
         url: 'https://www.sqlite.org/2021/sqlite-autoconf-3360000.tar.gz'
         sha256: bd90c3eb96bee996206b83be7065c9ce19aef38c3f4fb53073ada0d0b69bbce3
+    cleanup:
+      - /bin/sqlite3
 
   - name: pcre8
     config-opts:
@@ -130,6 +136,10 @@ modules:
       - type: archive
         url: 'https://sourceforge.net/projects/pcre/files/pcre/8.45/pcre-8.45.tar.bz2'
         sha256: 4dae6fdcd2bb0bb6c37b5f97c33c2be954da743985369cddac3546e3218bffb8
+    cleanup:
+    - /bin/pcre-config
+    - /bin/pcregrep
+    - /bin/pcretest
 
   - name: boost
     buildsystem: 'simple'
