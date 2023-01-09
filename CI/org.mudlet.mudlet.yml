@@ -20,7 +20,6 @@ cleanup:
   - /bin/json_verify
 
 modules:
-# TODO - check that all library versions are up to date...
   - name: lua-5.1
     buildsystem: simple
     build-commands:
@@ -159,7 +158,6 @@ modules:
       build-args:
         - '--share=network'
     build-commands:
-# TODO - these should be installed into /app
       - luarocks install --tree="/app" lua-yajl YAJL_INCDIR="/app/include" YAJL_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
       - luarocks install --tree="/app" luautf8
       - luarocks install --tree="/app" LuaFileSystem
@@ -187,10 +185,6 @@ modules:
       # - -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - -DCMAKE_BUILD_TYPE=Release
     sources:
-# commented out for testing
-#      - type: archive
-#        url: https://www.mudlet.org/download/Mudlet-4.16.0.tar.xz
-#        sha256: aa36c80e6e75761f834032f9ca7573b3a7991998afe90017c535be5c523af30b
       - type: git
         url: https://github.com/Mudlet/Mudlet.git
         branch: development
