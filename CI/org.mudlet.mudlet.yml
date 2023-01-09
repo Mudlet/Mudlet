@@ -3,7 +3,8 @@ runtime: org.kde.Platform
 runtime-version: '5.15-22.08'
 sdk: org.kde.Sdk
 command: mudlet
-rename-desktop-file: mudlet.desktop
+# buggy - see https://github.com/flathub/org.flatpak.Builder/issues/138
+# rename-desktop-file: mudlet.desktop
 finish-args:
   - --share=ipc
   - --socket=x11
