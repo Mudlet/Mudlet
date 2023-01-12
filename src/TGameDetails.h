@@ -62,7 +62,15 @@ public:
     }
 
     // clang-format off
-    // games are to be added here in alphabetical order
+    //
+    // Games are to be added here in alphabetical order and this format:
+    // - Name
+    // - Address to connect to
+    // - Port to connect on
+    // - Secure connection possible?
+    // - Website or other URLs
+    // - Path to the profile icon
+    // - Text to use for description
     inline static const QList<GameDetail> scmDefaultGames = {
             {qsl("Avalon.de"), // Name
              qsl("avalon.mud.de"), // address to connect to
@@ -535,6 +543,60 @@ public:
                  "Rivendell, Goblin-town, Mirkwood, Dol Guldur, and the Mines of Moria. The game is "
                  "completely at no cost to play and has been continually enhanced since its "
                  "inception in the fall of 1991.")},
+
+            {qsl("MorgenGrauen"),
+             qsl("mg.mud.de"),
+             4711,
+             true,
+             qsl("<a href='http://mg.mud.de/'>mg.mud.de</a>"),
+             qsl(":/icons/morgengrauen_480x120.png"),
+             /* English translation, provided by Game:
+ *           "The oldest Spanish free mud with more than 20 years of running history."
+ *           "\n\n"
+ *           "Reinos de Leyenda takes place in the ever changing world of Eirea, ravaged by the "
+ *           "mischiefs of the gods after more than a thousand years of contempt and hideous war "
+ *           "amongst their zealous mortal pawns."
+ *           "\n\n"
+ *           "History is written on a day per day basis, taking into consideration the players' "
+ *           "choices to decide the irreversible aftermath of this everlasting struggle."
+ *           "\n\n"
+ *           "This is a PvP MUD which allows the player to set how high are the stakes: the more "
+ *           "you risk losing upon death, the more glory to be earned by your heroism. RP, while "
+ *           "not enforced, is rewarded with non-PvP oriented perks and unique treasure."
+ *           "\n\n"
+ *           "A powerful character customization system allows you to choose your deity –or "
+ *           "fully disregard the gods– and join one of the player-run realms that govern the "
+ *           "land to explore a breathing world, delve into the secrets of the oceans, shape "
+ *           "your legacy, craft forgotten marvels for you –or your allies– and fight for faith, "
+ *           "glory or coin."
+ */
+             qsl("Willkommen im Morgengrauen, dem größten deutschsprachigen "
+                 "MUD, das seit 1992 kontinuierlich weiterentwickelt wird."
+                 "\n\n"
+                 "Core is one of the most distant settlements known to mankind, most famous for its "
+                 "lucrative yet oppressive mines, but more than mankind can be found here..."
+                 "\n\n"
+                 "Core is a diverse group of 9 races in total, all vying for recognition or profits, "
+                 "or both, working for The Company, the megalithic entity running the colony itself."
+                 "\n\n"
+                 "To The Company, everything is secondary to profits."
+                 "\n\n"
+                 "It is up to you to determine how best to survive in this environment, whether that "
+                 "be through combat training, superior mining skills, or technical prowess."
+                 "\n\n"
+                 "Core MUD is always free to play and features a fun and supportive atmosphere. "
+                 "Roleplaying is encouraged but not mandatory."
+                 "\n\n"
+                 "Mining is your primary source of income, but there are multiple ways to scrape "
+                 "together a few credits... or a few million."
+                 "\n\n"
+                 "Core Mud also features an economy which is player-driven.  Players own "
+                 "merchandise shops featuring energy weaponry or useful tools, pubs featuring "
+                 "assorted alcoholic (of course) and non-alcoholic beverages, and clinics for "
+                 "healing, to name a few."
+                 "\n\n"
+                 "Come join us today!")},
+
             };
     // clang-format on
 };
