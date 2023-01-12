@@ -191,6 +191,7 @@
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>
         <file>lua-function-list.json</file>
+        <file>mg-loader.xml</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
         <file>mudlet-lua/lua/enable-accessibility/enable-accessibility.xml</file>
         <file>mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml</file>
