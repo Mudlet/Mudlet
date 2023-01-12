@@ -1715,6 +1715,7 @@ DISTFILES += \
     .clang-format \
     CF-loader.xml \
     CMakeLists.txt \
+    mg-loader.xml \
     mudlet-lua/lua/generic-mapper/generic_mapper.xml \
     mudlet-lua/lua/generic-mapper/versions.lua \
     mudlet-lua/tests/DB.lua \
