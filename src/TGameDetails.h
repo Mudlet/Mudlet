@@ -547,7 +547,7 @@ public:
             {qsl("MorgenGrauen"),
              qsl("mg.mud.de"),
              4711,
-             true,
+             false,
              qsl("<a href='http://mg.mud.de/'>mg.mud.de</a>"),
              qsl(":/icons/morgengrauen_480x120.png"),
              /* English translation, provided by Game:
