@@ -6,15 +6,10 @@
 	<AliasPackage />
 	<ActionPackage />
 	<ScriptPackage>
-		<ScriptGroup isActive="yes" isFolder="yes">
-			<name>MG_Loader</name>
-			<packageName>MG_Loader</packageName>
-			<script></script>
-			<eventHandlerList />
-			<Script isActive="yes" isFolder="no">
-				<name>MG_Loader</name>
-				<packageName></packageName>
-				<script>function downloadPackage(a,b)
+		<Script isActive="yes" isFolder="no">
+			<name>MG-Loader</name>
+			<packageName></packageName>
+			<script>function downloadPackage(a,b)
   echo("[ INFO ]  - Das Mudlet-Paket fürs MorgenGrauen wird heruntergeladen...")
   downloadFile(getMudletHomeDir() .. "/MorgenGrauen.mpackage", "https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage")
 end
@@ -23,25 +18,24 @@ function installReady(event, file)
   if file ~= getMudletHomeDir().."/MorgenGrauen.mpackage" then return end
   if not io.exists(getMudletHomeDir().."/MorgenGrauen.mpackage") then
     cecho([[&lt;DeepSkyBlue&gt;[ INFO ]  -&lt;LimeGreen&gt; Um das Mudlet-Paket fürs MorgenGrauen zu laden, kopiere bitte folgenden Text (ohne Zeilenumbrüche) in die Eingabezeile und sende ihn ab:
-    
+
 lua function d(a,b)if not b:find("MorgenGrauen",1,true)then return end installPackage(b)os.remove(b)cecho("&amp;lt;gold&amp;gt;Paket installiert!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/MorgenGrauen.mpackage","https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage")
-    
+
 ]])
     return
   end
-  
+
 
   cecho([[&lt;LimeGreen&gt;[  OK  ]  -&lt;gold&gt; Dein Mudlet-Paket fürs MorgenGrauen wurde erfolgreich heruntergeladen.]])
   cecho("\n&lt;DeepSkyBlue&gt;[ INFO ]  -&lt;LimeGreen&gt; Installiere... (dies dauert einige Sekunden.)\n")
   tempTimer(1, [[installPackage(getMudletHomeDir().."/MorgenGrauen.mpackage")]])
-  uninstallPackage("MG_Loader")
+  uninstallPackage("MG-Loader")
 end
 
 registerAnonymousEventHandler("sysConnectionEvent", "downloadPackage")
 registerAnonymousEventHandler("sysDownloadDone", "installReady")</script>
-				<eventHandlerList />
-			</Script>
-		</ScriptGroup>
+			<eventHandlerList />
+		</Script>
 	</ScriptPackage>
 	<KeyPackage />
 	<VariablePackage>
