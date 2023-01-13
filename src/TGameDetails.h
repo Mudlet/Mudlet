@@ -62,15 +62,7 @@ public:
     }
 
     // clang-format off
-    //
-    // Games are to be added here in alphabetical order and this format:
-    // - Name
-    // - Address to connect to
-    // - Port to connect on
-    // - Secure connection possible?
-    // - Website or other URLs
-    // - Path to the profile icon
-    // - Text to use for description
+    // games are to be added here in alphabetical order
     inline static const QList<GameDetail> scmDefaultGames = {
             {qsl("Avalon.de"), // Name
              qsl("avalon.mud.de"), // address to connect to
