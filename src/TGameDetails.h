@@ -551,11 +551,11 @@ public:
              qsl("<a href='http://mg.mud.de/'>mg.mud.de</a>"),
              qsl(":/icons/morgengrauen_480x120.png"),
              /* English translation, provided by Game:
- *           "Welcome to Morgengrauen, the largest German-language "
- *           "MUD, which has been continuously developed since 1992."
- *           "\n\n"
- *           "Play now or never!"
- */
+              * "Welcome to Morgengrauen, the largest German-language "
+              *  "MUD, which has been continuously developed since 1992."
+              * "\n\n"
+              * "Play now or never!"
+              */
              qsl("Willkommen im Morgengrauen, dem größten deutschsprachigen "
                  "MUD, das seit 1992 kontinuierlich weiterentwickelt wird."
                  "\n\n"
