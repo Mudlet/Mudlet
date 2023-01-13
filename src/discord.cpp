@@ -60,7 +60,6 @@ Discord::Discord(QObject* parent)
               {"clessidra", {"clessidra.it", "mud.clessidra.it"}},
               {"mume", {"mume.org"}},
               {"asteria", {"asteriamud.com"}},
-              {"morgengrauen", {"mg.mud.de"}},
             }
 {
 #if defined(Q_OS_WIN64)
