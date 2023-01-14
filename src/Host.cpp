@@ -788,9 +788,6 @@ void Host::resetProfile_phase2()
 // returns true+filepath if successful or false+error message otherwise
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, const QString& saveName, bool syncModules)
 {
-    emit profileSaveStarted();
-    qApp->processEvents();
-
     QString directory_xml;
     if (saveFolder.isEmpty()) {
         directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
@@ -819,6 +816,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     if (currentlySavingProfile()) {
         return std::make_tuple(false, QString(), qsl("a save is already in progress"));
     }
+
+    emit profileSaveStarted();
+    qApp->processEvents();
 
     auto writer = new XMLexport(this);
     writers.insert(qsl("profile"), writer);
