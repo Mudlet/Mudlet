@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -4500,6 +4500,14 @@ void mudlet::activateProfile(Host* pHost)
 
     emit signal_tabChanged(mpCurrentActiveHost->getName());
     emit signal_profileActivated(pHost, newActiveTabIndex);
+}
+
+void mudlet::slot_setFocusToMainCommandLine()
+{
+    if (!mpCurrentActiveHost) {
+        return;
+    }
+    mpCurrentActiveHost->setFocusOnHostMainConsole();
 }
 
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2018-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -1196,6 +1196,9 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
         if (mudlet::self()->mpTabBar->count() >= (tabNumber)) {
             mudlet::self()->slot_tabChanged(tabNumber - 1);
             ke->accept();
+            // We need the delayed (until everything else has been done)
+            // step of moving the focus to the appropriate main command line:
+            QTimer::singleShot(0, mudlet::self(), &mudlet::slot_setFocusToMainCommandLine);
             return true;
         }
     }
