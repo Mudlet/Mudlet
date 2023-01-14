@@ -111,7 +111,6 @@ T2DMap::T2DMap(QWidget* parent)
     mMultiSelectionListWidget.move(0, 0);
     mMultiSelectionListWidget.hide();
     connect(&mMultiSelectionListWidget, &QTreeWidget::itemSelectionChanged, this, &T2DMap::slot_roomSelectionChanged);
-    connect(this, &T2DMap::signal_showPropertiesDialogue, this, &T2DMap::slot_showPropertiesDialog);
 }
 
 void T2DMap::init()
@@ -2909,9 +2908,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                                                   // Intentional argument to separate arguments
                                                                   "2D Mapper context menu (room) item tooltip",
                                                                   selectionSize)));
-                    connect(roomProperties, &QAction::triggered, this, [=]() {
-                        emit signal_showPropertiesDialogue(0);
-                    });
+                    connect(roomProperties, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
                     popup->addAction(roomProperties);
                 }
 
@@ -2935,17 +2932,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 if (selectionSize > 0) {
                     // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
                     auto recolorRoom = new QAction(tr("Set color... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    connect(recolorRoom, &QAction::triggered, this, [=]() {
-                        emit signal_showPropertiesDialogue(1);
-                    });
+                    connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
                     popup->addAction(recolorRoom);
 
                     // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
                     auto roomSymbol = new QAction(tr("Set symbol... (Configure room)", "2D Mapper context menu (room) item"), this);
                     roomSymbol->setToolTip(utils::richText(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip")));
-                    connect(roomSymbol, &QAction::triggered, this, [=]() {
-                        emit signal_showPropertiesDialogue(2);
-                    });
+                    connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
                     popup->addAction(roomSymbol);
                 }
 
@@ -2969,17 +2962,13 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                                             // Intentional comment to separate arguments
                                                             "2D Mapper context menu (room) item tooltip, although there is not a %n for the "
                                                             "number of rooms involved the value is provided so the words can be pluralised "
-                                                            "as required,", selectionSize)));
-                    connect(lockRoom, &QAction::triggered, this, [=]() {
-                        emit signal_showPropertiesDialogue(3);
-                    });
+                                                            "as required.", selectionSize)));
+                    connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
                     popup->addAction(lockRoom);
 
                     // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
                     auto weightRoom = new QAction(tr("Set weight... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    connect(weightRoom, &QAction::triggered, this, [=]() {
-                        emit signal_showPropertiesDialogue(4);
-                    });
+                    connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
                     popup->addAction(weightRoom);
 
                     auto deleteRoom = new QAction(tr("Delete", "2D Mapper context menu (room) item"), this);
@@ -3685,7 +3674,7 @@ void T2DMap::slot_moveRoom()
     mNewMoveAction = true;
 }
 
-void T2DMap::slot_showPropertiesDialog(const int what)
+void T2DMap::slot_showPropertiesDialog()
 {
     // Counts and reports the existing properties used in ALL the selected rooms
     // if more than one has been selected (and sorts by their frequency).
@@ -3772,7 +3761,7 @@ void T2DMap::slot_showPropertiesDialog(const int what)
     }
 
     mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, roomPtrsSet, what);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, roomPtrsSet);
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);

@@ -42,8 +42,7 @@ public:
         QHash<QString, int>& pSymbols,
         QHash<int, int>& pWeights,
         QHash<bool, int> lockStatus,
-        QSet<TRoom*>& pRooms,
-        const int focusOnObject);
+        QSet<TRoom*>& pRooms);
     void accept() override;
 
 signals:

@@ -56,8 +56,7 @@ void dlgRoomProperties::init(
     QHash<QString, int>& pSymbols,
     QHash<int, int>& pWeights,
     QHash<bool, int> lockStatus,
-    QSet<TRoom*>& pRooms,
-    const int focusOnObject)
+    QSet<TRoom*>& pRooms)
 {
     // Configure name display
     if (usedNames.size() > 1) {
@@ -69,9 +68,7 @@ void dlgRoomProperties::init(
     } else {
         lineEdit_name->clear();
     }
-    if (!focusOnObject) {
-        lineEdit_name->setFocus();
-    }
+
 
     // Configure symbols display
     mpSymbols = pSymbols;
@@ -80,27 +77,18 @@ void dlgRoomProperties::init(
         // show simple text-entry box empty
         lineEdit_roomSymbol->setText(QString());
         comboBox_roomSymbol->hide();
-        if (focusOnObject == 2) {
-            lineEdit_roomSymbol->setFocus();
-        }
     } else if (mpSymbols.size() == 1) {
         // show simple text-entry box with the (single) existing symbol pre-filled
         lineEdit_roomSymbol->setText(mpSymbols.constBegin().key());
         // and selected
         lineEdit_roomSymbol->selectAll();
         comboBox_roomSymbol->hide();
-        if (focusOnObject == 2) {
-            lineEdit_roomSymbol->setFocus();
-        }
     } else {
         // show combined dropdown & text-entry box to host all of the (multiple) existing symbols
         lineEdit_roomSymbol->hide();
         comboBox_roomSymbol->addItems(getComboBoxSymbolItems());
         if (comboBox_roomSymbol->lineEdit()) {
             comboBox_roomSymbol->lineEdit()->selectAll();
-        }
-        if (focusOnObject == 2) {
-            comboBox_roomSymbol->setFocus();
         }
     }
     initSymbolInstructions();
@@ -114,9 +102,6 @@ void dlgRoomProperties::init(
     } else {
         mRoomColor = QColor("grey"); // rgb(128, 128, 128)
     }
-    if (focusOnObject == 1) {
-        pushButton_setRoomColor->setFocus();
-    }
     slot_updatePreview();
 
     //   Configure weight display
@@ -126,26 +111,17 @@ void dlgRoomProperties::init(
         spinBox_weight->setValue(1);
         spinBox_weight->selectAll();
         comboBox_weight->hide();
-        if (focusOnObject == 4) {
-            spinBox_weight->setFocus();
-        }
     } else if (mpWeights.size() == 1) {
         // show spin-box with the (single) existing weight pre-filled
         spinBox_weight->setValue(mpWeights.constBegin().key());
         spinBox_weight->selectAll();
         comboBox_weight->hide();
-        if (focusOnObject == 4) {
-            spinBox_weight->setFocus();
-        }
     } else {
         // show combined dropdown & text-entry box to host all of the (multiple) existing weights
         spinBox_weight->hide();
         comboBox_weight->addItems(getComboBoxWeightItems());
         if (comboBox_weight->lineEdit()) {
             comboBox_weight->lineEdit()->selectAll();
-        }
-        if (focusOnObject == 4) {
-            comboBox_weight->setFocus();
         }
     }
     initWeightInstructions();
@@ -161,9 +137,6 @@ void dlgRoomProperties::init(
     } else { // lockStatus.contains(false)
         checkBox_locked->setTristate(false);
         checkBox_locked->setCheckState(Qt::Unchecked);
-    }
-    if (focusOnObject == 3) {
-        checkBox_locked->setFocus();
     }
     initLockInstructions();
 
