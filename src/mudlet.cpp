@@ -227,6 +227,7 @@ mudlet::mudlet()
     mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonConnect->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonConnect->setAutoRaise(true);
+    mpButtonConnect->setFocusPolicy(Qt::ClickFocus);
     mpMainToolBar->addWidget(mpButtonConnect);
 
     mpActionConnect = new QAction(tr("Connect"), this);
@@ -297,6 +298,7 @@ mudlet::mudlet()
     mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonDiscord->setAutoRaise(true);
+    mpButtonDiscord->setFocusPolicy(Qt::ClickFocus);
     mpMainToolBar->addWidget(mpButtonDiscord);
 
     mpActionDiscord = new QAction(tr("Open Discord"), this);
@@ -352,6 +354,7 @@ mudlet::mudlet()
     mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonPackageManagers->setAutoRaise(true);
+    mpButtonPackageManagers->setFocusPolicy(Qt::ClickFocus);
     mpMainToolBar->addWidget(mpButtonPackageManagers);
 
     mpActionPackageManager = new QAction(tr("Package Manager"), this);
@@ -3551,6 +3554,7 @@ void mudlet::slot_updateAvailable(const int updateCount)
     mpActionAboutWithUpdates = mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
     // And quickly pull out the old QAction/QToolButton:
     mpMainToolBar->removeAction(mpActionAbout);
+    mpButtonAbout->setFocusPolicy(Qt::ClickFocus);
 
     // Create the new menu
     QMenu* pUpdateMenu = new QMenu();
