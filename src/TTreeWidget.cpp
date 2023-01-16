@@ -232,7 +232,13 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
     // determine position in parent list
 
     if (mIsDropAction) {
-        QModelIndex child = parent.model()->index(start, 0, parent);
+        // If parent.isValid() is false for the item being considered then that
+        // item is a top-level item. The obsolete parent.child(start, 0) that we
+        // used to use would return a null "QModelIndex" directly but now,
+        // since we must get the (const QAbstractModel*) from parent.model()
+        // and use that, we have to handle the case where that returns a
+        // nullptr - see: https://github.com/Mudlet/Mudlet/issues/6313
+        QModelIndex child = parent.isValid() ? parent.model()->index(start, 0, parent) : QModelIndex();
         int parentPosition = parent.row();
         int childPosition = child.row();
         if (!mChildID) {
