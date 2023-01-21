@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -1337,11 +1337,6 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
     QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
-        QTimer::singleShot(0, this, [this]() {
-            if (mpConsole) {
-                mpConsole->setFocusOnAppropriateConsole();
-            }
-        });
     }
 
     if (mpConsole->getType() == TConsole::MainConsole || mpConsole->getType() == TConsole::UserWindow) {
@@ -1959,16 +1954,17 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
-        QTimer::singleShot(0, this, [this]() {
-            if (mpConsole) {
-                mpConsole->setFocusOnAppropriateConsole();
-            }
-        });
     }
 
     if (mpConsole->getType() == TConsole::MainConsole || mpConsole->getType() == TConsole::UserWindow) {
         mpConsole->raiseMudletMousePressOrReleaseEvent(&newEvent, false);
     }
+
+    QTimer::singleShot(0, this, [this]() {
+        if (mpHost) {
+            mudlet::self()->activateProfile(mpHost);
+        }
+    });
 }
 
 void TTextEdit::showEvent(QShowEvent* event)

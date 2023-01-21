@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
@@ -84,11 +84,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     ps->setContext(Qt::WidgetShortcut);
 
     if (mType & CentralDebugConsole) {
-        setWindowTitle(tr("Debug Console"));
-        setAccessibleName(tr("Debug Console"));
-        setAccessibleDescription(tr("Debug messages are shown here."));
         // Probably will not show up as this is used inside a QMainWindow widget
         // which has its own title and icon set.
+        setWindowTitle(tr("Debug Console"));
         // mIsSubConsole was left false for this
         mWrapAt = 50;
     } else {
@@ -101,16 +99,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             mMainFrameLeftWidth = 0;
             mMainFrameRightWidth = 0;
 
-            if (mType & ErrorConsole) {
-                setAccessibleName(tr("Error Console"));
-                setAccessibleDescription(tr("Error messages are shown here."));
-            } else if (mType & SubConsole) {
-                setAccessibleName(tr("Sub Console"));
-                setAccessibleDescription(tr("Sub console messages are shown here."));
-            } else {
-                setAccessibleName(tr("User Window"));
-                setAccessibleDescription(tr("User window messages are shown here."));
-            }
         } else if (mType & (MainConsole|Buffer)) {
             // Originally this was for TConsole instances without a parent pointer
             // This branch for: Buffers, MainConsole
@@ -122,8 +110,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
             mCommandBgColor = mpHost->mCommandBgColor;
             mCommandFgColor = mpHost->mCommandFgColor;
 
-            setAccessibleName(tr("Main Window"));
-            setAccessibleDescription(tr("Game content is shown here. It may contain subconsoles and a mapper window."));
         } else {
             Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
         }
@@ -231,10 +217,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     centralLayout->setContentsMargins(0, 0, 0, 0);
 
     if (mType == MainConsole) {
-        mpCommandLine = new TCommandLine(pH, mpCommandLine->MainCommandLine, this, mpMainDisplay);
+        mpCommandLine = new TCommandLine(pH, QLatin1String("main"), TCommandLine::MainCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
         mpCommandLine->setFocusPolicy(Qt::StrongFocus);
+        // Setting the focusProxy cannot be done here because things have not
+        // been completed enough at this point - it has been defered to a
+        // zero-timer at the end of this constructor
     }
 
     layer = new QWidget(mpMainDisplay);
@@ -278,14 +267,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         setFocusProxy(mpCommandLine);
         mUpperPane->setFocusProxy(mpCommandLine);
         mLowerPane->setFocusProxy(mpCommandLine);
-        // technically this is the 'main input line' - but as it's the one most often used,
-        // it is important to keep its name short
-        mpCommandLine->setAccessibleName(qsl("input line"));
-    } else if (mType == UserWindow) {
+    } else if (mType & (UserWindow|SubConsole)) {
+        // These will need to be changed when the built in TCommandLine is
+        // enabled or an additional one is added to them:
         setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-        mpHost->mpConsole->setAccessibleName(qsl("%1 input line").arg(mpHost->mpConsole->mConsoleName));
     }
 
     splitter->addWidget(mUpperPane);
@@ -562,7 +549,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mpCommandLine->adjustHeight();
     }
 
-    adjustAccessibleNames();
+    connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TConsole::slot_adjustAccessibleNames);
+    // Need to delay doing this because it uses elements that may not have
+    // been constructed yet:
+    if (mType == MainConsole) {
+        QTimer::singleShot(0, this, [this]() { setProxyForFocus(mpCommandLine); });
+    }
 }
 
 TConsole::~TConsole()
@@ -1086,7 +1078,7 @@ void TConsole::scrollDown(int lines)
         mUpperPane->updateScreenView();
         mUpperPane->forceUpdate();
     }
-    adjustAccessibleNames();
+    slot_adjustAccessibleNames();
 }
 
 void TConsole::scrollUp(int lines)
@@ -1101,7 +1093,7 @@ void TConsole::scrollUp(int lines)
         QTimer::singleShot(0, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
     }
     mUpperPane->scrollUp(lines);
-    adjustAccessibleNames();
+    slot_adjustAccessibleNames();
 }
 
 void TConsole::deselect()
@@ -1454,22 +1446,37 @@ void TConsole::setCmdVisible(bool isVisible)
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // create MiniConsole commandline if it's not existing
     if (!mpCommandLine) {
-        mpCommandLine = new TCommandLine(mpHost, mpCommandLine->ConsoleCommandLine, this, mpMainDisplay);
+        mpCommandLine = new TCommandLine(mpHost, mConsoleName, TCommandLine::ConsoleCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
         mpCommandLine->setFocusPolicy(Qt::StrongFocus);
         // put this CommandLine in the mainConsoles SubCommandLineMap
         // name is the console name
         mpHost->mpConsole->mSubCommandLineMap[mConsoleName] = mpCommandLine;
-        mpCommandLine->mCommandLineName = mConsoleName;
-        mpCommandLine->setObjectName(mConsoleName);
         layoutLayer2->addWidget(mpCommandLine);
     }
-    mpButtonMainLayer->setVisible(false);
+    if (mType == MainConsole) {
+        if (mpHost) {
+            if (!mpHost->getCompactInputLine() && isVisible) {
+                mpButtonMainLayer->setVisible(true);
+            } else {
+                mpButtonMainLayer->setVisible(false);
+            }
+        }
+
+    } else {
+        mpButtonMainLayer->setVisible(false);
+    }
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
     //resizes miniconsole if command line gets enabled/disabled
     resizeConsole();
+    setProxyForFocus(isVisible ? mpCommandLine : nullptr);
+    // Need to remove the TCommandLine from the last used stack
+    // if it has been explicitly hidden:
+    if (!isVisible && mpHost) {
+        mpHost->forgetCommandLine(mpCommandLine);
+    }
 }
 
 void TConsole::refreshView() const
@@ -1994,25 +2001,9 @@ void TConsole::dropEvent(QDropEvent* e)
     }
 }
 
-// Ensure that the correct TConsole is selected in a multi-view situation:
-void TConsole::setFocusOnAppropriateConsole()
-{
-    if (mType & (SubConsole|UserWindow) && mpCommandLine && mpCommandLine->isVisible()) {
-        // The activateProfile will tend to move the focus to the TCommandLine
-        // in the TMainConsole, but if we have a TCommandLine visible in this
-        // TConsole then we want the focus to stay there:
-        mudlet::self()->activateProfile(mpHost);
-        mpCommandLine->setFocus(Qt::OtherFocusReason);
-    } else {
-        // Otherwise return focus to the main TConsole command line
-        mpHost->setFocusOnHostMainConsole();
-    }
-}
-
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    setFocusOnAppropriateConsole();
 
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
@@ -2055,6 +2046,8 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(mudletEvent);
+
+    mpHost->setFocusOnHostActiveCommandLine();
 }
 
 void TConsole::mousePressEvent(QMouseEvent* event)
@@ -2062,14 +2055,121 @@ void TConsole::mousePressEvent(QMouseEvent* event)
     raiseMudletMousePressOrReleaseEvent(event, true);
 }
 
-void TConsole::adjustAccessibleNames()
+void TConsole::slot_adjustAccessibleNames()
 {
-    if (mLowerPane->isVisible()) {
-        mUpperPane->setAccessibleName(tr("main window past content", "accessibility-friendly name to describe the upper half of the Mudlet window when you've scrolled up"));
-        mLowerPane->setAccessibleName(tr("main window live content", "accessibility-friendly name to describe the lower half of the Mudlet window when you've scrolled up"));
-    } else {
-        mUpperPane->setAccessibleName(tr("main window"));
-        mLowerPane->setAccessibleName(QString());
+    bool isMultipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    switch (mType) {
+    case CentralDebugConsole:
+        setAccessibleName(tr("Debug Console."));
+        setAccessibleDescription(tr("Debug messages from all profile are shown here."));
+        if (mLowerPane->isVisible()) {
+            mUpperPane->setAccessibleName(tr("Central debug console past content.", "accessibility-friendly name to describe the upper half of the Mudlet central debug window when you've scrolled up"));
+            mLowerPane->setAccessibleName(tr("Central debug console live content.", "accessibility-friendly name to describe the lower half of the Mudlet central debug when you've scrolled up"));
+        } else {
+            mUpperPane->setAccessibleName(tr("Central debug console.", "accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up"));
+            mLowerPane->setAccessibleName(QString());
+        }
+        return;
+    case ErrorConsole:
+        setAccessibleName(tr("Error Console in editor."));
+        if (mLowerPane->isVisible()) {
+            if (isMultipleProfilesActive) {
+                mUpperPane->setAccessibleName(tr("Editor's error window for profile \"%1\", past content.", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when you've scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+                mLowerPane->setAccessibleName(tr("Editor's error window for profile \"%1\", live content.", "accessibility-friendly name to describe the lower half of the Mudlet profile's editor error window when you've scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+            } else {
+                mUpperPane->setAccessibleName(tr("Editor's error window past content.", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when you've scrolled up and only one profile is loaded."));
+                mLowerPane->setAccessibleName(tr("Editor's error window live content.", "accessibility-friendly name to describe the lower half of the Mudlet profile's editor error window when you've scrolled up and only one profile is loaded."));
+            }
+            setAccessibleDescription(tr("Error messages for the \"%1\" profile are shown here in the editor.").arg(mProfileName));
+        } else {
+            if (isMultipleProfilesActive) {
+                mUpperPane->setAccessibleName(tr("Editor's error window for profile \"%1\".", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+            } else {
+                mUpperPane->setAccessibleName(tr("Editor's error window", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when it is not scrolled up and only one profile is loaded."));
+            }
+            mLowerPane->setAccessibleName(QString());
+            setAccessibleDescription(tr("Error messages are shown here in the editor."));
+        }
+        return;
+    case MainConsole:
+        setAccessibleDescription(tr("Game content is shown here. It may contain subconsoles and a mapper window."));
+        if (isMultipleProfilesActive) {
+            setAccessibleName(tr("Main Window for \"%1\" profile.").arg(mProfileName));
+        } else {
+            setAccessibleName(tr("Main Window."));
+        }
+        if (mLowerPane->isVisible()) {
+            if (isMultipleProfilesActive) {
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" main window past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when you've scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+                mLowerPane->setAccessibleName(tr("Profile \"%1\" main window live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's main window when you've scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+            } else {
+                mUpperPane->setAccessibleName(tr("Profile main window past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when you've scrolled up and only one profile is loaded."));
+                mLowerPane->setAccessibleName(tr("Profile main window live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's main window when you've scrolled up and only one profile is loaded."));
+            }
+        } else {
+            if (isMultipleProfilesActive) {
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" main window.", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+            } else {
+                mUpperPane->setAccessibleName(tr("Profile main window.", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when it is not scrolled up and only one profile is loaded."));
+            }
+            mLowerPane->setAccessibleName(QString());
+        }
+        return;
+    case SubConsole:
+        if (isMultipleProfilesActive) {
+            setAccessibleName(tr("Embedded window \"%1\" for \"%2\" profile.").arg(mConsoleName, mProfileName));
+        } else {
+            setAccessibleName(tr("Embedded window \"%1\".").arg(mConsoleName));
+        }
+        setAccessibleDescription(tr("Game content or locally generated text may be sent here."));
+        if (mLowerPane->isVisible()) {
+            if (isMultipleProfilesActive) {
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" embedded window \"%2\" past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+                mLowerPane->setAccessibleName(tr("Profile \"%1\" embedded window \"%2\" live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+            } else {
+                mUpperPane->setAccessibleName(tr("Profile embedded window \"%1\" past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.").arg(mConsoleName));
+                mLowerPane->setAccessibleName(tr("Profile embedded window \"%1\" live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.").arg(mConsoleName));
+            }
+        } else {
+            if (isMultipleProfilesActive) {
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" embedded window \"%2\".", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+            } else {
+                mUpperPane->setAccessibleName(tr("Profile embedded window \"%1\".", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when it is not scrolled up, %1 is the name of the window.").arg(mConsoleName));
+            }
+            mLowerPane->setAccessibleName(QString());
+        }
+        return;
+    case UserWindow:
+        if (isMultipleProfilesActive) {
+            setAccessibleName(tr("User window \"%1\" for \"%2\" profile.").arg(mConsoleName, mProfileName));
+        } else {
+            setAccessibleName(tr("User window \"%1\".").arg(mConsoleName));
+        }
+        setAccessibleDescription(tr("Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window."));
+        if (mLowerPane->isVisible()) {
+            if (isMultipleProfilesActive) {
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" user window \"%2\" past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+                mLowerPane->setAccessibleName(tr("Profile \"%1\" user window \"%2\" live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's floating/dockable user window window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+            } else {
+                mUpperPane->setAccessibleName(tr("Profile user window \"%1\" past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.").arg(mConsoleName));
+                mLowerPane->setAccessibleName(tr("Profile user window \"%1\" live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.").arg(mConsoleName));
+            }
+        } else {
+            if (isMultipleProfilesActive) {
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" user window \"%2\".", "accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+            } else {
+                mUpperPane->setAccessibleName(tr("Profile user window \"%1\".", "accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window window when it is not scrolled up, %1 is the name of the window.").arg(mConsoleName));
+            }
+            mLowerPane->setAccessibleName(QString());
+        }
+        return;
+    case Buffer:
+        // This is not a visible thing so is not accessible to screen readers
+        [[fallthrough]];
+    case UnknownType:
+        // Should never be used -  and since we have now handled ALL enum values
+        // we do not need a "default:" entry
+        Q_UNREACHABLE();
     }
 }
 
@@ -2078,7 +2178,7 @@ void TConsole::mouseReleaseEvent(QMouseEvent* event)
     raiseMudletMousePressOrReleaseEvent(event, false);
 }
 
-void TConsole::TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mode)
+void TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mode)
 {
     if (mControlCharacter != mode) {
         mControlCharacter = mode;
@@ -2086,6 +2186,48 @@ void TConsole::TConsole::slot_changeControlCharacterHandling(const ControlCharac
     }
 }
 
+void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
+{
+    if (mType == MainConsole) {
+        mUpperPane->setFocusProxy(pCommandLine);
+        QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+        QAccessible::updateAccessibility(&event);
+    } else if (mType == UserWindow) {
+        if (pCommandLine && pCommandLine->isVisible()) {
+            mUpperPane->setFocusProxy(pCommandLine);
+            QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        } else {
+            mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+            QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        }
+    } else if (mType == SubConsole) {
+        if (pCommandLine && pCommandLine->isVisible()) {
+            mUpperPane->setFocusProxy(pCommandLine);
+            QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        } else {
+            // Need to search ancestors to find the TConsole that this one
+            // is inserted into - and if it has a TCommandLine
+            auto parentConsole = mpHost->parentTConsole(this);
+            if (!parentConsole.isNull() && parentConsole->mpCommandLine && parentConsole->mpCommandLine->isVisible()) {
+                // TBH We ought to also check for any added TCommandLine but
+                // that can wait for a future development...
+                mUpperPane->setFocusProxy(parentConsole->mpCommandLine);
+                QAccessibleEvent event(parentConsole->mpCommandLine, QAccessible::Focus);
+                QAccessible::updateAccessibility(&event);
+            } else {
+                // Somehow that has failed so fall back to the main console
+                mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+                QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+                QAccessible::updateAccessibility(&event);
+            }
+        }
+    }
+}
+
+// At present this only supports/works on the main console
 void TConsole::setCaretMode(bool enabled)
 {
     mUpperPane->updateCaret();
@@ -2093,6 +2235,7 @@ void TConsole::setCaretMode(bool enabled)
 
     if (enabled) {
         mUpperPane->initializeCaret();
+        // This adds TabFocus to the otherwise used ClickFocus:
         mUpperPane->setFocusPolicy(Qt::StrongFocus);
         mUpperPane->setFocusProxy(nullptr);
 #if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
@@ -2103,7 +2246,9 @@ void TConsole::setCaretMode(bool enabled)
         QAccessibleEvent event(mUpperPane, QAccessible::Focus);
         QAccessible::updateAccessibility(&event);
 #endif
-
+        // The overload without an argument uses Qt::OtherFocusReason according
+        // to the Qt source code:
+        mUpperPane->setFocus();
     } else {
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
 #if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
@@ -2112,18 +2257,8 @@ void TConsole::setCaretMode(bool enabled)
             mUpperPane->releaseKeyboard();
         });
 #endif
-        if (mType == MainConsole) {
-            mUpperPane->setFocusProxy(mpCommandLine);
-            QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-            QAccessible::updateAccessibility(&event);
-        } else if (mType == UserWindow) {
-            mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-            QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
-            QAccessible::updateAccessibility(&event);
-        }
+        setProxyForFocus(mpCommandLine);
     }
-
-    mUpperPane->setFocus();
 }
 
 void TConsole::createSearchOptionIcon()

@@ -227,7 +227,6 @@ mudlet::mudlet()
     mpButtonConnect->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonConnect->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonConnect->setAutoRaise(true);
-    mpButtonConnect->setFocusPolicy(Qt::NoFocus);
     mpMainToolBar->addWidget(mpButtonConnect);
 
     mpActionConnect = new QAction(tr("Connect"), this);
@@ -298,7 +297,6 @@ mudlet::mudlet()
     mpButtonDiscord->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonDiscord->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonDiscord->setAutoRaise(true);
-    mpButtonDiscord->setFocusPolicy(Qt::NoFocus);
     mpMainToolBar->addWidget(mpButtonDiscord);
 
     mpActionDiscord = new QAction(tr("Open Discord"), this);
@@ -354,7 +352,6 @@ mudlet::mudlet()
     mpButtonPackageManagers->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpButtonPackageManagers->setPopupMode(QToolButton::MenuButtonPopup);
     mpButtonPackageManagers->setAutoRaise(true);
-    mpButtonPackageManagers->setFocusPolicy(Qt::NoFocus);
     mpMainToolBar->addWidget(mpButtonPackageManagers);
 
     mpActionPackageManager = new QAction(tr("Package Manager"), this);
@@ -607,6 +604,7 @@ mudlet::mudlet()
     // initialize Announcer after the window is loaded, as UIA on Windows requires it
     QTimer::singleShot(0, this, [this]() {
         mpAnnouncer = new Announcer(this);
+        emit signal_adjustAccessibleNames();
     });
 }
 
@@ -1318,8 +1316,10 @@ void mudlet::closeHost(const QString& name)
     // instead we just have to accept that any profile changes will not be
     // saved if the preferences dialog is not closed before the profile is...
     int hostCount = mHostManager.getHostCount();
-    emit signal_hostDestroyed(pH, --hostCount);
     mHostManager.deleteHost(pH->getName());
+    // pH is NOT valid now - it must NOT be dereferenced:
+    emit signal_hostDestroyed(pH, --hostCount);
+    emit signal_adjustAccessibleNames();
     updateMultiViewControls();
 }
 
@@ -1337,9 +1337,9 @@ void mudlet::updateMultiViewControls()
 void mudlet::reshowRequiredMainConsoles()
 {
     if (mpTabBar->count() > 1 && mMultiView) {
-        for (auto pHost: mHostManager) {
-            if (pHost->mpConsole) {
-                pHost->mpConsole->show();
+        for (const auto& host: mHostManager) {
+            if (host->mpConsole) {
+                host->mpConsole->show();
             }
         }
     }
@@ -2699,6 +2699,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     }
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
+    emit signal_adjustAccessibleNames();
     slot_connectionDialogueFinished(profile_name, true);
     enableToolbarButtons();
     updateMultiViewControls();
@@ -3554,7 +3555,6 @@ void mudlet::slot_updateAvailable(const int updateCount)
     mpActionAboutWithUpdates = mpMainToolBar->insertWidget(mpActionAbout, mpButtonAbout);
     // And quickly pull out the old QAction/QToolButton:
     mpMainToolBar->removeAction(mpActionAbout);
-    mpButtonAbout->setFocusPolicy(Qt::NoFocus);
 
     // Create the new menu
     QMenu* pUpdateMenu = new QMenu();
@@ -4463,7 +4463,6 @@ void mudlet::activateProfile(Host* pHost)
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
     mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-    // CHECKME: Why are we only repainting the main command line, what about the others?
 
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();
@@ -4502,16 +4501,12 @@ void mudlet::activateProfile(Host* pHost)
 
     mpCurrentActiveHost->updateDisplayDimensions();
 
+    // Currently used to update the Discord Rich Presence
     emit signal_tabChanged(mpCurrentActiveHost->getName());
+    // Currently used to assign the shortcuts for the activated profile:-
     emit signal_profileActivated(pHost, newActiveTabIndex);
-}
 
-void mudlet::slot_setFocusToMainCommandLine()
-{
-    if (!mpCurrentActiveHost) {
-        return;
-    }
-    mpCurrentActiveHost->setFocusOnHostMainConsole();
+    mpCurrentActiveHost->setFocusOnHostActiveCommandLine();
 }
 
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)

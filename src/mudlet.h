@@ -504,7 +504,6 @@ public slots:
     void slot_replayTimeChanged();
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
-    void slot_setFocusToMainCommandLine();
     void slot_showAboutDialog();
     void slot_showHelpDialogForum();
 // Not used:    void slot_showHelpDialogIrc();
@@ -520,6 +519,7 @@ protected:
 
 
 signals:
+    void signal_adjustAccessibleNames();
     void signal_appearanceChanged(mudlet::Appearance);
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_enableFulScreenModeChanged(bool);
