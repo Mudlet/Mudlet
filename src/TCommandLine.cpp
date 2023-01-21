@@ -988,15 +988,20 @@ void TCommandLine::handleTabCompletion(bool direction)
     QStringList highPrioList = commandLineSuggestions.values(); // add user added suggestions to a separate list. 
     //wordList.append(commandLineSuggestions.values());
     QStringList blacklist = tabCompleteBlacklist.values(); //this should be doable somehow with filter.
+    QStringList toDelete;
     foreach(QString wstr, wordList) {
         if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
-            wordList.removeAll(wstr);
+            toDelete += wstr;
         }
     }
     foreach(QString hstr, highPrioList) {
         if (blacklist.contains(hstr, Qt::CaseInsensitive)) {
-            highPrioList.removeAll(hstr);
+            toDelete += hstr;
         }
+    }
+    foreach(QString dstr, toDelete) {
+        wordList.removeAll(dstr);
+        highPrioList.removeAll(dstr);
     }
 
     if (direction) {
