@@ -1066,6 +1066,9 @@ void TCommandLine::handleTabCompletion(bool direction)
             if (mTabCompletionCount >= filterList.size()) {
                 mTabCompletionCount = filterList.size() - 1;
             }
+            if (highPrioFilter.empty() && mTabCompletionCount < 0){
+                mTabCompletionCount = 0;
+            }
             QString proposal = filterList[mTabCompletionCount];
             QString userWords = mTabCompletionTyped.left(typePosition);
             setPlainText(QString(userWords + proposal));

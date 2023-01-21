@@ -11984,7 +11984,6 @@ int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
     if (n == 1) {
         name = CMDLINE_NAME(L, 1);
     }
-    QString text = getVerifiedString(L, __func__, n, "suggestion text");
     auto pN = COMMANDLINE(L, name);
     pN->clearBlacklist();
     return 0;
