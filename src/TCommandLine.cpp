@@ -985,15 +985,22 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar::LineFeed, QChar::Space);
 
     QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
-
-    wordList.append(commandLineSuggestions.values());
+    QStringList highPrioList = commandLineSuggestions.values(); // add user added suggestions to a separate list. 
+    //wordList.append(commandLineSuggestions.values());
+    QStringList blacklist = tabCompleteBlacklist.values(); //this should be doable somehow with filter.
+    foreach(QString str, blacklist) {
+        wordList.replaceInStrings(str, " ", Qt::CaseInsensitive);
+        highPrioList.replaceInStrings(str, " ", Qt::CaseInsensitive);
+    }
+    wordList.removeAll(" ");
+    highPrioList.removeAll(" ");
 
     if (direction) {
         mTabCompletionCount++;
     } else {
         mTabCompletionCount--;
     }
-    if (!wordList.empty()) {
+    if (!wordList.empty() || !highPrioList.empty()) { // check both tab complete buffers first. 
         if (mTabCompletionTyped.endsWith(QChar::Space)) {
             return;
         }
@@ -1008,26 +1015,49 @@ void TCommandLine::handleTabCompletion(bool direction)
         }
 
         QStringList filterList = wordList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
-        if (filterList.empty()) {
+        QStringList highPrioFilter = highPrioList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
+        //filter high prio in the same manner as buffer
+
+        if (highPrioFilter.empty() && filterList.empty()) {
             return;
         }
         int offset = 0;
+        if (!highPrioFilter.empty()) {
+            forever {
+                QString hTmp = highPrioFilter.back();
+                highPrioFilter.removeAll(hTmp);
+                highPrioFilter.insert(offset, hTmp);
+                ++offset;
+                if(offset >= highPrioFilter.size()){
+                    break;
+                }
+            }
+        }
+        else if (!filterList.empty()) {
         forever {
-            QString tmp = filterList.back();
-            filterList.removeAll(tmp);
+            QString tmp = filterList.front();
+            filterList.removeAll(tmp); 
             filterList.insert(offset, tmp);
             ++offset;
-            if (offset >= filterList.size()) {
+            if (offset >= (filterList.size() + highPrioFilter.size()) - 1 ) {
                 break;
             }
         }
+        }
 
-        if (!filterList.empty()) {
-            if (mTabCompletionCount >= filterList.size()) {
-                mTabCompletionCount = filterList.size() - 1;
-            }
+        if (!highPrioFilter.empty() && mTabCompletionCount < (highPrioFilter.size())) {
             if (mTabCompletionCount < 0) {
                 mTabCompletionCount = 0;
+            }
+            QString proposal = highPrioFilter[mTabCompletionCount];
+            QString userWords = mTabCompletionTyped.left(typePosition);
+            setPlainText(QString(userWords + proposal));
+            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+            mTabCompletionOld = toPlainText();
+        }
+        else if (!filterList.empty()) {
+            if (mTabCompletionCount >= filterList.size()) {
+                mTabCompletionCount = filterList.size() - 1;
             }
             QString proposal = filterList[mTabCompletionCount];
             QString userWords = mTabCompletionTyped.left(typePosition);
@@ -1287,4 +1317,19 @@ void TCommandLine::removeSuggestion(const QString& suggestion)
 void TCommandLine::clearSuggestions()
 {
     commandLineSuggestions.clear();
+}
+
+void TCommandLine::addBlacklist(const QString& word)
+{
+    tabCompleteBlacklist += word;
+}
+
+void TCommandLine::removeBlacklist(const QString& word)
+{
+    tabCompleteBlacklist.remove(word);
+}
+
+void TCommandLine::clearBlacklist()
+{
+    tabCompleteBlacklist.clear();
 }

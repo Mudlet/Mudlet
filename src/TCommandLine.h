@@ -70,6 +70,9 @@ public:
     void addSuggestion(const QString&);
     void removeSuggestion(const QString&);
     void clearSuggestions();
+    void addBlacklist(const QString&);
+    void removeBlacklist(const QString&);
+    void clearBlacklist();
     void adjustHeight();
 
     int mActionFunction = 0;
@@ -120,6 +123,8 @@ private:
     char** mpSystemSuggestionsList = nullptr;
     char** mpUserSuggestionsList = nullptr;
     QSet<QString> commandLineSuggestions;
+    QSet<QString> tabCompleteBlacklist;
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
