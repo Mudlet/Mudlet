@@ -1,6 +1,6 @@
 /***************************************************************************
 *   Copyright (C) 2022 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
-*   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+*   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
 *                                                                         *
 *   This program is free software; you can redistribute it and/or modify  *
 *   it under the terms of the GNU General Public License as published by  *
@@ -61,11 +61,6 @@ QString InvisibleAccessibleNotification::text(QAccessible::Text t) const
 InvisibleStatusbar::InvisibleStatusbar(QWidget *parent)
 : QWidget(parent)
 {
-    setObjectName(qsl("InvisibleStatusbar"));
-    // This class should not be "visible" to anyone, but it should be localised
-    // in case it does show up:
-    setAccessibleName(tr("InvisibleStatusbar"));
-    setAccessibleDescription(tr("An invisible widget used as part as a workaround to announce text to the screen reader"));
 }
 
 Announcer::Announcer(QWidget *parent)
@@ -73,6 +68,10 @@ Announcer::Announcer(QWidget *parent)
 , statusbar(new InvisibleStatusbar(this))
 {
     notification = new InvisibleNotification(statusbar);
+    // Needed to prevent this (invisible) widget from being seen by itself in
+    // the top left corner of the main application window where it masks part of
+    // the main menu bar:
+    setVisible(false);
 }
 
 void Announcer::announce(const QString& text, const QString& processing)
