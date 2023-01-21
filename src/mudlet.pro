@@ -779,7 +779,7 @@ HEADERS += \
 
 macx|win32 {
     macx {
-        OBJECTIVE_SOURCES += AnnouncerMac.mm
+        SOURCES += AnnouncerMac.mm
     }
 
     win32 {
