@@ -1037,18 +1037,17 @@ void TCommandLine::handleTabCompletion(bool direction)
                 highPrioFilter.removeAll(hTmp);
                 highPrioFilter.insert(offset, hTmp);
                 ++offset;
-                if(offset >= highPrioFilter.size()){
+                if (offset >= highPrioFilter.size()){
                     break;
                 }
             }
-        }
-        else if (!filterList.empty()) {
+        } else if (!filterList.empty()) {
         forever {
             QString tmp = filterList.front();
             filterList.removeAll(tmp); 
             filterList.insert(offset, tmp);
             ++offset;
-            if (offset >= (filterList.size() + highPrioFilter.size()) - 1 ) {
+            if (offset >= (filterList.size() + highPrioFilter.size()) - 1) {
                 break;
             }
         }
@@ -1063,8 +1062,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             setPlainText(QString(userWords + proposal));
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
-        }
-        else if (!filterList.empty()) {
+        } else if (!filterList.empty()) {
             if (mTabCompletionCount >= filterList.size()) {
                 mTabCompletionCount = filterList.size() - 1;
             }
