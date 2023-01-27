@@ -449,7 +449,7 @@ private:
         {tr("Buttons"),    tr("Ctrl+7")},
         {tr("Errors"),     tr("Ctrl+8")},
         {tr("Statistics"), tr("Ctrl+9")},
-        {tr("Debug"),      tr("Ctrl+0")},
+        {tr("Debug"),      tr("Ctrl+0")}
     };
 
     QToolBar* toolBar = nullptr;
