@@ -23,6 +23,9 @@ CMakeLists.txt.user
 #CLion
 .idea
 cmake-build-debug
+cmake-build-minsizerel
+cmake-build-release
+cmake-build-relwithdebinfo
 
 #VS Code
 .vscode/*.code-workspace
@@ -38,3 +41,7 @@ compile_commands.json
 .vs
 out
 CMakeSettings.json
+
+# flatpak builder
+CI/.flatpak-builder
+CI/build-dir
