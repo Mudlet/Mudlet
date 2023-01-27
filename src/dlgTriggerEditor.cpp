@@ -8439,27 +8439,26 @@ void dlgTriggerEditor::setShortcuts(const bool active)
     actionList = toolBar2->actions();
     for (auto& action : actionList) {
         actionText = action->text();
-        // TODO: Refactor into nice list to iterate
-        if (actionText == tr("Triggers")) {
-            action->setShortcut((active) ? tr("Ctrl+1") : QString());
-        } else if (actionText == tr("Aliases")) {
-            action->setShortcut((active) ? tr("Ctrl+2") : QString());
-        } else if (actionText == tr("Scripts")) {
-            action->setShortcut((active) ? tr("Ctrl+3") : QString());
-        } else if (actionText == tr("Timers")) {
-            action->setShortcut((active) ? tr("Ctrl+4") : QString());
-        } else if (actionText == tr("Keys")) {
-            action->setShortcut((active) ? tr("Ctrl+5") : QString());
-        } else if (actionText == tr("Variables")) {
-            action->setShortcut((active) ? tr("Ctrl+6") : QString());
-        } else if (actionText == tr("Buttons")) {
-            action->setShortcut((active) ? tr("Ctrl+7") : QString());
-        } else if (actionText == tr("Errors")) {
-            action->setShortcut((active) ? tr("Ctrl+8") : QString());
-        } else if (actionText == tr("Statistics")) {
-            action->setShortcut((active) ? tr("Ctrl+9") : QString());
-        } else if (actionText == tr("Debug")) {
-            action->setShortcut((active) ? tr("Ctrl+0") : QString());
+        struct TextAction {
+            std::string text;
+            std::string action;
+        }
+        TextAction expectedTextsAndShortcuts[] = {
+            {tr("Triggers"),   tr("Ctrl+1")},
+            {tr("Aliases"),    tr("Ctrl+2")},
+            {tr("Scripts"),    tr("Ctrl+3")},
+            {tr("Timers"),     tr("Ctrl+4")},
+            {tr("Keys"),       tr("Ctrl+5")},
+            {tr("Variables"),  tr("Ctrl+6")},
+            {tr("Buttons"),    tr("Ctrl+7")},
+            {tr("Errors"),     tr("Ctrl+8")},
+            {tr("Statistics"), tr("Ctrl+9")},
+            {tr("Debug"),      tr("Ctrl+0")},
+        }
+        for (auto$ [expectedText, shortcut]: expectedTextsAndShortcuts) {
+            if (actionText == expectedText) {
+                action->setShortcut((active) ? shortcut : QString());
+            }
         }
     }
 }
