@@ -452,7 +452,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
-    mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), QString(), this);
+    // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
+    // PLACEMARKER 1/3 save button texts need to be kept in sync
+    mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), qsl("Save Item"), this);
     mSaveItem->setToolTip(tr("<p>Saves the selected item. (Ctrl+S)</p>"
                               "<p>Saving causes any changes to the item to take effect. It will not save to disk, "
                               "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>"));
@@ -6766,6 +6768,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     // texts are duplicated here so that translators can work with the full string
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
+        // PLACEMARKER 2/3 save button texts need to be kept in sync
         mAddItem->setText(tr("Add Trigger"));
         mAddItem->setStatusTip(tr("Add new trigger"));
         mAddGroup->setText(tr("Add Trigger Group"));
@@ -8428,9 +8431,11 @@ void dlgTriggerEditor::setShortcuts(const bool active)
 {
     QList<QAction*> actionList = toolBar->actions();
     QString actionText;
+    // PLACEMARKER 3/3 save button texts need to be kept in sync
+    const QStringList saveButtonNames = {qsl("Save Item"), tr("Save Trigger"), tr("Save Timer"), tr("Save Alias"), tr("Save Script"), tr("Save Button"), tr("Save Key"), tr("Save Variable")};
     for (auto& action : actionList) {
         actionText = action->text();
-        if (actionText ==  tr("Save Item")) {
+        if (saveButtonNames.contains(actionText)) {
             action->setShortcut((active) ? tr("Ctrl+S") : QString());
         } else if (actionText == tr("Save Profile")) {
             action->setShortcut((active) ? tr("Ctrl+Shift+S") : QString());
@@ -8439,7 +8444,6 @@ void dlgTriggerEditor::setShortcuts(const bool active)
     actionList = toolBar2->actions();
     for (auto& action : actionList) {
         actionText = action->text();
-        // TODO: Refactor into nice list to iterate
         if (actionText == tr("Triggers")) {
             action->setShortcut((active) ? tr("Ctrl+1") : QString());
         } else if (actionText == tr("Aliases")) {
