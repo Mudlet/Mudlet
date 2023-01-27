@@ -437,11 +437,7 @@ private:
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
 
-    struct TextShortcut {
-        std::string text;
-        std::string shortcut;
-    }
-    TextShortcut expectedTextsAndShortcuts[] = {
+    std::unordered_map<std::string, std::string> expectedTextsAndShortcuts[] = {
         {tr("Save Item"),    tr("Ctrl+S")},
         {tr("Save Profile"), tr("Ctrl+Shift+S")},
         {tr("Triggers"),   tr("Ctrl+1")},

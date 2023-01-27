@@ -8438,10 +8438,8 @@ void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool activ
             continue;
         }
         buttonLabel = action->text();
-        for (auto$ [expectedText, shortcut]: expectedTextsAndShortcuts) {
-            if (buttonLabel == expectedText) {
-                action->setShortcut(shortcut);
-            }
+        if (auto it = expectedTextsAndShortcuts.find(buttonLabel); it != expectedTextsAndShortcuts.end()) {
+            action->setShortcut(it->second);
         }
     }
 }
