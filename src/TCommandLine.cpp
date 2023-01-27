@@ -985,23 +985,17 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar::LineFeed, QChar::Space);
 
     QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
-    QStringList highPrioList = commandLineSuggestions.values(); // add user added suggestions to a separate list. 
-    //wordList.append(commandLineSuggestions.values());
-    QStringList blacklist = tabCompleteBlacklist.values(); //this should be doable somehow with filter.
+    wordList.append(commandLineSuggestions.values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead. 
+    QStringList blacklist = tabCompleteBlacklist.values(); 
     QStringList toDelete;
+
     foreach(QString wstr, wordList) {
         if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
             toDelete += wstr;
         }
     }
-    foreach(QString hstr, highPrioList) {
-        if (blacklist.contains(hstr, Qt::CaseInsensitive)) {
-            toDelete += hstr;
-        }
-    }
     foreach(QString dstr, toDelete) {
         wordList.removeAll(dstr);
-        highPrioList.removeAll(dstr);
     }
 
     if (direction) {
@@ -1009,7 +1003,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     } else {
         mTabCompletionCount--;
     }
-    if (!wordList.empty() || !highPrioList.empty()) { // check both tab complete buffers first. 
+    if (!wordList.empty()) { // check both tab complete buffers first. 
         if (mTabCompletionTyped.endsWith(QChar::Space)) {
             return;
         }
@@ -1024,49 +1018,27 @@ void TCommandLine::handleTabCompletion(bool direction)
         }
 
         QStringList filterList = wordList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
-        QStringList highPrioFilter = highPrioList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
-        //filter high prio in the same manner as buffer
 
-        if (highPrioFilter.empty() && filterList.empty()) {
+        if (filterList.empty()) {
             return;
         }
         int offset = 0;
-        if (!highPrioFilter.empty()) {
-            forever {
-                QString hTmp = highPrioFilter.back();
-                highPrioFilter.removeAll(hTmp);
-                highPrioFilter.insert(offset, hTmp);
-                ++offset;
-                if (offset >= highPrioFilter.size()){
-                    break;
-                }
-            }
-        } else if (!filterList.empty()) {
         forever {
-            QString tmp = filterList.front();
-            filterList.removeAll(tmp); 
+            QString tmp = filterList.back();
+            filterList.removeAll(tmp);
             filterList.insert(offset, tmp);
             ++offset;
-            if (offset >= (filterList.size() + highPrioFilter.size()) - 1) {
+            if (offset >= filterList.size()){
                 break;
             }
         }
-        }
+         
 
-        if (!highPrioFilter.empty() && mTabCompletionCount < (highPrioFilter.size())) {
-            if (mTabCompletionCount < 0) {
-                mTabCompletionCount = 0;
-            }
-            QString proposal = highPrioFilter[mTabCompletionCount];
-            QString userWords = mTabCompletionTyped.left(typePosition);
-            setPlainText(QString(userWords + proposal));
-            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
-            mTabCompletionOld = toPlainText();
-        } else if (!filterList.empty()) {
-            if (mTabCompletionCount >= filterList.size()) {
+        if (!filterList.empty()) {
+            if (mTabCompletionCount > filterList.size()) {
                 mTabCompletionCount = filterList.size() - 1;
             }
-            if (highPrioFilter.empty() && mTabCompletionCount < 0){
+            if (mTabCompletionCount < 0) {
                 mTabCompletionCount = 0;
             }
             QString proposal = filterList[mTabCompletionCount];
