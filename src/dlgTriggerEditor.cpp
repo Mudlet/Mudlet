@@ -8426,24 +8426,6 @@ void dlgTriggerEditor::slot_keyGrab()
 // Deactivate instead with optional "false" - to allow these for keybindings
 void dlgTriggerEditor::setShortcuts(const bool active)
 {
-    struct TextShortcut {
-        std::string text;
-        std::string shortcut;
-    }
-    TextShortcut expectedTextsAndShortcuts[] = {
-        {tr("Save Item"),    tr("Ctrl+S")},
-        {tr("Save Profile"), tr("Ctrl+Shift+S")},
-        {tr("Triggers"),   tr("Ctrl+1")},
-        {tr("Aliases"),    tr("Ctrl+2")},
-        {tr("Scripts"),    tr("Ctrl+3")},
-        {tr("Timers"),     tr("Ctrl+4")},
-        {tr("Keys"),       tr("Ctrl+5")},
-        {tr("Variables"),  tr("Ctrl+6")},
-        {tr("Buttons"),    tr("Ctrl+7")},
-        {tr("Errors"),     tr("Ctrl+8")},
-        {tr("Statistics"), tr("Ctrl+9")},
-        {tr("Debug"),      tr("Ctrl+0")},
-    }
     setShortcuts(toolBar->actions());
     setShortcuts(toolBar2->actions());
 }
