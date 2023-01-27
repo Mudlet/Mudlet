@@ -432,6 +432,7 @@ private:
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
     void setShortcuts(const bool active = true);
+    void setShortcuts(QList<QAction*> actionList, const bool active = true);
 
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();

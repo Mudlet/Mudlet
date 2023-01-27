@@ -8426,8 +8426,6 @@ void dlgTriggerEditor::slot_keyGrab()
 // Deactivate instead with optional "false" - to allow these for keybindings
 void dlgTriggerEditor::setShortcuts(const bool active)
 {
-    QList<QAction*> actionList = toolBar->actions();
-    QString buttonLabel;
     struct TextShortcut {
         std::string text;
         std::string shortcut;
@@ -8446,19 +8444,12 @@ void dlgTriggerEditor::setShortcuts(const bool active)
         {tr("Statistics"), tr("Ctrl+9")},
         {tr("Debug"),      tr("Ctrl+0")},
     }
-    for (auto& action : actionList) {
-        if (!active) {
-            action->setShortcut(QString());
-            continue;
-        }
-        buttonLabel = action->text();
-        for (auto$ [expectedText, shortcut]: expectedTextsAndShortcuts) {
-            if (buttonLabel == expectedText) {
-                action->setShortcut(shortcut);
-            }
-        }
-    }
-    actionList = toolBar2->actions();
+    setShortcuts(toolBar->actions());
+    setShortcuts(toolBar2->actions());
+}
+
+void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active) {
+    QString buttonLabel;
     for (auto& action : actionList) {
         if (!active) {
             action->setShortcut(QString());
