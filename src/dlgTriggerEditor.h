@@ -450,7 +450,7 @@ private:
         {tr("Errors"),     tr("Ctrl+8")},
         {tr("Statistics"), tr("Ctrl+9")},
         {tr("Debug"),      tr("Ctrl+0")},
-    }
+    };
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
