@@ -28,6 +28,7 @@
 #include "pre_guard.h"
 #include "ui_trigger_editor.h"
 #include <QPointer>
+#include <unordered_map>
 #include "post_guard.h"
 
 #include "TAction.h"
@@ -437,7 +438,7 @@ private:
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
 
-    std::unordered_map<std::string, std::string> expectedTextsAndShortcuts = {
+    std::unordered_map<QString, QString> expectedTextsAndShortcuts = {
         {tr("Save Item"),    tr("Ctrl+S")},
         {tr("Save Profile"), tr("Ctrl+Shift+S")},
         {tr("Triggers"),   tr("Ctrl+1")},
