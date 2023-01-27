@@ -8427,18 +8427,18 @@ void dlgTriggerEditor::slot_keyGrab()
 void dlgTriggerEditor::setShortcuts(const bool active)
 {
     QList<QAction*> actionList = toolBar->actions();
-    QString actionText;
+    QString buttonLabel;
     for (auto& action : actionList) {
-        actionText = action->text();
-        if (actionText ==  tr("Save Item")) {
+        buttonLabel = action->text();
+        if (buttonLabel ==  tr("Save Item")) {
             action->setShortcut((active) ? tr("Ctrl+S") : QString());
-        } else if (actionText == tr("Save Profile")) {
+        } else if (buttonLabel == tr("Save Profile")) {
             action->setShortcut((active) ? tr("Ctrl+Shift+S") : QString());
         }
     }
     actionList = toolBar2->actions();
     for (auto& action : actionList) {
-        actionText = action->text();
+        buttonLabel = action->text();
         struct TextAction {
             std::string text;
             std::string action;
@@ -8456,7 +8456,7 @@ void dlgTriggerEditor::setShortcuts(const bool active)
             {tr("Debug"),      tr("Ctrl+0")},
         }
         for (auto$ [expectedText, shortcut]: expectedTextsAndShortcuts) {
-            if (actionText == expectedText) {
+            if (buttonLabel == expectedText) {
                 action->setShortcut((active) ? shortcut : QString());
             }
         }
