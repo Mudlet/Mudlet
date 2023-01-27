@@ -28,6 +28,7 @@
 #include "pre_guard.h"
 #include "ui_trigger_editor.h"
 #include <QPointer>
+#include <unordered_map>
 #include "post_guard.h"
 
 #include "TAction.h"
