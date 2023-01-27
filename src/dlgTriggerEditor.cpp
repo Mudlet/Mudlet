@@ -8429,15 +8429,23 @@ void dlgTriggerEditor::setShortcuts(const bool active)
     QList<QAction*> actionList = toolBar->actions();
     QString buttonLabel;
     for (auto& action : actionList) {
+        if (!active) {
+            action->setShortcut(QString());
+            continue;
+        }
         buttonLabel = action->text();
         if (buttonLabel ==  tr("Save Item")) {
-            action->setShortcut((active) ? tr("Ctrl+S") : QString());
+            action->setShortcut(tr("Ctrl+S"));
         } else if (buttonLabel == tr("Save Profile")) {
-            action->setShortcut((active) ? tr("Ctrl+Shift+S") : QString());
+            action->setShortcut(tr("Ctrl+Shift+S"));
         }
     }
     actionList = toolBar2->actions();
     for (auto& action : actionList) {
+        if (!active) {
+            action->setShortcut(QString());
+            continue;
+        }
         buttonLabel = action->text();
         struct TextAction {
             std::string text;
@@ -8457,7 +8465,7 @@ void dlgTriggerEditor::setShortcuts(const bool active)
         }
         for (auto$ [expectedText, shortcut]: expectedTextsAndShortcuts) {
             if (buttonLabel == expectedText) {
-                action->setShortcut((active) ? shortcut : QString());
+                action->setShortcut(shortcut);
             }
         }
     }
