@@ -8428,16 +8428,34 @@ void dlgTriggerEditor::setShortcuts(const bool active)
 {
     QList<QAction*> actionList = toolBar->actions();
     QString buttonLabel;
+    struct TextShortcut {
+        std::string text;
+        std::string shortcut;
+    }
+    TextShortcut expectedTextsAndShortcuts[] = {
+        {tr("Save Item"),    tr("Ctrl+S")},
+        {tr("Save Profile"), tr("Ctrl+Shift+S")},
+        {tr("Triggers"),   tr("Ctrl+1")},
+        {tr("Aliases"),    tr("Ctrl+2")},
+        {tr("Scripts"),    tr("Ctrl+3")},
+        {tr("Timers"),     tr("Ctrl+4")},
+        {tr("Keys"),       tr("Ctrl+5")},
+        {tr("Variables"),  tr("Ctrl+6")},
+        {tr("Buttons"),    tr("Ctrl+7")},
+        {tr("Errors"),     tr("Ctrl+8")},
+        {tr("Statistics"), tr("Ctrl+9")},
+        {tr("Debug"),      tr("Ctrl+0")},
+    }
     for (auto& action : actionList) {
         if (!active) {
             action->setShortcut(QString());
             continue;
         }
         buttonLabel = action->text();
-        if (buttonLabel ==  tr("Save Item")) {
-            action->setShortcut(tr("Ctrl+S"));
-        } else if (buttonLabel == tr("Save Profile")) {
-            action->setShortcut(tr("Ctrl+Shift+S"));
+        for (auto$ [expectedText, shortcut]: expectedTextsAndShortcuts) {
+            if (buttonLabel == expectedText) {
+                action->setShortcut(shortcut);
+            }
         }
     }
     actionList = toolBar2->actions();
@@ -8447,22 +8465,6 @@ void dlgTriggerEditor::setShortcuts(const bool active)
             continue;
         }
         buttonLabel = action->text();
-        struct TextAction {
-            std::string text;
-            std::string action;
-        }
-        TextAction expectedTextsAndShortcuts[] = {
-            {tr("Triggers"),   tr("Ctrl+1")},
-            {tr("Aliases"),    tr("Ctrl+2")},
-            {tr("Scripts"),    tr("Ctrl+3")},
-            {tr("Timers"),     tr("Ctrl+4")},
-            {tr("Keys"),       tr("Ctrl+5")},
-            {tr("Variables"),  tr("Ctrl+6")},
-            {tr("Buttons"),    tr("Ctrl+7")},
-            {tr("Errors"),     tr("Ctrl+8")},
-            {tr("Statistics"), tr("Ctrl+9")},
-            {tr("Debug"),      tr("Ctrl+0")},
-        }
         for (auto$ [expectedText, shortcut]: expectedTextsAndShortcuts) {
             if (buttonLabel == expectedText) {
                 action->setShortcut(shortcut);
