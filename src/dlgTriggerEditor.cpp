@@ -8426,8 +8426,8 @@ void dlgTriggerEditor::slot_keyGrab()
 // Deactivate instead with optional "false" - to allow these for keybindings
 void dlgTriggerEditor::setShortcuts(const bool active)
 {
-    setShortcuts(toolBar->actions());
-    setShortcuts(toolBar2->actions());
+    setShortcuts(toolBar->actions(), active);
+    setShortcuts(toolBar2->actions(), active);
 }
 
 void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active) {
