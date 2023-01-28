@@ -452,7 +452,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
-    mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), QString(), this);
+    // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
+    // PLACEMARKER 1/3 save button texts need to be kept in sync
+    mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), qsl("Save Item"), this);
     mSaveItem->setToolTip(tr("<p>Saves the selected item. (Ctrl+S)</p>"
                               "<p>Saving causes any changes to the item to take effect. It will not save to disk, "
                               "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>"));
@@ -6766,6 +6768,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     // texts are duplicated here so that translators can work with the full string
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
+        // PLACEMARKER 2/3 save button texts need to be kept in sync
         mAddItem->setText(tr("Add Trigger"));
         mAddItem->setStatusTip(tr("Add new trigger"));
         mAddGroup->setText(tr("Add Trigger Group"));
@@ -8438,7 +8441,7 @@ void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool activ
             continue;
         }
         buttonLabel = action->text();
-        if (auto it = expectedTextsAndShortcuts.find(buttonLabel); it != expectedTextsAndShortcuts.end()) {
+        if (auto it = mButtonShortcuts.find(buttonLabel); it != mButtonShortcuts.end()) {
             action->setShortcut(it->second);
         }
     }

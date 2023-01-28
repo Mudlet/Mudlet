@@ -438,9 +438,17 @@ private:
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
 
-    std::unordered_map<QString, QString> expectedTextsAndShortcuts = {
-        {tr("Save Item"),    tr("Ctrl+S")},
-        {tr("Save Profile"), tr("Ctrl+Shift+S")},
+    // PLACEMARKER 3/3 save button texts need to be kept in sync
+    std::unordered_map<QString, QString> mButtonShortcuts = {
+        {qsl("Save Item"),    tr("Ctrl+S")},
+        {tr("Save Trigger"),  tr("Ctrl+S")},
+        {tr("Save Timer"),    tr("Ctrl+S")},
+        {tr("Save Alias"),    tr("Ctrl+S")},
+        {tr("Save Script"),   tr("Ctrl+S")},
+        {tr("Save Button"),   tr("Ctrl+S")},
+        {tr("Save Key"),      tr("Ctrl+S")},
+        {tr("Save Variable"), tr("Ctrl+S")},
+        {tr("Save Profile"),  tr("Ctrl+Shift+S")},
         {tr("Triggers"),   tr("Ctrl+1")},
         {tr("Aliases"),    tr("Ctrl+2")},
         {tr("Scripts"),    tr("Ctrl+3")},
