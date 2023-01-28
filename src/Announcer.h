@@ -4,7 +4,7 @@
  *   Copyright 2019-2022 Leonard de Ruijter, James Teh - OSARA             *
  *   Copyright 2017 The Qt Company Ltd.                                    *
  *   Copyright (C) 2022 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -35,7 +35,8 @@
 #endif
 #include "post_guard.h"
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_OPENBSD)
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN32)
+// i.e. all other OSes
 // implemented per recommendation from Orca dev: https://mail.gnome.org/archives/orca-list/2022-June/msg00027.html
 class InvisibleNotification : public QWidget
 {
@@ -92,7 +93,8 @@ public:
     explicit Announcer(QWidget* parent = nullptr);
     void announce(const QString& text, const QString& processing = QString());
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_OPENBSD)
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN32)
+    // i.e. all other OSes
     static QAccessibleInterface* accessibleFactory(const QString& classname, QObject* object)
     {
 #undef interface // mingw compilation breaks without this
@@ -109,7 +111,8 @@ public:
 #endif
 
 private:
-#if defined(Q_OS_LINUX) || defined(Q_OS_OPENBSD)
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN32)
+    // i.e. all other OSes
     InvisibleNotification* notification;
     InvisibleStatusbar* statusbar;
 #endif
