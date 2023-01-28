@@ -8433,7 +8433,8 @@ void dlgTriggerEditor::setShortcuts(const bool active)
     setShortcuts(toolBar2->actions(), active);
 }
 
-void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active) {
+void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active)
+{
     QString buttonLabel;
     for (auto& action : actionList) {
         if (!active) {
