@@ -1003,7 +1003,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     } else {
         mTabCompletionCount--;
     }
-    if (!wordList.empty()) { // check both tab complete buffers first. 
+    if (!wordList.empty()) { 
         if (mTabCompletionTyped.endsWith(QChar::Space)) {
             return;
         }
@@ -1035,7 +1035,7 @@ void TCommandLine::handleTabCompletion(bool direction)
          
 
         if (!filterList.empty()) {
-            if (mTabCompletionCount > filterList.size()) {
+            if (mTabCompletionCount >= filterList.size()) {
                 mTabCompletionCount = filterList.size() - 1;
             }
             if (mTabCompletionCount < 0) {
