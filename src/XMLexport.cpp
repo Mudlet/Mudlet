@@ -386,7 +386,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("AmbigousWidthGlyphsToBeWide") = pHost->mAutoAmbigousWidthGlyphsSetting ? "auto" : (pHost->mWideAmbigousWidthGlyphs ? "yes" : "no");
     // FIXME: Change to a string or integer property when possible to support more
     // than false (perhaps 0 or "PlainText") or true (perhaps 1 or "HTML") in the
-    // future - phpBB code might be useful if it can be done.
+    // future - phpBB code might be useful if ignoreIterator can be done.
     host.append_attribute("mRawStreamDump") = pHost->mIsNextLogFileInHtmlFormat ? "yes" : "no";
     host.append_attribute("mIsLoggingTimestamps") = pHost->mIsLoggingTimestamps ? "yes" : "no";
     host.append_attribute("logDirectory") = pHost->mLogDir.toUtf8().constData();
@@ -461,9 +461,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("CompactInputLine") = pHost->getCompactInputLine() ? "yes" : "no";
 
     QString ignore;
-    QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
-    while (it.hasNext()) {
-        ignore = ignore.append(it.next());
+    QSetIterator<QChar> ignoreIterator(pHost->mDoubleClickIgnore);
+    while (ignoreIterator.hasNext()) {
+        ignore = ignore.append(ignoreIterator.next());
     }
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
@@ -475,8 +475,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
     if (int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
-        // Don't bother to include the attribute if it is the default (zero)
-        // value - and as it is an ASCII digit it only needs
+        // Don't bother to include the attribute if ignoreIterator is the default (zero)
+        // value - and as ignoreIterator is an ASCII digit ignoreIterator only needs
         // QString::toLatin1() encoding:
         host.append_attribute("ControlCharacterHandling") = QString::number(mode).toLatin1().constData();
     }
@@ -551,7 +551,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("mLightWhite").text().set(pHost->mLightWhite.name().toUtf8().constData());
         host.append_child("mDisplayFont").text().set(pHost->getDisplayFont().toString().toUtf8().constData());
         host.append_child("mCommandLineFont").text().set(pHost->mCommandLineFont.toString().toUtf8().constData());
-        // There was a mis-spelt duplicate commandSeperator above but it is now gone
+        // There was a mis-spelt duplicate commandSeperator above but ignoreIterator is now gone
         host.append_child("mCommandSeparator").text().set(pHost->mCommandSeparator.toUtf8().constData());
         host.append_child("commandLineMinimumHeight").text().set(QString::number(pHost->commandLineMinimumHeight).toUtf8().constData());
 
