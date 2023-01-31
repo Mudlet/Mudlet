@@ -5,6 +5,7 @@
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -8429,41 +8430,21 @@ void dlgTriggerEditor::slot_keyGrab()
 // Deactivate instead with optional "false" - to allow these for keybindings
 void dlgTriggerEditor::setShortcuts(const bool active)
 {
-    QList<QAction*> actionList = toolBar->actions();
-    QString actionText;
-    // PLACEMARKER 3/3 save button texts need to be kept in sync
-    const QStringList saveButtonNames = {qsl("Save Item"), tr("Save Trigger"), tr("Save Timer"), tr("Save Alias"), tr("Save Script"), tr("Save Button"), tr("Save Key"), tr("Save Variable")};
+    setShortcuts(toolBar->actions(), active);
+    setShortcuts(toolBar2->actions(), active);
+}
+
+void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active)
+{
+    QString buttonLabel;
     for (auto& action : actionList) {
-        actionText = action->text();
-        if (saveButtonNames.contains(actionText)) {
-            action->setShortcut((active) ? tr("Ctrl+S") : QString());
-        } else if (actionText == tr("Save Profile")) {
-            action->setShortcut((active) ? tr("Ctrl+Shift+S") : QString());
+        if (!active) {
+            action->setShortcut(QString());
+            continue;
         }
-    }
-    actionList = toolBar2->actions();
-    for (auto& action : actionList) {
-        actionText = action->text();
-        if (actionText == tr("Triggers")) {
-            action->setShortcut((active) ? tr("Ctrl+1") : QString());
-        } else if (actionText == tr("Aliases")) {
-            action->setShortcut((active) ? tr("Ctrl+2") : QString());
-        } else if (actionText == tr("Scripts")) {
-            action->setShortcut((active) ? tr("Ctrl+3") : QString());
-        } else if (actionText == tr("Timers")) {
-            action->setShortcut((active) ? tr("Ctrl+4") : QString());
-        } else if (actionText == tr("Keys")) {
-            action->setShortcut((active) ? tr("Ctrl+5") : QString());
-        } else if (actionText == tr("Variables")) {
-            action->setShortcut((active) ? tr("Ctrl+6") : QString());
-        } else if (actionText == tr("Buttons")) {
-            action->setShortcut((active) ? tr("Ctrl+7") : QString());
-        } else if (actionText == tr("Errors")) {
-            action->setShortcut((active) ? tr("Ctrl+8") : QString());
-        } else if (actionText == tr("Statistics")) {
-            action->setShortcut((active) ? tr("Ctrl+9") : QString());
-        } else if (actionText == tr("Debug")) {
-            action->setShortcut((active) ? tr("Ctrl+0") : QString());
+        buttonLabel = action->text();
+        if (auto it = mButtonShortcuts.find(buttonLabel); it != mButtonShortcuts.end()) {
+            action->setShortcut(it->second);
         }
     }
 }
