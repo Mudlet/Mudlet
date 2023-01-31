@@ -7,6 +7,7 @@
  *   Copyright (C) 2017-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2015-2018, 2020, 2022 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -28,6 +29,7 @@
 #include "pre_guard.h"
 #include "ui_trigger_editor.h"
 #include <QPointer>
+#include <unordered_map>
 #include "post_guard.h"
 
 #include "TAction.h"
@@ -432,10 +434,33 @@ private:
     void setupPatternControls(const int type, dlgTriggerPatternEdit* pItem);
     void key_grab_callback(const Qt::Key, const Qt::KeyboardModifiers);
     void setShortcuts(const bool active = true);
+    void setShortcuts(QList<QAction*> actionList, const bool active = true);
 
     void showOrHideRestoreEditorActionsToolbarAction();
     void showOrHideRestoreEditorItemsToolbarAction();
 
+    // PLACEMARKER 3/3 save button texts need to be kept in sync
+    std::unordered_map<QString, QString> mButtonShortcuts = {
+        {qsl("Save Item"),    tr("Ctrl+S")},
+        {tr("Save Trigger"),  tr("Ctrl+S")},
+        {tr("Save Timer"),    tr("Ctrl+S")},
+        {tr("Save Alias"),    tr("Ctrl+S")},
+        {tr("Save Script"),   tr("Ctrl+S")},
+        {tr("Save Button"),   tr("Ctrl+S")},
+        {tr("Save Key"),      tr("Ctrl+S")},
+        {tr("Save Variable"), tr("Ctrl+S")},
+        {tr("Save Profile"),  tr("Ctrl+Shift+S")},
+        {tr("Triggers"),   tr("Ctrl+1")},
+        {tr("Aliases"),    tr("Ctrl+2")},
+        {tr("Scripts"),    tr("Ctrl+3")},
+        {tr("Timers"),     tr("Ctrl+4")},
+        {tr("Keys"),       tr("Ctrl+5")},
+        {tr("Variables"),  tr("Ctrl+6")},
+        {tr("Buttons"),    tr("Ctrl+7")},
+        {tr("Errors"),     tr("Ctrl+8")},
+        {tr("Statistics"), tr("Ctrl+9")},
+        {tr("Debug"),      tr("Ctrl+0")}
+    };
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
