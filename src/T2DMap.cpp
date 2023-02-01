@@ -3262,6 +3262,7 @@ void T2DMap::slot_customLineProperties()
                 qWarning("T2DMap::slot_customLineProperties() ERROR: failed to create the dialog!");
                 return;
             }
+            dialog->setAttribute(Qt::WA_DeleteOnClose);
             dialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_custom_exit_properties.png")));
             auto* le_toId = dialog->findChild<QLineEdit*>(qsl("toId"));
             auto* le_fromId = dialog->findChild<QLineEdit*>(qsl("fromId"));
