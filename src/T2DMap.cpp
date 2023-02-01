@@ -4059,6 +4059,7 @@ void T2DMap::slot_setArea()
     if (!set_room_area_dialog) {
         return;
     }
+    set_room_area_dialog->setAttribute(Qt::WA_DeleteOnClose);
     arealist_combobox = set_room_area_dialog->findChild<QComboBox*>("arealist_combobox");
     if (!arealist_combobox) {
         return;
