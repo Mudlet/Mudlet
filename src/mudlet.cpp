@@ -1215,8 +1215,9 @@ void mudlet::slot_packageExporter()
     if (!pH) {
         return;
     }
-    auto d = new dlgPackageExporter(this, pH);
-    d->show();
+    auto dialog = new dlgPackageExporter(this, pH);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
 }
 
 void mudlet::slot_closeCurrentProfile()
