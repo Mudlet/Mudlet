@@ -4536,6 +4536,7 @@ void T2DMap::slot_setCustomLine()
     if (!dialog) {
         return;
     }
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_custom_exit.png")));
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
