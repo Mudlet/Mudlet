@@ -2097,8 +2097,14 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         update();
         if (mpMap->mpRoomDB->getRoom(mTarget)) {
             mpMap->mTargetID = mTarget;
-            if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
+            if (mpMap->mpHost->checkForCustomSpeedwalk()) {
+                mpMap->mpHost->startSpeedWalk(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID);
+            } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                 mpMap->mpHost->startSpeedWalk();
+            } else {
+            mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
+                                                          .arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)),
+                                                               QString::number(mpMap->mTargetID))));
             }
             //            else
             //            {
