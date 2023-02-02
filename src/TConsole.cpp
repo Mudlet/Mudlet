@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
@@ -1465,7 +1465,18 @@ void TConsole::setCmdVisible(bool isVisible)
         mpCommandLine->setObjectName(mConsoleName);
         layoutLayer2->addWidget(mpCommandLine);
     }
-    mpButtonMainLayer->setVisible(false);
+    if (mType == MainConsole) {
+        if (mpHost) {
+            if (!mpHost->getCompactInputLine() && isVisible) {
+                mpButtonMainLayer->setVisible(true);
+            } else {
+                mpButtonMainLayer->setVisible(false);
+            }
+        }
+
+    } else {
+        mpButtonMainLayer->setVisible(false);
+    }
     layerCommandLine->setVisible(isVisible);
     mpCommandLine->setVisible(isVisible);
     //resizes miniconsole if command line gets enabled/disabled
