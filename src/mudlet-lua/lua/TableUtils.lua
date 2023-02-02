@@ -590,3 +590,38 @@ function table.keys(t)
   end
 	return keys
 end
+
+
+-- Table is_field
+--
+-- @return true or false, indicating if a given field exists inside the given complex table
+---
+--- @usage Example:
+---   <pre>
+---   -- Assume a table like this is received from game via GMCP. For testing, we define here.
+---   local gmcpTable = {
+---     char = {
+---       base = {
+---         info = {
+---           guild = {
+---             foo = "bar"
+---           }
+---         }
+---       }
+---     }
+---   }
+---
+---   if table.is_field(gmcpTable, "char.base.info.guild.foo") then
+---     -- We can now be sure this table exists, and every table inside, until the interesting leaf value 
+---     save_for_later = gmcpTable.char.base.info.guild.foo
+---   end
+---   </pre>
+function table.is_field(t, s)
+  if t == nil then return false end
+  local t = t
+  for key in s:gmatch('[^.]+') do
+    if t[key] == nil then return false end
+    t = t[key]
+  end
+  return true
+end
