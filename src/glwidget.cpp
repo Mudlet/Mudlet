@@ -2102,7 +2102,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
             } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                 mpMap->mpHost->startSpeedWalk();
             } else {
-            mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
+                mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
                                                           .arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)),
                                                                QString::number(mpMap->mTargetID))));
             }
