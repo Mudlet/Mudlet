@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2022 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2023 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -777,18 +777,19 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
-macx {
-    OBJECTIVE_SOURCES += AnnouncerMac.mm
-}
+macx|win32 {
+    macx {
+        SOURCES += AnnouncerMac.mm
+    }
 
-win32 {
-    SOURCES += AnnouncerWindows.cpp \
-        uiawrapper.cpp
+    win32 {
+        SOURCES += AnnouncerWindows.cpp \
+            uiawrapper.cpp
 
-    HEADERS += uiawrapper.h
-}
-
-openbsd|linux {
+        HEADERS += uiawrapper.h
+    }
+} else {
+    # Everything else
     SOURCES += \
         AnnouncerUnix.cpp
 }

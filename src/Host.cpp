@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *                                                                         *
@@ -788,9 +788,6 @@ void Host::resetProfile_phase2()
 // returns true+filepath if successful or false+error message otherwise
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, const QString& saveName, bool syncModules)
 {
-    emit profileSaveStarted();
-    qApp->processEvents();
-
     QString directory_xml;
     if (saveFolder.isEmpty()) {
         directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
@@ -819,6 +816,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     if (currentlySavingProfile()) {
         return std::make_tuple(false, QString(), qsl("a save is already in progress"));
     }
+
+    emit profileSaveStarted();
+    qApp->processEvents();
 
     auto writer = new XMLexport(this);
     writers.insert(qsl("profile"), writer);
@@ -3294,6 +3294,20 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (!mpConsole) {
         return {false, QString()};
     }
+    //checks - for reasons why the indicated thing might not be moved to the indicated destination
+    auto pDCheck = mpConsole->mDockWidgetMap.value(name);
+    if (pDCheck) {
+        return {false, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(name)};
+    }
+    if (mpDockableMapWidget) {
+        if (!name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+            return {false, qsl("element '%1' is the map in a floating/dockable window and may not be moved").arg(name)};
+        }
+        if (!windowname.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+            return {false, qsl("window '%1' is the map in a floating/dockable window and may not receive other elements").arg(windowname)};
+        }
+    }
+
     //children
     auto pL = mpConsole->mLabelMap.value(name);
     auto pC = mpConsole->mSubConsoleMap.value(name);
@@ -3305,7 +3319,9 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     auto pD = mpConsole->mDockWidgetMap.value(windowname);
     auto pSW = mpConsole->mScrollBoxMap.value(windowname);
 
-    if (!pSW && !pD && windowname.toLower() != QLatin1String("main")) {
+    if (!pSW && !pD && windowname.compare(QLatin1String("main"), Qt::CaseInsensitive)) {
+        // Third argument is non-zero (i.e. true) if the window name is NOT
+        // the given string:
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
@@ -3347,7 +3363,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
             pN->show();
         }
         return {true, QString()};
-    } else if (pM && name.toLower() == QLatin1String("mapper")) {
+    } else if (pM && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
         pM->setParent(pW);
         pM->move(x1, y1);
         if (show) {
