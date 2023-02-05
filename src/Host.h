@@ -400,6 +400,7 @@ public:
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
     void setFocusOnHostMainConsole();
+    QPointer<TConsole> parentTConsole(QObject*) const;
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;

@@ -4078,3 +4078,23 @@ void Host::setFocusOnHostMainConsole()
     mpConsole->activateWindow();
     mpConsole->setFocus();
 }
+
+QPointer<TConsole> Host::parentTConsole(QObject* start) const
+{
+    QPointer<TConsole> result;
+    auto ptr = start;
+    if (!ptr) {
+        // Handle pathalogical case:
+        return result;
+    }
+    do {
+        ptr = ptr->parent();
+    } while (ptr && !ptr->inherits("TConsole"));
+    // QObject::inherits(...) uses a const char* - so no need to wrap raw string literal!
+    if (!ptr) {
+        // Handle not found case:
+        return result;
+    }
+    result = qobject_cast<TConsole*>(ptr);
+    return result;
+}

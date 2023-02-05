@@ -313,7 +313,7 @@ protected:
 
 
 private:
-    void adjustAccessibleNames();
+    void slot_adjustAccessibleNames();
     void createSearchOptionIcon();
 
     ConsoleType mType = UnknownType;
