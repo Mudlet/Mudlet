@@ -61,7 +61,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     echo "----"
   fi
 
-  if [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
+  if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
     appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
     if [ -n "${GITHUB_REPOSITORY}" ]; then
