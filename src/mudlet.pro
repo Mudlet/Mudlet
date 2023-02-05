@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2022 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2023 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -449,10 +449,6 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
-        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qt-ordered-map")
-    }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
@@ -467,10 +463,6 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
-    }
-    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
-        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qt-ordered-map")
     }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
@@ -514,10 +506,6 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
-}
-
-!exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
-    error("Cannot locate Qt ordered map submodule source code, build abandoned!")
 }
 
 contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
@@ -594,6 +582,7 @@ SOURCES += \
     ScriptUnit.cpp \
     ShortcutsManager.cpp \
     T2DMap.cpp \
+    TAccessibleTextEdit.cpp \
     TAction.cpp \
     TAlias.cpp \
     TArea.cpp \
@@ -649,7 +638,6 @@ SOURCES += \
     TTabBar.cpp \
     TTextCodec.cpp \
     TTextEdit.cpp \
-    TAccessibleTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
     TTreeWidget.cpp \
@@ -710,6 +698,8 @@ HEADERS += \
     ScriptUnit.h \
     ShortcutsManager.h \
     T2DMap.h \
+    TAccessibleConsole.h \
+    TAccessibleTextEdit.h \
     TAction.h \
     TAlias.h \
     TArea.h \
@@ -717,7 +707,6 @@ HEADERS += \
     TBuffer.h \
     TCommandLine.h \
     TConsole.h \
-    TAccessibleConsole.h \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
@@ -728,6 +717,7 @@ HEADERS += \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
+    TGameDetails.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
@@ -774,7 +764,6 @@ HEADERS += \
     TTabBar.h \
     TTextCodec.h \
     TTextEdit.h \
-    TAccessibleTextEdit.h \
     TTimer.h \
     TToolBar.h \
     TTreeWidget.h \
@@ -788,18 +777,19 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
-macx {
-    OBJECTIVE_SOURCES += AnnouncerMac.mm
-}
+macx|win32 {
+    macx {
+        SOURCES += AnnouncerMac.mm
+    }
 
-win32 {
-    SOURCES += AnnouncerWindows.cpp \
-        uiawrapper.cpp
+    win32 {
+        SOURCES += AnnouncerWindows.cpp \
+            uiawrapper.cpp
 
-    HEADERS += uiawrapper.h
-}
-
-openbsd|linux {
+        HEADERS += uiawrapper.h
+    }
+} else {
+    # Everything else
     SOURCES += \
         AnnouncerUnix.cpp
 }

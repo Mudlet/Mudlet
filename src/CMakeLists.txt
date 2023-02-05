@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#    Copyright (C) 2015-2018, 2020, 2023 by Stephen Lyons                  #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
 #    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
@@ -159,11 +159,11 @@ set(mudlet_SRCS
 
 if(APPLE)
   list(APPEND mudlet_SRCS AnnouncerMac.mm)
-elseif(UNIX AND NOT APPLE)
-  list(APPEND mudlet_SRCS AnnouncerUnix.cpp)
 elseif(WIN32)
   list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
   list(APPEND mudlet_SRCS uiawrapper.cpp)
+else()
+  list(APPEND mudlet_SRCS AnnouncerUnix.cpp)
 endif()
 
 # This is for compiled UI files, not those used at runtime
@@ -601,7 +601,5 @@ if(UNIX AND NOT APPLE)
         GROUP_READ
         GROUP_EXECUTE
         WORLD_READ
-        WORLD_EXECUTE
-      CONFIGURATIONS Debug Release
-      COMPONENT All)
+        WORLD_EXECUTE)
 endif()

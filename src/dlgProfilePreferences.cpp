@@ -167,10 +167,10 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         checkbox_noAutomaticUpdates->setDisabled(true);
         checkbox_noAutomaticUpdates->setToolTip(utils::richText(tr("Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.")));
     } else {
-        checkbox_noAutomaticUpdates->setChecked(!pMudlet->updater->updateAutomatically());
+        checkbox_noAutomaticUpdates->setChecked(!pMudlet->pUpdater->updateAutomatically());
         // This is the extra connect(...) relating to settings' changes saved by
         // a different profile mentioned further down in this constructor:
-        connect(pMudlet->updater, &Updater::signal_automaticUpdatesChanged, this, &dlgProfilePreferences::slot_changeAutomaticUpdates);
+        connect(pMudlet->pUpdater, &Updater::signal_automaticUpdatesChanged, this, &dlgProfilePreferences::slot_changeAutomaticUpdates);
     }
 #else
     groupBox_updates->hide();
@@ -286,7 +286,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
         auto& nativeName = translation.getNativeName();
         if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();
-            if (translatedPc >= pMudlet->mTranslationGoldStar) {
+            if (translatedPc >= pMudlet->scmTranslationGoldStar) {
                 comboBox_guiLanguage->addItem(QIcon(":/icons/rating.png"),
                                               nativeName,
                                               code);
@@ -866,6 +866,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMSSP->setChecked(pHost->mEnableMSSP);
     mEnableMSP->setChecked(pHost->mEnableMSP);
 
+    groupBox_purgeMediaCache->setVisible(true);
+    connect(buttonPurgeMediaCache, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_purgeMediaCache);
+
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
     QStringList profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
@@ -1201,7 +1204,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(checkBox_largeAreaExitArrows, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_changeLargeAreaExitArrows);
 
     //Shortcuts tab
-    auto shortcutKeys = mudlet::self()->mShortcutsManager->iterator();
+    auto shortcutKeys = mudlet::self()->mpShortcutsManager->iterator();
     int shortcutsRow = 0;
     while (shortcutKeys.hasNext()) {
         auto key = shortcutKeys.next();
@@ -1209,7 +1212,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         currentShortcuts.insert(key, sequence);
         auto sequenceEdit = new QKeySequenceEdit(*sequence);
 
-        gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
+        gridLayout_groupBox_shortcuts->addWidget(new QLabel(mudlet::self()->mpShortcutsManager->getLabel(key)), floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 1);
         gridLayout_groupBox_shortcuts->addWidget(sequenceEdit, floor(shortcutsRow / 2), (shortcutsRow % 2) * 2 + 2);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
@@ -1226,8 +1229,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             delete newSequence;
         });
         connect(this, &dlgProfilePreferences::signal_resetMainWindowShortcutsToDefaults, sequenceEdit, [=]() {
-            sequenceEdit->setKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
-            QKeySequence* newSequence = new QKeySequence(*mudlet::self()->mShortcutsManager->getDefault(key));
+            sequenceEdit->setKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
+            QKeySequence* newSequence = new QKeySequence(*mudlet::self()->mpShortcutsManager->getDefault(key));
             sequence->swap(*newSequence);
             delete newSequence;
         });
@@ -1621,6 +1624,16 @@ void dlgProfilePreferences::setTab(QString tab)
         }
     }
     tabWidget->setCurrentIndex(0);
+}
+
+void dlgProfilePreferences::slot_purgeMediaCache()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mpMedia->purgeMediaCache();
 }
 
 void dlgProfilePreferences::slot_resetColors()
@@ -2882,7 +2895,7 @@ void dlgProfilePreferences::slot_saveAndClose()
                                              pHost->mpMap->mPlayerRoomInnerColor);
         }
 
-        auto iterator = mudlet::self()->mShortcutsManager->iterator();
+        auto iterator = mudlet::self()->mpShortcutsManager->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
             QKeySequence sequence = QKeySequence(*currentShortcuts.value(key));
@@ -2892,7 +2905,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
 #if defined(INCLUDE_UPDATER)
     if (mudlet::scmIsReleaseVersion || mudlet::scmIsPublicTestVersion) {
-        pMudlet->updater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
+        pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
     }
 #endif
 

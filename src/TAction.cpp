@@ -82,7 +82,7 @@ void TAction::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of action:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
@@ -96,7 +96,7 @@ void TAction::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::debugMode) {
+            if (mudlet::smDebugMode) {
                 TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of action:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
@@ -158,16 +158,14 @@ void TAction::execute()
 
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            mpHost->mpConsole->activateWindow();
-            mpHost->mpConsole->setFocus();
+            mpHost->setFocusOnHostMainConsole();
             return;
         }
     }
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
     // move focus back to the active console / command line:
-    mpHost->mpConsole->activateWindow();
-    mpHost->mpConsole->setFocus();
+    mpHost->setFocusOnHostMainConsole();
 }
 
 void TAction::expandToolbar(TToolBar* pT)
@@ -242,11 +240,8 @@ void TAction::expandToolbar(TToolBar* pT)
 void TAction::insertActions(TToolBar* pT, QMenu* menu)
 {
     mpToolBar = pT;
-    QIcon icon(mIcon);
-    auto action = new EAction(icon, mName);
+    auto action = new EAction(mpHost, QIcon(mIcon), mName, mID);
     action->setCheckable(mIsPushDownButton);
-    action->mID = mID;
-    action->mpHost = mpHost;
     action->setStatusTip(mName);
     if (mpEButton) {
         mpEButton->deleteLater();
@@ -341,10 +336,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
             continue;
         }
         mpEasyButtonBar = pT;
-        QIcon icon(mIcon);
-        auto newAction = new EAction(icon, action->mName);
-        newAction->mID = action->mID;
-        newAction->mpHost = mpHost;
+        auto newAction = new EAction(mpHost, QIcon(mIcon), action->mName, mID);
         newAction->setStatusTip(action->mName);
         newAction->setCheckable(action->mIsPushDownButton);
         if (action->mIsPushDownButton) {
@@ -388,11 +380,8 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
 void TAction::insertActions(TEasyButtonBar* pT, QMenu* menu)
 {
     mpEasyButtonBar = pT;
-    QIcon icon(mIcon);
-    auto action = new EAction(icon, mName);
+    auto action = new EAction(mpHost, QIcon(mIcon), mName, mID);
     action->setCheckable(mIsPushDownButton);
-    action->mID = mID;
-    action->mpHost = mpHost;
     action->setStatusTip(mName);
     if (mpEButton) {
         mpEButton->deleteLater();

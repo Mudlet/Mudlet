@@ -2778,6 +2778,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
     if (event->buttons() & Qt::RightButton) {
         auto popup = new QMenu(this);
         popup->setToolTipsVisible(true);
+        popup->setAttribute(Qt::WA_DeleteOnClose);
 
         if (mCustomLinesRoomFrom > 0) {
             if (mDialogLock) {
@@ -3098,6 +3099,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             QStringList menuInfo = it.value();
             QString displayName = menuInfo[1];
             auto userMenu = new QMenu(displayName, this);
+            userMenu->setAttribute(Qt::WA_DeleteOnClose);
             userMenus.insert(it.key(), userMenu);
         }
         it.toFront();
@@ -3783,21 +3785,21 @@ void T2DMap::slot_setRoomProperties(
     if (newName.isEmpty()) {
         newName = QString();
     } else {
-        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // 10.0 is the maximum supported by all the Qt versions (5.14+) we
         // handle/use/allow - by normalising the symbol we can ensure that
         // all the entered ones are decomposed and recomposed in a
         // "standard" way and will have the same sequence of codepoints:
-        newName = newName.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        newName = newName.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
 
     if (newSymbol.isEmpty()) {
         newSymbol = QString();
     } else {
-        // 8.0 is the maximum supported by all the Qt versions (>= 5.7.0) we
+        // 10.0 is the maximum supported by all the Qt versions (5.14+) we
         // handle/use/allow - by normalising the symbol we can ensure that
         // all the entered ones are decomposed and recomposed in a
         // "standard" way and will have the same sequence of codepoints:
-        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_8_0);
+        newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
 
     QSetIterator<TRoom*> itpRoom(rooms);
