@@ -164,7 +164,7 @@ jobs:
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
     - name: (Linux) Install Lua
-      uses: leafo/gh-actions-lua@v9
+      uses: leafo/gh-actions-lua@v10
       if: runner.os == 'Linux'
       with:
         luaVersion: "5.1.5"
@@ -329,6 +329,12 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+
+    - name: (Linux/macOS) add ssh-agent for tag deployment
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && github.event == 'tag'
+      uses: webfactory/ssh-agent@v0.5.4
+      with:
+        ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
     - name: (Linux/macOS) package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
