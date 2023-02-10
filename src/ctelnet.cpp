@@ -8,6 +8,7 @@
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Michael Hupp - darksix@northfire.org            *
  *   Copyright (C) 2017 by Colton Rasbury - rasbury.colton@gmail.com       *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1674,6 +1675,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
                 connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
+                mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
                 mpProgressDialog->show();
             }
             return;
@@ -2036,6 +2038,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
         connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
+        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
         mpProgressDialog->show();
         return;
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
