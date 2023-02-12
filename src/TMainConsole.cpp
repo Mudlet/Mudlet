@@ -554,14 +554,13 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
     auto pS = mScrollBoxMap.value(windowname);
     if (!pL) {
         if (pW) {
-            pL = new TLabel(mpHost, pW->widget());
+            pL = new TLabel(mpHost, name, pW->widget());
         } else if (pS) {
-            pL = new TLabel(mpHost, pS->widget());
+            pL = new TLabel(mpHost, name, pS->widget());
         } else {
-            pL = new TLabel(mpHost, mpMainFrame);
+            pL = new TLabel(mpHost, name, mpMainFrame);
         }
         mLabelMap[name] = pL;
-        pL->setObjectName(name);
         pL->setAutoFillBackground(fillBackground);
         pL->setClickThrough(clickThrough);
         pL->resize(width, height);
@@ -570,9 +569,9 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->show();
         mpHost->setBackgroundColor(name, 32, 32, 32, 255);
         return pL;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)

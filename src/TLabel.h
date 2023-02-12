@@ -43,7 +43,7 @@ class TLabel : public QLabel
 
 public:
     Q_DISABLE_COPY(TLabel)
-    explicit TLabel(Host* pH, QWidget* pW = nullptr);
+    explicit TLabel(Host*, const QString&, QWidget* pW = nullptr);
     ~TLabel();
 
     void setClick(const int func);
@@ -64,6 +64,7 @@ public:
     void setClickThrough(bool clickthrough);
 
     QPointer<Host> mpHost;
+    QString mName;
     int mClickFunction = 0;
     int mDoubleClickFunction = 0;
     int mReleaseFunction = 0;
