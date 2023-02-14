@@ -232,7 +232,7 @@ public:
     //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
     int mButtonState = 1;
 
-    QString mConsoleName = qsl("main");
+    QString mConsoleName;
     QString mCurrentLine;
     QString mDisplayFontName = qsl("Bitstream Vera Sans Mono");
     int mDisplayFontSize = 14;
