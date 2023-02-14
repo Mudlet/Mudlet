@@ -1296,11 +1296,11 @@ void TCommandLine::clearSuggestions()
 
 void TCommandLine::slot_adjustAccessibleNames()
 {
-    bool isMultipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
     const QString hostName{mpHost ? mpHost->getName() : QString()};
     switch (mType) {
     case MainCommandLine:
-        if (isMultipleProfilesActive) {
+        if (multipleProfilesActive) {
             setAccessibleName(tr("Input line for \"%1\" profile.",
                                  // Intentional comment to separate arguments
                                  "Item name for acccessibilty system. Phrased so that a changable possive suffix "
@@ -1323,7 +1323,7 @@ void TCommandLine::slot_adjustAccessibleNames()
         }
         break;
     case SubCommandLine:
-        if (isMultipleProfilesActive) {
+        if (multipleProfilesActive) {
             setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.",
                                  // Intentional comment to separate arguments
                                  "Item name for acccessibilty system. Phrased so that a changable possive suffix "
@@ -1352,7 +1352,7 @@ void TCommandLine::slot_adjustAccessibleNames()
         break;
     case ConsoleCommandLine:
         // The mCommandLine for this type is the same as the parent TConsole
-        if (isMultipleProfilesActive) {
+        if (multipleProfilesActive) {
             setAccessibleName(tr("Input line of \"%1\" window of \"%2\" profile.",
                                  // Intentional comment to separate arguments
                                  "Item name for acccessibilty system. Phrased so that a changable possive suffix "

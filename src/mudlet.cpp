@@ -1316,9 +1316,8 @@ void mudlet::closeHost(const QString& name)
     // instead we just have to accept that any profile changes will not be
     // saved if the preferences dialog is not closed before the profile is...
     int hostCount = mHostManager.getHostCount();
-    mHostManager.deleteHost(pH->getName());
-    // pH is NOT valid now - it must NOT be dereferenced:
     emit signal_hostDestroyed(pH, --hostCount);
+    mHostManager.deleteHost(pH->getName());
     emit signal_adjustAccessibleNames();
     updateMultiViewControls();
 }
