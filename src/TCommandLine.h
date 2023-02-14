@@ -50,14 +50,14 @@ public:
     enum CommandLineTypeFlag {
         UnknownType = 0x0,     // Should not be encountered but left as a trap value
         MainCommandLine = 0x1, // One per profile
-        SubCommandLine = 0x2,  // Overlaid on top of MainConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
-        ConsoleCommandLine = 0x4,  // Integrated in MiniConsoles
+        SubCommandLine = 0x2,  // Overlaid on top of TMainConsole or TConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
+        ConsoleCommandLine = 0x4,  // Integrated in TConsoles other than those derived into a TMainConsole
     };
 
     Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
 
     Q_DISABLE_COPY(TCommandLine)
-    explicit TCommandLine(Host*, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
+    explicit TCommandLine(Host*, const QString&, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void hideEvent(QHideEvent*) override;
@@ -83,6 +83,7 @@ public slots:
     void slot_addWord();
     void slot_removeWord();
     void slot_clearSelection(bool yes);
+    void slot_adjustAccessibleNames();
 
 private:
     bool event(QEvent*) override;
