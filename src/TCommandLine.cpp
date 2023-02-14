@@ -1303,51 +1303,59 @@ void TCommandLine::slot_adjustAccessibleNames()
         if (multipleProfilesActive) {
             setAccessibleName(tr("Input line for \"%1\" profile.",
                                  // Intentional comment to separate arguments
-                                 "Item name for acccessibilty system. Phrased so that a changable possive suffix "
-                                 "can be avoided but kept as short as possible for this, the main input command "
-                                 "line when more than one profile is loaded.").arg(hostName));
+                                 "Accessibility-friendly name to describe the main command line for a "
+                                 "Mudlet profile when more than one profile is loaded, %1 is the "
+                                 "profile name. Because this is likely to be used often it should be "
+                                 "kept as short as possible.").arg(hostName));
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
                                         "to run commands locally.",
                                         // Intentional comment to separate arguments
-                                        "Item description for acccessibilty system. Phrased so that a changable possive "
-                                        "suffix can be avoided. Used when more than one profile is loaded.").arg(hostName));
+                                        "Accessibility-friendly description for the main command line for "
+                                        "a Mudlet profile when more than one profile is loaded, %1 is the "
+                                        "profile name. Because this is likely to be used often it should be "
+                                        "kept as short as possible.").arg(hostName));
         } else {
             setAccessibleName(tr("Input line.",
                                  // Intentional comment to separate arguments
-                                 "Item name for acccessibilty system. To be kept as short as possible for this, "
-                                 "the main input command line when only one profile is loaded."));
+                                 "Accessibility-friendly name to describe the main command line for a "
+                                 "Mudlet profile when only one profile is loaded. Because this is "
+                                 "likely to be used often it should be kept as short as possible."));
             setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
                                         "locally.",
                                         // Intentional comment to separate arguments
-                                        "Item description for acccessibilty system. Used when only one profile is loaded."));
+                                        "Accessibility-friendly description for the main command line for "
+                                        "a Mudlet profile when only one profile is loaded. Because this is "
+                                        "likely to be used often it should be kept as short as possible."));
         }
         break;
     case SubCommandLine:
         if (multipleProfilesActive) {
             setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.",
                                  // Intentional comment to separate arguments
-                                 "Item name for acccessibilty system. Phrased so that a changable possive suffix "
-                                 "can be avoided but kept as short as possible for this, an extra input command "
-                                 "line of the main or a mini-console or user window when more than one profile "
-                                 "is loaded.")
-                              .arg(mCommandLineName, mpConsole->mConsoleName, hostName));
+                                 "Accessibility-friendly name to describe an extra command line on "
+                                 "top of console/window when more than one profile is loaded, %1 is "
+                                 "the command line name, %2 is the name of the window/console that "
+                                 "it is on and %3 is the name of the profile.")
+                                      .arg(mCommandLineName, mpConsole->mConsoleName, hostName));
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
                                         "to run commands locally.",
                                         // Intentional comment to separate arguments
-                                        "Item description for acccessibilty system. Phrased so that a changable possive "
-                                        "suffix can be avoided. Used when more than one profile is loaded.")
-                                     .arg(hostName));
+                                        "Accessibility-friendly description for an extra command line on top of a "
+                                        "console/window when more than one profile is loaded, %1 is the profile "
+                                        "name.").arg(hostName));
         } else {
             setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window.",
                                  // Intentional comment to separate arguments
-                                 "Item name for acccessibilty system. To be kept as short as possible for this, "
-                                 "the input command line of the main or a mini-console or user window when only "
-                                 "one profile is loaded.")
-                              .arg(mCommandLineName, mpConsole->mConsoleName));
+                                 "Accessibility-friendly name to describe an extra command line on "
+                                 "top of console/window when only one profile is loaded, %1 is the "
+                                 "command line name and %2 is the name of the window/console that "
+                                 "it is on.")
+                                      .arg(mCommandLineName, mpConsole->mConsoleName));
             setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
                                         "locally.",
                                         // Intentional comment to separate arguments
-                                        "Item description for acccessibilty system. Used when only one profile is loaded."));
+                                        "Accessibility-friendly description for an extra command line on "
+                                        "top of a console/window when only one profile is loaded."));
         }
         break;
     case ConsoleCommandLine:
@@ -1355,28 +1363,29 @@ void TCommandLine::slot_adjustAccessibleNames()
         if (multipleProfilesActive) {
             setAccessibleName(tr("Input line of \"%1\" window of \"%2\" profile.",
                                  // Intentional comment to separate arguments
-                                 "Item name for acccessibilty system. Phrased so that a changable possive suffix "
-                                 "can be avoided but kept as short as possible for this, an extra input command "
-                                 "line of the main or a mini-console or user window when more than one profile "
-                                 "is loaded.")
-                              .arg(mCommandLineName, hostName));
+                                 "Accessibility-friendly name to describe the built-in command line of a "
+                                 "console/window other than the main one, when more than one profile is "
+                                 "loaded, %1 is the name of the window/console and %2 is the name of the "
+                                 "profile.").arg(mCommandLineName, hostName));
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
                                         "to run commands locally.",
                                         // Intentional comment to separate arguments
-                                        "Item description for acccessibilty system. Phrased so that a changable possive "
-                                        "suffix can be avoided. Used when more than one profile is loaded.")
-                                     .arg(hostName));
+                                        "Accessibility-friendly description for the built-in command line of a "
+                                        "console/window other than the main window's one when more than one profile is "
+                                        "loaded, %1 is the profile name.").arg(hostName));
         } else {
             setAccessibleName(tr("Input line of \"%1\" window.",
                                  // Intentional comment to separate arguments
-                                 "Item name for acccessibilty system. Phrased so that a changable possive suffix "
-                                 "can be avoided but kept as short as possible for this, the input command "
-                                 "line of a mini-console or user window when more than one profile is loaded.")
-                              .arg(mCommandLineName));
+                                 "Accessibility-friendly name to describe the built-in command line "
+                                 "of a console/window other than the main one, when only one "
+                                 "profile is loaded, %1 is the name of the window/console.")
+                                      .arg(mCommandLineName));
             setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
                                         "locally.",
                                         // Intentional comment to separate arguments
-                                        "Item description for acccessibilty system. Used when only one profile is loaded."));
+                                        "Accessibility-friendly description for the built-in command line of a "
+                                        "console/window other than the main window's one when only one profile is "
+                                        "loaded."));
         }
         break;
     case UnknownType:
