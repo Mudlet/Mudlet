@@ -6,7 +6,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
- *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -8663,7 +8663,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    int id;
+    int id = -1;
     QString name;
     if (!lua_isnumber(L, 1)) {
         if (!lua_isstring(L, 1)) {
@@ -17786,7 +17786,7 @@ int TLuaInterpreter::announce(lua_State *L) {
 int TLuaInterpreter::scrollTo(lua_State* L)
 {
     QString windowName;
-    int targetLine;
+    int targetLine = -1;
     bool stopScrolling = false;
 
     int n = lua_gettop(L);

@@ -672,7 +672,7 @@ void XMLimport::readUnknownElement(const QString& what)
 {
     if (!atEnd()) {
         qDebug().nospace().noquote() << "XMLimport::readUnknownElement(\"" << what << "\") ERROR - UNKNOWN Package Element name: \"" << name().toString() << "\".";
-        qDebug().nospace().noquote() << "    This is at offset: " << characterOffset() << ", at line: " << lineNumber() << ", column: " << columnNumber() << ".";
+        qDebug().nospace().noquote() << "    This is at byte offset: " << characterOffset() << ", which is (line:column): " << lineNumber() << ":" << columnNumber() << ".";
 #if !defined(QT_STRICT_ITERATORS)
         if (attributes().isEmpty()) {
             qDebug().nospace().noquote() << "    It has no attributes.";

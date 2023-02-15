@@ -601,7 +601,5 @@ if(UNIX AND NOT APPLE)
         GROUP_READ
         GROUP_EXECUTE
         WORLD_READ
-        WORLD_EXECUTE
-      CONFIGURATIONS Debug Release
-      COMPONENT All)
+        WORLD_EXECUTE)
 endif()
