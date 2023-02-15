@@ -13727,7 +13727,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 host.mMSSPHostName = msspVAL;
             } else if (msspVAR == "TLS" || msspVAR == "SSL") {
                 // In certain MSSP fields "-1" and "1" denote not supported/supported indicators,
-                // however the port is the standard value here. Ignore those values here. 
+                // however the port is the standard value here. Ignore those values here.
                 host.mMSSPTlsPort = (msspVAL != "-1" && msspVAL != "1") ? msspVAL.toInt() : 0;
             }
         }
@@ -17556,6 +17556,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         } else if (behaviour == qsl("replacewithspace")) {
             host.mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
         }
+        return success();
     }
     if (key == qsl("caretShortcut")) {
         static const QStringList keys{"none", "tab", "ctrltab", "f6"};
@@ -17576,6 +17577,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         } else if (key == qsl("f6")) {
             host.mCaretShortcut = Host::CaretShortcut::F6;
         }
+        return success();
     }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
