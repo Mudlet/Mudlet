@@ -496,6 +496,7 @@ void dlgRoomProperties::slot_defineNewColor()
 void dlgRoomProperties::slot_openRoomColorSelector()
 {
     auto dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Set room color"));
     auto vboxLayout = new QVBoxLayout;
     dialog->setLayout(vboxLayout);

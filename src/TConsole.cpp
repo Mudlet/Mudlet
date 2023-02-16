@@ -550,6 +550,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     }
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TConsole::slot_adjustAccessibleNames);
+    slot_adjustAccessibleNames();
     // Need to delay doing this because it uses elements that may not have
     // been constructed yet:
     if (mType == MainConsole) {
