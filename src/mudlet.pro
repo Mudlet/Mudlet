@@ -85,7 +85,9 @@ win32 {
 }
 
 QT += network uitools multimedia gui concurrent
-qtHaveModule(gamepad) {
+# there is a suspicion that the Gamepad module is breaking things on Windows
+# See: https://github.com/Mudlet/Mudlet/issues/6500
+!win32 : qtHaveModule(gamepad) {
     QT += gamepad
     !build_pass : message("Using Gamepad module")
 }

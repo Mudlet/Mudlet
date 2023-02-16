@@ -364,7 +364,11 @@ find_package(
              UiTools
              Widgets
              Concurrent)
-find_package(Qt5 COMPONENTS Gamepad QUIET)
+if(NOT WIN32)
+  # there is a suspicion that the Gamepad module is breaking things on Windows
+  # See: https://github.com/Mudlet/Mudlet/issues/6500
+  find_package(Qt5 COMPONENTS Gamepad QUIET)
+endif()
 find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
 if(Qt5Core_VERSION VERSION_LESS 5.14)
