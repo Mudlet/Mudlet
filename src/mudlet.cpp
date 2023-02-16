@@ -189,7 +189,6 @@ mudlet::mudlet()
     mpMainToolBar->setMovable(false);
     addToolBarBreak();
     auto frame = new QWidget(this);
-    frame->setFocusPolicy(Qt::NoFocus);
     setCentralWidget(frame);
     mpTabBar = new TTabBar(frame);
     mpTabBar->setMaximumHeight(30);
@@ -209,7 +208,6 @@ mudlet::mudlet()
     mpWidget_profileContainer->setPalette(mainPalette);
     mpWidget_profileContainer->setContentsMargins(0, 0, 0, 0);
     mpWidget_profileContainer->setSizePolicy(sizePolicy);
-    mpWidget_profileContainer->setFocusPolicy(Qt::NoFocus);
     mpWidget_profileContainer->setAutoFillBackground(true);
 
     layoutTopLevel->addWidget(mpWidget_profileContainer);

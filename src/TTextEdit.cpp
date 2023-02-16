@@ -117,7 +117,6 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mScreenHeight = height() / mFontHeight;
 
     setMouseTracking(true);
-    setFocusPolicy(Qt::NoFocus);
     QCursor cursor;
     cursor.setShape(Qt::IBeamCursor);
     setCursor(cursor);

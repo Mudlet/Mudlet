@@ -498,7 +498,6 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         mSubConsoleMap[name] = pC;
         pC->setObjectName(name);
         pC->mConsoleName = name;
-        pC->setFocusPolicy(Qt::NoFocus);
         const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
         pC->setFocusProxy(hostCommandLine);
         pC->mUpperPane->setFocusProxy(hostCommandLine);
@@ -535,7 +534,6 @@ TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QStri
         }
         mScrollBoxMap[name] = pS;
         pS->setObjectName(name);
-        pS->setFocusPolicy(Qt::NoFocus);
         pS->resize(width, height);
         pS->setContentsMargins(0, 0, 0, 0);
         pS->move(x, y);

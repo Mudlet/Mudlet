@@ -209,8 +209,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     mpBaseVFrame->setSizePolicy(sizePolicy);
     mpBaseHFrame->setSizePolicy(sizePolicy);
-    mpBaseVFrame->setFocusPolicy(Qt::NoFocus);
-    mpBaseHFrame->setFocusPolicy(Qt::NoFocus);
 
     baseVFrameLayout->setContentsMargins(0, 0, 0, 0);
     baseHFrameLayout->setContentsMargins(0, 0, 0, 0);
@@ -220,7 +218,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mpCommandLine = new TCommandLine(pH, qsl("main"), TCommandLine::MainCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
-        mpCommandLine->setFocusPolicy(Qt::StrongFocus);
         // Setting the focusProxy cannot be done here because things have not
         // been completed enough at this point - it has been defered to a
         // zero-timer at the end of this constructor
@@ -231,7 +228,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layer->setStyleSheet("QWidget#layer{background-color: rgba(0,0,0,0)}");
     layer->setContentsMargins(0, 0, 0, 0);
     layer->setSizePolicy(sizePolicy);
-    layer->setFocusPolicy(Qt::NoFocus);
 
     auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
@@ -255,13 +251,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
-    mUpperPane->setFocusPolicy(Qt::NoFocus);
     mUpperPane->setAccessibleName(tr("main window"));
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
-    mLowerPane->setFocusPolicy(Qt::NoFocus);
 
     if (mType == MainConsole) {
         setFocusProxy(mpCommandLine);
@@ -512,9 +506,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     buttonLayer->setMaximumWidth(400);
     mpButtonMainLayer->setMinimumWidth(400);
     mpButtonMainLayer->setMaximumWidth(400);
-    setFocusPolicy(Qt::ClickFocus);
-    mUpperPane->setFocusPolicy(Qt::ClickFocus);
-    mLowerPane->setFocusPolicy(Qt::ClickFocus);
 
     mpButtonMainLayer->setAutoFillBackground(true);
     mpButtonMainLayer->setPalette(commandLinePalette);
@@ -2236,9 +2227,11 @@ void TConsole::setCaretMode(bool enabled)
 
     if (enabled) {
         mUpperPane->initializeCaret();
+        // Remove the focusProxy before setting the focusPolicy otherwise
+        // the Policy gets sent to the Proxy!
+        mUpperPane->setFocusProxy(nullptr);
         // This adds TabFocus to the otherwise used ClickFocus:
         mUpperPane->setFocusPolicy(Qt::StrongFocus);
-        mUpperPane->setFocusProxy(nullptr);
 #if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
         // windows & linux don't move keyboard focus to the main window without this
         mUpperPane->setFocus(Qt::MouseFocusReason);
@@ -2251,14 +2244,16 @@ void TConsole::setCaretMode(bool enabled)
         // to the Qt source code:
         mUpperPane->setFocus();
     } else {
-        mUpperPane->setFocusPolicy(Qt::ClickFocus);
 #if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
         // NVDA breaks focus reset, so do it on a timer
         QTimer::singleShot(0, this, [this] () {
             mUpperPane->releaseKeyboard();
         });
 #endif
+        Q_ASSERT_X(!mUpperPane->focusProxy(), "TConsole:setCaretMode(false) FAIL", "About to set a focusPolicy but there is a focusProxy in place that will get it instead!");
+        mUpperPane->setFocusPolicy(Qt::ClickFocus);
         setProxyForFocus(mpCommandLine);
+        // Carefull - if there is a FocusProxy for this element then IT gets the policy
     }
 }
 
