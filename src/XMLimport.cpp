@@ -260,7 +260,7 @@ std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::importFromClipboard(
     return result;
 }
 
-void XMLimport::readVariableGroup(TVar* pParent)
+void XMLimport::readVariable(TVar* pParent)
 {
     auto var = new TVar(pParent);
 
@@ -270,6 +270,7 @@ void XMLimport::readVariableGroup(TVar* pParent)
     int keyType = 0;
     int valueType;
 
+    QString what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -294,7 +295,9 @@ void XMLimport::readVariableGroup(TVar* pParent)
                 lI->setValue(var);
                 continue;
             } else if (name() == "VariableGroup" || name() == "Variable") {
-                readVariableGroup(var);
+                readVariable(var);
+            } else {
+                readUnknownElement(what);
             }
         }
     }
@@ -333,9 +336,11 @@ void XMLimport::readVariablePackage()
         readNext();
         if (isStartElement()) {
             if (name() == "VariableGroup" || name() == "Variable") {
-                readVariableGroup(mpVar);
+                readVariable(mpVar);
             } else if (name() == "HiddenVariables") {
                 readHiddenVariables();
+            } else {
+                readUnknownElement(qsl("VariablePackage"));
             }
         }
     }
@@ -596,7 +601,7 @@ void XMLimport::readUnknownMapElement()
         if (isEndElement()) {
             break;
         } else if (isStartElement()) {
-            readMap();
+            readUnknownMapElement();
         }
     }
 }
@@ -638,7 +643,7 @@ std::pair<dlgTriggerEditor::EditorViewType, int> XMLimport::readPackage()
                 objectType = dlgTriggerEditor::EditorViewType::cmVarsView;
                 readVariablePackage();
             } else {
-                readUnknownPackage();
+                readUnknownElement(qsl("MudletPackage"));
             }
         }
     }
@@ -661,147 +666,34 @@ void XMLimport::readHelpPackage()
     }
 }
 
-void XMLimport::readUnknownPackage()
+// Will be on a startElement on entry, and on the matching endElement
+// at exit:
+void XMLimport::readUnknownElement(const QString& what)
 {
-    while (!atEnd()) {
-        readNext();
-        qDebug().nospace() << "XMLimport::readUnknownPackage(): ERROR: UNKNOWN "
-                              "Package Element name: "
-                           << name().toString() << " and content: " << text().toString();
-
-        if (isEndElement()) {
-            break;
+    if (!atEnd()) {
+        qDebug().nospace().noquote() << "XMLimport::readUnknownElement(\"" << what << "\") ERROR - UNKNOWN Package Element name: \"" << name().toString() << "\".";
+        qDebug().nospace().noquote() << "    This is at byte offset: " << characterOffset() << ", which is (line:column): " << lineNumber() << ":" << columnNumber() << ".";
+#if !defined(QT_STRICT_ITERATORS)
+        if (attributes().isEmpty()) {
+            qDebug().nospace().noquote() << "    It has no attributes.";
+        } else {
+            // This can fail if QT_STRICT_ITERATORS is defined.
+            // See https://bugreports.qt.io/browse/QTBUG-45368
+            QVectorIterator<QXmlStreamAttribute> itAttribute(attributes());
+            qDebug().nospace().noquote() << "    It has the following attributes:";
+            while (itAttribute.hasNext()) {
+                const auto attribute = itAttribute.next();
+                qDebug().nospace().noquote() << "        name: \"" << attribute.name() << "\", value: \"" << attribute.value() << "\".";
+            }
         }
-
-        if (isStartElement()) {
-            readPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownHostElement()
-{
-    while (!atEnd()) {
-        readNext();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Host Package Element, name: "
-                           << name().toString() << " and content: " << text().toString();
-
-        if (isEndElement()) {
-            break;
-        }
-
-        if (isStartElement()) {
-            readHostPackage(mpHost);
-        }
-    }
-}
-
-void XMLimport::readUnknownTriggerElement()
-{
-    while (!atEnd()) {
-        readNext();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Trigger Package Element, name: "
-                           << name().toString() << " and content: " << text().toString();
-
-        if (isEndElement()) {
-            break;
-        }
-
-        if (isStartElement()) {
-            readTriggerPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownTimerElement()
-{
-    while (!atEnd()) {
-        readNext();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Timer Package Element, name: "
-                           << name().toString() << " and content: " << text().toString();
-
-        if (isEndElement()) {
-            break;
-        }
-
-        if (isStartElement()) {
-            readTimerPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownAliasElement()
-{
-    while (!atEnd()) {
-        readNext();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Alias Package Element, name: "
-                           << name().toString() << " and content: " << text().toString();
-
-        if (isEndElement()) {
-            break;
-        }
-
-        if (isStartElement()) {
-            readAliasPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownActionElement()
-{
-    while (!atEnd()) {
-        readNext();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Action Package Element, name: "
-                           << name().toString() << " and content: " << text().toString();
-
-        if (isEndElement()) {
-            break;
-        }
-
-        if (isStartElement()) {
-            readActionPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownScriptElement()
-{
-    while (!atEnd()) {
-        readNext();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Script Package Element, name: "
-                           << name().toString() << " and content: " << text().toString();
-
-        if (isEndElement()) {
-            break;
-        }
-
-        if (isStartElement()) {
-            readScriptPackage();
-        }
-    }
-}
-
-void XMLimport::readUnknownKeyElement()
-{
-    while (!atEnd()) {
-        readNext();
-        qDebug().nospace() << "XMLimport::readUnknownHostElement() ERROR: UNKNOWN "
-                              "Key Package Element, name: "
-                           << name().toString() << " and content: " << text().toString();
-
-        if (isEndElement()) {
-            break;
-        }
-
-        if (isStartElement()) {
-            readKeyPackage();
-        }
+#endif
+        // The argument to readElementText(...) is required otherwise it stops
+        // if a child element is encountered, the third alternative
+        // "IncludeChildElements" is not so helpful as it might seem as it only
+        // includes some of the intervening content from sub-elements. As it is
+        // this should advance the current position to the EndElement of the
+        // unexpected startElement:
+        qDebug().nospace().noquote() << "    The (text) content is: \"" << readElementText(QXmlStreamReader::SkipChildElements) << "\"";
     }
 }
 
@@ -813,15 +705,15 @@ void XMLimport::readHostPackage()
             break;
         } else if (isStartElement()) {
             if (name() == "Host") {
-                readHostPackage(mpHost);
+                readHost(mpHost);
             } else {
-                readUnknownHostElement();
+                readUnknownElement(qsl("HostPackage"));
             }
         }
     }
 }
 
-void XMLimport::readHostPackage(Host* pHost)
+void XMLimport::readHost(Host* pHost)
 {
     pHost->mAutoClearCommandLineAfterSend = attributes().value(qsl("autoClearCommandLineAfterSend")) == YES;
     pHost->mPrintCommand = attributes().value(qsl("printCommand")) == YES;
@@ -1080,7 +972,7 @@ void XMLimport::readHostPackage(Host* pHost)
                     pHost->mModulePriorities[it.key()] = entryList.at(2).toInt();
                 }
             } else if (name() == "mInstalledPackages") {
-                readStringList(pHost->mInstalledPackages);
+                readStringList(pHost->mInstalledPackages, qsl("Host"));
             } else if (name() == "url") {
                 pHost->mUrl = readElementText();
             } else if (name() == "serverPackageName") {
@@ -1163,7 +1055,7 @@ void XMLimport::readHostPackage(Host* pHost)
                 // Ignore this misspelled duplicate, it has been removed from
                 // the Xml format but will appear in older files and trip the
                 // QDebug() error reporting associated with the following
-                // readUnknownHostElement() for "anything not otherwise parsed"
+                // readUnknownElement(...) for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
             } else if (name() == "mFgColor2") {
                 pHost->mFgColor_2.setNamedColor(readElementText());
@@ -1218,7 +1110,7 @@ void XMLimport::readHostPackage(Host* pHost)
                 // all but the greatest 2 values where it was read as "1"!}
                 // We still check for them so that we avoid falling into the
                 // QDebug() error reporting associated with the following
-                // readUnknownHostElement() for "anything not otherwise parsed"
+                // readUnknownElement(...) for "anything not otherwise parsed"
                 Q_UNUSED(readElementText());
             } else if (name() == "mMapInfoContributors") {
                 readLegacyMapInfoContributors();
@@ -1229,7 +1121,7 @@ void XMLimport::readHostPackage(Host* pHost)
             } else if (name() == "stopwatches") {
                 readStopWatchMap();
             } else {
-                readUnknownHostElement();
+                readUnknownElement(qsl("Host"));
             }
         }
     }
@@ -1254,9 +1146,9 @@ int XMLimport::readTriggerPackage()
         if (isStartElement()) {
             if (name() == "TriggerGroup" || name() == "Trigger") {
                 gotTrigger = true;
-                parentItemID = readTriggerGroup(mPackageName.isEmpty() ? nullptr : mpTrigger);
+                parentItemID = readTrigger(mPackageName.isEmpty() ? nullptr : mpTrigger);
             } else {
-                readUnknownTriggerElement();
+                readUnknownElement(qsl("TriggerPackage"));
             }
         }
     }
@@ -1266,7 +1158,7 @@ int XMLimport::readTriggerPackage()
 
 // imports a trigger and returns its ID - in case of a group, returns the ID
 // of the top-level trigger group.
-int XMLimport::readTriggerGroup(TTrigger* pParent)
+int XMLimport::readTrigger(TTrigger* pParent)
 {
     auto pT = new TTrigger(pParent, mpHost);
 
@@ -1286,7 +1178,8 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
     pT->mSoundTrigger = attributes().value(qsl("isSoundTrigger")) == YES;
     pT->mColorTrigger = attributes().value(qsl("isColorTrigger")) == YES;
 
-
+    // Is this a "TriggerGroup" or a "Trigger"
+    QString what = name().toString();
     while (!atEnd()) {
         readNext();
 
@@ -1298,7 +1191,7 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
-                    qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
+                    qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
                 }
             } else if (name() == "packageName") {
                 pT->mPackageName = readElementText();
@@ -1325,11 +1218,11 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
                 // in the next revision - sample code for "RegexCode" elements
                 // inside a "patterns" container (with a "size" attribute) is
                 // commented out in the XMLexporter class.
-                readStringList(pT->mPatterns);
+                readStringList(pT->mPatterns, what);
             } else if (name() == "regexCodePropertyList") {
-                readIntegerList(pT->mPatternKinds, pT->getName());
+                readIntegerList(pT->mPatternKinds, pT->getName(), what);
                 if (Q_UNLIKELY(pT->mPatterns.count() != pT->mPatternKinds.count())) {
-                    qWarning().nospace() << "XMLimport::readTriggerGroup(...) ERROR: "
+                    qWarning().nospace() << "XMLimport::readTrigger(...) ERROR: "
                                             "mismatch in regexCode details for Trigger: "
                                          << pT->getName() << " there were " << pT->mPatterns.count() << " 'regexCodeList' sub-elements and " << pT->mPatternKinds.count()
                                          << " 'regexCodePropertyList' sub-elements so "
@@ -1341,15 +1234,15 @@ int XMLimport::readTriggerGroup(TTrigger* pParent)
                     remapColorsToAnsiNumber(pT->mPatterns, pT->mPatternKinds);
                 }
             } else if (name() == "TriggerGroup" || name() == "Trigger") {
-                readTriggerGroup(pT);
+                readTrigger(pT);
             } else {
-                readUnknownTriggerElement();
+                readUnknownElement(what);
             }
         }
     }
 
     if (!pT->setRegexCodeList(pT->mPatterns, pT->mPatternKinds)) {
-        qDebug().nospace() << "XMLimport::readTriggerGroup(...): ERROR: can not "
+        qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not "
                               "initialize pattern list for trigger: "
                            << pT->getName();
     }
@@ -1368,9 +1261,9 @@ int XMLimport::readTimerPackage()
         } else if (isStartElement()) {
             if (name() == "TimerGroup" || name() == "Timer") {
                 gotTimer = true;
-                lastImportedTimerID = readTimerGroup(mPackageName.isEmpty() ? nullptr : mpTimer);
+                lastImportedTimerID = readTimer(mPackageName.isEmpty() ? nullptr : mpTimer);
             } else {
-                readUnknownTimerElement();
+                readUnknownElement(qsl("TimerPackage"));
             }
         }
     }
@@ -1378,7 +1271,7 @@ int XMLimport::readTimerPackage()
     return lastImportedTimerID;
 }
 
-int XMLimport::readTimerGroup(TTimer* pParent)
+int XMLimport::readTimer(TTimer* pParent)
 {
     auto pT = new TTimer(pParent, mpHost);
 
@@ -1397,6 +1290,7 @@ int XMLimport::readTimerGroup(TTimer* pParent)
         pT->mModuleMember = true;
     }
 
+    QString what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1409,16 +1303,16 @@ int XMLimport::readTimerGroup(TTimer* pParent)
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
-                    qDebug().nospace() << "XMLimport::readTimerGroup(...): ERROR: can not compile timer's lua code for: " << pT->getName();
+                    qDebug().nospace() << "XMLimport::readTimer(...): ERROR: can not compile timer's lua code for: " << pT->getName();
                 }
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "time") {
                 pT->setTime(QTime::fromString(readElementText(), "hh:mm:ss.zzz"));
             } else if (name() == "TimerGroup" || name() == "Timer") {
-                readTimerGroup(pT);
+                readTimer(pT);
             } else {
-                readUnknownTimerElement();
+                readUnknownElement(what);
             }
         }
     }
@@ -1442,9 +1336,9 @@ int XMLimport::readAliasPackage()
         } else if (isStartElement()) {
             if (name() == "AliasGroup" || name() == "Alias") {
                 gotAlias = true;
-                lastImportedAliasID = readAliasGroup(mPackageName.isEmpty() ? nullptr : mpAlias);
+                lastImportedAliasID = readAlias(mPackageName.isEmpty() ? nullptr : mpAlias);
             } else {
-                readUnknownAliasElement();
+                readUnknownElement(qsl("AliasPackage"));
             }
         }
     }
@@ -1452,7 +1346,7 @@ int XMLimport::readAliasPackage()
     return lastImportedAliasID;
 }
 
-int XMLimport::readAliasGroup(TAlias* pParent)
+int XMLimport::readAlias(TAlias* pParent)
 {
     auto pT = new TAlias(pParent, mpHost);
 
@@ -1463,6 +1357,7 @@ int XMLimport::readAliasGroup(TAlias* pParent)
         pT->mModuleMember = true;
     }
 
+    QString what = name().toString();
     while (!atEnd()) {
         readNext();
 
@@ -1476,16 +1371,16 @@ int XMLimport::readAliasGroup(TAlias* pParent)
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
-                    qDebug().nospace() << "XMLimport::readAliasGroup(...): ERROR: can not compile alias's lua code for: " << pT->getName();
+                    qDebug().nospace() << "XMLimport::readAlias(...): ERROR: can not compile alias's lua code for: " << pT->getName();
                 }
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
             } else if (name() == "regex") {
                 pT->setRegexCode(readElementText());
             } else if (name() == "AliasGroup" || name() == "Alias") {
-                readAliasGroup(pT);
+                readAlias(pT);
             } else {
-                readUnknownAliasElement();
+                readUnknownElement(what);
             }
         }
     }
@@ -1504,9 +1399,9 @@ int XMLimport::readActionPackage()
         } else if (isStartElement()) {
             if (name() == "ActionGroup" || name() == "Action") {
                 gotAction = true;
-                lastImportedActionID = readActionGroup(mPackageName.isEmpty() ? nullptr : mpAction);
+                lastImportedActionID = readAction(mPackageName.isEmpty() ? nullptr : mpAction);
             } else {
-                readUnknownActionElement();
+                readUnknownElement(qsl("ActionPackage"));
             }
         }
     }
@@ -1514,7 +1409,7 @@ int XMLimport::readActionPackage()
     return lastImportedActionID;
 }
 
-int XMLimport::readActionGroup(TAction* pParent)
+int XMLimport::readAction(TAction* pParent)
 {
     auto pT = new TAction(pParent, mpHost);
 
@@ -1529,6 +1424,7 @@ int XMLimport::readActionGroup(TAction* pParent)
         pT->mModuleMember = true;
     }
 
+    QString what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1541,7 +1437,7 @@ int XMLimport::readActionGroup(TAction* pParent)
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
-                    qDebug().nospace() << "XMLimport::readActionGroup(...): ERROR: can not compile action's lua code for: " << pT->getName();
+                    qDebug().nospace() << "XMLimport::readAction(...): ERROR: can not compile action's lua code for: " << pT->getName();
                 }
             } else if (name() == "css") {
                 pT->css = readElementText();
@@ -1575,9 +1471,9 @@ int XMLimport::readActionGroup(TAction* pParent)
             } else if (name() == "posY") {
                 pT->mPosY = readElementText().toInt();
             } else if (name() == "ActionGroup" || name() == "Action") {
-                readActionGroup(pT);
+                readAction(pT);
             } else {
-                readUnknownActionElement();
+                readUnknownElement(what);
             }
         }
     }
@@ -1596,9 +1492,9 @@ int XMLimport::readScriptPackage()
         } else if (isStartElement()) {
             if (name() == "ScriptGroup" || name() == "Script") {
                 gotScript = true;
-                lastImportedScriptID = readScriptGroup(mPackageName.isEmpty() ? nullptr : mpScript);
+                lastImportedScriptID = readScript(mPackageName.isEmpty() ? nullptr : mpScript);
             } else {
-                readUnknownScriptElement();
+                readUnknownElement(qsl("ScriptPackage"));
             }
         }
     }
@@ -1606,7 +1502,7 @@ int XMLimport::readScriptPackage()
     return lastImportedScriptID;
 }
 
-int XMLimport::readScriptGroup(TScript* pParent)
+int XMLimport::readScript(TScript* pParent)
 {
     auto script = new TScript(pParent, mpHost);
 
@@ -1618,6 +1514,7 @@ int XMLimport::readScriptGroup(TScript* pParent)
         script->mModuleMember = true;
     }
 
+    QString what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1630,15 +1527,15 @@ int XMLimport::readScriptGroup(TScript* pParent)
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
                 if (!script->setScript(tempScript)) {
-                    qDebug().nospace().noquote() << "XMLimport::readScriptGroup(...) ERROR - can not compile script's lua code for \"" << script->getName() << "\"; reason: " << script->getError() << ".";
+                    qDebug().nospace().noquote() << "XMLimport::readScript(...) ERROR - can not compile script's lua code for \"" << script->getName() << "\"; reason: " << script->getError() << ".";
                 }
             } else if (name() == "eventHandlerList") {
-                readStringList(script->mEventHandlerList);
+                readStringList(script->mEventHandlerList, what);
                 script->setEventHandlerList(script->mEventHandlerList);
             } else if (name() == "ScriptGroup" || name() == "Script") {
-                readScriptGroup(script);
+                readScript(script);
             } else {
-                readUnknownScriptElement();
+                readUnknownElement(what);
             }
         }
     }
@@ -1657,9 +1554,9 @@ int XMLimport::readKeyPackage()
         } else if (isStartElement()) {
             if (name() == "KeyGroup" || name() == "Key") {
                 gotKey = true;
-                lastImportedKeyID = readKeyGroup(mPackageName.isEmpty() ? nullptr : mpKey);
+                lastImportedKeyID = readKey(mPackageName.isEmpty() ? nullptr : mpKey);
             } else {
-                readUnknownKeyElement();
+                readUnknownElement(qsl("KeyPackage"));
             }
         }
     }
@@ -1667,7 +1564,7 @@ int XMLimport::readKeyPackage()
     return lastImportedKeyID;
 }
 
-int XMLimport::readKeyGroup(TKey* pParent)
+int XMLimport::readKey(TKey* pParent)
 {
     auto pT = new TKey(pParent, mpHost);
 
@@ -1678,6 +1575,7 @@ int XMLimport::readKeyGroup(TKey* pParent)
         pT->mModuleMember = true;
     }
 
+    QString what = name().toString();
     while (!atEnd()) {
         readNext();
 
@@ -1691,7 +1589,7 @@ int XMLimport::readKeyGroup(TKey* pParent)
             } else if (name() == "script") {
                 QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
-                    qDebug().nospace() << "XMLimport::readKeyGroup(...): ERROR: can not compile key's lua code for: " << pT->getName();
+                    qDebug().nospace() << "XMLimport::readKey(...): ERROR: can not compile key's lua code for: " << pT->getName();
                 }
             } else if (name() == "command") {
                 pT->mCommand = readElementText();
@@ -1700,9 +1598,9 @@ int XMLimport::readKeyGroup(TKey* pParent)
             } else if (name() == "keyModifier") {
                 pT->setKeyModifiers(readElementText().toInt());
             } else if (name() == "KeyGroup" || name() == "Key") {
-                readKeyGroup(pT);
+                readKey(pT);
             } else {
-                readUnknownKeyElement();
+                readUnknownElement(what);
             }
         }
     }
@@ -1740,13 +1638,13 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
                 map[key] = entry;
                 entry.clear();
             } else {
-                readUnknownHostElement();
+                readUnknownElement(qsl("ModulesDetailsMap"));
             }
         }
     }
 }
 
-void XMLimport::readStringList(QStringList& list)
+void XMLimport::readStringList(QStringList& list, const QString& whatIsParent)
 {
     while (!atEnd()) {
         readNext();
@@ -1757,13 +1655,13 @@ void XMLimport::readStringList(QStringList& list)
             if (name() == "string") {
                 list << readElementText();
             } else {
-                readUnknownTriggerElement();
+                readUnknownElement(whatIsParent);
             }
         }
     }
 }
 
-void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
+void XMLimport::readIntegerList(QList<int>& list, const QString& parentName, const QString& whatIsParent)
 {
     while (!atEnd()) {
         readNext();
@@ -1807,7 +1705,7 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName)
                     list << REGEX_SUBSTRING; //Just assume most common one
                 }
             } else {
-                readUnknownTriggerElement();
+                readUnknownElement(whatIsParent);
             }
         }
     }
@@ -1987,7 +1885,7 @@ void XMLimport::readStopWatchMap()
                 // A dummy read as there should not be any text for this element:
                 readElementText();
             } else {
-                readUnknownHostElement();
+                readUnknownElement("stopwatches");
             }
         }
     }
