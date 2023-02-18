@@ -679,6 +679,9 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             QAction* action_addWord = nullptr;
             QAction* action_removeWord = nullptr;
             QAction* action_dictionarySeparatorLine = nullptr;
+            if (codec) {
+                QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+            }
             if (handle_profile) {
                 // TODO: Make icons for these?
 //                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
@@ -718,10 +721,8 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             QList<QAction*> spellings_profile;
             if (!(handle_system && codec)) {
                 mSystemDictionarySuggestionsCount = 0;
-            else
-            {
+            } else {
                 QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
-
                 if (!Hunspell_spell(handle_system, encodedText.constData())) {
                     // The word is NOT in the main system dictionary:
                     if (handle_profile) {
