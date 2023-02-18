@@ -664,13 +664,18 @@ void TCommandLine::slot_popupMenu()
 
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
-
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPos());
         if (mpHost->mEnableSpellCheck) {
             QTextCursor c = cursorForPosition(event->pos());
             c.select(QTextCursor::WordUnderCursor);
             mSpellCheckedWord = c.selectedText();
+
+            bool IsSpellCheckedWordLongEnoughToWarrantInspection = mSpellCheckedWord.size() > 2;
+            if (!IsSpellCheckedWordLongEnoughToWarrantInspection) {
+                ...
+            }
+
             auto codec = mpHost->mpConsole->getHunspellCodec_system();
             auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
             auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
@@ -840,7 +845,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             } else {
                 popup->insertActions(separator_aboveStandardMenu, spellings_system);
             }
-            // else the word is in the dictionary - in either ca`se show the context
+            // else the word is in the dictionary - in either case show the context
             // menu - either the one with the prefixed spellings, or the standard
             // one:
         }
