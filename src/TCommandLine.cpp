@@ -682,15 +682,15 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup) {
     QAction* action_dictionarySeparatorLine = nullptr;
     if (handle_profile) {
         // TODO: Make icons for these?
-//                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
-//                    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
-//                    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
-//                } else {
+        // if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        //    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
+        //    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
+        // } else {
         action_addWord = new QAction(tr("Add to user dictionary"));
         action_addWord->setEnabled(false);
         action_removeWord = new QAction(tr("Remove from user dictionary"));
         action_removeWord->setEnabled(false);
-//                }
+        // }
         if (mudlet::self()->mUsingMudletDictionaries) {
             action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
                                                                     // Intentional separator
