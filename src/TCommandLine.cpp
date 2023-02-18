@@ -716,7 +716,10 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
             QList<QAction*> spellings_system;
             QList<QAction*> spellings_profile;
-            if (handle_system && codec) {
+            if (!(handle_system && codec)) {
+                mSystemDictionarySuggestionsCount = 0;
+            else
+            {
                 QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
 
                 if (!Hunspell_spell(handle_system, encodedText.constData())) {
@@ -743,8 +746,6 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 }
 
                 mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
-            } else {
-                mSystemDictionarySuggestionsCount = 0;
             }
 
             if (handle_profile) {
