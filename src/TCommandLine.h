@@ -91,6 +91,7 @@ private:
     void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion();
     void spellCheck();
+    void fillSpellCheckList(QMouseEvent*, QMenu*);
     void handleTabCompletion(bool);
     void historyMove(MoveDirection);
     void enterCommand(QKeyEvent*);
