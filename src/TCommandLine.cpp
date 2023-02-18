@@ -841,9 +841,6 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup) {
     } else {
         popup->insertActions(separator_aboveStandardMenu, spellings_system);
     }
-    // else the word is in the dictionary - in either case show the context
-    // menu - either the one with the prefixed spellings, or the standard
-    // one:
 }
 
 void TCommandLine::mousePressEvent(QMouseEvent* event)
@@ -852,6 +849,8 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         auto popup = createStandardContextMenu(event->globalPos());
         if (mpHost->mEnableSpellCheck) {
             fillSpellCheckList(event, popup);
+            // else the word is in the dictionary - in either case show the context
+            // menu - either the one with the prefixed spellings, or the standard one
         }
 
         popup->addSeparator();
