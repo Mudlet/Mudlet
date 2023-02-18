@@ -667,8 +667,8 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup) {
     c.select(QTextCursor::WordUnderCursor);
     mSpellCheckedWord = c.selectedText();
 
-    bool IsSpellCheckedWordLongEnoughToWarrantInspection = mSpellCheckedWord.size() > 2;
-    if (!IsSpellCheckedWordLongEnoughToWarrantInspection) {
+    bool IsWordLongEnoughForSpellCheck = mSpellCheckedWord.size() > 2;
+    if (!IsWordLongEnoughForSpellCheck) {
         return;
     }
 
