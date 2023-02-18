@@ -477,7 +477,7 @@ void TMainConsole::resetMainConsole()
     }
 }
 
-// This is a sub-console overlaid on to the main console
+// This is a sub-console overlaid on to the main or other console
 TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     //if pW then add Console as Overlay to the Userwindow
@@ -554,14 +554,13 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
     auto pS = mScrollBoxMap.value(windowname);
     if (!pL) {
         if (pW) {
-            pL = new TLabel(mpHost, pW->widget());
+            pL = new TLabel(mpHost, name, pW->widget());
         } else if (pS) {
-            pL = new TLabel(mpHost, pS->widget());
+            pL = new TLabel(mpHost, name, pS->widget());
         } else {
-            pL = new TLabel(mpHost, mpMainFrame);
+            pL = new TLabel(mpHost, name, mpMainFrame);
         }
         mLabelMap[name] = pL;
-        pL->setObjectName(name);
         pL->setAutoFillBackground(fillBackground);
         pL->setClickThrough(clickThrough);
         pL->resize(width, height);
@@ -570,9 +569,9 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->show();
         mpHost->setBackgroundColor(name, 32, 32, 32, 255);
         return pL;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
@@ -742,15 +741,13 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
 
     if (!pN) {
         if (pS) {
-            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pS->widget());
+            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pS->widget());
         } else if (pW) {
-            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pW->widget());
+            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pW->widget());
         } else {
-            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
+            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
         }
         mSubCommandLineMap[name] = pN;
-        pN->mCommandLineName = name;
-        pN->setObjectName(name);
         pN->resize(width, height);
         pN->move(x, y);
         pN->show();
