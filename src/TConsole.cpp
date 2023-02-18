@@ -2157,7 +2157,7 @@ void TConsole::slot_adjustAccessibleNames()
         return;
     case Buffer:
         // This is not a visible thing so is not accessible to screen readers
-        [[fallthrough]];
+        return;
     case UnknownType:
         // Should never be used -  and since we have now handled ALL enum values
         // we do not need a "default:" entry
