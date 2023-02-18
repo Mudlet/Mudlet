@@ -662,192 +662,196 @@ void TCommandLine::slot_popupMenu()
     spellCheck();
 }
 
+void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup) {
+    QTextCursor c = cursorForPosition(event->pos());
+    c.select(QTextCursor::WordUnderCursor);
+    mSpellCheckedWord = c.selectedText();
+
+    bool IsSpellCheckedWordLongEnoughToWarrantInspection = mSpellCheckedWord.size() > 2;
+    if (!IsSpellCheckedWordLongEnoughToWarrantInspection) {
+        ...
+    }
+
+    auto codec = mpHost->mpConsole->getHunspellCodec_system();
+    auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
+    auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
+    bool haveAddOption = false;
+    bool haveRemoveOption = false;
+    QAction* action_addWord = nullptr;
+    QAction* action_removeWord = nullptr;
+    QAction* action_dictionarySeparatorLine = nullptr;
+    if (handle_profile) {
+        // TODO: Make icons for these?
+//                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+//                    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
+//                    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
+//                } else {
+        action_addWord = new QAction(tr("Add to user dictionary"));
+        action_addWord->setEnabled(false);
+        action_removeWord = new QAction(tr("Remove from user dictionary"));
+        action_removeWord->setEnabled(false);
+//                }
+        if (mudlet::self()->mUsingMudletDictionaries) {
+            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
+                                                                    // Intentional separator
+                                                                    "This line is shown in the list of spelling suggestions on the profile's command-"
+                                                                    "line context menu to clearly divide up where the suggestions for correct "
+                                                                    "spellings are coming from.  The precise format might be modified as long as it "
+                                                                    "is clear that the entries below this line in the menu come from the spelling "
+                                                                    "dictionary that the user has chosen in the profile setting which we have "
+                                                                    "bundled with Mudlet; the entries about this line are the ones that the user "
+                                                                    "has personally added."));
+        } else {
+            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
+                                                                    // Intentional separator
+                                                                    "This line is shown in the list of spelling suggestions on the profile's command-"
+                                                                    "line context menu to clearly divide up where the suggestions for correct "
+                                                                    "spellings are coming from.  The precise format might be modified as long as it "
+                                                                    "is clear that the entries below this line in the menu come from the spelling "
+                                                                    "dictionary that the user has chosen in the profile setting which is provided "
+                                                                    "as part of the OS; the entries about this line are the ones that the user has "
+                                                                    "personally added."));
+        }
+        action_dictionarySeparatorLine->setEnabled(false);
+    }
+
+    QList<QAction*> spellings_system;
+    QList<QAction*> spellings_profile;
+    if (!(handle_system && codec)) {
+        mSystemDictionarySuggestionsCount = 0;
+    } else {
+        QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+        if (!Hunspell_spell(handle_system, encodedText.constData())) {
+            // The word is NOT in the main system dictionary:
+            if (handle_profile) {
+                // Have a user dictionary so check it:
+                if (!Hunspell_spell(handle_profile, mSpellCheckedWord.toUtf8().constData())) {
+                    // The word is NOT in the profile one either - so enable add option
+                    haveAddOption = true;
+                } else {
+                    // However the word is in the profile one - so enable remove option
+                    haveRemoveOption = true;
+                }
+
+                if (haveAddOption) {
+                    action_addWord->setEnabled(true);
+                    connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
+                }
+                if (haveRemoveOption) {
+                    action_removeWord->setEnabled(true);
+                    connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
+                }
+            }
+        }
+
+        mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
+    }
+
+    if (handle_profile) {
+        mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, mSpellCheckedWord.toUtf8().constData());
+    } else {
+        mUserDictionarySuggestionsCount = 0;
+    }
+
+    if (mSystemDictionarySuggestionsCount) {
+        for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
+            auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
+#if defined(Q_OS_FREEBSD)
+            // Adding the text afterwards as user data as well as in the
+            // constructor is to fix a bug(?) in FreeBSD that
+            // automagically adds a '&' somewhere in the text to be a
+            // shortcut - but doesn't show it and forgets to remove
+            // it when asked for the text later:
+            pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
+#endif
+            connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
+            spellings_system << pA;
+        }
+
+    } else {
+        auto pA = new QAction(tr("no suggestions (system)",
+                                    // Intentional comment
+                                    "used when the command spelling checker using the selected system dictionary has no words to suggest"));
+        pA->setEnabled(false);
+        spellings_system << pA;
+    }
+
+    if (handle_profile) {
+        if (mUserDictionarySuggestionsCount) {
+            for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
+                auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
+#if defined(Q_OS_FREEBSD)
+                // Adding the text afterwards as user data as well as in the
+                // constructor is to fix a bug(?) in FreeBSD that
+                // automagically adds a '&' somewhere in the text to be a
+                // shortcut - but doesn't show it and forgets to remove
+                // it when asked for the text later:
+                pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
+#endif
+                connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
+                spellings_profile << pA;
+            }
+
+        } else {
+            QAction* pA = nullptr;
+            auto mainConsole = mpConsole->mpHost->mpConsole;
+            if (mainConsole->isUsingSharedDictionary()) {
+                pA = new QAction(tr("no suggestions (shared)",
+                                            // Intentional comment
+                                            "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
+            } else {
+                pA = new QAction(tr("no suggestions (profile)",
+                                            // Intentional comment
+                                            "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
+            }
+            pA->setEnabled(false);
+            spellings_profile << pA;
+        }
+    }
+
+    /*
+    * Build up the extra context menu items from the BOTTOM up, so that
+    * the top of the context menu looks like:
+    *
+    * profile dictionary suggestions
+    * --------- separator_aboveDictionarySeparatorLine
+    * \/ System dictionary suggestions /\ Profile  <== Text
+    * --------- separator_aboveSystemDictionarySuggestions
+    * system dictionary suggestions
+    * --------- separator_aboveAddAndRemove
+    * Add word action
+    * Remove word action
+    * --------- separator_aboveStandardMenu
+    *
+    * The insertAction[s](...)/(Separator(...)) insert their things
+    * second argument (or generated by themself) before the first (or
+    * only) argument given.
+    */
+
+    auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
+    if (handle_profile) {
+        popup->insertAction(separator_aboveStandardMenu, action_removeWord);
+        popup->insertAction(action_removeWord, action_addWord);
+        auto separator_aboveAddAndRemove = popup->insertSeparator(action_addWord);
+        popup->insertActions(separator_aboveAddAndRemove, spellings_system);
+        auto separator_aboveSystemDictionarySuggestions = popup->insertSeparator(spellings_system.first());
+        popup->insertAction(separator_aboveSystemDictionarySuggestions, action_dictionarySeparatorLine);
+        auto separator_aboveDictionarySeparatorLine = popup->insertSeparator(action_dictionarySeparatorLine);
+        popup->insertActions(separator_aboveDictionarySeparatorLine, spellings_profile);
+    } else {
+        popup->insertActions(separator_aboveStandardMenu, spellings_system);
+    }
+    // else the word is in the dictionary - in either case show the context
+    // menu - either the one with the prefixed spellings, or the standard
+    // one:
+}
+
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPos());
         if (mpHost->mEnableSpellCheck) {
-            QTextCursor c = cursorForPosition(event->pos());
-            c.select(QTextCursor::WordUnderCursor);
-            mSpellCheckedWord = c.selectedText();
-
-            bool IsSpellCheckedWordLongEnoughToWarrantInspection = mSpellCheckedWord.size() > 2;
-            if (!IsSpellCheckedWordLongEnoughToWarrantInspection) {
-                ...
-            }
-
-            auto codec = mpHost->mpConsole->getHunspellCodec_system();
-            auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
-            auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
-            bool haveAddOption = false;
-            bool haveRemoveOption = false;
-            QAction* action_addWord = nullptr;
-            QAction* action_removeWord = nullptr;
-            QAction* action_dictionarySeparatorLine = nullptr;
-            if (handle_profile) {
-                // TODO: Make icons for these?
-//                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
-//                    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
-//                    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
-//                } else {
-                action_addWord = new QAction(tr("Add to user dictionary"));
-                action_addWord->setEnabled(false);
-                action_removeWord = new QAction(tr("Remove from user dictionary"));
-                action_removeWord->setEnabled(false);
-//                }
-                if (mudlet::self()->mUsingMudletDictionaries) {
-                    action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which we have "
-                                                                         "bundled with Mudlet; the entries about this line are the ones that the user "
-                                                                         "has personally added."));
-                } else {
-                    action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which is provided "
-                                                                         "as part of the OS; the entries about this line are the ones that the user has "
-                                                                         "personally added."));
-                }
-                action_dictionarySeparatorLine->setEnabled(false);
-            }
-
-            QList<QAction*> spellings_system;
-            QList<QAction*> spellings_profile;
-            if (!(handle_system && codec)) {
-                mSystemDictionarySuggestionsCount = 0;
-            } else {
-                QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
-                if (!Hunspell_spell(handle_system, encodedText.constData())) {
-                    // The word is NOT in the main system dictionary:
-                    if (handle_profile) {
-                        // Have a user dictionary so check it:
-                        if (!Hunspell_spell(handle_profile, mSpellCheckedWord.toUtf8().constData())) {
-                            // The word is NOT in the profile one either - so enable add option
-                            haveAddOption = true;
-                        } else {
-                            // However the word is in the profile one - so enable remove option
-                            haveRemoveOption = true;
-                        }
-
-                        if (haveAddOption) {
-                            action_addWord->setEnabled(true);
-                            connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
-                        }
-                        if (haveRemoveOption) {
-                            action_removeWord->setEnabled(true);
-                            connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
-                        }
-                    }
-                }
-
-                mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
-            }
-
-            if (handle_profile) {
-                mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, mSpellCheckedWord.toUtf8().constData());
-            } else {
-                mUserDictionarySuggestionsCount = 0;
-            }
-
-            if (mSystemDictionarySuggestionsCount) {
-                for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
-                    auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
-#if defined(Q_OS_FREEBSD)
-                    // Adding the text afterwards as user data as well as in the
-                    // constructor is to fix a bug(?) in FreeBSD that
-                    // automagically adds a '&' somewhere in the text to be a
-                    // shortcut - but doesn't show it and forgets to remove
-                    // it when asked for the text later:
-                    pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
-#endif
-                    connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
-                    spellings_system << pA;
-                }
-
-            } else {
-                auto pA = new QAction(tr("no suggestions (system)",
-                                         // Intentional comment
-                                         "used when the command spelling checker using the selected system dictionary has no words to suggest"));
-                pA->setEnabled(false);
-                spellings_system << pA;
-            }
-
-            if (handle_profile) {
-                if (mUserDictionarySuggestionsCount) {
-                    for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
-                        auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
-#if defined(Q_OS_FREEBSD)
-                        // Adding the text afterwards as user data as well as in the
-                        // constructor is to fix a bug(?) in FreeBSD that
-                        // automagically adds a '&' somewhere in the text to be a
-                        // shortcut - but doesn't show it and forgets to remove
-                        // it when asked for the text later:
-                        pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
-#endif
-                        connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
-                        spellings_profile << pA;
-                    }
-
-                } else {
-                    QAction* pA = nullptr;
-                    auto mainConsole = mpConsole->mpHost->mpConsole;
-                    if (mainConsole->isUsingSharedDictionary()) {
-                        pA = new QAction(tr("no suggestions (shared)",
-                                                 // Intentional comment
-                                                 "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
-                    } else {
-                        pA = new QAction(tr("no suggestions (profile)",
-                                                 // Intentional comment
-                                                 "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
-                    }
-                    pA->setEnabled(false);
-                    spellings_profile << pA;
-                }
-            }
-
-           /*
-            * Build up the extra context menu items from the BOTTOM up, so that
-            * the top of the context menu looks like:
-            *
-            * profile dictionary suggestions
-            * --------- separator_aboveDictionarySeparatorLine
-            * \/ System dictionary suggestions /\ Profile  <== Text
-            * --------- separator_aboveSystemDictionarySuggestions
-            * system dictionary suggestions
-            * --------- separator_aboveAddAndRemove
-            * Add word action
-            * Remove word action
-            * --------- separator_aboveStandardMenu
-            *
-            * The insertAction[s](...)/(Separator(...)) insert their things
-            * second argument (or generated by themself) before the first (or
-            * only) argument given.
-            */
-
-            auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
-            if (handle_profile) {
-                popup->insertAction(separator_aboveStandardMenu, action_removeWord);
-                popup->insertAction(action_removeWord, action_addWord);
-                auto separator_aboveAddAndRemove = popup->insertSeparator(action_addWord);
-                popup->insertActions(separator_aboveAddAndRemove, spellings_system);
-                auto separator_aboveSystemDictionarySuggestions = popup->insertSeparator(spellings_system.first());
-                popup->insertAction(separator_aboveSystemDictionarySuggestions, action_dictionarySeparatorLine);
-                auto separator_aboveDictionarySeparatorLine = popup->insertSeparator(action_dictionarySeparatorLine);
-                popup->insertActions(separator_aboveDictionarySeparatorLine, spellings_profile);
-            } else {
-                popup->insertActions(separator_aboveStandardMenu, spellings_system);
-            }
-            // else the word is in the dictionary - in either case show the context
-            // menu - either the one with the prefixed spellings, or the standard
-            // one:
+            fillSpellCheckList(event, popup);
         }
 
         popup->addSeparator();
