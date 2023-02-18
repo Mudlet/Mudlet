@@ -2027,7 +2027,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
             postMessage(tr("[  OK  ]  - Package is already installed."));
-            return;
         }
 
         mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
@@ -2040,7 +2039,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
         mpProgressDialog->show();
-        return;
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
         mpHost->setMmpMapLocation(data);
     }
