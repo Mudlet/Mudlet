@@ -669,7 +669,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup) {
 
     bool IsSpellCheckedWordLongEnoughToWarrantInspection = mSpellCheckedWord.size() > 2;
     if (!IsSpellCheckedWordLongEnoughToWarrantInspection) {
-        ...
+        return;
     }
 
     auto codec = mpHost->mpConsole->getHunspellCodec_system();
