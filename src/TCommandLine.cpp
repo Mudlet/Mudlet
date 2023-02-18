@@ -679,9 +679,6 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             QAction* action_addWord = nullptr;
             QAction* action_removeWord = nullptr;
             QAction* action_dictionarySeparatorLine = nullptr;
-            if (codec) {
-                QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
-            }
             if (handle_profile) {
                 // TODO: Make icons for these?
 //                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
