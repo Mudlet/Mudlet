@@ -17153,14 +17153,19 @@ int TLuaInterpreter::showNotification(lua_State* L)
     if (n >= 2) {
         text = getVerifiedString(L, __func__, 2, "message");
     }
-    int notificationExpirationTime = 1;
+    std::optional<int> notificationExpirationTime;
     if (n >= 3) {
-        notificationExpirationTime = qMax(qRound(getVerifiedDouble(L, __func__, 3, "expiration time in seconds") / 1000), 1);
+        notificationExpirationTime = qMax(qRound(getVerifiedDouble(L, __func__, 3, "expiration time in seconds") * 1000), 1000);
     }
 
     mudlet::self()->mTrayIcon.show();
-    mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
-    return 0;
+    if (notificationExpirationTime.has_value()) {
+        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime.value());
+    } else {
+        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon());
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveJsonMap
