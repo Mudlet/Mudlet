@@ -12,6 +12,7 @@ jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
+    if: ${{ github.repository_owner == 'Mudlet' }}
     strategy:
       fail-fast: false
       matrix:
@@ -38,11 +39,11 @@ jobs:
             compiler: clang_64
             qt: '5.14.2'
             deploy: 'deploy'
-          - os: windows-2019
-            buildname: 'windows'
-            triplet: x64-mingw-dynamic
-            # compiler: flag not used in windows pipeline
-            qt: '5.14.2'
+#           - os: windows-2019
+#             buildname: 'windows'
+#             triplet: x64-mingw-dynamic
+#             # compiler: flag not used in windows pipeline
+#             qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
@@ -109,7 +110,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # dependencies needed for vcpkg specifically
-        brew install automake autoconf
+        brew install automake autoconf pkg-config
 
     - name: (Linux) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'Linux'
@@ -135,7 +136,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
+        brew install libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -163,7 +164,7 @@ jobs:
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
     - name: (Linux) Install Lua
-      uses: leafo/gh-actions-lua@v9
+      uses: leafo/gh-actions-lua@v10
       if: runner.os == 'Linux'
       with:
         luaVersion: "5.1.5"
@@ -328,6 +329,12 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+
+    - name: (Linux/macOS) add ssh-agent for tag deployment
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && github.event == 'tag'
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
     - name: (Linux/macOS) package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'

@@ -32,11 +32,13 @@
 #include "post_guard.h"
 
 
-TLabel::TLabel(Host* pH, QWidget* pW)
+TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 : QLabel(pW)
 , mpHost(pH)
+, mName(name)
 {
     setMouseTracking(true);
+    setObjectName(qsl("label_%1_%2").arg(pH->getName(), mName));
 }
 
 TLabel::~TLabel()

@@ -4,7 +4,7 @@
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
- *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -3262,6 +3262,7 @@ void T2DMap::slot_customLineProperties()
                 qWarning("T2DMap::slot_customLineProperties() ERROR: failed to create the dialog!");
                 return;
             }
+            dialog->setAttribute(Qt::WA_DeleteOnClose);
             dialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_custom_exit_properties.png")));
             auto* le_toId = dialog->findChild<QLineEdit*>(qsl("toId"));
             auto* le_fromId = dialog->findChild<QLineEdit*>(qsl("fromId"));
@@ -3597,6 +3598,7 @@ void T2DMap::slot_movePosition()
 
     auto dialog = new QDialog(this);
     auto gridLayout = new QGridLayout;
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setLayout(gridLayout);
     dialog->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     dialog->setContentsMargins(0, 0, 0, 0);
@@ -3982,6 +3984,7 @@ void T2DMap::slot_setExits()
         auto pD = new dlgRoomExits(mpHost, mMultiSelectionHighlightRoomId, this);
         pD->show();
         pD->raise();
+        pD->setAttribute(Qt::WA_DeleteOnClose);
     }
 }
 
@@ -4057,6 +4060,7 @@ void T2DMap::slot_setArea()
     if (!set_room_area_dialog) {
         return;
     }
+    set_room_area_dialog->setAttribute(Qt::WA_DeleteOnClose);
     arealist_combobox = set_room_area_dialog->findChild<QComboBox*>("arealist_combobox");
     if (!arealist_combobox) {
         return;
@@ -4563,6 +4567,7 @@ void T2DMap::slot_setCustomLine()
     if (!dialog) {
         return;
     }
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_custom_exit.png")));
     mCustomLinesRoomFrom = mMultiSelectionHighlightRoomId;
     mCustomLinesRoomTo = 0;
