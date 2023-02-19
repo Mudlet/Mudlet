@@ -6,7 +6,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
- *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -8663,7 +8663,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    int id;
+    int id = -1;
     QString name;
     if (!lua_isnumber(L, 1)) {
         if (!lua_isstring(L, 1)) {
@@ -13727,7 +13727,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 host.mMSSPHostName = msspVAL;
             } else if (msspVAR == "TLS" || msspVAR == "SSL") {
                 // In certain MSSP fields "-1" and "1" denote not supported/supported indicators,
-                // however the port is the standard value here. Ignore those values here. 
+                // however the port is the standard value here. Ignore those values here.
                 host.mMSSPTlsPort = (msspVAL != "-1" && msspVAL != "1") ? msspVAL.toInt() : 0;
             }
         }
@@ -17563,6 +17563,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         } else if (behaviour == qsl("replacewithspace")) {
             host.mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
         }
+        return success();
     }
     if (key == qsl("caretShortcut")) {
         static const QStringList keys{"none", "tab", "ctrltab", "f6"};
@@ -17583,6 +17584,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         } else if (key == qsl("f6")) {
             host.mCaretShortcut = Host::CaretShortcut::F6;
         }
+        return success();
     }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
@@ -17793,7 +17795,7 @@ int TLuaInterpreter::announce(lua_State *L) {
 int TLuaInterpreter::scrollTo(lua_State* L)
 {
     QString windowName;
-    int targetLine;
+    int targetLine = -1;
     bool stopScrolling = false;
 
     int n = lua_gettop(L);

@@ -597,8 +597,7 @@ void Host::reloadModules()
         while (it.hasNext()) {
             it.next();
             QStringList moduleList = it.value();
-            for (int i = 0, total = moduleList.size(); i < total; ++i) {
-                QString moduleName = moduleList[i];
+            for (auto moduleName : moduleList) {
                 if (mModulesToSync.contains(moduleName)) {
                     otherHost->reloadModule(moduleName, mHostName);
                 }
@@ -1657,9 +1656,9 @@ bool Host::isClosingDown()
 
 std::pair<bool, QString> Host::installPackage(const QString& fileName, int module)
 {
-    // As the pointed to dialog is only used now WITHIN this method and this
+    // As the pointer to dialog is only used now WITHIN this method and this
     // method can be re-entered, it is best to use a local rather than a class
-    // pointer just in case we accidentally reenter this method in the future.
+    // pointer just in case we accidentally re-enter this method in the future.
     QDialog* pUnzipDialog = nullptr;
 
     //     Module notes:
@@ -1678,13 +1677,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         return {false, qsl("could not open file '%1").arg(fileName)};
     }
 
-    QString packageName = fileName.section(qsl("/"), -1);
-    packageName.remove(qsl(".trigger"), Qt::CaseInsensitive);
-    packageName.remove(qsl(".xml"), Qt::CaseInsensitive);
-    packageName.remove(qsl(".zip"), Qt::CaseInsensitive);
-    packageName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
-    packageName.remove(QLatin1Char('\\'));
-    packageName.remove(QLatin1Char('.'));
+    QString packageName = sanitizePackageName(fileName);
     if (module) {
         if ((module == 2) && (mActiveModules.contains(packageName))) {
             uninstallPackage(packageName, 2);
@@ -1877,6 +1870,16 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
     return {true, QString()};
 }
 
+QString Host::sanitizePackageName(const QString packageName) const {
+    auto tempName = packageName.section(qsl("/"), -1);
+    tempName.remove(qsl(".trigger"), Qt::CaseInsensitive);
+    tempName.remove(qsl(".xml"), Qt::CaseInsensitive);
+    tempName.remove(qsl(".zip"), Qt::CaseInsensitive);
+    tempName.remove(qsl(".mpackage"), Qt::CaseInsensitive);
+    tempName.remove(QLatin1Char('\\'));
+    return tempName;
+}
+
 // credit: http://john.nachtimwald.com/2010/06/08/qt-remove-directory-and-its-contents/
 bool Host::removeDir(const QString& dirName, const QString& originalPath)
 {
@@ -2028,8 +2031,8 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 void Host::readPackageConfig(const QString& luaConfig, QString& packageName, bool isModule)
 {
     QString newName = getPackageConfig(luaConfig, isModule);
-    if (!newName.isEmpty()){
-        packageName = newName;
+    if (!newName.isEmpty()) {
+        packageName = sanitizePackageName(newName);
     }
 }
 
@@ -4077,4 +4080,24 @@ void Host::setFocusOnHostMainConsole()
     mudlet::self()->activateProfile(this);
     mpConsole->activateWindow();
     mpConsole->setFocus();
+}
+
+QPointer<TConsole> Host::parentTConsole(QObject* start) const
+{
+    QPointer<TConsole> result;
+    auto ptr = start;
+    if (!ptr) {
+        // Handle pathalogical case:
+        return result;
+    }
+    do {
+        ptr = ptr->parent();
+    } while (ptr && !ptr->inherits("TConsole"));
+    // QObject::inherits(...) uses a const char* - so no need to wrap raw string literal!
+    if (!ptr) {
+        // Handle not found case:
+        return result;
+    }
+    result = qobject_cast<TConsole*>(ptr);
+    return result;
 }
