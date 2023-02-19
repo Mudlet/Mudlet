@@ -1921,6 +1921,12 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
     //     3=uninstall from a script
 
+    // block packages/modules from being uninstalled while a profile save is in progress
+    // just so the save mechanism doesn't get surprised with something getting removed from memory under its feet
+    if (currentlySavingProfile()) {
+        return false;
+    }
+
     if (module) {
         if (!mInstalledModules.contains(packageName)) {
             return false;
@@ -2017,7 +2023,19 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     QString dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
-    saveProfile();
+
+    static std::optional<bool> saveTimer;
+    // ensure only one timer is running in case multiple modules are uninstalled at once
+    if (!saveTimer.has_value() || !saveTimer.value()) {
+        saveTimer = true;
+        // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
+        // not to try to write to disk a package/module that just got uninstalled and removed from memory
+        QTimer::singleShot(0, this, [this]() {
+            saveTimer = false;
+            saveProfile();
+        });
+    }
+
     //NOW we reset if we're uninstalling a module
     if (mpEditorDialog && module == 3) {
         mpEditorDialog->doCleanReset();
