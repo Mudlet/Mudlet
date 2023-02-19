@@ -17153,16 +17153,14 @@ int TLuaInterpreter::showNotification(lua_State* L)
     if (n >= 2) {
         text = getVerifiedString(L, __func__, 2, "message");
     }
-    int notificationExpirationTime = 1000;
-    bool timeoutGiven = false;
+    std::optional<int> notificationExpirationTime;
     if (n >= 3) {
         notificationExpirationTime = qMax(qRound(getVerifiedDouble(L, __func__, 3, "expiration time in seconds") * 1000), 1000);
-        timeoutGiven = true;
     }
 
     mudlet::self()->mTrayIcon.show();
-    if (timeoutGiven) {
-        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
+    if (notificationExpirationTime.has_value()) {
+        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime.value());
     } else {
         mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon());
     }
