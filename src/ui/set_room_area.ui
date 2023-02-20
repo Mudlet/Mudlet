@@ -33,7 +33,7 @@
      <item>
       <widget class="QLabel" name="label_info">
        <property name="text">
-        <string>TextLabel</string>
+        <string/>
        </property>
        <property name="textFormat">
         <enum>Qt::AutoText</enum>

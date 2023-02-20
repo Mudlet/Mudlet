@@ -4097,8 +4097,7 @@ void T2DMap::slot_setArea()
     connect(set_room_area_dialog, &QDialog::accepted, [=]() {
         int newAreaId;
         if (arealist_combobox->findText(arealist_combobox->currentText(), Qt::MatchExactly) != -1) {
-            auto newArea = arealist_combobox->itemData(arealist_combobox->currentIndex());
-            newAreaId = newArea.toInt();
+            newAreaId = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
         } else if (sortedAreaList.contains(arealist_combobox->currentText().trimmed())) {
             newAreaId = mpMap->mpRoomDB->getAreaNamesMap().key(arealist_combobox->currentText());
         } else {
@@ -4132,10 +4131,10 @@ void T2DMap::slot_setArea()
                     // Failed on the last of multiple room area move so do the missed
                     // out recalculations for the dirtied areas
                     auto areaPtrsList{mpMap->mpRoomDB->getAreaPtrList()};
-                    QSet<TArea *> areaPtrsSet{areaPtrsList.begin(), areaPtrsList.end()};
-                    QSetIterator<TArea *> itpArea{areaPtrsSet};
+                    QSet<TArea*> areaPtrsSet{areaPtrsList.begin(), areaPtrsList.end()};
+                    QSetIterator<TArea*> itpArea{areaPtrsSet};
                     while (itpArea.hasNext()) {
-                        TArea *pArea = itpArea.next();
+                        TArea* pArea = itpArea.next();
                         if (pArea->mIsDirty) {
                             pArea->determineAreaExits();
                             pArea->calcSpan();
