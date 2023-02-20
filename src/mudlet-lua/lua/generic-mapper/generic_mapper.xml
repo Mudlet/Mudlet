@@ -656,7 +656,7 @@ raiseEvent("sysSpeedwalkStopped")</script>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.0.25"
+local version = "2.0.26"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -2035,13 +2035,17 @@ local function capture_move_cmd(dir,priority)
         end
     end
     if table.contains(exitmap,dir) or string.starts(dir,"enter ") or dir == "recall" then
+      if dir ~= configs.lang_dirs['look'] then
         if priority then
             table.insert(move_queue,1,exitmap[dir] or dir)
         else
             table.insert(move_queue,exitmap[dir] or dir)
         end
-    elseif configs.search_on_look and dir == configs.lang_dirs['look'] then
-        table.insert(move_queue, dir)
+      else
+        if configs.search_on_look == true then
+          table.insert(move_queue, dir)
+        end
+    end				
     elseif map.currentRoom then
         local special = getSpecialExitsSwap(map.currentRoom) or {}
         if special[dir] then
