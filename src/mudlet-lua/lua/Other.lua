@@ -1178,3 +1178,15 @@ function setConfig(...)
     oldsetConfig(k, v)
   end
 end
+
+local oldgetConfig = getConfig
+function getConfig(...)
+  local args = {...}
+  local result = oldgetConfig()
+
+  if #args == 0 then
+    return result
+  end
+
+  return result[args[1]]
+end

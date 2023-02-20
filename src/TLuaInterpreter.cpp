@@ -17870,3 +17870,128 @@ int TLuaInterpreter::getScroll(lua_State* L)
     lua_pushnumber(L, result);
     return 1;
 }
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConfig
+int TLuaInterpreter::getConfig(lua_State * L)
+{
+    auto& host = getHostFromLua(L);
+    const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
+    lua_newtable(L);
+    
+    if (host.mpMap && host.mpMap->mpMapper) {
+        lua_pushstring(L, "mapRoomSize");
+        lua_pushnumber(L, host.mRoomSize);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "mapExitSize");
+        lua_pushnumber(L, host.mLineSize);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "mapRoundRooms");
+        lua_pushboolean(L, host.mBubbleMode);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "showRoomIdsOnMap");
+        lua_pushboolean(L, host.mShowRoomID);
+        lua_settable(L, -3);
+#if defined(INCLUDE_3DMAPPER)
+        lua_pushstring(L, "show3dMapView");
+        auto widget = host.mpMap->mpMapper->glWidget;
+        lua_pushboolean(L, (widget && widget->isVisible()));
+        lua_settable(L, -3);
+#endif
+        lua_pushstring(L, "mapperPanelVisible");
+        lua_pushboolean(L, host.mShowPanel);
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "mapShowRoomBorders");
+        lua_pushboolean(L, host.mMapperShowRoomBorders);
+        lua_settable(L, -3);
+    }
+
+    lua_pushstring(L, "enableGMCP");
+    lua_pushboolean(L, host.mEnableGMCP);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "enableMSDP");
+    lua_pushboolean(L, host.mEnableMSDP);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "enableMSSP");
+    lua_pushboolean(L, host.mEnableMSSP);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "enableMSP");
+    lua_pushboolean(L, host.mEnableMSP);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "askTlsAvailable");
+    lua_pushboolean(L, host.mAskTlsAvailable);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "inputLineStrictUnixEndings");
+    lua_pushboolean(L, host.mUSE_UNIX_EOL);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "autoClearInputLine");
+    lua_pushboolean(L, host.mAutoClearCommandLineAfterSend);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "showSentText");
+    lua_pushboolean(L, host.mPrintCommand);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "fixUnnecessaryLinebreaks");
+    lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "specialForceCompressionOff");
+    lua_pushboolean(L, host.mFORCE_NO_COMPRESSION);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "specialForceGAOff");
+    lua_pushboolean(L, host.mFORCE_GA_OFF);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "specialForceCharsetNegotiationOff");
+    lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "specialForceMxpNegotiationOff");
+    lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "compactInputLine");
+    lua_pushboolean(L, host.getCompactInputLine());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "announceIncomingText");
+    lua_pushboolean(L, host.mAnnounceIncomingText);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "blankLinesBehaviour");
+    const auto behaviour = host.mBlankLineBehaviour;
+    if (behaviour == Host::BlankLineBehaviour::Show){
+        lua_pushstring(L, "show");
+    } else if (behaviour == Host::BlankLineBehaviour::Hide){
+        lua_pushstring(L, "hide");
+    } else if (behaviour == Host::BlankLineBehaviour::ReplaceWithSpace){
+        lua_pushstring(L, "replacewithspace");
+    }
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "caretShortcut");
+    const auto caret = host.mCaretShortcut;
+    if (caret == Host::CaretShortcut::None){
+        lua_pushstring(L, "none");
+    } else if (caret == Host::CaretShortcut::Tab){
+        lua_pushstring(L, "tab");
+    } else if (caret == Host::CaretShortcut::CtrlTab){
+        lua_pushstring(L, "ctrltab");
+    } else if (caret == Host::CaretShortcut::F6){
+        lua_pushstring(L, "f6");
+    }
+    lua_settable(L, -3);
+
+    return 1;
+}
