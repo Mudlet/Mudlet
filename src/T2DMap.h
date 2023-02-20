@@ -206,7 +206,7 @@ public slots:
     void slot_shiftDown();
     void slot_shiftLeft();
     void slot_shiftRight();
-    void slot_showSymbolSelection(); // TODO: obsolete, see https://github.com/Mudlet/Mudlet/issues/6385
+    void slot_showSymbolSelection();
     void slot_showPropertiesDialog();
     void slot_setRoomSymbol(QString newSymbol, QColor symbolColor, QSet<TRoom*> rooms);
     void slot_setRoomProperties(
