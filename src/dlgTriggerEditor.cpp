@@ -7244,6 +7244,9 @@ void dlgTriggerEditor::slot_sourceReplace()
         if(mpSourceEditorEdbee->textDocument()->text().mid(range.anchor(), range.length()) == replaceText) {
             slot_sourceFindNext();
             continue;
+        } else if (range.length() == 0) {
+            slot_sourceFindPrevious();
+            continue;
         }
         mpSourceEditorEdbee->textDocument()->replace(range.anchor(), range.length(), replaceText);
         range.setLength(mpSourceEditorFindArea->lineEdit_replaceText->text().length());
