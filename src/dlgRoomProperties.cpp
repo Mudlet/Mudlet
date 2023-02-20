@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -40,9 +40,11 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setupUi(this);
 
     connect(lineEdit_roomSymbol, &QLineEdit::textChanged, this, &dlgRoomProperties::slot_updatePreview);
+    connect(comboBox_roomSymbol, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgRoomProperties::slot_symbolComboBoxItemChanged);
+    connect(comboBox_weight, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgRoomProperties::slot_weightComboBoxItemChanged);
     connect(comboBox_roomSymbol, &QComboBox::currentTextChanged, this, &dlgRoomProperties::slot_updatePreview);
     connect(pushButton_setSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openSymbolColorSelector);
-    connect(toolButton_resetSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_resetSymbolColor);
+    connect(pushButton_resetSymbolColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_resetSymbolColor);
     connect(pushButton_setRoomColor, &QAbstractButton::released, this, &dlgRoomProperties::slot_openRoomColorSelector);
 
     setAttribute(Qt::WA_DeleteOnClose);
@@ -59,11 +61,14 @@ void dlgRoomProperties::init(
     // Configure name display
     if (usedNames.size() > 1) {
         lineEdit_name->setText(multipleValuesPlaceholder);
+        lineEdit_name->selectAll();
     } else if (usedNames.size() == 1) {
         lineEdit_name->setText(usedNames.constBegin().key());
+        lineEdit_name->selectAll();
     } else {
         lineEdit_name->clear();
     }
+
 
     // Configure symbols display
     mpSymbols = pSymbols;
@@ -75,11 +80,16 @@ void dlgRoomProperties::init(
     } else if (mpSymbols.size() == 1) {
         // show simple text-entry box with the (single) existing symbol pre-filled
         lineEdit_roomSymbol->setText(mpSymbols.constBegin().key());
+        // and selected
+        lineEdit_roomSymbol->selectAll();
         comboBox_roomSymbol->hide();
     } else {
         // show combined dropdown & text-entry box to host all of the (multiple) existing symbols
         lineEdit_roomSymbol->hide();
         comboBox_roomSymbol->addItems(getComboBoxSymbolItems());
+        if (comboBox_roomSymbol->lineEdit()) {
+            comboBox_roomSymbol->lineEdit()->selectAll();
+        }
     }
     initSymbolInstructions();
 
@@ -99,15 +109,20 @@ void dlgRoomProperties::init(
     if (mpWeights.isEmpty()) {
         // show spin-box with default value
         spinBox_weight->setValue(1);
+        spinBox_weight->selectAll();
         comboBox_weight->hide();
     } else if (mpWeights.size() == 1) {
         // show spin-box with the (single) existing weight pre-filled
         spinBox_weight->setValue(mpWeights.constBegin().key());
+        spinBox_weight->selectAll();
         comboBox_weight->hide();
     } else {
         // show combined dropdown & text-entry box to host all of the (multiple) existing weights
         spinBox_weight->hide();
         comboBox_weight->addItems(getComboBoxWeightItems());
+        if (comboBox_weight->lineEdit()) {
+            comboBox_weight->lineEdit()->selectAll();
+        }
     }
     initWeightInstructions();
 
@@ -378,7 +393,7 @@ int dlgRoomProperties::getNewWeight()
 
 void dlgRoomProperties::slot_updatePreview()
 {
-    auto realSymbolColor = selectedSymbolColor != nullptr ? selectedSymbolColor : defaultSymbolColor();
+    auto realSymbolColor = selectedSymbolColor.isValid() ? selectedSymbolColor : defaultSymbolColor();
     QString newSymbol = getNewSymbol();
     if (newSymbol == multipleValuesPlaceholder) {
         newSymbol = QString();
@@ -420,7 +435,7 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
 
 void dlgRoomProperties::slot_openSymbolColorSelector()
 {
-    auto* dialog = (selectedSymbolColor != nullptr) ? new QColorDialog(selectedSymbolColor, this) : new QColorDialog(defaultSymbolColor(), this);
+    auto* dialog = new QColorDialog(selectedSymbolColor.isValid() ? selectedSymbolColor : defaultSymbolColor(), this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Set symbol color"));
     dialog->open(this, SLOT(slot_symbolColorSelected(const QColor&)));
@@ -439,7 +454,6 @@ void dlgRoomProperties::slot_resetSymbolColor()
     selectedSymbolColor = QColor();
     slot_updatePreview();
 }
-
 
 QColor dlgRoomProperties::backgroundBasedColor(QColor background)
 {
@@ -475,13 +489,14 @@ void dlgRoomProperties::slot_defineNewColor()
         slot_openRoomColorSelector();
     }
     repaint();
-    mpHost->mpMap->mUnsavedMap = true;
+    mpHost->mpMap->setUnsaved(__func__);
 }
 
 
 void dlgRoomProperties::slot_openRoomColorSelector()
 {
     auto dialog = new QDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(tr("Set room color"));
     auto vboxLayout = new QVBoxLayout;
     dialog->setLayout(vboxLayout);
@@ -502,7 +517,7 @@ void dlgRoomProperties::slot_openRoomColorSelector()
 
             mpHost->mpMap->mCustomEnvColors.remove(color.toInt());
             repaint();
-            mpHost->mpMap->mUnsavedMap = true;
+            mpHost->mpMap->setUnsaved(__func__);
         });
 
         menu.exec(QCursor::pos());
@@ -554,4 +569,22 @@ void dlgRoomProperties::slot_openRoomColorSelector()
         mRoomColor = mpHost->mpMap->mCustomEnvColors.value(mRoomColorNumber);
         slot_updatePreview();
     }
+}
+
+void dlgRoomProperties::slot_symbolComboBoxItemChanged(const int index)
+{
+    if (index < 0 || index >= comboBox_roomSymbol->count() || !comboBox_roomSymbol->lineEdit()) {
+        return;
+    }
+
+    comboBox_roomSymbol->lineEdit()->selectAll();
+}
+
+void dlgRoomProperties::slot_weightComboBoxItemChanged(const int index)
+{
+    if (index < 0 || index >= comboBox_weight->count() || !comboBox_weight->lineEdit()) {
+        return;
+    }
+
+    comboBox_weight->lineEdit()->selectAll();
 }

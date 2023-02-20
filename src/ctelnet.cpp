@@ -8,6 +8,7 @@
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Michael Hupp - darksix@northfire.org            *
  *   Copyright (C) 2017 by Colton Rasbury - rasbury.colton@gmail.com       *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -45,11 +46,12 @@
 #endif
 
 #include "pre_guard.h"
+#include <QTextCodec>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMessageBox>
 #include <QNetworkProxy>
 #include <QProgressDialog>
-#include <QTextCodec>
 #include <QSslError>
 #include "post_guard.h"
 
@@ -528,7 +530,7 @@ void cTelnet::slot_socketDisconnected()
     }
 
     if (sslerr) {
-        mudlet::self()->show_options_dialog(qsl("tab_connection"));
+        mudlet::self()->showOptionsDialog(qsl("tab_connection"));
     }
 #endif
 
@@ -1673,6 +1675,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
                 connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
+                mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
                 mpProgressDialog->show();
             }
             return;
@@ -2024,7 +2027,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
             postMessage(tr("[  OK  ]  - Package is already installed."));
-            return;
         }
 
         mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
@@ -2035,8 +2037,8 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
         connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
+        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
         mpProgressDialog->show();
-        return;
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
         mpHost->setMmpMapLocation(data);
     }
@@ -2078,6 +2080,8 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
     transcodedMsg.remove(QChar::CarriageReturn);
 
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
+
+    promptTlsConnectionAvailable();
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#MSP
@@ -2187,6 +2191,61 @@ void cTelnet::setMSPVariables(const QByteArray& msg)
     }
 
     mpHost->mpMedia->playMedia(mediaData);
+}
+
+bool cTelnet::isIPAddress(QString& arg)
+{
+    bool isIPAddress = false;
+
+    QHostAddress address(arg);
+
+    if (QAbstractSocket::IPv4Protocol == address.protocol()) {
+        isIPAddress = true;
+    } else if (QAbstractSocket::IPv6Protocol == address.protocol()) {
+        isIPAddress = true;
+    }
+
+    return isIPAddress;
+}
+
+void cTelnet::promptTlsConnectionAvailable()
+{
+    // If an SSL port is detected by MSSP and we're not using it, prompt to use on future connections
+    if (mpHost->mMSSPTlsPort && socket.mode() == QSslSocket::UnencryptedMode && mpHost->mAskTlsAvailable && !isIPAddress(hostName)
+        && (mpHost->mMSSPHostName.isEmpty() || QString::compare(hostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
+        postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
+
+        QPointer msgBox = new QMessageBox();
+
+        msgBox->setIcon(QMessageBox::Question);
+        msgBox->setText(tr("For data transfer protection and privacy, this connection advertises a secure port."));
+        msgBox->setInformativeText(tr("Update to port %1 and connect with encryption?").arg(QString::number(mpHost->mMSSPTlsPort)));
+        msgBox->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox->setDefaultButton(QMessageBox::Yes);
+
+        int ret = msgBox->exec();
+        delete msgBox;
+
+        switch (ret) {
+        case QMessageBox::Yes:
+            cTelnet::disconnectIt();
+            hostPort = mpHost->mMSSPTlsPort;
+            mpHost->setPort(hostPort);
+            mpHost->mSslTsl = true;
+            mpHost->writeProfileData(QLatin1String("port"), QString::number(hostPort));
+            mpHost->writeProfileData(QLatin1String("ssl_tsl"), QString::number(Qt::Checked));
+            cTelnet::connectIt(mpHost->getUrl(), hostPort);
+            break;
+        case QMessageBox::No:
+            cTelnet::disconnectIt();
+            mpHost->mAskTlsAvailable = false; // Don't ask next time
+            cTelnet::reconnect();             // A no-op (;) is desired, but read buffer does not flush
+            break;
+        default:
+            // should never be reached
+            break;
+        }
+    }
 }
 
 bool cTelnet::purgeMediaCache()
@@ -3008,11 +3067,11 @@ void cTelnet::setKeepAlive(int socketHandle)
 
 #else // For OSes other than Windows:
 
-#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
+#if defined(Q_OS_LINUX) || defined(Q_OS_MACOS) || defined(Q_OS_OPENBSD)
     setsockopt(socketHandle, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on));
 #else
     // FreeBSD always has the Keep-alive option enabled, so the above is not
-    // needed
+    // usable
     Q_UNUSED(on)
 #endif
 
@@ -3036,15 +3095,23 @@ void cTelnet::setKeepAlive(int socketHandle)
 #if defined(Q_OS_MACOS)
     // TCP_KEEPIDLE is TCP_KEEPALIVE on MacOs
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+#elif defined(Q_OS_OPENBSD)
+    // There does not appear to be a per-socket option for TCP_KEEPALIVE on OpenBSD
+    // only a system wide one
 #else
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
 #endif
+
+#if !defined(Q_OS_OPENBSD)
+    // There does not appear to be a per-socket options for these on OpenBSD
+    // only system wide one:
 
     // Interval between keep-alives, in seconds:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
     // Number of failed keep alives before forcing a close:
     setsockopt(socketHandle, IPPROTO_TCP, TCP_KEEPCNT, &count, sizeof(count));
-#endif // defined(Q_OS_WIN32)
+#endif // !defined(Q_OS_OPENBSD)
+#endif // !defined(Q_OS_WIN32)
 }
 
 // Used to convert a collection of Bytes in the current MUD Server encoding

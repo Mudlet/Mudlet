@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#    Copyright (C) 2015-2018, 2020, 2022 by Stephen Lyons                  #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -21,14 +21,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
-#    as such; the work on getting them working has been done by myself,    #
-#    and other developers, unless they have explicitly said so, are not    #
-#    able to address issues relating specifically to these Operating       #
-#    Systems. Nevertheless users of either are equally welcome to          #
-#    contribute to the development of Mudlet - bugfixes and enhancements   #
-#    are welcome from all!                                                 #
-#                         Stephen Lyons, February 2018, updated March 2021 #
+#    NOTICE: FreeBSD, OpenBSD and GNU/Hurd are not officially supported    #
+#    platforms as such; the work on getting them working has been done by  #
+#    myself, and other developers, unless they have explicitly said so,    #
+#    are not able to address issues relating specifically to these         #
+#    Operating Systems. Nevertheless users of these operating systems are  #
+#    equally welcome to contribute to the development of Mudlet - bugfixes #
+#    and enhancements are welcome from all!                                #
+#        Stephen Lyons, February 2018, updated March 2021 & October 2022   #
 #                                                                          #
 ############################################################################
 
@@ -149,10 +149,6 @@ endif()
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
-
-git_submodule_init(
-  CHECK_FILE "3rdparty/qt-ordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
-  READABLE_NAME "Qt ordered map source code")
 
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH

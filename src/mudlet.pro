@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2022 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2023 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -25,14 +25,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
-#    as such; the work on getting them working has been done by myself,    #
-#    and other developers, unless they have explicitly said so, are not    #
-#    able to address issues relating specifically to these Operating       #
-#    Systems. Nevertheless users of either are equally welcome to          #
-#    contribute to the development of Mudlet - bugfixes and enhancements   #
-#    are welcome from all!                                                 #
-#                         Stephen Lyons, February 2018, updated March 2021 #
+#    NOTICE: FreeBSD, OpenBSD and GNU/Hurd are not officially supported    #
+#    platforms as such; the work on getting them working has been done by  #
+#    myself, and other developers, unless they have explicitly said so,    #
+#    are not able to address issues relating specifically to these         #
+#    Operating Systems. Nevertheless users of these operating systems are  #
+#    equally welcome to contribute to the development of Mudlet - bugfixes #
+#    and enhancements are welcome from all!                                #
+#        Stephen Lyons, February 2018, updated March 2021 & October 2022   #
 #                                                                          #
 ############################################################################
 
@@ -235,6 +235,21 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # We should consider the XDG specifications in:
 # https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 
+########################### Debugging code inclusions ##########################
+# Controls the include/selection of extra code to aide developers debug various
+# features of Mudlet, generally speaking they will not be '#define'd in
+# production builds - uncomment the 'DEFINES+=DEBUG_XXX' line here to include
+# the relevant code:
+#
+# Other DEFINES+=DEBUG_XXX expected here as a result of:
+# https://github.com/Mudlet/Mudlet/issues/6314
+#
+# * Produce a timestamped message on the OS's command line when an autosave of
+# the map file gets requested and when such a request gets actioned (or
+# rejected because the profile is being loaded):
+# DEFINES+=DEBUG_MAPAUTOSAVE
+
+
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
 # destination place for local builds for software for all users:
@@ -256,6 +271,15 @@ unix:!macx {
     isEmpty( BINDIR ) BINDIR = $${PREFIX}/bin
 # Again according to FHS /usr/local/share/games is the corresponding place for locally built games documentation:
     isEmpty( DOCDIR ) DOCDIR = $${DATAROOTDIR}/doc/mudlet
+    openbsd {
+        LIBS += \
+# Some OS platforms have a hyphen (I think Cygwin does as well):
+            -llua5.1 \
+            -lhunspell-1.7
+        INCLUDEPATH += \
+            /usr/local/include \
+            /usr/local/include/lua-5.1
+    }
     freebsd {
         LIBS += \
 # Some OS platforms have a hyphen (I think Cygwin does as well):
@@ -267,7 +291,8 @@ unix:!macx {
 # FreeBSD (at least) supports multiple Lua versions (and 5.1 is not the default anymore):
         INCLUDEPATH += \
             /usr/local/include/lua51
-    } else {
+    }
+    linux {
         LIBS += \
             -llua5.1 \
             -lhunspell
@@ -424,10 +449,6 @@ win32 {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}\.. & git submodule update --init 3rdparty/lcf")
     }
-    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
-        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}\.. & git submodule update --init 3rdparty/qt-ordered-map")
-    }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
             message("git submodule for required QtKeychain source code missing, executing 'git submodule update --init' to get it...")
@@ -442,10 +463,6 @@ win32 {
     !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
         message("git submodule for required lua code formatter source code missing, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/lcf")
-    }
-    !exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
-        message("git submodule for required Qt ordered map source code missing, executing 'git submodule update --init' to get it...")
-        system("cd $${PWD}/.. ; git submodule update --init 3rdparty/qt-ordered-map")
     }
     contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         !exists("$${PWD}/../3rdparty/qtkeychain/keychain.h") {
@@ -489,10 +506,6 @@ exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
 
 !exists("$${PWD}/../3rdparty/lcf/lcf-scm-1.rockspec") {
     error("Cannot locate lua code formatter submodule source code, build abandoned!")
-}
-
-!exists("$${PWD}/../3rdparty/qt-ordered-map/src/orderedmap.h") {
-    error("Cannot locate Qt ordered map submodule source code, build abandoned!")
 }
 
 contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
@@ -545,7 +558,6 @@ SOURCES += \
     dlgProfilePreferences.cpp \
     dlgRoomExits.cpp \
     dlgRoomProperties.cpp \
-    dlgRoomSymbol.cpp \
     dlgScriptsMainArea.cpp \
     dlgSourceEditorArea.cpp \
     dlgSourceEditorFindArea.cpp \
@@ -570,6 +582,7 @@ SOURCES += \
     ScriptUnit.cpp \
     ShortcutsManager.cpp \
     T2DMap.cpp \
+    TAccessibleTextEdit.cpp \
     TAction.cpp \
     TAlias.cpp \
     TArea.cpp \
@@ -625,7 +638,6 @@ SOURCES += \
     TTabBar.cpp \
     TTextCodec.cpp \
     TTextEdit.cpp \
-    TAccessibleTextEdit.cpp \
     TTimer.cpp \
     TToolBar.cpp \
     TTreeWidget.cpp \
@@ -662,7 +674,6 @@ HEADERS += \
     dlgProfilePreferences.h \
     dlgRoomExits.h \
     dlgRoomProperties.h \
-    dlgRoomSymbol.h \
     dlgScriptsMainArea.h \
     dlgSourceEditorArea.h \
     dlgSourceEditorFindArea.h \
@@ -687,6 +698,8 @@ HEADERS += \
     ScriptUnit.h \
     ShortcutsManager.h \
     T2DMap.h \
+    TAccessibleConsole.h \
+    TAccessibleTextEdit.h \
     TAction.h \
     TAlias.h \
     TArea.h \
@@ -694,7 +707,6 @@ HEADERS += \
     TBuffer.h \
     TCommandLine.h \
     TConsole.h \
-    TAccessibleConsole.h \
     TDebug.h \
     TDockWidget.h \
     TEasyButtonBar.h \
@@ -705,6 +717,7 @@ HEADERS += \
     TEvent.h \
     TFlipButton.h \
     TForkedProcess.h \
+    TGameDetails.h \
     TimerUnit.h \
     TKey.h \
     TLabel.h \
@@ -751,7 +764,6 @@ HEADERS += \
     TTabBar.h \
     TTextCodec.h \
     TTextEdit.h \
-    TAccessibleTextEdit.h \
     TTimer.h \
     TToolBar.h \
     TTreeWidget.h \
@@ -765,19 +777,21 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
 
-macx {
-    OBJECTIVE_SOURCES += AnnouncerMac.mm
-}
+macx|win32 {
+    macx {
+        SOURCES += AnnouncerMac.mm
+    }
 
-win32 {
-    SOURCES += AnnouncerWindows.cpp \
-        uiawrapper.cpp
+    win32 {
+        SOURCES += AnnouncerWindows.cpp \
+            uiawrapper.cpp
 
-    HEADERS += uiawrapper.h
-}
-
-linux {
-    SOURCES += AnnouncerLinux.cpp
+        HEADERS += uiawrapper.h
+    }
+} else {
+    # Everything else
+    SOURCES += \
+        AnnouncerUnix.cpp
 }
 
 # This is for compiled UI files, not those used at runtime through the resource file.
@@ -801,7 +815,6 @@ FORMS += \
     ui/profile_preferences.ui \
     ui/room_exits.ui \
     ui/room_properties.ui \
-    ui/room_symbol.ui \
     ui/scripts_main_area.ui \
     ui/source_editor_area.ui \
     ui/source_editor_find_area.ui \

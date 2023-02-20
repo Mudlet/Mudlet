@@ -158,6 +158,7 @@ public:
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
+    bool isIPAddress(QString&);
     bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
@@ -251,6 +252,7 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
+    void promptTlsConnectionAvailable();
     void sendNAWS(int x, int y);
     static std::pair<bool, bool> testReadReplayFile();
 

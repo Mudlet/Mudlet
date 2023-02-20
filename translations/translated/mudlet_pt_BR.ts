@@ -48,36 +48,36 @@
   <context>
     <name>Host</name>
     <message>
-      <location filename="../src/Host.cpp" line="441"/>
+      <location filename="../src/Host.cpp" line="443"/>
       <source>Text to send to the game</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="615"/>
+      <location filename="../src/Host.cpp" line="617"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="627"/>
+      <location filename="../src/Host.cpp" line="629"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <comment>This error message will appear when a module is saved as package but cannot be done for some reason.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="918"/>
+      <location filename="../src/Host.cpp" line="920"/>
       <source>[  OK  ]  - %1 Thanks a lot for using the Public Test Build!</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>%1 Muito obrigado por usar o beta público!</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="919"/>
+      <location filename="../src/Host.cpp" line="921"/>
       <source>[  OK  ]  - %1 Help us make Mudlet better by reporting any problems.</source>
       <comment>%1 will be a random happy emoji</comment>
       <translation>%1 Ajude-nos a fazer o Mudlet melhor reportando qualquer problema.</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1709"/>
+      <location filename="../src/Host.cpp" line="1711"/>
       <source>Unpacking module:
 &quot;%1&quot;
 please wait...</source>
@@ -86,7 +86,7 @@ please wait...</source>
 Por favor aguarde...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1711"/>
+      <location filename="../src/Host.cpp" line="1713"/>
       <source>Unpacking package:
 &quot;%1&quot;
 please wait...</source>
@@ -95,35 +95,35 @@ please wait...</source>
 Por favor aguarde...</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="1715"/>
+      <location filename="../src/Host.cpp" line="1717"/>
       <source>Unpacking</source>
       <translation>Desempacotando</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2358"/>
+      <location filename="../src/Host.cpp" line="2360"/>
       <source>Playing %1</source>
       <translation>Jogando %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2360"/>
-      <location filename="../src/Host.cpp" line="2366"/>
+      <location filename="../src/Host.cpp" line="2362"/>
+      <location filename="../src/Host.cpp" line="2368"/>
       <source>%1 at %2:%3</source>
       <comment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</comment>
       <translation>%1 de %2:%3</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="2753"/>
-      <location filename="../src/Host.cpp" line="3793"/>
+      <location filename="../src/Host.cpp" line="2755"/>
+      <location filename="../src/Host.cpp" line="3823"/>
       <source>Map - %1</source>
       <translation>Mapa - %1</translation>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="3809"/>
+      <location filename="../src/Host.cpp" line="3839"/>
       <source>Pre-Map loading(3) report</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/Host.cpp" line="3819"/>
+      <location filename="../src/Host.cpp" line="3849"/>
       <source>Loading map(3) at %1 report</source>
       <translation type="unfinished"/>
     </message>
@@ -140,46 +140,35 @@ Por favor aguarde...</translation>
   <context>
     <name>MapInfoContributorManager</name>
     <message>
-      <location filename="../src/mapInfoContributorManager.cpp" line="116"/>
-      <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9
-</source>
+      <location filename="../src/mapInfoContributorManager.cpp" line="119"/>
+      <source>Area:%1%2 ID:%1%3 x:%1%4%1&lt;‑&gt;%1%5 y:%1%6%1&lt;‑&gt;%1%7 z:%1%8%1&lt;‑&gt;%1%9</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and non-breaking hyphens which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. %2 is the (text) name of the area, %3 is the number for it, %4 to %9 are pairs (min &lt;-&gt; max) of extremes for each of x,y and z coordinates</comment>
-      <translation>Área:%1%2 Id:%1%3 X:%1%4%1&lt;‑&gt;%1%5 Y:%1%6%1&lt;‑&gt;%1%7 Z:%1%8%1&lt;‑&gt;%1%9
-</translation>
+      <translation>Área:%1%2 Id:%1%3 X:%1%4%1&lt;‑&gt;%1%5 Y:%1%6%1&lt;‑&gt;%1%7 Z:%1%8%1&lt;‑&gt;%1%9</translation>
     </message>
     <message>
-      <location filename="../src/mapInfoContributorManager.cpp" line="140"/>
-      <source>Room Name: %1
-</source>
-      <translation>Nome da Sala: %1
-</translation>
+      <location filename="../src/mapInfoContributorManager.cpp" line="143"/>
+      <source>Room Name: %1</source>
+      <translation>Nome da Sala: %1</translation>
     </message>
     <message>
-      <location filename="../src/mapInfoContributorManager.cpp" line="153"/>
-      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location
-</source>
+      <location filename="../src/mapInfoContributorManager.cpp" line="157"/>
+      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1current player location</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when NO rooms are selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the current player&apos;s room.</comment>
-      <translation>Quarto%1ID:%1%2 Posição%1 no %1 Mapa: (%3,%4,%5) ‑%1 Localização atual do jogador 
-</translation>
+      <translation>Quarto%1ID:%1%2 Posição%1 no %1 Mapa: (%3,%4,%5) ‑%1 Localização atual do jogador </translation>
     </message>
     <message>
-      <location filename="../src/mapInfoContributorManager.cpp" line="170"/>
-      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room
-</source>
+      <location filename="../src/mapInfoContributorManager.cpp" line="179"/>
+      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1selected room</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when ONE room is selected, %3 is the room number of, and %4-%6 are the x,y and z coordinates for, the selected Room.</comment>
-      <translation>Sala%1ID:%1%2 Posição%1oN%1Mapa: (%3,%4,%5) ‑%1sala selecionada
-</translation>
+      <translation>Sala%1ID:%1%2 Posição%1oN%1Mapa: (%3,%4,%5) ‑%1sala selecionada</translation>
     </message>
     <message numerus="yes">
-      <location filename="../src/mapInfoContributorManager.cpp" line="188"/>
-      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms
-</source>
+      <location filename="../src/mapInfoContributorManager.cpp" line="202"/>
+      <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
       <translation>
-        <numerusform>Sala% 1ID: %1%2 Posição %1on%1 Mapa: (%3,%4,%5) ‑%1 sala selecionada
-</numerusform>
-        <numerusform>Sala% 1ID: %1%2 Posição %1on%1 Mapa: (%3,%4,%5) ‑%1 sala selecionada
-</numerusform>
+        <numerusform>Sala% 1ID: %1%2 Posição %1on%1 Mapa: (%3,%4,%5) ‑%1 sala selecionada</numerusform>
+        <numerusform>Sala% 1ID: %1%2 Posição %1on%1 Mapa: (%3,%4,%5) ‑%1 sala selecionada</numerusform>
       </translation>
     </message>
   </context>
@@ -498,7 +487,7 @@ Por favor aguarde...</translation>
 </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="371"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="379"/>
       <source>Error parsing %1: %2 </source>
       <translation>Erro ao analisar %1: %2 </translation>
     </message>
@@ -508,32 +497,32 @@ Por favor aguarde...</translation>
       <translation>Erro lendo o arquivo %1:%2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="438"/>
       <source>%1 ranges</source>
       <translation>%1 intervalos</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
       <source>Line %1, Column %2</source>
       <translation>Linha %1, Coluna %2</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="447"/>
       <source>, Offset %1</source>
       <translation>, Deslocamento %1</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="451"/>
       <source> | %1 chars selected</source>
       <translation> | %1 caracteres selecionados</translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="452"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="455"/>
       <source> | scope: </source>
       <translation> | escopo: </translation>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="462"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="465"/>
       <source> (%1)</source>
       <translation> (%1)</translation>
     </message>
@@ -580,64 +569,65 @@ Por favor aguarde...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3293"/>
-      <location filename="../src/T2DMap.cpp" line="4902"/>
+      <location filename="../src/T2DMap.cpp" line="4930"/>
       <source>Solid line</source>
       <translation>Linha sólida</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3294"/>
-      <location filename="../src/T2DMap.cpp" line="4903"/>
+      <location filename="../src/T2DMap.cpp" line="4931"/>
       <source>Dot line</source>
       <translation>Linha de ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3295"/>
-      <location filename="../src/T2DMap.cpp" line="4904"/>
+      <location filename="../src/T2DMap.cpp" line="4932"/>
       <source>Dash line</source>
       <translation>Linha tracejada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3296"/>
-      <location filename="../src/T2DMap.cpp" line="4905"/>
+      <location filename="../src/T2DMap.cpp" line="4933"/>
       <source>Dash-dot line</source>
       <translation>Linha traço e ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3297"/>
-      <location filename="../src/T2DMap.cpp" line="4906"/>
+      <location filename="../src/T2DMap.cpp" line="4934"/>
       <source>Dash-dot-dot line</source>
       <translation>Linha traço-ponto-ponto</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3594"/>
+      <location filename="../src/T2DMap.cpp" line="3587"/>
+      <source>Move the selection, centered on the highlighted room (%1) to:</source>
+      <comment>%1 is a room number</comment>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/T2DMap.cpp" line="3593"/>
       <source>x coordinate (was %1):</source>
       <translation>coordenada x (era %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3595"/>
+      <location filename="../src/T2DMap.cpp" line="3594"/>
       <source>y coordinate (was %1):</source>
       <translation>coordenada y (era %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3596"/>
+      <location filename="../src/T2DMap.cpp" line="3595"/>
       <source>z coordinate (was %1):</source>
       <translation>coordenada z (era %1):</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3788"/>
+      <location filename="../src/T2DMap.cpp" line="3787"/>
       <source>Delete color</source>
       <comment>Deletes an environment colour</comment>
       <translation>Excluir cor</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3807"/>
+      <location filename="../src/T2DMap.cpp" line="3806"/>
       <source>Define new color</source>
       <translation>Definir nova cor</translation>
-    </message>
-    <message>
-      <location filename="../src/T2DMap.cpp" line="4119"/>
-      <source>%1 {count:%2}</source>
-      <translation>%1 {contagem:%2}</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1332"/>
@@ -1014,43 +1004,49 @@ Por favor aguarde...</translation>
       <translation>Remover tudo nesta linha personalizada</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3587"/>
-      <source>Move the selection, centered on
-the highlighted room (%1) to:</source>
-      <comment>Use linefeeds as necessary to format text into a reasonable rectangle of text, %1 is a room number</comment>
-      <translation>Mover a seleção, centrada no espaço destacado (%1) para:</translation>
+      <location filename="../src/T2DMap.cpp" line="4116"/>
+      <location filename="../src/T2DMap.cpp" line="4140"/>
+      <source>1 {count:%1, default}</source>
+      <comment>An entry into the QComboBox used to show the existing room weights in a selection of rooms for the user to choose to apply to every room in the selection. Everything after the &apos;1&apos; which is the default weight (and which is used by %1 rooms in the selection) will be removed by processing the entry as a QRegularExpression programmatically - the translation needs to also begin with that number &apos;1&apos;.</comment>
+      <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3611"/>
+      <location filename="../src/T2DMap.cpp" line="4126"/>
+      <source>%1 {count:%2}</source>
+      <comment>An entry into the QComboBox used to show the existing room weights in a selection of rooms for the user to choose to apply to every room in the selection. Everything after the &apos;%1&apos; which is a number and is the weight used by a number %2 of rooms in the selection) will be removed by processing the entry as a QRegularExpression programmatically - the translation needs to also begin with that number &apos;%1&apos;.</comment>
+      <translation>%1 {contagem:%2}</translation>
+    </message>
+    <message>
+      <location filename="../src/T2DMap.cpp" line="3610"/>
       <source>OK</source>
       <comment>dialog (room(s) move) button</comment>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3616"/>
+      <location filename="../src/T2DMap.cpp" line="3615"/>
       <source>Cancel</source>
       <comment>dialog (room(s) move) button</comment>
       <translation>Cancelar</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3815"/>
+      <location filename="../src/T2DMap.cpp" line="3814"/>
       <source>OK</source>
       <comment>dialog (room(s) change color) button</comment>
       <translation>OK</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3820"/>
+      <location filename="../src/T2DMap.cpp" line="3819"/>
       <source>Cancel</source>
       <comment>dialog (room(s) change color) button</comment>
       <translation>Cancelar</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3878"/>
+      <location filename="../src/T2DMap.cpp" line="3877"/>
       <source>Spread out rooms</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3879"/>
+      <location filename="../src/T2DMap.cpp" line="3878"/>
       <source>Increase the spacing of
 the selected rooms,
 centered on the
@@ -1059,12 +1055,12 @@ factor of:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3939"/>
+      <location filename="../src/T2DMap.cpp" line="3938"/>
       <source>Shrink in rooms</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="3940"/>
+      <location filename="../src/T2DMap.cpp" line="3939"/>
       <source>Decrease the spacing of
 the selected rooms,
 centered on the
@@ -1073,14 +1069,14 @@ factor of:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4068"/>
-      <location filename="../src/T2DMap.cpp" line="4082"/>
-      <location filename="../src/T2DMap.cpp" line="4128"/>
+      <location filename="../src/T2DMap.cpp" line="4067"/>
+      <location filename="../src/T2DMap.cpp" line="4081"/>
+      <location filename="../src/T2DMap.cpp" line="4151"/>
       <source>Enter room weight</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4069"/>
+      <location filename="../src/T2DMap.cpp" line="4068"/>
       <source>Enter new roomweight
 (= travel time), minimum
 (and default) is 1:</source>
@@ -1088,7 +1084,7 @@ factor of:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4083"/>
+      <location filename="../src/T2DMap.cpp" line="4082"/>
       <source>Enter new roomweight
 (= travel time) for all
 selected rooms, minimum
@@ -1099,17 +1095,7 @@ used is:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4117"/>
-      <source>%1 {count:%2, default}</source>
-      <translation>%1 {contagem:%2, padrão}</translation>
-    </message>
-    <message>
-      <location filename="../src/T2DMap.cpp" line="4125"/>
-      <source>1 {count 0, default}</source>
-      <translation>! {contador 0, padrão}</translation>
-    </message>
-    <message>
-      <location filename="../src/T2DMap.cpp" line="4129"/>
+      <location filename="../src/T2DMap.cpp" line="4152"/>
       <source>Choose an existing
 roomweight (= travel
 time) from the list
@@ -1122,25 +1108,25 @@ rooms:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4179"/>
+      <location filename="../src/T2DMap.cpp" line="4208"/>
       <source>Load Mudlet map</source>
       <translation>Carregar mapa do Mudlet</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="4181"/>
+      <location filename="../src/T2DMap.cpp" line="4210"/>
       <source>Mudlet map (*.dat);;Xml map data (*.xml);;Any file (*)</source>
       <comment>Do not change extensions (in braces) or the ;;s as they are used programmatically</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5049"/>
-      <location filename="../src/T2DMap.cpp" line="5082"/>
+      <location filename="../src/T2DMap.cpp" line="5077"/>
+      <location filename="../src/T2DMap.cpp" line="5110"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation>Use o botão esquerdo do mouse para adicionar um ponto, use o botão direito do mouse para desfazer/mudar/finalizar...</translation>
     </message>
     <message>
-      <location filename="../src/T2DMap.cpp" line="5092"/>
+      <location filename="../src/T2DMap.cpp" line="5120"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <comment>2D Mapper big, bottom of screen help message</comment>
       <translation type="unfinished"/>
@@ -1149,14 +1135,13 @@ rooms:</source>
   <context>
     <name>TAlias</name>
     <message>
-      <location filename="../src/TAlias.cpp" line="123"/>
-      <location filename="../src/TAlias.cpp" line="191"/>
-      <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.
-</source>
+      <location filename="../src/TAlias.cpp" line="125"/>
+      <location filename="../src/TAlias.cpp" line="196"/>
+      <source>[Alias Error:] %1 capture group limit exceeded, capture less groups.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TAlias.cpp" line="260"/>
+      <location filename="../src/TAlias.cpp" line="267"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
       <translation type="unfinished"/>
     </message>
@@ -1252,7 +1237,7 @@ rooms:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="1739"/>
+      <location filename="../src/TConsole.cpp" line="1759"/>
       <source>System Message: %1</source>
       <translation>Mensagem do sistema: %1</translation>
     </message>
@@ -1308,7 +1293,7 @@ rooms:</source>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="272"/>
-      <location filename="../src/TConsole.cpp" line="2020"/>
+      <location filename="../src/TConsole.cpp" line="2040"/>
       <source>main window</source>
       <translation type="unfinished"/>
     </message>
@@ -1353,19 +1338,19 @@ rooms:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="1847"/>
-      <location filename="../src/TConsole.cpp" line="1886"/>
+      <location filename="../src/TConsole.cpp" line="1867"/>
+      <location filename="../src/TConsole.cpp" line="1906"/>
       <source>No search results, sorry!</source>
       <translation>Nenhum resultado da pesquisa, desculpe!</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2017"/>
+      <location filename="../src/TConsole.cpp" line="2037"/>
       <source>main window past content</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet window when you&apos;ve scrolled up</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2018"/>
+      <location filename="../src/TConsole.cpp" line="2038"/>
       <source>main window live content</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet window when you&apos;ve scrolled up</comment>
       <translation type="unfinished"/>
@@ -1382,122 +1367,121 @@ rooms:</source>
   <context>
     <name>TLuaInterpreter</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="11355"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="11469"/>
       <source>Playing %1</source>
       <translation>Jogando %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13821"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="13845"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13935"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13959"/>
       <source>ERROR</source>
       <translation>ERRO</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13822"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="13836"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13936"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13950"/>
       <source>object</source>
       <comment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>objeto</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="13822"/>
-      <location filename="../src/TLuaInterpreter.cpp" line="13836"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13936"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="13950"/>
       <source>function</source>
       <comment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</comment>
       <translation>função</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15354"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15470"/>
       <source>Some functions may not be available.</source>
       <translation>Algumas funções podem não estar disponíveis.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14736"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14850"/>
       <source>No error message available from Lua</source>
       <translation>Nenhuma mensagem de erro disponível do Lua</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14738"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14852"/>
       <source>Lua error: %1</source>
       <translation>Erro de Lua: %1</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14740"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14854"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <comment>%1 is the name of the module;%2 will be a line-feed inserted to put the next argument on a new line;%3 is the error message from the lua sub-system;%4 can be an additional message about the expected effect (but may be blank).</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="14754"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="14868"/>
       <source>[  OK  ]  - Lua module %1 loaded.</source>
       <comment>%1 is the name (may specify which variant) of the module.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15341"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15457"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
       <translation>Provavelmente não será possível acessar o código Lua do Mudlet.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15359"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15475"/>
       <source>Database support will not be available.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15366"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15482"/>
       <source>utf8.* Lua functions won&apos;t be available.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15372"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15488"/>
       <source>yajl.* Lua functions won&apos;t be available.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15557"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15673"/>
       <source>No error message available from Lua.</source>
       <translation>Nenhuma mensagem de erro disponível do Lua.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15559"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15675"/>
       <source>Lua error: %1.</source>
       <translation>Erro de Lua: %1.</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15561"/>
-      <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.
-</source>
+      <location filename="../src/TLuaInterpreter.cpp" line="15677"/>
+      <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15638"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15754"/>
       <source>%1 (doesn&apos;t exist)</source>
       <comment>This file doesn&apos;t exist</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15643"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15759"/>
       <source>%1 (isn&apos;t a file or symlink to a file)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15652"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15768"/>
       <source>%1 (isn&apos;t a readable file or symlink to a readable file)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15670"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15786"/>
       <source>%1 (couldn&apos;t read file)</source>
       <comment>This file could not be read for some reason (for example, no permission)</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15676"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15792"/>
       <source>[  OK  ]  - Mudlet-lua API &amp; Geyser Layout manager loaded.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15683"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15799"/>
       <source>[ ERROR ] - Couldn&apos;t find, load and successfully run LuaGlobal.lua - your Mudlet is broken!
 Tried these locations:
 %1</source>
@@ -1511,18 +1495,6 @@ Tried these locations:
       <source>logfile</source>
       <comment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).</comment>
       <translation>logfile</translation>
-    </message>
-    <message>
-      <location filename="../src/TMainConsole.cpp" line="219"/>
-      <source>Logging has started. Log file is %1
-</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/TMainConsole.cpp" line="229"/>
-      <source>Logging has been stopped. Log file is %1
-</source>
-      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="259"/>
@@ -1550,6 +1522,16 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="323"/>
       <source>Stop logging game output to log file.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TMainConsole.cpp" line="219"/>
+      <source>Logging has started. Log file is %1</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TMainConsole.cpp" line="229"/>
+      <source>Logging has been stopped. Log file is %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -1656,67 +1638,66 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1445"/>
       <source>+--------------------------------------------------------------+
 |                      system statistics                       |
-+--------------------------------------------------------------+
-</source>
++--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1454"/>
+      <location filename="../src/TMainConsole.cpp" line="1455"/>
       <source>GMCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1458"/>
+      <location filename="../src/TMainConsole.cpp" line="1459"/>
       <source>ATCP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1462"/>
+      <location filename="../src/TMainConsole.cpp" line="1463"/>
       <source>Channel102 events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1466"/>
+      <location filename="../src/TMainConsole.cpp" line="1467"/>
       <source>MSSP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1471"/>
+      <location filename="../src/TMainConsole.cpp" line="1472"/>
       <source>MSDP events:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1482"/>
+      <location filename="../src/TMainConsole.cpp" line="1483"/>
       <source>Trigger Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1486"/>
+      <location filename="../src/TMainConsole.cpp" line="1487"/>
       <source>Timer Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1490"/>
+      <location filename="../src/TMainConsole.cpp" line="1491"/>
       <source>Alias Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1494"/>
+      <location filename="../src/TMainConsole.cpp" line="1495"/>
       <source>Keybinding Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TMainConsole.cpp" line="1498"/>
+      <location filename="../src/TMainConsole.cpp" line="1499"/>
       <source>Script Report:</source>
       <comment>Heading for the system&apos;s statistics information displayed in the console</comment>
       <translation type="unfinished"/>
@@ -1837,12 +1818,6 @@ Tried these locations:
       <translation>fora</translation>
     </message>
     <message>
-      <location filename="../src/TMap.cpp" line="112"/>
-      <source>[MAP ERROR:]%1
-</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/TMap.cpp" line="48"/>
       <source>Default Area</source>
       <translation>Área padrão</translation>
@@ -1851,6 +1826,11 @@ Tried these locations:
       <location filename="../src/TMap.cpp" line="49"/>
       <source>Unnamed Area</source>
       <translation>Área não nomeada</translation>
+    </message>
+    <message>
+      <location filename="../src/TMap.cpp" line="112"/>
+      <source>[MAP ERROR:]%1</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="526"/>
@@ -2493,37 +2473,35 @@ and the exit will be turned into a stub.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1635"/>
-      <source>
-It was locked, this is recorded as user data with key:
+      <location filename="../src/TRoom.cpp" line="1637"/>
+      <source>It was locked, this is recorded as user data with key:
 &quot;%1&quot;.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1639"/>
-      <source>  It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
+      <location filename="../src/TRoom.cpp" line="1640"/>
+      <source>It was locked, this is recorded as user data with key: &quot;%1&quot;.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1647"/>
-      <source>
-It had a weight, this is recorded as user data with key:
+      <location filename="../src/TRoom.cpp" line="1650"/>
+      <source>It had a weight, this is recorded as user data with key:
 &quot;%1&quot;.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1651"/>
-      <source>  It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
+      <location filename="../src/TRoom.cpp" line="1653"/>
+      <source>It had a weight, this is recorded as user data with key: &quot;%1&quot;.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1662"/>
+      <location filename="../src/TRoom.cpp" line="1664"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but
 it has not been possible to salvage this, it has been lost!</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoom.cpp" line="1667"/>
+      <location filename="../src/TRoom.cpp" line="1669"/>
       <source>[ WARN ]  - There was a custom exit line associated with the invalid exit but it has not been possible to salvage this, it has been lost!</source>
       <translation type="unfinished"/>
     </message>
@@ -2609,6 +2587,17 @@ Old ==&gt; New</source>
 out what new id numbers to use.</source>
       <translation type="unfinished"/>
     </message>
+    <message>
+      <location filename="../src/TRoomDB.cpp" line="857"/>
+      <source>[ INFO ]  - The renumbered rooms will be:</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TRoomDB.cpp" line="1177"/>
+      <source>[  OK  ]  - The changes made are:
+(ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
+      <translation type="unfinished"/>
+    </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="715"/>
       <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
@@ -2633,12 +2622,6 @@ out what new id numbers to use.</source>
     <message>
       <location filename="../src/TRoomDB.cpp" line="850"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/TRoomDB.cpp" line="857"/>
-      <source>[ INFO ]  - The renumbered rooms will be:
-</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -2721,13 +2704,6 @@ they have been removed.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TRoomDB.cpp" line="1177"/>
-      <source>[  OK  ]  - The changes made are:
-(ID) &quot;old name&quot; ==&gt; &quot;new name&quot;
-</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
       <location filename="../src/TRoomDB.cpp" line="1184"/>
       <source>&lt;nothing&gt;</source>
       <translation type="unfinished"/>
@@ -2803,597 +2779,596 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
   <context>
     <name>TTextEdit</name>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1496"/>
+      <location filename="../src/TTextEdit.cpp" line="1504"/>
       <source>Copy</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1507"/>
+      <location filename="../src/TTextEdit.cpp" line="1515"/>
       <source>Copy HTML</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1511"/>
+      <location filename="../src/TTextEdit.cpp" line="1519"/>
       <source>Copy as image</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1514"/>
+      <location filename="../src/TTextEdit.cpp" line="1522"/>
       <source>Select All</source>
       <translation>Selecionar tudo</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1519"/>
+      <location filename="../src/TTextEdit.cpp" line="1527"/>
       <source>Search on %1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1537"/>
+      <location filename="../src/TTextEdit.cpp" line="1545"/>
       <source>Analyse characters</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1546"/>
+      <location filename="../src/TTextEdit.cpp" line="1554"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1555"/>
+      <location filename="../src/TTextEdit.cpp" line="1563"/>
       <source>restore Main menu</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1557"/>
+      <location filename="../src/TTextEdit.cpp" line="1565"/>
       <source>Use this to restore the Main menu to get access to controls.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1559"/>
+      <location filename="../src/TTextEdit.cpp" line="1567"/>
       <source>restore Main Toolbar</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1561"/>
+      <location filename="../src/TTextEdit.cpp" line="1569"/>
       <source>Use this to restore the Main Toolbar to get access to controls.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1569"/>
+      <location filename="../src/TTextEdit.cpp" line="1577"/>
       <source>Clear console</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1572"/>
-      <source>*** starting new session ***
-</source>
+      <location filename="../src/TTextEdit.cpp" line="1580"/>
+      <source>*** starting new session ***</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1657"/>
+      <location filename="../src/TTextEdit.cpp" line="1666"/>
       <source>Mudlet, debug console extract</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1659"/>
+      <location filename="../src/TTextEdit.cpp" line="1668"/>
       <source>Mudlet, %1 mini-console extract from %2 profile</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1661"/>
+      <location filename="../src/TTextEdit.cpp" line="1670"/>
       <source>Mudlet, %1 user window extract from %2 profile</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="1663"/>
+      <location filename="../src/TTextEdit.cpp" line="1672"/>
       <source>Mudlet, main console extract from %1 profile</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2133"/>
+      <location filename="../src/TTextEdit.cpp" line="2146"/>
       <source>{tab}</source>
       <comment>Unicode U+0009 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2134"/>
+      <location filename="../src/TTextEdit.cpp" line="2147"/>
       <source>{line-feed}</source>
       <comment>Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2135"/>
+      <location filename="../src/TTextEdit.cpp" line="2148"/>
       <source>{carriage-return}</source>
       <comment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2136"/>
+      <location filename="../src/TTextEdit.cpp" line="2149"/>
       <source>{space}</source>
       <comment>Unicode U+0020 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2137"/>
+      <location filename="../src/TTextEdit.cpp" line="2150"/>
       <source>{non-breaking space}</source>
       <comment>Unicode U+00A0 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2138"/>
+      <location filename="../src/TTextEdit.cpp" line="2151"/>
       <source>{soft hyphen}</source>
       <comment>Unicode U+00AD codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2139"/>
+      <location filename="../src/TTextEdit.cpp" line="2152"/>
       <source>{combining grapheme joiner}</source>
       <comment>Unicode U+034F codepoint (badly named apparently - see Wikipedia!)</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2140"/>
+      <location filename="../src/TTextEdit.cpp" line="2153"/>
       <source>{ogham space mark}</source>
       <comment>Unicode U+1680 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2141"/>
+      <location filename="../src/TTextEdit.cpp" line="2154"/>
       <source>{&apos;n&apos; quad}</source>
       <comment>Unicode U+2000 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2142"/>
+      <location filename="../src/TTextEdit.cpp" line="2155"/>
       <source>{&apos;m&apos; quad}</source>
       <comment>Unicode U+2001 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2143"/>
+      <location filename="../src/TTextEdit.cpp" line="2156"/>
       <source>{&apos;n&apos; space}</source>
       <comment>Unicode U+2002 codepoint - En (&apos;n&apos;) wide space.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2144"/>
+      <location filename="../src/TTextEdit.cpp" line="2157"/>
       <source>{&apos;m&apos; space}</source>
       <comment>Unicode U+2003 codepoint - Em (&apos;m&apos;) wide space.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2145"/>
+      <location filename="../src/TTextEdit.cpp" line="2158"/>
       <source>{3-per-em space}</source>
       <comment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</comment>
       <translation>{3-per-em space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2146"/>
+      <location filename="../src/TTextEdit.cpp" line="2159"/>
       <source>{4-per-em space}</source>
       <comment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</comment>
       <translation>{4-per-em space}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2147"/>
+      <location filename="../src/TTextEdit.cpp" line="2160"/>
       <source>{6-per-em space}</source>
       <comment>Unicode U+2006 codepoint - six-per-em (&apos;m&apos;) wide (Sometimes the same as a Thin) space.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2148"/>
+      <location filename="../src/TTextEdit.cpp" line="2161"/>
       <source>{digit space}</source>
       <comment>Unicode U+2007 codepoint - figure (digit) wide space.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2149"/>
+      <location filename="../src/TTextEdit.cpp" line="2162"/>
       <source>{punctuation wide space}</source>
       <comment>Unicode U+2008 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2150"/>
+      <location filename="../src/TTextEdit.cpp" line="2163"/>
       <source>{5-per-em space}</source>
       <comment>Unicode U+2009 codepoint - five-per-em (&apos;m&apos;) wide space.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2151"/>
+      <location filename="../src/TTextEdit.cpp" line="2164"/>
       <source>{hair width space}</source>
       <comment>Unicode U+200A codepoint - thinnest space.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2152"/>
+      <location filename="../src/TTextEdit.cpp" line="2165"/>
       <source>{zero width space}</source>
       <comment>Unicode U+200B codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2153"/>
+      <location filename="../src/TTextEdit.cpp" line="2166"/>
       <source>{Zero width non-joiner}</source>
       <comment>Unicode U+200C codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2154"/>
+      <location filename="../src/TTextEdit.cpp" line="2167"/>
       <source>{zero width joiner}</source>
       <comment>Unicode U+200D codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2155"/>
+      <location filename="../src/TTextEdit.cpp" line="2168"/>
       <source>{left-to-right mark}</source>
       <comment>Unicode U+200E codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2156"/>
+      <location filename="../src/TTextEdit.cpp" line="2169"/>
       <source>{right-to-left mark}</source>
       <comment>Unicode U+200F codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2157"/>
+      <location filename="../src/TTextEdit.cpp" line="2170"/>
       <source>{line separator}</source>
       <comment>Unicode 0x2028 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2158"/>
+      <location filename="../src/TTextEdit.cpp" line="2171"/>
       <source>{paragraph separator}</source>
       <comment>Unicode U+2029 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2159"/>
+      <location filename="../src/TTextEdit.cpp" line="2172"/>
       <source>{Left-to-right embedding}</source>
       <comment>Unicode U+202A codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2160"/>
+      <location filename="../src/TTextEdit.cpp" line="2173"/>
       <source>{right-to-left embedding}</source>
       <comment>Unicode U+202B codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2161"/>
+      <location filename="../src/TTextEdit.cpp" line="2174"/>
       <source>{pop directional formatting}</source>
       <comment>Unicode U+202C codepoint - pop (undo last) directional formatting.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2162"/>
+      <location filename="../src/TTextEdit.cpp" line="2175"/>
       <source>{Left-to-right override}</source>
       <comment>Unicode U+202D codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2163"/>
+      <location filename="../src/TTextEdit.cpp" line="2176"/>
       <source>{right-to-left override}</source>
       <comment>Unicode U+202E codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2164"/>
+      <location filename="../src/TTextEdit.cpp" line="2177"/>
       <source>{narrow width no-break space}</source>
       <comment>Unicode U+202F codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2165"/>
+      <location filename="../src/TTextEdit.cpp" line="2178"/>
       <source>{medium width mathematical space}</source>
       <comment>Unicode U+205F codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2166"/>
+      <location filename="../src/TTextEdit.cpp" line="2179"/>
       <source>{zero width non-breaking space}</source>
       <comment>Unicode U+2060 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2167"/>
+      <location filename="../src/TTextEdit.cpp" line="2180"/>
       <source>{function application}</source>
       <comment>Unicode U+2061 codepoint - function application (whatever that means!)</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2168"/>
+      <location filename="../src/TTextEdit.cpp" line="2181"/>
       <source>{invisible times}</source>
       <comment>Unicode U+2062 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2169"/>
+      <location filename="../src/TTextEdit.cpp" line="2182"/>
       <source>{invisible separator}</source>
       <comment>Unicode U+2063 codepoint - invisible separator or comma.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2170"/>
+      <location filename="../src/TTextEdit.cpp" line="2183"/>
       <source>{invisible plus}</source>
       <comment>Unicode U+2064 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2171"/>
+      <location filename="../src/TTextEdit.cpp" line="2184"/>
       <source>{left-to-right isolate}</source>
       <comment>Unicode U+2066 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2172"/>
+      <location filename="../src/TTextEdit.cpp" line="2185"/>
       <source>{right-to-left isolate}</source>
       <comment>Unicode U+2067 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2173"/>
+      <location filename="../src/TTextEdit.cpp" line="2186"/>
       <source>{first strong isolate}</source>
       <comment>Unicode U+2068 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2174"/>
+      <location filename="../src/TTextEdit.cpp" line="2187"/>
       <source>{pop directional isolate}</source>
       <comment>Unicode U+2069 codepoint - pop (undo last) directional isolate.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2175"/>
+      <location filename="../src/TTextEdit.cpp" line="2188"/>
       <source>{inhibit symmetrical swapping}</source>
       <comment>Unicode U+206A codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2176"/>
+      <location filename="../src/TTextEdit.cpp" line="2189"/>
       <source>{activate symmetrical swapping}</source>
       <comment>Unicode U+206B codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2177"/>
+      <location filename="../src/TTextEdit.cpp" line="2190"/>
       <source>{inhibit arabic form-shaping}</source>
       <comment>Unicode U+206C codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2178"/>
+      <location filename="../src/TTextEdit.cpp" line="2191"/>
       <source>{activate arabic form-shaping}</source>
       <comment>Unicode U+206D codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2179"/>
+      <location filename="../src/TTextEdit.cpp" line="2192"/>
       <source>{national digit shapes}</source>
       <comment>Unicode U+206E codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2180"/>
+      <location filename="../src/TTextEdit.cpp" line="2193"/>
       <source>{nominal Digit shapes}</source>
       <comment>Unicode U+206F codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2181"/>
+      <location filename="../src/TTextEdit.cpp" line="2194"/>
       <source>{ideographic space}</source>
       <comment>Unicode U+3000 codepoint - ideographic (CJK Wide) space</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2182"/>
+      <location filename="../src/TTextEdit.cpp" line="2195"/>
       <source>{variation selector 1}</source>
       <comment>Unicode U+FE00 codepoint.</comment>
       <translation>{variation selector 1}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2183"/>
+      <location filename="../src/TTextEdit.cpp" line="2196"/>
       <source>{variation selector 2}</source>
       <comment>Unicode U+FE01 codepoint.</comment>
       <translation>{variation selector 2}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2184"/>
+      <location filename="../src/TTextEdit.cpp" line="2197"/>
       <source>{variation selector 3}</source>
       <comment>Unicode U+FE02 codepoint.</comment>
       <translation>{variation selector 3}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2185"/>
+      <location filename="../src/TTextEdit.cpp" line="2198"/>
       <source>{variation selector 4}</source>
       <comment>Unicode U+FE03 codepoint.</comment>
       <translation>{variation selector 4}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2186"/>
+      <location filename="../src/TTextEdit.cpp" line="2199"/>
       <source>{variation selector 5}</source>
       <comment>Unicode U+FE04 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2187"/>
+      <location filename="../src/TTextEdit.cpp" line="2200"/>
       <source>{variation selector 6}</source>
       <comment>Unicode U+FE05 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2188"/>
+      <location filename="../src/TTextEdit.cpp" line="2201"/>
       <source>{variation selector 7}</source>
       <comment>Unicode U+FE06 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2189"/>
+      <location filename="../src/TTextEdit.cpp" line="2202"/>
       <source>{variation selector 8}</source>
       <comment>Unicode U+FE07 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2190"/>
+      <location filename="../src/TTextEdit.cpp" line="2203"/>
       <source>{variation selector 9}</source>
       <comment>Unicode U+FE08 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2191"/>
+      <location filename="../src/TTextEdit.cpp" line="2204"/>
       <source>{variation selector 10}</source>
       <comment>Unicode U+FE09 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2192"/>
+      <location filename="../src/TTextEdit.cpp" line="2205"/>
       <source>{variation selector 11}</source>
       <comment>Unicode U+FE0A codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2193"/>
+      <location filename="../src/TTextEdit.cpp" line="2206"/>
       <source>{variation selector 12}</source>
       <comment>Unicode U+FE0B codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2194"/>
+      <location filename="../src/TTextEdit.cpp" line="2207"/>
       <source>{variation selector 13}</source>
       <comment>Unicode U+FE0C codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2195"/>
+      <location filename="../src/TTextEdit.cpp" line="2208"/>
       <source>{variation selector 14}</source>
       <comment>Unicode U+FE0D codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2196"/>
+      <location filename="../src/TTextEdit.cpp" line="2209"/>
       <source>{variation selector 15}</source>
       <comment>Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black &amp; white) rendition.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2197"/>
+      <location filename="../src/TTextEdit.cpp" line="2210"/>
       <source>{variation selector 16}</source>
       <comment>Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured &apos;Emoji&apos; rendition.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2198"/>
+      <location filename="../src/TTextEdit.cpp" line="2211"/>
       <source>{zero width no-break space}</source>
       <comment>Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2204"/>
+      <location filename="../src/TTextEdit.cpp" line="2217"/>
       <source>{interlinear annotation anchor}</source>
       <comment>Unicode U+FFF9 codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2205"/>
+      <location filename="../src/TTextEdit.cpp" line="2218"/>
       <source>{interlinear annotation separator}</source>
       <comment>Unicode U+FFFA codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2206"/>
+      <location filename="../src/TTextEdit.cpp" line="2219"/>
       <source>{interlinear annotation terminator}</source>
       <comment>Unicode U+FFFB codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2207"/>
+      <location filename="../src/TTextEdit.cpp" line="2220"/>
       <source>{object replacement character}</source>
       <comment>Unicode U+FFFC codepoint.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2219"/>
+      <location filename="../src/TTextEdit.cpp" line="2232"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFD0 to U+FDEF - not a character.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2221"/>
+      <location filename="../src/TTextEdit.cpp" line="2234"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint in range U+FFFx - not a character.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2230"/>
+      <location filename="../src/TTextEdit.cpp" line="2243"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <comment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</comment>
       <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2231"/>
+      <location filename="../src/TTextEdit.cpp" line="2244"/>
       <source>{FitzPatrick modifier 3}</source>
       <comment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</comment>
       <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2232"/>
+      <location filename="../src/TTextEdit.cpp" line="2245"/>
       <source>{FitzPatrick modifier 4}</source>
       <comment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</comment>
       <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2233"/>
+      <location filename="../src/TTextEdit.cpp" line="2246"/>
       <source>{FitzPatrick modifier 5}</source>
       <comment>Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2234"/>
+      <location filename="../src/TTextEdit.cpp" line="2247"/>
       <source>{FitzPatrick modifier 6}</source>
       <comment>Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2238"/>
+      <location filename="../src/TTextEdit.cpp" line="2251"/>
       <source>{noncharacter}</source>
       <comment>Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2509"/>
-      <location filename="../src/TTextEdit.cpp" line="2571"/>
+      <location filename="../src/TTextEdit.cpp" line="2522"/>
+      <location filename="../src/TTextEdit.cpp" line="2584"/>
       <source>Index (UTF-16)</source>
       <comment>1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2512"/>
-      <location filename="../src/TTextEdit.cpp" line="2573"/>
+      <location filename="../src/TTextEdit.cpp" line="2525"/>
+      <location filename="../src/TTextEdit.cpp" line="2586"/>
       <source>U+&lt;i&gt;####&lt;/i&gt; Unicode Code-point &lt;i&gt;(High:Low Surrogates)&lt;/i&gt;</source>
       <comment>2nd Row heading for Text analyser output, table item is the unicode code point (will be between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2516"/>
-      <location filename="../src/TTextEdit.cpp" line="2577"/>
+      <location filename="../src/TTextEdit.cpp" line="2529"/>
+      <location filename="../src/TTextEdit.cpp" line="2590"/>
       <source>Visual</source>
       <comment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</comment>
       <translation>Visual</translation>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2520"/>
-      <location filename="../src/TTextEdit.cpp" line="2581"/>
+      <location filename="../src/TTextEdit.cpp" line="2533"/>
+      <location filename="../src/TTextEdit.cpp" line="2594"/>
       <source>Index (UTF-8)</source>
       <comment>4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2524"/>
-      <location filename="../src/TTextEdit.cpp" line="2585"/>
+      <location filename="../src/TTextEdit.cpp" line="2537"/>
+      <location filename="../src/TTextEdit.cpp" line="2598"/>
       <source>Byte</source>
       <comment>5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua system uses {this translation used 2 times}</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTextEdit.cpp" line="2528"/>
-      <location filename="../src/TTextEdit.cpp" line="2589"/>
+      <location filename="../src/TTextEdit.cpp" line="2541"/>
+      <location filename="../src/TTextEdit.cpp" line="2602"/>
       <source>Lua character or code</source>
       <comment>6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 times}</comment>
       <translation type="unfinished"/>
@@ -3430,22 +3405,24 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTrigger.cpp" line="325"/>
-      <location filename="../src/TTrigger.cpp" line="409"/>
+      <location filename="../src/TTrigger.cpp" line="326"/>
+      <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/TTrigger.cpp" line="412"/>
       <source>[Trigger Error:] %1 capture group limit exceeded, capture less groups.
 </source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TTrigger.cpp" line="1159"/>
-      <source>Trigger name=%1 expired.
-</source>
+      <location filename="../src/TTrigger.cpp" line="1164"/>
+      <source>Trigger name=%1 expired.</source>
       <translation type="unfinished"/>
     </message>
     <message numerus="yes">
-      <location filename="../src/TTrigger.cpp" line="1164"/>
-      <source>Trigger name=%1 will fire %n more time(s).
-</source>
+      <location filename="../src/TTrigger.cpp" line="1169"/>
+      <source>Trigger name=%1 will fire %n more time(s).</source>
       <translation type="unfinished"/>
     </message>
   </context>
@@ -3546,7 +3523,7 @@ Would you like to update now?</source>
   <context>
     <name>VarUnit</name>
     <message>
-      <location filename="../src/VarUnit.cpp" line="88"/>
+      <location filename="../src/VarUnit.cpp" line="89"/>
       <source>Checked variables will be saved and loaded with your profile.</source>
       <translation type="unfinished"/>
     </message>
@@ -3747,49 +3724,43 @@ and this one cannot read it, you need a newer Mudlet!</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/aliases_main_area.ui" line="103"/>
+      <location filename="../src/ui/aliases_main_area.ui" line="98"/>
       <source>enter a perl regex pattern for your alias; alias are triggers on your input</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/aliases_main_area.ui" line="110"/>
+      <location filename="../src/ui/aliases_main_area.ui" line="105"/>
       <source>Type:</source>
       <translation>Tipo:</translation>
     </message>
     <message>
-      <location filename="../src/ui/aliases_main_area.ui" line="124"/>
+      <location filename="../src/ui/aliases_main_area.ui" line="119"/>
       <source>Regex</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/aliases_main_area.ui" line="129"/>
+      <location filename="../src/ui/aliases_main_area.ui" line="124"/>
       <source>Plain</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/aliases_main_area.ui" line="149"/>
+      <location filename="../src/ui/aliases_main_area.ui" line="144"/>
       <source>Command:</source>
       <translation>Comando:</translation>
     </message>
     <message>
-      <location filename="../src/ui/aliases_main_area.ui" line="171"/>
+      <location filename="../src/ui/aliases_main_area.ui" line="166"/>
       <source>&lt;p&gt;Type in one or more commands you want the alias to send directly to the game if the keys entered match the pattern. (Optional)&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/aliases_main_area.ui" line="174"/>
+      <location filename="../src/ui/aliases_main_area.ui" line="169"/>
       <source>Text to send to the game as-is (optional)</source>
       <translation type="unfinished"/>
     </message>
   </context>
   <context>
     <name>cTelnet</name>
-    <message>
-      <location filename="../src/ctelnet.cpp" line="573"/>
-      <source>[ INFO ]  - The IP address of %1 has been found. It is: %2
-</source>
-      <translation type="unfinished"/>
-    </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="582"/>
       <source>[ ERROR ] - Host name lookup Failure!
@@ -3817,12 +3788,6 @@ or your nameservers are not working properly.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="521"/>
       <source>Secure connections aren&apos;t supported by this game on this port - try turning the option off.</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/ctelnet.cpp" line="566"/>
-      <source>[ INFO ]  - Trying secure connection to %1: %2 ...
-</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -3876,15 +3841,23 @@ Reason: </source>
       <translation type="unfinished"/>
     </message>
     <message>
+      <location filename="../src/ctelnet.cpp" line="566"/>
+      <source>[ INFO ]  - Trying secure connection to %1: %2 ...</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/ctelnet.cpp" line="573"/>
+      <source>[ INFO ]  - The IP address of %1 has been found. It is: %2</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/ctelnet.cpp" line="575"/>
-      <source>[ INFO ]  - Trying to connect to %1:%2 ...
-</source>
+      <source>[ INFO ]  - Trying to connect to %1:%2 ...</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="577"/>
-      <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...
-</source>
+      <source>[ INFO ]  - Trying to connect to %1:%2 via proxy...</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -4584,145 +4557,145 @@ Count</source>
   <context>
     <name>directions</name>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15407"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15523"/>
       <source>north</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>norte</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15409"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15525"/>
       <source>n</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15411"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15527"/>
       <source>east</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>leste</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15413"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15529"/>
       <source>e</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15415"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15531"/>
       <source>south</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sul</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15417"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15533"/>
       <source>s</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15419"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15535"/>
       <source>west</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>oeste</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15421"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15537"/>
       <source>w</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15423"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15539"/>
       <source>northeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>nordeste</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15425"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15541"/>
       <source>ne</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15427"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15543"/>
       <source>southeast</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sudeste</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15429"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15545"/>
       <source>se</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15431"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15547"/>
       <source>southwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>sudoeste</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15433"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15549"/>
       <source>sw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15435"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15551"/>
       <source>northwest</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>noroeste</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15437"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15553"/>
       <source>nw</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15439"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15555"/>
       <source>in</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>dentro</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15441"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15557"/>
       <source>i</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15443"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15559"/>
       <source>out</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>fora</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15445"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15561"/>
       <source>o</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15447"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15563"/>
       <source>up</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>cima</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15449"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15565"/>
       <source>u</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15451"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15567"/>
       <source>down</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation>baixo</translation>
     </message>
     <message>
-      <location filename="../src/TLuaInterpreter.cpp" line="15453"/>
+      <location filename="../src/TLuaInterpreter.cpp" line="15569"/>
       <source>d</source>
       <comment>Entering this direction will move the player in the game</comment>
       <translation type="unfinished"/>
@@ -4731,7 +4704,7 @@ Count</source>
   <context>
     <name>dlgAboutDialog</name>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="146"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="147"/>
       <source>&lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Homepage&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://www.mudlet.org/&quot;&gt;www.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Forums&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://forums.mudlet.org/&quot;&gt;forums.mudlet.org&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Documentation&lt;/b&gt;&lt;/span&gt;&lt;/td&gt;&lt;td&gt;&lt;a href=&quot;http://wiki.mudlet.org/w/Main_Page&quot;&gt;wiki.mudlet.org/w/Main_Page&lt;/a&gt;&lt;/td&gt;&lt;/tr&gt;
@@ -4741,145 +4714,145 @@ Count</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="155"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="156"/>
       <source>Original author, original project lead, Mudlet core coding, retired.</source>
       <comment>about:Heiko</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="158"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="159"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <comment>about:Vadi</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="165"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="166"/>
       <source>After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; subsequently trying to patch over some of the holes made/found. Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language other than American English you will be seeing the results of him getting fed up with the spelling differences between what was being used and the British English his brain wanted to see.</source>
       <comment>about:SlySven</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="172"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="173"/>
       <source>Former maintainer of the early Windows and Apple OSX packages. He also administers our server and helps the project in many ways.</source>
       <comment>about:demonnic</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="176"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="177"/>
       <source>Contributed many improvements to Mudlet&apos;s db: interface, event system, and has been around the project for a very long while assisting users.</source>
       <comment>about:keneanung</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="180"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="181"/>
       <source>Does a ton of work in making Mudlet, the website and the wiki accessible to you regardless of the language you speak - and promoting our genre!</source>
       <comment>about:Leris</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="184"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="185"/>
       <source>Contributions to the Travis integration, CMake and Visual C++ build, a lot of code quality and memory management improvements.</source>
       <comment>about:ahmedcharles</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="188"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="189"/>
       <source>Developed a shared module system that allows script packages to be shared among profiles, a UI for viewing Lua variables, improvements in the mapper and all around.</source>
       <comment>about:Chris7</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="192"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="193"/>
       <source>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</source>
       <comment>about:Ben Carlsen</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="196"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="197"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <comment>about:Ben Smith</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="200"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="201"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <comment>about:Blaine von Roeder</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="204"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="205"/>
       <source>Developed the original cmake build script and he has committed a number of patches.</source>
       <comment>about:Bruno Bigras</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="207"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="208"/>
       <source>Contributed to the Lua API.</source>
       <comment>about:Carter Dewey</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="210"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="211"/>
       <source>Developed the Vyzor GUI Manager for Mudlet.</source>
       <comment>about:Oneymus</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="213"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="214"/>
       <source>Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - if you are a &lt;i&gt;SpamBot&lt;/i&gt; you will not get onto our Fora now. They have also made some useful C++ core code contributions and we look forward to future reviews on and work in that area.</source>
       <comment>about:TheFae</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="218"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="219"/>
       <source>Joining us 2017 they have given us some useful C++ and Lua contributions.</source>
       <comment>about:Dicene</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="221"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="222"/>
       <source>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</source>
       <comment>about:James Younquist</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="225"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="226"/>
       <source>Helped develop and debug the Lua API.</source>
       <comment>about:John Dahlström</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="228"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="229"/>
       <source>Contributed several improvements and new features for Geyser.</source>
       <comment>about:Beliaar</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="231"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="232"/>
       <source>The original author of our Windows installer.</source>
       <comment>about:Leigh Stillard</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="234"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="235"/>
       <source>Worked on the manual, forum help and helps with GUI design and documentation.</source>
       <comment>about:Maksym Grinenko</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="237"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="238"/>
       <source>Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.</source>
       <comment>about:Stephen Hansen</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="240"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="241"/>
       <source>Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. Visit his homepage at &lt;a href=&quot;http://thorwil.wordpress.com/&quot;&gt;thorwil.wordpress.com&lt;/a&gt;.</source>
       <comment>about:Thorsten Wilms</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="249"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="250"/>
       <source>&lt;p&gt;Others too, have make their mark on different aspects of the Mudlet project and if they have not been mentioned here it is by no means intentional! For past contributors you may see them mentioned in the &lt;b&gt;&lt;a href=&quot;https://launchpad.net/~mudlet-makers/+members#active&quot;&gt;Mudlet Makers&lt;/a&gt;&lt;/b&gt; list (on our former bug-tracking site), or for on-going contributors they may well be included in the &lt;b&gt;&lt;a href=&quot;https://github.com/Mudlet/Mudlet/graphs/contributors&quot;&gt;Contributors&lt;/a&gt;&lt;/b&gt; list on GitHub.&lt;/p&gt;
 &lt;br&gt;
 &lt;p&gt;Many icons are taken from the &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;&lt;u&gt;KDE4 oxygen icon theme&lt;/u&gt;&lt;/b&gt;&lt;/span&gt; at &lt;a href=&quot;https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/&quot;&gt;www.oxygen-icons.org &lt;sup&gt;{wayback machine archive}&lt;/sup&gt;&lt;/a&gt; or &lt;a href=&quot;http://www.kde.org&quot;&gt;www.kde.org&lt;/a&gt;.  Most of the rest are from Thorsten Wilms, or from Stephen Lyons combining bits of Thorsten&apos;s work with the other sources.&lt;/p&gt;
@@ -4889,156 +4862,156 @@ Count</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="294"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="295"/>
       <source>&lt;p&gt;Mudlet was originally written by Heiko Köhn, KoehnHeiko@googlemail.com.&lt;/p&gt;
 &lt;p&gt;Mudlet is released under the GPL license version 2, which is reproduced below:&lt;/p&gt;</source>
       <comment>For non-english language versions please append a translation of the following to explain why the GPL is NOT reproduced in the relevant language: &apos;but only the English form is considered the official version of the license, so the following is reproduced in that language:&apos; to replace &apos;which is reproduced below:&apos;...</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="590"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="591"/>
       <source>&lt;p align=&quot;center&quot;&gt;&lt;b&gt;Mudlet&lt;/b&gt; is built upon the shoulders of other projects in the FOSS world; as well as using many GPL components we also make use of some third-party software with other licenses:&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="832"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="833"/>
       <source>&lt;h2&gt;&lt;u&gt;Communi IRC Library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008-2020 The Communi Project&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="835"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="836"/>
       <source>&lt;p&gt;Parts of &lt;tt&gt;irctextformat.cpp&lt;/t&gt; code come from Konversation and are copyrighted to:&lt;br&gt;Copyright © 2002 Dario Abatianni &amp;lt;eisfuchs@tigress.com&amp;gt;&lt;br&gt;Copyright © 2004 Peter Simonsson &amp;lt;psn@linux.se&amp;gt;&lt;br&gt;Copyright © 2006-2008 Eike Hein &amp;lt;hein@kde.org&amp;gt;&lt;br&gt;Copyright © 2004-2009 Eli Mackenzie &amp;lt;argonel@gmail.com&amp;gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="841"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="842"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua - Lua 5.1&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1994–2017 Lua.org, PUC-Rio.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="844"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="845"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="847"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="848"/>
       <source>&lt;h2&gt;&lt;u&gt;Lua_yajl - Lua 5.1 interface to yajl&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Brian Maher &amp;lt;maherb at brimworks dot com&amp;gt;&lt;br&gt;Copyright © 2009 Brian Maher&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="851"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="852"/>
       <source>&lt;h2&gt;&lt;u&gt;Luautf8 - A UTF-8 support module for Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="854"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="855"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="857"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="858"/>
       <source>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre -  Regular expression library binding (PCRE flavour).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="868"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="869"/>
       <source>&lt;h2&gt;&lt;u&gt;Edbee - multi-feature editor widget&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2012-2014 by Reliable Bits Software by Blommers IT&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="886"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="887"/>
       <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="893"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="894"/>
       <source>&lt;h2&gt;&lt;u&gt;Dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="914"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="915"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle-glue&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2008 Remko Troncon&lt;br&gt;Copyright © 2017 Vadim Peretokin&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="926"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="927"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="930"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="931"/>
       <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="862"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="863"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaZip - Reading files inside zip files&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Author: Danilo Tuler&lt;br&gt;Copyright © 2003-2007 Kepler Project&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="871"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="872"/>
       <source>The &lt;b&gt;edbee-lib&lt;/b&gt; widget itself incorporates other components with licences that must be noted as well, they are:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="873"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="874"/>
       <source>&lt;h2&gt;&lt;u&gt;Onigmo (Oniguruma-mod) LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;Copyright © 2011-2014 K.Takata &amp;lt;kentkt AT csc DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="878"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="879"/>
       <source>&lt;h2&gt;&lt;u&gt;Oniguruma LICENSE&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2002-2009 K.Kosako &amp;lt;sndgk393 AT ybb DOT ne DOT jp&amp;gt;&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="882"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="883"/>
       <source>&lt;h2&gt;&lt;u&gt;Ruby BSDL&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 1993-2013 Yukihiro Matsumoto.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="896"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="897"/>
       <source>&lt;h2&gt;&lt;u&gt;Sparkle - macOS updater&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2006-2013 Andy Matuschak.&lt;br&gt;Copyright © 2009-2013 Elgato Systems GmbH.&lt;br&gt;Copyright © 2011-2014 Kornel Lesiński.&lt;br&gt;Copyright © 2015-2017 Mayur Pawashe.&lt;br&gt;Copyright © 2014 C.W. Betts.&lt;br&gt;Copyright © 2014 Petroules Corporation.&lt;br&gt;Copyright © 2014 Big Nerd Ranch.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="906"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="907"/>
       <source>&lt;h4&gt;bspatch.c and bsdiff.c, from bsdiff 4.3 &lt;a href=&quot;http://www.daemonology.net/bsdiff/&quot;&gt;http://www.daemonology.net/bsdiff&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2003-2005 Colin Percival.&lt;/h3&gt;&lt;h4&gt;sais.c and sais.c, from sais-lite (2010/08/07) &lt;a href=&quot;https://sites.google.com/site/yuta256/sais&quot;&gt;https://sites.google.com/site/yuta256/sais&lt;/a&gt;:&lt;/h4&gt;&lt;h3&gt;Copyright © 2008-2010 Yuta Mori.&lt;/h3&gt;&lt;h4&gt;SUDSAVerifier.m:&lt;/h4&gt;&lt;h3&gt;Copyright © 2011 Mark Hamlin.&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="920"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="921"/>
       <source>&lt;h2&gt;&lt;u&gt;Discord - Rich Presence - RPC library&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Discord, Inc.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="923"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="924"/>
       <source>&lt;h2&gt;&lt;u&gt;QtKeyChain - Platform-independent Qt API for storing passwords securely&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2011-2019 Frank Osterfeld &amp;lt;frank.osterfeld@gmail.com&amp;gt;.&lt;/h3&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1090"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1091"/>
       <source>
                           These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                           </source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1101"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1102"/>
       <source>Technical information:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1102"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1103"/>
       <source>Version</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1103"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1104"/>
       <source>OS</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgAboutDialog.cpp" line="1104"/>
+      <location filename="../src/dlgAboutDialog.cpp" line="1105"/>
       <source>CPU</source>
       <translation type="unfinished"/>
     </message>
@@ -6752,40 +6725,24 @@ and there is enough space. The copying operation has failed.</source>
     <name>dlgRoomSymbol</name>
     <message numerus="yes">
       <location filename="../src/dlgRoomSymbol.cpp" line="80"/>
-      <source>The only used symbol is &quot;%1&quot; in one or
-more of the selected %n room(s), delete this to
-clear it from all selected rooms or replace
-with a new symbol to use for all the rooms:</source>
-      <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation>
-        <numerusform>O único símbolo usado é &quot;%1&quot; num ou
-mais das %n sala(s) selecionada(s), remova isto para
-limpa-lo de todas as salas selecionadas ou para substituir
-com um novo símbolo para usar em todas as salas:</numerusform>
-        <numerusform>O único símbolo usado é &quot;%1&quot; num ou
-mais das %n sala(s) selecionada(s), remova isto para
-limpa-lo de todas as salas selecionadas ou para substituir
-com um novo símbolo para usar em todas as salas:</numerusform>
-      </translation>
+      <source>The only used symbol is &quot;%1&quot; in one or more of the selected %n room(s), delete this to clear it from all selected rooms or replace with a new symbol to use for all the rooms:</source>
+      <comment>This is for when applying a new room symbol to one or more rooms and some have the SAME symbol (others may have none) at present, %n is the total number of rooms involved and is at least two. </comment>
+      <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/dlgRoomSymbol.cpp" line="91"/>
-      <source>The symbol is &quot;%1&quot; in the selected room,
-delete this to clear the symbol or replace
-it with a new symbol for this room:</source>
-      <comment>This is for when applying a new room symbol to one room. Use line feeds to format text into a reasonable rectangle.</comment>
-      <translation>O símbolo é &quot;%1&quot; na sala selecionada,
-exclua-o para limpar o símbolo ou substituir
-com um novo símbolo para esta sala:</translation>
+      <location filename="../src/dlgRoomSymbol.cpp" line="90"/>
+      <source>The symbol is &quot;%1&quot; in the selected room, delete this to clear the symbol or replace it with a new symbol for this room:</source>
+      <comment>This is for when applying a new room symbol to one room.</comment>
+      <translation type="unfinished"/>
     </message>
     <message numerus="yes">
-      <location filename="../src/dlgRoomSymbol.cpp" line="100"/>
+      <location filename="../src/dlgRoomSymbol.cpp" line="98"/>
       <source>Choose:
  • an existing symbol from the list below (sorted by most commonly used first)
  • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
  • enter a space to clear any existing symbols
 for all of the %n selected room(s):</source>
-      <comment>Use line feeds to format text into a reasonable rectangle if needed, %n is the number of rooms involved.</comment>
+      <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols (others may have none) at present, %n is the number of rooms involved.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -6802,18 +6759,6 @@ for all of the %n selected room(s):</source>
   </context>
   <context>
     <name>dlgTriggerEditor</name>
-    <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="211"/>
-      <source>-- Enter your lua code here
-</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/dlgTriggerEditor.cpp" line="291"/>
-      <source>*** starting new session ***
-</source>
-      <translation type="unfinished"/>
-    </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="379"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="5832"/>
@@ -7037,6 +6982,16 @@ for all of the %n selected room(s):</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="142"/>
       <source>%1 - Editor</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="211"/>
+      <source>-- Enter your lua code here</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/dlgTriggerEditor.cpp" line="291"/>
+      <source>*** starting new session ***</source>
       <translation type="unfinished"/>
     </message>
     <message>
@@ -8066,22 +8021,22 @@ for all of the %n selected room(s):</source>
   <context>
     <name>edbee::TextEditorComponent</name>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="573"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="580"/>
       <source>Cut</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="574"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="581"/>
       <source>Copy</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="575"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="582"/>
       <source>Paste</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="577"/>
+      <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/views/components/texteditorcomponent.cpp" line="584"/>
       <source>Select All</source>
       <translation>Selecionar tudo</translation>
     </message>
@@ -8196,57 +8151,49 @@ for all of the %n selected room(s):</source>
        --profile=&lt;profile&gt;  additional profile to open
 
 There are other inherited options that arise from the Qt Libraries which are
-less likely to be useful for normal use of this application:
-</source>
+less likely to be useful for normal use of this application:</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/main.cpp" line="276"/>
+      <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
+      <location filename="../src/main.cpp" line="277"/>
+      <source>Project home page: http://www.mudlet.org/</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
-      <source>%1 %2%3 (with debug symbols, without optimisations)
-</source>
+      <source>%1 %2%3 (with debug symbols, without optimisations)</source>
       <comment>%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev</comment>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/main.cpp" line="291"/>
-      <source>Qt libraries %1 (compilation) %2 (runtime)
-</source>
+      <source>Qt libraries %1 (compilation) %2 (runtime)</source>
       <comment>%1 and %2 are version numbers</comment>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/main.cpp" line="294"/>
-      <source>Copyright © 2008-2022  Mudlet developers
-</source>
+      <source>Copyright © 2008-2022  Mudlet developers</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/main.cpp" line="295"/>
-      <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html
-</source>
+      <source>Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>This is free software: you are free to change and redistribute it.
-There is NO WARRANTY, to the extent permitted by law.
-</source>
+There is NO WARRANTY, to the extent permitted by law.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/main.cpp" line="276"/>
-      <source>Report bugs to: https://github.com/Mudlet/Mudlet/issues
-</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/main.cpp" line="277"/>
-      <source>Project home page: http://www.mudlet.org/
-</source>
-      <translation type="unfinished"/>
-    </message>
-    <message>
-      <location filename="../src/main.cpp" line="320"/>
+      <location filename="../src/main.cpp" line="321"/>
       <source>Version: %1</source>
       <translation type="unfinished"/>
     </message>
@@ -9111,7 +9058,7 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="537"/>
-      <location filename="../src/mudlet.cpp" line="3663"/>
+      <location filename="../src/mudlet.cpp" line="3668"/>
       <source>Inform yourself about this version of Mudlet, the people who made it and the licence under which you can share it.</source>
       <comment>Tooltip for About Mudlet sub-menu item and main toolbar button (or menu item if an update has changed that control to have a popup menu instead) (Used in 3 places - please ensure all have the same translation).</comment>
       <translation type="unfinished"/>
@@ -10089,33 +10036,33 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3073"/>
+      <location filename="../src/mudlet.cpp" line="3078"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3092"/>
+      <location filename="../src/mudlet.cpp" line="3097"/>
       <source>Replay each step with a shorter time interval between steps.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3098"/>
+      <location filename="../src/mudlet.cpp" line="3103"/>
       <source>Replay each step with a longer time interval between steps.</source>
       <translation type="unfinished"/>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3697"/>
+      <location filename="../src/mudlet.cpp" line="3702"/>
       <source>Review the update(s) available...</source>
       <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4572"/>
+      <location filename="../src/mudlet.cpp" line="4577"/>
       <source>Hide tray icon</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="4577"/>
+      <location filename="../src/mudlet.cpp" line="4582"/>
       <source>Quit Mudlet</source>
       <translation type="unfinished"/>
     </message>
@@ -10298,7 +10245,7 @@ There is NO WARRANTY, to the extent permitted by law.
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="536"/>
-      <location filename="../src/mudlet.cpp" line="3680"/>
+      <location filename="../src/mudlet.cpp" line="3685"/>
       <source>About</source>
       <translation type="unfinished"/>
     </message>
@@ -10538,13 +10485,13 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1705"/>
-      <location filename="../src/mudlet.cpp" line="3169"/>
+      <location filename="../src/mudlet.cpp" line="1710"/>
+      <location filename="../src/mudlet.cpp" line="3174"/>
       <source>Load a Mudlet replay.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2767"/>
+      <location filename="../src/mudlet.cpp" line="2772"/>
       <source>Central Debug Console</source>
       <translation type="unfinished"/>
     </message>
@@ -10584,78 +10531,78 @@ There is NO WARRANTY, to the extent permitted by law.
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="1668"/>
+      <location filename="../src/mudlet.cpp" line="1673"/>
       <source>&lt;p&gt;Load a Mudlet replay.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Disabled until a profile is loaded.&lt;/i&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2536"/>
+      <location filename="../src/mudlet.cpp" line="2541"/>
       <source>%1 - notes</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2620"/>
+      <location filename="../src/mudlet.cpp" line="2625"/>
       <source>Select Replay</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2622"/>
+      <location filename="../src/mudlet.cpp" line="2627"/>
       <source>*.dat</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="2932"/>
+      <location filename="../src/mudlet.cpp" line="2937"/>
       <source>[  OK  ]  - Profile &quot;%1&quot; loaded in offline mode.</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3013"/>
+      <location filename="../src/mudlet.cpp" line="3018"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <comment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3090"/>
+      <location filename="../src/mudlet.cpp" line="3095"/>
       <source>Faster</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3096"/>
+      <location filename="../src/mudlet.cpp" line="3101"/>
       <source>Slower</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3108"/>
-      <location filename="../src/mudlet.cpp" line="3177"/>
-      <location filename="../src/mudlet.cpp" line="3190"/>
+      <location filename="../src/mudlet.cpp" line="3113"/>
+      <location filename="../src/mudlet.cpp" line="3182"/>
+      <location filename="../src/mudlet.cpp" line="3195"/>
       <source>Speed: X%1</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3115"/>
-      <location filename="../src/mudlet.cpp" line="3132"/>
+      <location filename="../src/mudlet.cpp" line="3120"/>
+      <location filename="../src/mudlet.cpp" line="3137"/>
       <source>Time: %1</source>
       <translation type="unfinished"/>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3674"/>
+      <location filename="../src/mudlet.cpp" line="3679"/>
       <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
       <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
       <translation type="unfinished"/>
     </message>
     <message numerus="yes">
-      <location filename="../src/mudlet.cpp" line="3692"/>
+      <location filename="../src/mudlet.cpp" line="3697"/>
       <source>Review %n update(s)...</source>
       <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3722"/>
+      <location filename="../src/mudlet.cpp" line="3727"/>
       <source>Update installed - restart to apply</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/mudlet.cpp" line="3758"/>
+      <location filename="../src/mudlet.cpp" line="3763"/>
       <source>[ WARN ]  - Cannot perform replay, another one may already be in progress,
 try again when it has finished.</source>
       <translation type="unfinished"/>
@@ -13145,66 +13092,66 @@ or LUA script</source>
   <context>
     <name>vars_main_area</name>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="109"/>
+      <location filename="../src/ui/vars_main_area.ui" line="112"/>
       <source>Name:</source>
       <translation>Nome:</translation>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="175"/>
+      <location filename="../src/ui/vars_main_area.ui" line="181"/>
       <source>⏴ Key type:</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="125"/>
+      <location filename="../src/ui/vars_main_area.ui" line="131"/>
       <source>&lt;p&gt;Set the &lt;i&gt;global variable&lt;/i&gt; or the &lt;i&gt;table entry&lt;/i&gt; name here. The name has to start with a letter, but can contain a mix of letters and numbers.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="51"/>
-      <location filename="../src/ui/vars_main_area.ui" line="145"/>
+      <location filename="../src/ui/vars_main_area.ui" line="151"/>
       <source>Auto-Type</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="128"/>
+      <location filename="../src/ui/vars_main_area.ui" line="134"/>
       <source>Variable name ...</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="138"/>
+      <location filename="../src/ui/vars_main_area.ui" line="144"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modified from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="150"/>
+      <location filename="../src/ui/vars_main_area.ui" line="156"/>
       <source>key (string)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="155"/>
+      <location filename="../src/ui/vars_main_area.ui" line="161"/>
       <source>index (integer)</source>
       <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="71"/>
-      <location filename="../src/ui/vars_main_area.ui" line="160"/>
+      <location filename="../src/ui/vars_main_area.ui" line="166"/>
       <source>table</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="165"/>
+      <location filename="../src/ui/vars_main_area.ui" line="171"/>
       <source>function
 (cannot create
 from GUI)</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="185"/>
+      <location filename="../src/ui/vars_main_area.ui" line="194"/>
       <source>&lt;p&gt;If checked this item (and its children, if applicable) does not show in area to the left unless &lt;b&gt;Show normally hidden variables&lt;/b&gt; is checked.&lt;/p&gt;</source>
       <translation type="unfinished"/>
     </message>
     <message>
-      <location filename="../src/ui/vars_main_area.ui" line="188"/>
+      <location filename="../src/ui/vars_main_area.ui" line="197"/>
       <source>hidden variable</source>
       <translation type="unfinished"/>
     </message>

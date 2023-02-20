@@ -169,7 +169,7 @@ public:
     QString         getDiscordGameName()             { return mDiscordGameName; }
     void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
     int             getPort()                        { return mPort; }
-    void            setPort(const int p)                 { mPort = p; }
+    void            setPort(const int p)             { mPort = p; }
     void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
     QString &       getLogin()                       { return mLogin; }
     void            setLogin(const QString& s)       { mLogin = s; }
@@ -196,7 +196,7 @@ public:
     void            setDiscordInviteURL(const QString& s);
     const QString&  getDiscordInviteURL() const { return mDiscordInviteURL; }
     void            setSpellDic(const QString&);
-    const QString&  getSpellDic() { return mSpellDic; }
+    QString         getSpellDic();
     void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
@@ -399,8 +399,8 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
-    bool autoWrap() const;
-    void setAutoWrap(bool enabled);
+    void setFocusOnHostMainConsole();
+    QPointer<TConsole> parentTConsole(QObject*) const;
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -431,6 +431,9 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+    bool mAskTlsAvailable;
+    int mMSSPTlsPort;
+    QString mMSSPHostName;
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
@@ -520,9 +523,7 @@ public:
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
-    // wrap at a specific amount of characters if not autowrapping:
     int mWrapAt;
-    // after wrapping a line, intent it by how many spaces:
     int mWrapIndentCount;
 
     bool mEditorAutoComplete;
@@ -645,7 +646,7 @@ public:
     QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
-    QList<TToolBar*> mToolbarLayoutChanges;
+    QList<QPointer<TToolBar>> mToolbarLayoutChanges;
 
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
@@ -711,6 +712,7 @@ private:
     void startMapAutosave();
     void timerEvent(QTimerEvent *event) override;
     void autoSaveMap();
+    QString sanitizePackageName(const QString packageName) const;
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
@@ -722,9 +724,6 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
-
-    // automatically calculate wrapping?
-    bool mAutoWrap = true;
 
     QFile mErrorLogFile;
 

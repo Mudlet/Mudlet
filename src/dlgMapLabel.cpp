@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,16 +17,15 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #include "dlgMapLabel.h"
 
-#include "pre_guard.h"
-#include <QColorDialog>
-#include <QFontDialog>
-#include "post_guard.h"
+#include "utils.h"
 
-static QString BUTTON_STYLESHEET = QStringLiteral("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
+static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
 
-dlgMapLabel::dlgMapLabel(QWidget* pF) : QDialog(pF), fgColor(QColor(255, 255, 50, 255)), bgColor(QColor(50, 50, 150, 100))
+dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
+: QDialog(pParentWidget)
 {
     setupUi(this);
 
@@ -55,8 +55,6 @@ dlgMapLabel::dlgMapLabel(QWidget* pF) : QDialog(pF), fgColor(QColor(255, 255, 50
     slot_updateControls();
     slot_updateControlsVisibility();
 }
-
-dlgMapLabel::~dlgMapLabel() {}
 
 bool dlgMapLabel::isTextLabel()
 {

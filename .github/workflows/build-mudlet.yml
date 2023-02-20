@@ -12,6 +12,7 @@ jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
+    if: ${{ github.repository_owner == 'Mudlet' }}
     strategy:
       fail-fast: false
       matrix:
@@ -21,6 +22,7 @@ jobs:
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
+            gcc_compiler_version: 8
             qt: '5.14.2'
             deploy: 'deploy'
             run_tests: 'true'
@@ -28,6 +30,8 @@ jobs:
             buildname: 'ubuntu / clang'
             triplet: x64-linux
             compiler: clang_64
+            # We still need a gcc for some sub-stages - and it ain't always the same one:
+            gcc_compiler_version: 9
             qt: '5.14.2'
           - os: macos-11
             buildname: 'macos / c++ tests'
@@ -35,11 +39,11 @@ jobs:
             compiler: clang_64
             qt: '5.14.2'
             deploy: 'deploy'
-          - os: windows-2019
-            buildname: 'windows'
-            triplet: x64-mingw-dynamic
-            # compiler: flag not used in windows pipeline
-            qt: '5.14.2'
+#           - os: windows-2019
+#             buildname: 'windows'
+#             triplet: x64-mingw-dynamic
+#             # compiler: flag not used in windows pipeline
+#             qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
@@ -54,21 +58,22 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: Restore Qt cache
-      uses: actions/cache@v3
-      id: cache-qt
-      with:
-        path: ${{runner.workspace}}/Qt/${{matrix.qt}}
-        key: ${{matrix.os}}-qt-${{matrix.qt}}-cache
-
-    - name: Install Qt
-      uses: jurplel/install-qt-action@v2
+    - name: (Windows) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Windows'
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
-        arch: win64_mingw73 # this key is relevant only for windows
-        cached: ${{steps.cache-qt.outputs.cache-hit}}
-        aqtversion: '==1.1.2'
+        arch: win64_mingw73
+        cache: true
+
+    - name: (Linux/macOS) Install Qt
+      uses: jurplel/install-qt-action@v3
+      if: runner.os == 'Linux' || runner.os == 'macOS'
+      with:
+        version: ${{matrix.qt}}
+        dir: ${{runner.workspace}}
+        cache: true
 
     - name: Restore Boost cache
       uses: actions/cache@v3
@@ -105,7 +110,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # dependencies needed for vcpkg specifically
-        brew install automake autoconf
+        brew install automake autoconf pkg-config
 
     - name: (Linux) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'Linux'
@@ -131,7 +136,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install pkg-config libzzip libzip ccache luarocks expect mitchellh/gon/gon
+        brew install libzzip libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -159,7 +164,7 @@ jobs:
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
     - name: (Linux) Install Lua
-      uses: leafo/gh-actions-lua@v9
+      uses: leafo/gh-actions-lua@v10
       if: runner.os == 'Linux'
       with:
         luaVersion: "5.1.5"
@@ -177,14 +182,14 @@ jobs:
         # Install from vcpkg everything we can for cross-platform consistency
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
-        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-7 \
+        sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
           libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 7
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-7 7
-        sudo update-alternatives --set gcc /usr/bin/gcc-7
-        sudo update-alternatives --set g++ /usr/bin/g++-7
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
+        sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
@@ -307,7 +312,7 @@ jobs:
         run-luarocks install --local luautf8
         run-luarocks install --local lua-zip
         run-luarocks install SQLITE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
-        run-luarocks install --local lrexlib-pcre
+        run-luarocks install PCRE_INCDIR="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/include" --local lrexlib-pcre
 
         # CI changelog generation dependencies
         run-luarocks install --local argparse
@@ -324,6 +329,12 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+
+    - name: (Linux/macOS) add ssh-agent for tag deployment
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && github.event == 'tag'
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
     - name: (Linux/macOS) package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'

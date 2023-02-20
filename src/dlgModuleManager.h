@@ -2,8 +2,8 @@
 #define MUDLET_DLGMODULEMANAGER_H
 
 /***************************************************************************
- *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2011 by Chris Mitchell                                  *
+ *   Copyright (C) 2021 by Manuel Wegmann - wegmann.manuel@yahoo.com       *
  *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -26,25 +26,20 @@
 #include "Host.h"
 
 #include "pre_guard.h"
-#include "QTableWidget"
+#include "ui_module_manager.h"
 #include <QDialog>
 #include "post_guard.h"
 
-class Host;
-namespace Ui {
-class module_manager;
-}
-
-class dlgModuleManager : public QDialog
+class dlgModuleManager : public QDialog, public Ui::module_manager
 {
     Q_OBJECT
 
 public:
     Q_DISABLE_COPY(dlgModuleManager)
     explicit dlgModuleManager(QWidget* parent, Host*);
-    ~dlgModuleManager();
-     void layoutModules();
-     QTableWidget* mModuleTable;
+    ~dlgModuleManager() override;
+
+    void layoutModules();
 
 private slots:
     void slot_installModule();
@@ -54,11 +49,7 @@ private slots:
     void slot_moduleChanged(QTableWidgetItem*);
 
 private:
-    Ui::module_manager* ui = nullptr;
     Host* mpHost = nullptr;
-    QPushButton* mModuleUninstallButton = nullptr;
-    QPushButton* mModuleInstallButton = nullptr;
-    QPushButton* mModuleHelpButton = nullptr;
 };
 
 #endif
