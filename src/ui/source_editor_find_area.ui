@@ -19,7 +19,7 @@
   <property name="focusPolicy">
    <enum>Qt::StrongFocus</enum>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout" stretch="6,0,1,0,0,0">
+  <layout class="QHBoxLayout" name="horizontalLayout" stretch="5,0,0,5,0,0">
    <property name="sizeConstraint">
     <enum>QLayout::SetDefaultConstraint</enum>
    </property>
@@ -98,7 +98,8 @@
       <string/>
      </property>
      <property name="icon">
-      <iconset theme="edit-paste"/>
+      <iconset theme="edit-paste">
+       <normaloff>.</normaloff>.</iconset>
      </property>
      <property name="flat">
       <bool>true</bool>
