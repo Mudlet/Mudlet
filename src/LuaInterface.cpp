@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020, 2023 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -37,7 +37,7 @@ static jmp_buf buf;
 
 LuaInterface::LuaInterface(lua_State* L)
 : depth()
-, L(L)
+, mL(L)
 {
     varUnit.reset(new VarUnit());
     //set our panic function
@@ -160,7 +160,7 @@ bool LuaInterface::reparentCVariable(TVar* from, TVar* to, TVar* curVar)
             // moving from global to global or nowhere
             return true;
         }
-        int stackSize = lua_gettop(L);
+        int stackSize = lua_gettop(mL);
         bool isSaved = varUnit->isSaved(curVar);
         if (isSaved) {
             QList<TVar*> list;
@@ -172,11 +172,11 @@ bool LuaInterface::reparentCVariable(TVar* from, TVar* to, TVar* curVar)
             }
         }
         QList<TVar*> vars = varOrder(curVar);
-        lua_getglobal(L, (vars[0]->getName()).toUtf8().constData());
+        lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
         int i = 1;
         for (; i < vars.size(); i++) {
-            if (!loadValue(L, vars[i], -2)) {
-                lua_settop(L, stackSize);
+            if (!loadValue(mL, vars[i], -2)) {
+                lua_settop(mL, stackSize);
                 return false;
             }
         }
@@ -188,45 +188,45 @@ bool LuaInterface::reparentCVariable(TVar* from, TVar* to, TVar* curVar)
         //do the actual reparenting part
         if (to == varUnit->getBase()) {
             //we're going global
-            lua_setglobal(L, curVar->getName().toUtf8().constData());
+            lua_setglobal(mL, curVar->getName().toUtf8().constData());
         } else {
-            lua_getglobal(L, (vars[0]->getName()).toUtf8().constData());
+            lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
             i = 1;
             for (; i < vars.size() - 1; i++) {
-                if (!loadValue(L, vars[i], -2)) {
-                    lua_settop(L, stackSize);
+                if (!loadValue(mL, vars[i], -2)) {
+                    lua_settop(mL, stackSize);
                     return false;
                 }
-                lua_remove(L, -2);
+                lua_remove(mL, -2);
             }
-            lua_insert(L, -2);
-            if (!loadKey(L, curVar)) {
-                lua_settop(L, stackSize);
+            lua_insert(mL, -2);
+            if (!loadKey(mL, curVar)) {
+                lua_settop(mL, stackSize);
                 return false;
             }
-            lua_insert(L, -2);
-            if (!lua_istable(L, -3)) {
-                lua_settop(L, stackSize);
+            lua_insert(mL, -2);
+            if (!lua_istable(mL, -3)) {
+                lua_settop(mL, stackSize);
                 return false;
             }
-            lua_settable(L, -3);
-            lua_pop(L, 1);
+            lua_settable(mL, -3);
+            lua_pop(mL, 1);
         }
         //delete the old copy
         if (from == varUnit->getBase()) {
-            lua_pushnil(L);
-            lua_setglobal(L, curVar->getName().toUtf8().constData());
+            lua_pushnil(mL);
+            lua_setglobal(mL, curVar->getName().toUtf8().constData());
         } else {
-            if (!loadKey(L, curVar)) {
-                lua_settop(L, stackSize);
+            if (!loadKey(mL, curVar)) {
+                lua_settop(mL, stackSize);
                 return false;
             }
-            lua_pushnil(L);
-            if (!lua_istable(L, -3)) {
-                lua_settop(L, stackSize);
+            lua_pushnil(mL);
+            if (!lua_istable(mL, -3)) {
+                lua_settop(mL, stackSize);
                 return false;
             }
-            lua_settable(L, -3);
+            lua_settable(mL, -3);
         }
         if (isSaved) {
             QList<TVar*> list;
@@ -238,7 +238,7 @@ bool LuaInterface::reparentCVariable(TVar* from, TVar* to, TVar* curVar)
                 varUnit->addSavedVar(t);
             }
         }
-        lua_settop(L, stackSize);
+        lua_settop(mL, stackSize);
         return true;
     }
     return false;
@@ -316,39 +316,39 @@ bool LuaInterface::setCValue(QList<TVar*> vars)
     //make the new stack
     TVar* var = vars.back();
     if (setjmp(buf) == 0) {
-        int stackSize = lua_gettop(L);
-        lua_getglobal(L, (vars[0]->getName()).toUtf8().constData());
+        int stackSize = lua_gettop(mL);
+        lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
         int i = 1;
         for (; i < vars.size() - 1; i++) {
-            if (!loadValue(L, vars[i], -2)) {
-                lua_settop(L, stackSize);
+            if (!loadValue(mL, vars[i], -2)) {
+                lua_settop(mL, stackSize);
                 return false;
             }
         }
         //push our value onto the stack
         switch (var->getValueType()) {
         case LUA_TSTRING:
-            lua_pushstring(L, var->getValue().toUtf8().constData());
+            lua_pushstring(mL, var->getValue().toUtf8().constData());
             break;
         case LUA_TNUMBER:
-            lua_pushnumber(L, var->getValue().toInt());
+            lua_pushnumber(mL, var->getValue().toInt());
             break;
         case LUA_TBOOLEAN:
-            lua_pushboolean(L, var->getValue().toLower() == "true" ? 1 : 0);
+            lua_pushboolean(mL, var->getValue().toLower() == "true" ? 1 : 0);
             break;
         case LUA_TTABLE:
-            lua_newtable(L);
+            lua_newtable(mL);
             break;
         default:
-            lua_settop(L, stackSize);
+            lua_settop(mL, stackSize);
             return false;
         }
         //set it up
-        if (lua_type(L, -1) != var->getValueType()) {
-            lua_settop(L, stackSize);
+        if (lua_type(mL, -1) != var->getValueType()) {
+            lua_settop(mL, stackSize);
             return false;
         }
-        lua_settable(L, -3);
+        lua_settable(mL, -3);
     }
     return false;
 }
@@ -387,18 +387,18 @@ bool LuaInterface::setValue(TVar* var)
     default:
         return false;
     }
-    int error = luaL_loadstring(L, variableChangeCode.toUtf8().constData());
+    int error = luaL_loadstring(mL, variableChangeCode.toUtf8().constData());
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - Internal Lua (parsing) error: \""
-                                       << lua_tostring(L, -1)
+                                       << lua_tostring(mL, -1)
                                        << "\" in code:\n\""
                                        << variableChangeCode << "\".";
         return false;
     }
-    error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    error = lua_pcall(mL, 0, LUA_MULTRET, 0);
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - Internal Lua (executing) error: \""
-                                       << lua_tostring(L, -1)
+                                       << lua_tostring(mL, -1)
                                        << "\" in code:\n\""
                                        << variableChangeCode << "\".";
         return false;
@@ -420,18 +420,18 @@ void LuaInterface::deleteVar(TVar* var)
     }
     //delete it
     oldName.append(qsl(" = nil"));
-    int error = luaL_loadstring(L, oldName.toUtf8().constData());
+    int error = luaL_loadstring(mL, oldName.toUtf8().constData());
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Internal Lua (parsing) error: \""
-                                       << lua_tostring(L, -1)
+                                       << lua_tostring(mL, -1)
                                        << "\" in code:\n\""
                                        << oldName << "\".";
         return;
     }
-    error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    error = lua_pcall(mL, 0, LUA_MULTRET, 0);
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::deleteVar(...) WARNING - Internal Lua (executing) error: \""
-                                       << lua_tostring(L, -1)
+                                       << lua_tostring(mL, -1)
                                        << "\" in code:\n\""
                                        << oldName << "\".";
     }
@@ -445,7 +445,7 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
 
     TVar* var = vars.back();
     //make the new stack
-    lua_getglobal(L, (vars[0]->getName()).toUtf8().constData());
+    lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
     if (setjmp(buf) == 0) {
         int i = 1;
         int pushCount = 0;
@@ -453,101 +453,101 @@ void LuaInterface::renameCVar(QList<TVar*> vars)
         for (; i < vars.size() - 1; i++) {
             kType = vars[i]->getKeyType();
             if (kType == LUA_TNUMBER) {
-                lua_pushnumber(L, QString(vars[i]->getName()).toInt());
+                lua_pushnumber(mL, QString(vars[i]->getName()).toInt());
             } else if (kType == LUA_TTABLE) {
-                lua_rawgeti(L, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
+                lua_rawgeti(mL, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
             } else {
-                lua_pushstring(L, QString(vars[i]->getName()).toUtf8().constData());
+                lua_pushstring(mL, QString(vars[i]->getName()).toUtf8().constData());
             }
-            lua_gettable(L, -2);
-            if (lua_isnil(L, -1)) {
+            lua_gettable(mL, -2);
+            if (lua_isnil(mL, -1)) {
                 //value didn't exist, make it
-                lua_pop(L, -1);
+                lua_pop(mL, -1);
                 if (kType == LUA_TNUMBER) {
-                    lua_pushnumber(L, QString(vars[i]->getName()).toInt());
+                    lua_pushnumber(mL, QString(vars[i]->getName()).toInt());
                 } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
-                    lua_rawgeti(L, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
+                    lua_rawgeti(mL, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
                 } else {
-                    lua_pushstring(L, QString(vars[i]->getName()).toUtf8().constData());
+                    lua_pushstring(mL, QString(vars[i]->getName()).toUtf8().constData());
                 }
-                lua_newtable(L);
-                lua_settable(L, -3);
+                lua_newtable(mL);
+                lua_settable(mL, -3);
                 i--; //decrement since we want to reput this table on the stack on next iteration
             }
         }
 
         kType = var->getKeyType();
         if (kType == LUA_TSTRING) {
-            lua_pushstring(L, QString(var->getNewName()).toUtf8().constData());
+            lua_pushstring(mL, QString(var->getNewName()).toUtf8().constData());
         } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(L, var->getNewName().toInt());
+            lua_pushnumber(mL, var->getNewName().toInt());
         } else if (kType == LUA_TTABLE) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
+            lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
             //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
             return;
         }
 
         //put the old value on the stack
-        lua_getglobal(L, (vars[0]->getName()).toUtf8().constData());
+        lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
         i = 1;
         for (; i < vars.size() - 1; i++) {
             kType = vars[i]->getKeyType();
             if (kType == LUA_TNUMBER) {
-                lua_pushnumber(L, QString(vars[i]->getName()).toInt());
+                lua_pushnumber(mL, QString(vars[i]->getName()).toInt());
             } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
-                lua_rawgeti(L, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
+                lua_rawgeti(mL, LUA_REGISTRYINDEX, vars[i]->getName().toInt());
             } else {
-                lua_pushstring(L, QString(vars[i]->getName()).toUtf8().constData());
+                lua_pushstring(mL, QString(vars[i]->getName()).toUtf8().constData());
             }
-            lua_gettable(L, -2);
+            lua_gettable(mL, -2);
             pushCount++;
         }
 
         kType = var->getKeyType();
         if (kType == LUA_TSTRING) {
-            lua_pushstring(L, QString(var->getName()).toUtf8().constData());
+            lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
         } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(L, var->getName().toInt());
+            lua_pushnumber(mL, var->getName().toInt());
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
+            lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
             //FIXME: report error to user qDebug()<<"unknown key type"<<var->getKeyType();
             return;
         }
-        lua_gettable(L, -2);
+        lua_gettable(mL, -2);
         pushCount++;
         //old value is @ -1 now
         //we want to put our new named key @ -2
         kType = var->getKeyType();
         if (kType == LUA_TSTRING) {
-            lua_pushstring(L, QString(var->getNewName()).toUtf8().constData());
+            lua_pushstring(mL, QString(var->getNewName()).toUtf8().constData());
         } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(L, var->getNewName().toInt());
+            lua_pushnumber(mL, var->getNewName().toInt());
         } else if (kType == LUA_TTABLE) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
+            lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
             //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
             return;
         }
         pushCount++;
-        lua_insert(L, -2);
-        lua_settable(L, -3 - pushCount);
+        lua_insert(mL, -2);
+        lua_settable(mL, -3 - pushCount);
         //key & value popped
         //delete it, so we put the old key back on the stack and set to nil
         kType = var->getKeyType();
         if (kType == LUA_TSTRING) {
-            lua_pushstring(L, QString(var->getName()).toUtf8().constData());
+            lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
         } else if (kType == LUA_TNUMBER) {
-            lua_pushnumber(L, var->getName().toInt());
+            lua_pushnumber(mL, var->getName().toInt());
         } else if (kType == LUA_TTABLE || kType == LUA_TFUNCTION) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
+            lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
             //FIXME: report error to userqDebug()<<"unknown key type"<<var->getKeyType();
             return;
         }
-        lua_pushnil(L);
-        lua_settable(L, -3);
+        lua_pushnil(mL);
+        lua_settable(mL, -3);
         var->clearNewName();
     }
 }
@@ -561,25 +561,25 @@ bool LuaInterface::loadVar(TVar* var)
         int vType = var->getValueType();
         if (vType == LUA_TTABLE) {
             if (kType == LUA_TNUMBER) {
-                lua_pushnumber(L, QString(var->getName()).toInt());
+                lua_pushnumber(mL, QString(var->getName()).toInt());
             } else if (kType == LUA_TTABLE) {
-                lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
+                lua_rawgeti(mL, LUA_REGISTRYINDEX, var->getName().toInt());
             } else {
-                lua_pushstring(L, QString(var->getName()).toUtf8().constData());
+                lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
             }
-            if (lua_istable(L, -2)) {
-                lua_gettable(L, -2);
+            if (lua_istable(mL, -2)) {
+                lua_gettable(mL, -2);
                 return true;
             } else {
-                lua_pop(L, 1);
+                lua_pop(mL, 1);
                 return false;
             }
         } else if (vType == LUA_TNUMBER) {
-            lua_pushnumber(L, QString(var->getValue()).toInt());
+            lua_pushnumber(mL, QString(var->getValue()).toInt());
         } else if (vType == LUA_TBOOLEAN) {
-            lua_pushboolean(L, var->getValue().toLower() == "true" ? 1 : 0);
+            lua_pushboolean(mL, var->getValue().toLower() == "true" ? 1 : 0);
         } else if (vType == LUA_TSTRING) {
-            lua_pushstring(L, QString(var->getName()).toUtf8().constData());
+            lua_pushstring(mL, QString(var->getName()).toUtf8().constData());
         } else {
             return false;
         }
@@ -634,19 +634,19 @@ void LuaInterface::renameVar(TVar* var)
     }
 
     auto renameCode = qsl("%1 = %2").arg(newName, oldVariable);
-    int error = luaL_loadstring(L, renameCode.toUtf8().constData());
+    int error = luaL_loadstring(mL, renameCode.toUtf8().constData());
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (parsing) error: \""
-                                       << lua_tostring(L, -1)
+                                       << lua_tostring(mL, -1)
                                        << "\" in code:\n\""
                                        << renameCode << "\".";
         var->clearNewName();
         return;
     }
-    error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    error = lua_pcall(mL, 0, LUA_MULTRET, 0);
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In copying (first) stage, internal Lua (executing) error: \""
-                                       << lua_tostring(L, -1)
+                                       << lua_tostring(mL, -1)
                                        << "\" in code:\n\""
                                        << renameCode << "\".";
         var->clearNewName();
@@ -654,19 +654,19 @@ void LuaInterface::renameVar(TVar* var)
     }
 
     //delete it
-    error = luaL_loadstring(L, oldVariable.append(QLatin1String(" = nil")).toUtf8().constData());
+    error = luaL_loadstring(mL, oldVariable.append(QLatin1String(" = nil")).toUtf8().constData());
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (parsing) error: \""
-                                       << lua_tostring(L, -1)
+                                       << lua_tostring(mL, -1)
                                        << "\" in code:\n\""
                                        << renameCode << "\".";
         var->clearNewName();
         return;
     }
-    error = lua_pcall(L, 0, LUA_MULTRET, 0);
+    error = lua_pcall(mL, 0, LUA_MULTRET, 0);
     if (error) {
         qWarning().noquote().nospace() << "LuaInterface::renameVar(...) WARNING - In deleting (second) stage, internal Lua (executing) error: \""
-                                       << lua_tostring(L, -1)
+                                       << lua_tostring(mL, -1)
                                        << "\" in code:\n\""
                                        << renameCode << "\".";
     }
@@ -683,20 +683,20 @@ QString LuaInterface::getValue(TVar* var)
         }
         int pCount = vars.size(); //how many things we need to pop at the end
         //load from _G first
-        lua_getglobal(L, (vars[0]->getName()).toUtf8().constData());
+        lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
         for (int i = 1; i < vars.size(); i++) {
-            if (!loadValue(L, vars[i], -2)) {
+            if (!loadValue(mL, vars[i], -2)) {
                 return QString();
             }
         }
-        int vType = lua_type(L, -1);
+        int vType = lua_type(mL, -1);
         QString value;
         if (vType == LUA_TBOOLEAN) {
-            value = lua_toboolean(L, -1) == 0 ? QLatin1String("false") : QLatin1String("true");
+            value = lua_toboolean(mL, -1) == 0 ? QLatin1String("false") : QLatin1String("true");
         } else if (vType == LUA_TNUMBER || vType == LUA_TSTRING) {
-            value = lua_tostring(L, -1);
+            value = lua_tostring(mL, -1);
         }
-        lua_pop(L, pCount);
+        lua_pop(mL, pCount);
         return value;
     }
     return QString();
@@ -788,7 +788,7 @@ void LuaInterface::getVars(bool hide)
     //returns the base item
     // QElapsedTimer t;
     // t.start();
-    lua_pushnil(L);
+    lua_pushnil(mL);
     depth = 0;
     auto g = new TVar();
     g->setName("_G", LUA_TSTRING);
@@ -796,11 +796,11 @@ void LuaInterface::getVars(bool hide)
     QListIterator<int> it(lrefs);
     while (it.hasNext()) {
         int ref = it.next();
-        luaL_unref(L, LUA_REGISTRYINDEX, ref);
+        luaL_unref(mL, LUA_REGISTRYINDEX, ref);
     }
     varUnit->clear();
     varUnit->setBase(g);
     varUnit->addVariable(g);
-    iterateTable(L, LUA_GLOBALSINDEX, g, hide);
+    iterateTable(mL, LUA_GLOBALSINDEX, g, hide);
     // FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
 }
