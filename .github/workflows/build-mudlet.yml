@@ -5,6 +5,8 @@ on:
     tags: [Mudlet-*]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
 
 jobs:
   compile-mudlet:
