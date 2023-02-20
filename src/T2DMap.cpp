@@ -4082,41 +4082,40 @@ void T2DMap::slot_setArea()
         arealist_combobox->addItem(qsl("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
 
-
-
-    if (set_room_area_dialog->exec() == QDialog::Rejected) { // Don't proceed if "cancel" was pressed
-        return;
-    }
-
-    int newAreaId = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
-    mMultiRect = QRect(0, 0, 0, 0);
-    QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
-    while (itSelectedRoom.hasNext()) {
-        int currentRoomId = itSelectedRoom.next();
-        if (itSelectedRoom.hasNext()) { // NOT the last room in set -  so defer some area related recalculations
-            mpMap->setRoomArea(currentRoomId, newAreaId, true);
-        } else {
-            // Is the LAST room, so be careful to do all that is needed to clean
-            // up the affected areas (triggered by last "false" argument in next
-            // line)...
-            if (!(mpMap->setRoomArea(currentRoomId, newAreaId, false))) {
-                // Failed on the last of multiple room area move so do the missed
-                // out recalculations for the dirtied areas
-                auto areaPtrsList{mpMap->mpRoomDB->getAreaPtrList()};
-                QSet<TArea*> areaPtrsSet{areaPtrsList.begin(), areaPtrsList.end()};
-                QSetIterator<TArea*> itpArea{areaPtrsSet};
-                while (itpArea.hasNext()) {
-                    TArea* pArea = itpArea.next();
-                    if (pArea->mIsDirty) {
-                        pArea->determineAreaExits();
-                        pArea->calcSpan();
-                        pArea->mIsDirty = false;
+    connect(set_room_area_dialog, &QDialog::accepted, [=]() {
+        int newAreaId = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
+        mMultiRect = QRect(0, 0, 0, 0);
+        QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
+        while (itSelectedRoom.hasNext()) {
+            int currentRoomId = itSelectedRoom.next();
+            if (itSelectedRoom.hasNext()) { // NOT the last room in set -  so defer some area related recalculations
+                mpMap->setRoomArea(currentRoomId, newAreaId, true);
+            } else {
+                // Is the LAST room, so be careful to do all that is needed to clean
+                // up the affected areas (triggered by last "false" argument in next
+                // line)...
+                if (!(mpMap->setRoomArea(currentRoomId, newAreaId, false))) {
+                    // Failed on the last of multiple room area move so do the missed
+                    // out recalculations for the dirtied areas
+                    auto areaPtrsList{mpMap->mpRoomDB->getAreaPtrList()};
+                    QSet<TArea*> areaPtrsSet{areaPtrsList.begin(), areaPtrsList.end()};
+                    QSetIterator<TArea*> itpArea{areaPtrsSet};
+                    while (itpArea.hasNext()) {
+                        TArea* pArea = itpArea.next();
+                        if (pArea->mIsDirty) {
+                            pArea->determineAreaExits();
+                            pArea->calcSpan();
+                            pArea->mIsDirty = false;
+                        }
                     }
                 }
             }
         }
-    }
-    repaint();
+        repaint();
+    });
+
+    set_room_area_dialog->show();
+    set_room_area_dialog->raise();
 }
 
 
