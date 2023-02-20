@@ -4062,14 +4062,11 @@ void T2DMap::slot_setArea()
     }
     set_room_area_dialog->setAttribute(Qt::WA_DeleteOnClose);
     arealist_combobox = set_room_area_dialog->findChild<QComboBox*>("arealist_combobox");
+    auto label_info = set_room_area_dialog->findChild<QLabel*>("label_info");
+    arealist_combobox->setInsertPolicy(QComboBox::NoInsert);
     if (!arealist_combobox) {
         return;
     }
-
-    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=](QString newText) {
-        auto buttonBox = set_room_area_dialog->findChild<QDialogButtonBox*>("buttonBox");
-        buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!newText.isEmpty());
-    });
 
     QStringList sortedAreaList;
     sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
@@ -4080,73 +4077,86 @@ void T2DMap::slot_setArea()
 
     std::sort( sortedAreaList.begin(), sortedAreaList.end(), sorter);
 
-
     const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
     for (int i = 0, total = sortedAreaList.count(); i < total; ++i) {
         int areaId = areaNamesMap.key(sortedAreaList.at(i));
         arealist_combobox->addItem(qsl("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
 
-    if (set_room_area_dialog->exec() == QDialog::Rejected) { // Don't proceed if "cancel" was pressed
-        return;
-    }
-
-    auto newArea = arealist_combobox->itemData(arealist_combobox->currentIndex());
-    int  newAreaId;
-    if (newArea.isValid()) {
-        newAreaId = newArea.toInt();
-    } else if (sortedAreaList.contains(arealist_combobox->currentText().trimmed())) {
-        newAreaId = mpMap->mpRoomDB->getAreaNamesMap().key(arealist_combobox->currentText());
-    } else {
-        auto newAreaName = arealist_combobox->currentText();
-        newAreaId = mpMap->mpRoomDB->addArea(newAreaName);
-        if (!newAreaId) {
-                        mpMap->postMessage(tr("[ ERROR ] - Unable to add \"%1\" as an area to the map.\n"
-                                  "See the \"[MAP ERROR:]\" message for the reason.",
-                                  // Intentional separator between argument
-                                  "The '[MAP ERROR:]' text should be the same as that used for the translation of \"[MAP ERROR:]%1\n\" in the 'TMAP::logerror(...)' function.").arg(newAreaName));
-            return;
-        }
-        mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
-        mpMap->setUnsaved(__func__);
-
-        mpMap->mpMapper->updateAreaComboBox();
-    }
-    mMultiRect = QRect(0, 0, 0, 0);
-    QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
-    while (itSelectedRoom.hasNext()) {
-        int currentRoomId = itSelectedRoom.next();
-        if (itSelectedRoom.hasNext()) { // NOT the last room in set -  so defer some area related recalculations
-            mpMap->setRoomArea(currentRoomId, newAreaId, true);
+    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=](const QString newText) {
+        auto buttonBox = set_room_area_dialog->findChild<QDialogButtonBox*>("buttonBox");
+        buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!newText.trimmed().isEmpty());
+        if (!newText.trimmed().isEmpty() && arealist_combobox->findText(newText.trimmed(), Qt::MatchExactly) == -1
+            && !sortedAreaList.contains(newText.trimmed().trimmed())) {
+            label_info->setText(qsl("This will create new area: %1").arg(arealist_combobox->currentText()));
         } else {
-            // Is the LAST room, so be careful to do all that is needed to clean
-            // up the affected areas (triggered by last "false" argument in next
-            // line)...
-            if (!(mpMap->setRoomArea(currentRoomId, newAreaId, false))) {
-                // Failed on the last of multiple room area move so do the missed
-                // out recalculations for the dirtied areas
-                auto areaPtrsList{mpMap->mpRoomDB->getAreaPtrList()};
-                QSet<TArea*> areaPtrsSet{areaPtrsList.begin(), areaPtrsList.end()};
-                QSetIterator<TArea*> itpArea{areaPtrsSet};
-                while (itpArea.hasNext()) {
-                    TArea* pArea = itpArea.next();
-                    if (pArea->mIsDirty) {
-                        pArea->determineAreaExits();
-                        pArea->calcSpan();
-                        pArea->mIsDirty = false;
+            label_info->clear();
+        }
+    });
+
+    connect(set_room_area_dialog, &QDialog::accepted, [=]() {
+        int newAreaId;
+        if (arealist_combobox->findText(arealist_combobox->currentText(), Qt::MatchExactly) != -1) {
+            auto newArea = arealist_combobox->itemData(arealist_combobox->currentIndex());
+            newAreaId = newArea.toInt();
+        } else if (sortedAreaList.contains(arealist_combobox->currentText().trimmed())) {
+            newAreaId = mpMap->mpRoomDB->getAreaNamesMap().key(arealist_combobox->currentText());
+        } else {
+            auto newAreaName = arealist_combobox->currentText().trimmed();
+            newAreaId = mpMap->mpRoomDB->addArea(newAreaName);
+            if (!newAreaId) {
+                mpMap->postMessage(tr("[ ERROR ] - Unable to add \"%1\" as an area to the map.\n"
+                                      "See the \"[MAP ERROR:]\" message for the reason.",
+                        // Intentional separator between argument
+                                      "The '[MAP ERROR:]' text should be the same as that used for the translation of \"[MAP ERROR:]%1\n\" in the 'TMAP::logerror(...)' function.").arg(
+                        newAreaName));
+                return;
+            }
+            mpMap->postMessage(
+                    tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
+            mpMap->setUnsaved(__func__);
+
+            mpMap->mpMapper->updateAreaComboBox();
+        }
+        mMultiRect = QRect(0, 0, 0, 0);
+        QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
+        while (itSelectedRoom.hasNext()) {
+            int currentRoomId = itSelectedRoom.next();
+            if (itSelectedRoom.hasNext()) { // NOT the last room in set -  so defer some area related recalculations
+                mpMap->setRoomArea(currentRoomId, newAreaId, true);
+            } else {
+                // Is the LAST room, so be careful to do all that is needed to clean
+                // up the affected areas (triggered by last "false" argument in next
+                // line)...
+                if (!(mpMap->setRoomArea(currentRoomId, newAreaId, false))) {
+                    // Failed on the last of multiple room area move so do the missed
+                    // out recalculations for the dirtied areas
+                    auto areaPtrsList{mpMap->mpRoomDB->getAreaPtrList()};
+                    QSet<TArea *> areaPtrsSet{areaPtrsList.begin(), areaPtrsList.end()};
+                    QSetIterator<TArea *> itpArea{areaPtrsSet};
+                    while (itpArea.hasNext()) {
+                        TArea *pArea = itpArea.next();
+                        if (pArea->mIsDirty) {
+                            pArea->determineAreaExits();
+                            pArea->calcSpan();
+                            pArea->mIsDirty = false;
+                        }
                     }
                 }
-            }
-            auto& targetAreaName = areaNamesMap.value(newAreaId);
-            mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+                auto &targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
+                mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
-            switchArea(targetAreaName);
+                switchArea(targetAreaName);
 #else
-            slot_switchArea(targetAreaName);
+                slot_switchArea(targetAreaName);
 #endif
+            }
         }
-    }
-    update();
+        update();
+    });
+
+    set_room_area_dialog->show();
+    set_room_area_dialog->raise();
 }
 
 
