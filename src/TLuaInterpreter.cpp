@@ -17873,7 +17873,7 @@ int TLuaInterpreter::getScroll(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConfig
-int TLuaInterpreter::getConfig(lua_State * L)
+int TLuaInterpreter::getConfig(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
