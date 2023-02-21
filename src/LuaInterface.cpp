@@ -108,29 +108,21 @@ bool LuaInterface::loadKey(lua_State* L, TVar* var)
 {
     if (setjmp(buf) == 0) {
         int keyType = var->getKeyType();
-        qDebug() << "keyType" << keyType << "loading" << var;
-        qDebug() << "var name is" << var->getName().toInt();
         if (var->isReference()) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
-            qDebug() << "loading reference";
         } else {
             if (keyType == LUA_TNUMBER) {
-                qDebug() << "loading number";
                 lua_pushnumber(L, var->getName().toInt());
             } else if (keyType == LUA_TTABLE) {
-                qDebug() << "loading table";
             } else if (keyType == LUA_TBOOLEAN) {
-                qDebug() << "loading boolean";
                 lua_pushboolean(L, var->getName().toLower() == "true" ? 1 : 0);
             } else {
-                qDebug() << "loading string";
                 lua_pushstring(L, var->getName().toUtf8().constData());
             }
         }
         return lua_type(L, -1) == keyType;
     }
 
-    qDebug() << "setjmp failed";
     return false;
 }
 
@@ -684,19 +676,26 @@ void LuaInterface::renameVar(TVar* var)
 
 QString LuaInterface::getValue(TVar* var)
 {
-    qDebug() << "LuaInterface::getValue for " << var;
     if (setjmp(buf) == 0) {
-
         QList<TVar*> vars = varOrder(var);
         if (vars.empty()) {
-            return QString();
+            return {};
         }
         int pCount = vars.size(); //how many things we need to pop at the end
         //load from _G first
-        lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
+        auto firstVariable = vars.constFirst();
+        if (firstVariable->getKeyType() == LUA_TSTRING) {
+            lua_getglobal(mL, (firstVariable->getName()).toUtf8().constData());
+        } else if (firstVariable->getKeyType() == LUA_TNUMBER) {
+            lua_rawgeti(mL, LUA_GLOBALSINDEX, firstVariable->getName().toInt());
+        }
+        if (lua_isnoneornil(mL, lua_gettop(mL))) {
+            qDebug() << "Failed to read root value" << firstVariable->getName() << "in order to get" << var->getName() << "onto the stack, perhaps the key type isn't supported?";
+            return {};
+        }
         for (int i = 1; i < vars.size(); i++) {
-            if (!loadValue(mL, vars[i], -2)) {
-                return QString();
+            if (!loadValue(mL, vars.at(i), -2)) {
+                return {};
             }
         }
         int vType = lua_type(mL, -1);
@@ -709,7 +708,7 @@ QString LuaInterface::getValue(TVar* var)
         lua_pop(mL, pCount);
         return value;
     }
-    return QString();
+    return {};
 }
 
 void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)

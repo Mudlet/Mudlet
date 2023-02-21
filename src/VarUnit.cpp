@@ -147,7 +147,6 @@ TVar* VarUnit::getTVar(QTreeWidgetItem* p)
 TVar* VarUnit::getWVar(QTreeWidgetItem* p)
 {
     if (wVars.contains(p)) {
-        qDebug() << "for tree widget"<<p<<"returning variable"<<wVars[p];
         return wVars[p];
     }
     return nullptr;

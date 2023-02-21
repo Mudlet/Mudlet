@@ -5387,7 +5387,6 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     TVar* var = vu->getWVar(pItem); // This does NOT modify pItem or what it points at
-    qDebug() << "working with" << var;
     QList<QTreeWidgetItem*> list;
     if (state == Qt::Checked || state == Qt::PartiallyChecked) {
         if (var) {
@@ -5547,7 +5546,6 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
 
     mpVarsMainArea->checkBox_variable_hidden->setChecked(vu->isHidden(var));
     mpVarsMainArea->lineEdit_var_name->setText(var->getName());
-    qDebug() << "about to get value of " << var;
     clearDocument(mpSourceEditorEdbee, lI->getValue(var));
     pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
     pItem->setToolTip(0, utils::richText(tr("Checked variables will be saved and loaded with your profile.")));
