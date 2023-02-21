@@ -15564,6 +15564,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
     lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
     lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
+    lua_register(pGlobalLua, "getConfig", TLuaInterpreter::getConfig);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -17971,24 +17972,24 @@ int TLuaInterpreter::getConfig(lua_State * L)
 
     lua_pushstring(L, "blankLinesBehaviour");
     const auto behaviour = host.mBlankLineBehaviour;
-    if (behaviour == Host::BlankLineBehaviour::Show){
+    if (behaviour == Host::BlankLineBehaviour::Show) {
         lua_pushstring(L, "show");
-    } else if (behaviour == Host::BlankLineBehaviour::Hide){
+    } else if (behaviour == Host::BlankLineBehaviour::Hide) {
         lua_pushstring(L, "hide");
-    } else if (behaviour == Host::BlankLineBehaviour::ReplaceWithSpace){
+    } else if (behaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
         lua_pushstring(L, "replacewithspace");
     }
     lua_settable(L, -3);
 
     lua_pushstring(L, "caretShortcut");
     const auto caret = host.mCaretShortcut;
-    if (caret == Host::CaretShortcut::None){
+    if (caret == Host::CaretShortcut::None) {
         lua_pushstring(L, "none");
-    } else if (caret == Host::CaretShortcut::Tab){
+    } else if (caret == Host::CaretShortcut::Tab) {
         lua_pushstring(L, "tab");
-    } else if (caret == Host::CaretShortcut::CtrlTab){
+    } else if (caret == Host::CaretShortcut::CtrlTab) {
         lua_pushstring(L, "ctrltab");
-    } else if (caret == Host::CaretShortcut::F6){
+    } else if (caret == Host::CaretShortcut::F6) {
         lua_pushstring(L, "f6");
     }
     lua_settable(L, -3);
