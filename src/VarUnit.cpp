@@ -26,6 +26,7 @@
 
 #include "pre_guard.h"
 #include <QTreeWidgetItem>
+#include <QDebug>
 #include "post_guard.h"
 
 
@@ -146,6 +147,7 @@ TVar* VarUnit::getTVar(QTreeWidgetItem* p)
 TVar* VarUnit::getWVar(QTreeWidgetItem* p)
 {
     if (wVars.contains(p)) {
+        qDebug() << "for tree widget"<<p<<"returning variable"<<wVars[p];
         return wVars[p];
     }
     return nullptr;

@@ -51,9 +51,9 @@ int LuaInterface::onPanic(lua_State* L)
     QString error = "Lua Panic, No error information";
     if (lua_isstring(L, -1)) {
         error = lua_tostring(L, -1);
-        //there's never anything but the error on the stack, nothing to report
+        qDebug() << "Lua panic:" << error;
     }
-    //FIXME: report error to user qDebug()<<"PANIC ERROR:"<<error;
+
     longjmp(buf, 1);
     return 1;
 }
@@ -107,21 +107,30 @@ void LuaInterface::getAllChildren(TVar* var, QList<TVar*>* list)
 bool LuaInterface::loadKey(lua_State* L, TVar* var)
 {
     if (setjmp(buf) == 0) {
-        int kType = var->getKeyType();
+        int keyType = var->getKeyType();
+        qDebug() << "keyType" << keyType << "loading" << var;
+        qDebug() << "var name is" << var->getName().toInt();
         if (var->isReference()) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
+            qDebug() << "loading reference";
         } else {
-            if (kType == LUA_TNUMBER) {
+            if (keyType == LUA_TNUMBER) {
+                qDebug() << "loading number";
                 lua_pushnumber(L, var->getName().toInt());
-            } else if (kType == LUA_TTABLE) {
-            } else if (kType == LUA_TBOOLEAN) {
+            } else if (keyType == LUA_TTABLE) {
+                qDebug() << "loading table";
+            } else if (keyType == LUA_TBOOLEAN) {
+                qDebug() << "loading boolean";
                 lua_pushboolean(L, var->getName().toLower() == "true" ? 1 : 0);
             } else {
+                qDebug() << "loading string";
                 lua_pushstring(L, var->getName().toUtf8().constData());
             }
         }
-        return lua_type(L, -1) == kType;
+        return lua_type(L, -1) == keyType;
     }
+
+    qDebug() << "setjmp failed";
     return false;
 }
 
@@ -675,6 +684,7 @@ void LuaInterface::renameVar(TVar* var)
 
 QString LuaInterface::getValue(TVar* var)
 {
+    qDebug() << "LuaInterface::getValue for " << var;
     if (setjmp(buf) == 0) {
 
         QList<TVar*> vars = varOrder(var);
