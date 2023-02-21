@@ -223,8 +223,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorMovementNecessary, this, &dlgTriggerEditor::slot_sourceFindMove);
     connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceFindPrevious);
     connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceFindNext);
+    connect(mpSourceEditorFindArea->pushButton_replace, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceReplace);
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_sourceFindPrevious);
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_sourceFindNext);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorReplace, this, &dlgTriggerEditor::slot_sourceReplace);
     connect(mpSourceEditorFindArea->pushButton_close, &QPushButton::clicked, this, &dlgTriggerEditor::slot_closeSourceFind);
 
     auto openSourceFindAction = new QAction(this);
@@ -7231,6 +7233,25 @@ void dlgTriggerEditor::slot_closeSourceFind()
     controller->update();
     mpSourceEditorFindArea->hide();
     mpSourceEditorEdbee->setFocus();
+}
+
+void dlgTriggerEditor::slot_sourceReplace()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    auto replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
+    for (int i = 0; i < controller->textSelection()->rangeCount(); i++) {
+        auto &range = controller->textSelection()->range(i);
+        if (mpSourceEditorEdbee->textDocument()->text().mid(range.anchor(), range.length()) == replaceText) {
+            slot_sourceFindNext();
+            continue;
+        }
+        if (!range.hasSelection()) {
+            slot_sourceFindPrevious();
+            continue;
+        }
+        mpSourceEditorEdbee->textDocument()->replace(range.anchor(), range.length(), replaceText);
+        range.setLength(mpSourceEditorFindArea->lineEdit_replaceText->text().length());
+    }
 }
 
 void dlgTriggerEditor::slot_sourceFindPrevious()
