@@ -1170,8 +1170,7 @@ function setConfig(...)
   local args = {...}
 
   if type(args[1]) ~= "table" then
-    oldsetConfig(...)
-    return
+    return oldsetConfig(...)
   end
 
   for k,v in pairs(args[1]) do
