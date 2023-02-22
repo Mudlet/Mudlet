@@ -17419,6 +17419,8 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConfig
+// Please use same options with same names in setConfig and getConfig and keep them in sync
 int TLuaInterpreter::setConfig(lua_State * L)
 {
     auto& host = getHostFromLua(L);
@@ -17873,42 +17875,49 @@ int TLuaInterpreter::getScroll(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConfig
+// Please use same options with same names in setConfig and getConfig and keep them in sync
 int TLuaInterpreter::getConfig(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
     lua_newtable(L);
     
-    if (host.mpMap && host.mpMap->mpMapper) {
-        lua_pushstring(L, "mapRoomSize");
-        lua_pushnumber(L, host.mRoomSize);
-        lua_settable(L, -3);
+    lua_pushstring(L, "mapRoomSize");
+    lua_pushnumber(L, host.mRoomSize);
+    lua_settable(L, -3);
 
-        lua_pushstring(L, "mapExitSize");
-        lua_pushnumber(L, host.mLineSize);
-        lua_settable(L, -3);
+    lua_pushstring(L, "mapExitSize");
+    lua_pushnumber(L, host.mLineSize);
+    lua_settable(L, -3);
 
-        lua_pushstring(L, "mapRoundRooms");
-        lua_pushboolean(L, host.mBubbleMode);
-        lua_settable(L, -3);
+    lua_pushstring(L, "mapRoundRooms");
+    lua_pushboolean(L, host.mBubbleMode);
+    lua_settable(L, -3);
 
-        lua_pushstring(L, "showRoomIdsOnMap");
-        lua_pushboolean(L, host.mShowRoomID);
-        lua_settable(L, -3);
+    lua_pushstring(L, "showRoomIdsOnMap");
+    lua_pushboolean(L, host.mShowRoomID);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "show3dMapView");
 #if defined(INCLUDE_3DMAPPER)
-        lua_pushstring(L, "show3dMapView");
+    if (host.mpMap && host.mpMap->mpMapper) {
         auto widget = host.mpMap->mpMapper->glWidget;
         lua_pushboolean(L, (widget && widget->isVisible()));
-        lua_settable(L, -3);
-#endif
-        lua_pushstring(L, "mapperPanelVisible");
-        lua_pushboolean(L, host.mShowPanel);
-        lua_settable(L, -3);
-
-        lua_pushstring(L, "mapShowRoomBorders");
-        lua_pushboolean(L, host.mMapperShowRoomBorders);
-        lua_settable(L, -3);
+    } else {
+        lua_pushboolean(L, false);
     }
+#else
+    lua_pushboolean(L, false);
+#endif
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "mapperPanelVisible");
+    lua_pushboolean(L, host.mShowPanel);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "mapShowRoomBorders");
+    lua_pushboolean(L, host.mMapperShowRoomBorders);
+    lua_settable(L, -3);
 
     lua_pushstring(L, "enableGMCP");
     lua_pushboolean(L, host.mEnableGMCP);
