@@ -1211,12 +1211,12 @@ function getConfig(...)
       "caretShortcut", 
     }
     for _,v in ipairs(list) do
-      result[v]=oldgetConfig(v)
+      result[v] = oldgetConfig(v)
     end
     return result
   end
 
-  if type(args[1])== "table" then
+  if type(args[1]) == "table" then
     for _,v in pairs(args[1]) do
       result[v] = oldgetConfig(v)
     end
