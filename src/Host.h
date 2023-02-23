@@ -675,6 +675,9 @@ public:
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
 
+    // How many graphemes do we need before we run the spell checker on a "word" in the command line:
+    int mMinLengthForSpellCheck = 3;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -851,9 +854,6 @@ private:
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;
-
-    // How many graphemes do we need before we run the spell checker on a "word" in the command line:
-    int mMinLengthForSpellCheck = 3;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
