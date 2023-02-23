@@ -670,7 +670,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     mSpellCheckedWord = c.selectedText();
 
     {
-        bool wantSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) > mMinLengthForSpellCheck;
+        bool wantSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) >= mMinLengthForSpellCheck;
         if (!wantSpellCheck) {
             return;
         }
@@ -1169,7 +1169,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     QString spellCheckedWord = c.selectedText();
 
     {
-        bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) > mMinLengthForSpellCheck;
+        bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) >= mMinLengthForSpellCheck;
         if (!wantSpellCheck) {
             // We don't check when the word is too short, but may need to 
             // undo any prior underline, and we need to also reset the flag:
