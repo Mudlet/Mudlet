@@ -2215,7 +2215,7 @@ void cTelnet::promptTlsConnectionAvailable()
         && (mpHost->mMSSPHostName.isEmpty() || QString::compare(hostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
         postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
 
-        QPointer msgBox = new QMessageBox();
+        auto msgBox = new QMessageBox();
 
         msgBox->setIcon(QMessageBox::Question);
         msgBox->setText(tr("For data transfer protection and privacy, this connection advertises a secure port."));
