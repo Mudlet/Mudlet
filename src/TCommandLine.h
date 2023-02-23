@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2018-2019, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -123,6 +123,8 @@ private:
     char** mpSystemSuggestionsList = nullptr;
     char** mpUserSuggestionsList = nullptr;
     QSet<QString> commandLineSuggestions;
+    // How many graphemes do we need before we run the spell checker on a "word" in the command line:
+    int mMinLengthForSpellCheck = 2;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)

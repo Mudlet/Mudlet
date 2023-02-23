@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2018-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -669,7 +669,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup) {
     mSpellCheckedWord = c.selectedText();
 
     {
-        bool IsWordLongEnoughForSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) > 2;
+        bool IsWordLongEnoughForSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) > mMinLengthForSpellCheck;
         if (!IsWordLongEnoughForSpellCheck) {
             return;
         }
