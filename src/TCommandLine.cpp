@@ -1247,7 +1247,6 @@ void TCommandLine::recheckWholeLine()
     // Save the current position
     QTextCursor oldCursor = textCursor();
 
-    QTextCharFormat f;
     QTextCursor c = textCursor();
     // Move Cursor AND selection anchor to start:
     c.movePosition(QTextCursor::Start);
