@@ -668,8 +668,11 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup) {
     c.select(QTextCursor::WordUnderCursor);
     mSpellCheckedWord = c.selectedText();
 
-    if (bool IsWordLongEnoughForSpellCheck = mSpellCheckedWord.size() > 2; !IsWordLongEnoughForSpellCheck) {
-        return;
+    {
+        bool IsWordLongEnoughForSpellCheck = mSpellCheckedWord.size() > 2;
+        if (!IsWordLongEnoughForSpellCheck) {
+            return;
+        }
     }
 
     auto codec = mpHost->mpConsole->getHunspellCodec_system();
