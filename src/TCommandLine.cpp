@@ -663,7 +663,8 @@ void TCommandLine::slot_popupMenu()
     spellCheck();
 }
 
-void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup) {
+void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
+{
     QTextCursor c = cursorForPosition(event->pos());
     c.select(QTextCursor::WordUnderCursor);
     mSpellCheckedWord = c.selectedText();
