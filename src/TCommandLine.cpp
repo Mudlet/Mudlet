@@ -669,7 +669,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup) {
     mSpellCheckedWord = c.selectedText();
 
     {
-        bool IsWordLongEnoughForSpellCheck = mSpellCheckedWord.size() > 2;
+        bool IsWordLongEnoughForSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) > 2;
         if (!IsWordLongEnoughForSpellCheck) {
             return;
         }
