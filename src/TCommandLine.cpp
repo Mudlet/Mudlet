@@ -1165,12 +1165,27 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     QTextCharFormat f;
     mSpellChecking = true;
     c.select(QTextCursor::WordUnderCursor);
-    QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(c.selectedText());
+    QString spellCheckedWord = c.selectedText();
+
+    {
+        bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) > mMinLengthForSpellCheck;
+        if (!wantSpellCheck) {
+            // We don't check when the word is too short, but may need to 
+            // undo any prior underline, and we need to also reset the flag:
+            f.setFontUnderline(false);
+            c.setCharFormat(f);
+            setTextCursor(c);
+            mSpellChecking = false;
+            return;
+        }
+    }
+
+    QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(spellCheckedWord);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
         if (userDictionaryhandle) {
-            if (Hunspell_spell(userDictionaryhandle, c.selectedText().toUtf8().constData())) {
+            if (Hunspell_spell(userDictionaryhandle, spellCheckedWord.toUtf8().constData())) {
                 // We are using a user dictionary and it does contain this word - so
                 // use a different underline, on many systems the spell-check underline is
                 // a wavy line but on macOs it is a dotted line - so use dash underline
