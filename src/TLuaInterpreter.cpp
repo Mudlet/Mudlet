@@ -17421,6 +17421,8 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConfig
 // Please use same options with same names in setConfig and getConfig and keep them in sync
+// The table argument case for setting multiple properties at once is handled
+// by setConfig in Other.lua.
 int TLuaInterpreter::setConfig(lua_State * L)
 {
     auto& host = getHostFromLua(L);
@@ -17876,7 +17878,8 @@ int TLuaInterpreter::getScroll(lua_State* L)
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConfig
 // Please use same options with same names in setConfig and getConfig and keep them in sync
-// Also list is in Other.lua
+// The no args case that returns a table is handled by getConfig in Other.lua
+// that runs a loop with a list of these properties, please update that list.
 int TLuaInterpreter::getConfig(lua_State* L)
 {
     auto& host = getHostFromLua(L);
