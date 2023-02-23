@@ -4087,8 +4087,8 @@ void T2DMap::slot_setArea()
         auto buttonBox = set_room_area_dialog->findChild<QDialogButtonBox*>("buttonBox");
         buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!newText.trimmed().isEmpty());
         if (!newText.trimmed().isEmpty() && arealist_combobox->findText(newText.trimmed(), Qt::MatchExactly) == -1
-            && !sortedAreaList.contains(newText.trimmed().trimmed())) {
-            label_info->setText(qsl("This will create new area: %1").arg(arealist_combobox->currentText()));
+            && !sortedAreaList.contains(newText.trimmed())) {
+            label_info->setText(tr("This will create new area: %1").arg(arealist_combobox->currentText()));
         } else {
             label_info->clear();
         }
