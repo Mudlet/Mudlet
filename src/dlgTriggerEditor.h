@@ -266,6 +266,7 @@ public slots:
     void slot_sourceFindPrevious();
     void slot_sourceFindNext();
     void slot_sourceFindTextChanges();
+    void slot_sourceReplace();
     void slot_saveEdits();
     void slot_copyXml();
     void slot_pasteXml();

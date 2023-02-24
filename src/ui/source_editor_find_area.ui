@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>340</width>
-    <height>30</height>
+    <width>542</width>
+    <height>36</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,7 +19,7 @@
   <property name="focusPolicy">
    <enum>Qt::StrongFocus</enum>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout" stretch="6,1,1,0">
+  <layout class="QHBoxLayout" name="horizontalLayout" stretch="5,0,0,5,0,0">
    <property name="sizeConstraint">
     <enum>QLayout::SetDefaultConstraint</enum>
    </property>
@@ -37,6 +37,9 @@
    </property>
    <item>
     <widget class="QLineEdit" name="lineEdit_findText">
+     <property name="placeholderText">
+      <string>Find</string>
+     </property>
      <property name="clearButtonEnabled">
       <bool>true</bool>
      </property>
@@ -70,6 +73,33 @@
      <property name="icon">
       <iconset resource="../mudlet.qrc">
        <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
+     </property>
+     <property name="flat">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QLineEdit" name="lineEdit_replaceText">
+     <property name="placeholderText">
+      <string>Replace</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPushButton" name="pushButton_replace">
+     <property name="maximumSize">
+      <size>
+       <width>16</width>
+       <height>16</height>
+      </size>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+     <property name="icon">
+      <iconset theme="edit-paste">
+       <normaloff>.</normaloff>.</iconset>
      </property>
      <property name="flat">
       <bool>true</bool>
