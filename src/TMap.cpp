@@ -2563,7 +2563,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     mapClear();
 
     XMLimport reader(pHost);
-    bool result = reader.importPackage(&file);
+    auto [success, message] = reader.importPackage(&file);
 
     // probably not needed for the download but might be
     // needed for local file case:
@@ -2571,7 +2571,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     // No need to call audit() as XMLimport::importPackage() does it!
     // audit() produces the successful ending [ OK ] message...!
     mpMapper->updateAreaComboBox();
-    if (result) {
+    if (success) {
         mpMapper->resetAreaComboBoxToPlayerRoomArea();
     } else {
         // Failed...
@@ -2588,7 +2588,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     }
     mpMapper->show();
 
-    return result;
+    return success;
 }
 
 void TMap::slot_setDownloadProgress(qint64 got, qint64 total)
