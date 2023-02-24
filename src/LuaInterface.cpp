@@ -674,6 +674,7 @@ void LuaInterface::renameVar(TVar* var)
     var->clearNewName();
 }
 
+// returns the value for a string/number/boolean datatype, or an empty string otherwise
 QString LuaInterface::getValue(TVar* var)
 {
     if (setjmp(buf) == 0) {
@@ -681,7 +682,7 @@ QString LuaInterface::getValue(TVar* var)
         if (vars.empty()) {
             return {};
         }
-        int pCount = vars.size(); //how many things we need to pop at the end
+        int pCount = vars.size(); //how many things we need to pop from the stack at the end
         //load from _G first
         auto firstVariable = vars.constFirst();
         if (firstVariable->getKeyType() == LUA_TSTRING) {
@@ -690,7 +691,9 @@ QString LuaInterface::getValue(TVar* var)
             lua_rawgeti(mL, LUA_GLOBALSINDEX, firstVariable->getName().toInt());
         }
         if (lua_isnoneornil(mL, lua_gettop(mL))) {
-            qDebug() << "Failed to read root value" << firstVariable->getName() << "in order to get" << var->getName() << "onto the stack, perhaps the key type isn't supported?";
+            qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName() 
+                << "onto the Lua stack in order to get value of" << var->getName() 
+                << ", perhaps the key type isn't supported?";
             return {};
         }
         for (int i = 1; i < vars.size(); i++) {
@@ -698,11 +701,11 @@ QString LuaInterface::getValue(TVar* var)
                 return {};
             }
         }
-        int vType = lua_type(mL, -1);
+        int valueType = lua_type(mL, -1);
         QString value;
-        if (vType == LUA_TBOOLEAN) {
+        if (valueType == LUA_TBOOLEAN) {
             value = lua_toboolean(mL, -1) == 0 ? QLatin1String("false") : QLatin1String("true");
-        } else if (vType == LUA_TNUMBER || vType == LUA_TSTRING) {
+        } else if (valueType == LUA_TNUMBER || valueType == LUA_TSTRING) {
             value = lua_tostring(mL, -1);
         }
         lua_pop(mL, pCount);
