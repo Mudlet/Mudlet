@@ -638,6 +638,39 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
+  describe("Test functionality of buffers", function()
+
+    before_each(function()
+      createBuffer("mybuffer")
+      -- clear the buffer in case it already exists
+      clearWindow("mybuffer")
+    end)
+
+    it("should append text to the buffer", function()
+      echo("mybuffer", "Hello, world!")
+      selectCurrentLine("mybuffer")
+      assert.are.equal("Hello, world!", getSelection("mybuffer"))
+    end)
+  
+    -- https://github.com/Mudlet/Mudlet/issues/#
+    pending("should append multiple lines of text to the buffer", function()
+      echo("mybuffer", "Line 1\n")
+      echo("mybuffer", "Line 2\n")
+      echo("mybuffer", "Line 3\n")
+      moveCursorEnd()
+      selectCurrentLine("mybuffer")
+      assert.are.equal("Line 3", getSelection("mybuffer"))
+    end)
+  
+    it("should append new text to existing text in the buffer", function()
+      echo("mybuffer", "Hello")
+      echo("mybuffer", ", world!")
+      selectCurrentLine("mybuffer")
+      assert.are.equal("Hello, world!", getSelection("mybuffer"))
+    end)
+  
+  end)
+
   describe("Tests the functionality of getHTMLformat", function()
     local fmt
     before_each(function()
