@@ -1519,11 +1519,19 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     if (entries.isEmpty()) {
         firstTimeLoad = true;
     } else {
-        QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
+        QString fileName{qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString())};
+        QFile file(fileName);
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
+
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
+        if (auto [success, message] = importer.importPackage(&file, nullptr); !success) {
+            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
+                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(fileName));
+        
+            qDebug() << "dlgConnectionProfiles::loadProfile: ERROR loading" << fileName << "due to:" << message;
+        }
+
         pHost->refreshPackageFonts();
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
