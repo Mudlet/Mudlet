@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018-2019, 2022 by Stephen Lyons                  *
+ *   Copyright (C) 2016, 2018-2019, 2022-2023 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2021-2022 by Piotr Wilczynski - delwing@gmail.com       *
  *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
@@ -60,7 +60,8 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
-    void setMapZoom(qreal zoom);
+    void setMapZoom(const qreal zoom);
+    bool setMapZoom(const int areaId, const qreal zoom);
     void init();
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
@@ -91,9 +92,13 @@ public:
 #endif
 
 
+    inline static const qreal csmDefaultXYZoom = 20.0;
+    inline static const qreal csmMinXYZoom = 3.0;
+
+
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
-    qreal xyzoom = 20.0;
+    qreal xyzoom = csmDefaultXYZoom;
     int mRX = 0;
     int mRY = 0;
     QPoint mPHighlight;
@@ -133,7 +138,12 @@ public:
     QMap<int, QPixmap> mPixMap;
     double rSize = 0.5;
     double eSize = 3.0;
+    // When a Lua centerview(...) is called this assigns the room ID value to
+    // this member and (switching areas if necessary) pans the map to be
+    // centered on this room:
     int mRoomID = 0;
+    // This is the area of the map that is being shown, it need not be that
+    // which contains the player room:
     int mAreaID = 0;
     // These next three represent the room coordinates at the middle of the map
     // the first pair needs to not be integer types as a more flexible zoom
@@ -143,6 +153,9 @@ public:
     qreal mOx = 0.0;
     qreal mOy = 0.0;
     int mOz = 0;
+    // Gets set when pan controls are used to move the map away from being
+    // centered on mRoomID - it seems to be needed if the room concerned
+    // is being moved by the mouse as part of a selection:
     bool mShiftMode = false;
     QComboBox* arealist_combobox = nullptr;
     QPointer<QDialog> mpCustomLinesDialog;
@@ -289,6 +302,11 @@ private:
 
     dlgRoomProperties* mpDlgRoomProperties = nullptr;
     dlgMapLabel* mpDlgMapLabel = nullptr;
+    // Track the area last viewed so we can raise an event when it changes,
+    // initialised to an invalid area that is different to the one that mAreaID
+    // is initialised to - so that the xyzoom gets read for the first area that
+    // is shown - because the value of these two are different:
+    int mLastViewedAreaID = -2;
 
 private slots:
     void slot_createRoom();

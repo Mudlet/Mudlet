@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -9009,16 +9009,59 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
     qreal zoom = getVerifiedFloat(L, __func__, 1, "zoom");
-    Host& host = getHostFromLua(L);
-    if (host.mpMap) {
-        if (host.mpMap->mpMapper) {
-            if (host.mpMap->mpMapper->mp2dMap) {
-                host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom);
-                updateMap(L);
-            }
-        }
+    std::optional<int> areaID;
+    if (lua_gettop(L) > 1) {
+        areaID = getVerifiedInt(L, __func__, 2, "area id", true);
     }
-    return 0;
+    Host& host = getHostFromLua(L);
+    if (host.mpMap.isNull() || host.mpMap->mpMapper.isNull()) {
+        return warnArgumentValue(L, __func__, "no map loaded or no active mapper");
+    }
+
+    bool result = false;
+    if (areaID.has_value()) {
+        result = host.mpMap->mpMapper->mp2dMap->setMapZoom(areaID.value(), zoom);
+    } else {
+        host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom);
+        result = true;
+    }
+
+    if (!result) {
+        // Whilst it will also return false should there not be a map or mapper
+        // we should have already ruled those cases out:
+        return warnArgumentValue(L, __func__, qsl("unable to set the zoom for area id %1").arg(QString::number(areaID.value())));
+    }
+
+    updateMap(L);
+    // Now return a result to indicate success, we didn't before we could
+    // specify an area to work with:
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapZoom
+int TLuaInterpreter::getMapZoom(lua_State* L)
+{
+    std::optional<int> areaID;
+    if (lua_gettop(L)) {
+        areaID = getVerifiedInt(L, __func__, 1, "area id", true);
+    }
+    Host& host = getHostFromLua(L);
+    if (host.mpMap.isNull() || host.mpMap->mpMapper.isNull()) {
+        return warnArgumentValue(L, __func__, "no map loaded or no active mapper");
+    }
+
+    if (areaID.has_value()) {
+        if (!host.mpMap->mpRoomDB->getArea(areaID.value())) {
+            return warnArgumentValue(L, __func__, qsl("unable to get the zoom for area id %1").arg(QString::number(areaID.value())));
+        }
+        lua_pushnumber(L, host.mpMap->mpRoomDB->get2DMapZoom(areaID.value()));
+        return 1;
+    }
+
+    areaID = host.mpMap->mpMapper->mp2dMap->mAreaID;
+    lua_pushnumber(L, host.mpMap->mpRoomDB->get2DMapZoom(areaID.value()));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapImageLabel
@@ -15461,6 +15504,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setPackageInfo", TLuaInterpreter::setPackageInfo);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
+    lua_register(pGlobalLua, "getMapZoom", TLuaInterpreter::getMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
     lua_register(pGlobalLua, "setExitWeight", TLuaInterpreter::setExitWeight);
     lua_register(pGlobalLua, "setDoor", TLuaInterpreter::setDoor);
