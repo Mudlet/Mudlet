@@ -244,7 +244,7 @@ private:
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
 
-    void processTelnetCommand(const std::string& command);
+    void processTelnetCommand(const std::string& telnetCommand);
     void sendTelnetOption(char type, char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
