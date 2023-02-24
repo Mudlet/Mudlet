@@ -112,6 +112,7 @@ set(mudlet_SRCS
     TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
+    TLuaInterpreterMapper.cpp
     TMap.cpp
     TMapLabel.cpp
     TMainConsole.cpp
