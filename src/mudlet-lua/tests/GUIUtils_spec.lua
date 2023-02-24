@@ -652,7 +652,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.equal("Hello, world!", getSelection("mybuffer"))
     end)
   
-    -- https://github.com/Mudlet/Mudlet/issues/#
+    -- https://github.com/Mudlet/Mudlet/issues/6575
     pending("should append multiple lines of text to the buffer", function()
       echo("mybuffer", "Line 1\n")
       echo("mybuffer", "Line 2\n")
