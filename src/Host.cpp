@@ -801,6 +801,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         filename_xml = qsl("%1/%2.xml").arg(directory_xml, saveName);
     }
 
+    if (!loadedOk) {
+        return {false, filename_xml, qsl("profile was not loaded correctly to begin with")};
+    }
 
     if (mIsProfileLoadingSequence) {
         //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
