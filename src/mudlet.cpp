@@ -2671,7 +2671,16 @@ void mudlet::doAutoLogin(const QString& profile_name)
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        importer.importPackage(&file); // TODO: Missing false return value handler
+        importer.importPackage(&file);
+        if (auto [success, message] = importer.importPackage(&file); !success) {
+            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
+                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
+        
+            qDebug() << "mudlet::doAutoLogin: ERROR loading" << file.fileName() << "due to:" << message;
+        } else {
+            pHost->loadedOk = true;
+        }
+
         pHost->refreshPackageFonts();
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
