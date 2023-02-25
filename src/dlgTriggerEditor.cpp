@@ -5,6 +5,7 @@
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -222,8 +223,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorMovementNecessary, this, &dlgTriggerEditor::slot_sourceFindMove);
     connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceFindPrevious);
     connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceFindNext);
+    connect(mpSourceEditorFindArea->pushButton_replace, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceReplace);
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_sourceFindPrevious);
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_sourceFindNext);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorReplace, this, &dlgTriggerEditor::slot_sourceReplace);
     connect(mpSourceEditorFindArea->pushButton_close, &QPushButton::clicked, this, &dlgTriggerEditor::slot_closeSourceFind);
 
     auto openSourceFindAction = new QAction(this);
@@ -452,7 +455,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
-    mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), QString(), this);
+    // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
+    // PLACEMARKER 1/3 save button texts need to be kept in sync
+    mSaveItem = new QAction(QIcon(qsl(":/icons/document-save-as.png")), qsl("Save Item"), this);
     mSaveItem->setToolTip(tr("<p>Saves the selected item. (Ctrl+S)</p>"
                               "<p>Saving causes any changes to the item to take effect. It will not save to disk, "
                               "so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)</p>"));
@@ -6766,6 +6771,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     // texts are duplicated here so that translators can work with the full string
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
+        // PLACEMARKER 2/3 save button texts need to be kept in sync
         mAddItem->setText(tr("Add Trigger"));
         mAddItem->setStatusTip(tr("Add new trigger"));
         mAddGroup->setText(tr("Add Trigger Group"));
@@ -7227,6 +7233,25 @@ void dlgTriggerEditor::slot_closeSourceFind()
     controller->update();
     mpSourceEditorFindArea->hide();
     mpSourceEditorEdbee->setFocus();
+}
+
+void dlgTriggerEditor::slot_sourceReplace()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    auto replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
+    for (int i = 0; i < controller->textSelection()->rangeCount(); i++) {
+        auto &range = controller->textSelection()->range(i);
+        if (mpSourceEditorEdbee->textDocument()->text().mid(range.anchor(), range.length()) == replaceText) {
+            slot_sourceFindNext();
+            continue;
+        }
+        if (!range.hasSelection()) {
+            slot_sourceFindPrevious();
+            continue;
+        }
+        mpSourceEditorEdbee->textDocument()->replace(range.anchor(), range.length(), replaceText);
+        range.setLength(mpSourceEditorFindArea->lineEdit_replaceText->text().length());
+    }
 }
 
 void dlgTriggerEditor::slot_sourceFindPrevious()
@@ -8426,40 +8451,21 @@ void dlgTriggerEditor::slot_keyGrab()
 // Deactivate instead with optional "false" - to allow these for keybindings
 void dlgTriggerEditor::setShortcuts(const bool active)
 {
-    QList<QAction*> actionList = toolBar->actions();
-    QString actionText;
+    setShortcuts(toolBar->actions(), active);
+    setShortcuts(toolBar2->actions(), active);
+}
+
+void dlgTriggerEditor::setShortcuts(QList<QAction*> actionList, const bool active)
+{
+    QString buttonLabel;
     for (auto& action : actionList) {
-        actionText = action->text();
-        if (actionText ==  tr("Save Item")) {
-            action->setShortcut((active) ? tr("Ctrl+S") : QString());
-        } else if (actionText == tr("Save Profile")) {
-            action->setShortcut((active) ? tr("Ctrl+Shift+S") : QString());
+        if (!active) {
+            action->setShortcut(QString());
+            continue;
         }
-    }
-    actionList = toolBar2->actions();
-    for (auto& action : actionList) {
-        actionText = action->text();
-        // TODO: Refactor into nice list to iterate
-        if (actionText == tr("Triggers")) {
-            action->setShortcut((active) ? tr("Ctrl+1") : QString());
-        } else if (actionText == tr("Aliases")) {
-            action->setShortcut((active) ? tr("Ctrl+2") : QString());
-        } else if (actionText == tr("Scripts")) {
-            action->setShortcut((active) ? tr("Ctrl+3") : QString());
-        } else if (actionText == tr("Timers")) {
-            action->setShortcut((active) ? tr("Ctrl+4") : QString());
-        } else if (actionText == tr("Keys")) {
-            action->setShortcut((active) ? tr("Ctrl+5") : QString());
-        } else if (actionText == tr("Variables")) {
-            action->setShortcut((active) ? tr("Ctrl+6") : QString());
-        } else if (actionText == tr("Buttons")) {
-            action->setShortcut((active) ? tr("Ctrl+7") : QString());
-        } else if (actionText == tr("Errors")) {
-            action->setShortcut((active) ? tr("Ctrl+8") : QString());
-        } else if (actionText == tr("Statistics")) {
-            action->setShortcut((active) ? tr("Ctrl+9") : QString());
-        } else if (actionText == tr("Debug")) {
-            action->setShortcut((active) ? tr("Ctrl+0") : QString());
+        buttonLabel = action->text();
+        if (auto it = mButtonShortcuts.find(buttonLabel); it != mButtonShortcuts.end()) {
+            action->setShortcut(it->second);
         }
     }
 }

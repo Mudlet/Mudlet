@@ -6,7 +6,7 @@
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
- *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
+ *   Copyright (C) 2022-2023 by Lecker Kebap - Leris@mudlet.org            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -8663,7 +8663,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    int id;
+    int id = -1;
     QString name;
     if (!lua_isnumber(L, 1)) {
         if (!lua_isstring(L, 1)) {
@@ -13765,7 +13765,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
                 host.mMSSPHostName = msspVAL;
             } else if (msspVAR == "TLS" || msspVAR == "SSL") {
                 // In certain MSSP fields "-1" and "1" denote not supported/supported indicators,
-                // however the port is the standard value here. Ignore those values here. 
+                // however the port is the standard value here. Ignore those values here.
                 host.mMSSPTlsPort = (msspVAL != "-1" && msspVAL != "1") ? msspVAL.toInt() : 0;
             }
         }
@@ -15605,6 +15605,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "announce", TLuaInterpreter::announce);
     lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
     lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
+    lua_register(pGlobalLua, "getConfig", TLuaInterpreter::getConfig);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -17194,14 +17195,19 @@ int TLuaInterpreter::showNotification(lua_State* L)
     if (n >= 2) {
         text = getVerifiedString(L, __func__, 2, "message");
     }
-    int notificationExpirationTime = 1;
+    std::optional<int> notificationExpirationTime;
     if (n >= 3) {
-        notificationExpirationTime = qMax(qRound(getVerifiedDouble(L, __func__, 3, "expiration time in seconds") / 1000), 1);
+        notificationExpirationTime = qMax(qRound(getVerifiedDouble(L, __func__, 3, "expiration time in seconds") * 1000), 1000);
     }
 
     mudlet::self()->mTrayIcon.show();
-    mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime);
-    return 0;
+    if (notificationExpirationTime.has_value()) {
+        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime.value());
+    } else {
+        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon());
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveJsonMap
@@ -17454,6 +17460,10 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setConfig
+// Please use same options with same names in setConfig and getConfig and keep them in sync
+// The table argument case for setting multiple properties at once is handled
+// by setConfig in Other.lua.
 int TLuaInterpreter::setConfig(lua_State * L)
 {
     auto& host = getHostFromLua(L);
@@ -17597,6 +17607,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         } else if (behaviour == qsl("replacewithspace")) {
             host.mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
         }
+        return success();
     }
     if (key == qsl("caretShortcut")) {
         static const QStringList keys{"none", "tab", "ctrltab", "f6"};
@@ -17617,6 +17628,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         } else if (key == qsl("f6")) {
             host.mCaretShortcut = Host::CaretShortcut::F6;
         }
+        return success();
     }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
@@ -17827,7 +17839,7 @@ int TLuaInterpreter::announce(lua_State *L) {
 int TLuaInterpreter::scrollTo(lua_State* L)
 {
     QString windowName;
-    int targetLine;
+    int targetLine = -1;
     bool stopScrolling = false;
 
     int n = lua_gettop(L);
@@ -17903,4 +17915,164 @@ int TLuaInterpreter::getScroll(lua_State* L)
     result = std::max(result, 0);
     lua_pushnumber(L, result);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getConfig
+// Please use same options with same names in setConfig and getConfig and keep them in sync
+// The no args case that returns a table is handled by getConfig in Other.lua
+// that runs a loop with a list of these properties, please update that list.
+int TLuaInterpreter::getConfig(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
+
+    QString key = getVerifiedString(L, __func__, 1, "key");
+    if (key.isEmpty()) {
+        return warnArgumentValue(L, __func__, "you must provide key");
+    }
+
+    if (key == qsl("mapRoomSize")) {
+        lua_pushnumber(L, host.mRoomSize);
+        return 1;
+    }
+
+    if (key == qsl("mapExitSize")) {
+        lua_pushnumber(L, host.mLineSize);
+        return 1;
+    }
+
+    if (key == qsl("mapRoundRooms")) {
+        lua_pushboolean(L, host.mBubbleMode);
+        return 1;
+    }
+
+    if (key == qsl("showRoomIdsOnMap")) {
+        lua_pushboolean(L, host.mShowRoomID);
+        return 1;
+    }
+
+    if (key == qsl("show3dMapView")) {
+#if defined(INCLUDE_3DMAPPER)
+        if (host.mpMap && host.mpMap->mpMapper) {
+            auto widget = host.mpMap->mpMapper->glWidget;
+            lua_pushboolean(L, (widget && widget->isVisible()));
+            return 1;
+        }
+#endif
+        lua_pushboolean(L, false);
+        return 1;
+    }
+
+    if (key == qsl("mapperPanelVisible")) {
+        lua_pushboolean(L, host.mShowPanel);
+        return 1;
+    }
+
+    if (key == qsl("mapShowRoomBorders")) {
+        lua_pushboolean(L, host.mMapperShowRoomBorders);
+        return 1;
+    }
+
+    if (key == qsl("enableGMCP")) {
+        lua_pushboolean(L, host.mEnableGMCP);
+        return 1;
+    }
+
+    if (key == qsl("enableMSDP")) {
+        lua_pushboolean(L, host.mEnableMSDP);
+        return 1;
+    }
+
+    if (key == qsl("enableMSSP")) {
+        lua_pushboolean(L, host.mEnableMSSP);
+        return 1;
+    }
+
+    if (key == qsl("enableMSP")) {
+        lua_pushboolean(L, host.mEnableMSP);
+        return 1;
+    }
+
+    if (key == qsl("askTlsAvailable")) {
+        lua_pushboolean(L, host.mAskTlsAvailable);
+        return 1;
+    }
+
+    if (key == qsl("inputLineStrictUnixEndings")) {
+        lua_pushboolean(L, host.mUSE_UNIX_EOL);
+        return 1;
+    }
+
+    if (key == qsl("autoClearInputLine")) {
+        lua_pushboolean(L, host.mAutoClearCommandLineAfterSend);
+        return 1;
+    }
+
+    if (key == qsl("showSentText")) {
+        lua_pushboolean(L, host.mPrintCommand);
+        return 1;
+    }
+
+    if (key == qsl("fixUnnecessaryLinebreaks")) {
+        lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX);
+        return 1;
+    }
+
+    if (key == qsl("specialForceCompressionOff")) {
+        lua_pushboolean(L, host.mFORCE_NO_COMPRESSION);
+        return 1;
+    }
+
+    if (key == qsl("specialForceGAOff")) {
+        lua_pushboolean(L, host.mFORCE_GA_OFF);
+        return 1;
+    }
+
+    if (key == qsl("specialForceCharsetNegotiationOff")) {
+        lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF);
+        return 1;
+    }
+
+    if (key == qsl("specialForceMxpNegotiationOff")) {
+        lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF);
+        return 1;
+    }
+
+    if (key == qsl("compactInputLine")) {
+        lua_pushboolean(L, host.getCompactInputLine());
+        return 1;
+    }
+
+    if (key == qsl("announceIncomingText")) {
+        lua_pushboolean(L, host.mAnnounceIncomingText);
+        return 1;
+    }
+
+    if (key == qsl("blankLinesBehaviour")) {
+        const auto behaviour = host.mBlankLineBehaviour;
+        if (behaviour == Host::BlankLineBehaviour::Show) {
+            lua_pushstring(L, "show");
+        } else if (behaviour == Host::BlankLineBehaviour::Hide) {
+            lua_pushstring(L, "hide");
+        } else if (behaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
+            lua_pushstring(L, "replacewithspace");
+        }
+        return 1;
+    }
+
+    if (key == qsl("caretShortcut")) {
+        const auto caret = host.mCaretShortcut;
+        if (caret == Host::CaretShortcut::None) {
+            lua_pushstring(L, "none");
+        } else if (caret == Host::CaretShortcut::Tab) {
+            lua_pushstring(L, "tab");
+        } else if (caret == Host::CaretShortcut::CtrlTab) {
+            lua_pushstring(L, "ctrltab");
+        } else if (caret == Host::CaretShortcut::F6) {
+            lua_pushstring(L, "f6");
+        }
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
