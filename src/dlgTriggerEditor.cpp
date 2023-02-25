@@ -505,7 +505,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpExportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
 
     mProfileSaveAction = new QAction(QIcon(qsl(":/icons/document-save-all.png")), tr("Save Profile"), this);
-    mProfileSaveAction->setEnabled(true);
     mProfileSaveAction->setToolTip(tr("<p>Saves your profile. (Ctrl+Shift+S)</p>"
                                       "<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and "
                                       "keys, but not the map or script-specific settings) to your computer disk, so "
@@ -520,8 +519,19 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mProfileSaveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAction);
 
     mProfileSaveAsAction = new QAction(QIcon(qsl(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
-    mProfileSaveAsAction->setEnabled(true);
     connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
+
+    if (mpHost->loadedOk) {
+        mProfileSaveAction->setEnabled(true);
+        mProfileSaveAsAction->setEnabled(true);
+    } else {
+        mProfileSaveAction->setDisabled(true);
+        mProfileSaveAsAction->setDisabled(true);
+        auto disabledSaving = tr("Something went wrong loading your Mudlet profile and it could not be loaded. "
+            "Try loading an older version in 'Connect - Options - Profile history'");
+        mProfileSaveAction->setToolTip(disabledSaving);
+        mProfileSaveAsAction->setToolTip(disabledSaving);
+    }
 
     auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
     QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_nextSection);
