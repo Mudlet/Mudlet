@@ -382,6 +382,18 @@ end</script>
 				<packageName></packageName>
 				<regex>^map ignore(?: (.*))?$</regex>
 			</Alias>
+                        <Alias isActive="yes" isFolder="no">
+				<name>Set Move Method Alias</name>
+				<script>
+if matches[2] then
+  map.make_move_method(matches[2])
+else
+  display(map.save.move_methods)
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map movemethod(?: (.*))?$</regex>
+			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Debug Alias</name>
 				<script>map.configs.debug = not map.configs.debug
@@ -644,7 +656,7 @@ raiseEvent("sysSpeedwalkStopped")</script>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.0.25"
+local version = "2.0.26"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -686,6 +698,7 @@ map.help = {[[
             your prompt, uses Lua string-library patterns
         &lt;link: ignore&gt;map ignore&lt;/link&gt; - Provides a specific pattern for the script to ignore,
             uses Lua string-library patterns
+        &lt;link: movemethod&gt;map movemethod&lt;/link&gt; - Adds a movement method for the script to look for when mapping.
         &lt;link: debug&gt;map debug&lt;/link&gt; - Toggles on debug mode, in which extra messages are shown
             with the intent of assisting in troubleshooting getting the
             script setup
@@ -898,6 +911,18 @@ map.help.ignore = [[
 
         If the given pattern is already in the list of ignore patterns, that
         pattern will be removed from the list.
+]]
+map.help.movemethod = [[
+    &lt;cyan&gt;Move Method&lt;reset&gt;
+        syntax: &lt;yellow&gt;map movemethod &lt;movement word&gt;&lt;reset&gt;
+
+        This command will add a movement method for the script to look for
+        when moving between rooms. If your game has methods such as "walk north",
+        "swim south" or similar, add "walk" or "swim" as necessary. For single
+        room movement only.
+
+        If the given method is already in the list of movement methods, that
+        method will be removed from the list.
 ]]
 map.help.areas = [[
     &lt;cyan&gt;Map Areas&lt;reset&gt;
@@ -1250,6 +1275,7 @@ map.save = map.save or {}
 map.save.recall = map.save.recall or {}
 map.save.prompt_pattern = map.save.prompt_pattern or {}
 map.save.ignore_patterns = map.save.ignore_patterns or {}
+map.save.move_methods = map.save.move_methods or {}
 
 local oldstring = string
 local string = utf8
@@ -1408,6 +1434,7 @@ local function config()
     end
     saves.prompt_pattern = saves.prompt_pattern or {}
     saves.ignore_patterns = saves.ignore_patterns or {}
+    saves.move_methods = saves.move_methods or {}
     saves.recall = saves.recall or {}
     map.save = saves
 
@@ -1993,6 +2020,13 @@ local function capture_move_cmd(dir,priority)
             map.set_door(door,"","")
         end
     end
+    for i,v in ipairs(map.save.move_methods) do
+    	local str = string.match(dir, v .. " (%a+)")
+    	if str then 
+    		dir = str
+    		break
+    	end
+    end
     local portal = string.match(dir,"enter (%a+)")
     if map.mapping and portal then
         local portals = getSpecialExitsSwap(map.currentRoom)
@@ -2001,13 +2035,17 @@ local function capture_move_cmd(dir,priority)
         end
     end
     if table.contains(exitmap,dir) or string.starts(dir,"enter ") or dir == "recall" then
+      if dir ~= configs.lang_dirs['look'] then
         if priority then
             table.insert(move_queue,1,exitmap[dir] or dir)
         else
             table.insert(move_queue,exitmap[dir] or dir)
         end
-    elseif configs.search_on_look and dir == configs.lang_dirs['look'] then
-        table.insert(move_queue, dir)
+      else
+        if configs.search_on_look == true then
+          table.insert(move_queue, dir)
+        end
+    end				
     elseif map.currentRoom then
         local special = getSpecialExitsSwap(map.currentRoom) or {}
         if special[dir] then
@@ -2735,6 +2773,18 @@ function map.make_ignore_pattern(str)
     else
         table.remove(map.save.ignore_patterns, table.index_of(map.save.ignore_patterns, str))
         map.echo("Ignore pattern removed: " .. str)
+    end
+    table.save(profilePath .. "/map downloads/map_save.dat",map.save)
+end
+
+function map.make_move_method(str)
+    map.save.move_methods = map.save.move_methods or {}
+    if not table.contains(map.save.move_methods,str) then
+        table.insert(map.save.move_methods,str)
+        map.echo("Move method added: " .. str)
+    else
+        table.remove(map.save.move_methods, table.index_of(map.save.move_methods, str))
+        map.echo("Move method removed: " .. str)
     end
     table.save(profilePath .. "/map downloads/map_save.dat",map.save)
 end

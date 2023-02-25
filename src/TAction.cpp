@@ -82,7 +82,7 @@ void TAction::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of action:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
@@ -96,7 +96,7 @@ void TAction::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::debugMode) {
+            if (mudlet::smDebugMode) {
                 TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of action:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
@@ -158,16 +158,14 @@ void TAction::execute()
 
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            mpHost->mpConsole->activateWindow();
-            mpHost->mpConsole->setFocus();
+            mpHost->setFocusOnHostMainConsole();
             return;
         }
     }
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
     // move focus back to the active console / command line:
-    mpHost->mpConsole->activateWindow();
-    mpHost->mpConsole->setFocus();
+    mpHost->setFocusOnHostMainConsole();
 }
 
 void TAction::expandToolbar(TToolBar* pT)

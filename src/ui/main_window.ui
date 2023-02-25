@@ -291,10 +291,7 @@
   </action>
   <action name="dactionPackageExporter">
    <property name="text">
-    <string>Package exporter (exp.)</string>
-   </property>
-   <property name="iconText">
-    <string comment="&quot;exp. stands for experimental; shortened so it doesn't make menu entries/buttons huge in the main interface&quot;">Package exporter (exp.)</string>
+    <string>Package exporter</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</string>

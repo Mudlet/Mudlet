@@ -3633,6 +3633,38 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
+        <widget class="QGroupBox" name="groupBox_purgeMediaCache">
+         <property name="title">
+          <string>Clear stored media</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_purgeMediaCache">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_purgeMediaCache">
+            <property name="toolTip">
+             <string>&lt;p&gt;Media files used with Mudlet's Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Purge stored media files for the current profile:</string>
+            </property>
+            <property name="buddy">
+             <cstring>buttonPurgeMediaCache</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="buttonPurgeMediaCache">
+            <property name="toolTip">
+             <string>&lt;p&gt;Media files used with Mudlet's Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Clear</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox_updates">
          <property name="title">
           <string>Mudlet updates</string>

@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2018-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -38,14 +39,16 @@
 #include <QScrollBar>
 #include "post_guard.h"
 
-TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
-, mCommandLineName(qsl("main"))
+, mCommandLineName(name)
 , mpHost(pHost)
 , mType(type)
 , mpKeyUnit(pHost->getKeyUnit())
 , mpConsole(pConsole)
 {
+    setObjectName(qsl("commandLine_%1_%2").arg(mpHost->getName(), name));
+
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
@@ -74,6 +77,9 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     // We do NOT want the standard context menu to happen as we generate it
     // ourself:
     setContextMenuPolicy(Qt::PreventContextMenu);
+
+    connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TCommandLine::slot_adjustAccessibleNames);
+    slot_adjustAccessibleNames();
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -128,7 +134,7 @@ bool TCommandLine::event(QEvent* event)
         }
 
         if (ke->matches(QKeySequence::Find)){ // Find is Ctrl+F
-            if (mudlet::self()->dactionInputLine->isChecked()){
+            if (mudlet::self()->dactionInputLine->isChecked()) {
                 // If hidden then reveal as if pressed Alt-L
                 mudlet::self()->dactionInputLine->setChecked(false);
                 mudlet::self()->mpCurrentActiveHost->setCompactInputLine(false);
@@ -174,9 +180,9 @@ bool TCommandLine::event(QEvent* event)
                 int currentIndex = mudlet::self()->mpTabBar->currentIndex();
                 int count = mudlet::self()->mpTabBar->count();
                 if (currentIndex - 1 < 0) {
-                    mudlet::self()->mpTabBar->setCurrentIndex(count - 1);
+                    mudlet::self()->slot_tabChanged(count - 1);
                 } else {
-                    mudlet::self()->mpTabBar->setCurrentIndex(currentIndex - 1);
+                    mudlet::self()->slot_tabChanged(currentIndex - 1);
                 }
                 ke->accept();
                 return true;
@@ -210,9 +216,9 @@ bool TCommandLine::event(QEvent* event)
                 int currentIndex = mudlet::self()->mpTabBar->currentIndex();
                 int count = mudlet::self()->mpTabBar->count();
                 if (currentIndex + 1 < count) {
-                    mudlet::self()->mpTabBar->setCurrentIndex(currentIndex + 1);
+                    mudlet::self()->slot_tabChanged(currentIndex + 1);
                 } else {
-                    mudlet::self()->mpTabBar->setCurrentIndex(0);
+                    mudlet::self()->slot_tabChanged(0);
                 }
                 ke->accept();
                 return true;
@@ -255,8 +261,10 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 mLastCompletion.clear();
+                // This does the actual deletion of the character:
                 QPlainTextEdit::event(event);
-
+                // Recheck spelling of shortened word:
+                spellCheck();
                 adjustHeight();
                 return true;
             }
@@ -281,7 +289,10 @@ bool TCommandLine::event(QEvent* event)
                 mAutoCompletionCount = -1;
                 mTabCompletionCount = -1;
                 mLastCompletion.clear();
+                // This does the actual deletion of the character:
                 QPlainTextEdit::event(event);
+                // Recheck spelling of shortened word:
+                spellCheck();
                 adjustHeight();
                 return true;
             }
@@ -856,17 +867,48 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
         mPopupPosition = event->pos();
         popup->popup(event->globalPos());
-        // The use of accept here prevents this event from reaching any parent
-        // widget - like the TConsole containing this TCommandLine...
+        // The use of accept here is supposed to prevents this event from
+        // reaching any parent widget - like the TConsole containing this
+        // TCommandLine...
         event->accept();
-        mudlet::self()->activateProfile(mpHost);
-        return;
     }
 
     // Process any other possible mousePressEvent - which is default popup
     // handling - and which accepts the event:
     QPlainTextEdit::mousePressEvent(event);
     mudlet::self()->activateProfile(mpHost);
+    if (mType & (SubCommandLine|ConsoleCommandLine)) {
+        // This is NOT the main TMainConsole so keep the focus in this
+        // TConsole/TCommandLine - but due to the way things happen we
+        // need to do it after other things have happened - by using a zero
+        // time-out timer:
+        QTimer::singleShot(0, this, [this]() {
+            if (mpConsole) {
+                mpConsole->setFocusOnAppropriateConsole();
+                this->setFocus(Qt::OtherFocusReason);
+            }
+        });
+    }
+}
+
+void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
+{
+    // Process any other possible mousePressEvent - which is default popup
+    // handling - and which accepts the event:
+    QPlainTextEdit::mousePressEvent(event);
+    mudlet::self()->activateProfile(mpHost);
+    if (mType & (SubCommandLine|ConsoleCommandLine)) {
+        // This is NOT the main TMainConsole so keep the focus in this
+        // TConsole/TCommandLine - but due to the way things happen we
+        // need to do it after other things have happened - by using a zero
+        // time-out timer:
+        QTimer::singleShot(0, this, [this]() {
+            if (mpConsole) {
+                mpConsole->setFocusOnAppropriateConsole();
+                this->setFocus(Qt::OtherFocusReason);
+            }
+        });
+    }
 }
 
 void TCommandLine::enterCommand(QKeyEvent* event)
@@ -1163,7 +1205,7 @@ bool TCommandLine::handleCtrlTabChange(QKeyEvent* ke, int tabNumber)
         }
 
         if (mudlet::self()->mpTabBar->count() >= (tabNumber)) {
-            mudlet::self()->mpTabBar->setCurrentIndex(tabNumber - 1);
+            mudlet::self()->slot_tabChanged(tabNumber - 1);
             ke->accept();
             return true;
         }
@@ -1256,4 +1298,104 @@ void TCommandLine::removeSuggestion(const QString& suggestion)
 void TCommandLine::clearSuggestions()
 {
     commandLineSuggestions.clear();
+}
+
+void TCommandLine::slot_adjustAccessibleNames()
+{
+    bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    const QString hostName{mpHost ? mpHost->getName() : QString()};
+    switch (mType) {
+    case MainCommandLine:
+        if (multipleProfilesActive) {
+            setAccessibleName(tr("Input line for \"%1\" profile.",
+                                 // Intentional comment to separate arguments
+                                 "Accessibility-friendly name to describe the main command line for a "
+                                 "Mudlet profile when more than one profile is loaded, %1 is the "
+                                 "profile name. Because this is likely to be used often it should be "
+                                 "kept as short as possible.").arg(hostName));
+            setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
+                                        "to run commands locally.",
+                                        // Intentional comment to separate arguments
+                                        "Accessibility-friendly description for the main command line for "
+                                        "a Mudlet profile when more than one profile is loaded, %1 is the "
+                                        "profile name. Because this is likely to be used often it should be "
+                                        "kept as short as possible.").arg(hostName));
+        } else {
+            setAccessibleName(tr("Input line.",
+                                 // Intentional comment to separate arguments
+                                 "Accessibility-friendly name to describe the main command line for a "
+                                 "Mudlet profile when only one profile is loaded. Because this is "
+                                 "likely to be used often it should be kept as short as possible."));
+            setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
+                                        "locally.",
+                                        // Intentional comment to separate arguments
+                                        "Accessibility-friendly description for the main command line for "
+                                        "a Mudlet profile when only one profile is loaded. Because this is "
+                                        "likely to be used often it should be kept as short as possible."));
+        }
+        break;
+    case SubCommandLine:
+        if (multipleProfilesActive) {
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.",
+                                 // Intentional comment to separate arguments
+                                 "Accessibility-friendly name to describe an extra command line on "
+                                 "top of console/window when more than one profile is loaded, %1 is "
+                                 "the command line name, %2 is the name of the window/console that "
+                                 "it is on and %3 is the name of the profile.")
+                                      .arg(mCommandLineName, mpConsole->mConsoleName, hostName));
+            setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
+                                        "to run commands locally.",
+                                        // Intentional comment to separate arguments
+                                        "Accessibility-friendly description for an extra command line on top of a "
+                                        "console/window when more than one profile is loaded, %1 is the profile "
+                                        "name.").arg(hostName));
+        } else {
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window.",
+                                 // Intentional comment to separate arguments
+                                 "Accessibility-friendly name to describe an extra command line on "
+                                 "top of console/window when only one profile is loaded, %1 is the "
+                                 "command line name and %2 is the name of the window/console that "
+                                 "it is on.")
+                                      .arg(mCommandLineName, mpConsole->mConsoleName));
+            setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
+                                        "locally.",
+                                        // Intentional comment to separate arguments
+                                        "Accessibility-friendly description for an extra command line on "
+                                        "top of a console/window when only one profile is loaded."));
+        }
+        break;
+    case ConsoleCommandLine:
+        // The mCommandLine for this type is the same as the parent TConsole
+        if (multipleProfilesActive) {
+            setAccessibleName(tr("Input line of \"%1\" window of \"%2\" profile.",
+                                 // Intentional comment to separate arguments
+                                 "Accessibility-friendly name to describe the built-in command line of a "
+                                 "console/window other than the main one, when more than one profile is "
+                                 "loaded, %1 is the name of the window/console and %2 is the name of the "
+                                 "profile.").arg(mCommandLineName, hostName));
+            setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
+                                        "to run commands locally.",
+                                        // Intentional comment to separate arguments
+                                        "Accessibility-friendly description for the built-in command line of a "
+                                        "console/window other than the main window's one when more than one profile is "
+                                        "loaded, %1 is the profile name.").arg(hostName));
+        } else {
+            setAccessibleName(tr("Input line of \"%1\" window.",
+                                 // Intentional comment to separate arguments
+                                 "Accessibility-friendly name to describe the built-in command line "
+                                 "of a console/window other than the main one, when only one "
+                                 "profile is loaded, %1 is the name of the window/console.")
+                                      .arg(mCommandLineName));
+            setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
+                                        "locally.",
+                                        // Intentional comment to separate arguments
+                                        "Accessibility-friendly description for the built-in command line of a "
+                                        "console/window other than the main window's one when only one profile is "
+                                        "loaded."));
+        }
+        break;
+    case UnknownType:
+        Q_UNREACHABLE();
+    }
+
 }
