@@ -2667,7 +2667,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
             pHost->mSslTsl = (*it).tlsEnabled;
         }
     } else {
-        QFile file(qsl("%1/%2").arg(folder, entries.at(0)));
+        QFile file(qsl("%1%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
