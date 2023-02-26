@@ -234,9 +234,9 @@ int main(int argc, char* argv[])
     // was causing issue when Mudlet was set to error out on unexpected
     // commandline options, issue: https://github.com/Mudlet/Mudlet/issues/6500
     // Also see: https://github.com/Squirrel/Squirrel.Windows/blob/develop/docs/using/custom-squirrel-events-non-cs.md
-    // Only the first one does not take a semver argument and is the one
-    // that was causing the issue but the others might, if handled, lead to
-    // ways to improve our Windows installation process
+    // Only the first one does not take a semantic version argument and is the
+    // one that was causing the issue but the others might, if handled, lead to
+    // ways to improve our Windows installation process.
     const QString dummyInternalOptionString{qsl("Internal option used by Windows installer")};
     const QString dummyVersionString{qsl("version")};
     QCommandLineOption firstRunAfterInstall(QStringList() << qsl("squirrel-firstrun"), dummyInternalOptionString);
@@ -327,16 +327,16 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "There are other options that may be used by the Windows OS installer that are\n"
                                                                   "only for its own internal use:"));
         texts << appendLF.arg(QCoreApplication::translate("main", "       --squirrel-firstrun          used by the installer to tell Mudlet that\n"
-                                                                  "                                    it has justbeen installed."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --squirrel-install <vers>    used by the installer to tell Mudlet to\n"
-                                                                  "                                    install the <sem-ver> of the application."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --squirrel-obsolete <vers>   used by the install to tell Mudlet that\n"
-                                                                  "                                    it has been made obsolete by the <sem-ver>\n"
+                                                                  "                                    it has just been installed."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       --squirrel-install <version>  used by the installer to tell Mudlet to\n"
+                                                                  "                                    install the <version> of the application."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       --squirrel-obsolete <version>  used by the install to tell Mudlet that\n"
+                                                                  "                                    it has been made obsolete by the <version>\n"
                                                                   "                                    version."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --squirrel-updated <ver>     used by the installer to tell Mudlet to\n"
-                                                                  "                                    update to the <sem-ver> version."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --squirrel-uninstall <ver>   used by the installed to tell Mudlet that\n"
-                                                                  "                                    it must unstall <sem-ver> of itself."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       --squirrel-updated <version>  used by the installer to tell Mudlet to\n"
+                                                                  "                                    update to the <version> version."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       --squirrel-uninstall <version>  used by the installed to tell Mudlet that\n"
+                                                                  "                                    it must unstall <version> of itself."));
 #endif
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
