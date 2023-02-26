@@ -660,7 +660,7 @@ int main(int argc, char* argv[])
     // is intended to return any non-zero exit value from the main application
     // but a -1 if there is a problem with the command line arguments if the main
     // application DOES terminate normally or 0 if everything is fine:
-    return exitCode ? exitCode : (parsedCommandLineOk ? -1 : 0);
+    return exitCode ? exitCode : (parsedCommandLineOk ? 0 : -1);
 }
 
 #if defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)
