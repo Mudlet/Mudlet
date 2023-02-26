@@ -234,7 +234,7 @@ int main(int argc, char* argv[])
 
     if (!parsedCommandLineOk) {
         // Warn of unknown options but tolerate them, in case user is not typing in command line.
-        std::cout << QCoreApplication::translate("main", "Error: %1").arg(parser.errorText()).toStdString();
+        std::cout << QCoreApplication::translate("main", "Error: %1\n").arg(parser.errorText()).toStdString();
     }
 
     if (parser.isSet(showHelp)) {
