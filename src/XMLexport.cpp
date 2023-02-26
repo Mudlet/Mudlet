@@ -461,9 +461,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("CompactInputLine") = pHost->getCompactInputLine() ? "yes" : "no";
 
     QString ignore;
-    QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
-    while (it.hasNext()) {
-        ignore = ignore.append(it.next());
+    QSetIterator<QChar> ignoreIterator(pHost->mDoubleClickIgnore);
+    while (ignoreIterator.hasNext()) {
+        ignore = ignore.append(ignoreIterator.next());
     }
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
@@ -475,8 +475,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
     if (int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
-        // Don't bother to include the attribute if it is the default (zero)
-        // value - and as it is an ASCII digit it only needs
+        // Don't bother to include the attribute if ignoreIterator is the default (zero)
+        // value - and as ignoreIterator is an ASCII digit ignoreIterator only needs
         // QString::toLatin1() encoding:
         host.append_attribute("ControlCharacterHandling") = QString::number(mode).toLatin1().constData();
     }

@@ -451,7 +451,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
             pC->deselect();
             auto its = captureList.begin();
             auto iti = posList.begin();
-            for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
+            for (int position = 1; iti != posList.end(); ++iti, ++its, position++) {
                 int begin = *iti;
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
@@ -459,7 +459,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
                     // skip complete match in Perl /g option type of triggers
                     // to enable people to highlight capture groups if there are any
                     // otherwise highlight complete expression match
-                    if (i % numberOfCaptureGroups != 1) {
+                    if (position % numberOfCaptureGroups != 1) {
                         pC->selectSection(begin, length);
                         if (mBgColor != QColorConstants::Transparent) {
                             pC->setBgColor(r1, g1, b1, 255);
@@ -490,14 +490,14 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
                     int total = captureList.size();
                     auto its = captureList.begin();
                     auto iti = posList.begin();
-                    for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
+                    for (int filterPosition = 1; iti != posList.end(); ++iti, ++its, filterPosition++) {
                         int begin = *iti;
                         std::string& s = *its;
                         if (total > 1 && numberOfCaptureGroups > 0) {
                             // skip complete match in Perl /g option type of triggers
                             // to enable people to highlight capture groups if there are any
                             // otherwise highlight complete expression match
-                            if (i % numberOfCaptureGroups != 1) {
+                            if (filterPosition % numberOfCaptureGroups != 1) {
                                 filter(s, begin);
                             }
                         } else {
