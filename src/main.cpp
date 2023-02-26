@@ -227,7 +227,7 @@ int main(int argc, char* argv[])
                                                    QCoreApplication::translate("main", "predefined_game", "Dummy text that is not used, no translation needed."));
     parser.addOption(onlyPredefinedProfileToShow);
 
-#if (defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER)) ||
+#if (defined(Q_OS_WIN32) && defined(INCLUDE_UPDATER))
     // These options may be passed to the Mudlet application by the
     // Squirrel.windows installer system, not having them as options
     // was causing issue when Mudlet was set to error out on unexpected
