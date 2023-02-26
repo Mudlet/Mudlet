@@ -1664,7 +1664,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         // Accumulated width in "normal" width characters:
         int column{};
         QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
-        for (int indexOfChar{}, total{lineText.size()}; indexOfChar < total;) {
+        for (int indexOfChar{}, lineLength{lineText.size()}; indexOfChar < lineLength;) {
             int nextBoundary{boundaryFinder.toNextBoundary()};
             // Width in "normal" width equivalent of this grapheme:
             int charWidth{};
