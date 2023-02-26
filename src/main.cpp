@@ -231,10 +231,13 @@ int main(int argc, char* argv[])
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
     QStringList texts;
-    if (!parsedCommandLineOk || parser.isSet(showHelp)) {
-        if (!parsedCommandLineOk) {
-            texts << append2LF.arg(QCoreApplication::translate("main", "Error: %1").arg(parser.errorText()));
-        }
+
+    if (!parsedCommandLineOk) {
+        // Warn of unknown options but tolerate them, in case user is not typing in command line.
+        texts << append2LF.arg(QCoreApplication::translate("main", "Error: %1").arg(parser.errorText()));
+    }
+
+    if (parser.isSet(showHelp)) {
         // Do "help" action
         texts << appendLF.arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]",
                                                           // Comment to separate arguments
@@ -292,7 +295,7 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
-        return parsedCommandLineOk ? 0 :-1;
+        return 0;
     }
 
     if (parser.isSet(showVersion)) {
