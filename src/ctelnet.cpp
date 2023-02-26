@@ -2082,7 +2082,9 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
 
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
 
+#if !defined(QT_NO_SSL)
     promptTlsConnectionAvailable();
+#endif
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#MSP
@@ -2209,6 +2211,7 @@ bool cTelnet::isIPAddress(QString& arg)
     return isIPAddress;
 }
 
+#if !defined(QT_NO_SSL)
 void cTelnet::promptTlsConnectionAvailable()
 {
     // If an SSL port is detected by MSSP and we're not using it, prompt to use on future connections
@@ -2248,6 +2251,7 @@ void cTelnet::promptTlsConnectionAvailable()
         }
     }
 }
+#endif
 
 bool cTelnet::purgeMediaCache()
 {
