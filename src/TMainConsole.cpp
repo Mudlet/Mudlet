@@ -72,6 +72,20 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
+
+    if (!mudlet::self()->smCommandLineParseError.isEmpty()) {
+        mpHost->postMessage(tr("[ WARN ]  - Mudlet was started with a command-line argument that it does\n"
+                               "not understand, and the parser has produced an error message:\n"
+                               "\"%1\"\n"
+                               "If possible you should check how the Mudlet application was started and\n"
+                               "that it is updated to be the latest version.",
+                               // Intentional comment to separate arguments
+                               "This text is shown in the first profile loaded in a session when there is "
+                               "one or more command line arguments that were not expected - %1 is the "
+                               "message from the Qt command line parsing system.")
+                                    .arg(mudlet::self()->smCommandLineParseError));
+        mudlet::self()->smCommandLineParseError.clear();
+    }
 }
 
 TMainConsole::~TMainConsole()

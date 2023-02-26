@@ -229,7 +229,6 @@ public:
         hunspellDictionaryPath
     };
 
-
     static QString getMudletPath(mudletPathType, const QString& extra1 = QString(), const QString& extra2 = QString());
     // From https://stackoverflow.com/a/14678964/4805858 an answer to:
     // "How to find and replace string?" by "Czarek Tomczak":
@@ -299,6 +298,11 @@ public:
     inline static QPointer<QMainWindow> smpDebugArea;
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool smMirrorToStdOut = false;
+    // If we get something we do not understand from the command line arguments
+    // then save the error message here so it can be shown in the first profile
+    // loaded. This is to help in the Windows OS case where it is not always
+    // possible to view "std::out"-put sent to the OS command line:
+    inline static QString smCommandLineParseError;
 
 
     void showEvent(QShowEvent*) override;
@@ -474,7 +478,6 @@ public:
 #if defined(INCLUDE_UPDATER)
     Updater* pUpdater = nullptr;
 #endif
-
 
 public slots:
     void slot_closeCurrentProfile();
