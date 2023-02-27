@@ -681,6 +681,37 @@ QStringList IrcNetwork::requestedCapabilities() const
     return IrcPrivate::setToList(d->requestedCaps);
 }
 
+
+/*!
+    This property specifies whether we should request capabilities right away
+    after establishing connecting or not. Otherwise, we wait for CAP * LS and
+    check if capabilities we're about to request are supported by the server.
+
+    By default this is set to false
+
+    \par Access functions:
+    \li bool <b>skipCapabilityValidation</b>() const
+    \li void <b>setSkipCapabilityValidation</b>(bool skip)
+
+    \par Notifier signal:
+    \li void <b>skipCapabilityValidationChanged</b>(bool skip)
+ */
+
+bool IrcNetwork::skipCapabilityValidation() const
+{
+    Q_D(const IrcNetwork);
+    return d->skipCapabilityValidation;
+}
+
+void IrcNetwork::setSkipCapabilityValidation(bool skip)
+{
+    Q_D(IrcNetwork);
+    if (d->skipCapabilityValidation != skip) {
+        d->skipCapabilityValidation = skip;
+        emit skipCapabilityValidationChanged(skip);
+    }
+}
+
 void IrcNetwork::setRequestedCapabilities(const QStringList& capabilities)
 {
     Q_D(IrcNetwork);

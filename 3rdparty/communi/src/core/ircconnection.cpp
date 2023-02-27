@@ -39,7 +39,7 @@
 #include "irccore_p.h"
 #include "irc.h"
 #include <QLocale>
-#include <QRegExp>
+#include <QRegularExpression>
 #include <QDateTime>
 #include <QTcpSocket>
 #include <QTextCodec>
@@ -247,6 +247,8 @@ IRC_BEGIN_NAMESPACE
     \li void <b>whoReplyMessageReceived</b>(\ref IrcWhoReplyMessage* message) (\b since 3.1)
  */
 
+extern bool irc_is_supported_encoding(const QByteArray& encoding); // ircmessagedecoder.cpp
+
 #ifndef IRC_DOXYGEN
 IrcConnectionPrivate::IrcConnectionPrivate() :
     encoding("ISO-8859-15"),
@@ -363,7 +365,7 @@ void IrcConnectionPrivate::_irc_filterDestroyed(QObject* filter)
 
 static bool parseServer(const QString& server, QString* host, int* port, bool* ssl)
 {
-    QStringList p = server.split(QRegExp("[: ]"), Qt::SkipEmptyParts);
+    QStringList p = server.split(QRegularExpression("[: ]"), Qt::SkipEmptyParts);
     *host = p.value(0);
     *ssl = p.value(1).startsWith(QLatin1Char('+'));
     bool ok = false;
@@ -663,7 +665,6 @@ QByteArray IrcConnection::encoding() const
 void IrcConnection::setEncoding(const QByteArray& encoding)
 {
     Q_D(IrcConnection);
-    extern bool irc_is_supported_encoding(const QByteArray& encoding); // ircmessagedecoder.cpp
     if (!irc_is_supported_encoding(encoding)) {
         qWarning() << "IrcConnection::setEncoding(): unsupported encoding" << encoding;
         return;
@@ -1397,7 +1398,6 @@ void IrcConnection::close()
         if (d->socket->state() == QAbstractSocket::UnconnectedState)
             d->setStatus(Closed);
         d->reconnecter.stop();
-        d->setConnectionCount(0);
     }
 }
 
@@ -1414,10 +1414,13 @@ void IrcConnection::close()
  */
 void IrcConnection::quit(const QString& reason)
 {
-    if (isConnected())
+    Q_D(IrcConnection);
+    if (isConnected()) {
+        d->setConnectionCount(0);
         sendCommand(IrcCommand::createQuit(reason));
-    else
+    } else {
         close();
+    }
 }
 
 /*!
