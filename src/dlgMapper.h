@@ -52,6 +52,8 @@ public:
     void setDefaultAreaShown(bool);
     bool getDefaultAreaShown() { return mShowDefaultArea; }
     void resetAreaComboBoxToPlayerRoomArea();
+    // The button is the goto source for this bit of information:
+    bool isIn3DMode() const { return pushButton_3D->isDown(); }
     bool isFloatAndDockable() const;
 
 public slots:

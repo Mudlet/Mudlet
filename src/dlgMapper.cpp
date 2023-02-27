@@ -234,10 +234,10 @@ void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
 void dlgMapper::slot_toggle3DView(const bool is3DMode)
 {
 #if defined(INCLUDE_3DMAPPER)
-    if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
-        mpHost->mpMap->mpM->update();
-    }
-    if (!glWidget) {
+    pushButton_3D->setDown(is3DMode);
+    if (glWidget) {
+        glWidget->update();
+    } else {
         glWidget = new GLWidget(mpMap, mpHost, this);
         glWidget->setObjectName("glWidget");
 
@@ -247,7 +247,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
         glWidget->setSizePolicy(sizePolicy);
         verticalLayout_mapper->insertWidget(0, glWidget);
-        mpMap->mpM = mpMap->mpMapper->glWidget;
+        mpMap->mpM = glWidget;
         connect(pushButton_ortho, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showAllLevels);
         connect(pushButton_singleLevel, &QAbstractButton::clicked, glWidget, &GLWidget::slot_singleLevelView);
         connect(pushButton_increaseTop, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showMoreUpperLevels);
