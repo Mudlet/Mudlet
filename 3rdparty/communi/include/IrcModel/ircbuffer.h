@@ -62,6 +62,14 @@ class IRC_MODEL_EXPORT IrcBuffer : public QObject
     Q_PROPERTY(QVariantMap userData READ userData WRITE setUserData NOTIFY userDataChanged)
 
 public:
+    enum Type
+    {
+        Basic = 0,
+        Channel,
+        Custom
+    };
+    Q_ENUM(Type)
+
     Q_INVOKABLE explicit IrcBuffer(QObject* parent = nullptr);
     ~IrcBuffer() override;
 
@@ -88,6 +96,8 @@ public:
     void setUserData(const QVariantMap& data);
 
     Q_INVOKABLE bool sendCommand(IrcCommand* command);
+
+    virtual IrcBuffer *clone(QObject* parent = nullptr);
 
 public Q_SLOTS:
     void setName(const QString& name);

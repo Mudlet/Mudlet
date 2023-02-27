@@ -1,3 +1,10 @@
+## [3.7.0] - 2021-12-18
+- Fix build with Qt 6
+- Add a way to skip capability validation
+- Make sure to remove buffer from channel list when buffer get destroyed
+- Don't reset connection count on connection close but on quit
+- Support more responses to CAP LS 302
+
 ## [3.6.0] - 2020-10-29
 - General
   - Fixed deprecation warnings up until Qt 5.15

@@ -261,6 +261,8 @@ IRC_BEGIN_NAMESPACE
     \brief A whowas command (WHOWAS) is used to query information about a user that no longer exists.
  */
 
+extern bool irc_is_supported_encoding(const QByteArray& encoding); // ircmessagedecoder.cpp
+
 #ifndef IRC_DOXYGEN
 IrcCommandPrivate::IrcCommandPrivate() :  encoding("UTF-8")
 {
@@ -387,7 +389,6 @@ QByteArray IrcCommand::encoding() const
 void IrcCommand::setEncoding(const QByteArray& encoding)
 {
     Q_D(IrcCommand);
-    extern bool irc_is_supported_encoding(const QByteArray& encoding); // ircmessagedecoder.cpp
     if (!irc_is_supported_encoding(encoding)) {
         qWarning() << "IrcCommand::setEncoding(): unsupported encoding" << encoding;
         return;

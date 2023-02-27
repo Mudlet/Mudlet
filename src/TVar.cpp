@@ -45,10 +45,10 @@ TVar::TVar()
 , reference(false)
 , parent(nullptr)
 , name(QString())
-, kType(LUA_TNONE)
+, keyType(LUA_TNONE)
 , value(QString())
-, vType(LUA_TNONE)
-, nkType(LUA_TNONE)
+, valueType(LUA_TNONE)
+, newKeyType(LUA_TNONE)
 , nName(QString())
 {
 }
@@ -61,10 +61,10 @@ TVar::TVar(TVar* p)
 , reference(false)
 , parent(p)
 , name(QString())
-, kType(LUA_TNONE)
+, keyType(LUA_TNONE)
 , value(QString())
-, vType(LUA_TNONE)
-, nkType(LUA_TNONE)
+, valueType(LUA_TNONE)
+, newKeyType(LUA_TNONE)
 , nName(QString())
 {
 }
@@ -77,10 +77,10 @@ TVar::TVar(TVar* p, const QString& kName, const int kt, const QString& val, cons
 , reference(false)
 , parent(p)
 , name(kName)
-, kType(kt)
+, keyType(kt)
 , value(val)
-, vType(vt)
-, nkType(LUA_TNONE)
+, valueType(vt)
+, newKeyType(LUA_TNONE)
 , nName(QString())
 {
 }
@@ -143,7 +143,7 @@ void TVar::removeChild(TVar* t)
 
 int TVar::getKeyType()
 {
-    return kType;
+    return keyType;
 }
 
 QString TVar::getValue()
@@ -153,18 +153,18 @@ QString TVar::getValue()
 
 int TVar::getValueType()
 {
-    return vType;
+    return valueType;
 }
 
 void TVar::setNewName(const QString& n, const int t)
 {
     nName = n;
-    nkType = t;
+    newKeyType = t;
 }
 
 int TVar::getNewKeyType()
 {
-    return nkType;
+    return newKeyType;
 }
 
 QString TVar::getNewName()
@@ -175,9 +175,9 @@ QString TVar::getNewName()
 void TVar::clearNewName()
 {
     name = nName;
-    kType = nkType;
+    keyType = newKeyType;
     nName = QString();
-    nkType = LUA_TNIL; // CHECK: Was 0 but perhaps it should have been -1 (LUA_TNONE ?)
+    newKeyType = LUA_TNIL; // CHECK: Was 0 but perhaps it should have been -1 (LUA_TNONE ?)
 }
 
 bool TVar::setValue(const QString& val)
@@ -189,20 +189,20 @@ bool TVar::setValue(const QString& val)
 bool TVar::setValue(const QString& val, const int t)
 {
     value = val;
-    vType = t;
+    valueType = t;
     return true;
 }
 
 bool TVar::setValueType(const int t)
 {
-    vType = t;
+    valueType = t;
     return true;
 }
 
 bool TVar::setName(const QString& n, const int kt)
 {
     name = n;
-    kType = kt;
+    keyType = kt;
     return true;
 }
 
