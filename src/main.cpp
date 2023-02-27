@@ -233,8 +233,12 @@ int main(int argc, char* argv[])
     QStringList texts;
 
     if (!parsedCommandLineOk) {
-        // Warn of unknown options but tolerate them, in case user is not typing in command line.
-        std::cout << QCoreApplication::translate("main", "Error: %1\n").arg(parser.errorText()).toStdString();
+        // Warn of unknown options but tolerate them.
+        // We want the message to be visible for someone launching from command prompt
+        // and will have standard output left on their screen, but still allow program
+        // to start when launched by installer.
+        // --squirrel-firstrun for example is given for launch at end of install process.
+        std::cout << QCoreApplication::translate("main", "Warning: %1\n").arg(parser.errorText()).toStdString();
     }
 
     if (parser.isSet(showHelp)) {
