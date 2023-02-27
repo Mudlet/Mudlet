@@ -758,9 +758,9 @@ private:
     bool mHaveMapperScript;
     // This option makes the control on the preferences tristated so the value
     // used depends - currently - on what the MUD Server encoding is (only set
-    // true for GBK and GB18030 ones) - however this is likely to be due for
-    // revision once locale/language support is brought in - when it can be
-    // made dependent on that instead.
+    // true for GBK, GB18030, Big5/Big-HKCS, EUC-KR ones) - however this was
+    // due for revision once locale/language support is brought in - when it
+    // could be made dependent on that instead.
     bool mAutoAmbigousWidthGlyphsSetting;
     // If above is true is the value deduced from the MUD server encoding, if
     // the above is false is the user's direct setting - this is so that changes
