@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2013 by Chris Mitchell                                  *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020, 2023 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -71,7 +71,7 @@ public:
 
 private:
     int depth;
-    lua_State* L;
+    lua_State* mL;
     QSet<TVar> hiddenVars;
     QScopedPointer<VarUnit> varUnit;
     QList<int> lrefs;

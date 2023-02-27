@@ -8,6 +8,7 @@
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Michael Hupp - darksix@northfire.org            *
  *   Copyright (C) 2017 by Colton Rasbury - rasbury.colton@gmail.com       *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -927,9 +928,9 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
-void cTelnet::processTelnetCommand(const std::string& command)
+void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
-    char ch = command[1];
+    char ch = telnetCommand[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
     QString _type;
     switch ((quint8)ch) {
@@ -960,10 +961,10 @@ void cTelnet::processTelnetCommand(const std::string& command)
     default:
         _type = QString::number((quint8)ch);
     }
-    if (command.size() > 2) {
-        qDebug() << "SERVER sent telnet (" << command.size() << " bytes):" << _type << " + " << decodeOption(command[2]);
+    if (telnetCommand.size() > 2) {
+        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << _type << " + " << decodeOption(telnetCommand[2]);
     } else {
-        qDebug() << "SERVER sent telnet (" << command.size() << " bytes):" << _type;
+        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << _type;
     }
 #endif
 
@@ -976,7 +977,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
     }
     case TN_WILL: {
         //server wants to enable some option (or he sends a timing-mark)...
-        option = command[2];
+        option = telnetCommand[2];
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC WILL " << decodeOption(option);
@@ -1212,7 +1213,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
     case TN_WONT: {
         //server refuses to enable some option
-        option = command[2];
+        option = telnetCommand[2];
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC WONT " << decodeOption(option);
@@ -1296,7 +1297,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
     case TN_DO: {
         //server wants us to enable some option
-        option = command[2];
+        option = telnetCommand[2];
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
@@ -1420,7 +1421,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
     }
     case TN_DONT: {
         //only respond if value changed or if this option has not been announced yet
-        option = command[2];
+        option = telnetCommand[2];
         const auto idxOption = static_cast<size_t>(option);
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DONT " << decodeOption(option);
@@ -1481,11 +1482,11 @@ void cTelnet::processTelnetCommand(const std::string& command)
     }
 
     case TN_SB: {
-        option = command[2];
+        option = telnetCommand[2];
 
         // CHARSET
         if (option == OPT_CHARSET && enableCHARSET) {
-            QByteArray payload = command.c_str();
+            QByteArray payload = telnetCommand.c_str();
             if (payload.size() < 6) {
                 return;
             }
@@ -1494,7 +1495,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
             payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
 
             // CHARSET support per https://tools.ietf.org/html/rfc2066
-            if (command[3] == CHARSET_REQUEST) {
+            if (telnetCommand[3] == CHARSET_REQUEST) {
                 if (payload.startsWith("[TTABLE]1")) { // No translate table support.  Discard.
                     payload.remove(0, 9);
                 }
@@ -1559,11 +1560,11 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 output += TN_IAC;
                 output += TN_SE;
                 socketOutRaw(output);
-            } else if (command[3] == CHARSET_ACCEPTED) {
+            } else if (telnetCommand[3] == CHARSET_ACCEPTED) {
                 // Case unlikely.  Mudlet does not initiate negotiations yet.  Do nothing.
-            } else if (command[3] == CHARSET_REJECTED) {
+            } else if (telnetCommand[3] == CHARSET_REJECTED) {
                 // Case unlikely.  Mudlet does not initiate negotiations yet.  Do nothing.
-            } else if (command[3] == CHARSET_TTABLE_IS) {
+            } else if (telnetCommand[3] == CHARSET_TTABLE_IS) {
                 // Mudlet does not support translate tables
                 // Required to respond per the specification
                 std::string output;
@@ -1583,9 +1584,9 @@ void cTelnet::processTelnetCommand(const std::string& command)
         if (option == OPT_MSDP) {
             // Using a QByteArray means there is no consideration of encoding
             // used - it is just bytes...
-            QByteArray rawData = command.c_str();
+            QByteArray rawData = telnetCommand.c_str();
 
-            if (command.size() < 6) {
+            if (telnetCommand.size() < 6) {
                 return;
             }
 
@@ -1602,7 +1603,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         // ATCP
         if (option == OPT_ATCP) {
-            QByteArray payload = command.c_str();
+            QByteArray payload = telnetCommand.c_str();
             if (payload.size() < 6) {
                 return;
             }
@@ -1673,6 +1674,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
                 mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
                 connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
                 connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
+                mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
                 mpProgressDialog->show();
             }
             return;
@@ -1683,7 +1685,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         // GMCP
         if (option == OPT_GMCP) {
-            QByteArray payload = command.c_str();
+            QByteArray payload = telnetCommand.c_str();
             if (payload.size() < 6) {
                 return;
             }
@@ -1699,7 +1701,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         // MSSP
         if (option == OPT_MSSP) {
-            QByteArray payload = command.c_str();
+            QByteArray payload = telnetCommand.c_str();
             if (payload.size() < 6) {
                 return;
             }
@@ -1715,7 +1717,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         // MSP
         if (option == OPT_MSP) {
-            QByteArray payload = command.c_str();
+            QByteArray payload = telnetCommand.c_str();
             if (payload.size() < 6) {
                 return;
             }
@@ -1730,7 +1732,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
 
         if (option == OPT_102) {
-            QByteArray payload = command.c_str();
+            QByteArray payload = telnetCommand.c_str();
             if (payload.size() < 6) {
                 return;
             }
@@ -1744,7 +1746,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
         switch (option) { //switch 2
         case OPT_STATUS: {
-            if (command.length() >= 6 && command[3] == TNSB_SEND && command[4] == TN_IAC && command[5] == TN_SE) {
+            if (telnetCommand.length() >= 6 && telnetCommand[3] == TNSB_SEND && telnetCommand[4] == TN_IAC && telnetCommand[5] == TN_SE) {
                 //request to send all enabled commands; if server sends his
                 //own list of commands, we just ignore it (well, he shouldn't
                 //send anything, as we do not request anything, but there are
@@ -1786,7 +1788,7 @@ void cTelnet::processTelnetCommand(const std::string& command)
         }
 
         case OPT_TERMINAL_TYPE: {
-            if (command.length() >= 6 && command[3] == TNSB_SEND && command[4] == TN_IAC && command[5] == TN_SE) {
+            if (telnetCommand.length() >= 6 && telnetCommand[3] == TNSB_SEND && telnetCommand[4] == TN_IAC && telnetCommand[5] == TN_SE) {
                 if (myOptionState[static_cast<size_t>(OPT_TERMINAL_TYPE)]) {
                     //server wants us to send terminal type; he can send his own type
                     //too, but we just ignore it, as we have no use for it...
@@ -1822,12 +1824,12 @@ void cTelnet::processTelnetCommand(const std::string& command)
 
     // raise sysTelnetEvent for all unhandled protocols
     // EXCEPT TN_GA / TN_EOR, which come at the end of every transmission, for performance reasons
-    if (command[1] != TN_GA && command[1] != TN_EOR) {
-        auto type = static_cast<unsigned char>(command[1]);
-        auto telnetOption = static_cast<unsigned char>(command[2]);
-        QString msg = command.c_str();
-        if (command.size() >= 6) {
-            msg = msg.mid(3, command.size() - 5);
+    if (telnetCommand[1] != TN_GA && telnetCommand[1] != TN_EOR) {
+        auto type = static_cast<unsigned char>(telnetCommand[1]);
+        auto telnetOption = static_cast<unsigned char>(telnetCommand[2]);
+        QString msg = telnetCommand.c_str();
+        if (telnetCommand.size() >= 6) {
+            msg = msg.mid(3, telnetCommand.size() - 5);
         }
 
         TEvent event {};
@@ -2024,7 +2026,6 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
             postMessage(tr("[  OK  ]  - Package is already installed."));
-            return;
         }
 
         mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
@@ -2035,8 +2036,8 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
         connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
         connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
+        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
         mpProgressDialog->show();
-        return;
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
         mpHost->setMmpMapLocation(data);
     }
@@ -2213,7 +2214,7 @@ void cTelnet::promptTlsConnectionAvailable()
         && (mpHost->mMSSPHostName.isEmpty() || QString::compare(hostName, mpHost->mMSSPHostName, Qt::CaseInsensitive) == 0)) {
         postMessage(tr("[ INFO ]  - A more secure connection on port %1 is available.").arg(QString::number(mpHost->mMSSPTlsPort)));
 
-        QPointer msgBox = new QMessageBox();
+        auto msgBox = new QMessageBox();
 
         msgBox->setIcon(QMessageBox::Question);
         msgBox->setText(tr("For data transfer protection and privacy, this connection advertises a secure port."));

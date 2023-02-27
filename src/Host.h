@@ -400,6 +400,7 @@ public:
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
     void setFocusOnHostMainConsole();
+    QPointer<TConsole> parentTConsole(QObject*) const;
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -711,6 +712,7 @@ private:
     void startMapAutosave();
     void timerEvent(QTimerEvent *event) override;
     void autoSaveMap();
+    QString sanitizePackageName(const QString packageName) const;
 
     QFont mDisplayFont;
     QStringList mModulesToSync;

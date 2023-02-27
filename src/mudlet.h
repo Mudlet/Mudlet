@@ -524,6 +524,7 @@ protected:
 
 
 signals:
+    void signal_adjustAccessibleNames();
     void signal_appearanceChanged(mudlet::Appearance);
     void signal_editorTextOptionsChanged(QTextOption::Flags);
     void signal_enableFulScreenModeChanged(bool);

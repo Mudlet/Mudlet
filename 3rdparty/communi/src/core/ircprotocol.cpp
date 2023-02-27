@@ -306,8 +306,23 @@ void IrcProtocolPrivate::handleCapabilityMessage(IrcCapabilityMessage* msg)
             }
             const QStringList params = msg->parameters();
             if (params.value(params.count() - 1) != QLatin1String("*")) {
-                if (!connection->saslMechanism().isEmpty() && availableCaps.contains(QLatin1String("sasl")))
-                    requestedCaps += QLatin1String("sasl");
+                if (!connection->saslMechanism().isEmpty()) {
+                    foreach (const QString& cap, availableCaps) {
+                        QStringList capParts = cap.split('=');
+                        if (capParts.length() == 2) {
+                            QString capName = capParts[0];
+                            if (capName.compare(QLatin1String("sasl"), Qt::CaseInsensitive) == 0) {
+                                // The server has advertised supporting SASL with a list of supported SASL Mechanisms, ensure our supported SASL Mechanism is part of that list before accepting the SASL capability
+                                QStringList serverSaslMethods = capParts[1].split(',');
+                                if (serverSaslMethods.contains(connection->saslMechanism())) {
+                                    requestedCaps += QLatin1String("sasl");
+                                }
+                            }
+                        } else if (cap.compare(QLatin1String("sasl"), Qt::CaseInsensitive) == 0) {
+                            requestedCaps += QLatin1String("sasl");
+                        }
+                    }
+                }
             }
             if (!requestedCaps.isEmpty())
                 connection->sendRaw("CAP REQ :" + QStringList(IrcPrivate::setToList(requestedCaps)).join(" "));
@@ -356,10 +371,14 @@ void IrcProtocolPrivate::handleCapabilityMessage(IrcCapabilityMessage* msg)
 
 void IrcProtocolPrivate::_irc_pauseHandshake()
 {
-    // Send CAP LS first; if the server understands it this will
-    // temporarily pause the handshake until CAP END is sent, so we
-    // know whether the server supports the CAP extension.
-    connection->sendData("CAP LS 302");
+    if (connection->network()->skipCapabilityValidation()) {
+        connection->sendRaw("CAP REQ :" + connection->network()->requestedCapabilities().join(" "));
+    } else {
+        // Send CAP LS first; if the server understands it this will
+        // temporarily pause the handshake until CAP END is sent, so we
+        // know whether the server supports the CAP extension.
+        connection->sendData("CAP LS 302");
+    }
     resumed = false;
     authed = false;
 }
