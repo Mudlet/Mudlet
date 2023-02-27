@@ -3252,7 +3252,12 @@ std::pair<bool, bool> cTelnet::testReadReplayFile(QDataStream& dataStream)
                                      << " chunks and covers a period of: " << QTime(0, 0).addMSecs(static_cast<int>(totalElapsed)).toString(qsl("hh:mm:ss.zzz")) << " (hh:mm:ss).";
 
         const qint32 totalSeconds = qFloor(totalElapsed / 1000);
-        for (qint32 seconds = 0; seconds < totalSeconds; ++seconds) {
+        // This inserts dummy entries into the data at the start of every
+        // second in the replay to update the elapsed time in the replay
+        // toolbar every second. We need to use a <= test here so that the very
+        // last second before the end of the replay gets a needed dummy entry
+        // at the start of that last second:
+        for (qint32 seconds = 0; seconds <= totalSeconds; ++seconds) {
             const qint64 milliSeconds = seconds * 1000;
             if (!tempChunkMap.contains(milliSeconds)) {
                 tempChunkMap.insert(milliSeconds, QByteArray());
