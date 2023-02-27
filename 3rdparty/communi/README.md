@@ -14,7 +14,7 @@ See the [online reference documentation](https://communi.github.io/doc) for help
 - Website: [communi.github.io](https://communi.github.io)
 - Documentation: [communi.github.io/doc](https://communi.github.io/doc)
 - Issue tracker: [communi.github.io/issues](https://communi.github.io/issues)
-- IRC channel: `#communi` on irc.freenode.net
+- IRC channel: `#communi` on [irc.libera.chat](ircs://irc.libera.chat/communi)
 
 [Home]:         https://communi.github.io
 [Logo]:         https://raw.githubusercontent.com/communi/libcommuni/master/doc/communi.png

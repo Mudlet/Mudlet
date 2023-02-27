@@ -52,6 +52,7 @@ class IRC_CORE_EXPORT IrcNetwork : public QObject
     Q_PROPERTY(QStringList availableCapabilities READ availableCapabilities NOTIFY availableCapabilitiesChanged)
     Q_PROPERTY(QStringList requestedCapabilities READ requestedCapabilities WRITE setRequestedCapabilities NOTIFY requestedCapabilitiesChanged)
     Q_PROPERTY(QStringList activeCapabilities READ activeCapabilities NOTIFY activeCapabilitiesChanged)
+    Q_PROPERTY(bool skipCapabilityValidation READ skipCapabilityValidation WRITE setSkipCapabilityValidation NOTIFY skipCapabilityValidationChanged)
     Q_ENUMS(Limit ModeType)
     Q_FLAGS(ModeTypes)
 
@@ -104,6 +105,7 @@ public:
     QStringList availableCapabilities() const;
     QStringList requestedCapabilities() const;
     QStringList activeCapabilities() const;
+    bool skipCapabilityValidation() const;
 
     Q_INVOKABLE bool hasCapability(const QString& capability) const;
     Q_INVOKABLE bool isCapable(const QString& capability) const;
@@ -112,6 +114,7 @@ public Q_SLOTS:
     bool requestCapability(const QString& capability);
     bool requestCapabilities(const QStringList& capabilities);
     void setRequestedCapabilities(const QStringList& capabilities);
+    void setSkipCapabilityValidation(bool skip);
 
 Q_SIGNALS:
     void initialized();
@@ -123,6 +126,7 @@ Q_SIGNALS:
     void availableCapabilitiesChanged(const QStringList& capabilities);
     void requestedCapabilitiesChanged(const QStringList& capabilities);
     void activeCapabilitiesChanged(const QStringList& capabilities);
+    void skipCapabilityValidationChanged(bool skip);
     void requestingCapabilities();
 
 private:

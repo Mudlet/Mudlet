@@ -91,6 +91,7 @@ public:
     QVariantMap userData;
     QDateTime activity;
     MonitorStatus monitorStatus = MonitorUnknown;
+    IrcBuffer::Type type = IrcBuffer::Basic;
 };
 
 IRC_END_NAMESPACE

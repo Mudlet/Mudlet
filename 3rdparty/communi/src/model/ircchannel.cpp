@@ -497,6 +497,8 @@ bool IrcChannelPrivate::processWhoReplyMessage(IrcWhoReplyMessage *message)
 IrcChannel::IrcChannel(QObject* parent)
     : IrcBuffer(*new IrcChannelPrivate, parent)
 {
+    Q_D(IrcChannel);
+    d->type = IrcBuffer::Channel;
 }
 
 /*!
@@ -571,6 +573,11 @@ bool IrcChannel::isActive() const
 {
     Q_D(const IrcChannel);
     return IrcBuffer::isActive() && d->active;
+}
+
+IrcBuffer *IrcChannel::clone(QObject *parent)
+{
+    return new IrcChannel(parent);
 }
 
 /*!

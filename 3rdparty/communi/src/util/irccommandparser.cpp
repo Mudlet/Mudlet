@@ -31,6 +31,7 @@
 #include "irctoken_p.h"
 #include "irccore_p.h"
 #include <climits>
+#include <QRegularExpression>
 
 IRC_BEGIN_NAMESPACE
 
@@ -89,7 +90,7 @@ IRC_BEGIN_NAMESPACE
     \code
     // currently in a query, and also present on some channels
     parser->setTarget("jpnurmi");
-    parser->setChannels(QStringList() << "#communi" << "#freenode");
+    parser->setChannels(QStringList() << "#communi" << "#libera");
     \endcode
 
     \section command-triggers Command triggers
@@ -374,7 +375,7 @@ QString IrcCommandParser::syntax(const QString& command, Details details) const
         QString str = info.fullSyntax();
         if (details != Full) {
             if (details & NoTarget)
-                str.remove(QRegExp("\\[[^\\]]+\\]"));
+                str.remove(QRegularExpression("\\[[^\\]]+\\]"));
             if (details & NoPrefix)
                 str.remove("#");
             if (details & NoEllipsis)
@@ -413,7 +414,11 @@ void IrcCommandParser::removeCommand(IrcCommand::Type type, const QString& synta
 {
     Q_D(IrcCommandParser);
     bool changed = false;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    QMutableMultiMapIterator<QString, IrcCommandInfo> it(d->commands);
+#else
     QMutableMapIterator<QString, IrcCommandInfo> it(d->commands);
+#endif
     while (it.hasNext()) {
         IrcCommandInfo cmd = it.next().value();
         if (cmd.type == type && (syntax.isEmpty() || !syntax.compare(cmd.fullSyntax(), Qt::CaseInsensitive))) {

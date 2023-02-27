@@ -26,6 +26,8 @@
   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "ircchannel.h"
+#include "ircchannel_p.h"
 #include "ircuser.h"
 #include "ircuser_p.h"
 #include <qdebug.h>

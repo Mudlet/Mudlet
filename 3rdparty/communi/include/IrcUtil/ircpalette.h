@@ -66,7 +66,7 @@ public:
     QMap<int, QString> colorNames() const;
     void setColorNames(const QMap<int, QString>& names);
 
-    QString colorName(int color, const QString& fallback = QLatin1String("black")) const;
+    QString colorName(int color, const QString& fallback = QStringLiteral("black")) const;
     void setColorName(int color, const QString& name);
 
     QString white() const;

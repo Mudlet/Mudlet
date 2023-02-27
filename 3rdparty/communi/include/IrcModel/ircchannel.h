@@ -54,6 +54,8 @@ public:
 
     bool isActive() const override;
 
+    IrcBuffer *clone(QObject* parent = nullptr) override;
+
 public Q_SLOTS:
     void who();
     void join(const QString& key = QString());
