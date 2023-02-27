@@ -67,10 +67,10 @@ private:
     QList<TVar*> children;
     TVar* parent;
     QString name;
-    int kType;
+    int keyType;
     QString value;
-    int vType;
-    int nkType;
+    int valueType;
+    int newKeyType;
     QString nName;
 };
 
