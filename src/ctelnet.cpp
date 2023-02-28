@@ -85,6 +85,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // The raw string literals are QByteArrays now not QStrings:
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << "UTF-8";
+        mAcceptableEncodings << "EUC-KR";
         mAcceptableEncodings << "GBK";
         mAcceptableEncodings << "GB18030";
         mAcceptableEncodings << "BIG5";
