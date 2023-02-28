@@ -42,7 +42,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="2105"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Nie może znaleźć ścieżki od %1 do %2 używając znanych wyjść.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="282"/>
@@ -1181,7 +1181,7 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1324"/>
       <source>Input line.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Linia wprowadzania.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1329"/>
@@ -1314,17 +1314,17 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="411"/>
       <location filename="../src/TConsole.cpp" line="414"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Opcje wyszukiwania</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="418"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Uwzględniana wielkość liter</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="420"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Dokładnie dopasuj wielkość liter</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="433"/>
@@ -1355,7 +1355,7 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
-      <translation type="unfinished"/>
+      <translation>Konsola debugowania.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
@@ -5870,7 +5870,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="33"/>
       <source>Create label</source>
       <comment>Create label dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Utwórz etykietę</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="73"/>
@@ -7178,13 +7178,13 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>OK</source>
       <comment>confirm room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="546"/>
       <source>Cancel</source>
       <comment>cancel room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Anuluj</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
@@ -8061,7 +8061,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7414"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Centralna konsola debugowania</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7696"/>
@@ -11058,7 +11058,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Menedżer pakietów</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="363"/>
@@ -11736,7 +11736,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1017"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>Zawijanie linii w:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1037"/>
@@ -13616,7 +13616,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
@@ -13636,7 +13636,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
       <source>Symbol</source>
-      <translation type="unfinished"/>
+      <translation>Symbol</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
@@ -13646,7 +13646,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="210"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>Kolor do użycia dla symbolu(-ów) lokacji</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
@@ -13657,7 +13657,7 @@ or LUA script</source>
       <location filename="../src/ui/room_properties.ui" line="229"/>
       <source>Reset</source>
       <extracomment>This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Resetuj</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
