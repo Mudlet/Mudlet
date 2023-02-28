@@ -1344,7 +1344,7 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
-      <translation type="unfinished"/>
+      <translation>Consola de Depuração.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
@@ -7045,13 +7045,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>OK</source>
       <comment>confirm room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="546"/>
       <source>Cancel</source>
       <comment>cancel room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
@@ -13489,7 +13489,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
       <source>Symbol</source>
-      <translation type="unfinished"/>
+      <translation>Símbolo</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
