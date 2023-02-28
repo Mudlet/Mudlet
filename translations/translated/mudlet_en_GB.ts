@@ -42,7 +42,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="2105"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Cannot find a path from %1 to %2 using known exits.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="282"/>
@@ -1325,12 +1325,12 @@ factor of:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="418"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Case sensitive</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="420"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Match case precisely</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="433"/>
@@ -1361,7 +1361,7 @@ factor of:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
-      <translation type="unfinished"/>
+      <translation>Debug Console.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
@@ -1445,7 +1445,7 @@ factor of:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2098"/>
       <source>Main Window.</source>
-      <translation type="unfinished"/>
+      <translation>Main Window.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2102"/>
@@ -6235,7 +6235,7 @@ Count</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="47"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Package Manager - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="100"/>
@@ -7173,13 +7173,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>OK</source>
       <comment>confirm room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="546"/>
       <source>Cancel</source>
       <comment>cancel room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Cancel</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
@@ -13613,7 +13613,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Name:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
@@ -13633,7 +13633,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
       <source>Symbol</source>
-      <translation type="unfinished"/>
+      <translation>Symbol</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
@@ -13643,7 +13643,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="210"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>Colour to use for the room symbol(s)</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
@@ -13654,7 +13654,7 @@ or LUA script</source>
       <location filename="../src/ui/room_properties.ui" line="229"/>
       <source>Reset</source>
       <extracomment>This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Reset</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
