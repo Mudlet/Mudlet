@@ -1345,7 +1345,7 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
-      <translation type="unfinished"/>
+      <translation>Console de débogage.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
@@ -5740,7 +5740,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="33"/>
       <source>Create label</source>
       <comment>Create label dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>Créer une étiquette</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="73"/>
@@ -7043,13 +7043,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>OK</source>
       <comment>confirm room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="546"/>
       <source>Cancel</source>
       <comment>cancel room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Annuler</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
@@ -13491,7 +13491,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
       <source>Symbol</source>
-      <translation type="unfinished"/>
+      <translation>Symbole</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
