@@ -1176,7 +1176,7 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1324"/>
       <source>Input line.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Línea de entrada.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1329"/>
@@ -1309,12 +1309,12 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="411"/>
       <location filename="../src/TConsole.cpp" line="414"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Opciones de Búsqueda</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="418"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Sensible a mayúsculas</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="420"/>
@@ -1350,7 +1350,7 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
-      <translation type="unfinished"/>
+      <translation>Consola de depuración.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
@@ -7054,13 +7054,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>OK</source>
       <comment>confirm room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="546"/>
       <source>Cancel</source>
       <comment>cancel room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
@@ -10929,7 +10929,7 @@ NO hay ninguna garantía, en la medida en que la ley lo permita.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestor de paquetes</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="363"/>
@@ -13479,7 +13479,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nombre:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
@@ -13499,7 +13499,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
       <source>Symbol</source>
-      <translation type="unfinished"/>
+      <translation>Símbolo</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
@@ -13520,7 +13520,7 @@ or LUA script</source>
       <location filename="../src/ui/room_properties.ui" line="229"/>
       <source>Reset</source>
       <extracomment>This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Reestablecer</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
