@@ -42,7 +42,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="2105"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Impossibile trovare un percorso da %1 a %2 utilizzando le uscite conosciute.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="282"/>
@@ -1185,7 +1185,7 @@ evidenziata, di un fattore:</translation>
       <location filename="../src/TCommandLine.cpp" line="1324"/>
       <source>Input line.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Linea dei comandi.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1329"/>
@@ -1318,17 +1318,17 @@ evidenziata, di un fattore:</translation>
       <location filename="../src/TConsole.cpp" line="411"/>
       <location filename="../src/TConsole.cpp" line="414"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Opzioni di Ricerca</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="418"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>Maiuscole/minuscole</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="420"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Maiuscole/minuscole</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="433"/>
@@ -1359,7 +1359,7 @@ evidenziata, di un fattore:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
-      <translation type="unfinished"/>
+      <translation>Console di Debug.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
@@ -1443,7 +1443,7 @@ evidenziata, di un fattore:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2098"/>
       <source>Main Window.</source>
-      <translation type="unfinished"/>
+      <translation>Finestra Principale.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2102"/>
@@ -6310,7 +6310,7 @@ Utilizzi</translation>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="47"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Gestione Package - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="100"/>
@@ -7251,13 +7251,13 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>OK</source>
       <comment>confirm room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="546"/>
       <source>Cancel</source>
       <comment>cancel room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Annulla</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
@@ -8135,7 +8135,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7414"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Console di Debug Principale</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7696"/>
@@ -11144,7 +11144,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Gestione Package</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="363"/>
@@ -11829,7 +11829,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1017"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>Torna a capo a:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1037"/>
@@ -13711,7 +13711,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Nome:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
@@ -13731,7 +13731,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
       <source>Symbol</source>
-      <translation type="unfinished"/>
+      <translation>Simbolo</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
@@ -13741,7 +13741,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="210"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>Colore da utilizzare per il simbolo della stanza</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
@@ -13752,7 +13752,7 @@ o script LUA</translation>
       <location filename="../src/ui/room_properties.ui" line="229"/>
       <source>Reset</source>
       <extracomment>This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Azzera</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
