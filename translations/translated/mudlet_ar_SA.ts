@@ -42,7 +42,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="2105"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>محدد الخرائط: لا يسطتيع أيجاد ممر من %1 إلى %2 باستخدام المخارج المعروفة.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="282"/>
@@ -1433,7 +1433,7 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2098"/>
       <source>Main Window.</source>
-      <translation type="unfinished"/>
+      <translation>النافذة الرئيسية.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2102"/>
@@ -5745,7 +5745,7 @@ Count</source>
       <location filename="../src/dlgMapLabel.cpp" line="33"/>
       <source>Create label</source>
       <comment>Create label dialog title</comment>
-      <translation type="unfinished"/>
+      <translation>إنشاء عنوان</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="73"/>
@@ -7048,13 +7048,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>OK</source>
       <comment>confirm room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>حسنا</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="546"/>
       <source>Cancel</source>
       <comment>cancel room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
