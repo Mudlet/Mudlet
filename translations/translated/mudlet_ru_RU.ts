@@ -42,7 +42,7 @@
     <message>
       <location filename="../src/glwidget.cpp" line="2105"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation type="unfinished"/>
+      <translation>Mapper: Не удается найти путь от %1 до %2, используя известные выхода.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="282"/>
@@ -1187,7 +1187,7 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1324"/>
       <source>Input line.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Строка ввода.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1329"/>
@@ -1320,17 +1320,17 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="411"/>
       <location filename="../src/TConsole.cpp" line="414"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Параметры запроса</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="418"/>
       <source>Case sensitive</source>
-      <translation type="unfinished"/>
+      <translation>С учетом регистра</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="420"/>
       <source>Match case precisely</source>
-      <translation type="unfinished"/>
+      <translation>Учитывать регистр</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="433"/>
@@ -1361,7 +1361,7 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
-      <translation type="unfinished"/>
+      <translation>Консоль отладки.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
@@ -1445,7 +1445,7 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2098"/>
       <source>Main Window.</source>
-      <translation type="unfinished"/>
+      <translation>Главное окно.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2102"/>
@@ -6309,7 +6309,7 @@ Count</source>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="47"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Менеджер пакетов - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="100"/>
@@ -7252,13 +7252,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>OK</source>
       <comment>confirm room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>ОК</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="546"/>
       <source>Cancel</source>
       <comment>cancel room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Отменить</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
@@ -8135,7 +8135,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7414"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Консоль отладки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7696"/>
@@ -8939,7 +8939,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/main.cpp" line="246"/>
       <source>Usage: %1 [OPTION...]</source>
       <comment>%1 is the name of the executable as it is on this OS.</comment>
-      <translation type="unfinished"/>
+      <translation>Использование: %1 [OPTION...]</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="250"/>
@@ -11143,7 +11143,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
       <source>Package Manager</source>
-      <translation type="unfinished"/>
+      <translation>Управление пакетами</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="363"/>
@@ -11832,7 +11832,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1017"/>
       <source>Wrap lines at:</source>
-      <translation type="unfinished"/>
+      <translation>Перенос:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1037"/>
@@ -13711,7 +13711,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Имя:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
@@ -13731,7 +13731,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
       <source>Symbol</source>
-      <translation type="unfinished"/>
+      <translation>Символ</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
@@ -13741,7 +13741,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="210"/>
       <source>Color of to use for the room symbol(s)</source>
-      <translation type="unfinished"/>
+      <translation>Цвет символа комнаты</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
@@ -13752,7 +13752,7 @@ or LUA script</source>
       <location filename="../src/ui/room_properties.ui" line="229"/>
       <source>Reset</source>
       <extracomment>This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Сброс</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
