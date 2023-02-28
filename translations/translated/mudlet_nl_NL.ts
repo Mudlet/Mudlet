@@ -7046,13 +7046,13 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
       <source>OK</source>
       <comment>confirm room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="546"/>
       <source>Cancel</source>
       <comment>cancel room color selection dialog</comment>
-      <translation type="unfinished"/>
+      <translation>Annuleren</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
@@ -13470,7 +13470,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
       <source>Name:</source>
-      <translation type="unfinished"/>
+      <translation>Naam:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
