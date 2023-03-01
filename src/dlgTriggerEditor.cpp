@@ -3129,14 +3129,14 @@ void dlgTriggerEditor::activeToggle_action()
     }
 
     if (pT->isFolder()) {
-        if (!pT->getPackageName().isEmpty()) {
+        if (!pT->mPackageName.isEmpty()) {
             // Has a package name - is a module master folder
             if (pT->isActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
             }
-        } else if (!pT->getParent() || !pT->getParent()->getPackageName().isEmpty()) {
+        } else if (!pT->getParent() || !pT->getParent()->mPackageName.isEmpty()) {
             // Does not have a parent or the parent has a package name - is a toolbar
             if (pT->isActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
@@ -5627,7 +5627,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         mpActionsMainArea->spinBox_action_bar_columns->setValue(pT->getButtonColumns());
         mpActionsMainArea->plainTextEdit_action_css->setPlainText(pT->css);
         if (pT->isFolder()) {
-            if (!pT->getPackageName().isEmpty()) {
+            if (!pT->mPackageName.isEmpty()) {
                 // We have a non-empty package name (Tree<T>::mModuleName
                 // is NEVER used but Tree<T>::mPackageName is for both!)
                 // THUS: We are a module master folder
@@ -5636,7 +5636,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
                 mpActionsMainArea->groupBox_action_button_appearance->hide();
                 mpActionsMainArea->widget_top->hide();
                 mpSourceEditorArea->hide();
-            } else if (!pT->getParent() || (pT->getParent() && !pT->getParent()->getPackageName().isEmpty())) {
+            } else if (!pT->getParent() || (pT->getParent() && !pT->getParent()->mPackageName.isEmpty())) {
                 // We are a top-level folder with no parent
                 // OR: We have a parent and that IS a module master folder
                 // THUS: We are a toolbar

@@ -488,6 +488,8 @@ public:
     static int permAlias(lua_State*);
     static int exists(lua_State*);
     static int isActive(lua_State*);
+    static int isAncestorsActive(lua_State*);
+    static int ancestors(lua_State*);
     static int tempAlias(lua_State*);
     static int enableAlias(lua_State*);
     static int disableAlias(lua_State*);

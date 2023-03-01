@@ -73,7 +73,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             mpKey->mModuleMasterFolder = true;
             mpKey->mModuleMember = true;
         }
-        mpKey->setPackageName(mPackageName);
+        mpKey->mPackageName = mPackageName;
         mpKey->setIsActive(true);
         mpKey->setName(mPackageName);
         mpKey->setIsFolder(true);
@@ -83,7 +83,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             mpTrigger->mModuleMasterFolder = true;
             mpTrigger->mModuleMember = true;
         }
-        mpTrigger->setPackageName(mPackageName);
+        mpTrigger->mPackageName = mPackageName;
         mpTrigger->setIsActive(true);
         mpTrigger->setName(mPackageName);
         mpTrigger->setIsFolder(true);
@@ -93,7 +93,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             mpTimer->mModuleMasterFolder = true;
             mpTimer->mModuleMember = true;
         }
-        mpTimer->setPackageName(mPackageName);
+        mpTimer->mPackageName = mPackageName;
         mpTimer->setIsActive(true);
         mpTimer->setName(mPackageName);
         mpTimer->setIsFolder(true);
@@ -103,7 +103,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             mpAlias->mModuleMasterFolder = true;
             mpAlias->mModuleMember = true;
         }
-        mpAlias->setPackageName(mPackageName);
+        mpAlias->mPackageName = mPackageName;
         mpAlias->setIsActive(true);
         mpAlias->setName(mPackageName);
         mpAlias->setScript(QString());
@@ -115,7 +115,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             mpAction->mModuleMasterFolder = true;
             mpAction->mModuleMember = true;
         }
-        mpAction->setPackageName(mPackageName);
+        mpAction->mPackageName = mPackageName;
         mpAction->setIsActive(true);
         mpAction->setName(mPackageName);
         mpAction->setIsFolder(true);
@@ -125,7 +125,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
             mpScript->mModuleMasterFolder = true;
             mpScript->mModuleMember = true;
         }
-        mpScript->setPackageName(mPackageName);
+        mpScript->mPackageName = mPackageName;
         mpScript->setIsActive(true);
         mpScript->setName(mPackageName);
         mpScript->setIsFolder(true);
