@@ -146,7 +146,7 @@ please wait...</translation>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
       <source>An invisible widget used as a workaround to announce text to the screen reader</source>
-      <translation type="unfinished"/>
+      <translation>An invisible widget used as a workaround to announce text to the screen reader</translation>
     </message>
   </context>
   <context>
@@ -757,43 +757,43 @@ please wait...</translation>
       <location filename="../src/T2DMap.cpp" line="2902"/>
       <source>Configure room...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Configure room...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2903"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Set room&apos;s name and colour of icon, weight and lock for speed walks, and a symbol to mark special rooms</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2929"/>
       <source>Set color... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Set colour... (Configure room)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2936"/>
       <source>Set symbol... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Set symbol... (Configure room)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2959"/>
       <source>Lock... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Lock... (Configure room)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2964"/>
       <source>Unlock... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Unlock... (Configure room)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2972"/>
       <source>Set weight... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Set weight... (Configure room)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2978"/>
@@ -1175,73 +1175,73 @@ factor of:</translation>
       <location filename="../src/TCommandLine.cpp" line="1310"/>
       <source>Input line for &quot;%1&quot; profile.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Input line for &quot;%1&quot; profile.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1316"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1324"/>
       <source>Input line.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Input line.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1329"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Type in text to send to the game server, or enter an alias to run commands locally.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1339"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</comment>
-      <translation type="unfinished"/>
+      <translation>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1346"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.</comment>
-      <translation type="unfinished"/>
+      <translation>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1353"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</comment>
-      <translation type="unfinished"/>
+      <translation>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1360"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for an extra command line on top of a console/window when only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Type in text to send to the game server, or enter an alias to run commands locally.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1370"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <comment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</comment>
-      <translation type="unfinished"/>
+      <translation>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1376"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</comment>
-      <translation type="unfinished"/>
+      <translation>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1383"/>
       <source>Input line of &quot;%1&quot; window.</source>
       <comment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</comment>
-      <translation type="unfinished"/>
+      <translation>Input line of &quot;%1&quot; window.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1389"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Type in text to send to the game server, or enter an alias to run commands locally.</translation>
     </message>
   </context>
   <context>
@@ -1289,7 +1289,7 @@ factor of:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
       <source>Debug messages from all profiles are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Debug messages from all profiles are shown here.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
@@ -1325,7 +1325,7 @@ factor of:</translation>
       <location filename="../src/TConsole.cpp" line="411"/>
       <location filename="../src/TConsole.cpp" line="414"/>
       <source>Search Options</source>
-      <translation type="unfinished"/>
+      <translation>Search Options</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="418"/>
@@ -1372,75 +1372,75 @@ factor of:</translation>
       <location filename="../src/TConsole.cpp" line="2065"/>
       <source>Central debug console past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Central debug console past content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2066"/>
       <source>Central debug console live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Central debug console live content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2068"/>
       <source>Central debug console.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Central debug console.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2073"/>
       <source>Error Console in editor.</source>
-      <translation type="unfinished"/>
+      <translation>Error Console in editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2076"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Editor&apos;s error window for profile &quot;%1&quot;, past content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2077"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Editor&apos;s error window for profile &quot;%1&quot;, live content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2079"/>
       <source>Editor&apos;s error window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Editor&apos;s error window past content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2080"/>
       <source>Editor&apos;s error window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Editor&apos;s error window live content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2082"/>
       <source>Error messages for the &quot;%1&quot; profile are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Error messages for the &quot;%1&quot; profile are shown here in the editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2085"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Editor&apos;s error window for profile &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2087"/>
       <source>Editor&apos;s error window</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Editor&apos;s error window</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2090"/>
       <source>Error messages are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Error messages are shown here in the editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2096"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Main Window for &quot;%1&quot; profile.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2098"/>
@@ -1451,88 +1451,88 @@ factor of:</translation>
       <location filename="../src/TConsole.cpp" line="2102"/>
       <source>Profile &quot;%1&quot; main window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile &quot;%1&quot; main window past content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2103"/>
       <source>Profile &quot;%1&quot; main window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile &quot;%1&quot; main window live content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2105"/>
       <source>Profile main window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile main window past content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2106"/>
       <source>Profile main window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile main window live content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2110"/>
       <source>Profile &quot;%1&quot; main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile &quot;%1&quot; main window.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2112"/>
       <source>Profile main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile main window.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2119"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2121"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Embedded window &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2123"/>
       <source>Game content or locally generated text may be sent here.</source>
-      <translation type="unfinished"/>
+      <translation>Game content or locally generated text may be sent here.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2126"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2127"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2129"/>
       <source>Profile embedded window &quot;%1&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile embedded window &quot;%1&quot; past content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2130"/>
       <source>Profile embedded window &quot;%1&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile embedded window &quot;%1&quot; live content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2134"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2136"/>
       <source>Profile embedded window &quot;%1&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Profile embedded window &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2143"/>
@@ -7871,187 +7871,187 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6798"/>
       <source>Delete the selected alias</source>
-      <translation type="unfinished"/>
+      <translation>Delete the selected alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6799"/>
       <location filename="../src/dlgTriggerEditor.h" line="448"/>
       <source>Save Alias</source>
-      <translation type="unfinished"/>
+      <translation>Save Alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6800"/>
       <source>Saves the selected alias, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Saves the selected alias, causing new changes to take effect - does not save to disk though...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6803"/>
       <source>Add Script</source>
-      <translation type="unfinished"/>
+      <translation>Add Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6804"/>
       <source>Add new script</source>
-      <translation type="unfinished"/>
+      <translation>Add new script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6805"/>
       <source>Add Script Group</source>
-      <translation type="unfinished"/>
+      <translation>Add Script Group</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6806"/>
       <source>Add new group of scripts</source>
-      <translation type="unfinished"/>
+      <translation>Add new group of scripts</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6807"/>
       <source>Delete Script</source>
-      <translation type="unfinished"/>
+      <translation>Delete Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6808"/>
       <source>Delete the selected script</source>
-      <translation type="unfinished"/>
+      <translation>Delete the selected script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6809"/>
       <location filename="../src/dlgTriggerEditor.h" line="449"/>
       <source>Save Script</source>
-      <translation type="unfinished"/>
+      <translation>Save Script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6810"/>
       <source>Saves the selected script, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Saves the selected script, causing new changes to take effect - does not save to disk though...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6813"/>
       <source>Add Button</source>
-      <translation type="unfinished"/>
+      <translation>Add Button</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6814"/>
       <source>Add new button</source>
-      <translation type="unfinished"/>
+      <translation>Add new button</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6815"/>
       <source>Add Button Group</source>
-      <translation type="unfinished"/>
+      <translation>Add Button Group</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6816"/>
       <source>Add new group of buttons</source>
-      <translation type="unfinished"/>
+      <translation>Add new group of buttons</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6817"/>
       <source>Delete Button</source>
-      <translation type="unfinished"/>
+      <translation>Delete Button</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6818"/>
       <source>Delete the selected button</source>
-      <translation type="unfinished"/>
+      <translation>Delete the selected button</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6819"/>
       <location filename="../src/dlgTriggerEditor.h" line="450"/>
       <source>Save Button</source>
-      <translation type="unfinished"/>
+      <translation>Save Button</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6820"/>
       <source>Saves the selected button, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Saves the selected button, causing new changes to take effect - does not save to disk though...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6823"/>
       <source>Add Key</source>
-      <translation type="unfinished"/>
+      <translation>Add Key</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6824"/>
       <source>Add new key</source>
-      <translation type="unfinished"/>
+      <translation>Add new key</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6825"/>
       <source>Add Key Group</source>
-      <translation type="unfinished"/>
+      <translation>Add Key Group</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6826"/>
       <source>Add new group of keys</source>
-      <translation type="unfinished"/>
+      <translation>Add new group of keys</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6827"/>
       <source>Delete Key</source>
-      <translation type="unfinished"/>
+      <translation>Delete Key</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6828"/>
       <source>Delete the selected key</source>
-      <translation type="unfinished"/>
+      <translation>Delete the selected key</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6829"/>
       <location filename="../src/dlgTriggerEditor.h" line="451"/>
       <source>Save Key</source>
-      <translation type="unfinished"/>
+      <translation>Save Key</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6830"/>
       <source>Saves the selected key, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Saves the selected key, causing new changes to take effect - does not save to disk though...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6833"/>
       <source>Add Variable</source>
-      <translation type="unfinished"/>
+      <translation>Add Variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6834"/>
       <source>Add new variable</source>
-      <translation type="unfinished"/>
+      <translation>Add new variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6835"/>
       <source>Add Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Add Lua table</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6836"/>
       <source>Add new Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Add new Lua table</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6837"/>
       <source>Delete Variable</source>
-      <translation type="unfinished"/>
+      <translation>Delete Variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6838"/>
       <source>Delete the selected variable</source>
-      <translation type="unfinished"/>
+      <translation>Delete the selected variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6839"/>
       <location filename="../src/dlgTriggerEditor.h" line="452"/>
       <source>Save Variable</source>
-      <translation type="unfinished"/>
+      <translation>Save Variable</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6840"/>
       <source>Saves the selected variable, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Saves the selected variable, causing new changes to take effect - does not save to disk though...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7414"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Central Debug Console</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7696"/>
@@ -8837,82 +8837,91 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/main.cpp" line="222"/>
       <source>Set Mudlet to only show this predefined MUD profile and hide all other predefined ones.</source>
-      <translation type="unfinished"/>
+      <translation>Set Mudlet to only show this predefined MUD profile and hide all other predefined ones.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="223"/>
       <source>predefined_game</source>
-      <translation type="unfinished"/>
+      <translation>predefined_game</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="241"/>
       <source>Warning: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Warning: %1
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="246"/>
       <source>Usage: %1 [OPTION...]</source>
       <comment>%1 is the name of the executable as it is on this OS.</comment>
-      <translation type="unfinished"/>
+      <translation>Usage: %1 [OPTION...]</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="250"/>
       <source>       -h, --help                   displays this message.</source>
-      <translation type="unfinished"/>
+      <translation>       -h, --help                   displays this message.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="251"/>
       <source>       -v, --version                displays version information.</source>
-      <translation type="unfinished"/>
+      <translation>       -v, --version                displays version information.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="252"/>
       <source>       -q, --quiet                  no splash screen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>       -q, --quiet                  no splash screen on startup.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="253"/>
       <source>       -p, --profile=&lt;profile&gt;      additional profile to open, may be
                                     repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -p, --profile=&lt;profile&gt;      additional profile to open, may be
+                                    repeated.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="255"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
+                                    predefined game, may be repeated.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="257"/>
       <source>There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>There are other inherited options that arise from the Qt Libraries which are
+less likely to be useful for normal use of this application:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="260"/>
       <source>       --dograb                     ignore any implicit or explicit -nograb.
                                     --dograb wins over --nograb even when --nograb is last on
                                     the command line.</source>
-      <translation type="unfinished"/>
+      <translation>       --dograb                     ignore any implicit or explicit -nograb.
+                                    --dograb wins over --nograb even when --nograb is last on
+                                    the command line.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="264"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard. This option is set by default when Mudlet is
                                     running in the gdb debugger under Linux.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     the application should never grab the mouse or the
+                                    keyboard. This option is set by default when Mudlet is
+                                    running in the gdb debugger under Linux.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="268"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     the application should never grab the mouse or the
+                                    keyboard.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="271"/>
       <source>       --reverse                    sets the application&apos;s layout direction to right to left.</source>
-      <translation type="unfinished"/>
+      <translation>       --reverse                    sets the application&apos;s layout direction to right to left.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="272"/>
