@@ -1491,7 +1491,7 @@ herum um einen Faktor von:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2123"/>
       <source>Game content or locally generated text may be sent here.</source>
-      <translation type="unfinished"/>
+      <translation>Hierhin können Spielinhalte geschickt oder Texte lokal erstellt werden.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2126"/>
@@ -1532,53 +1532,53 @@ herum um einen Faktor von:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2143"/>
       <source>User window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerfenster &quot;%1&quot; des Profils &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2145"/>
       <source>User window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Benutzerfenster &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2147"/>
       <source>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</source>
-      <translation type="unfinished"/>
+      <translation>Hierhin können Spielinhalte geschickt oder Texte lokal erstellt werden. Das Fenster kann von Mudlet entfernt oder im Hauptfenster angedockt werden.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2150"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Früherer Inhalt im Benutzerfenster &quot;%2&quot; des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2151"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Aktueller Inhalt im Benutzerfenster &quot;%2&quot; des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2153"/>
       <source>Profile user window &quot;%1&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Früherer Inhalt im Benutzerfenster &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2154"/>
       <source>Profile user window &quot;%1&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Aktueller Inhalt im Benutzerfenster &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2158"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Benutzerfenster &quot;%2&quot; des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2160"/>
       <source>Profile user window &quot;%1&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Benutzerfenster &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -4234,17 +4234,17 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2217"/>
       <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Es ist eine sicherere Verbindung auf Port %1 verfügbar.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2222"/>
       <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
-      <translation type="unfinished"/>
+      <translation>Von dieser Verbindung wird ein gesicherter Port angeboten, um die Datenübertragung und die Privatsphäre zu schützen.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2223"/>
       <source>Update to port %1 and connect with encryption?</source>
-      <translation type="unfinished"/>
+      <translation>Auf Port %1 wechseln und mit Verschlüsselung verbinden?</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2371"/>
