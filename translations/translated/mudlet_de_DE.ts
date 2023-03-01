@@ -5117,7 +5117,7 @@ Nutzungen</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="159"/>
       <source>GUI design and initial feature planning. He is responsible for the project homepage and the user manual. Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp;amp; user help. With the project from the very beginning and is an official spokesman of the project. Since the retirement of Heiko, he has become the head of the Mudlet project.</source>
       <comment>about:Vadi</comment>
-      <translation type="unfinished"/>
+      <translation>GUI-Design und anfängliche Feature-Planung. Er ist für die Projekt-Homepage und das Benutzerhandbuch verantwortlich. Maintainer der Windows-, macOS-, Ubuntu- und generischen Linux-Installationsprogramme. Verwaltet das Mudlet-Wiki, die Lua-API und kümmert sich um die Projektverwaltung, die Öffentlichkeitsarbeit &amp;, die Benutzerhilfe. Er ist von Anfang an dabei und ein offizieller Sprecher des Projekts. Seit dem Ruhestand von Heiko ist er der Leiter des Mudlet-Projekts.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="166"/>
@@ -6154,7 +6154,7 @@ Nutzungen</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="128"/>
       <source>Package Exporter - %1</source>
       <comment>Title of the window. The %1 will be replaced by the current profile&apos;s name.</comment>
-      <translation type="unfinished"/>
+      <translation>Paket exportieren - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="174"/>
@@ -7828,105 +7828,105 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6777"/>
       <source>Delete Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6778"/>
       <source>Delete the selected trigger</source>
-      <translation type="unfinished"/>
+      <translation>Den ausgewählten Trigger entfernen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6779"/>
       <location filename="../src/dlgTriggerEditor.h" line="446"/>
       <source>Save Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6780"/>
       <source>Saves the selected trigger, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Speichert den ausgewählten Trigger, wodurch neue Änderungen wirksam werden - speichert aber nicht auf der Festplatte...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6783"/>
       <source>Add Timer</source>
-      <translation type="unfinished"/>
+      <translation>Timer hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6784"/>
       <source>Add new timer</source>
-      <translation type="unfinished"/>
+      <translation>Neuen Timer hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6785"/>
       <source>Add Timer Group</source>
-      <translation type="unfinished"/>
+      <translation>Timer-Gruppe hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6786"/>
       <source>Add new group of timers</source>
-      <translation type="unfinished"/>
+      <translation>Eine neue Gruppe von Timern hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6787"/>
       <source>Delete Timer</source>
-      <translation type="unfinished"/>
+      <translation>Timer löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6788"/>
       <source>Delete the selected timer</source>
-      <translation type="unfinished"/>
+      <translation>Den ausgewählten Timer entfernen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6789"/>
       <location filename="../src/dlgTriggerEditor.h" line="447"/>
       <source>Save Timer</source>
-      <translation type="unfinished"/>
+      <translation>Timer speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6790"/>
       <source>Saves the selected timer, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Speichert den ausgewählten Timer, wodurch neue Änderungen wirksam werden - speichert aber nicht auf der Festplatte...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6793"/>
       <source>Add Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6794"/>
       <source>Add new alias</source>
-      <translation type="unfinished"/>
+      <translation>Neues Alias hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6795"/>
       <source>Add Alias Group</source>
-      <translation type="unfinished"/>
+      <translation>Alias-Gruppe hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6796"/>
       <source>Add new group of aliases</source>
-      <translation type="unfinished"/>
+      <translation>Eine neue Gruppe von Aliasen hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6797"/>
       <source>Delete Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6798"/>
       <source>Delete the selected alias</source>
-      <translation type="unfinished"/>
+      <translation>Das ausgewählte Alias löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6799"/>
       <location filename="../src/dlgTriggerEditor.h" line="448"/>
       <source>Save Alias</source>
-      <translation type="unfinished"/>
+      <translation>Alias speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6800"/>
       <source>Saves the selected alias, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Speichert das ausgewählte Alias, wodurch neue Änderungen wirksam werden - speichert aber nicht auf der Festplatte...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6803"/>
