@@ -1181,7 +1181,7 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1316"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите текст для отправки на сервер игры для профайла &quot;%1&quot; или введите алиас для запуска команд локально.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1324"/>
@@ -1193,19 +1193,19 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1329"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите текст для отправки игровому серверу или введите алиас для выполнения локальных команд.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1339"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</comment>
-      <translation type="unfinished"/>
+      <translation>Дополнительная входная строка &quot;%1&quot; &quot;%2&quot; окна &quot;%3&quot;профиля.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1346"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите текст для отправки на сервер игры для профайла &quot;%1&quot; или введите алиас для запуска команд локально.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1353"/>
@@ -1223,13 +1223,13 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1370"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <comment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</comment>
-      <translation type="unfinished"/>
+      <translation>Входная строка &quot;%1&quot; окна &quot;%2&quot; профиля.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1376"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите текст для отправки на сервер игры для профайла &quot;%1&quot; или введите алиас для запуска команд локально.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1383"/>
@@ -1285,6 +1285,11 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="330"/>
       <source>Show Time Stamps.</source>
       <translation>Показывать марки времени</translation>
+    </message>
+    <message>
+      <location filename="../src/TConsole.cpp" line="2063"/>
+      <source>Debug messages from all profiles are shown here.</source>
+      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
@@ -1364,11 +1369,6 @@ factor of:</source>
       <translation>Консоль отладки.</translation>
     </message>
     <message>
-      <location filename="../src/TConsole.cpp" line="2063"/>
-      <source>Debug messages from all profile are shown here.</source>
-      <translation>Здесь показаны отладочные сообщения из всех профилей.</translation>
-    </message>
-    <message>
       <location filename="../src/TConsole.cpp" line="2065"/>
       <source>Central debug console past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</comment>
@@ -1430,17 +1430,17 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="2087"/>
       <source>Editor&apos;s error window</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Окно ошибки редактора</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2090"/>
       <source>Error messages are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Сообщения об ошибках отображаются здесь в редакторе.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2096"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Главное окно &quot;%1&quot; профиля.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2098"/>
@@ -1475,7 +1475,7 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="2110"/>
       <source>Profile &quot;%1&quot; main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Профайл &quot;%1&quot; главное окно.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2112"/>
@@ -1491,7 +1491,7 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2121"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Встроенное окно &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2123"/>
@@ -1542,12 +1542,12 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2145"/>
       <source>User window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Окно пользователя &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2147"/>
       <source>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</source>
-      <translation type="unfinished"/>
+      <translation>Игровой контент или локально сгенерированный текст могут быть отправлены в это окно, которое может быть удалено из приложения Mudlet или закреплено в главном окне приложения.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2150"/>
@@ -1875,7 +1875,9 @@ Tried these locations:
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+--------------------------------------------------------------+
+|                      статистика системы                      |
++--------------------------------------------------------------+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1454"/>
