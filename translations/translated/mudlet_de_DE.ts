@@ -1527,7 +1527,7 @@ herum um einen Faktor von:</translation>
       <location filename="../src/TConsole.cpp" line="2136"/>
       <source>Profile embedded window &quot;%1&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Eingebettetes Fenster &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2143"/>
