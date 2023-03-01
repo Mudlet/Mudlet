@@ -781,25 +781,25 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2936"/>
       <source>Set symbol... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Установить символ... (Настройка комнаты)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2959"/>
       <source>Lock... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Заблокировать... (Настройка комнаты)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2964"/>
       <source>Unlock... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Разблокировать... (Настройка комнаты)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2972"/>
       <source>Set weight... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Установить вес... (Настроить комнату)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2978"/>
@@ -1175,7 +1175,7 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1310"/>
       <source>Input line for &quot;%1&quot; profile.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Входная строка для &quot;%1&quot; профиля.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1316"/>
@@ -1211,13 +1211,13 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1353"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</comment>
-      <translation type="unfinished"/>
+      <translation>Дополнительная входная строка &quot;%1&quot; в окне &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1360"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for an extra command line on top of a console/window when only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите текст для отправки игровому серверу или введите алиас для выполнения локальных команд.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1370"/>
@@ -1235,13 +1235,13 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1383"/>
       <source>Input line of &quot;%1&quot; window.</source>
       <comment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</comment>
-      <translation type="unfinished"/>
+      <translation>Строка ввода &quot;%1&quot; окна.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1389"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Введите текст для отправки игровому серверу или введите алиас для выполнения локальных команд.</translation>
     </message>
   </context>
   <context>
@@ -1366,30 +1366,30 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
       <source>Debug messages from all profile are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Здесь показаны отладочные сообщения из всех профилей.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2065"/>
       <source>Central debug console past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Центральная консоль отладки прошлого контента.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2066"/>
       <source>Central debug console live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Консоль для центральной отладки живого контента.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2068"/>
       <source>Central debug console.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Консоль для отладки.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2073"/>
       <source>Error Console in editor.</source>
-      <translation type="unfinished"/>
+      <translation>Консоль ошибок в редакторе.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2076"/>
@@ -1481,7 +1481,7 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="2112"/>
       <source>Profile main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Главное окно профиля.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2119"/>
@@ -1583,7 +1583,7 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="2160"/>
       <source>Profile user window &quot;%1&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Окно профиля пользователя &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -4284,12 +4284,12 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2222"/>
       <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
-      <translation type="unfinished"/>
+      <translation>Для защиты передачи данных и конфиденциальности это соединение объявляет безопасный порт.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2223"/>
       <source>Update to port %1 and connect with encryption?</source>
-      <translation type="unfinished"/>
+      <translation>Обновить на порт %1 и подключиться с шифрованием?</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2371"/>
@@ -6192,7 +6192,7 @@ Count</source>
       <location filename="../src/dlgPackageExporter.cpp" line="128"/>
       <source>Package Exporter - %1</source>
       <comment>Title of the window. The %1 will be replaced by the current profile&apos;s name.</comment>
-      <translation type="unfinished"/>
+      <translation>Экспортер пакетов - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="174"/>
@@ -7183,7 +7183,12 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="150"/>
       <source>Lock room(s), so it/they will never be used for speedwalking</source>
       <comment>This text will be shown at a checkbox, where you can set/unset a number of room&apos;s lock.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Заблокировать комнату, так что она никогда не будет использоваться для быстрого перемещения</numerusform>
+        <numerusform>Заблокировать комнаты, так чтобы они никогда не будут использоваться для быстрого перемещения</numerusform>
+        <numerusform>Заблокировать комнаты, так чтобы они никогда не будут использоваться для быстрого перемещения</numerusform>
+        <numerusform>Заблокировать комнаты, так чтобы они никогда не будут использоваться для быстрого перемещения</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="167"/>
@@ -7218,35 +7223,35 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="241"/>
       <source>count</source>
       <comment>This text will be part of a list of room values shown, which will show the value itself, followed by the counted number of rooms with this very value like: grey {count:2} - so please translate like counted ammount, number of, etc.</comment>
-      <translation type="unfinished"/>
+      <translation>количество</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="280"/>
       <source>count</source>
       <comment>This text will be part of a list of room values shown, which will name the value itself, followed by the counted number of rooms with that very value like: grey {count: 2} - So please translate like counted amount, number of, etc.</comment>
-      <translation type="unfinished"/>
+      <translation>количество</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="440"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Задать цвет символа</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="477"/>
       <location filename="../src/dlgRoomProperties.cpp" line="533"/>
       <source>Define new room color</source>
-      <translation type="unfinished"/>
+      <translation>Определить новый цвет комнаты</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="500"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать цвет комнаты</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="514"/>
       <source>Delete room color</source>
       <comment>This action deletes a color from the list of all room colors</comment>
-      <translation type="unfinished"/>
+      <translation>Удалить цвет комнаты</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
@@ -7263,7 +7268,7 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
       <source>(Multiple values...)</source>
-      <translation type="unfinished"/>
+      <translation>(Несколько значений...)</translation>
     </message>
   </context>
   <context>
@@ -7848,289 +7853,289 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6773"/>
       <source>Add Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Добавить триггер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6774"/>
       <source>Add new trigger</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новый триггер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6775"/>
       <source>Add Trigger Group</source>
-      <translation type="unfinished"/>
+      <translation>Добавить группу триггеров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6776"/>
       <source>Add new group of triggers</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую группу триггеров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6777"/>
       <source>Delete Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Удалить триггер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6778"/>
       <source>Delete the selected trigger</source>
-      <translation type="unfinished"/>
+      <translation>Удалить выбранный триггер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6779"/>
       <location filename="../src/dlgTriggerEditor.h" line="446"/>
       <source>Save Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить триггер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6780"/>
       <source>Saves the selected trigger, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет выбранный триггер, в результате чего новые изменения вступят в силу - однако не сохраняет на диск...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6783"/>
       <source>Add Timer</source>
-      <translation type="unfinished"/>
+      <translation>Добавить таймер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6784"/>
       <source>Add new timer</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новый таймер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6785"/>
       <source>Add Timer Group</source>
-      <translation type="unfinished"/>
+      <translation>Добавить группу таймеров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6786"/>
       <source>Add new group of timers</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую группу таймеров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6787"/>
       <source>Delete Timer</source>
-      <translation type="unfinished"/>
+      <translation>Удалить таймер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6788"/>
       <source>Delete the selected timer</source>
-      <translation type="unfinished"/>
+      <translation>Удалить выбранный таймер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6789"/>
       <location filename="../src/dlgTriggerEditor.h" line="447"/>
       <source>Save Timer</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить таймер</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6790"/>
       <source>Saves the selected timer, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет выбранный таймер, в результате чего новые изменения вступят в силу - однако, не сохраняются на диск...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6793"/>
       <source>Add Alias</source>
-      <translation type="unfinished"/>
+      <translation>Добавить алиас</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6794"/>
       <source>Add new alias</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новый алиас</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6795"/>
       <source>Add Alias Group</source>
-      <translation type="unfinished"/>
+      <translation>Добавить группу алиасов</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6796"/>
       <source>Add new group of aliases</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую группу алиасов</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6797"/>
       <source>Delete Alias</source>
-      <translation type="unfinished"/>
+      <translation>Удалить алиас</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6798"/>
       <source>Delete the selected alias</source>
-      <translation type="unfinished"/>
+      <translation>Удалить выбранный алиас</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6799"/>
       <location filename="../src/dlgTriggerEditor.h" line="448"/>
       <source>Save Alias</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить алиас</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6800"/>
       <source>Saves the selected alias, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет выбранный псевдоним, в результате чего новые изменения вступят в силу - однако, не сохраняются на диск...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6803"/>
       <source>Add Script</source>
-      <translation type="unfinished"/>
+      <translation>Добавить скрипт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6804"/>
       <source>Add new script</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новый скрипт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6805"/>
       <source>Add Script Group</source>
-      <translation type="unfinished"/>
+      <translation>Добавить группу скриптов</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6806"/>
       <source>Add new group of scripts</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую группу скриптов</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6807"/>
       <source>Delete Script</source>
-      <translation type="unfinished"/>
+      <translation>Удалить скрипт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6808"/>
       <source>Delete the selected script</source>
-      <translation type="unfinished"/>
+      <translation>Удалить выбранный скрипт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6809"/>
       <location filename="../src/dlgTriggerEditor.h" line="449"/>
       <source>Save Script</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить скрипт</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6810"/>
       <source>Saves the selected script, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет выбранный скрипт, в результате чего новые изменения вступят в силу - однако, не сохраняются на диск...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6813"/>
       <source>Add Button</source>
-      <translation type="unfinished"/>
+      <translation>Добавить кнопку</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6814"/>
       <source>Add new button</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую кнопку</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6815"/>
       <source>Add Button Group</source>
-      <translation type="unfinished"/>
+      <translation>Добавить группу кнопок</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6816"/>
       <source>Add new group of buttons</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую группу кнопок</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6817"/>
       <source>Delete Button</source>
-      <translation type="unfinished"/>
+      <translation>Удалить кнопку</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6818"/>
       <source>Delete the selected button</source>
-      <translation type="unfinished"/>
+      <translation>Удалить выбранную кнопку</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6819"/>
       <location filename="../src/dlgTriggerEditor.h" line="450"/>
       <source>Save Button</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить кнопку</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6820"/>
       <source>Saves the selected button, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет выбранную кнопку, в результате чего новые изменения вступят в силу - однако не сохраняются на диск...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6823"/>
       <source>Add Key</source>
-      <translation type="unfinished"/>
+      <translation>Добавить ключ</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6824"/>
       <source>Add new key</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новый ключ</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6825"/>
       <source>Add Key Group</source>
-      <translation type="unfinished"/>
+      <translation>Добавить группу ключей</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6826"/>
       <source>Add new group of keys</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую группу ключей</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6827"/>
       <source>Delete Key</source>
-      <translation type="unfinished"/>
+      <translation>Удалить ключ</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6828"/>
       <source>Delete the selected key</source>
-      <translation type="unfinished"/>
+      <translation>Удалить выбранный ключ</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6829"/>
       <location filename="../src/dlgTriggerEditor.h" line="451"/>
       <source>Save Key</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить ключ</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6830"/>
       <source>Saves the selected key, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет выбранный ключ, приводя к новым изменениям, однако не сохраняет на диск...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6833"/>
       <source>Add Variable</source>
-      <translation type="unfinished"/>
+      <translation>Добавить переменную</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6834"/>
       <source>Add new variable</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую переменную</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6835"/>
       <source>Add Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Добавить таблицу Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6836"/>
       <source>Add new Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Добавить новую таблицу Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6837"/>
       <source>Delete Variable</source>
-      <translation type="unfinished"/>
+      <translation>Удалить переменную</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6838"/>
       <source>Delete the selected variable</source>
-      <translation type="unfinished"/>
+      <translation>Удалить выбранную переменную</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6839"/>
       <location filename="../src/dlgTriggerEditor.h" line="452"/>
       <source>Save Variable</source>
-      <translation type="unfinished"/>
+      <translation>Сохранить переменную</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6840"/>
       <source>Saves the selected variable, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Сохраняет выбранную переменную, в результате чего новые изменения вступят в силу - однако не сохраняются на диск...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7414"/>
@@ -12203,17 +12208,17 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="3644"/>
       <location filename="../src/ui/profile_preferences.ui" line="3657"/>
       <source>&lt;p&gt;Media files used with Mudlet&apos;s Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Медиа файлы, используемые с Mudlet&apos;s Lua API, Mud Client Media Protocol (MCMP), и Mud Sound Protocol (MSP) кэшируются с игровым профилем. Вы можете нажать эту кнопку, чтобы очистить медиа-кэш. Для многих игр медиа-файлы будут загружены снова по требованию.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3647"/>
       <source>Purge stored media files for the current profile:</source>
-      <translation type="unfinished"/>
+      <translation>Очистить сохраненные медиа файлы для текущего профиля:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3660"/>
       <source>Clear</source>
-      <translation type="unfinished"/>
+      <translation>Очистить</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3824"/>
@@ -13706,7 +13711,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="20"/>
       <source>Room properties</source>
-      <translation type="unfinished"/>
+      <translation>Свойства комнаты</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
@@ -13716,17 +13721,17 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
       <source>Room name...</source>
-      <translation type="unfinished"/>
+      <translation>Имя комнаты...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="61"/>
       <source>Icon:</source>
-      <translation type="unfinished"/>
+      <translation>Значок:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="111"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Выбрать цвет комнаты</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
@@ -13736,7 +13741,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
       <source>Room symbol...</source>
-      <translation type="unfinished"/>
+      <translation>Символ комнаты...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="210"/>
@@ -13746,7 +13751,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Задать цвет символа</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="229"/>
@@ -13757,12 +13762,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
       <source>Pathfinding</source>
-      <translation type="unfinished"/>
+      <translation>Поиск путей</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
       <source>1 (default)</source>
-      <translation type="unfinished"/>
+      <translation>1 (по умолчанию)</translation>
     </message>
   </context>
   <context>
@@ -13834,12 +13839,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="41"/>
       <source>Find</source>
-      <translation type="unfinished"/>
+      <translation>Найти</translation>
     </message>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="85"/>
       <source>Replace</source>
-      <translation type="unfinished"/>
+      <translation>Заменить</translation>
     </message>
   </context>
   <context>
