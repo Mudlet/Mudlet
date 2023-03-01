@@ -1289,7 +1289,7 @@ factor of:</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
       <source>Debug messages from all profiles are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Отладочные сообщения из всех профилей показываются здесь.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
@@ -9995,12 +9995,12 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="702"/>
       <source>Welsh</source>
-      <translation type="unfinished"/>
+      <translation>Уэльш</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="703"/>
       <source>Welsh (United Kingdom {Wales})</source>
-      <translation type="unfinished"/>
+      <translation>Уэлш (Соединенное Королевство)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="716"/>
@@ -10307,7 +10307,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="788"/>
       <source>Irish</source>
-      <translation type="unfinished"/>
+      <translation>Ирландский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="789"/>
@@ -10490,17 +10490,17 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="827"/>
       <source>Latin</source>
-      <translation type="unfinished"/>
+      <translation>Латынь</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="828"/>
       <source>Luxembourgish</source>
-      <translation type="unfinished"/>
+      <translation>Люксембургский</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="829"/>
       <source>Luxembourgish (Luxembourg)</source>
-      <translation type="unfinished"/>
+      <translation>Люксембургский (Люксембург)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="830"/>
@@ -11145,7 +11145,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="351"/>
       <location filename="../src/mudlet.cpp" line="360"/>
       <source>Packages</source>
-      <translation type="unfinished"/>
+      <translation>Пакеты</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
@@ -11223,7 +11223,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="930"/>
       <source>EUC-KR (Korean)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>EUC-KR (Корейский)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="935"/>
@@ -12174,7 +12174,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3380"/>
       <source>Allow secure connection reminder</source>
-      <translation type="unfinished"/>
+      <translation>Разрешить напоминание о безопасном соединении</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3383"/>
@@ -12204,7 +12204,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3638"/>
       <source>Clear stored media</source>
-      <translation type="unfinished"/>
+      <translation>Очистить сохранённые файлы</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3644"/>
@@ -12696,7 +12696,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2130"/>
       <source>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Включает границы вокруг комнаты. Цвет может быть установлен на вкладке цвета Mapper&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2133"/>
@@ -13489,7 +13489,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/room_exits.ui" line="728"/>
       <source>This room</source>
-      <translation type="unfinished"/>
+      <translation>Эта комната</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="841"/>
