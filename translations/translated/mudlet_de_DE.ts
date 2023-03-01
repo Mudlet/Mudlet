@@ -187,7 +187,10 @@ Bitte warten...</translation>
       <location filename="../src/mapInfoContributorManager.cpp" line="202"/>
       <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</source>
       <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Raum%1ID:%1%2 Position%1auf%1der%1Karte: (%3,%4,%5) ‑%1Mittelpunkt der %n ausgewählten Räume</numerusform>
+        <numerusform>Raum%1ID:%1%2 Position%1auf%1der%1Karte: (%3,%4,%5) ‑%1Mittelpunkt der %n ausgewählten Räume</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -7142,13 +7145,19 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgRoomProperties.cpp" line="150"/>
       <source>Lock room(s), so it/they will never be used for speedwalking</source>
       <comment>This text will be shown at a checkbox, where you can set/unset a number of room&apos;s lock.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Raum sperren, so dass er nie für Speedwalking benutzt wird</numerusform>
+        <numerusform>Räume sperren, so dass sie nie für Speedwalking benutzt werden</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="167"/>
       <source>Enter a new room weight to use as the travel time for all of the %n selected room(s). This will be used for calculating the best path. The minimum and default is 1.</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Gib ein neues Raumgewicht ein, das als Reisezeit für den ausgewählten Raum verwendet werden soll. Dieses wird zur Berechnung des besten Pfades verwendet. Das Minimum und der Standard sind 1.</numerusform>
+        <numerusform>Gib ein neues Raumgewicht ein, das als Reisezeit für die %n ausgewählten Räume verwendet werden soll. Dieses wird zur Berechnung des besten Pfades verwendet. Das Minimum und der Standard sind 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="173"/>
@@ -7156,13 +7165,23 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
  • an existing room weight from the list below (sorted by most commonly used first)
  • enter a new positive integer value to use as a new weight. The default is 1.</source>
       <comment>This is for when applying a new room weight to one or more rooms and some have different weights at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Um das Raumgewicht für die ausgewählten Räume zu ändern, bitte entweder:
+ • ein existierendes Raumgewicht aus der Liste unten wählen (sortiert nach der häufigsten Verwendung), oder
+ • eine positive Ganzzahl eingeben, die als neues Gewicht benutzt werden soll. Der Standard ist 1.</numerusform>
+        <numerusform>Um das Raumgewicht für die ausgewählten %n Räume zu ändern, bitte entweder:
+ • ein existierendes Raumgewicht aus der Liste unten wählen (sortiert nach der häufigsten Verwendung), oder
+ • eine positive Ganzzahl eingeben, die als neues Gewicht benutzt werden soll. Der Standard ist 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="195"/>
       <source>Type one or more graphemes (&quot;visible characters&quot;) to use as a symbol for all of the %n selected room(s), or enter a space to clear the symbol:</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Gib ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) ein, die als neues Symbol in allen %n ausgewählten Räumen genutzt werden sollen, oder gib ein Leerzeichen ein, um das Symbole zu entfernen:</numerusform>
+        <numerusform>Gib ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) ein, die als neues Symbol in allen %n ausgewählten Räumen genutzt werden sollen, oder gib ein Leerzeichen ein, um das Symbole zu entfernen:</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="201"/>
@@ -7171,41 +7190,50 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
  • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
  • enter a space to clear any existing symbols</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols or no symbol at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Um das Symbol in allen %n ausgewählten Räumen zu ändern, bitte entweder:
+ • ein existierendes Symbol aus der Liste unten wählen (sortiert nach Häufigkeit der Nutzung),
+ • ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) als neues Symbol eingeben, oder
+ • ein Leerzeichen eingeben, um alle bestehenden Symbole zu entfernen</numerusform>
+        <numerusform>Um das Symbol in allen %n ausgewählten Räumen zu ändern, bitte entweder:
+ • ein existierendes Symbol aus der Liste unten wählen (sortiert nach Häufigkeit der Nutzung),
+ • ein oder mehrere Grapheme (&quot;sichtbare Zeichen&quot;) als neues Symbol eingeben, oder
+ • ein Leerzeichen eingeben, um alle bestehenden Symbole zu entfernen</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="241"/>
       <source>count</source>
       <comment>This text will be part of a list of room values shown, which will show the value itself, followed by the counted number of rooms with this very value like: grey {count:2} - so please translate like counted ammount, number of, etc.</comment>
-      <translation type="unfinished"/>
+      <translation>Anzahl</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="280"/>
       <source>count</source>
       <comment>This text will be part of a list of room values shown, which will name the value itself, followed by the counted number of rooms with that very value like: grey {count: 2} - So please translate like counted amount, number of, etc.</comment>
-      <translation type="unfinished"/>
+      <translation>Anzahl</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="440"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Symbolfarbe festlegen</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="477"/>
       <location filename="../src/dlgRoomProperties.cpp" line="533"/>
       <source>Define new room color</source>
-      <translation type="unfinished"/>
+      <translation>Neue Raumfarbe definieren</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="500"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Raumfarbe wählen</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="514"/>
       <source>Delete room color</source>
       <comment>This action deletes a color from the list of all room colors</comment>
-      <translation type="unfinished"/>
+      <translation>Raumfarbe löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
@@ -7222,7 +7250,7 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
       <source>(Multiple values...)</source>
-      <translation type="unfinished"/>
+      <translation>(Mehrere Werte...)</translation>
     </message>
   </context>
   <context>
@@ -7808,22 +7836,22 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6773"/>
       <source>Add Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Trigger hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6774"/>
       <source>Add new trigger</source>
-      <translation type="unfinished"/>
+      <translation>Einen neuen Trigger hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6775"/>
       <source>Add Trigger Group</source>
-      <translation type="unfinished"/>
+      <translation>Trigger-Gruppe hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6776"/>
       <source>Add new group of triggers</source>
-      <translation type="unfinished"/>
+      <translation>Eine neue Gruppe von Triggern hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6777"/>
@@ -7915,7 +7943,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6798"/>
       <source>Delete the selected alias</source>
-      <translation>Das ausgewählte Alias löschen</translation>
+      <translation>Das ausgewählte Alias entfernen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6799"/>
@@ -7931,166 +7959,166 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6803"/>
       <source>Add Script</source>
-      <translation type="unfinished"/>
+      <translation>Skript hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6804"/>
       <source>Add new script</source>
-      <translation type="unfinished"/>
+      <translation>Ein neues Skript hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6805"/>
       <source>Add Script Group</source>
-      <translation type="unfinished"/>
+      <translation>Skript-Gruppe hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6806"/>
       <source>Add new group of scripts</source>
-      <translation type="unfinished"/>
+      <translation>Eine neue Gruppe von Skripten hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6807"/>
       <source>Delete Script</source>
-      <translation type="unfinished"/>
+      <translation>Skript löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6808"/>
       <source>Delete the selected script</source>
-      <translation type="unfinished"/>
+      <translation>Das ausgewählte Skript entfernen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6809"/>
       <location filename="../src/dlgTriggerEditor.h" line="449"/>
       <source>Save Script</source>
-      <translation type="unfinished"/>
+      <translation>Skript speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6810"/>
       <source>Saves the selected script, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Speichert das ausgewählte Skript, wodurch neue Änderungen wirksam werden - speichert aber nicht auf der Festplatte...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6813"/>
       <source>Add Button</source>
-      <translation type="unfinished"/>
+      <translation>Button hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6814"/>
       <source>Add new button</source>
-      <translation type="unfinished"/>
+      <translation>Neuen Button hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6815"/>
       <source>Add Button Group</source>
-      <translation type="unfinished"/>
+      <translation>Button-Gruppe hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6816"/>
       <source>Add new group of buttons</source>
-      <translation type="unfinished"/>
+      <translation>Eine neue Gruppe von Buttons hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6817"/>
       <source>Delete Button</source>
-      <translation type="unfinished"/>
+      <translation>Button löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6818"/>
       <source>Delete the selected button</source>
-      <translation type="unfinished"/>
+      <translation>Den ausgewählten Button entfernen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6819"/>
       <location filename="../src/dlgTriggerEditor.h" line="450"/>
       <source>Save Button</source>
-      <translation type="unfinished"/>
+      <translation>Button speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6820"/>
       <source>Saves the selected button, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Speichert den ausgewählten Button, wodurch neue Änderungen wirksam werden - speichert aber nicht auf der Festplatte...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6823"/>
       <source>Add Key</source>
-      <translation type="unfinished"/>
+      <translation>Taste hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6824"/>
       <source>Add new key</source>
-      <translation type="unfinished"/>
+      <translation>Neue Taste hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6825"/>
       <source>Add Key Group</source>
-      <translation type="unfinished"/>
+      <translation>Tasten-Gruppe hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6826"/>
       <source>Add new group of keys</source>
-      <translation type="unfinished"/>
+      <translation>Eine neue Gruppe von Tasten hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6827"/>
       <source>Delete Key</source>
-      <translation type="unfinished"/>
+      <translation>Taste löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6828"/>
       <source>Delete the selected key</source>
-      <translation type="unfinished"/>
+      <translation>Die ausgewählte Taste entfernen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6829"/>
       <location filename="../src/dlgTriggerEditor.h" line="451"/>
       <source>Save Key</source>
-      <translation type="unfinished"/>
+      <translation>Taste speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6830"/>
       <source>Saves the selected key, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Speichert die ausgewählte Taste, wodurch neue Änderungen wirksam werden - speichert aber nicht auf der Festplatte...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6833"/>
       <source>Add Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variable hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6834"/>
       <source>Add new variable</source>
-      <translation type="unfinished"/>
+      <translation>Eine neue Variable hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6835"/>
       <source>Add Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Lua-Tabelle hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6836"/>
       <source>Add new Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Eine neue Lua-Tabelle hinzufügen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6837"/>
       <source>Delete Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variable löschen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6838"/>
       <source>Delete the selected variable</source>
-      <translation type="unfinished"/>
+      <translation>Die ausgewählte Variable entfernen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6839"/>
       <location filename="../src/dlgTriggerEditor.h" line="452"/>
       <source>Save Variable</source>
-      <translation type="unfinished"/>
+      <translation>Variable speichern</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6840"/>
       <source>Saves the selected variable, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Speichert die ausgewählte Variable, wodurch neue Änderungen wirksam werden - speichert aber nicht auf der Festplatte...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7414"/>
@@ -8894,7 +8922,8 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/main.cpp" line="241"/>
       <source>Warning: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Warnung: %1
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="246"/>
@@ -9015,7 +9044,7 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="317"/>
       <source>Copyright © 2008-2023  Mudlet developers</source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-2023 Mudlet-Entwickler</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="299"/>
@@ -9949,12 +9978,12 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="702"/>
       <source>Welsh</source>
-      <translation type="unfinished"/>
+      <translation>Walisisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="703"/>
       <source>Welsh (United Kingdom {Wales})</source>
-      <translation type="unfinished"/>
+      <translation>Walisisch (Vereinigtes Königreich {Wales})</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="716"/>
@@ -10261,7 +10290,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="788"/>
       <source>Irish</source>
-      <translation type="unfinished"/>
+      <translation>Irisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="789"/>
@@ -10444,17 +10473,17 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="827"/>
       <source>Latin</source>
-      <translation type="unfinished"/>
+      <translation>Latein</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="828"/>
       <source>Luxembourgish</source>
-      <translation type="unfinished"/>
+      <translation>Luxemburgisch</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="829"/>
       <source>Luxembourgish (Luxembourg)</source>
-      <translation type="unfinished"/>
+      <translation>Luxemburgisch (Luxemburg)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="830"/>
@@ -11097,7 +11126,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/mudlet.cpp" line="351"/>
       <location filename="../src/mudlet.cpp" line="360"/>
       <source>Packages</source>
-      <translation type="unfinished"/>
+      <translation>Pakete</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
@@ -11175,7 +11204,7 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/mudlet.cpp" line="930"/>
       <source>EUC-KR (Korean)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>EUC-KR (Koreanisch)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="935"/>
@@ -12121,7 +12150,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3380"/>
       <source>Allow secure connection reminder</source>
-      <translation type="unfinished"/>
+      <translation>Erinnerung an sichere Verbindung erlauben</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3383"/>
@@ -12151,7 +12180,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3638"/>
       <source>Clear stored media</source>
-      <translation type="unfinished"/>
+      <translation>Gespeicherte Medien löschen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3644"/>
@@ -12162,12 +12191,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3647"/>
       <source>Purge stored media files for the current profile:</source>
-      <translation type="unfinished"/>
+      <translation>Gespeicherte Mediendateien für das aktuelle Profil löschen:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3660"/>
       <source>Clear</source>
-      <translation type="unfinished"/>
+      <translation>Löschen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3824"/>
@@ -13664,7 +13693,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="20"/>
       <source>Room properties</source>
-      <translation type="unfinished"/>
+      <translation>Raum-Eigenschaften</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
@@ -13674,17 +13703,17 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
       <source>Room name...</source>
-      <translation type="unfinished"/>
+      <translation>Raumname...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="61"/>
       <source>Icon:</source>
-      <translation type="unfinished"/>
+      <translation>Zeichen:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="111"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Raumfarbe wählen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
@@ -13694,7 +13723,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
       <source>Room symbol...</source>
-      <translation type="unfinished"/>
+      <translation>Raumsymbol...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="210"/>
@@ -13704,7 +13733,7 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Symbolfarbe festlegen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="229"/>
@@ -13715,12 +13744,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
       <source>Pathfinding</source>
-      <translation type="unfinished"/>
+      <translation>Wegfindung</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
       <source>1 (default)</source>
-      <translation type="unfinished"/>
+      <translation>1 (Standard)</translation>
     </message>
   </context>
   <context>
@@ -13792,12 +13821,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="41"/>
       <source>Find</source>
-      <translation type="unfinished"/>
+      <translation>Suchen</translation>
     </message>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="85"/>
       <source>Replace</source>
-      <translation type="unfinished"/>
+      <translation>Ersetzen</translation>
     </message>
   </context>
   <context>
