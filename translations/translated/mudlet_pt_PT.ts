@@ -1270,6 +1270,11 @@ factor of:</source>
       <translation>Mostrar Marcas Temporais.</translation>
     </message>
     <message>
+      <location filename="../src/TConsole.cpp" line="2063"/>
+      <source>Debug messages from all profiles are shown here.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
       <translation type="unfinished"/>
@@ -1345,11 +1350,6 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
       <translation>Consola de Depuração.</translation>
-    </message>
-    <message>
-      <location filename="../src/TConsole.cpp" line="2063"/>
-      <source>Debug messages from all profile are shown here.</source>
-      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2065"/>
