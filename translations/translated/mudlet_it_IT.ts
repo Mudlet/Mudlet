@@ -1285,6 +1285,11 @@ evidenziata, di un fattore:</translation>
       <translation>Mostra Data / Ora.</translation>
     </message>
     <message>
+      <location filename="../src/TConsole.cpp" line="2063"/>
+      <source>Debug messages from all profiles are shown here.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
       <translation>Il contenuto del gioco è mostrato qui. Può contenere delle sotto-console e la finestra del mapper.</translation>
@@ -1360,11 +1365,6 @@ evidenziata, di un fattore:</translation>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
       <translation>Console di Debug.</translation>
-    </message>
-    <message>
-      <location filename="../src/TConsole.cpp" line="2063"/>
-      <source>Debug messages from all profile are shown here.</source>
-      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2065"/>
