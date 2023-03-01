@@ -143,12 +143,12 @@ please wait...</source>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="34"/>
       <source>InvisibleNotification</source>
-      <translation type="unfinished"/>
+      <translation>Невидимое уведомление</translation>
     </message>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
       <source>An invisible widget used as a workaround to announce text to the screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Невидимый виджет, используемый в качестве обходного пути для объявления текста читателю экрана</translation>
     </message>
   </context>
   <context>
@@ -763,7 +763,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2902"/>
       <source>Configure room...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Настроить комнату...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2903"/>
@@ -775,7 +775,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2929"/>
       <source>Set color... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Задать цвет... (Настроить комнату)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2936"/>
