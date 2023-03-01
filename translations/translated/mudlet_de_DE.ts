@@ -141,12 +141,12 @@ Bitte warten...</translation>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="34"/>
       <source>InvisibleNotification</source>
-      <translation type="unfinished"/>
+      <translation>Unsichtbare Benachrichtigung</translation>
     </message>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
       <source>An invisible widget used as a workaround to announce text to the screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Ein unsichtbares Widget, das genutzt wird, um Text an den Screenreader zu melden</translation>
     </message>
   </context>
   <context>
@@ -754,43 +754,43 @@ Bitte warten...</translation>
       <location filename="../src/T2DMap.cpp" line="2902"/>
       <source>Configure room...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Raum konfigurieren...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2903"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Einstellungen zum Namen des Raums, zur Farbe des Zeichens, des Gewichts und der Sperre für Schnellreise und dem Symbol, um spezielle Räume zu markieren</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2929"/>
       <source>Set color... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Farbe festlegen... (Raum konfigurieren)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2936"/>
       <source>Set symbol... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Symbol festlegen... (Raum konfigurieren)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2959"/>
       <source>Lock... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Sperren... (Raum konfigurieren)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2964"/>
       <source>Unlock... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Entsperren... (Raum konfigurieren)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2972"/>
       <source>Set weight... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Gewicht festlegen... (Raum konfigurieren)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2978"/>
@@ -1170,13 +1170,13 @@ herum um einen Faktor von:</translation>
       <location filename="../src/TCommandLine.cpp" line="1310"/>
       <source>Input line for &quot;%1&quot; profile.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Eingabezeile des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1316"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Gib Text ein, um ihn an den Spielserver des &quot;%1&quot; Profils zu senden oder gib einen Alias ein, um Befehle lokal auszuführen.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1324"/>
@@ -1188,55 +1188,55 @@ herum um einen Faktor von:</translation>
       <location filename="../src/TCommandLine.cpp" line="1329"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Gib Text ein, um ihn an den Spielserver zu senden oder gib einen Alias ein, um Befehle lokal auszuführen.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1339"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</comment>
-      <translation type="unfinished"/>
+      <translation>Zusätzliche Eingabezeile &quot;%1&quot; im Fenster &quot;%2&quot; des Profils &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1346"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.</comment>
-      <translation type="unfinished"/>
+      <translation>Gib Text ein, um ihn an den Spielserver des &quot;%1&quot; Profils zu senden oder gib einen Alias ein, um Befehle lokal auszuführen.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1353"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</comment>
-      <translation type="unfinished"/>
+      <translation>Zusätzliche Eingabezeile &quot;%1&quot; im Fenster &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1360"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for an extra command line on top of a console/window when only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Gib Text ein, um ihn an den Spielserver zu senden oder gib einen Alias ein, um Befehle lokal auszuführen.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1370"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <comment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</comment>
-      <translation type="unfinished"/>
+      <translation>Eingabezeile im Fenster &quot;%1&quot; des Profils &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1376"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</comment>
-      <translation type="unfinished"/>
+      <translation>Gib Text ein, um ihn an den Spielserver des &quot;%1&quot; Profils zu senden oder gib einen Alias ein, um Befehle lokal auszuführen.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1383"/>
       <source>Input line of &quot;%1&quot; window.</source>
       <comment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</comment>
-      <translation type="unfinished"/>
+      <translation>Eingabezeile im Fenster &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1389"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Gib Text ein, um ihn an den Spielserver zu senden oder gib einen Alias ein, um Befehle lokal auszuführen.</translation>
     </message>
   </context>
   <context>
@@ -1284,7 +1284,7 @@ herum um einen Faktor von:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
       <source>Debug messages from all profiles are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Hier werden Debug-Meldungen aus allen Profilen angezeigt.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
@@ -1367,75 +1367,75 @@ herum um einen Faktor von:</translation>
       <location filename="../src/TConsole.cpp" line="2065"/>
       <source>Central debug console past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Früherer Inhalt der zentralen Debug-Konsole.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2066"/>
       <source>Central debug console live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Aktueller Inhalt der zentralen Debug-Konsole.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2068"/>
       <source>Central debug console.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Zentrale Debug-Konsole.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2073"/>
       <source>Error Console in editor.</source>
-      <translation type="unfinished"/>
+      <translation>Fehler-Konsole im Editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2076"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Früherer Inhalt im Fehlerfenster im Editor des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2077"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Aktueller Inhalt im Fehlerfenster im Editor des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2079"/>
       <source>Editor&apos;s error window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Früherer Inhalt im Fehlerfenster im Editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2080"/>
       <source>Editor&apos;s error window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Aktueller Inhalt im Fehlerfenster im Editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2082"/>
       <source>Error messages for the &quot;%1&quot; profile are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Hier werden Fehlermeldungen im Editor des Profils &quot;%1&quot; angezeigt.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2085"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Fehlerfenster im Editor des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2087"/>
       <source>Editor&apos;s error window</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Fehlerfenster im Editor</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2090"/>
       <source>Error messages are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>Hier werden Fehlermeldungen im Editor angezeigt.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2096"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Hauptfenster des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2098"/>
@@ -1446,47 +1446,47 @@ herum um einen Faktor von:</translation>
       <location filename="../src/TConsole.cpp" line="2102"/>
       <source>Profile &quot;%1&quot; main window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Früherer Inhalt im Hauptfenster des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2103"/>
       <source>Profile &quot;%1&quot; main window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Aktueller Inhalt im Hauptfenster des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2105"/>
       <source>Profile main window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Früherer Inhalt im Hauptfenster.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2106"/>
       <source>Profile main window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Aktueller Inhalt im Hauptfenster.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2110"/>
       <source>Profile &quot;%1&quot; main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Hauptfenster des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2112"/>
       <source>Profile main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Hauptfenster des Profils.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2119"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Eingebettetes Fenster &quot;%1&quot; des Profils &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2121"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Eingebettetes Fenster &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2123"/>
@@ -1497,31 +1497,31 @@ herum um einen Faktor von:</translation>
       <location filename="../src/TConsole.cpp" line="2126"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Früherer Inhalt im eingebetteten Fenster &quot;%2&quot; des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2127"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Aktueller Inhalt im eingebetteten Fenster &quot;%2&quot; des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2129"/>
       <source>Profile embedded window &quot;%1&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Früherer Inhalt im eingebetteten Fenster &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2130"/>
       <source>Profile embedded window &quot;%1&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Aktueller Inhalt im eingebetteten Fenster &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2134"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Eingebettetes Fenster &quot;%2&quot; des Profils &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2136"/>
