@@ -1282,6 +1282,11 @@ herum um einen Faktor von:</translation>
       <translation>Zeiten anzeigen.</translation>
     </message>
     <message>
+      <location filename="../src/TConsole.cpp" line="2063"/>
+      <source>Debug messages from all profiles are shown here.</source>
+      <translation type="unfinished"/>
+    </message>
+    <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
       <translation>Hier wird der Spielinhalt angezeigt. Er kann Unterkonsolen und ein Mapper-Fenster enthalten.</translation>
@@ -1357,11 +1362,6 @@ herum um einen Faktor von:</translation>
       <location filename="../src/TConsole.cpp" line="2062"/>
       <source>Debug Console.</source>
       <translation>Debug-Konsole.</translation>
-    </message>
-    <message>
-      <location filename="../src/TConsole.cpp" line="2063"/>
-      <source>Debug messages from all profile are shown here.</source>
-      <translation type="unfinished"/>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2065"/>
