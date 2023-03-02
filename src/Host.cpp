@@ -2024,14 +2024,13 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     QString dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
 
-    static std::optional<bool> saveTimer;
     // ensure only one timer is running in case multiple modules are uninstalled at once
-    if (!saveTimer.has_value() || !saveTimer.value()) {
-        saveTimer = true;
+    if (!mSaveTimer.has_value() || !mSaveTimer.value()) {
+        mSaveTimer = true;
         // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
         // not to try to write to disk a package/module that just got uninstalled and removed from memory
         QTimer::singleShot(0, this, [this]() {
-            saveTimer = false;
+            mSaveTimer = false;
             saveProfile();
         });
     }

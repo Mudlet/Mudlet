@@ -724,6 +724,8 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
+    // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
+    std::optional<bool> mSaveTimer;
 
     QFile mErrorLogFile;
 
