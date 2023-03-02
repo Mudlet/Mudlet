@@ -2031,7 +2031,9 @@ bool Host::uninstallPackage(const QString& packageName, int module)
         // not to try to write to disk a package/module that just got uninstalled and removed from memory
         QTimer::singleShot(0, this, [this]() {
             mSaveTimer = false;
-            saveProfile();
+            if (auto [ok, filename, error] = saveProfile(); !ok) {
+                qDebug() << qsl("Host::uninstallPackage: Couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
+            }
         });
     }
 
