@@ -33,10 +33,13 @@
 #include <QMessageBox>
 #endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QPainter>
+#include <QPointer>
 #include <QScreen>
+#include <QSettings>
 #include <QSplashScreen>
 #include <QStringList>
 #include <QStringListIterator>
+#include <QTranslator>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
@@ -110,6 +113,28 @@ void removeOldNoteColorEmojiFonts()
 }
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
+
+QTranslator* loadTranslationsForCommandLine()
+{
+    QSettings settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
+    auto pSettings = new QSettings((settings_new.contains(QLatin1String("pos")) ? QLatin1String("mudlet") : QLatin1String("Mudlet")),
+                                   (settings_new.contains(QLatin1String("pos")) ? QLatin1String("Mudlet") : QLatin1String("Mudlet 1.0")));
+    auto interfaceLanguage = pSettings->value(QLatin1String("interfaceLanguage")).toString();
+    auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
+    if (userLocale == QLocale::c()) {
+        // nothing found
+        return nullptr;
+    }
+    // We only need the Mudlet translations for the Command Line texts, no need
+    // for any Qt ones:
+    QTranslator* pMudletTranslator = new QTranslator;
+    // If we allow the translations to be outside of the resource file inside
+    // the application executable then this will have to be revised to handle
+    // it:
+    pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
+    QCoreApplication::installTranslator(pMudletTranslator);
+    return pMudletTranslator;
+}
 
 int main(int argc, char* argv[])
 {
@@ -202,25 +227,32 @@ int main(int argc, char* argv[])
         app->setApplicationVersion(APP_VERSION APP_BUILD);
     }
 
+    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
-    QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
+    // The third (and fourth if provided) arguments are used to populate the
+    // help text that the QCommandLineParser::showHelp(...) would produce
+    // however we do the -h/--help option ourself so these texts are unused
+    // other than that a non-null fourth argument maybe responsible for
+    // making the option take a value that follows it - as such they do not
+    // need to be passed to the translation system.
+    QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), qsl("Profile to open automatically"), qsl("profile"));
     parser.addOption(profileToOpen);
 
-    QCommandLineOption showHelp(QStringList() << qsl("h") << qsl("help"), QCoreApplication::translate("main", "Display help and exit"));
+    QCommandLineOption showHelp(QStringList() << qsl("h") << qsl("help"), qsl("Display help and exit"));
     parser.addOption(showHelp);
 
-    QCommandLineOption showVersion(QStringList() << qsl("v") << qsl("version"), QCoreApplication::translate("main", "Display version and exit"));
+    QCommandLineOption showVersion(QStringList() << qsl("v") << qsl("version"), qsl("Display version and exit"));
     parser.addOption(showVersion);
 
-    QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), QCoreApplication::translate("main", "Don't show the splash screen when starting"));
+    QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Don't show the splash screen when starting"));
     parser.addOption(beQuiet);
 
-    QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), QCoreApplication::translate("main", "Mirror output of all consoles to STDOUT"));
+    QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), qsl("Mirror output of all consoles to STDOUT"));
     parser.addOption(mirrorToStdout);
 
     QCommandLineOption onlyPredefinedProfileToShow(QStringList() << qsl("o") << qsl("only"),
-                                                   QCoreApplication::translate("main", "Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."),
-                                                   QCoreApplication::translate("main", "predefined_game"));
+                                                   qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."),
+                                                   qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
     bool parsedCommandLineOk = parser.parse(app->arguments());
@@ -325,6 +357,12 @@ int main(int argc, char* argv[])
     /*******************************************************************
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
+    // Unload translator so we can use main application translation system;
+    if (!commandLineTranslator.isNull()) {
+        QCoreApplication::removeTranslator(commandLineTranslator);
+        commandLineTranslator.clear();
+    }
+
     QStringList cliProfiles = parser.values(profileToOpen);
     QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
