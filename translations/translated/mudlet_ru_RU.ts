@@ -8951,60 +8951,72 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/main.cpp" line="250"/>
       <source>       -h, --help                   displays this message.</source>
-      <translation type="unfinished"/>
+      <translation>       -h, --help                   отображает это сообщение.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="251"/>
       <source>       -v, --version                displays version information.</source>
-      <translation type="unfinished"/>
+      <translation>       -v, --version                отображает информацию о версии.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="252"/>
       <source>       -q, --quiet                  no splash screen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>       -q, --quiet                  Нет логотипного экрана при запуске.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="253"/>
       <source>       -p, --profile=&lt;profile&gt;      additional profile to open, may be
                                     repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -p, --profile=&lt;профиль&gt;      Дополнительный профиль для
+                                    открытия, может быть повторен.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="255"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -o, --only=&lt;предопределен&gt; сделать только Mudlet только показывать
+                                    конкретную предопределенную игру, может
+                                    быть повторена.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="257"/>
       <source>There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Существуют и другие унаследованные варианты, которые возникают
+из библиотек Qt, которые с меньшей вероятностью будут полезны для
+нормального использования этого приложения:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="260"/>
       <source>       --dograb                     ignore any implicit or explicit -nograb.
                                     --dograb wins over --nograb even when --nograb is last on
                                     the command line.</source>
-      <translation type="unfinished"/>
+      <translation>       --dograb                     игнорируйте любой неявный или явный --nograb.
+                                    --dograb выигрывает над  --nograb даже когда --nograb
+                                    последний в командной строке.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="264"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard. This option is set by default when Mudlet is
                                     running in the gdb debugger under Linux.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     Приложение никогда не должно захватывать
+                                    мышь или клавиатуру. Эта опция устанавливается
+                                    по умолчанию, когда Mudlet работает в gdb-
+                                    отладчика под Linux.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="268"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     Приложение никогда не должно захватывать
+                                    мышь или клавиатуру.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="271"/>
       <source>       --reverse                    sets the application&apos;s layout direction to right to left.</source>
-      <translation type="unfinished"/>
+      <translation>       --reverse                    устанавливает направление макета приложения
+                                    вправо налево.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="272"/>
@@ -9015,12 +9027,20 @@ less likely to be useful for normal use of this application:</source>
                                     option. You can also set the style for all Qt
                                     applications by setting the QT_STYLE_OVERRIDE environment
                                     variable.</source>
-      <translation type="unfinished"/>
+      <translation>       --style=style                Устанавливает стиль GUI приложения. Возможные
+                                    значения зависят от конфигурации вашей
+                                    системы. Если QT был скомпилирован с
+                                    дополнительными стилями или имеет
+                                    дополнительные стили в качестве плагинов,
+                                    они будут доступны для параметра командной
+                                    строки --style. Вы также можете установить стиль
+                                    для всех приложений QT, установив переменную
+                                    среды QT_STYLE_OVERRIDE.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="279"/>
       <source>       --style style                is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --style style                это то же самое, что указано выше.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="280"/>
@@ -9028,12 +9048,16 @@ less likely to be useful for normal use of this application:</source>
                                     The value must be a path to a file that contains the
                                     Style Sheet. Note: Relative URLs in the Style Sheet file
                                     are relative to the Style Sheet file&apos;s path.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet=stylesheet      Устанавливает таблицу стилей приложения.
+                                    Значение должно быть пути к файлу, который
+                                    содержит лист стилей. Примечание. Относительные
+                                    URL -адреса в файле листа стиля относительно пути
+                                    файла листа стиля.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="284"/>
       <source>       --stylesheet stylesheet      is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet stylesheet      это то же самое, что указано выше.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="287"/>
@@ -9041,14 +9065,21 @@ less likely to be useful for normal use of this application:</source>
                                     immediately and not use buffer optimization. It makes the
                                     program easier to debug and often much slower. The --sync
                                     option is only valid for the X11 version of Qt.</source>
-      <translation type="unfinished"/>
+      <translation>       --sync                       Заставляет X -сервер немедленно выполнять
+                                    каждый запрос клиента X и не использовать оптимизацию
+                                    буфера. Это облегчает отладку программы и часто
+                                    намного медленнее. Параметр --sync действительна
+                                    только для версии Qt X11.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="292"/>
       <source>       --widgetcount                prints debug message at the end about number of widgets
                                     left undestroyed and maximum number of widgets existing
                                     at the same time.</source>
-      <translation type="unfinished"/>
+      <translation>       --widgetcount                Отпечатано отладочное сообщение в конце о
+                                    количестве оставшихся виджетов, которые не уничтожены,
+                                    и максимально количество виджетов, существующих
+                                    одновременно.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="295"/>
@@ -9056,12 +9087,16 @@ less likely to be useful for normal use of this application:</source>
                                     specified port. The number is the port value and block is
                                     optional and will make the application wait until a
                                     debugger connects to it.</source>
-      <translation type="unfinished"/>
+      <translation>       --qmljsdebugger=1234[,block] Активирует отладчик QML/JS с
+                                    указанным портом. Номер - это значение порта,
+                                    а block не является обязательным и заставит
+                                    приложение ждать, пока отладчик не
+                                    подключится к нему.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="317"/>
       <source>Copyright © 2008-2023  Mudlet developers</source>
-      <translation type="unfinished"/>
+      <translation>Авторское право © 2008-2023 Mudlet разработчики</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="299"/>
