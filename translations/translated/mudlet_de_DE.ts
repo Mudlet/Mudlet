@@ -8934,12 +8934,12 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/main.cpp" line="250"/>
       <source>       -h, --help                   displays this message.</source>
-      <translation type="unfinished"/>
+      <translation>       -h, --Help                   zeigt diese Nachricht an.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="251"/>
       <source>       -v, --version                displays version information.</source>
-      <translation type="unfinished"/>
+      <translation>       -v, --version                zeigt Versionsinformationen an.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="252"/>
