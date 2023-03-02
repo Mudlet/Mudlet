@@ -8940,7 +8940,8 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/main.cpp" line="241"/>
       <source>Warning: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Предупреждение: %1
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="246"/>
@@ -8974,7 +8975,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/main.cpp" line="255"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
-      <translation>       -o, --only=&lt;предопределен&gt; сделать только Mudlet только показывать
+      <translation>       -o, --only=&lt;предопределен&gt;   сделать только Mudlet только показывать
                                     конкретную предопределенную игру, может
                                     быть повторена.</translation>
     </message>
