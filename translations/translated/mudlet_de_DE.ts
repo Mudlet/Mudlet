@@ -8944,50 +8944,62 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/main.cpp" line="252"/>
       <source>       -q, --quiet                  no splash screen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>       -q, --quiet                  ohne Spritzbild beim Start.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="253"/>
       <source>       -p, --profile=&lt;profile&gt;      additional profile to open, may be
                                     repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -p, --profile=&lt;profil&gt;       Zusätzliches Profil zum Öffnen, kann
+                                    wiederholt werden.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="255"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -o, --only=&lt;vordefiniert&gt;    Machen Sie Mudlet nur das spezifische
+                                    vordefinierte Spiel anzeigen, kann
+                                    wiederholt werden.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="257"/>
       <source>There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Es gibt andere ererbte Optionen, die aus den Qt -Bibliotheken
+entstehen, die weniger wahrscheinlich für die normale
+Verwendung dieser Anwendung nützlich sind:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="260"/>
       <source>       --dograb                     ignore any implicit or explicit -nograb.
                                     --dograb wins over --nograb even when --nograb is last on
                                     the command line.</source>
-      <translation type="unfinished"/>
+      <translation>       --dograb                     Ignorieren Sie implizite oder explizite --nograb.
+                                    --dograb gewinnt über --nograb auch wenn --Nograb
+                                    in der Befehlszeile der letzte ist.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="264"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard. This option is set by default when Mudlet is
                                     running in the gdb debugger under Linux.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     Die Anwendung sollte niemals die Maus oder die
+                                    Tastatur greifen. Diese Option wird standardmäßig
+                                    festgelegt, wenn Mudlet im gdb-debugger unter
+                                    Linux ausgeführt wird.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="268"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     Die Anwendung sollte niemals die Maus oder die
+                                   Tastatur greifen.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="271"/>
       <source>       --reverse                    sets the application&apos;s layout direction to right to left.</source>
-      <translation type="unfinished"/>
+      <translation>       --reverse                    Legt die Layout-Richtung der Anwendung auf rechts
+                                    nach links.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="272"/>
@@ -8998,12 +9010,19 @@ less likely to be useful for normal use of this application:</source>
                                     option. You can also set the style for all Qt
                                     applications by setting the QT_STYLE_OVERRIDE environment
                                     variable.</source>
-      <translation type="unfinished"/>
+      <translation>       --style=style                Legt den Anwendungs -GUI -Stil fest. Mögliche Werte hängen
+                                    von Ihrer Systemkonfiguration ab. Wenn QT mit
+                                    zusätzlichen Stilen kompiliert wurde oder zusätzliche
+                                    Stile als Plugins aufweist, sind diese der
+                                    Befehlszeilenoption von --style zur Verfügung. Sie
+                                    können den Stil auch für alle QT -Anwendungen
+                                    festlegen, indem Sie die Umgebungsvariable
+                                    QT_STYLE_OVERRIDE einstellen.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="279"/>
       <source>       --style style                is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --style style                ist das gleiche wie oben aufgeführt.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="280"/>
@@ -9011,12 +9030,16 @@ less likely to be useful for normal use of this application:</source>
                                     The value must be a path to a file that contains the
                                     Style Sheet. Note: Relative URLs in the Style Sheet file
                                     are relative to the Style Sheet file&apos;s path.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet=stylesheet      Legt das Anwendungsstylesheet fest.
+                                    Der Wert muss ein Pfad zu einer Datei sein, die
+                                    das Stilblatt enthält. HINWEIS: Relative URLs in der
+                                    Styletheet -Datei sind relativ zum Pfad der
+                                    Stylesheet -Datei.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="284"/>
       <source>       --stylesheet stylesheet      is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet stylesheet      ist das gleiche wie oben aufgeführt.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="287"/>
@@ -9024,14 +9047,20 @@ less likely to be useful for normal use of this application:</source>
                                     immediately and not use buffer optimization. It makes the
                                     program easier to debug and often much slower. The --sync
                                     option is only valid for the X11 version of Qt.</source>
-      <translation type="unfinished"/>
+      <translation>       --sync                       erzwingt den X -Server, jede X -Client -Anforderung
+                                    sofort durchzuführen und nicht die Pufferoptimierung zu
+                                    verwenden. Es macht es einfacher, das Programm zu
+                                    debuggen, ist aber oft viel langsamer. Die Option -sync
+                                    gilt nur für die X11-Version von Qt.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="292"/>
       <source>       --widgetcount                prints debug message at the end about number of widgets
                                     left undestroyed and maximum number of widgets existing
                                     at the same time.</source>
-      <translation type="unfinished"/>
+      <translation>       --widgetcount                Druckt Informationen am Ende über die Anzahl der übrigen
+                                    Widgets, die nicht zerstört werden, und die maximale
+                                    Anzahl von Widgets, die gleichzeitig vorhanden sind.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="295"/>
@@ -9039,7 +9068,11 @@ less likely to be useful for normal use of this application:</source>
                                     specified port. The number is the port value and block is
                                     optional and will make the application wait until a
                                     debugger connects to it.</source>
-      <translation type="unfinished"/>
+      <translation>       --qmljsdebugger=1234[,block] Aktiviert den QML/JS -Debugger mit
+                                    einem bestimmten Port. Die Nummer ist der
+                                    Portwert und block ist optional und lässt die
+                                    Anwendung warten, bis ein Debugger eine
+                                    Verbindung dazu herstellt.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="317"/>
