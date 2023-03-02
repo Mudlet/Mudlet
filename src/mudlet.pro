@@ -1567,7 +1567,9 @@ OTHER_FILES += \
     ../.github/workflows/codespell-analysis.yml \
     ../.github/workflows/dangerjs.yml \
     ../.github/workflows/generate-changelog.yml \
+    ../.github/workflows/generate-coder-attribution.yml \
     ../.github/workflows/link-ptbs-to-dblsqd.yml \
+    ../.github/workflows/performance-analysis.yml \
     ../.github/workflows/tag-pull-requests.yml \
     ../.github/workflows/update-3rdparty.yml \
     ../.github/workflows/update-autocompletion.yml \
