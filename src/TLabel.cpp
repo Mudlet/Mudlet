@@ -3,7 +3,7 @@
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020, 2023 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -119,7 +119,8 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     auto labelParent = qobject_cast<TConsole*>(parent());
     if (labelParent && labelParent->mpDockWidget && labelParent->mpDockWidget->isFloating()) {
-        mpHost->setFocusOnHostMainConsole();
+        // move focus back to the active console / command line:
+        mudlet::self()->activateProfile(mpHost);
     }
 
     if (mpHost && mReleaseFunction) {

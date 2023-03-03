@@ -177,13 +177,10 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & (allModifiers & ~(Qt::ShiftModifier))) == Qt::ControlModifier) {
                 // Switch to PREVIOUS profile tab when used with <CTRL> (and
                 // implicit <SHIFT>):
-                int currentIndex = mudlet::self()->mpTabBar->currentIndex();
-                int count = mudlet::self()->mpTabBar->count();
-                if (currentIndex - 1 < 0) {
-                    mudlet::self()->slot_tabChanged(count - 1);
-                } else {
-                    mudlet::self()->slot_tabChanged(currentIndex - 1);
-                }
+                const int currentIndex = mudlet::self()->mpTabBar->currentIndex();
+                const int count = mudlet::self()->mpTabBar->count();
+                int newIndex = (currentIndex - 1 < 0) ? (count - 1) : (currentIndex - 1);
+                mudlet::self()->slot_tabChanged(newIndex);
                 ke->accept();
                 return true;
             }
@@ -213,13 +210,10 @@ bool TCommandLine::event(QEvent* event)
 
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
                 // Switch to NEXT profile tab
-                int currentIndex = mudlet::self()->mpTabBar->currentIndex();
-                int count = mudlet::self()->mpTabBar->count();
-                if (currentIndex + 1 < count) {
-                    mudlet::self()->slot_tabChanged(currentIndex + 1);
-                } else {
-                    mudlet::self()->slot_tabChanged(0);
-                }
+                const int currentIndex = mudlet::self()->mpTabBar->currentIndex();
+                const int count = mudlet::self()->mpTabBar->count();
+                int newIndex = (currentIndex + 1 < count) ? (currentIndex + 1) : 0;
+                mudlet::self()->slot_tabChanged(newIndex);
                 ke->accept();
                 return true;
             }
@@ -554,7 +548,14 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     mpConsole->mUpperPane->forceUpdate();
     mpConsole->mLowerPane->forceUpdate();
 
-    // Make sure this profile's tab gets activated in multi-view mode:
+    // Record that this is the CommandLine in use for this profile, but NOT
+    // if it was Qt::ActiveWindowFocusReason as that gets used just by
+    // switching away and back to the Mudlet application and it messes up
+    // the record:
+    if (event->reason() != Qt::ActiveWindowFocusReason) {
+        mpHost->recordActiveCommandLine(this);
+    }
+
     mudlet::self()->activateProfile(mpHost);
 
     QPlainTextEdit::focusInEvent(event);
@@ -574,9 +575,6 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 
 void TCommandLine::hideEvent(QHideEvent* event)
 {
-    if (hasFocus()) {
-        mudlet::self()->mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
-    }
     QPlainTextEdit::hideEvent(event);
 }
 
@@ -856,7 +854,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         foreach(auto label, contextMenuItems.keys()) {
             auto eventName = contextMenuItems.value(label);
             auto action = new QAction(label, this);
-            connect(action, &QAction::triggered, [=]() {
+            connect(action, &QAction::triggered, this, [=]() {
                 TEvent event = {};
                 event.mArgumentList << eventName;
                 event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -877,18 +875,6 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
     // handling - and which accepts the event:
     QPlainTextEdit::mousePressEvent(event);
     mudlet::self()->activateProfile(mpHost);
-    if (mType & (SubCommandLine|ConsoleCommandLine)) {
-        // This is NOT the main TMainConsole so keep the focus in this
-        // TConsole/TCommandLine - but due to the way things happen we
-        // need to do it after other things have happened - by using a zero
-        // time-out timer:
-        QTimer::singleShot(0, this, [this]() {
-            if (mpConsole) {
-                mpConsole->setFocusOnAppropriateConsole();
-                this->setFocus(Qt::OtherFocusReason);
-            }
-        });
-    }
 }
 
 void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
@@ -897,18 +883,6 @@ void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
     // handling - and which accepts the event:
     QPlainTextEdit::mousePressEvent(event);
     mudlet::self()->activateProfile(mpHost);
-    if (mType & (SubCommandLine|ConsoleCommandLine)) {
-        // This is NOT the main TMainConsole so keep the focus in this
-        // TConsole/TCommandLine - but due to the way things happen we
-        // need to do it after other things have happened - by using a zero
-        // time-out timer:
-        QTimer::singleShot(0, this, [this]() {
-            if (mpConsole) {
-                mpConsole->setFocusOnAppropriateConsole();
-                this->setFocus(Qt::OtherFocusReason);
-            }
-        });
-    }
 }
 
 void TCommandLine::enterCommand(QKeyEvent* event)

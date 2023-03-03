@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -189,7 +189,6 @@ mudlet::mudlet()
     mpMainToolBar->setMovable(false);
     addToolBarBreak();
     auto frame = new QWidget(this);
-    frame->setFocusPolicy(Qt::NoFocus);
     setCentralWidget(frame);
     mpTabBar = new TTabBar(frame);
     mpTabBar->setMaximumHeight(30);
@@ -209,7 +208,6 @@ mudlet::mudlet()
     mpWidget_profileContainer->setPalette(mainPalette);
     mpWidget_profileContainer->setContentsMargins(0, 0, 0, 0);
     mpWidget_profileContainer->setSizePolicy(sizePolicy);
-    mpWidget_profileContainer->setFocusPolicy(Qt::NoFocus);
     mpWidget_profileContainer->setAutoFillBackground(true);
 
     layoutTopLevel->addWidget(mpWidget_profileContainer);
@@ -1341,9 +1339,9 @@ void mudlet::updateMultiViewControls()
 void mudlet::reshowRequiredMainConsoles()
 {
     if (mpTabBar->count() > 1 && mMultiView) {
-        for (auto pHost: mHostManager) {
-            if (pHost->mpConsole) {
-                pHost->mpConsole->show();
+        for (const auto& host: mHostManager) {
+            if (host->mpConsole) {
+                host->mpConsole->show();
             }
         }
     }
@@ -4471,7 +4469,6 @@ void mudlet::activateProfile(Host* pHost)
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
     mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-    // CHECKME: Why are we only repainting the main command line, what about the others?
 
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();
@@ -4510,8 +4507,12 @@ void mudlet::activateProfile(Host* pHost)
 
     mpCurrentActiveHost->updateDisplayDimensions();
 
+    // Currently used to update the Discord Rich Presence
     emit signal_tabChanged(mpCurrentActiveHost->getName());
+    // Currently used to assign the shortcuts for the activated profile:-
     emit signal_profileActivated(pHost, newActiveTabIndex);
+
+    mpCurrentActiveHost->setFocusOnHostActiveCommandLine();
 }
 
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2018-2019, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -24,6 +24,8 @@
  ***************************************************************************/
 
 
+#include "TConsole.h"
+
 #include "pre_guard.h"
 #include <QPlainTextEdit>
 #include <QPointer>
@@ -33,7 +35,6 @@
 #include "post_guard.h"
 
 
-class TConsole;
 class KeyUnit;
 class Host;
 
@@ -71,6 +72,7 @@ public:
     void removeSuggestion(const QString&);
     void clearSuggestions();
     void adjustHeight();
+    TConsole* console() const { return mpConsole; }
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -102,7 +104,7 @@ private:
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
     KeyUnit* mpKeyUnit = nullptr;
-    TConsole* mpConsole = nullptr;
+    QPointer<TConsole> mpConsole;
     QString mLastCompletion;
     int mTabCompletionCount = 0;
     int mAutoCompletionCount = 0;
