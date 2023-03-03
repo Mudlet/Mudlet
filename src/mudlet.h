@@ -288,8 +288,9 @@ public:
     // during the application run it is easiest to define it as one once:
     inline static const QVersionNumber scmRunTimeQtVersion = QVersionNumber::fromString(QLatin1String(qVersion()));
     // translations done high enough will get a gold star to hide the last few percent
-    // as well as encourage translators to maintain it;
-    static const int scmTranslationGoldStar = 95;
+    // as well as encourage translators to maintain it
+    // temporary until 2023-04-01: lower from 95 to 85 because translation updates weren't coming for 3 months
+    static const int scmTranslationGoldStar = 85;
     inline static const QString scmVersion = qsl("Mudlet " APP_VERSION APP_BUILD);
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;
