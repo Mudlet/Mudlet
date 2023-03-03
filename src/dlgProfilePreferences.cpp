@@ -3412,8 +3412,6 @@ void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 co
  * functionality to handle the situation of having a mainly disabled preference
  * dialog opened when no profiles were, it makes for a slightly more friendly
  * UX to also do this and adds a certain "balance" in the "code functionality".
- * Note that although pHost is not equal to nullptr when this is called, it is
- * now NOT valid or safe to dereference!
  */
 void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
 {

@@ -4076,11 +4076,55 @@ void Host::setCaretEnabled(bool enabled) {
     mpConsole->setCaretMode(enabled);
 }
 
-void Host::setFocusOnHostMainConsole()
+void Host::setFocusOnHostActiveCommandLine()
 {
-    mudlet::self()->activateProfile(this);
-    mpConsole->activateWindow();
-    mpConsole->setFocus();
+    QTimer::singleShot(0, this, [this]() {
+        auto pCommandLine = activeCommandLine();
+        if (pCommandLine) {
+            pCommandLine->activateWindow();
+            pCommandLine->console()->show();
+            pCommandLine->console()->raise();
+            pCommandLine->console()->repaint();
+            pCommandLine->setFocus(Qt::OtherFocusReason);
+        } else {
+            mpConsole->mpCommandLine->activateWindow();
+            mpConsole->show();
+            mpConsole->raise();
+            mpConsole->repaint();
+            mpConsole->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        }
+    });
+}
+
+void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
+{
+    mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    mpLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
+}
+
+void Host::forgetCommandLine(TCommandLine* pCommandLine)
+{
+    if (pCommandLine) {
+        mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    }
+}
+
+// Returns a pointer to the last used TCommandLine for this profile:
+TCommandLine* Host::activeCommandLine()
+{
+    TCommandLine* pCommandLine = nullptr;
+    if (mpLastCommandLineUsed.isEmpty()) {
+        return nullptr;
+    }
+
+    do {
+        pCommandLine = mpLastCommandLineUsed.top();
+        if (!pCommandLine) {
+            mpLastCommandLineUsed.pop();
+        }
+    } while (!mpLastCommandLineUsed.isEmpty() && !pCommandLine);
+
+    return pCommandLine;
 }
 
 QPointer<TConsole> Host::parentTConsole(QObject* start) const
@@ -4099,6 +4143,5 @@ QPointer<TConsole> Host::parentTConsole(QObject* start) const
         // Handle not found case:
         return result;
     }
-    result = qobject_cast<TConsole*>(ptr);
-    return result;
+    return qobject_cast<TConsole*>(ptr);
 }

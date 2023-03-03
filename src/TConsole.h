@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2020 by Matthias Urlichs matthias@urlichs.de            *
@@ -204,7 +204,7 @@ public:
     QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
     void setSearchOptions(const SearchOptions);
-    void setFocusOnAppropriateConsole();
+    void setProxyForFocus(TCommandLine*);
 
 
     QPointer<Host> mpHost;

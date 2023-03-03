@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2021-2022 by Stephen Lyons                        *
+ *   Copyright (C) 2017, 2021-2023 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -158,14 +158,14 @@ void TAction::execute()
 
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            mpHost->setFocusOnHostMainConsole();
+            mpHost->setFocusOnHostActiveCommandLine();
             return;
         }
     }
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
     // move focus back to the active console / command line:
-    mpHost->setFocusOnHostMainConsole();
+    mpHost->setFocusOnHostActiveCommandLine();
 }
 
 void TAction::expandToolbar(TToolBar* pT)

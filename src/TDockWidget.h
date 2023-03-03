@@ -2,7 +2,8 @@
 #define MUDLET_TDOCKWIDGET_H
 /***************************************************************************
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2019, 2022-2023 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -33,6 +34,8 @@
 
 // TDockWidget contains helpers for User Windows QDockWidget.
 class TDockWidget : public QDockWidget {
+    Q_OBJECT // Needed so we can use qobject_cast on it!
+
 public:
     TDockWidget(Host *, const QString &);
     void setTConsole(TConsole*);
@@ -40,7 +43,7 @@ public:
     void setVisible(bool) override;
 
 
-    QString widgetConsoleName;
+    QString mWidgetConsoleName;
     bool hasLayoutAlready = false;
 
 protected:

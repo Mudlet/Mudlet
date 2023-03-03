@@ -209,8 +209,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     mpBaseVFrame->setSizePolicy(sizePolicy);
     mpBaseHFrame->setSizePolicy(sizePolicy);
-    mpBaseVFrame->setFocusPolicy(Qt::NoFocus);
-    mpBaseHFrame->setFocusPolicy(Qt::NoFocus);
 
     baseVFrameLayout->setContentsMargins(0, 0, 0, 0);
     baseHFrameLayout->setContentsMargins(0, 0, 0, 0);
@@ -220,7 +218,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mpCommandLine = new TCommandLine(pH, qsl("main"), TCommandLine::MainCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
-        mpCommandLine->setFocusPolicy(Qt::StrongFocus);
+        // Setting the focusProxy cannot be done here because things have not
+        // been completed enough at this point - it has been defered to a
+        // zero-timer at the end of this constructor
     }
 
     layer = new QWidget(mpMainDisplay);
@@ -228,7 +228,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layer->setStyleSheet("QWidget#layer{background-color: rgba(0,0,0,0)}");
     layer->setContentsMargins(0, 0, 0, 0);
     layer->setSizePolicy(sizePolicy);
-    layer->setFocusPolicy(Qt::NoFocus);
 
     auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
@@ -252,19 +251,19 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
-    mUpperPane->setFocusPolicy(Qt::NoFocus);
     mUpperPane->setAccessibleName(tr("main window"));
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
-    mLowerPane->setFocusPolicy(Qt::NoFocus);
 
     if (mType == MainConsole) {
         setFocusProxy(mpCommandLine);
         mUpperPane->setFocusProxy(mpCommandLine);
         mLowerPane->setFocusProxy(mpCommandLine);
-    } else if (mType == UserWindow) {
+    } else if (mType & (UserWindow|SubConsole)) {
+        // These will need to be changed when the built in TCommandLine is
+        // enabled or an additional one is added to them:
         setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
@@ -507,9 +506,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     buttonLayer->setMaximumWidth(400);
     mpButtonMainLayer->setMinimumWidth(400);
     mpButtonMainLayer->setMaximumWidth(400);
-    setFocusPolicy(Qt::ClickFocus);
-    mUpperPane->setFocusPolicy(Qt::ClickFocus);
-    mLowerPane->setFocusPolicy(Qt::ClickFocus);
 
     mpButtonMainLayer->setAutoFillBackground(true);
     mpButtonMainLayer->setPalette(commandLinePalette);
@@ -546,6 +542,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TConsole::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
+    // Need to delay doing this because it uses elements that may not have
+    // been constructed yet:
+    if (mType == MainConsole) {
+        QTimer::singleShot(0, this, [this]() { setProxyForFocus(mpCommandLine); });
+    }
 }
 
 TConsole::~TConsole()
@@ -1462,6 +1463,12 @@ void TConsole::setCmdVisible(bool isVisible)
     mpCommandLine->setVisible(isVisible);
     //resizes miniconsole if command line gets enabled/disabled
     resizeConsole();
+    setProxyForFocus(isVisible ? mpCommandLine : nullptr);
+    // Need to remove the TCommandLine from the last used stack
+    // if it has been explicitly hidden:
+    if (!isVisible && mpHost) {
+        mpHost->forgetCommandLine(mpCommandLine);
+    }
 }
 
 void TConsole::refreshView() const
@@ -1986,25 +1993,9 @@ void TConsole::dropEvent(QDropEvent* e)
     }
 }
 
-// Ensure that the correct TConsole is selected in a multi-view situation:
-void TConsole::setFocusOnAppropriateConsole()
-{
-    if (mType & (SubConsole|UserWindow) && mpCommandLine && mpCommandLine->isVisible()) {
-        // The activateProfile will tend to move the focus to the TCommandLine
-        // in the TMainConsole, but if we have a TCommandLine visible in this
-        // TConsole then we want the focus to stay there:
-        mudlet::self()->activateProfile(mpHost);
-        mpCommandLine->setFocus(Qt::OtherFocusReason);
-    } else {
-        // Otherwise return focus to the main TConsole command line
-        mpHost->setFocusOnHostMainConsole();
-    }
-}
-
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    setFocusOnAppropriateConsole();
 
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
@@ -2047,6 +2038,8 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(mudletEvent);
+
+    mpHost->setFocusOnHostActiveCommandLine();
 }
 
 void TConsole::mousePressEvent(QMouseEvent* event)
@@ -2185,6 +2178,48 @@ void TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mo
     }
 }
 
+void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
+{
+    if (mType == MainConsole) {
+        mUpperPane->setFocusProxy(pCommandLine);
+        QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+        QAccessible::updateAccessibility(&event);
+    } else if (mType == UserWindow) {
+        if (pCommandLine && pCommandLine->isVisible()) {
+            mUpperPane->setFocusProxy(pCommandLine);
+            QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        } else {
+            mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+            QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        }
+    } else if (mType == SubConsole) {
+        if (pCommandLine && pCommandLine->isVisible()) {
+            mUpperPane->setFocusProxy(pCommandLine);
+            QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        } else {
+            // Need to search ancestors to find the TConsole that this one
+            // is inserted into - and if it has a TCommandLine
+            auto parentConsole = mpHost->parentTConsole(this);
+            if (!parentConsole.isNull() && parentConsole->mpCommandLine && parentConsole->mpCommandLine->isVisible()) {
+                // TBH We ought to also check for any added TCommandLine but
+                // that can wait for a future development...
+                mUpperPane->setFocusProxy(parentConsole->mpCommandLine);
+                QAccessibleEvent event(parentConsole->mpCommandLine, QAccessible::Focus);
+                QAccessible::updateAccessibility(&event);
+            } else {
+                // Somehow that has failed so fall back to the main console
+                mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+                QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+                QAccessible::updateAccessibility(&event);
+            }
+        }
+    }
+}
+
+// At present this only supports/works on the main console
 void TConsole::setCaretMode(bool enabled)
 {
     mUpperPane->updateCaret();
@@ -2192,9 +2227,11 @@ void TConsole::setCaretMode(bool enabled)
 
     if (enabled) {
         mUpperPane->initializeCaret();
+        // Remove the focusProxy before setting the focusPolicy otherwise
+        // the Policy gets sent to the Proxy!
+        mUpperPane->setFocusProxy(nullptr);
         // This adds TabFocus to the otherwise used ClickFocus:
         mUpperPane->setFocusPolicy(Qt::StrongFocus);
-        mUpperPane->setFocusProxy(nullptr);
 #if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
         // windows & linux don't move keyboard focus to the main window without this
         mUpperPane->setFocus(Qt::MouseFocusReason);
@@ -2203,53 +2240,21 @@ void TConsole::setCaretMode(bool enabled)
         QAccessibleEvent event(mUpperPane, QAccessible::Focus);
         QAccessible::updateAccessibility(&event);
 #endif
-
+        // The overload without an argument uses Qt::OtherFocusReason according
+        // to the Qt source code:
+        mUpperPane->setFocus();
     } else {
-        mUpperPane->setFocusPolicy(Qt::ClickFocus);
 #if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
         // NVDA breaks focus reset, so do it on a timer
         QTimer::singleShot(0, this, [this] () {
             mUpperPane->releaseKeyboard();
         });
 #endif
-        if (mType == MainConsole) {
-            mUpperPane->setFocusProxy(mpCommandLine);
-            QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-            QAccessible::updateAccessibility(&event);
-        } else if (mType == UserWindow) {
-            if (mpCommandLine && mpCommandLine->isVisible()) {
-                mUpperPane->setFocusProxy(mpCommandLine);
-                QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-                QAccessible::updateAccessibility(&event);
-            } else {
-                mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
-                QAccessible::updateAccessibility(&event);
-            }
-        } else if (mType == SubConsole) {
-            if (mpCommandLine && mpCommandLine->isVisible()) {
-                mUpperPane->setFocusProxy(mpCommandLine);
-                QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-                QAccessible::updateAccessibility(&event);
-            } else {
-                // Need to search ancestors to find the TConsole that this one
-                // is inserted into
-                auto parentConsole = mpHost->parentTConsole(mpCommandLine);
-                if (!parentConsole.isNull()) {
-                    parentConsole->mUpperPane->setFocusProxy(parentConsole->mpCommandLine);
-                    QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-                    QAccessible::updateAccessibility(&event);
-                } else {
-                    // Somehow that has failed so fall back to the main console
-                    mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                    QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
-                    QAccessible::updateAccessibility(&event);
-                }
-            }
-        }
+        Q_ASSERT_X(!mUpperPane->focusProxy(), "TConsole:setCaretMode(false) FAIL", "About to set a focusPolicy but there is a focusProxy in place that will get it instead!");
+        mUpperPane->setFocusPolicy(Qt::ClickFocus);
+        setProxyForFocus(mpCommandLine);
+        // Carefull - if there is a FocusProxy for this element then IT gets the policy
     }
-
-    mUpperPane->setFocus();
 }
 
 void TConsole::createSearchOptionIcon()
