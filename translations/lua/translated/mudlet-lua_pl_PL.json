@@ -11,6 +11,14 @@
     "message": "góra",
     "description": "one of the borders the container can be attached to"
   },
+  "AdjustableContainer.left": {
+    "message": "lewa",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "prawa",
+    "description": "one of the borders the container can be attached to"
+  },
   "AdjustableContainer.custom": {
     "message": "Własne:",
     "description": "a menu item in the right click menu. it contains user/package made custom items"
@@ -34,6 +42,10 @@
   "AdjustableContainer.full": {
     "message": "pełny",
     "description": "one of the Lockstyles. Can also be translated as complete as it's locking the container without any margin left for the right click menu."
+  },
+  "AdjustableContainer.border": {
+    "message": "krawędź",
+    "description": "one of the Lockstyles which keeps the borders of the container visible."
   },
   "AdjustableContainer.save": {
     "message": "Zapisz",
