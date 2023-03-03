@@ -89,6 +89,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // The raw string literals are QByteArrays now not QStrings:
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << "UTF-8";
+        mAcceptableEncodings << "EUC-KR";
         mAcceptableEncodings << "GBK";
         mAcceptableEncodings << "GB18030";
         mAcceptableEncodings << "BIG5";
@@ -2027,18 +2028,18 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         postMessage(tr("[ INFO ]  - Server offers downloadable GUI (url='%1') (package='%2').").arg(url, packageName));
         if (mpHost->mInstalledPackages.contains(packageName)) {
             postMessage(tr("[  OK  ]  - Package is already installed."));
+        } else {
+            mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
+            mpHost->updateProxySettings(mpDownloader);
+            auto request = QNetworkRequest(QUrl(url));
+            mudlet::self()->setNetworkRequestDefaults(url, request);
+            mpPackageDownloadReply = mpDownloader->get(request);
+            mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
+            connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
+            connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
+            mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
+            mpProgressDialog->show();
         }
-
-        mServerPackage = mudlet::getMudletPath(mudlet::profileDataItemPath, mProfileName, fileName);
-        mpHost->updateProxySettings(mpDownloader);
-        auto request = QNetworkRequest(QUrl(url));
-        mudlet::self()->setNetworkRequestDefaults(url, request);
-        mpPackageDownloadReply = mpDownloader->get(request);
-        mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
-        connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
-        connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
-        mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
-        mpProgressDialog->show();
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
         mpHost->setMmpMapLocation(data);
     }
@@ -2081,7 +2082,9 @@ void cTelnet::setMSSPVariables(const QByteArray& msg)
 
     mpHost->mLuaInterpreter.setMSSPTable(transcodedMsg);
 
+#if !defined(QT_NO_SSL)
     promptTlsConnectionAvailable();
+#endif
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Supported_Protocols#MSP
@@ -2208,6 +2211,7 @@ bool cTelnet::isIPAddress(QString& arg)
     return isIPAddress;
 }
 
+#if !defined(QT_NO_SSL)
 void cTelnet::promptTlsConnectionAvailable()
 {
     // If an SSL port is detected by MSSP and we're not using it, prompt to use on future connections
@@ -2247,6 +2251,7 @@ void cTelnet::promptTlsConnectionAvailable()
         }
     }
 }
+#endif
 
 bool cTelnet::purgeMediaCache()
 {

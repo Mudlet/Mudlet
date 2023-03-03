@@ -5433,9 +5433,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     mpSourceEditorArea->show();
 
     mpCurrentVarItem = pItem; //remember what has been clicked to save it
-    // There was repeated test for pItem being null here but we have NOT altered
-    // it since the start of the function where it was already tested for not
-    // being zero so we don't need to retest it! - Slysven
+
     if (column) {
         mChangingVar = false;
         return;
@@ -5692,7 +5690,7 @@ void dlgTriggerEditor::slot_treeSelectionChanged()
     auto * sender = qobject_cast<TTreeWidget*>(QObject::sender());
     if (sender) {
         QList<QTreeWidgetItem*> items = sender->selectedItems();
-        if (items.length()) {
+        if (!items.empty()) {
             QTreeWidgetItem* item = items.first();
             if (sender == treeWidget_scripts) {
                 slot_scriptsSelected(item);

@@ -73,7 +73,7 @@ bool IrcLagTimerPrivate::processPongReply(IrcPongMessage* msg)
 {
 #if QT_VERSION >= 0x040700
     // TODO: configurable format?
-    if (msg->argument().startsWith("communi/")) {
+    if (msg->argument().startsWith(QLatin1String("communi/"))) {
         bool ok = false;
         qint64 timestamp = msg->argument().mid(8).toLongLong(&ok);
         if (ok) {
@@ -99,9 +99,9 @@ void IrcLagTimerPrivate::_irc_pingServer()
 {
 #if QT_VERSION >= 0x040700
     // TODO: configurable format?
-    QString cmd = QString("PING communi/%1").arg(QDateTime::currentMSecsSinceEpoch());
+    QString cmd = QStringLiteral("PING communi/%1").arg(QDateTime::currentMSecsSinceEpoch());
     connection->sendData(cmd.toUtf8());
-    qint64 pingLag = pendingPings * interval * 1000;
+    qint64 pingLag = pendingPings * interval * 1000ll;
     if (lag > -1 && pingLag > lag)
         updateLag(pingLag);
     ++pendingPings;

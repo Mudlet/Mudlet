@@ -2060,7 +2060,7 @@ void TConsole::slot_adjustAccessibleNames()
     switch (mType) {
     case CentralDebugConsole:
         setAccessibleName(tr("Debug Console."));
-        setAccessibleDescription(tr("Debug messages from all profile are shown here."));
+        setAccessibleDescription(tr("Debug messages from all profiles are shown here."));
         if (mLowerPane->isVisible()) {
             mUpperPane->setAccessibleName(tr("Central debug console past content.", "accessibility-friendly name to describe the upper half of the Mudlet central debug window when you've scrolled up"));
             mLowerPane->setAccessibleName(tr("Central debug console live content.", "accessibility-friendly name to describe the lower half of the Mudlet central debug when you've scrolled up"));
