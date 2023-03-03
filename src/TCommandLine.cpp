@@ -1000,12 +1000,12 @@ void TCommandLine::handleTabCompletion(bool direction)
     QStringList blacklist = tabCompleteBlacklist.values(); 
     QStringList toDelete;
 
-    foreach(QString wstr, wordList) {
+    for (const QString& wstr : qAsConst(wordList)) {
         if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
             toDelete += wstr;
         }
     }
-    foreach(QString dstr, toDelete) {
+    for (const QString& dstr : qAsConst(toDelete)) {
         wordList.removeAll(dstr);
     }
 
@@ -1014,7 +1014,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     } else {
         mTabCompletionCount--;
     }
-    if (!wordList.empty()) { 
+    if (!wordList.empty()) {
         if (mTabCompletionTyped.endsWith(QChar::Space)) {
             return;
         }
@@ -1039,11 +1039,10 @@ void TCommandLine::handleTabCompletion(bool direction)
             filterList.removeAll(tmp);
             filterList.insert(offset, tmp);
             ++offset;
-            if (offset >= filterList.size()){
+            if (offset >= filterList.size()) {
                 break;
             }
         }
-         
 
         if (!filterList.empty()) {
             if (mTabCompletionCount >= filterList.size()) {
