@@ -759,7 +759,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2902"/>
       <source>Configure room...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Skonfiguruj lokacje...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2903"/>
@@ -771,31 +771,31 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2929"/>
       <source>Set color... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw kolor... (Skonfiguruj lokacje)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2936"/>
       <source>Set symbol... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw symbol... (Skonfiguruj lokacje)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2959"/>
       <source>Lock... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Zablokuj... (Skonfiguruj lokacje)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2964"/>
       <source>Unlock... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Odblokuj... (Skonfiguruj lokacje)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2972"/>
       <source>Set weight... (Configure room)</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>Ustaw wagę... (Skonfiguruj lokacje)</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2978"/>
