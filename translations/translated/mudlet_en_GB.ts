@@ -11317,7 +11317,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="2621"/>
       <source>Central Debug Console</source>
-      <translation type="unfinished"/>
+      <translation>Central Debug Console</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="424"/>
@@ -11584,7 +11584,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="500"/>
       <source>Input line</source>
-      <translation type="unfinished"/>
+      <translation>Input line</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="509"/>
