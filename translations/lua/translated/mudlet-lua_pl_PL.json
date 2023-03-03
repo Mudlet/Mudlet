@@ -71,6 +71,10 @@
     "message": "Pomyślnie zainstalowano pakiet „%s”.",
     "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
   },
+  "Mudlet.packageInstallFail": {
+    "message": "Instalacja '%s' nie udała się: %s",
+    "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
+  },
   "Mudlet.packageDownloading": {
     "message": "Pobieranie pakietu z „%s”.",
     "description": "Download package from Url for installation - %s is source url"
