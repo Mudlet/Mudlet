@@ -252,7 +252,9 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
+#if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
+#endif
     void sendNAWS(int x, int y);
     static std::pair<bool, bool> testReadReplayFile();
 
