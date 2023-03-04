@@ -245,6 +245,9 @@ public:
     static int addCmdLineSuggestion(lua_State*);
     static int removeCmdLineSuggestion(lua_State*);
     static int clearCmdLineSuggestions(lua_State*);
+    static int addCmdLineBlacklist(lua_State*);
+    static int removeCmdLineBlacklist(lua_State*);
+    static int clearCmdLineBlacklist(lua_State*);
     static int clearSpecialExits(lua_State*);
     static int setGridMode(lua_State*);
     static int getGridMode(lua_State*);

@@ -970,8 +970,18 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar::LineFeed, QChar::Space);
 
     QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
+    wordList.append(commandLineSuggestions.values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead. 
+    QStringList blacklist = tabCompleteBlacklist.values(); 
+    QStringList toDelete;
 
-    wordList.append(commandLineSuggestions.values());
+    for (const QString& wstr : qAsConst(wordList)) {
+        if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
+            toDelete += wstr;
+        }
+    }
+    for (const QString& dstr : qAsConst(toDelete)) {
+        wordList.removeAll(dstr);
+    }
 
     if (direction) {
         mTabCompletionCount++;
@@ -993,6 +1003,7 @@ void TCommandLine::handleTabCompletion(bool direction)
         }
 
         QStringList filterList = wordList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
+
         if (filterList.empty()) {
             return;
         }
@@ -1274,6 +1285,21 @@ void TCommandLine::clearSuggestions()
     commandLineSuggestions.clear();
 }
 
+void TCommandLine::addBlacklist(const QString& word)
+{
+    tabCompleteBlacklist += word;
+}
+
+void TCommandLine::removeBlacklist(const QString& word)
+{
+    tabCompleteBlacklist.remove(word);
+}
+
+void TCommandLine::clearBlacklist()
+{
+    tabCompleteBlacklist.clear();
+}
+
 void TCommandLine::slot_adjustAccessibleNames()
 {
     bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
@@ -1371,5 +1397,4 @@ void TCommandLine::slot_adjustAccessibleNames()
     case UnknownType:
         Q_UNREACHABLE();
     }
-
 }
