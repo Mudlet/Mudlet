@@ -11951,6 +11951,44 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
     return 0;
 }
 
+int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    QString text = getVerifiedString(L, __func__, n, "suggestion text");
+    auto pN = COMMANDLINE(L, name);
+    pN->addBlacklist(text);
+    return 0;
+}
+
+int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n > 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    QString text = getVerifiedString(L, __func__, n, "suggestion text");
+    auto pN = COMMANDLINE(L, name);
+    pN->removeBlacklist(text);
+    return 0;
+}
+
+int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
+{
+    int n = lua_gettop(L);
+    QString name = "main";
+    if (n == 1) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto pN = COMMANDLINE(L, name);
+    pN->clearBlacklist();
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installPackage
 int TLuaInterpreter::installPackage(lua_State* L)
 {
@@ -15351,6 +15389,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addCmdLineSuggestion", TLuaInterpreter::addCmdLineSuggestion);
     lua_register(pGlobalLua, "removeCmdLineSuggestion", TLuaInterpreter::removeCmdLineSuggestion);
     lua_register(pGlobalLua, "clearCmdLineSuggestions", TLuaInterpreter::clearCmdLineSuggestions);
+    lua_register(pGlobalLua, "addCmdLineBlacklist", TLuaInterpreter::addCmdLineBlacklist);
+    lua_register(pGlobalLua, "removeCmdLineBlacklist", TLuaInterpreter::removeCmdLineBlacklist);
+    lua_register(pGlobalLua, "clearCmdLineBlacklist", TLuaInterpreter::clearCmdLineBlacklist);
     lua_register(pGlobalLua, "openUrl", TLuaInterpreter::openUrl);
     lua_register(pGlobalLua, "sendSocket", TLuaInterpreter::sendSocket);
     lua_register(pGlobalLua, "setRoomIDbyHash", TLuaInterpreter::setRoomIDbyHash);
