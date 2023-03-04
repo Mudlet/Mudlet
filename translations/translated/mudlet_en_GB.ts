@@ -7150,24 +7150,24 @@ and there is enough space. The copying operation has failed.</source>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="440"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Set symbol colour</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="477"/>
       <location filename="../src/dlgRoomProperties.cpp" line="533"/>
       <source>Define new room color</source>
-      <translation type="unfinished"/>
+      <translation>Define new room colour</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="500"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Set room colour</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="514"/>
       <source>Delete room color</source>
       <comment>This action deletes a color from the list of all room colors</comment>
-      <translation type="unfinished"/>
+      <translation>Delete room colour</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
@@ -13597,7 +13597,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="111"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Set room colour</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
@@ -13617,7 +13617,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Set symbol colour</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="229"/>
