@@ -29,6 +29,9 @@ jobs:
       uses: leafo/gh-actions-lua@v10
       with:
         luaVersion: "5.1.5"
+        
+    - name: Install libreadline-dev
+      run: sudo apt-get install libreadline-dev -y
 
     - name: Install Luarocks
       uses: leafo/gh-actions-luarocks@v4
