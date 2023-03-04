@@ -7110,7 +7110,10 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgRoomProperties.cpp" line="167"/>
       <source>Enter a new room weight to use as the travel time for all of the %n selected room(s). This will be used for calculating the best path. The minimum and default is 1.</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Enter a new room weight to use as the travel time for the %n selected room. This will be used for calculating the best path. The minimum and default is 1.</numerusform>
+        <numerusform>Enter a new room weight to use as the travel time for all the %n selected rooms. This will be used for calculating the best path. The minimum and default is 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="173"/>
@@ -7118,13 +7121,23 @@ and there is enough space. The copying operation has failed.</source>
  • an existing room weight from the list below (sorted by most commonly used first)
  • enter a new positive integer value to use as a new weight. The default is 1.</source>
       <comment>This is for when applying a new room weight to one or more rooms and some have different weights at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>To change the room weight for the %n selected room, please choose:
+ • an existing room weight from the list below (sorted by most commonly used first)
+ • enter a new positive integer value to use as a new weight. The default is 1.</numerusform>
+        <numerusform>To change the room weight for all the %n selected rooms, please choose:
+ • an existing room weight from the list below (sorted by most commonly used first)
+ • enter a new positive integer value to use as a new weight. The default is 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="195"/>
       <source>Type one or more graphemes (&quot;visible characters&quot;) to use as a symbol for all of the %n selected room(s), or enter a space to clear the symbol:</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Type one or more graphemes (&quot;visible characters&quot;) to use as a symbol for the %n selected room, or enter a space to clear the symbol:</numerusform>
+        <numerusform>Type one or more graphemes (&quot;visible characters&quot;) to use as a symbol for all the %n selected rooms, or enter a space to clear the symbol:</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="201"/>
@@ -7133,7 +7146,16 @@ and there is enough space. The copying operation has failed.</source>
  • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
  • enter a space to clear any existing symbols</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols or no symbol at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>To change the symbol for the %n selected room, please choose:
+ • an existing symbol from the list below (sorted by most commonly used first)
+ • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
+ • enter a space to clear any existing symbols</numerusform>
+        <numerusform>To change the symbol for all the %n selected rooms, please choose:
+ • an existing symbol from the list below (sorted by most commonly used first)
+ • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
+ • enter a space to clear any existing symbols</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="241"/>
