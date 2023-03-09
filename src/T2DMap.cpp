@@ -2512,6 +2512,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         }
         mMultiRect = QRect(0, 0, 0, 0);
         update();
+        return;
     }
 
     if (event->button() & Qt::RightButton) {
