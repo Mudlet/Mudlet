@@ -4167,11 +4167,13 @@ void Host::setBorders(const std::tuple<int, int, int, int> borders)
     auto original = mBorders;
     if (borders != original) {
         mBorders = borders;
-        auto x = mpConsole->width();
-        auto y = mpConsole->height();
-        QSize s = QSize(x, y);
-        QResizeEvent event(s, s);
-        QApplication::sendEvent(mpConsole, &event);
-        mpConsole->raiseMudletSysWindowResizeEvent(x, y);
+        if (!mpConsole.isNull()) {
+            auto x = mpConsole->width();
+            auto y = mpConsole->height();
+            QSize s = QSize(x, y);
+            QResizeEvent event(s, s);
+            QApplication::sendEvent(mpConsole, &event);
+            mpConsole->raiseMudletSysWindowResizeEvent(x, y);
+        }
     }
 }
