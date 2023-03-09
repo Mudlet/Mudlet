@@ -242,7 +242,7 @@ public:
 
     int mIndentCount = 0;
     // Order top, bottom, left, right:
-    std::tuple<int, int, int, int> mBorders{};
+    QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;
 

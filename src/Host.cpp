@@ -4161,8 +4161,7 @@ QPointer<TConsole> Host::parentTConsole(QObject* start) const
     return qobject_cast<TConsole*>(ptr);
 }
 
-// The order in this is top, bottom, left, right
-void Host::setBorders(const std::tuple<int, int, int, int> borders)
+void Host::setBorders(QMargins borders)
 {
     auto original = mBorders;
     if (borders == original) {

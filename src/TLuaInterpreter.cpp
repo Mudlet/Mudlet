@@ -3680,14 +3680,14 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
     case 2: {
         auto height = getVerifiedInt(L, __func__, 1, "new height");
         auto width = getVerifiedInt(L, __func__, 2, "new width");
-        host.setBorders({height, height, width, width});
+        host.setBorders({width, height, width, height});
         break;
     }
     case 3: {
         auto top = getVerifiedInt(L, __func__, 1, "new top size");
         auto width = getVerifiedInt(L, __func__, 2, "new width");
         auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-        host.setBorders({top, bottom, width, width});
+        host.setBorders({width, top, width, bottom});
         break;
         }
     default: {
@@ -3695,7 +3695,7 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
         auto right = getVerifiedInt(L, __func__, 2, "new right size");
         auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
         auto left = getVerifiedInt(L, __func__, 4, "new left size");
-        host.setBorders({top, bottom, left, right});
+        host.setBorders({left, top, right, bottom});
         break;
     }
     }
@@ -3707,7 +3707,7 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     auto sizes = host.borders();
-    std::get<0>(sizes) = getVerifiedInt(L, __func__, 1, "new size");
+    sizes.setTop(getVerifiedInt(L, __func__, 1, "new size"));
     host.setBorders(sizes);
     return 0;
 }
@@ -3717,7 +3717,7 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     auto sizes = host.borders();
-    std::get<3>(sizes) = getVerifiedInt(L, __func__, 1, "new size");
+    sizes.setRight(getVerifiedInt(L, __func__, 1, "new size"));
     host.setBorders(sizes);
     return 0;
 }
@@ -3727,7 +3727,7 @@ int TLuaInterpreter::setBorderBottom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     auto sizes = host.borders();
-    std::get<1>(sizes) = getVerifiedInt(L, __func__, 1, "new size");
+    sizes.setBottom(getVerifiedInt(L, __func__, 1, "new size"));
     host.setBorders(sizes);
     return 0;
 }
@@ -3737,7 +3737,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     auto sizes = host.borders();
-    std::get<2>(sizes) = getVerifiedInt(L, __func__, 1, "new size");
+    sizes.setLeft(getVerifiedInt(L, __func__, 1, "new size"));
     host.setBorders(sizes);
     return 0;
 }
@@ -3746,7 +3746,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
 int TLuaInterpreter::getBorderTop(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, std::get<0>(host.borders()));
+    lua_pushnumber(L, host.borders().top());
     return 1;
 }
 
@@ -3754,7 +3754,7 @@ int TLuaInterpreter::getBorderTop(lua_State* L)
 int TLuaInterpreter::getBorderLeft(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, std::get<2>(host.borders()));
+    lua_pushnumber(L, host.borders().left());
     return 1;
 }
 
@@ -3762,7 +3762,7 @@ int TLuaInterpreter::getBorderLeft(lua_State* L)
 int TLuaInterpreter::getBorderBottom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, std::get<1>(host.borders()));
+    lua_pushnumber(L, host.borders().bottom());
     return 1;
 }
 
@@ -3770,7 +3770,7 @@ int TLuaInterpreter::getBorderBottom(lua_State* L)
 int TLuaInterpreter::getBorderRight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, std::get<3>(host.borders()));
+    lua_pushnumber(L, host.borders().right());
     return 1;
 }
 
@@ -3780,13 +3780,13 @@ int TLuaInterpreter::getBorderSizes(lua_State* L)
     Host& host = getHostFromLua(L);
     auto sizes = host.borders();
     lua_createtable(L, 0, 4);
-    lua_pushinteger(L, std::get<0>(sizes));
+    lua_pushinteger(L, sizes.top());
     lua_setfield(L, -2, "top");
-    lua_pushinteger(L, std::get<3>(sizes));
+    lua_pushinteger(L, sizes.right());
     lua_setfield(L, -2, "right");
-    lua_pushinteger(L, std::get<1>(sizes));
+    lua_pushinteger(L, sizes.bottom());
     lua_setfield(L, -2, "bottom");
-    lua_pushinteger(L, std::get<2>(sizes));
+    lua_pushinteger(L, sizes.left());
     lua_setfield(L, -2, "left");
     return 1;
 }

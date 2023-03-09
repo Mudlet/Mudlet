@@ -175,7 +175,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBaseHFrame->setContentsMargins(0, 0, 0, 0);
     centralLayout->setSpacing(0);
     centralLayout->setContentsMargins(0, 0, 0, 0);
-    mpMainDisplay->move(std::get<2>(mBorders), std::get<0>(mBorders));
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     mpMainFrame->show();
     mpMainDisplay->show();
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
@@ -556,8 +556,8 @@ void TConsole::raiseMudletSysWindowResizeEvent(const int overallWidth, const int
     }
     TEvent mudletEvent {};
     mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
-    mudletEvent.mArgumentList.append(QString::number(overallWidth - std::get<2>(mBorders) - std::get<3>(mBorders)));
-    mudletEvent.mArgumentList.append(QString::number(overallHeight - std::get<0>(mBorders) - std::get<1>(mBorders) - mpCommandLine->height()));
+    mudletEvent.mArgumentList.append(QString::number(overallWidth - mBorders.left() - mBorders.right()));
+    mudletEvent.mArgumentList.append(QString::number(overallHeight - mBorders.top() - mBorders.bottom() - mpCommandLine->height()));
     mudletEvent.mArgumentList.append(mConsoleName);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -589,14 +589,14 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpBaseHFrame->resize(x, y);
         x -= (mpLeftToolBar->width() + mpRightToolBar->width());
         y -= mpTopToolBar->height();
-        // The mMainFrameXxxxXxxx will be zero for all but the MainConsole:
-        mpMainDisplay->resize(x - std::get<2>(mBorders) - std::get<3>(mBorders),
-                              y - std::get<0>(mBorders) - std::get<1>(mBorders) - mpCommandLine->height());
+        // The mBorders will be all zeros for all but the MainConsole:
+        mpMainDisplay->resize(x - mBorders.left() - mBorders.right(),
+                              y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y);
     }
-    mpMainDisplay->move(std::get<2>(mBorders), std::get<0>(mBorders));
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
 
     if (mType & (CentralDebugConsole|ErrorConsole)) {
         layerCommandLine->hide();
@@ -668,13 +668,13 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
-    mpMainDisplay->resize(x - std::get<2>(mBorders) - std::get<3>(mBorders), y - std::get<0>(mBorders) - std::get<1>(mBorders) - mpCommandLine->height());
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
     if (mType & MainConsole) {
         mpCommandLine->adjustHeight();
     }
 
-    mpMainDisplay->move(std::get<2>(mBorders), std::get<0>(mBorders));
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     x = width();
     y = height();
     QSize s = QSize(x, y);

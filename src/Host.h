@@ -43,6 +43,7 @@
 #include <QFile>
 #include <QFont>
 #include <QList>
+#include <QMargins>
 #include <QPointer>
 #include <QStack>
 #include <QTextStream>
@@ -404,8 +405,8 @@ public:
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
     QPointer<TConsole> parentTConsole(QObject*) const;
-    std::tuple<int, int, int, int> borders() const { return mBorders; }
-    void setBorders(const std::tuple<int, int, int, int>);
+    QMargins borders() const { return mBorders; }
+    void setBorders(const QMargins);
 
 
     cTelnet mTelnet;
@@ -862,7 +863,7 @@ private:
     // return to it when switching between profiles:
     QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
 
-    std::tuple<int, int, int, int> mBorders{};
+    QMargins mBorders;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

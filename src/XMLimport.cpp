@@ -947,7 +947,7 @@ void XMLimport::readHost(Host* pHost)
         mpHost->mMapInfoContributors.clear();
     }
 
-    std::tuple<int, int, int, int> borders{};
+    QMargins borders;
     while (!atEnd()) {
         readNext();
 
@@ -983,13 +983,13 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == "port") {
                 pHost->mPort = readElementText().toInt();
             } else if (name() == "borderTopHeight") {
-                std::get<0>(borders) = readElementText().toInt();
+                borders.setTop(readElementText().toInt());
             } else if (name() == "borderBottomHeight") {
-                std::get<1>(borders) = readElementText().toInt();
+                borders.setBottom(readElementText().toInt());
             } else if (name() == "borderLeftWidth") {
-                std::get<2>(borders) = readElementText().toInt();
+                borders.setLeft(readElementText().toInt());
             } else if (name() == "borderRightWidth") {
-                std::get<3>(borders) = readElementText().toInt();
+                borders.setRight(readElementText().toInt());
             } else if (name() == "commandLineMinimumHeight") {
                 pHost->commandLineMinimumHeight = readElementText().toInt();
             } else if (name() == "wrapAt") {
