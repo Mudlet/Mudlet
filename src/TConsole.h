@@ -241,7 +241,6 @@ public:
     int mEngineCursor = -1;
 
     int mIndentCount = 0;
-    // Order top, bottom, left, right:
     QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;

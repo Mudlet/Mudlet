@@ -589,7 +589,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         mpBaseHFrame->resize(x, y);
         x -= (mpLeftToolBar->width() + mpRightToolBar->width());
         y -= mpTopToolBar->height();
-        // The mBorders will be all zeros for all but the MainConsole:
+        // The mBorders components will be all zeros for all but the MainConsole:
         mpMainDisplay->resize(x - mBorders.left() - mBorders.right(),
                               y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
