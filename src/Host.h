@@ -404,6 +404,8 @@ public:
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
     QPointer<TConsole> parentTConsole(QObject*) const;
+    std::tuple<int, int, int, int> borders() const { return mBorders; }
+    void setBorders(const std::tuple<int, int, int, int>);
 
 
     cTelnet mTelnet;
@@ -424,10 +426,6 @@ public:
     bool mBlockScriptCompile;
     bool mBlockStopWatchCreation;
     bool mEchoLuaErrors;
-    int mBorderBottomHeight;
-    int mBorderLeftWidth;
-    int mBorderRightWidth;
-    int mBorderTopHeight;
     QFont mCommandLineFont;
     QString mCommandSeparator;
     bool mEnableGMCP;
@@ -863,6 +861,8 @@ private:
     // Tracks which command line was last used for this profile so that we can
     // return to it when switching between profiles:
     QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+
+    std::tuple<int, int, int, int> mBorders{};
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

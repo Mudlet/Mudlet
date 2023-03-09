@@ -815,10 +815,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
-    topBorderHeight->setValue(pHost->mBorderTopHeight);
-    bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
-    leftBorderWidth->setValue(pHost->mBorderLeftWidth);
-    rightBorderWidth->setValue(pHost->mBorderRightWidth);
+    auto originalBorders = pHost->borders();
+    topBorderHeight->setValue(std::get<0>(originalBorders));
+    bottomBorderHeight->setValue(std::get<1>(originalBorders));
+    leftBorderWidth->setValue(std::get<2>(originalBorders));
+    rightBorderWidth->setValue(std::get<3>(originalBorders));
 
     // Set the properties in groupBox_logOptions
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
@@ -2672,10 +2673,8 @@ void dlgProfilePreferences::slot_saveAndClose()
             pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
             pHost->mpMap->mpMapper->update();
         }
-        pHost->mBorderTopHeight = topBorderHeight->value();
-        pHost->mBorderBottomHeight = bottomBorderHeight->value();
-        pHost->mBorderLeftWidth = leftBorderWidth->value();
-        pHost->mBorderRightWidth = rightBorderWidth->value();
+        std::tuple<int, int, int, int> newBorders{topBorderHeight->value(), bottomBorderHeight->value(), leftBorderWidth->value(), rightBorderWidth->value()};
+        pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();

@@ -205,6 +205,7 @@ public:
     void setCaretMode(bool enabled);
     void setSearchOptions(const SearchOptions);
     void setProxyForFocus(TCommandLine*);
+    void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
 
 
     QPointer<Host> mpHost;
@@ -240,10 +241,8 @@ public:
     int mEngineCursor = -1;
 
     int mIndentCount = 0;
-    int mMainFrameBottomHeight = 0;
-    int mMainFrameLeftWidth = 0;
-    int mMainFrameRightWidth = 0;
-    int mMainFrameTopHeight = 0;
+    // Order top, bottom, left, right:
+    std::tuple<int, int, int, int> mBorders{};
     int mOldX = 0;
     int mOldY = 0;
 

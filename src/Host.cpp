@@ -214,10 +214,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBlockScriptCompile(true)
 , mBlockStopWatchCreation(true)
 , mEchoLuaErrors(false)
-, mBorderBottomHeight(0)
-, mBorderLeftWidth(0)
-, mBorderRightWidth(0)
-, mBorderTopHeight(0)
 , mCommandLineFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(qsl(";;"))
 , mEnableGMCP(true)
@@ -4163,4 +4159,19 @@ QPointer<TConsole> Host::parentTConsole(QObject* start) const
         return result;
     }
     return qobject_cast<TConsole*>(ptr);
+}
+
+// The order in this is top, bottom, left, right
+void Host::setBorders(const std::tuple<int, int, int, int> borders)
+{
+    auto original = mBorders;
+    if (borders != original) {
+        mBorders = borders;
+        auto x = mpConsole->width();
+        auto y = mpConsole->height();
+        QSize s = QSize(x, y);
+        QResizeEvent event(s, s);
+        QApplication::sendEvent(mpConsole, &event);
+        mpConsole->raiseMudletSysWindowResizeEvent(x, y);
+    }
 }
