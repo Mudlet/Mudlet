@@ -4165,15 +4165,17 @@ QPointer<TConsole> Host::parentTConsole(QObject* start) const
 void Host::setBorders(const std::tuple<int, int, int, int> borders)
 {
     auto original = mBorders;
-    if (borders != original) {
-        mBorders = borders;
-        if (!mpConsole.isNull()) {
-            auto x = mpConsole->width();
-            auto y = mpConsole->height();
-            QSize s = QSize(x, y);
-            QResizeEvent event(s, s);
-            QApplication::sendEvent(mpConsole, &event);
-            mpConsole->raiseMudletSysWindowResizeEvent(x, y);
-        }
+    if (borders == original) {
+        return;
     }
+    mBorders = borders;
+    if (mpConsole.isNull()) {
+        return;
+    }
+    auto x = mpConsole->width();
+    auto y = mpConsole->height();
+    QSize s = QSize(x, y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(mpConsole, &event);
+    mpConsole->raiseMudletSysWindowResizeEvent(x, y);
 }
