@@ -112,12 +112,14 @@ end
 function Geyser.MiniConsole:enableScrollBar()
   enableScrollBar(self.name)
   self.scrollBar = true
+  self:resetAutoWrap()
 end
 
 --- Disables the scroll bar for this window
 function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
   self.scrollBar = false
+  self:resetAutoWrap()
 end
 
 --- Enables the horizontal scroll bar for this window
