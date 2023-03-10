@@ -406,7 +406,7 @@ end
 --- Set the wrap based on how wide the console is
 function Geyser.MiniConsole:resetAutoWrap()
   if not self.autoWrap then
-    return
+    return nil, "Autowrap is not enabled for " .. self.name
   end
   local fontWidth, fontHeight = calcFontSize(self.name)
   local consoleWidth = self.get_width()
