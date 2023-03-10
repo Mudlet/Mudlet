@@ -33,7 +33,11 @@ jobs:
         lines_changed=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { count++ } END { print count }')
         lines=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { lines = lines $0 "\n" } END { print lines }')
         
-        echo "$lines_changed lines changed and they are: $lines"
+        # strip cruft
+        lines=$(echo "$inputText" | sed -E 's/[-+]+[[:space:]]*<\/?message>\n//g')
+        lines=$(echo "$inputText" | sed -E 's/[-+]+[[:space:]]*<translation type="unfinished"><\/translation>\n//g')
+
+        echo "$lines_changed lines changed and they are:\n$lines"
         echo "lines_changed=$lines_changed" >> $GITHUB_OUTPUT
 
 #     - name: send in a pull request
