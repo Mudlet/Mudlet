@@ -26,7 +26,7 @@ jobs:
       with:
         args: -recursive ./src/ ./3rdparty/dblsqd/dblsqd ./3rdparty/edbee-lib/edbee-lib -ts ./translations/mudlet.ts
 
-    - name: check if any UI text was modified
+    - name: check & show if any UI text was modified
       id: getdiff
       run: |
         # see if we had any changes in the diff, ignoring the <location... changes
@@ -34,8 +34,8 @@ jobs:
         lines=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { lines = lines $0 "\n" } END { print lines }')
         
         # strip cruft
-        lines=$(echo "$inputText" | sed -E 's/[-+]+[[:space:]]*<\/?message>\n//g')
-        lines=$(echo "$inputText" | sed -E 's/[-+]+[[:space:]]*<translation type="unfinished"><\/translation>\n//g')
+        lines=$(echo "$lines" | sed -E 's/[-+]+[[:space:]]*<\/?message>\n//g')
+        lines=$(echo "$lines" | sed -E 's/[-+]+[[:space:]]*<translation type="unfinished"><\/translation>\n//g')
 
         echo "$lines_changed lines changed and they are:\n$lines"
         echo "lines_changed=$lines_changed" >> $GITHUB_OUTPUT
