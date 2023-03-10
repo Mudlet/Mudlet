@@ -4513,44 +4513,51 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     e->ignore();
 }
 
-// Can be called from outside this method to set the zoom on the current view
-// but also is used to update the view if the area suppied to the two argument
-// form is the currently viewed area:
-void T2DMap::setMapZoom(const qreal zoom)
+QString T2DMap::setMapZoom(const qreal zoom, const int areaId)
 {
-    qreal newZoom = qMax(csmMinXYZoom, zoom);
-    if (!qFuzzyCompare(1.0 + xyzoom, 1.0 + newZoom)) {
-        // If the floating point numbers are NOT considered to be the same we
-        // need to store the new zoom, clear the room symbol cache and redraw
-        // at the new zoom level:
-        xyzoom = newZoom;
-        flushSymbolPixmapCache();
-        update();
-    }
-}
-
-bool T2DMap::setMapZoom(const int areaId, qreal zoom)
-{
-    qreal newZoom = qMax(csmMinXYZoom, zoom);
-    if (areaId == mAreaID) {
-        // This is the area we are currently viewing, so set it directly
-        setMapZoom(newZoom);
-    }
-
-    // Also check that everything is setup correctly and that it is a
-    // valid id:
+    // Check that everything is setup correctly
     if (!mpMap || !mpMap->mpRoomDB) {
-        return false;
+        // This should be unreachable from the TLuaInterpreter but this cover
+        // any future usage:
+        return qsl("no map loaded or no active mapper");
     }
 
-    auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
+    if (zoom < csmMinXYZoom) {
+        // That zoom level is too small:
+        // We need to set a non-default precision as otherwise in the corner
+        // case with the default precision we can get something with zoom
+        // being 2.999999 we end up with a confusing:
+        // "zoom 3 is invalid, it must not be less than 3"
+        return qsl("zoom %1 is invalid, it must be at least %2").arg(QString::number(zoom, 'g', 16), QString::number(csmMinXYZoom, 'g', 16));
+    }
+
+    TArea* pArea = nullptr;
+    auto areaToChangeId = areaId ? areaId : mAreaID;
+    // An area has been supplied - though it could be the current one:
+    pArea = mpMap->mpRoomDB->getArea(areaToChangeId);
     if (!pArea) {
-        return false;
+        // That area does not exist
+        return qsl("number %1 is not a valid areaID").arg(QString::number(areaId));
     }
 
-    // So we can store the zoom to use the next time we view that area:
-    pArea->set2DMapZoom(newZoom);
-    return true;
+    auto existingZoom = pArea->get2DMapZoom();
+    if (qFuzzyCompare(1.0 + existingZoom, 1.0 + zoom)) {
+        // There is no detectable difference between the existing and supplied
+        // zooms so do nothing, sucessfully:
+        return QString();
+    }
+
+    // Store the zoom to use the next time we view that area:
+    pArea->set2DMapZoom(zoom);
+    if (areaId && (areaId != mAreaID)) {
+        // An area was supplied but it is not the area that is being viewed
+        return QString();
+    }
+
+    // We are adjusting the zoom for the currently viewed area so redraw it
+    flushSymbolPixmapCache();
+    update();
+    return QString();
 }
 
 void T2DMap::setRoomSize(double f)

@@ -9008,8 +9008,8 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapZoom
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
-    qreal zoom = getVerifiedFloat(L, __func__, 1, "zoom");
-    std::optional<int> areaID;
+    qreal zoom = getVerifiedDouble(L, __func__, 1, "zoom");
+    int areaID = 0;
     if (lua_gettop(L) > 1) {
         areaID = getVerifiedInt(L, __func__, 2, "area id", true);
     }
@@ -9018,27 +9018,11 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
         return warnArgumentValue(L, __func__, "no map loaded or no active mapper");
     }
 
-    if (zoom < T2DMap::csmMinXYZoom) {
-        return warnArgumentValue(L, __func__, qsl("%1 is less than the minimum value allowed for zoom which is %2").arg(QString::number(zoom), QString::number(T2DMap::csmMinXYZoom)));
+    QString result = host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom, areaID);
+    if (!result.isEmpty()) {
+        return warnArgumentValue(L, __func__, result);
     }
 
-    bool result = false;
-    if (areaID.has_value()) {
-        result = host.mpMap->mpMapper->mp2dMap->setMapZoom(areaID.value(), zoom);
-    } else {
-        host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom);
-        result = true;
-    }
-
-    if (!result) {
-        // Whilst it will also return false should there not be a map or mapper
-        // we should have already ruled those cases out:
-        return warnArgumentValue(L, __func__, qsl("number %1 is not a valid area id").arg(QString::number(areaID.value())));
-    }
-
-    updateMap(L);
-    // Now return a result to indicate success, we didn't before we could
-    // specify an area to work with:
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9057,7 +9041,7 @@ int TLuaInterpreter::getMapZoom(lua_State* L)
 
     if (areaID.has_value()) {
         if (!host.mpMap->mpRoomDB->getArea(areaID.value())) {
-            return warnArgumentValue(L, __func__, qsl("number %1 is not a valid area id").arg(QString::number(areaID.value())));
+            return warnArgumentValue(L, __func__, qsl("number %1 is not a valid areaID").arg(QString::number(areaID.value())));
         }
         lua_pushnumber(L, host.mpMap->mpRoomDB->get2DMapZoom(areaID.value()));
         return 1;
