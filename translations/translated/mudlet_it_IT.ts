@@ -8012,43 +8012,43 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6813"/>
       <source>Add Button</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi Pulsante</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6814"/>
       <source>Add new button</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi un nuovo pulsante</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6815"/>
       <source>Add Button Group</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi Gruppo Pulsanti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6816"/>
       <source>Add new group of buttons</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi un nuovo gruppo di pulsanti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6817"/>
       <source>Delete Button</source>
-      <translation type="unfinished"/>
+      <translation>Elimina Pulsante</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6818"/>
       <source>Delete the selected button</source>
-      <translation type="unfinished"/>
+      <translation>Elimina il pulsante selezionato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6819"/>
       <location filename="../src/dlgTriggerEditor.h" line="450"/>
       <source>Save Button</source>
-      <translation type="unfinished"/>
+      <translation>Salva Pulsante</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6820"/>
       <source>Saves the selected button, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Salva il pulsante selezionato, applicando le modifiche effettuate - non salva l'elemento su disco...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6823"/>
@@ -9017,7 +9017,7 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="349"/>
       <source>Copyright © 2008-2023  Mudlet developers</source>
-      <translation type="unfinished"/>
+      <translation>Copyright © 2008-2023  Mudlet developers</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="331"/>
@@ -9951,12 +9951,12 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="702"/>
       <source>Welsh</source>
-      <translation type="unfinished"/>
+      <translation>Gallese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="703"/>
       <source>Welsh (United Kingdom {Wales})</source>
-      <translation type="unfinished"/>
+      <translation>Gallese (Regno Unito {Galles})</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="716"/>
@@ -10263,7 +10263,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="788"/>
       <source>Irish</source>
-      <translation type="unfinished"/>
+      <translation>Irlandese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="789"/>
@@ -10446,17 +10446,17 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="827"/>
       <source>Latin</source>
-      <translation type="unfinished"/>
+      <translation>Latino</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="828"/>
       <source>Luxembourgish</source>
-      <translation type="unfinished"/>
+      <translation>Lussemburghese</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="829"/>
       <source>Luxembourgish (Luxembourg)</source>
-      <translation type="unfinished"/>
+      <translation>Lussemburghese (Lussemburgo)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="830"/>
@@ -11099,7 +11099,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
       <location filename="../src/mudlet.cpp" line="351"/>
       <location filename="../src/mudlet.cpp" line="360"/>
       <source>Packages</source>
-      <translation type="unfinished"/>
+      <translation>Pacchetti</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
@@ -11177,7 +11177,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
       <location filename="../src/mudlet.cpp" line="930"/>
       <source>EUC-KR (Korean)</source>
       <comment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</comment>
-      <translation type="unfinished"/>
+      <translation>EUC-KR (Coreano)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="935"/>
@@ -13794,12 +13794,12 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="41"/>
       <source>Find</source>
-      <translation type="unfinished"/>
+      <translation>Trova</translation>
     </message>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="85"/>
       <source>Replace</source>
-      <translation type="unfinished"/>
+      <translation>Sostituisci</translation>
     </message>
   </context>
   <context>
