@@ -30,8 +30,8 @@ jobs:
       id: getdiff
       run: |
         # see if we had any changes in the diff, ignoring the <location... changes
-        lines_changed=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { count++ } END { print count }')
-        echo "$lines_changed lines changed."
+        lines_changed=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { count++; lines = lines $0 "\n" } END { print count }')
+        echo "$lines_changed lines changed and they are: $lines"
         echo "lines_changed=$lines_changed" >> $GITHUB_OUTPUT
 
     - name: send in a pull request
