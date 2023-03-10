@@ -36,19 +36,19 @@ jobs:
         echo "$lines_changed lines changed and they are: $lines"
         echo "lines_changed=$lines_changed" >> $GITHUB_OUTPUT
 
-    - name: send in a pull request
-      uses: gr2m/create-or-update-pull-request-action@77596e3166f328b24613f7082ab30bf2d93079d5
-      if: steps.getdiff.outputs.lines_changed > 0
-      env:
-        GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
-      with:
-        title: "Infrastructure: Update text for translation in Crowdin"
-        body: |
-          #### Brief overview of PR changes/additions
-          :crown: An automated PR to make new text available for translation in Crowdin from ${{ github.ref }} (${{ github.sha }}).
-          #### Motivation for adding to Mudlet
-          So translators can translate the new text before the upcoming release.
-        branch: update-texts-for-translators-${{ github.sha }}
-        path: translations/
-        commit-message: (autocommit) Updated text for translation
-        author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+#     - name: send in a pull request
+#       uses: gr2m/create-or-update-pull-request-action@77596e3166f328b24613f7082ab30bf2d93079d5
+#       if: steps.getdiff.outputs.lines_changed > 0
+#       env:
+#         GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+#       with:
+#         title: "Infrastructure: Update text for translation in Crowdin"
+#         body: |
+#           #### Brief overview of PR changes/additions
+#           :crown: An automated PR to make new text available for translation in Crowdin from ${{ github.ref }} (${{ github.sha }}).
+#           #### Motivation for adding to Mudlet
+#           So translators can translate the new text before the upcoming release.
+#         branch: update-texts-for-translators-${{ github.sha }}
+#         path: translations/
+#         commit-message: (autocommit) Updated text for translation
+#         author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
