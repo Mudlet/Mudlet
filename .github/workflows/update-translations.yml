@@ -68,7 +68,7 @@ jobs:
           
           ${{ steps.getdiff.outputs.lines}}
           
-          (note that if it just looks like the same strings were removed & added, then it means their line #'s have changed and translators will not need to do additional work.)
+          (note that if it just looks like the same strings were removed & added, then it means their context line #'s have changed and translators will not need to do additional work.)
           
         branch: update-texts-for-translators-${{ github.sha }}
         path: translations/
