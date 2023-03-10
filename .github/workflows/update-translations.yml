@@ -32,7 +32,7 @@ jobs:
         # see if we had any changes in the diff, ignoring the <location... changes
         lines_changed=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { count++ } END { print count }')
         lines=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { lines = lines $0 "\n" } END { print lines }')
-        
+
         # strip cruft
         lines=$(echo "$lines" | sed -E 's/[-+]+[[:space:]]*<\/?message>//g')
         lines=$(echo "$lines" | sed -E 's/[-+]+[[:space:]]*<translation type="unfinished"><\/translation>//g')
@@ -41,11 +41,11 @@ jobs:
         echo "$lines_changed lines changed and they are:"
         echo "$lines"
         echo "lines_changed=$lines_changed" >> $GITHUB_OUTPUT
-        
+
         # escape - and + for better rendering in markdown
         lines=$(echo "$lines" | sed 's/[+-]/\\&/g')
-        
-        # escape newlines (https://github.com/orgs/community/discussions/26288#discussioncomment-3876281)        
+
+        # escape newlines (https://github.com/orgs/community/discussions/26288#discussioncomment-3876281)
         delimiter="$(openssl rand -hex 8)"
         echo "lines<<${delimiter}" >> "${GITHUB_OUTPUT}"
         echo "$lines" >> "${GITHUB_OUTPUT}"
@@ -64,12 +64,12 @@ jobs:
           #### Motivation for adding to Mudlet
           So translators can translate the new text before the upcoming release.
           #### Other info (issues closed, discussion etc)
-          The following strings have been changed: 
-          
+          The following strings have been changed:
+
           ${{ steps.getdiff.outputs.lines}}
-          
+
           (note that if it just looks like the same strings were removed & added, then it means their context line #'s have changed and translators will not need to do additional work.)
-          
+
         branch: update-texts-for-translators-${{ github.sha }}
         path: translations/
         commit-message: (autocommit) Updated text for translation
