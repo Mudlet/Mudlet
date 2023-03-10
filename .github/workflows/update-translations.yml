@@ -32,7 +32,7 @@ jobs:
         # see if we had any changes in the diff, ignoring the <location... changes
         lines_changed=$(git diff --patch --unified=0 translations/mudlet.ts | awk '! /^((@@|diff|index|---|\+\+\+)|((-|+) *<location))/ { count++ } END { print count }')
         echo "$lines_changed lines changed."
-        echo ::set-output name=lines_changed::$lines_changed
+        echo "lines_changed=$lines_changed" >> $GITHUB_OUTPUT
 
     - name: send in a pull request
       uses: gr2m/create-or-update-pull-request-action@77596e3166f328b24613f7082ab30bf2d93079d5
