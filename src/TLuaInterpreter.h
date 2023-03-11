@@ -452,7 +452,6 @@ public:
     static int stopMusic(lua_State*);
     static int stopSounds(lua_State*);
     static int purgeMediaCache(lua_State*);
-    static void setBorderSize(lua_State*, int, int, bool resizeMudlet = true);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
     static int setBorderBottom(lua_State*);

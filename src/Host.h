@@ -43,6 +43,7 @@
 #include <QFile>
 #include <QFont>
 #include <QList>
+#include <QMargins>
 #include <QPointer>
 #include <QStack>
 #include <QTextStream>
@@ -404,6 +405,8 @@ public:
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
     QPointer<TConsole> parentTConsole(QObject*) const;
+    QMargins borders() const { return mBorders; }
+    void setBorders(const QMargins);
 
 
     cTelnet mTelnet;
@@ -424,10 +427,6 @@ public:
     bool mBlockScriptCompile;
     bool mBlockStopWatchCreation;
     bool mEchoLuaErrors;
-    int mBorderBottomHeight;
-    int mBorderLeftWidth;
-    int mBorderRightWidth;
-    int mBorderTopHeight;
     QFont mCommandLineFont;
     QString mCommandSeparator;
     bool mEnableGMCP;
@@ -863,6 +862,8 @@ private:
     // Tracks which command line was last used for this profile so that we can
     // return to it when switching between profiles:
     QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+
+    QMargins mBorders;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

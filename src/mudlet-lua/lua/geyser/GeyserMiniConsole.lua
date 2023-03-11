@@ -111,21 +111,27 @@ end
 --- Enables the scroll bar for this window
 function Geyser.MiniConsole:enableScrollBar()
   enableScrollBar(self.name)
+  self.scrollBar = true
+  self:resetAutoWrap()
 end
 
 --- Disables the scroll bar for this window
 function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
+  self.scrollBar = false
+  self:resetAutoWrap()
 end
 
 --- Enables the horizontal scroll bar for this window
 function Geyser.MiniConsole:enableHorizontalScrollBar()
   enableHorizontalScrollBar(self.name)
+  self.horizontalScrollBar = true
 end
 
 --- Disables the horizontal scroll bar for this window
 function Geyser.MiniConsole:disableHorizontalScrollBar()
   disableHorizontalScrollBar(self.name)
+  self.horizontalScrollBar = false
 end
 
 -- Start commandLine functions
@@ -399,8 +405,14 @@ end
 
 --- Set the wrap based on how wide the console is
 function Geyser.MiniConsole:resetAutoWrap()
+  if not self.autoWrap then
+    return nil, "Autowrap is not enabled for " .. self.name
+  end
   local fontWidth, fontHeight = calcFontSize(self.name)
   local consoleWidth = self.get_width()
+  if self.scrollBar then
+    consoleWidth = consoleWidth - 15
+  end
   local charactersWidth = math.floor(consoleWidth / fontWidth)
 
   self.wrapAt = charactersWidth
@@ -554,7 +566,7 @@ function Geyser.MiniConsole:new (cons, container)
   self.__index = self
   -----------------------------------------------------------
   -- Now create the MiniConsole using primitives
-  if not string.find(me.name, ".*Class") then
+  if not string.find(me.name, ".+Class$") then
     me.windowname = me.windowname or me.container.windowname or "main"
     createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
@@ -593,6 +605,9 @@ function Geyser.MiniConsole:new (cons, container)
       me:enableAutoWrap()
     elseif cons.wrapAt then
       me:setWrap(cons.wrapAt)
+    end
+    if cons.autoWrap then
+      me:enableAutoWrap()
     end
     if me.commandLine then
       me:enableCommandLine()

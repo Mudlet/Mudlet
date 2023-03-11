@@ -83,36 +83,15 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     ps->setKey(Qt::CTRL + Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);
 
-    if (mType & CentralDebugConsole) {
+    if (mType == CentralDebugConsole) {
         // Probably will not show up as this is used inside a QMainWindow widget
         // which has its own title and icon set.
         setWindowTitle(tr("Debug Console"));
-        // mIsSubConsole was left false for this
         mWrapAt = 50;
-    } else {
-        if (mType & (ErrorConsole|SubConsole|UserWindow)) {
-            // Originally this was for TConsole instances with a parent pointer
-            // This branch for: UserWindows, SubConsole, ErrorConsole
-            // mIsSubConsole was true for these
-            mMainFrameTopHeight = 0;
-            mMainFrameBottomHeight = 0;
-            mMainFrameLeftWidth = 0;
-            mMainFrameRightWidth = 0;
-
-        } else if (mType & (MainConsole|Buffer)) {
-            // Originally this was for TConsole instances without a parent pointer
-            // This branch for: Buffers, MainConsole
-            // mIsSubConsole was false for these
-            mMainFrameTopHeight = mpHost->mBorderTopHeight;
-            mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
-            mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
-            mMainFrameRightWidth = mpHost->mBorderRightWidth;
-            mCommandBgColor = mpHost->mCommandBgColor;
-            mCommandFgColor = mpHost->mCommandFgColor;
-
-        } else {
-            Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
-        }
+    } else if (mType == MainConsole) {
+        mBorders = mpHost->borders();
+        mCommandBgColor = mpHost->mCommandBgColor;
+        mCommandFgColor = mpHost->mCommandFgColor;
     }
     setContentsMargins(0, 0, 0, 0);
     setAttribute(Qt::WA_DeleteOnClose);
@@ -196,7 +175,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBaseHFrame->setContentsMargins(0, 0, 0, 0);
     centralLayout->setSpacing(0);
     centralLayout->setContentsMargins(0, 0, 0, 0);
-    mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     mpMainFrame->show();
     mpMainDisplay->show();
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
@@ -570,13 +549,27 @@ void TConsole::resizeConsole()
 }
 
 
+void TConsole::raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight)
+{
+    if (mpHost.isNull()) {
+        return;
+    }
+    TEvent mudletEvent {};
+    mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
+    mudletEvent.mArgumentList.append(QString::number(overallWidth - mBorders.left() - mBorders.right()));
+    mudletEvent.mArgumentList.append(QString::number(overallHeight - mBorders.top() - mBorders.bottom() - mpCommandLine->height()));
+    mudletEvent.mArgumentList.append(mConsoleName);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(mudletEvent);
+}
+
 void TConsole::resizeEvent(QResizeEvent* event)
 {
     if (mType & MainConsole) {
-        mMainFrameTopHeight = mpHost->mBorderTopHeight;
-        mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
-        mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
-        mMainFrameRightWidth = mpHost->mBorderRightWidth;
+        mBorders = mpHost->borders();
     }
     int x = event->size().width();
     int y = event->size().height();
@@ -590,18 +583,20 @@ void TConsole::resizeEvent(QResizeEvent* event)
         return;
     }
 
-    if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
+    if (mType & (MainConsole|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
-        x = x - mpLeftToolBar->width() - mpRightToolBar->width();
-        y = y - mpTopToolBar->height();
-        mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+        x -= (mpLeftToolBar->width() + mpRightToolBar->width());
+        y -= mpTopToolBar->height();
+        // The mBorders components will be all zeros for all but the MainConsole:
+        mpMainDisplay->resize(x - mBorders.left() - mBorders.right(),
+                              y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
-        mpMainDisplay->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpMainDisplay->resize(x, y);
     }
-    mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
 
     if (mType & (CentralDebugConsole|ErrorConsole)) {
         layerCommandLine->hide();
@@ -619,24 +614,17 @@ void TConsole::resizeEvent(QResizeEvent* event)
         if (preventLuaEvent) {
             return;
         }
-        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-        QString func = "handleWindowResizeEvent";
-        QString n = "WindowResizeEvent";
-        pLua->call(func, n);
+        if (!mpHost.isNull()) {
+            TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+            QString func = "handleWindowResizeEvent";
+            QString n = "WindowResizeEvent";
+            pLua->call(func, n);
 
-        TEvent mudletEvent {};
-        mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
-        mudletEvent.mArgumentList.append(QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth));
-        mudletEvent.mArgumentList.append(QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()));
-        mudletEvent.mArgumentList.append(mConsoleName);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mudletEvent);
+            raiseMudletSysWindowResizeEvent(x, y);
+        }
     }
 //create the sysUserWindowResize Event for automatic resizing with Geyser
-    if (mType & (UserWindow)) {
+    if (mType & (UserWindow) && !mpHost.isNull()) {
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
         QString func = "handleWindowResizeEvent";
         QString n = "WindowResizeEvent";
@@ -657,11 +645,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
 void TConsole::refresh()
 {
-    if (mType & (ErrorConsole|MainConsole|SubConsole|UserWindow|Buffer)) {
-        mMainFrameTopHeight = mpHost->mBorderTopHeight;
-        mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
-        mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
-        mMainFrameRightWidth = mpHost->mBorderRightWidth;
+    if (mType == MainConsole) {
+        mBorders = mpHost->borders();
     }
 
     int x = width();
@@ -683,13 +668,13 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
-    mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
     if (mType & MainConsole) {
         mpCommandLine->adjustHeight();
     }
 
-    mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     x = width();
     y = height();
     QSize s = QSize(x, y);
