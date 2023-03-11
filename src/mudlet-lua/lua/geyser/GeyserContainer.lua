@@ -342,7 +342,7 @@ function Geyser.Container:new(cons, container)
 
   -- If we're not not a class definition then add to a controlling
   -- container.
-  if not string.find(me.name, ".*Class") then
+  if not string.find(me.name, ".+Class$") then
     -- If passed in a container, add me to that container
     if container then
       if me.useAdd2 then
