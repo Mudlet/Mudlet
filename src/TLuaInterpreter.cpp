@@ -108,16 +108,16 @@ static const char *bad_window_value = "window \"%s\" not found";
 static const char *bad_cmdline_value = "command line \"%s\" not found";
 static const char *bad_label_value = "label \"%s\" not found";
 
-static const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
-static const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
-static const QString TLuaInterpreter::csmInvalidRedValue{qsl("red value %1 needs to be between 0-255")};
-static const QString TLuaInterpreter::csmInvalidGreenValue{qsl("green value %1 needs to be between 0-255")};
-static const QString TLuaInterpreter::csmInvalidBlueValue{qsl("blue value %1 needs to be between 0-255")};
-static const QString TLuaInterpreter::csmInvalidAlphaValue{qsl("alpha value %1 needs to be between 0-255")};
-static const QString TLuaInterpreter::csmInvalidExitRoomID{qsl("number %1 is not a valid exit roomID")};
-static const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem to be parseable as a positive integer")};
-static const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
-static const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
+const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
+const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
+const QString TLuaInterpreter::csmInvalidRedValue{qsl("red value %1 needs to be between 0-255")};
+const QString TLuaInterpreter::csmInvalidGreenValue{qsl("green value %1 needs to be between 0-255")};
+const QString TLuaInterpreter::csmInvalidBlueValue{qsl("blue value %1 needs to be between 0-255")};
+const QString TLuaInterpreter::csmInvalidAlphaValue{qsl("alpha value %1 needs to be between 0-255")};
+const QString TLuaInterpreter::csmInvalidExitRoomID{qsl("number %1 is not a valid exit roomID")};
+const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem to be parseable as a positive integer")};
+const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
+const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
 
 #define WINDOW_NAME(_L, _pos)                                                                  \
     ({                                                                                         \
