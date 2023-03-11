@@ -11,24 +11,45 @@ PROJECT(mudlet-tests
 
 ENABLE_TESTING()
 
-find_package(Qt5Test REQUIRED)
-find_package(Qt5 REQUIRED
-        COMPONENTS Core
-        Multimedia
-        Network
-        OpenGL
-        UiTools
-        Widgets
-        Concurrent)
+if (WITH_QT6)
+    find_package(Qt6 REQUIRED
+            COMPONENTS Core
+            Multimedia
+            Network
+            OpenGL
+            UiTools
+            Widgets
+            Concurrent
+            Test)
 
-link_libraries(
-        Qt5::Test
-        Qt5::Concurrent
-        Qt5::Core
-        Qt5::Network
-        Qt5::Multimedia
-        Qt5::UiTools
-        Qt5::Widgets)
+    link_libraries(
+            Qt6::Test
+            Qt6::Concurrent
+            Qt6::Core
+            Qt6::Network
+            Qt6::Multimedia
+            Qt6::UiTools
+            Qt6::Widgets)
+else()
+    find_package(Qt5 REQUIRED
+            COMPONENTS Core
+            Multimedia
+            Network
+            OpenGL
+            UiTools
+            Widgets
+            Concurrent
+            Test)
+
+    link_libraries(
+            Qt5::Test
+            Qt5::Concurrent
+            Qt5::Core
+            Qt5::Network
+            Qt5::Multimedia
+            Qt5::UiTools
+            Qt5::Widgets)
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake ${CMAKE_MODULE_PATH})
 
