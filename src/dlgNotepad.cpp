@@ -72,7 +72,10 @@ void dlgNotepad::save()
     file.open(QIODevice::WriteOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
+    // fileStream.setCodec is removed in Qt6 and UTF-8 is the default
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     fileStream << notesEdit->toPlainText();
     file.close();
 
@@ -85,9 +88,16 @@ void dlgNotepad::restoreFile(const QString& fn, const bool useUtf8Encoding)
     file.open(QIODevice::ReadOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
+    // In Qt6 the default encoding is UTF-8 instead of the system default
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (useUtf8Encoding) {
         fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
     }
+#else
+    if (!useUtf8Encoding) {
+        fileStream.setEncoding(QStringEncoder::Encoding::System);
+    }
+#endif
     const QString txt = fileStream.readAll();
     notesEdit->blockSignals(true);
     notesEdit->setPlainText(txt);

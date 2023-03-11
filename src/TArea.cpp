@@ -47,6 +47,11 @@ static const QColor defaultLabelForeground(QColor(0, 0, 0));
 static const QColor defaultLabelBackground(QColor(0, 0, 0));
 static const int kPixmapDataLineSize = 64;
 
+// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+template <typename Key, typename T>
+using QMultiMapIterator = QMapIterator<Key, T>;
+#endif
 
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : mpRoomDB(pRDB)
@@ -129,7 +134,7 @@ QList<int> TArea::getCollisionNodes()
         while (it2.hasNext()) {
             it2.next();
             QMultiMap<int, int> y_val = it2.value();
-            QMapIterator<int, int> it3(y_val);
+            QMultiMapIterator<int, int> it3(y_val);
             QList<int> z_coordinates;
             while (it3.hasNext()) {
                 it3.next();
@@ -520,7 +525,7 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
     QMultiMap<int, QPair<QString, int>> results;
     QSet<int> roomsWithOtherAreaSpecialExits;
 
-    QMapIterator<int, QPair<int, int>> itAreaExit = mAreaExits;
+    QMultiMapIterator<int, QPair<int, int>> itAreaExit = mAreaExits;
     // First parse the normal exits and also find the rooms where there is at
     // least one special area exit
     while (itAreaExit.hasNext()) {

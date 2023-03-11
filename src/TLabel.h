@@ -38,6 +38,12 @@ class Host;
 
 class QMouseEvent;
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+using QEnterEventType = QEnterEvent;
+#else
+using QEnterEventType = QEvent;
+#endif
+
 class TLabel : public QLabel
 {
     Q_OBJECT
@@ -60,7 +66,7 @@ public:
     void wheelEvent(QWheelEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
     void leaveEvent(QEvent*) override;
-    void enterEvent(QEvent*) override;
+    void enterEvent(QEnterEventType*) override;
     void resizeEvent(QResizeEvent* event) override;
     void setClickThrough(bool clickthrough);
 

@@ -162,7 +162,7 @@ void TLabel::leaveEvent(QEvent* event)
     }
 }
 
-void TLabel::enterEvent(QEvent* event)
+void TLabel::enterEvent(QEnterEventType* event)
 {
     if (mpHost && mEnterFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mEnterFunction, event);

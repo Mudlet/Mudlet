@@ -36,6 +36,11 @@
 #include <QStringBuilder>
 #include "post_guard.h"
 
+// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+template <typename Key, typename T>
+using QMultiMapIterator = QMapIterator<Key, T>;
+#endif
 
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
 // in Qt5 - the compilation errors that result in not having this are really
@@ -727,7 +732,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         // from version 11-ish:
         QMultiMap<int, QString> oldSpecialExits;
         ifs >> oldSpecialExits;
-        QMapIterator<int, QString> itOldSpecialExit(oldSpecialExits);
+        QMultiMapIterator<int, QString> itOldSpecialExit(oldSpecialExits);
         while (itOldSpecialExit.hasNext()) {
             itOldSpecialExit.next();
             QString cmd{itOldSpecialExit.value()};

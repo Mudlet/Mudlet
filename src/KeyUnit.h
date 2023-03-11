@@ -28,6 +28,7 @@
 #include <QMap>
 #include <QPointer>
 #include <QString>
+#include <QObject>
 #include "post_guard.h"
 
 #include <list>

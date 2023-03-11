@@ -31,7 +31,14 @@
 
 #include "pre_guard.h"
 #include <QMediaPlayer>
+#include <QAudioOutput>
 #include "post_guard.h"
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+using QMediaPlayerPlaybackState = QMediaPlayer::State;
+#else
+using QMediaPlayerPlaybackState = QMediaPlayer::PlaybackState;
+#endif
 
 
 class TMediaPlayer
@@ -45,13 +52,33 @@ public:
     , mMediaData(mediaData)
     , mMediaPlayer(new QMediaPlayer(pHost))
     , initialized(true)
-    {}
+    {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        mMediaPlayer->setAudioOutput(new QAudioOutput());
+#endif
+    }
     ~TMediaPlayer() = default;
 
     TMediaData getMediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
     QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
     bool isInitialized() const { return initialized; }
+    QMediaPlayerPlaybackState getPlaybackState() const
+    {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        return mMediaPlayer->state();
+#else
+        return mMediaPlayer->playbackState();
+#endif
+    }
+    void setVolume(int volume)
+    {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        return mMediaPlayer->setVolume(volume);
+#else
+        return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
+#endif
+    }
 
 private:
     QPointer<Host> mpHost;
@@ -95,6 +122,7 @@ private:
     TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
     bool doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& absolutePathFileName);
     void matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName);
+    void handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const TMediaPlayer& pPlayer);
 
     void play(TMediaData& mediaData);
 

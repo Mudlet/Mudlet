@@ -54,6 +54,7 @@
 #include <QTextBoundaryFinder>
 #include <QToolTip>
 #include <QVersionNumber>
+#include <QStringRef>
 #include "post_guard.h"
 
 // Renders text on screen
@@ -1768,10 +1769,10 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         mPB.ry() -= mpBuffer->mBatchDeleteSize;
     }
     int startLine = std::max(0, mPA.y());
-    int endLine = std::min(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
+    int endLine = std::min<qsizetype>(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
     int offset = endLine - startLine;
     int startPos = std::max(0, mPA.x());
-    int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
+    int endPos = std::min<qsizetype>(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
     if (textLines.isEmpty()) {
         return {};
@@ -2853,11 +2854,11 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                     QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
                     finder.setPosition(mCaretColumn);
                     int nextBoundary {};
-                    QStringRef currentLetter {};
+                    QString currentLetter {};
 
                     do {
                         nextBoundary = finder.toPreviousBoundary();
-                        currentLetter = line.midRef(nextBoundary, 1);
+                        currentLetter = line.mid(nextBoundary, 1);
                     } while (nextBoundary != 0 && mCtrlSelectionIgnores.contains(currentLetter));
 
                     newCaretLine = mCaretLine;
@@ -2886,14 +2887,14 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                     QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
                     finder.setPosition(mCaretColumn);
                     int nextBoundary {};
-                    QStringRef currentLetter {};
+                    QString currentLetter {};
 
                     do {
                         nextBoundary = finder.toNextBoundary();
-                        currentLetter = line.midRef(nextBoundary, 1);
+                        currentLetter = line.mid(nextBoundary, 1);
                     } while (nextBoundary != line.length() && mCtrlSelectionIgnores.contains(currentLetter));
 
-                    nextBoundary = std::min(nextBoundary, line.length() - 1);
+                    nextBoundary = std::min<qsizetype>(nextBoundary, line.length() - 1);
                     newCaretColumn = nextBoundary;
                     newCaretLine = mCaretLine;
                 } else {
@@ -2938,7 +2939,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
             break;
         case Qt::Key_PageDown:
-            newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
+            newCaretLine = std::min<qsizetype>(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
             break;
         case Qt::Key_C:
             if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {

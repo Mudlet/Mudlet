@@ -30,6 +30,7 @@
 #include <QColor>
 #include <QIcon>
 #include <QPointer>
+#include <QObject>
 #include "post_guard.h"
 
 class EAction;

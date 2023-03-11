@@ -89,6 +89,11 @@ class TKey;
 class TConsole;
 class dlgVarsMainArea;
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+using QEnterEventType = QEnterEvent;
+#else
+using QEnterEventType = QEvent;
+#endif
 
 class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
 {
@@ -176,7 +181,7 @@ public:
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
-    void enterEvent(QEvent* pE) override;
+    void enterEvent(QEnterEventType* pE) override;
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;

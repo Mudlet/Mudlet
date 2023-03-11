@@ -32,6 +32,12 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
+// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+template <typename Key, typename T>
+using QMultiMapIterator = QMapIterator<Key, T>;
+#endif
+
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");
 const QString ROOM_UI_NAMEFONT = qsl("room.ui_nameFont");
@@ -1178,7 +1184,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         if (!renamedMap.empty()) {
             detailText = qsl("%1\n").arg(tr("[  OK  ]  - The changes made are:\n"
                                             "(ID) \"old name\" ==> \"new name\""));
-            QMapIterator<QString, QString> itRemappedNames = renamedMap;
+            QMultiMapIterator<QString, QString> itRemappedNames = renamedMap;
             itRemappedNames.toBack();
             // Seems to look better if we iterate through backwards!
             while (itRemappedNames.hasPrevious()) {

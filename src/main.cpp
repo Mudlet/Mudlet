@@ -38,7 +38,6 @@
 #include <QSettings>
 #include <QSplashScreen>
 #include <QStringList>
-#include <QStringListIterator>
 #include <QTranslator>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
@@ -109,7 +108,7 @@ void removeOldNoteColorEmojiFonts()
     // Release: "Unicode 14.0"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
 
-    QStringListIterator itOldNotoFontDirectory(oldNotoFontDirectories);
+    QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
         auto oldNotoFontDirectory = itOldNotoFontDirectory.next();
         QDir oldDir{oldNotoFontDirectory};

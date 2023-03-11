@@ -86,8 +86,16 @@ QPointer<QTextToSpeech> speechUnit;
 QVector<QString> speechQueue;
 bool bSpeechBuilt;
 bool bSpeechQueueing;
-int speechState = QTextToSpeech::Ready;
+int speechState = QTextToSpeech::State::Ready;
 QString speechCurrent;
+
+// BackendError was renamed to Error in Qt6
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::BackendError;
+#else
+static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::Error;
+#endif
+
 #endif // QT_TEXTTOSPEECH_LIB
 
 // No documentation available in wiki - internal function
@@ -8041,7 +8049,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getTimerUnit()->getTimer(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            QMap<QString, TTimer*>::const_iterator it1 = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
+            auto it1 = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
             while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
                 if (it1.value()->isActive()) {
                     ++cnt;
@@ -8055,7 +8063,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getTriggerUnit()->getTrigger(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            QMap<QString, TTrigger*>::const_iterator it1 = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
+            auto it1 = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
             while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
                 if (it1.value()->isActive()) {
                     ++cnt;
@@ -8069,7 +8077,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getAliasUnit()->getAlias(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            QMap<QString, TAlias*>::const_iterator it1 = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
+            auto it1 = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
             while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
                 if (it1.value()->isActive()) {
                     ++cnt;
@@ -8083,7 +8091,7 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getKeyUnit()->getKey(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            QMap<QString, TKey*>::const_iterator it1 = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
+            auto it1 = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
             while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
                 if (it1.value()->isActive()) {
                     ++cnt;
@@ -12839,16 +12847,16 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         speechState = state;
         TEvent event {};
         switch (state) {
-        case QTextToSpeech::Paused:
+        case QTextToSpeech::State::Paused:
             event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
             break;
-        case QTextToSpeech::Speaking:
+        case QTextToSpeech::State::Speaking:
             event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
             break;
-        case QTextToSpeech::BackendError:
+        case TEXT_TO_SPEECH_ERROR_STATE:
             event.mArgumentList.append(QLatin1String("ttsSpeechError"));
             break;
-        case QTextToSpeech::Ready:
+        case QTextToSpeech::State::Ready:
             event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
             break;
         }
@@ -12862,7 +12870,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
     }
 
-    if (state != QTextToSpeech::Ready || speechQueue.empty()) {
+    if (state != QTextToSpeech::State::Ready || speechQueue.empty()) {
         bSpeechQueueing = false;
         return;
     }
@@ -12922,7 +12930,7 @@ int TLuaInterpreter::ttsQueue(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     host.raiseEvent(event);
 
-    if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::Ready && !bSpeechQueueing) {
+    if (speechQueue.size() == 1 && speechUnit->state() == QTextToSpeech::State::Ready && !bSpeechQueueing) {
         bSpeechQueueing = true;
         TLuaInterpreter::ttsStateChanged(speechUnit->state());
     }
@@ -13005,9 +13013,9 @@ int TLuaInterpreter::ttsGetCurrentLine(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
 
-    if (speechUnit->state() == QTextToSpeech::Ready) {
+    if (speechUnit->state() == QTextToSpeech::State::Ready) {
         return warnArgumentValue(L, __func__, "not speaking any text");
-    } else if (speechUnit->state() == QTextToSpeech::BackendError) {
+    } else if (speechUnit->state() == TEXT_TO_SPEECH_ERROR_STATE) {
         return warnArgumentValue(L, __func__, "error with the computer's TTS engine");
     }
 
@@ -13021,16 +13029,16 @@ int TLuaInterpreter::ttsGetState(lua_State* L)
     TLuaInterpreter::ttsBuild();
 
     switch (speechUnit->state()) {
-    case QTextToSpeech::Ready:
+    case QTextToSpeech::State::Ready:
         lua_pushstring(L, "ttsSpeechReady");
         break;
-    case QTextToSpeech::Paused:
+    case QTextToSpeech::State::Paused:
         lua_pushstring(L, "ttsSpeechPaused");
         break;
-    case QTextToSpeech::Speaking:
+    case QTextToSpeech::State::Speaking:
         lua_pushstring(L, "ttsSpeechStarted");
         break;
-    case QTextToSpeech::BackendError:
+    case TEXT_TO_SPEECH_ERROR_STATE:
         lua_pushstring(L, "ttsSpeechError");
         break;
     default:
@@ -13697,7 +13705,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                     case '\"' : initialText.replace(j, 2, '\"'); break;
                     case '\\' : initialText.replace(j, 2, '\\'); break;
                     case 'u': // handle lone code or pair of codes together
-                        u = initialText.midRef(j+2, 4).toUShort(0, 16);
+                        u = initialText.mid(j+2, 4).toUShort(0, 16);
                         if(u > 0xFFFD){
                             j += 5; // FFFE and FFFF are guaranteed to not be Unicode characters.  Skip it.
                         }
@@ -13712,7 +13720,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
                             // The regex above should ensure second code is DCxx-DFxx
                             QChar code[2];
                             code[0] = QChar(u);
-                            code[1] = QChar(initialText.midRef(j+8, 4).toUShort(0, 16));
+                            code[1] = QChar(initialText.mid(j+8, 4).toUShort(0, 16));
                             initialText.replace(j, 12, code, 2);
                             j++; // in this case we are adding 2 code points for the character
                         }
@@ -14551,7 +14559,7 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     }
 
     // Lua is limited to ~50 arguments on a function
-    auto maxArguments = std::min(pE.mArgumentList.size(), LUA_FUNCTION_MAX_ARGS);
+    auto maxArguments = std::min<qsizetype>(pE.mArgumentList.size(), LUA_FUNCTION_MAX_ARGS);
     for (int i = 0; i < maxArguments; i++) {
         switch (pE.mArgumentTypeList.at(i)) {
         case ARGUMENT_TYPE_NUMBER:
@@ -16046,7 +16054,10 @@ QString TLuaInterpreter::readScriptFile(const QString& path) const
     }
 
     QTextStream in(&file);
+    // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     in.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
 
     /*
      * FIXME: Qt Documentation for this method reports:
