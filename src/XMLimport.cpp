@@ -947,6 +947,7 @@ void XMLimport::readHost(Host* pHost)
         mpHost->mMapInfoContributors.clear();
     }
 
+    QMargins borders;
     while (!atEnd()) {
         readNext();
 
@@ -982,15 +983,15 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == "port") {
                 pHost->mPort = readElementText().toInt();
             } else if (name() == "borderTopHeight") {
-                pHost->mBorderTopHeight = readElementText().toInt();
+                borders.setTop(readElementText().toInt());
+            } else if (name() == "borderBottomHeight") {
+                borders.setBottom(readElementText().toInt());
+            } else if (name() == "borderLeftWidth") {
+                borders.setLeft(readElementText().toInt());
+            } else if (name() == "borderRightWidth") {
+                borders.setRight(readElementText().toInt());
             } else if (name() == "commandLineMinimumHeight") {
                 pHost->commandLineMinimumHeight = readElementText().toInt();
-            } else if (name() == "borderBottomHeight") {
-                pHost->mBorderBottomHeight = readElementText().toInt();
-            } else if (name() == "borderLeftWidth") {
-                pHost->mBorderLeftWidth = readElementText().toInt();
-            } else if (name() == "borderRightWidth") {
-                pHost->mBorderRightWidth = readElementText().toInt();
             } else if (name() == "wrapAt") {
                 pHost->mWrapAt = readElementText().toInt();
             } else if (name() == "wrapIndentCount") {
@@ -1125,7 +1126,8 @@ void XMLimport::readHost(Host* pHost)
             }
         }
     }
-    mpHost->loadPackageInfo();
+    pHost->setBorders(borders);
+    pHost->loadPackageInfo();
 }
 
 bool XMLimport::readDefaultTrueBool(QString name) {

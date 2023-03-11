@@ -3664,101 +3664,81 @@ int TLuaInterpreter::hideWindow(lua_State* L)
     return 0;
 }
 
-// No documentation available in wiki - internal function
-void TLuaInterpreter::setBorderSize(lua_State* L, int size, int position, bool resizeMudlet)
-{
-    Host& host = getHostFromLua(L);
-    switch (position) {
-        case Qt::TopSection: host.mBorderTopHeight = size; break;
-        case Qt::RightSection: host.mBorderRightWidth = size; break;
-        case Qt::BottomSection: host.mBorderBottomHeight = size; break;
-        case Qt::LeftSection: host.mBorderLeftWidth = size; break;
-    }
-    if (resizeMudlet) {
-        int x, y;
-        x = host.mpConsole->width();
-        y = host.mpConsole->height();
-        QSize s = QSize(x, y);
-        QResizeEvent event(s, s);
-        QApplication::sendEvent(host.mpConsole, &event);
-    }
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderSizes
 int TLuaInterpreter::setBorderSizes(lua_State* L)
 {
+    Host& host = getHostFromLua(L);
     int numberOfArguments = lua_gettop(L);
-    int sizeTop = 0;
-    int sizeRight = 0;
-    int sizeBottom = 0;
-    int sizeLeft = 0;
     switch (numberOfArguments) {
-        case 0: break;
-        case 1: {
-            sizeTop = getVerifiedInt(L, __func__, 1, "new size");
-            sizeRight = sizeTop;
-            sizeBottom = sizeTop;
-            sizeLeft = sizeTop;
-            break;
-        }
-        case 2: {
-            sizeTop = getVerifiedInt(L, __func__, 1, "new height");
-            sizeRight = getVerifiedInt(L, __func__, 2, "new width");
-            sizeBottom = sizeTop;
-            sizeLeft = sizeRight;
-            break;
-        }
-        case 3: {
-            sizeTop = getVerifiedInt(L, __func__, 1, "new top size");
-            sizeRight = getVerifiedInt(L, __func__, 2, "new width");
-            sizeBottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-            sizeLeft = sizeRight;
-            break;
-        }
-        default: {
-            sizeTop = getVerifiedInt(L, __func__, 1, "new top size");
-            sizeRight = getVerifiedInt(L, __func__, 2, "new right size");
-            sizeBottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-            sizeLeft = getVerifiedInt(L, __func__, 4, "new left size");
-            break;
-        }
+    case 0:
+        break;
+    case 1: {
+        auto value = getVerifiedInt(L, __func__, 1, "new size");
+        host.setBorders({value, value, value, value});
+        break;
     }
-    setBorderSize(L, sizeTop, Qt::TopSection, false);
-    setBorderSize(L, sizeRight, Qt::RightSection, false);
-    setBorderSize(L, sizeBottom, Qt::BottomSection, false);
-    setBorderSize(L, sizeLeft, Qt::LeftSection, true); // only now send update event to resize Mudlet window
+    case 2: {
+        auto height = getVerifiedInt(L, __func__, 1, "new height");
+        auto width = getVerifiedInt(L, __func__, 2, "new width");
+        host.setBorders({width, height, width, height});
+        break;
+    }
+    case 3: {
+        auto top = getVerifiedInt(L, __func__, 1, "new top size");
+        auto width = getVerifiedInt(L, __func__, 2, "new width");
+        auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
+        host.setBorders({width, top, width, bottom});
+        break;
+        }
+    default: {
+        auto top = getVerifiedInt(L, __func__, 1, "new top size");
+        auto right = getVerifiedInt(L, __func__, 2, "new right size");
+        auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
+        auto left = getVerifiedInt(L, __func__, 4, "new left size");
+        host.setBorders({left, top, right, bottom});
+        break;
+    }
+    }
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderTop
 int TLuaInterpreter::setBorderTop(lua_State* L)
 {
-    int size = getVerifiedInt(L, __func__, 1, "new size");
-    setBorderSize(L, size, Qt::TopSection);
+    Host& host = getHostFromLua(L);
+    auto sizes = host.borders();
+    sizes.setTop(getVerifiedInt(L, __func__, 1, "new size"));
+    host.setBorders(sizes);
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderRight
 int TLuaInterpreter::setBorderRight(lua_State* L)
 {
-    int size = getVerifiedInt(L, __func__, 1, "new size");
-    setBorderSize(L, size, Qt::RightSection);
+    Host& host = getHostFromLua(L);
+    auto sizes = host.borders();
+    sizes.setRight(getVerifiedInt(L, __func__, 1, "new size"));
+    host.setBorders(sizes);
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderBottom
 int TLuaInterpreter::setBorderBottom(lua_State* L)
 {
-    int size = getVerifiedInt(L, __func__, 1, "new size");
-    setBorderSize(L, size, Qt::BottomSection);
+    Host& host = getHostFromLua(L);
+    auto sizes = host.borders();
+    sizes.setBottom(getVerifiedInt(L, __func__, 1, "new size"));
+    host.setBorders(sizes);
     return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderLeft
 int TLuaInterpreter::setBorderLeft(lua_State* L)
 {
-    int size = getVerifiedInt(L, __func__, 1, "new size");
-    setBorderSize(L, size, Qt::LeftSection);
+    Host& host = getHostFromLua(L);
+    auto sizes = host.borders();
+    sizes.setLeft(getVerifiedInt(L, __func__, 1, "new size"));
+    host.setBorders(sizes);
     return 0;
 }
 
@@ -3766,7 +3746,7 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
 int TLuaInterpreter::getBorderTop(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.mBorderTopHeight);
+    lua_pushnumber(L, host.borders().top());
     return 1;
 }
 
@@ -3774,7 +3754,7 @@ int TLuaInterpreter::getBorderTop(lua_State* L)
 int TLuaInterpreter::getBorderLeft(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.mBorderLeftWidth);
+    lua_pushnumber(L, host.borders().left());
     return 1;
 }
 
@@ -3782,7 +3762,7 @@ int TLuaInterpreter::getBorderLeft(lua_State* L)
 int TLuaInterpreter::getBorderBottom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.mBorderBottomHeight);
+    lua_pushnumber(L, host.borders().bottom());
     return 1;
 }
 
@@ -3790,7 +3770,7 @@ int TLuaInterpreter::getBorderBottom(lua_State* L)
 int TLuaInterpreter::getBorderRight(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    lua_pushnumber(L, host.mBorderRightWidth);
+    lua_pushnumber(L, host.borders().right());
     return 1;
 }
 
@@ -3798,14 +3778,15 @@ int TLuaInterpreter::getBorderRight(lua_State* L)
 int TLuaInterpreter::getBorderSizes(lua_State* L)
 {
     Host& host = getHostFromLua(L);
+    auto sizes = host.borders();
     lua_createtable(L, 0, 4);
-    lua_pushinteger(L, host.mBorderTopHeight);
+    lua_pushinteger(L, sizes.top());
     lua_setfield(L, -2, "top");
-    lua_pushinteger(L, host.mBorderRightWidth);
+    lua_pushinteger(L, sizes.right());
     lua_setfield(L, -2, "right");
-    lua_pushinteger(L, host.mBorderBottomHeight);
+    lua_pushinteger(L, sizes.bottom());
     lua_setfield(L, -2, "bottom");
-    lua_pushinteger(L, host.mBorderLeftWidth);
+    lua_pushinteger(L, sizes.left());
     lua_setfield(L, -2, "left");
     return 1;
 }
