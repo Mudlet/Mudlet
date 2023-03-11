@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2018 by Vadim Peretokin - vperetokin@gmail.com          #
-#    Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         #
+#    Copyright (C) 2020, 2023 by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
 #    it under the terms of the GNU General Public License as published by  #
@@ -51,9 +51,15 @@ if(NOT WIN32)
 #  message(STATUS "The environmental variable LANG should now be reset to: ${OLDLANG} and it is now: $ENV{LANG}")
 endif()
 
-find_program(LUA_LOCATION lua5.1)
+find_program(LUA_LOCATION lua-5.1)
 if(NOT LUA_LOCATION)
-  find_program(LUA_LOCATION lua)
+  find_program(LUA_LOCATION lua5.1)
+  if(NOT LUA_LOCATION)
+    find_program(LUA_LOCATION lua51)
+    if(NOT LUA_LOCATION)
+      find_program(LUA_LOCATION lua)
+    endif()
+  endif()
 endif()
 
 execute_process(
