@@ -66,6 +66,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QJsonDocument>
+#include <QImage>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
@@ -4658,4 +4659,45 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
         }
         // Don't do anything if it was NOT found
     }
+}
+
+/*static*/ QImage mudlet::getSplashScreen()
+{
+#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
+    auto now = QDateTime::currentDateTime();
+    // clang-format off
+#if defined(DEBUG_EASTER_EGGS)
+    if (bool layEasterEgg = (now.time().second() < 30); layEasterEgg) {
+        // Only do it in the first half of any minute:
+#else
+    if (bool layEasterEgg = (now.date().month() == 4
+                        && now.date().day() == 1
+                        && (now.time().hour() < 12
+                            || now.time().hour() == 12
+                                && now.time().minute() == 0)); layEasterEgg) {
+
+        // Stop at midday local time!
+#endif // ! DEBUG_EASTER_EGGS
+        // clang-format on
+        // Set to one more than the highest number Mudlet_splashscreen_other_N.png:
+        auto egg = QRandomGenerator::global()->bounded(7);
+        if (egg) {
+            return QImage(qsl(":/Mudlet_splashscreen_other_%1.png").arg(QString::number(egg)));
+        } else {
+            // For the zeroth case just rotate the picture 180 degrees:
+            QImage original(mudlet::scmIsReleaseVersion
+                                    ? qsl(":/Mudlet_splashscreen_main.png")
+                                    : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
+                                                                     : qsl(":/Mudlet_splashscreen_development.png"));
+            return original.mirrored(true, true);
+        }
+    } else {
+        return QImage(mudlet::scmIsReleaseVersion
+                              ? qsl(":/Mudlet_splashscreen_main.png")
+                              : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
+                                                               : qsl(":/Mudlet_splashscreen_development.png"));
+    }
+#else
+    return QImage(qsl(":/Mudlet_splashscreen_main.png"));
+#endif // INCLUDE_VARIABLE_SPLASH_SCREEN
 }
