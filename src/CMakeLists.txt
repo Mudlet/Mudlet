@@ -23,10 +23,7 @@
 ############################################################################
 
 set(mudlet_RCCS mudlet.qrc)
-# /home/stephen/src/mudlet-dev/mudlet/translations/translated/qn.qrc
 configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
-# /home/stephen/src/mudlet-dev/mudlet/src/additional_splash_screens.qrc
-#configure_file("${mudlet_SOURCE_DIR}/src/additional_splash_screens.qrc" "${mudlet_BINARY_DIR}/src/additional_splash_screens.qrc" COPYONLY)
 
 if(USE_VARIABLE_SPLASH_SCREEN)
   list(APPEND mudlet_RCCS additional_splash_screens.qrc)
