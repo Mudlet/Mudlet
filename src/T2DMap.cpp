@@ -1266,12 +1266,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
         mOz = pPlayerRoom->z;
     }
 
-    TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
-    if (!pArea) {
+    TArea* pDrawnArea = mpMap->mpRoomDB->getArea(mAreaID);
+    if (!pDrawnArea) {
         return;
     }
 
-    xyzoom = pArea->get2DMapZoom();
+    xyzoom = pDrawnArea->get2DMapZoom();
     if (widgetWidth > widgetHeight) {
         xspan = xyzoom * (widgetWidth / widgetHeight);
         yspan = xyzoom;
@@ -1296,14 +1296,14 @@ void T2DMap::paintEvent(QPaintEvent* e)
          * when areas' room content changes.
          */
         int maxUsedRoomId = 0;
-        QSetIterator<int> itRoomId(pArea->getAreaRooms());
+        QSetIterator<int> itRoomId(pDrawnArea->getAreaRooms());
         while (itRoomId.hasNext()) {
             maxUsedRoomId = qMax(maxUsedRoomId, itRoomId.next());
         }
         mMaxRoomIdDigits = static_cast<quint8>(QString::number(maxUsedRoomId).length());
 
         QRectF roomTestRect;
-        if (pArea->gridMode) {
+        if (pDrawnArea->gridMode) {
             roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight));
         } else {
             roomTestRect = QRectF(0, 0, static_cast<qreal>(mRoomWidth) * rSize, static_cast<qreal>(mRoomHeight) * rSize);
@@ -1320,7 +1320,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         isFontBigEnoughToShowRoomVnum = sizeFontToFitTextInRect(roomVNumFont, roomTestRect, qsl("8").repeated(mMaxRoomIdDigits), roomVnumMargin);
     }
 
-    bool showRoomNames = mpMap->getRoomNamesShown() && !pArea->gridMode;
+    bool showRoomNames = mpMap->getRoomNamesShown() && !pDrawnArea->gridMode;
     if (showRoomNames) {
         /*
          * Like above, except that we use the room height as the font size.
@@ -1347,7 +1347,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     painter.setPen(pen);
 
     // Draw the ("background") labels that are on the bottom of the map:
-    QMutableMapIterator<int, TMapLabel> itMapLabel(pArea->mMapLabels);
+    QMutableMapIterator<int, TMapLabel> itMapLabel(pDrawnArea->mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
         auto mapLabel = itMapLabel.value();
@@ -1356,7 +1356,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
         if (mapLabel.text.isEmpty()) {
             mapLabel.text = tr("no text", "Default text if a label is created in mapper with no text");
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         QPointF labelPosition;
         int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
@@ -1382,7 +1382,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.drawPixmap(labelPosition, mapLabel.pix);
                 mapLabel.clickSize = QSizeF(mapLabel.pix.width(), mapLabel.pix.height());
             }
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
 
         if (mapLabel.highlight) {
@@ -1391,8 +1391,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
     }
 
-    if (!pArea->gridMode) {
-        paintRoomExits(painter, pen, exitList, oneWayExits, pArea, zLevel, exitWidth, areaExitsMap);
+    if (!pDrawnArea->gridMode) {
+        paintRoomExits(painter, pen, exitList, oneWayExits, pDrawnArea, zLevel, exitWidth, areaExitsMap);
     }
 
     // Draw label sizing or group selection box
@@ -1405,7 +1405,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QPointF playerRoomOnWidgetCoordinates;
     bool isPlayerRoomVisible = false;
     // Draw the rooms:
-    QSetIterator<int> itRoom(pArea->getAreaRooms());
+    QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
     while (itRoom.hasNext()) {
         int currentAreaRoom = itRoom.next();
         TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
@@ -1429,12 +1429,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
+            drawRoom(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-        drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
+        drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
         painter.save();
         QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
@@ -1477,7 +1477,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
         if (mapLabel.text.isEmpty()) {
             mapLabel.text = tr("no text", "Default text if a label is created in mapper with no text");
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         QPointF labelPosition;
         int labelX = mapLabel.pos.x() * mRoomWidth + mRX;
@@ -1503,7 +1503,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                 painter.drawPixmap(labelPosition, mapLabel.pix);
                 mapLabel.clickSize = QSize(mapLabel.pix.width(), mapLabel.pix.height());
             }
-            pArea->mMapLabels[itMapLabel.key()] = mapLabel;
+            pDrawnArea->mMapLabels[itMapLabel.key()] = mapLabel;
         }
         if (mapLabel.highlight) {
             labelPaintRectangle.setSize(mapLabel.clickSize);
@@ -1592,7 +1592,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         painter.setFont(_f2);
     }
     // Save the current map zoom for this area
-    pArea->set2DMapZoom(xyzoom);
+    pDrawnArea->set2DMapZoom(xyzoom);
 
     // Check and send view change event if necessary
     if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
@@ -4514,13 +4514,13 @@ void T2DMap::wheelEvent(QWheelEvent* e)
     e->ignore();
 }
 
-QString T2DMap::setMapZoom(const qreal zoom, const int areaId)
+std::pair<bool, QString> T2DMap::setMapZoom(const qreal zoom, const int areaId)
 {
     // Check that everything is setup correctly
     if (!mpMap || !mpMap->mpRoomDB) {
         // This should be unreachable from the TLuaInterpreter but this cover
         // any future usage:
-        return qsl("no map loaded or no active mapper");
+        return {false, qsl("no map loaded or no active mapper")};
     }
 
     if (zoom < csmMinXYZoom) {
@@ -4529,7 +4529,7 @@ QString T2DMap::setMapZoom(const qreal zoom, const int areaId)
         // case with the default precision we can get something with zoom
         // being 2.999999 we end up with a confusing:
         // "zoom 3 is invalid, it must not be less than 3"
-        return qsl("zoom %1 is invalid, it must be at least %2").arg(QString::number(zoom, 'g', 16), QString::number(csmMinXYZoom, 'g', 16));
+        return {false, qsl("zoom %1 is invalid, it must be at least %2").arg(QString::number(zoom, 'g', 16), QString::number(csmMinXYZoom, 'g', 16))};
     }
 
     TArea* pArea = nullptr;
@@ -4538,27 +4538,27 @@ QString T2DMap::setMapZoom(const qreal zoom, const int areaId)
     pArea = mpMap->mpRoomDB->getArea(areaToChangeId);
     if (!pArea) {
         // That area does not exist
-        return qsl("number %1 is not a valid areaID").arg(QString::number(areaId));
+        return {false, qsl("number %1 is not a valid areaID").arg(QString::number(areaId))};
     }
 
     auto existingZoom = pArea->get2DMapZoom();
     if (qFuzzyCompare(1.0 + existingZoom, 1.0 + zoom)) {
         // There is no detectable difference between the existing and supplied
         // zooms so do nothing, sucessfully:
-        return QString();
+        return {true, QString()};
     }
 
     // Store the zoom to use the next time we view that area:
     pArea->set2DMapZoom(zoom);
     if (areaId && (areaId != mAreaID)) {
         // An area was supplied but it is not the area that is being viewed
-        return QString();
+        return {true, QString()};
     }
 
     // We are adjusting the zoom for the currently viewed area so redraw it
     flushSymbolPixmapCache();
     update();
-    return QString();
+    return {true, QString()};
 }
 
 void T2DMap::setRoomSize(double f)

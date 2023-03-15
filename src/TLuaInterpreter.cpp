@@ -8999,9 +8999,9 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
         return warnArgumentValue(L, __func__, "no map loaded or no active mapper");
     }
 
-    QString result = host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom, areaID);
-    if (!result.isEmpty()) {
-        return warnArgumentValue(L, __func__, result);
+    auto [success, errMsg] = host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom, areaID);
+    if (!success) {
+        return warnArgumentValue(L, __func__, errMsg.toUtf8().constData());
     }
 
     lua_pushboolean(L, true);

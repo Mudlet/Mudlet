@@ -60,7 +60,7 @@ class T2DMap : public QWidget
 public:
     Q_DISABLE_COPY(T2DMap)
     explicit T2DMap(QWidget* parent = nullptr);
-    QString setMapZoom(const qreal zoom, const int areaId = 0);
+    std::pair<bool, QString> setMapZoom(const qreal zoom, const int areaId = 0);
     void init();
     void paintEvent(QPaintEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
@@ -91,7 +91,9 @@ public:
 #endif
 
 
+    // default 2D zoom level
     inline static const qreal csmDefaultXYZoom = 20.0;
+    // minimum 2D zoom level
     inline static const qreal csmMinXYZoom = 3.0;
 
 
