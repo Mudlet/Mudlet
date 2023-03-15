@@ -213,7 +213,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                 // this case we should just use the zoom value that we were
                 // using in the area we are switching from:
                 xyzoom = mpMap->mpRoomDB->get2DMapZoom(areaID);
-                areaViewedChangedEvent.mArgumentList.append(qsl("mapAreaViewedChangeEvent"));
+                areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
                 areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
                 areaViewedChangedEvent.mArgumentList.append(QString::number(areaID));
                 areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -1252,7 +1252,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         mRoomID = playerRoomId;
         mAreaID = pPlayerRoom->getArea();
         if (mLastViewedAreaID != mAreaID) {
-            areaViewedChangedEvent.mArgumentList.append(qsl("mapAreaViewedChangeEvent"));
+            areaViewedChangedEvent.mArgumentList.append(qsl("sysMapAreaChanged"));
             areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
             areaViewedChangedEvent.mArgumentList.append(QString::number(mAreaID));
             areaViewedChangedEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
