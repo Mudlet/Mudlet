@@ -9000,17 +9000,48 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapZoom
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
-    qreal zoom = getVerifiedFloat(L, __func__, 1, "zoom");
-    Host& host = getHostFromLua(L);
-    if (host.mpMap) {
-        if (host.mpMap->mpMapper) {
-            if (host.mpMap->mpMapper->mp2dMap) {
-                host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom);
-                updateMap(L);
-            }
-        }
+    qreal zoom = getVerifiedDouble(L, __func__, 1, "zoom");
+    int areaID = 0;
+    if (lua_gettop(L) > 1) {
+        areaID = getVerifiedInt(L, __func__, 2, "area id", true);
     }
-    return 0;
+    Host& host = getHostFromLua(L);
+    if (host.mpMap.isNull() || host.mpMap->mpMapper.isNull()) {
+        return warnArgumentValue(L, __func__, "no map loaded or no active mapper");
+    }
+
+    auto [success, errMsg] = host.mpMap->mpMapper->mp2dMap->setMapZoom(zoom, areaID);
+    if (!success) {
+        return warnArgumentValue(L, __func__, errMsg.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapZoom
+int TLuaInterpreter::getMapZoom(lua_State* L)
+{
+    std::optional<int> areaID;
+    if (lua_gettop(L)) {
+        areaID = getVerifiedInt(L, __func__, 1, "area id", true);
+    }
+    Host& host = getHostFromLua(L);
+    if (host.mpMap.isNull() || host.mpMap->mpMapper.isNull()) {
+        return warnArgumentValue(L, __func__, "no map loaded or no active mapper");
+    }
+
+    if (areaID.has_value()) {
+        if (!host.mpMap->mpRoomDB->getArea(areaID.value())) {
+            return warnArgumentValue(L, __func__, qsl("number %1 is not a valid areaID").arg(QString::number(areaID.value())));
+        }
+        lua_pushnumber(L, host.mpMap->mpRoomDB->get2DMapZoom(areaID.value()));
+        return 1;
+    }
+
+    areaID = host.mpMap->mpMapper->mp2dMap->mAreaID;
+    lua_pushnumber(L, host.mpMap->mpRoomDB->get2DMapZoom(areaID.value()));
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createMapImageLabel
@@ -15452,6 +15483,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setPackageInfo", TLuaInterpreter::setPackageInfo);
     lua_register(pGlobalLua, "createMapImageLabel", TLuaInterpreter::createMapImageLabel);
     lua_register(pGlobalLua, "setMapZoom", TLuaInterpreter::setMapZoom);
+    lua_register(pGlobalLua, "getMapZoom", TLuaInterpreter::getMapZoom);
     lua_register(pGlobalLua, "uninstallPackage", TLuaInterpreter::uninstallPackage);
     lua_register(pGlobalLua, "setExitWeight", TLuaInterpreter::setExitWeight);
     lua_register(pGlobalLua, "setDoor", TLuaInterpreter::setDoor);

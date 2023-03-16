@@ -172,6 +172,7 @@ public:
     static int getExitWeights(lua_State*);
     static int uninstallPackage(lua_State*);
     static int setMapZoom(lua_State*);
+    static int getMapZoom(lua_State*);
     static int createMapImageLabel(lua_State*);
     static int installPackage(lua_State*);
     static int installModule(lua_State*);
