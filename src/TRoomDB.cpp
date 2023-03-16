@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019, 2023 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,7 @@
 
 #include "Host.h"
 #include "TArea.h"
+#include "T2DMap.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -1303,3 +1305,24 @@ bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key,
     }
 }
 
+bool TRoomDB::set2DMapZoom(const int areaId, const qreal zoom) const
+{
+    auto pA = areas.value(areaId);
+    if (!pA) {
+        return false;
+    }
+    if (zoom < T2DMap::csmMinXYZoom) {
+        return false;
+    }
+    pA->set2DMapZoom(zoom);
+    return true;
+}
+
+qreal TRoomDB::get2DMapZoom(const int areaId) const
+{
+    auto pA = areas.value(areaId);
+    if (!pA) {
+        return T2DMap::csmDefaultXYZoom;
+    }
+    return pA->get2DMapZoom();
+}
