@@ -164,7 +164,7 @@ void TTextEdit::focusInEvent(QFocusEvent* event)
     QWidget::focusInEvent(event);
 }
 
-void TTextEdit::focusOutEvent(QFocusEvent *event)
+void TTextEdit::focusOutEvent(QFocusEvent* event)
 {
     if (mpHost->caretEnabled()) {
         mpHost->setCaretEnabled(false);
@@ -206,7 +206,7 @@ void TTextEdit::updateScrollBar(int line)
 {
     Q_ASSERT_X(!mIsLowerPane, "updateScrollBar(...)", "called on LOWER pane when it should only be used on upper one!");
     int screenHeight{mScreenHeight};
-    if (mIsTailMode){
+    if (mIsTailMode) {
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
     }
     if (mpConsole->mpScrollBar) {
@@ -1379,7 +1379,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                     QString func;
                     if (!command.empty()) {
                         func = command.at(0);
-                        if (!luaReference){
+                        if (!luaReference) {
                             mpHost->mLuaInterpreter.compileAndExecuteScript(func);
                         } else {
                             mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoLink"));
@@ -1412,7 +1412,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
                 mMouseTrackLevel = 3;
             }
 
-            if (mMouseTrackLevel == 3){
+            if (mMouseTrackLevel == 3) {
                 expandSelectionToLine(y);
                 event->accept();
                 return;
@@ -1600,7 +1600,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
         }
     }
     text.append(qsl(" </div></body>\n"
-                               "</html>"));
+                    "</html>"));
     // The last two of these tags were missing and meant the HTML was not terminated properly
     QClipboard* clipboard = QApplication::clipboard();
     clipboard->setText(text);
@@ -1798,7 +1798,7 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         }
     }
 
-     if (showTimestamps) {
+    if (showTimestamps) {
         QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
         QStringList result;
         std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result),
@@ -1938,9 +1938,9 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         while (it.hasNext()) {
             it.next();
             QStringList actionInfo = it.value();
-            const QString &uniqueName = it.key();
-            const QString &actionName = actionInfo.at(1);
-            QAction * mouseAction = new QAction(actionName, this);
+            const QString& uniqueName = it.key();
+            const QString& actionName = actionInfo.at(1);
+            QAction* mouseAction = new QAction(actionName, this);
             mouseAction->setToolTip(actionInfo.at(2));
             popup->addAction(mouseAction);
             connect(mouseAction, &QAction::triggered, this, [this, uniqueName] { slot_mouseAction(uniqueName); });
@@ -1951,14 +1951,24 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
     }
 
     QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
-    if (mpConsole->getType() == TConsole::SubConsole) {
+    switch (mpConsole->getType()) {
+    case TConsole::CentralDebugConsole:
+        [[fallthrough]];
+    case TConsole::ErrorConsole:
+        return;
+    case TConsole::SubConsole:
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
-    }
-
-    if (mpConsole->getType() == TConsole::MainConsole || mpConsole->getType() == TConsole::UserWindow) {
+        break;
+    case TConsole::MainConsole:
+        [[fallthrough]];
+    case TConsole::UserWindow:
         mpConsole->raiseMudletMousePressOrReleaseEvent(&newEvent, false);
+        break;
     }
 
+    // We have already bailed out before here for the Central Debug Console and
+    // the editor Error console so those will avoid the focus being changed to
+    // this profile now:
     QTimer::singleShot(0, this, [this]() {
         if (mpHost) {
             mudlet::self()->activateProfile(mpHost);

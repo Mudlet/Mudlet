@@ -1981,7 +1981,12 @@ void TConsole::dropEvent(QDropEvent* e)
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
+    if (mType & (CentralDebugConsole | ErrorConsole)) {
+        return;
+    }
 
+    // Else if NOT the CentralDebugConsole or the ErrorConsole then bring the
+    // focus to the current profile in the main application window:
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
     switch (event->button()) {
