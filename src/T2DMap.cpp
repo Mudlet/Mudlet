@@ -2869,8 +2869,9 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
             it.next();
             QStringList menuInfo = it.value();
             QString displayName = menuInfo[1];
-            auto userMenu = new QMenu(displayName, this);
-            userMenu->setAttribute(Qt::WA_DeleteOnClose);
+            // Need to give the top-level context menu as the parent so the
+            // sub-menus get destroyed at the right time:
+            auto userMenu = new QMenu(displayName, popup);
             userMenus.insert(it.key(), userMenu);
         }
         it.toFront();
