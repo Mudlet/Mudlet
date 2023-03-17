@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -105,12 +105,12 @@ public:
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
     void setAtcpTable(const QString&, const QString&);
-    void signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions);
+    void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions);
     void setGMCPTable(QString&, const QString&);
     void setMSSPTable(const QString&);
     void setChannel102Table(int& var, int& arg);
     bool compileAndExecuteScript(const QString&);
-    QString formatLuaCode(const QString &);
+    QString formatLuaCode(const QString&);
     void loadGlobal();
     QString getLuaString(const QString& stringName);
     int check_for_mappingscript();
@@ -152,7 +152,7 @@ public:
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
-    std::pair<int, QString> setScriptCode(QString &name, const QString& luaCode, int pos);
+    std::pair<int, QString> setScriptCode(QString& name, const QString& luaCode, int pos);
     std::pair<int, QString> startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
     std::pair<int, QString> startPermKey(QString&, QString&, int&, int&, QString&);
 
@@ -172,6 +172,7 @@ public:
     static int getExitWeights(lua_State*);
     static int uninstallPackage(lua_State*);
     static int setMapZoom(lua_State*);
+    static int getMapZoom(lua_State*);
     static int createMapImageLabel(lua_State*);
     static int installPackage(lua_State*);
     static int installModule(lua_State*);
@@ -683,6 +684,17 @@ public:
         {Qt::ExtraButton22, qsl("ExtraButton22")},
         {Qt::ExtraButton23, qsl("ExtraButton23")},
         {Qt::ExtraButton24, qsl("ExtraButton24")}};
+
+    static const QString csmInvalidRoomID;
+    static const QString csmInvalidStopWatchID;
+    static const QString csmInvalidRedValue;
+    static const QString csmInvalidGreenValue;
+    static const QString csmInvalidBlueValue;
+    static const QString csmInvalidAlphaValue;
+    static const QString csmInvalidExitRoomID;
+    static const QString csmInvalidItemID;
+    static const QString csmInvalidAreaID;
+    static const QString csmInvalidAreaName;
 
 public slots:
     void slot_httpRequestFinished(QNetworkReply*);
