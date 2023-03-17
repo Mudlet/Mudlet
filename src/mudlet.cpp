@@ -4671,33 +4671,29 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
         // Only do it in the first half of any minute:
 #else
     if (bool layEasterEgg = (now.date().month() == 4
-                        && now.date().day() == 1
-                        && (now.time().hour() < 12
-                            || now.time().hour() == 12
-                                && now.time().minute() == 0)); layEasterEgg) {
-
-        // Stop at midday local time!
+                        && now.date().day() == 1); layEasterEgg) {
 #endif // ! DEBUG_EASTER_EGGS
         // clang-format on
-        // Set to one more than the highest number Mudlet_splashscreen_other_N.png:
-        auto egg = QRandomGenerator::global()->bounded(7);
+        // Set to one more than the highest number Mudlet_splashscreen_other_NN.png:
+        auto egg = QRandomGenerator::global()->bounded(23);
         if (egg) {
-            return QImage(qsl(":/Mudlet_splashscreen_other_%1.png").arg(QString::number(egg)));
+            auto eggFileName = qsl(":/splash/Mudlet_splashscreen_other_%1.png").arg(QString::number(egg, 2, 10, QLatin1Char('0'))));
+            return QImage(eggFileName);
         } else {
             // For the zeroth case just rotate the picture 180 degrees:
             QImage original(mudlet::scmIsReleaseVersion
-                                    ? qsl(":/Mudlet_splashscreen_main.png")
-                                    : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
-                                                                     : qsl(":/Mudlet_splashscreen_development.png"));
+                                    ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                                    : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                                                     : qsl(":/splash/Mudlet_splashscreen_development.png"));
             return original.mirrored(true, true);
         }
     } else {
         return QImage(mudlet::scmIsReleaseVersion
-                              ? qsl(":/Mudlet_splashscreen_main.png")
-                              : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
-                                                               : qsl(":/Mudlet_splashscreen_development.png"));
+                              ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                              : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                                               : qsl(":/splash/Mudlet_splashscreen_development.png"));
     }
 #else
-    return QImage(qsl(":/Mudlet_splashscreen_main.png"));
+    return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
 #endif // INCLUDE_VARIABLE_SPLASH_SCREEN
 }

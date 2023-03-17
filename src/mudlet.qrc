@@ -195,7 +195,7 @@
         <file>mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
-        <file>Mudlet_splashscreen_main.png</file>
+        <file>splash/Mudlet_splashscreen_main.png</file>
         <file>run-lua-code-v4.xml</file>
         <file>run-tests.xml</file>
         <file>ui/custom_lines.ui</file>
