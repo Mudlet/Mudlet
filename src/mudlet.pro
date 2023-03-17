@@ -249,9 +249,9 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # rejected because the profile is being loaded):
 # DEFINES+=DEBUG_MAPAUTOSAVE
 #
-# * Produce all the time the surprise that normally will only occur on the
-# morning of the first day of the month of April:
-# DEFINES+=DEBUG_EASTER_EGGS
+# * Produce all the time the surprise that normally will only occur on the first
+# day of the fourth month of the Gregorian calendar year:
+DEFINES+=DEBUG_EASTER_EGGS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
