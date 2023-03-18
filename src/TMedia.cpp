@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -931,9 +931,9 @@ void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QStr
     }
 }
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 void TMedia::play(TMediaData& mediaData)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
         return;
     }
@@ -1097,13 +1097,11 @@ void TMedia::play(TMediaData& mediaData)
     pPlayer.getMediaPlayer()->play();
 
     updateMediaPlayerList(pPlayer);
-}
 #else
-void TMedia::play(TMediaData& mediaData)
-{
-    // TODO: QMediaPlaylist was removed in Qt6. Reimplement playing for Qt6.
-}
+    Q_UNUSED(mediaData)
+#warning QMediaPlaylist was removed in Qt6 - it has not been reimplemented yet!
 #endif
+}
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#type:_sound
 TMediaData::MediaType TMedia::parseJSONByMediaType(QJsonObject& json)

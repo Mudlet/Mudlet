@@ -72,6 +72,7 @@
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
+#include <QScreen>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSplitter>
@@ -144,7 +145,11 @@ mudlet::mudlet()
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // 'AA_UseHighDpiPixmaps' is deprecated in Qt6: High-DPI pixmaps are always enabled.
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
+
     // We need to record this before we clobber it with our own substitute...
     mDefaultStyle = qApp->style()->objectName();
     // ... which is applied here:
@@ -1155,8 +1160,8 @@ void mudlet::loadTranslators(const QString& languageCode)
         // mangles the former to find the actual best one to use, but we
         // shouldn't include the path in the first element as it seems to mess
         // up the process of locating the file:
-        pQtTranslator->load(qtTranslatorFileName, mPathNameQtTranslations);
-        if (!pQtTranslator->isEmpty()) {
+        bool isOk = pQtTranslator->load(qtTranslatorFileName, mPathNameQtTranslations);
+        if (isOk && !pQtTranslator->isEmpty()) {
             // qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << mPathNameQtTranslations << "/"<< qtTranslatorFileName << "\"...";
             qApp->installTranslator(pQtTranslator);
             mTranslatorsLoadedList.append(pQtTranslator);
@@ -1166,8 +1171,8 @@ void mudlet::loadTranslators(const QString& languageCode)
     QPointer<QTranslator> pMudletTranslator = new QTranslator;
     QString mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
     if (!mudletTranslatorFileName.isEmpty()) {
-        pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
-        if (!pMudletTranslator->isEmpty()) {
+        bool isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
+        if (isOk && !pMudletTranslator->isEmpty()) {
 //            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mPathNameMudletTranslations << "/"
 //                                         << mudletTranslatorFileName << "\"...";
             qApp->installTranslator(pMudletTranslator);
@@ -3404,7 +3409,11 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // when saving/resyncing packages/modules - ends in a '/'
         return qsl("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
     case qtTranslationsPath:
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+#else
+        return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+#endif
     case hunspellDictionaryPath:
         // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
