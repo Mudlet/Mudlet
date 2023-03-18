@@ -251,7 +251,7 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 #
 # * Produce all the time the surprise that normally will only occur on the first
 # day of the fourth month of the Gregorian calendar year:
-DEFINES+=DEBUG_EASTER_EGGS
+# DEFINES+=DEBUG_EASTER_EGGS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
