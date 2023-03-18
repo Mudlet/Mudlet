@@ -204,6 +204,12 @@
               <property name="autoRepeat">
                <bool>true</bool>
               </property>
+              <property name="autoRepeatDelay">
+               <number>100</number>
+              </property>
+              <property name="autoRepeatInterval">
+               <number>1</number>
+              </property>
              </widget>
             </item>
             <item>
@@ -237,6 +243,12 @@
               </property>
               <property name="autoRepeat">
                <bool>true</bool>
+              </property>
+              <property name="autoRepeatDelay">
+               <number>100</number>
+              </property>
+              <property name="autoRepeatInterval">
+               <number>1</number>
               </property>
              </widget>
             </item>
@@ -272,6 +284,12 @@
               <property name="autoRepeat">
                <bool>true</bool>
               </property>
+              <property name="autoRepeatDelay">
+               <number>100</number>
+              </property>
+              <property name="autoRepeatInterval">
+               <number>1</number>
+              </property>
              </widget>
             </item>
             <item>
@@ -305,6 +323,12 @@
               </property>
               <property name="autoRepeat">
                <bool>true</bool>
+              </property>
+              <property name="autoRepeatDelay">
+               <number>100</number>
+              </property>
+              <property name="autoRepeatInterval">
+               <number>1</number>
               </property>
              </widget>
             </item>
