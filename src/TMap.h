@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -197,7 +197,6 @@ public:
     void resetUnsaved() { mUnsavedMap = false; }
     bool isUnsaved() const { return mUnsavedMap; }
 
-
     TRoomDB* mpRoomDB = nullptr;
     QMap<int, int> mEnvColors;
     QPointer<Host> mpHost;
@@ -275,12 +274,6 @@ public:
      *   that prefixed a '1' for a locked exit or '0' for an unlocked one onto the
      *   special exit name (stored in the VALUE) in the old format.
      * It has been tested and *seems* to work. SlySven - 2020/12
-     * * The 2D Map labels are now stored in each TArea instead of in the TMap
-     *   this makes it easier to delete them and their area. SlySven - 2021/01
-     * * The 2D Map zoom now persists for each area and that value will be stored
-     *   directly into the TArea class serialization - for lower map versions it
-     *   is placed into a "system.fallback_map2DZoom" value in the Area userdata.
-     *   SlySven - 2023/03
      */
     const int mMaxVersion = 20;
 

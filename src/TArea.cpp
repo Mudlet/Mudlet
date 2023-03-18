@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,7 +25,6 @@
 
 
 #include "Host.h"
-#include "T2DMap.h"
 #include "TConsole.h"
 #include "TRoomDB.h"
 
@@ -51,7 +50,6 @@ static const int kPixmapDataLineSize = 64;
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : mpRoomDB(pRDB)
 , mpMap(pMap)
-, mLast2DMapZoom(T2DMap::csmDefaultXYZoom)
 {
 }
 
@@ -972,11 +970,4 @@ bool TArea::hasPermanentLabels() const
         }
     }
     return false;
-}
-
-void TArea::set2DMapZoom(const qreal zoom)
-{
-    if (zoom >= T2DMap::csmMinXYZoom) {
-        mLast2DMapZoom = zoom;
-    }
 }

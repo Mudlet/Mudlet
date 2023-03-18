@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2022 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -66,8 +66,6 @@ public:
     std::pair<int, QString> readJsonArea(const QJsonArray&, const int);
     QList<int> getPermanentLabelIds() const;
     bool hasPermanentLabels() const;
-    qreal get2DMapZoom() const { return mLast2DMapZoom; }
-    void set2DMapZoom(const qreal zoom);
 
 
     QSet<int> rooms; // rooms of this area
@@ -127,10 +125,6 @@ private:
     // key=in_area room id, pair.first=out_of_area room id pair.second=direction
     // Made private as we may change implementation detail
     QMultiMap<int, QPair<int, int>> mAreaExits;
-
-    // In use this has a minimum of 3.0 and a default of 20.0, the latter will
-    // be applied in the constructor initialisation list:
-    qreal mLast2DMapZoom = 0.0;
 };
 
 #endif // MUDLET_TAREA_H
