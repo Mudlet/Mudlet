@@ -815,10 +815,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
-    topBorderHeight->setValue(pHost->mBorderTopHeight);
-    bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
-    leftBorderWidth->setValue(pHost->mBorderLeftWidth);
-    rightBorderWidth->setValue(pHost->mBorderRightWidth);
+    auto originalBorders = pHost->borders();
+    topBorderHeight->setValue(originalBorders.top());
+    bottomBorderHeight->setValue(originalBorders.bottom());
+    leftBorderWidth->setValue(originalBorders.left());
+    rightBorderWidth->setValue(originalBorders.right());
 
     // Set the properties in groupBox_logOptions
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
@@ -2672,10 +2673,8 @@ void dlgProfilePreferences::slot_saveAndClose()
             pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
             pHost->mpMap->mpMapper->update();
         }
-        pHost->mBorderTopHeight = topBorderHeight->value();
-        pHost->mBorderBottomHeight = bottomBorderHeight->value();
-        pHost->mBorderLeftWidth = leftBorderWidth->value();
-        pHost->mBorderRightWidth = rightBorderWidth->value();
+        QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
+        pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
@@ -3412,8 +3411,6 @@ void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 co
  * functionality to handle the situation of having a mainly disabled preference
  * dialog opened when no profiles were, it makes for a slightly more friendly
  * UX to also do this and adds a certain "balance" in the "code functionality".
- * Note that although pHost is not equal to nullptr when this is called, it is
- * now NOT valid or safe to dereference!
  */
 void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
 {

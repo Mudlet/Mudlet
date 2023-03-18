@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2020 by Matthias Urlichs matthias@urlichs.de            *
@@ -204,7 +204,8 @@ public:
     QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
     void setSearchOptions(const SearchOptions);
-    void setFocusOnAppropriateConsole();
+    void setProxyForFocus(TCommandLine*);
+    void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
 
 
     QPointer<Host> mpHost;
@@ -240,10 +241,7 @@ public:
     int mEngineCursor = -1;
 
     int mIndentCount = 0;
-    int mMainFrameBottomHeight = 0;
-    int mMainFrameLeftWidth = 0;
-    int mMainFrameRightWidth = 0;
-    int mMainFrameTopHeight = 0;
+    QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;
 

@@ -25,6 +25,10 @@
 set(mudlet_RCCS mudlet.qrc)
 configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
 
+if(USE_VARIABLE_SPLASH_SCREEN)
+  list(APPEND mudlet_RCCS additional_splash_screens.qrc)
+endif()
+
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
   if(CMAKE_SYSTEM_NAME STREQUAL Linux)
@@ -416,9 +420,13 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # https://github.com/Mudlet/Mudlet/issues/6314
 #
 # * Produce a timestamped message on the OS's command line when an autosave of
-# the map file gets requested and when such a request gets actioned (or
-# rejected because the profile is being loaded):
+#   the map file gets requested and when such a request gets actioned (or
+#   rejected because the profile is being loaded):
 # target_compile_definitions(mudlet PRIVATE DEBUG_MAPAUTOSAVE)
+#
+# * Produce all the time the surprise that normally will only occur on the
+#   first day of the fourth month of the Gregorian calendar year:
+# target_compile_definitions(mudlet PRIVATE DEBUG_EASTER_EGGS)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 

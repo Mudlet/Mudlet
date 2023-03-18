@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -66,6 +66,7 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QJsonDocument>
+#include <QImage>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
@@ -189,7 +190,6 @@ mudlet::mudlet()
     mpMainToolBar->setMovable(false);
     addToolBarBreak();
     auto frame = new QWidget(this);
-    frame->setFocusPolicy(Qt::NoFocus);
     setCentralWidget(frame);
     mpTabBar = new TTabBar(frame);
     mpTabBar->setMaximumHeight(30);
@@ -209,7 +209,6 @@ mudlet::mudlet()
     mpWidget_profileContainer->setPalette(mainPalette);
     mpWidget_profileContainer->setContentsMargins(0, 0, 0, 0);
     mpWidget_profileContainer->setSizePolicy(sizePolicy);
-    mpWidget_profileContainer->setFocusPolicy(Qt::NoFocus);
     mpWidget_profileContainer->setAutoFillBackground(true);
 
     layoutTopLevel->addWidget(mpWidget_profileContainer);
@@ -993,6 +992,9 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 // selectable location, or even from a read-only part of their computer's
 // file-system we would have to do this each time they looked to change
 // language/locale:
+// If we ever change the usage of this to take a path other than the
+// resource file's one then the code in the main.cpp file's
+// (void) loadTranslationsForCommandLine() will have to be revised as well:
 void mudlet::scanForMudletTranslations(const QString& path)
 {
     mPathNameMudletTranslations = path;
@@ -1338,9 +1340,9 @@ void mudlet::updateMultiViewControls()
 void mudlet::reshowRequiredMainConsoles()
 {
     if (mpTabBar->count() > 1 && mMultiView) {
-        for (auto pHost: mHostManager) {
-            if (pHost->mpConsole) {
-                pHost->mpConsole->show();
+        for (const auto& host: mHostManager) {
+            if (host->mpConsole) {
+                host->mpConsole->show();
             }
         }
     }
@@ -3917,7 +3919,11 @@ QString mudlet::autodetectPreferredLanguage()
         }
     }
 
-    for (auto language : QLocale::system().uiLanguages()) {
+    QStringList systemUiLanguages = QLocale::system().uiLanguages();
+    // The code in the loop may modify the value anyway so explicity detach
+    // from the original:
+    systemUiLanguages.detach();
+    for (auto& language : systemUiLanguages) {
         if (availableQualityTranslations.contains(language.replace(qsl("-"), qsl("_")))) {
             return language;
         }
@@ -4464,7 +4470,6 @@ void mudlet::activateProfile(Host* pHost)
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
     mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-    // CHECKME: Why are we only repainting the main command line, what about the others?
 
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();
@@ -4503,8 +4508,12 @@ void mudlet::activateProfile(Host* pHost)
 
     mpCurrentActiveHost->updateDisplayDimensions();
 
+    // Currently used to update the Discord Rich Presence
     emit signal_tabChanged(mpCurrentActiveHost->getName());
+    // Currently used to assign the shortcuts for the activated profile:-
     emit signal_profileActivated(pHost, newActiveTabIndex);
+
+    mpCurrentActiveHost->setFocusOnHostActiveCommandLine();
 }
 
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
@@ -4650,4 +4659,41 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
         }
         // Don't do anything if it was NOT found
     }
+}
+
+/*static*/ QImage mudlet::getSplashScreen()
+{
+#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
+    auto now = QDateTime::currentDateTime();
+    // clang-format off
+#if defined(DEBUG_EASTER_EGGS)
+    if (bool layEasterEgg = (now.time().second() < 30); layEasterEgg) {
+        // Only do it in the first half of any minute:
+#else
+    if (bool layEasterEgg = (now.date().month() == 4
+                        && now.date().day() == 1); layEasterEgg) {
+#endif // ! DEBUG_EASTER_EGGS
+        // clang-format on
+        // Set to one more than the highest number Mudlet_splashscreen_other_NN.png:
+        auto egg = QRandomGenerator::global()->bounded(24);
+        if (egg) {
+            auto eggFileName = qsl(":/splash/Mudlet_splashscreen_other_%1.png").arg(egg, 2, 10, QLatin1Char('0'));
+            return QImage(eggFileName);
+        } else {
+            // For the zeroth case just rotate the picture 180 degrees:
+            QImage original(mudlet::scmIsReleaseVersion
+                                    ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                                    : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                                                     : qsl(":/splash/Mudlet_splashscreen_development.png"));
+            return original.mirrored(true, true);
+        }
+    } else {
+        return QImage(mudlet::scmIsReleaseVersion
+                              ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                              : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                                               : qsl(":/splash/Mudlet_splashscreen_development.png"));
+    }
+#else
+    return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
+#endif // INCLUDE_VARIABLE_SPLASH_SCREEN
 }

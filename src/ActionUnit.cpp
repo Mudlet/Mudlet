@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2021, 2023 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -436,7 +437,9 @@ void ActionUnit::showToolBar(const QString& name)
         }
     }
     mudlet::self()->processEventLoopHack();
-    mpHost->setFocusOnHostMainConsole();
+    // If a toolbar is clicked on for a profile that is not the "current"
+    // one, this will switch the focus to THAT profile:
+    mudlet::self()->activateProfile(mpHost);
 }
 
 void ActionUnit::hideToolBar(const QString& name)

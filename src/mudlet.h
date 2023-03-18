@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
- *   Copyright (C) 2015-2016, 2018-2019, 2021-2022 by Stephen Lyons        *
+ *   Copyright (C) 2015-2016, 2018-2019, 2021-2023 by Stephen Lyons        *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
@@ -241,6 +241,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
+    static QImage getSplashScreen();
 
 
     // final, official release
@@ -288,8 +289,9 @@ public:
     // during the application run it is easiest to define it as one once:
     inline static const QVersionNumber scmRunTimeQtVersion = QVersionNumber::fromString(QLatin1String(qVersion()));
     // translations done high enough will get a gold star to hide the last few percent
-    // as well as encourage translators to maintain it;
-    static const int scmTranslationGoldStar = 95;
+    // as well as encourage translators to maintain it
+    // temporary until 2023-04-01: lower from 95 to 85 because translation updates weren't coming for 3 months
+    static const int scmTranslationGoldStar = 85;
     inline static const QString scmVersion = qsl("Mudlet " APP_VERSION APP_BUILD);
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;

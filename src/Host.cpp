@@ -214,10 +214,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBlockScriptCompile(true)
 , mBlockStopWatchCreation(true)
 , mEchoLuaErrors(false)
-, mBorderBottomHeight(0)
-, mBorderLeftWidth(0)
-, mBorderRightWidth(0)
-, mBorderTopHeight(0)
 , mCommandLineFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(qsl(";;"))
 , mEnableGMCP(true)
@@ -1921,6 +1917,12 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
     //     3=uninstall from a script
 
+    // block packages/modules from being uninstalled while a profile save is in progress
+    // just so the save mechanism doesn't get surprised with something getting removed from memory under its feet
+    if (currentlySavingProfile()) {
+        return false;
+    }
+
     if (module) {
         if (!mInstalledModules.contains(packageName)) {
             return false;
@@ -2017,7 +2019,20 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     QString dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
-    saveProfile();
+
+    // ensure only one timer is running in case multiple modules are uninstalled at once
+    if (!mSaveTimer.has_value() || !mSaveTimer.value()) {
+        mSaveTimer = true;
+        // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
+        // not to try to write to disk a package/module that just got uninstalled and removed from memory
+        QTimer::singleShot(0, this, [this]() {
+            mSaveTimer = false;
+            if (auto [ok, filename, error] = saveProfile(); !ok) {
+                qDebug() << qsl("Host::uninstallPackage: Couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
+            }
+        });
+    }
+
     //NOW we reset if we're uninstalling a module
     if (mpEditorDialog && module == 3) {
         mpEditorDialog->doCleanReset();
@@ -4076,11 +4091,55 @@ void Host::setCaretEnabled(bool enabled) {
     mpConsole->setCaretMode(enabled);
 }
 
-void Host::setFocusOnHostMainConsole()
+void Host::setFocusOnHostActiveCommandLine()
 {
-    mudlet::self()->activateProfile(this);
-    mpConsole->activateWindow();
-    mpConsole->setFocus();
+    QTimer::singleShot(0, this, [this]() {
+        auto pCommandLine = activeCommandLine();
+        if (pCommandLine) {
+            pCommandLine->activateWindow();
+            pCommandLine->console()->show();
+            pCommandLine->console()->raise();
+            pCommandLine->console()->repaint();
+            pCommandLine->setFocus(Qt::OtherFocusReason);
+        } else {
+            mpConsole->mpCommandLine->activateWindow();
+            mpConsole->show();
+            mpConsole->raise();
+            mpConsole->repaint();
+            mpConsole->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        }
+    });
+}
+
+void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
+{
+    mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    mpLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
+}
+
+void Host::forgetCommandLine(TCommandLine* pCommandLine)
+{
+    if (pCommandLine) {
+        mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    }
+}
+
+// Returns a pointer to the last used TCommandLine for this profile:
+TCommandLine* Host::activeCommandLine()
+{
+    TCommandLine* pCommandLine = nullptr;
+    if (mpLastCommandLineUsed.isEmpty()) {
+        return nullptr;
+    }
+
+    do {
+        pCommandLine = mpLastCommandLineUsed.top();
+        if (!pCommandLine) {
+            mpLastCommandLineUsed.pop();
+        }
+    } while (!mpLastCommandLineUsed.isEmpty() && !pCommandLine);
+
+    return pCommandLine;
 }
 
 QPointer<TConsole> Host::parentTConsole(QObject* start) const
@@ -4099,6 +4158,23 @@ QPointer<TConsole> Host::parentTConsole(QObject* start) const
         // Handle not found case:
         return result;
     }
-    result = qobject_cast<TConsole*>(ptr);
-    return result;
+    return qobject_cast<TConsole*>(ptr);
+}
+
+void Host::setBorders(QMargins borders)
+{
+    auto original = mBorders;
+    if (borders == original) {
+        return;
+    }
+    mBorders = borders;
+    if (mpConsole.isNull()) {
+        return;
+    }
+    auto x = mpConsole->width();
+    auto y = mpConsole->height();
+    QSize s = QSize(x, y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(mpConsole, &event);
+    mpConsole->raiseMudletSysWindowResizeEvent(x, y);
 }

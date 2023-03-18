@@ -87,7 +87,7 @@ We believe in making Mudlet available to people on all major platforms, and we w
 
 ## Download
 
-Download for free from [mudlet.org](https://www.mudlet.org/download/)
+Download for free from [mudlet.org](https://www.mudlet.org/download/).
 
 ## How To Use
 
@@ -98,6 +98,10 @@ Download for free from [mudlet.org](https://www.mudlet.org/download/)
     1. Enter `Server address` and `Port` of your game (found on the game's website, e.g. `mygame.com` and `2003`)
     1. Pick a `Profile name`
     1. Hit `Connect`
+
+## Compiling
+
+If you'd like to compile Mudlet yourself instead of [downloading](https://www.mudlet.org/download/), you can find instructions to do so [here](https://wiki.mudlet.org/w/Compiling_Mudlet).
 
 ## Vision
 
