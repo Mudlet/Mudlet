@@ -55,8 +55,6 @@ using namespace std::chrono_literals;
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
 
-TConsole* spDebugConsole = nullptr;
-
 #if defined(Q_OS_WIN32)
 bool runUpdate();
 #endif
@@ -190,11 +188,6 @@ int main(int argc, char* argv[])
         pcre_stack_free = pcre_free_dbg;
     }
 #endif // _MSC_VER && _DEBUG
-    spDebugConsole = nullptr;
-
-#if defined (Q_OS_UNIX)
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
 
 #if defined(Q_OS_MACOS)
     // Workaround for horrible mac rendering issues once the mapper widget
@@ -380,13 +373,7 @@ int main(int argc, char* argv[])
     QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
     bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
-#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
-    QImage splashImage(mudlet::scmIsReleaseVersion ? qsl(":/Mudlet_splashscreen_main.png")
-                                                   : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
-                                                                                    : qsl(":/Mudlet_splashscreen_development.png"));
-#else
-    QImage splashImage(qsl(":/Mudlet_splashscreen_main.png"));
-#endif
+    QImage splashImage = mudlet::getSplashScreen();
 
     if (show_splash) {
         QPainter painter(&splashImage);

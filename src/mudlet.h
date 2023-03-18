@@ -241,6 +241,7 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
+    static QImage getSplashScreen();
 
 
     // final, official release

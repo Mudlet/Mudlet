@@ -34,20 +34,14 @@
 #include <QDebug>
 #include "post_guard.h"
 
+
 dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 : QDialog(parent)
 {
     setupUi(this);
 
     // Copied from main():
-
-#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
-    QImage splashImage(mudlet::scmIsReleaseVersion ? qsl(":/Mudlet_splashscreen_main.png")
-                                                   : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
-                                                                                    : qsl(":/Mudlet_splashscreen_development.png"));
-#else
-    QImage splashImage(qsl(":/Mudlet_splashscreen_main.png"));
-#endif
+    QImage splashImage = mudlet::getSplashScreen();
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
