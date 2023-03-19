@@ -370,7 +370,6 @@ find_package(
              Widgets
              Concurrent
              Core5Compat)
-  find_package(Qt6 COMPONENTS Gamepad QUIET)
   find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
   message(STATUS "Qt version: ${Qt6Core_VERSION}")
@@ -389,11 +388,6 @@ find_package(
   if(Qt6TextToSpeech_FOUND)
     list(APPEND QT_LIBS Qt6::TextToSpeech)
     message(STATUS "Using TextToSpeech module")
-  endif()
-
-  if(Qt6Gamepad_FOUND)
-    list(APPEND QT_LIBS Qt6::Gamepad)
-    message(STATUS "Using Gamepad module")
   endif()
 else()
   find_package(
