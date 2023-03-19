@@ -331,7 +331,7 @@ jobs:
         DEPLOY: ${{matrix.deploy}}
 
     - name: (Linux/macOS) add ssh-agent for tag deployment
-      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && github.event == 'tag'
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && github.event.ref_type == 'tag'
       uses: webfactory/ssh-agent@v0.7.0
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
