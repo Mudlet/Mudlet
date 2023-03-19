@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2012-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018, 2020-2021 by Stephen Lyons             *
+ *   Copyright (C) 2014-2016, 2018, 2020-2021, 2023 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -36,11 +36,6 @@
 #include <QStringBuilder>
 #include "post_guard.h"
 
-// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-template <typename Key, typename T>
-using QMultiMapIterator = QMapIterator<Key, T>;
-#endif
 
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
 // in Qt5 - the compilation errors that result in not having this are really

@@ -28,6 +28,15 @@
 
 #define qsl(s) QStringLiteral(s)
 
+// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+template <typename T1, typename T2>
+using QMultiMapIterator = QMapIterator<T1, T2>;
+
+template <typename T1, typename T2>
+using QMutableMultiMapIterator = QMutableMapIterator<T1, T2>;
+#endif
+
 class utils
 {
 public:

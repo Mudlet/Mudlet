@@ -47,11 +47,6 @@ static const QColor defaultLabelForeground(QColor(0, 0, 0));
 static const QColor defaultLabelBackground(QColor(0, 0, 0));
 static const int kPixmapDataLineSize = 64;
 
-// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-template <typename Key, typename T>
-using QMultiMapIterator = QMapIterator<Key, T>;
-#endif
 
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : mpRoomDB(pRDB)

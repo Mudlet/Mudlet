@@ -104,11 +104,6 @@ namespace coreMacOS {
 
 using namespace std::chrono_literals;
 
-// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-template <typename Key, typename T>
-using QMultiMapIterator = QMapIterator<Key, T>;
-#endif
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
