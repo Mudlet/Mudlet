@@ -145,7 +145,7 @@ then
       # get the archive script
       wget https://raw.githubusercontent.com/meitar/git-archive-all.sh/master/git-archive-all.sh
 
-      cd "${BUILD_DIR}" || exit
+      cd "${SOURCE_DIR}" || exit
       # generate and upload the tarball
       chmod +x "${HOME}/git-archive-all.sh"
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
