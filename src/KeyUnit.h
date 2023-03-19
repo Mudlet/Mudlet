@@ -26,9 +26,9 @@
 
 #include "pre_guard.h"
 #include <QMap>
+#include <QObject>
 #include <QPointer>
 #include <QString>
-#include <QObject>
 #include "post_guard.h"
 
 #include <list>

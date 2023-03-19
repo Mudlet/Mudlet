@@ -32,7 +32,6 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
-
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");
 const QString ROOM_UI_NAMEFONT = qsl("room.ui_nameFont");

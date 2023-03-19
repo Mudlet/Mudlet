@@ -30,8 +30,8 @@
 #include "TMediaData.h"
 
 #include "pre_guard.h"
-#include <QMediaPlayer>
 #include <QAudioOutput>
+#include <QMediaPlayer>
 #include "post_guard.h"
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

@@ -87,7 +87,6 @@
 #include <QRandomGenerator>
 #include <zip.h>
 #include <QStyle>
-#include <QScreen>
 #if defined(Q_OS_WIN32)
 #include <QSettings>
 #endif

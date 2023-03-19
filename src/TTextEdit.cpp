@@ -51,10 +51,10 @@
 #include <QHash>
 #include <QPainter>
 #include <QScrollBar>
+#include <QStringRef>
 #include <QTextBoundaryFinder>
 #include <QToolTip>
 #include <QVersionNumber>
-#include <QStringRef>
 #include "post_guard.h"
 
 // Renders text on screen
