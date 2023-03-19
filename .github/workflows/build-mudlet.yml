@@ -136,7 +136,7 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
         # these aren't available or don't work well in vcpkg
-        brew install libzzip libzip ccache luarocks expect mitchellh/gon/gon
+        brew install libzzip libzip ccache luarocks expect mitchellh/gon/gon pcre
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
@@ -331,7 +331,7 @@ jobs:
         DEPLOY: ${{matrix.deploy}}
 
     - name: (Linux/macOS) add ssh-agent for tag deployment
-      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && github.event == 'tag'
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
       uses: webfactory/ssh-agent@v0.7.0
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
