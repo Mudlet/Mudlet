@@ -63,16 +63,14 @@ public:
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
     QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
     bool isInitialized() const { return initialized; }
-    QMediaPlayerPlaybackState getPlaybackState() const
-    {
+    QMediaPlayerPlaybackState getPlaybackState() const {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         return mMediaPlayer->state();
 #else
         return mMediaPlayer->playbackState();
 #endif
     }
-    void setVolume(int volume)
-    {
+    void setVolume(int volume) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         return mMediaPlayer->setVolume(volume);
 #else
