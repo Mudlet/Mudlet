@@ -14436,20 +14436,27 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
             }
             lua_setfield(L, -2, qsl("buttons").toUtf8().constData());
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            auto globalPosition = qME->globalPos();
+            auto position = qME->pos();
+#else
+            auto globalPosition = qME->globalPosition().toPoint();
+            auto position = qME->position().toPoint();
+#endif
             // Push globalX()
-            lua_pushnumber(L, qME->globalX());
+            lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
 
             // Push globalY()
-            lua_pushnumber(L, qME->globalY());
+            lua_pushnumber(L, globalPosition.y());
             lua_setfield(L, -2, qsl("globalY").toUtf8().constData());
 
             // Push x()
-            lua_pushnumber(L, qME->x());
+            lua_pushnumber(L, position.x());
             lua_setfield(L, -2, qsl("x").toUtf8().constData());
 
             // Push y()
-            lua_pushnumber(L, qME->y());
+            lua_pushnumber(L, position.y());
             lua_setfield(L, -2, qsl("y").toUtf8().constData());
             return callReference(L, name, 1);
         }
@@ -14457,21 +14464,27 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
         case (QEvent::Enter): {
             auto qME = static_cast<const QEnterEvent*>(qE);
             lua_newtable(L);
-
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            auto globalPosition = qME->globalPos();
+            auto position = qME->pos();
+#else
+            auto globalPosition = qME->globalPosition().toPoint();
+            auto position = qME->position().toPoint();
+#endif
             // Push globalX()
-            lua_pushnumber(L, qME->globalX());
+            lua_pushnumber(L, globalPosition.x());
             lua_setfield(L, -2, qsl("globalX").toUtf8().constData());
 
             // Push globalY()
-            lua_pushnumber(L, qME->globalY());
+            lua_pushnumber(L, globalPosition.y());
             lua_setfield(L, -2, qsl("globalY").toUtf8().constData());
 
             // Push x()
-            lua_pushnumber(L, qME->x());
+            lua_pushnumber(L, position.x());
             lua_setfield(L, -2, qsl("x").toUtf8().constData());
 
             // Push y()
-            lua_pushnumber(L, qME->y());
+            lua_pushnumber(L, position.y());
             lua_setfield(L, -2, qsl("y").toUtf8().constData());
             return callReference(L, name, 1);
         }
@@ -17958,8 +17971,6 @@ int TLuaInterpreter::getScroll(lua_State* L)
 int TLuaInterpreter::getConfig(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
-
     QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {
         return warnArgumentValue(L, __func__, "you must provide key");

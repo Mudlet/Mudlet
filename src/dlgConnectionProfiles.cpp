@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2016-2018, 2020-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -130,12 +130,35 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     copy_profile_toolbutton->addAction(mpCopyProfile);
     copy_profile_toolbutton->addAction(copyProfileSettings);
     copy_profile_toolbutton->setDefaultAction(mpCopyProfile);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     auto widgetList = mpCopyProfile->associatedWidgets();
+#else
+    // QAction::associatedWidgets() has been deprecated in Qt 6
+    auto objectList = mpCopyProfile->associatedObjects();
+    QList<QWidget*> widgetList;
+    for (auto pObjectItem : objectList) {
+        auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
+        if (pWidgetItem) {
+            widgetList << pWidgetItem;
+        }
+    }
+#endif
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfile QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile"));
     widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     widgetList = copyProfileSettings->associatedWidgets();
+#else
+    objectList = copyProfileSettings->associatedObjects();
+    widgetList.clear();
+    for (auto pObjectItem : objectList) {
+        auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
+        if (pWidgetItem) {
+            widgetList << pWidgetItem;
+        }
+    }
+#endif
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfileSettings QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile settings"));
     widgetList.first()->setAccessibleDescription(tr("copy the settings and some other parts of the profile to a new one that will require a different new name."));

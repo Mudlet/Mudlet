@@ -32,11 +32,6 @@
 #include <QRegularExpression>
 #include "post_guard.h"
 
-// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-template <typename Key, typename T>
-using QMultiMapIterator = QMapIterator<Key, T>;
-#endif
 
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");

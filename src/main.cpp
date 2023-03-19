@@ -141,7 +141,10 @@ QTranslator* loadTranslationsForCommandLine()
     // If we allow the translations to be outside of the resource file inside
     // the application executable then this will have to be revised to handle
     // it:
-    pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
+    bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
+    if (!isOk) {
+        return nullptr;
+    }
     QCoreApplication::installTranslator(pMudletTranslator);
     return pMudletTranslator;
 }
