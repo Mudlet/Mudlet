@@ -140,7 +140,7 @@ if(USE_QT6)
           Qt6 6.2.0
           QUIET)
   if(NOT Qt6_FOUND)
-    message(STATUS "Qt6 >= 6.2.0 was not found. Attempting to build with Qt5.")
+    message(STATUS "Qt6 >= 6.2.0 was not found. Building with Qt5.")
   endif()
 endif()
 
