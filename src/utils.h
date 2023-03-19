@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@hey.com            *
- *   Copyright (C) 2021 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2021, 2023 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,18 +23,26 @@
 
 #include "pre_guard.h"
 #include <QApplication>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include <QEnterEvent>
+#endif
 #include <QString>
 #include "post_guard.h"
 
 #define qsl(s) QStringLiteral(s)
 
-// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+// QMultiMapIterator replaced QMapIterator as iterator for QMultiMap in Qt6
 template <typename T1, typename T2>
 using QMultiMapIterator = QMapIterator<T1, T2>;
 
 template <typename T1, typename T2>
 using QMutableMultiMapIterator = QMutableMapIterator<T1, T2>;
+
+// QEvent was derived into a specific QEnterEvent in Qt6
+using TEnterEvent = QEvent;
+#else
+using TEnterEvent = QEnterEvent;
 #endif
 
 class utils
