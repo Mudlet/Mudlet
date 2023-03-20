@@ -22,8 +22,13 @@
 
 message(STATUS "Building translations")
 
-find_package(Qt5LinguistTools REQUIRED)
-get_target_property(LRELEASE_LOCATION Qt5::lrelease LOCATION)
+if(WITH_QT6)
+  find_package(Qt6LinguistTools REQUIRED)
+  get_target_property(LRELEASE_LOCATION Qt6::lrelease LOCATION)
+else()
+  find_package(Qt5LinguistTools REQUIRED)
+  get_target_property(LRELEASE_LOCATION Qt5::lrelease LOCATION)
+endif()
 
 file(GLOB TS_FILES *.ts)
 string(REPLACE ".ts" "" TS_FILES_NOEXT "${TS_FILES}")

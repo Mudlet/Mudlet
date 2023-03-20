@@ -51,6 +51,7 @@
 #include <QHash>
 #include <QPainter>
 #include <QScrollBar>
+#include <QStringRef>
 #include <QTextBoundaryFinder>
 #include <QToolTip>
 #include <QVersionNumber>
@@ -1129,8 +1130,13 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
     }
 
     bool isOutOfbounds = false;
-    int lineIndex = std::max(0, (event->y() / mFontHeight) + imageTopLine());
-    int tCharIndex = convertMouseXToBufferX(event->x(), lineIndex, &isOutOfbounds);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    auto eventPos = event->pos();
+#else
+    auto eventPos = event->position().toPoint();
+#endif
+    int lineIndex = std::max(0, (eventPos.y() / mFontHeight) + imageTopLine());
+    int tCharIndex = convertMouseXToBufferX(eventPos.x(), lineIndex, &isOutOfbounds);
 
     updateTextCursor(event, lineIndex, tCharIndex, isOutOfbounds);
 
@@ -1138,17 +1144,17 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
-    if (event->y() < 10) {
+    if (eventPos.y() < 10) {
         mpConsole->scrollUp(3);
     }
-    if (event->y() >= height() - 10) {
+    if (eventPos.y() >= height() - 10) {
         mpConsole->scrollDown(3);
     }
 
-    if (event->x() < 10) {
+    if (eventPos.x() < 10) {
         scrollH(std::max(0, mCursorX - 2));
     }
-    if (event->x() >= width() - 10) {
+    if (eventPos.x() >= width() - 10) {
         scrollH(std::min(mMaxHRange, mCursorX + 2));
     }
 
@@ -1211,7 +1217,11 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
             if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
                 setCursor(Qt::PointingHandCursor);
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
-                QToolTip::showText(event->globalPos(), tooltip.join("\n"));
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+                QToolTip::showText(event->globalPos(), tooltip.join(QChar::LineFeed));
+#else
+                QToolTip::showText(event->globalPosition().toPoint(), tooltip.join(QChar::LineFeed));
+#endif
             } else {
                 setCursor(Qt::IBeamCursor);
                 QToolTip::hideText();
@@ -1333,7 +1343,14 @@ void TTextEdit::slot_popupMenu()
 void TTextEdit::mousePressEvent(QMouseEvent* event)
 {
     //new event to get mouse position on the parent window
-    QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    auto eventPos = event->pos();
+    auto eventGlobalPos = event->globalPos();
+#else
+    auto eventPos = event->position().toPoint();
+    auto eventGlobalPos = event->globalPosition().toPoint();
+#endif
+    QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(eventGlobalPos), eventGlobalPos, event->button(), event->buttons(), event->modifiers());
     if (mpConsole->getType() == TConsole::SubConsole) {
         qApp->sendEvent(mpConsole->parentWidget(), &newEvent);
     }
@@ -1343,7 +1360,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
     }
 
     if (event->button() == Qt::LeftButton) {
-        int y = (event->y() / mFontHeight) + imageTopLine();
+        int y = (eventPos.y() / mFontHeight) + imageTopLine();
         int x = 0;
         y = std::max(y, 0);
 
@@ -1354,14 +1371,14 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         bool isOutOfbounds = false;
         if (!mCtrlSelecting && mShowTimeStamps) {
             bool isOverTimeStamp = false;
-            x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds, &isOverTimeStamp);
+            x = convertMouseXToBufferX(eventPos.x(), y, &isOutOfbounds, &isOverTimeStamp);
             if (isOverTimeStamp) {
                 // If we have clicked on the timestamp then emulate the effect
                 // of control clicking - i.e. select the WHOLE line:
                 mCtrlSelecting = true;
             }
         } else {
-            x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds);
+            x = convertMouseXToBufferX(eventPos.x(), y, &isOutOfbounds);
         }
 
         if (mCtrlSelecting) {
@@ -1440,19 +1457,18 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
             highlightSelection();
             event->accept();
             return;
-        } else {
-            mLastClickTimer.start();
-            mMouseTracking = true;
-            mMouseTrackLevel = 1;
-            if (y >= mpBuffer->size()) {
-                return;
-            }
-            mDragStart.setX(x);
-            mDragStart.setY(y);
-            mDragSelectionEnd = mDragStart;
-            event->accept();
+        }
+        mLastClickTimer.start();
+        mMouseTracking = true;
+        mMouseTrackLevel = 1;
+        if (y >= mpBuffer->size()) {
             return;
         }
+        mDragStart.setX(x);
+        mDragStart.setY(y);
+        mDragSelectionEnd = mDragStart;
+        event->accept();
+        return;
     }
 
 
@@ -1664,8 +1680,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         // Accumulated width in "normal" width characters:
         int column{};
         QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
-        for (int indexOfChar{}, lineLength{lineText.size()}; indexOfChar < lineLength;) {
-            int nextBoundary{boundaryFinder.toNextBoundary()};
+        for (qsizetype indexOfChar{}, lineLength{lineText.size()}; indexOfChar < lineLength;) {
+            auto nextBoundary{boundaryFinder.toNextBoundary()};
             // Width in "normal" width equivalent of this grapheme:
             int charWidth{};
             const QString grapheme = lineText.mid(indexOfChar, nextBoundary - indexOfChar);
@@ -1767,11 +1783,11 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         mPA.ry() -= mpBuffer->mBatchDeleteSize;
         mPB.ry() -= mpBuffer->mBatchDeleteSize;
     }
-    int startLine = std::max(0, mPA.y());
-    int endLine = std::min(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
-    int offset = endLine - startLine;
-    int startPos = std::max(0, mPA.x());
-    int endPos = std::min(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
+    qsizetype startLine = std::max(0, mPA.y());
+    qsizetype endLine = std::min<qsizetype>(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
+    qsizetype offset = endLine - startLine;
+    qsizetype startPos = std::max(0, mPA.x());
+    qsizetype endPos = std::min<qsizetype>(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
     QStringList textLines = mpBuffer->lineBuffer.mid(startLine, endLine - startLine + 1);
     if (textLines.isEmpty()) {
         return {};
@@ -1811,15 +1827,22 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    auto eventPos = event->pos();
+    auto eventGlobalPos = event->globalPos();
+#else
+    auto eventPos = event->position().toPoint();
+    auto eventGlobalPos = event->globalPosition().toPoint();
+#endif
     if (event->button() == Qt::LeftButton) {
         mMouseTracking = false;
         mCtrlSelecting = false;
     }
     if (event->button() == Qt::RightButton) {
-        int y = (event->y() / mFontHeight) + imageTopLine();
+        int y = (eventPos.y() / mFontHeight) + imageTopLine();
         y = std::max(y, 0);
         bool isOutOfbounds = false;
-        int x = convertMouseXToBufferX(event->x(), y, &isOutOfbounds);
+        int x = convertMouseXToBufferX(eventPos.x(), y, &isOutOfbounds);
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
             if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOfbounds) {
@@ -1841,7 +1864,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                             }
                             connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
                         }
-                        popup->popup(event->globalPos());
+                        popup->popup(eventGlobalPos);
                     }
                     mIsCommandPopup = true;
                     return;
@@ -1945,12 +1968,12 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
             popup->addAction(mouseAction);
             connect(mouseAction, &QAction::triggered, this, [this, uniqueName] { slot_mouseAction(uniqueName); });
         }
-        popup->popup(mapToGlobal(event->pos()), action);
+        popup->popup(mapToGlobal(eventPos), action);
         event->accept();
         return;
     }
 
-    QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(event->globalPos()), event->button(), event->buttons(), event->modifiers());
+    QMouseEvent newEvent(event->type(), mpConsole->parentWidget()->mapFromGlobal(eventGlobalPos), eventGlobalPos, event->button(), event->buttons(), event->modifiers());
     switch (mpConsole->getType()) {
     case TConsole::CentralDebugConsole:
         [[fallthrough]];
@@ -2760,14 +2783,12 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         return;
     }
 
-    int newCaretLine = -1;
-    int newCaretColumn = -1;
-    int oldCaretLine = -1;
-    int oldCaretColumn = -1;
+    qsizetype newCaretLine = -1;
+    qsizetype newCaretColumn = -1;
 
     auto adjustCaretColumn = [&]() {
         // If the new line is shorter, we need to adjust the column.
-        int newLineLength = mpBuffer->line(newCaretLine).length();
+        qsizetype newLineLength = mpBuffer->line(newCaretLine).length();
         if (mCaretColumn >= newLineLength) {
             newCaretColumn = newLineLength == 0 ? 0 : newLineLength - 1;
 
@@ -2853,11 +2874,11 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                     QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
                     finder.setPosition(mCaretColumn);
                     int nextBoundary {};
-                    QStringRef currentLetter {};
+                    QString currentLetter {};
 
                     do {
                         nextBoundary = finder.toPreviousBoundary();
-                        currentLetter = line.midRef(nextBoundary, 1);
+                        currentLetter = line.mid(nextBoundary, 1);
                     } while (nextBoundary != 0 && mCtrlSelectionIgnores.contains(currentLetter));
 
                     newCaretLine = mCaretLine;
@@ -2886,14 +2907,14 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                     QTextBoundaryFinder finder(QTextBoundaryFinder::Word, line);
                     finder.setPosition(mCaretColumn);
                     int nextBoundary {};
-                    QStringRef currentLetter {};
+                    QString currentLetter {};
 
                     do {
                         nextBoundary = finder.toNextBoundary();
-                        currentLetter = line.midRef(nextBoundary, 1);
+                        currentLetter = line.mid(nextBoundary, 1);
                     } while (nextBoundary != line.length() && mCtrlSelectionIgnores.contains(currentLetter));
 
-                    nextBoundary = std::min(nextBoundary, line.length() - 1);
+                    nextBoundary = std::min<qsizetype>(nextBoundary, line.length() - 1);
                     newCaretColumn = nextBoundary;
                     newCaretLine = mCaretLine;
                 } else {
@@ -2938,7 +2959,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             newCaretLine = std::max(mCaretLine - mScreenHeight, 0);
             break;
         case Qt::Key_PageDown:
-            newCaretLine = std::min(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
+            newCaretLine = std::min<qsizetype>(mCaretLine + mScreenHeight, mpBuffer->lineBuffer.length() - 2);
             break;
         case Qt::Key_C:
             if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
@@ -2953,15 +2974,15 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
             if ((mpHost->mCaretShortcut == Host::CaretShortcut::Tab && !(event->modifiers() & Qt::ControlModifier))
                 || (mpHost->mCaretShortcut == Host::CaretShortcut::CtrlTab && (event->modifiers() & Qt::ControlModifier))) {
                 mpHost->setCaretEnabled(false);
-                break;
             }
+            break;
         }
 
         case Qt::Key_F6: {
             if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
                 mpHost->setCaretEnabled(false);
-                break;
             }
+            break;
         }
     }
 

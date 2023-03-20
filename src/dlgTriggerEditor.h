@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017-2020 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2015-2018, 2020, 2022 by Stephen Lyons                  *
+ *   Copyright (C) 2015-2018, 2020, 2022-2023 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -176,7 +176,7 @@ public:
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
-    void enterEvent(QEvent* pE) override;
+    void enterEvent(TEnterEvent* pE) override;
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;

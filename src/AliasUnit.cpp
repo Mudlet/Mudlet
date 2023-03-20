@@ -259,7 +259,7 @@ void AliasUnit::reenableAllTriggers()
 
 TAlias* AliasUnit::findFirstAlias(const QString& name)
 {
-    QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     if (it != mLookupTable.cend() && it.key() == name) {
         return it.value();
     }
@@ -269,7 +269,7 @@ TAlias* AliasUnit::findFirstAlias(const QString& name)
 bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
-    QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TAlias* pT = it.value();
         pT->setIsActive(true);
@@ -282,7 +282,7 @@ bool AliasUnit::enableAlias(const QString& name)
 bool AliasUnit::disableAlias(const QString& name)
 {
     bool found = false;
-    QMap<QString, TAlias*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TAlias* pT = it.value();
         pT->setIsActive(false);
