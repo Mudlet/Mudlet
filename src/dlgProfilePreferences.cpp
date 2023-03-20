@@ -282,7 +282,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
-        auto& translation = pMudlet->mTranslationsMap.value(code);
+        auto& translation = pMudlet->mTranslationsMap[code];
         auto& nativeName = translation.getNativeName();
         if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();

@@ -29,6 +29,7 @@
 #include "pre_guard.h"
 #include <QColor>
 #include <QIcon>
+#include <QObject>
 #include <QPointer>
 #include "post_guard.h"
 

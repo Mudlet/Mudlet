@@ -359,24 +359,70 @@ endif()
 
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
 
+if(WITH_QT6)
 find_package(
-  Qt5 5.14 REQUIRED
+  Qt6 6.2.0 REQUIRED
   COMPONENTS Core
              Multimedia
              Network
              OpenGL
              UiTools
              Widgets
-             Concurrent)
-find_package(Qt5 COMPONENTS Gamepad QUIET)
-find_package(Qt5 COMPONENTS TextToSpeech QUIET)
+             Concurrent
+             Core5Compat)
+  find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
-if(Qt5Core_VERSION VERSION_LESS 5.14)
-  message(
-    FATAL_ERROR "Mudlet requires Qt 5.14 or later, yours is ${Qt5Core_VERSION}")
+  message(STATUS "Qt version: ${Qt6Core_VERSION}")
+
+  set(QT_MAJOR_VERSION 6)
+  set(QT_LIBS Qt6::Concurrent
+              Qt6::Core
+              Qt6::Network
+              Qt6::Multimedia
+              Qt6::OpenGL
+              Qt6::UiTools
+              Qt6::Widgets
+              Qt6::Core5Compat
+              qt6keychain)
+
+  if(Qt6TextToSpeech_FOUND)
+    list(APPEND QT_LIBS Qt6::TextToSpeech)
+    message(STATUS "Using TextToSpeech module")
+  endif()
 else()
-  # Qt Speech (or at least the TTS part) was officially release in 5.10
+  find_package(
+          Qt5 5.14 REQUIRED
+          COMPONENTS Core
+          Multimedia
+          Network
+          OpenGL
+          UiTools
+          Widgets
+          Concurrent)
+  find_package(Qt5 COMPONENTS Gamepad QUIET)
+  find_package(Qt5 COMPONENTS TextToSpeech QUIET)
+
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
+
+  set(QT_MAJOR_VERSION 5)
+  set(QT_LIBS Qt5::Concurrent
+              Qt5::Core
+              Qt5::Network
+              Qt5::Multimedia
+              Qt5::OpenGL
+              Qt5::UiTools
+              Qt5::Widgets
+              qt5keychain)
+
+  if(Qt5TextToSpeech_FOUND)
+    list(APPEND QT_LIBS Qt5::TextToSpeech)
+    message(STATUS "Using TextToSpeech module")
+  endif()
+
+  if(Qt5Gamepad_FOUND)
+    list(APPEND QT_LIBS Qt5::Gamepad)
+    message(STATUS "Using Gamepad module")
+  endif()
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
@@ -389,13 +435,13 @@ find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
 
-if(NOT USE_OWN_QT5KEYCHAIN)
+if(NOT USE_OWN_QTKEYCHAIN)
   # Only use this when we are using a system package and NOT our own local build
-  find_package(Qt5Keychain REQUIRED)
+  find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
 
   # No need to test for it being found as the REQUIRED will make it error out
   # if it is NOT found!
-  message(STATUS "Using system QtKeyChain (Qt5) library (found version \"${Qt5Keychain_VERSION}\").")
+  message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
 endif()
 
 if(USE_3DMAPPER)
@@ -453,7 +499,7 @@ target_compile_definitions(mudlet
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
-if(USE_OWN_QT5KEYCHAIN)
+if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
 endif()
 
@@ -469,34 +515,17 @@ endif()
 target_compile_definitions(communi PUBLIC IRC_STATIC)
 
 target_link_libraries(
-  mudlet
-  communi
-  edbee-lib
-  Boost::boost
-  HUNSPELL::HUNSPELL
-  LUA51::LUA51
-  PCRE::PCRE
-  PUGIXML::PUGIXML
-  Qt5::Concurrent
-  Qt5::Core
-  Qt5::Network
-  Qt5::Multimedia
-  Qt5::OpenGL
-  Qt5::UiTools
-  Qt5::Widgets
-  ZIP::ZIP
-  ZLIB::ZLIB
-  qt5keychain)
-
-if(Qt5TextToSpeech_FOUND)
-  target_link_libraries(mudlet Qt5::TextToSpeech)
-  message(STATUS "Using TextToSpeech module")
-endif(Qt5TextToSpeech_FOUND)
-
-if(Qt5Gamepad_FOUND)
-  target_link_libraries(mudlet Qt5::Gamepad)
-  message(STATUS "Using Gamepad module")
-endif(Qt5Gamepad_FOUND)
+        mudlet
+        communi
+        edbee-lib
+        Boost::boost
+        HUNSPELL::HUNSPELL
+        LUA51::LUA51
+        PCRE::PCRE
+        PUGIXML::PUGIXML
+        ZIP::ZIP
+        ZLIB::ZLIB
+        ${QT_LIBS})
 
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)

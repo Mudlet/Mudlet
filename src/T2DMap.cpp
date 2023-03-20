@@ -2428,9 +2428,11 @@ void T2DMap::mouseDoubleClickEvent(QMouseEvent* event)
     if (mDialogLock || (event->buttons() != Qt::LeftButton)) {
         return;
     }
-    int x = event->x();
-    int y = event->y();
-    mPHighlight = QPoint(x, y);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    mPHighlight = event->pos();
+#else
+    mPHighlight = event->position().toPoint();
+#endif
     mPick = true;
     mStartSpeedWalk = true;
     repaint();
@@ -4155,8 +4157,11 @@ void T2DMap::slot_setArea()
 void T2DMap::mouseMoveEvent(QMouseEvent* event)
 {
     if (mpMap->mLeftDown && !mpMap->m2DPanMode && (event->modifiers().testFlag(Qt::AltModifier) || mMapViewOnly)) {
-        mpMap->m2DPanXStart = event->x();
-        mpMap->m2DPanYStart = event->y();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        mpMap->m2DPanStart = event->localPos();
+#else
+        mpMap->m2DPanStart = event->position();
+#endif
         mpMap->m2DPanMode = true;
     }
     if (mpMap->m2DPanMode && (!event->modifiers().testFlag(Qt::AltModifier) && !mMapViewOnly)) {
@@ -4164,13 +4169,16 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         mpMap->mLeftDown = false;
     }
     if (mpMap->m2DPanMode) {
-        int x = event->x();
-        int y = event->y();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        QPointF panNewPosition = event->localPos();
+#else
+        QPointF panNewPosition = event->position();
+#endif
         mShiftMode = true;
-        mOx = mOx + (mpMap->m2DPanXStart - static_cast<float>(x)) / mRoomWidth;
-        mOy = mOy + (mpMap->m2DPanYStart - static_cast<float>(y)) / mRoomHeight;
-        mpMap->m2DPanYStart = static_cast<float>(y);
-        mpMap->m2DPanXStart = static_cast<float>(x);
+        QPointF movement = mpMap->m2DPanStart - panNewPosition;
+        mOx += movement.x() / mRoomWidth;
+        mOy += movement.y() / mRoomHeight;
+        mpMap->m2DPanStart = panNewPosition;
         update();
         return;
     }

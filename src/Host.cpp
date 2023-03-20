@@ -221,6 +221,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
+, mAskTlsAvailable(true)
+, mMSSPTlsPort(0)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
 , mFORCE_GA_OFF(false)
@@ -230,8 +232,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSslIgnoreExpired(false)
 , mSslIgnoreSelfSigned(false)
 , mSslIgnoreAll(false)
-, mAskTlsAvailable(true)
-, mMSSPTlsPort(0)
 , mUseProxy(false)
 , mProxyPort(0)
 , mIsGoingDown(false)
@@ -390,7 +390,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
      * otherwise - note that this must be done AFTER setDevice(...):
      */
     mErrorLogStream.setDevice(&mErrorLogFile);
+    // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
 
     QTimer::singleShot(0, this, [this]() {
         qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
@@ -2062,11 +2065,13 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
         QTextStream in(&configFile);
         /*
          * We also have to explicit set the codec to use whilst reading the file
-         * as otherwise QTextCodec::codecForLocale() is used which might be a
-         * local8Bit codec that thus will not handle all the characters
-         * contained in Unicode:
+         * as otherwise QTextCodec::codecForLocale() is used which for Qt5
+         * might be a local8Bit codec that thus will not handle all the
+         * characters contained in Unicode. In Qt6 the default is UTF-8.
          */
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         in.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
         while (!in.atEnd()) {
             strings += in.readLine();
         }

@@ -62,7 +62,6 @@
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
-#include <QDesktopWidget>
 #include <QFile>
 #include <QFileDialog>
 #include <QJsonDocument>
@@ -73,6 +72,7 @@
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
+#include <QScreen>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSplitter>
@@ -102,6 +102,7 @@ namespace coreMacOS {
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
+
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
@@ -138,7 +139,11 @@ mudlet::mudlet()
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // 'AA_UseHighDpiPixmaps' is deprecated in Qt6: High-DPI pixmaps are always enabled.
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
+
     // We need to record this before we clobber it with our own substitute...
     mDefaultStyle = qApp->style()->objectName();
     // ... which is applied here:
@@ -1149,8 +1154,8 @@ void mudlet::loadTranslators(const QString& languageCode)
         // mangles the former to find the actual best one to use, but we
         // shouldn't include the path in the first element as it seems to mess
         // up the process of locating the file:
-        pQtTranslator->load(qtTranslatorFileName, mPathNameQtTranslations);
-        if (!pQtTranslator->isEmpty()) {
+        bool isOk = pQtTranslator->load(qtTranslatorFileName, mPathNameQtTranslations);
+        if (isOk && !pQtTranslator->isEmpty()) {
             // qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << mPathNameQtTranslations << "/"<< qtTranslatorFileName << "\"...";
             qApp->installTranslator(pQtTranslator);
             mTranslatorsLoadedList.append(pQtTranslator);
@@ -1160,8 +1165,8 @@ void mudlet::loadTranslators(const QString& languageCode)
     QPointer<QTranslator> pMudletTranslator = new QTranslator;
     QString mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
     if (!mudletTranslatorFileName.isEmpty()) {
-        pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
-        if (!pMudletTranslator->isEmpty()) {
+        bool isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
+        if (isOk && !pMudletTranslator->isEmpty()) {
 //            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mPathNameMudletTranslations << "/"
 //                                         << mudletTranslatorFileName << "\"...";
             qApp->installTranslator(pMudletTranslator);
@@ -2623,7 +2628,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     auto consoleCloser = new TConsoleMonitor(smpDebugArea);
     smpDebugArea->installEventFilter(consoleCloser);
 
-    QSize generalRule(qApp->desktop()->size());
+    QSize generalRule(QGuiApplication::primaryScreen()->availableSize());
     generalRule -= QSize(30, 30);
     smpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
     smpDebugArea->hide();
@@ -3398,7 +3403,11 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // when saving/resyncing packages/modules - ends in a '/'
         return qsl("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
     case qtTranslationsPath:
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+#else
+        return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+#endif
     case hunspellDictionaryPath:
         // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
@@ -3910,7 +3919,7 @@ QString mudlet::autodetectPreferredLanguage()
     // translation is still only at 20%
     QVector<QString> availableQualityTranslations {qsl("en_GB")};
     for (auto& code : getAvailableTranslationCodes()) {
-        auto& translation = mTranslationsMap.value(code);
+        auto& translation = mTranslationsMap[code];
         if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();
             if (translatedPc >= scmTranslationGoldStar) {
@@ -3946,7 +3955,10 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
     }
 
     QTextStream ds(&dict);
+    // In Qt6 the default encoding is UTF-8 instead
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     ds.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     QString dictionaryLine;
     ds.readLineInto(&dictionaryLine);
 
@@ -4014,7 +4026,10 @@ bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
     }
 
     QTextStream ds(&dict);
+    // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     ds.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     ds << qMax(0, wl.count());
     if (!wl.isEmpty()) {
       ds << QChar(QChar::LineFeed);
@@ -4038,7 +4053,10 @@ int mudlet::getDictionaryWordCount(QFile &dict)
     }
 
     QTextStream ds(&dict);
+    // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     ds.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     QString dictionaryLine;
     // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
@@ -4053,7 +4071,7 @@ int mudlet::getDictionaryWordCount(QFile &dict)
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
-bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
+bool mudlet::overwriteAffixFile(QFile& aff, const QHash<QString, unsigned int>& gc)
 {
     QMultiMap<unsigned int, QString> sortedGraphemeCounts;
     // Sort the graphemes into a descending order list:
@@ -4067,7 +4085,7 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
 
     // Generate TRY line:
     QString tryLine = qsl("TRY ");
-    QMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
+    QMultiMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
     itGrapheme.toBack();
     while (itGrapheme.hasPrevious()) {
         itGrapheme.previous();
@@ -4085,7 +4103,10 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
     }
 
     QTextStream as(&aff);
+    // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     as.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();

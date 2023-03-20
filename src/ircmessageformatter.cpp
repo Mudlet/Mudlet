@@ -458,7 +458,7 @@ QString IrcMessageFormatter::formatWhoReplyMessage(IrcWhoReplyMessage* message, 
 
 QString IrcMessageFormatter::formatSeconds(int secs)
 {
-    const QDateTime time = QDateTime::fromTime_t(secs);
+    const QDateTime time = QDateTime::fromSecsSinceEpoch(secs);
     return QObject::tr("%1s").arg(time.secsTo(QDateTime::currentDateTime()));
 }
 

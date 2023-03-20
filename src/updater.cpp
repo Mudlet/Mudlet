@@ -248,7 +248,7 @@ void Updater::setupOnLinux()
             return;
         }
 
-        QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, feed->getDownloadFile()->fileName());
+        QFuture<void> future = QtConcurrent::run([&]() { untarOnLinux(feed->getDownloadFile()->fileName()); });
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;
@@ -343,9 +343,9 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
-    QFuture<void> future = QtConcurrent::run(this, &Updater::untarOnLinux, filePath);
+    QFuture<void> future = QtConcurrent::run([&]() { untarOnLinux(filePath); });
 #elif defined(Q_OS_WIN32)
-    QFuture<void> future = QtConcurrent::run(this, &Updater::prepareSetupOnWindows, filePath);
+    QFuture<void> future = QtConcurrent::run([&]() { prepareSetupOnWindows(filePath); });
 #endif
 
     // replace current binary with the unzipped one

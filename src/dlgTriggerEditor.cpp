@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -523,10 +523,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mProfileSaveAsAction->setEnabled(true);
     connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
 
-    auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
+    auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab), this);
     QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_nextSection);
 
-    QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Tab), this);
+    QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab), this);
     QObject::connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previousSection);
 
     QShortcut *activateMainWindowAction = new QShortcut(QKeySequence((Qt::ALT | Qt::Key_E)), this);
@@ -6648,7 +6648,7 @@ void dlgTriggerEditor::autoSave()
     mpHost->saveProfile(QString(), qsl("autosave"));
 }
 
-void dlgTriggerEditor::enterEvent(QEvent* pE)
+void dlgTriggerEditor::enterEvent(TEnterEvent* pE)
 {
     Q_UNUSED(pE)
     if (mNeedUpdateData) {
