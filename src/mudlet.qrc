@@ -121,7 +121,11 @@
         <file>icons/legendsofthejedi_120x30.png</file>
         <file>icons/luminari_icon.png</file>
         <file>icons/lusternia_120_30.png</file>
+        <file>icons/media-eject.png</file>
         <file>icons/media-optical.png</file>
+        <file>icons/media-playback-pause.png</file>
+        <file>icons/media-playback-start.png</file>
+        <file>icons/media-skip-backward.png</file>
         <file>icons/media-seek-backward.png</file>
         <file>icons/media-seek-forward.png</file>
         <file>icons/media-tape.png</file>

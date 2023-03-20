@@ -44,6 +44,7 @@
 #include <QSslSocket>
 #endif
 #include <QTime>
+#include <QTimer>
 #include "post_guard.h"
 
 #include <zlib.h>
@@ -68,13 +69,13 @@
 
 #endif
 
+class QDataStream;
 class QNetworkAccessManager;
 class QNetworkReply;
 class QProgressDialog;
 class QTextCodec;
 class QTextDecoder;
 class QTextEncoder;
-class QTimer;
 
 class Host;
 class dlgComposer;
@@ -168,8 +169,8 @@ public:
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void recordReplay();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
-    void loadReplayChunk();
-    bool isReplaying() { return loadingReplay; }
+    void loadNextReplayChunk();
+    bool isReplaying() { return mPerformingReplay; }
     void setChannel102Variables(const QString&);
     bool socketOutRaw(std::string& data);
     const QByteArray & getEncoding() const { return mEncoding; }
@@ -215,6 +216,10 @@ public:
 
 public slots:
     void slot_setDownloadProgress(qint64, qint64);
+    void slot_replayAbort();
+    void slot_replayPaused(const bool);
+    void slot_replayRewind();
+    void slot_replaySpeedChanged(const double newSpeed, const double oldSpeed);
     void slot_replyFinished(QNetworkReply*);
     void slot_processReplayChunk();
     void slot_socketHostFound(QHostInfo);
@@ -256,7 +261,7 @@ private:
     void promptTlsConnectionAvailable();
 #endif
     void sendNAWS(int x, int y);
-    static std::pair<bool, bool> testReadReplayFile();
+    std::pair<bool, bool> testReadReplayFile(QDataStream&);
 
 
     QPointer<Host> mpHost;
@@ -334,7 +339,7 @@ private:
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
     // active profile...
-    bool loadingReplay = false;
+    bool mPerformingReplay = false;
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;
@@ -355,6 +360,19 @@ private:
     // we can send NAWS data when it changes:
     int mNaws_x = 0;
     int mNaws_y = 0;
+
+    qint32 mReplayCurrentOffset = 0;
+    QTimer mReplayChunkTimer;
+    // Used to index into the two following QVector<T>s:
+    int mReplayCurrentChunk = -1;
+    // Stores the chunks in a replay:
+    QVector<QByteArray> mReplayChunksList;
+    // Stores the real-time (i.e. unity playback speed) elasped time for when to
+    // playback a chunk in a replay:
+    QVector<qint64> mReplayChunkOffsetsList;
+    // Flag set before the last replay chunk is processed so that the replay
+    // gets cleaned up after it has run:
+    bool mReplayCleanup = false;
 };
 
 #endif // MUDLET_CTELNET_H
