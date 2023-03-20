@@ -238,6 +238,10 @@ bool TCommandLine::event(QEvent* event)
                 ke->accept();
                 return true;
             }
+
+            if (keybindingMatched(ke)) {
+                return true;
+            }
             break;
 
         case Qt::Key_unknown:
