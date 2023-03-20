@@ -335,7 +335,7 @@ QByteArray TTextCodec_437::convertFromUnicode(const QChar *in, int length, Conve
     int remainingChars = length;
     // Use '?' as replacement character (like some of Qt's own QTextCodec s)
     // unless we are told to use a NULL:
-    const char replacement = (state && (state->flags & ConversionFlag::ConvertInvalidToNull)) ? '\0' : '?';
+    const char replacement = (state && (state->flags & QTextCodec::ConvertInvalidToNull)) ? '\0' : '?';
     int i = 0;
     QByteArray result;
 
@@ -439,7 +439,7 @@ QByteArray TTextCodec_667::convertFromUnicode(const QChar *in, int length, Conve
     int remainingChars = length;
     // Use '?' as replacement character (like some of Qt's own QTextCodec s)
     // unless we are told to use a NULL:
-    const char replacement = (state && (state->flags & ConversionFlag::ConvertInvalidToNull)) ? '\0' : '?';
+    const char replacement = (state && (state->flags & QTextCodec::ConvertInvalidToNull)) ? '\0' : '?';
     int i = 0;
     QByteArray result;
 
@@ -543,7 +543,7 @@ QByteArray TTextCodec_737::convertFromUnicode(const QChar *in, int length, Conve
     int remainingChars = length;
     // Use '?' as replacement character (like some of Qt's own QTextCodec s)
     // unless we are told to use a NULL:
-    const char replacement = (state && (state->flags & ConversionFlag::ConvertInvalidToNull)) ? '\0' : '?';
+    const char replacement = (state && (state->flags & QTextCodec::ConvertInvalidToNull)) ? '\0' : '?';
     int i = 0;
     QByteArray result;
 
@@ -647,7 +647,7 @@ QByteArray TTextCodec_869::convertFromUnicode(const QChar *in, int length, Conve
     int remainingChars = length;
     // Use '?' as replacement character (like some of Qt's own QTextCodec s)
     // unless we are told to use a NULL:
-    const char replacement = (state && (state->flags & ConversionFlag::ConvertInvalidToNull)) ? '\0' : '?';
+    const char replacement = (state && (state->flags & QTextCodec::ConvertInvalidToNull)) ? '\0' : '?';
     int i = 0;
     QByteArray result;
 

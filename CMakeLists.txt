@@ -125,12 +125,35 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
-                        OPTION_VARIABLE USE_OWN_QT5KEYCHAIN
-                        READABLE_NAME "own QKeychain (Qt5) library")
+                        OPTION_VARIABLE USE_OWN_QTKEYCHAIN
+                        READABLE_NAME "own QtKeychain library")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_MAIN_BUILD_SYSTEM
                         OPTION_VARIABLE USE_MAIN_BUILD_SYSTEM
                         READABLE_NAME "original CI (setup-windows-sdk.ps1) windows build system"
                         SUPPORTED_SYSTEMS "Windows")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
+                        OPTION_VARIABLE USE_QT6
+                        READABLE_NAME "build with Qt6 (if installed)")
+
+if(USE_QT6)
+  find_package(
+          Qt6 6.2.0
+          QUIET)
+  if(NOT Qt6_FOUND)
+    message(STATUS "Qt6 >= 6.2.0 was not found. Building with Qt5.")
+  endif()
+endif()
+
+# Set Qt version for src, test, translations and communi
+set(WITH_QT6 ${Qt6_FOUND} CACHE BOOL "Whether to build with Qt6 or Qt5.")
+# Set Qt version for edbee-lib and dblsqd
+if(WITH_QT6)
+  option(BUILD_WITH_QT5 "" OFF)
+else()
+  option(BUILD_WITH_QT5 "" ON)
+endif()
+# Set Qt version for qtkeychain
+option(BUILD_WITH_QT6 "" ${WITH_QT6})
 
 include(InitGitSubmodule)
 
@@ -138,7 +161,7 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-if(USE_OWN_QT5KEYCHAIN)
+if(USE_OWN_QTKEYCHAIN)
   git_submodule_init(
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"

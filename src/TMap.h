@@ -209,8 +209,7 @@ public:
     bool m2DPanMode = false;
     bool mLeftDown = false;
     bool mRightDown = false;
-    float m2DPanXStart = 0.0f;
-    float m2DPanYStart = 0.0f;
+    QPointF m2DPanStart;
     int mTargetID = 0;
     QList<int> mPathList;
     QList<QString> mDirList;

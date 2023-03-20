@@ -592,7 +592,7 @@ private:
     void loadMaps();
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
-    bool overwriteAffixFile(QFile&, QHash<QString, unsigned int>&);
+    bool overwriteAffixFile(QFile&, const QHash<QString, unsigned int>&);
     bool overwriteDictionaryFile(QFile&, const QStringList&);
     bool scanDictionaryFile(QFile&, int&, QHash<QString, unsigned int>&, QStringList&);
     int scanWordList(QStringList&, QHash<QString, unsigned int>&);
