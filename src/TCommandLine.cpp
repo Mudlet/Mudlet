@@ -233,7 +233,8 @@ bool TCommandLine::event(QEvent* event)
             break;
 
         case Qt::Key_F6:
-            if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
+            if ((mpHost->mCaretShortcut == Host::CaretShortcut::F6) &&
+                ((ke->modifiers() & allModifiers) == Qt::NoModifier)) {
                 mpHost->setCaretEnabled(true);
                 ke->accept();
                 return true;
