@@ -1,0 +1,14 @@
+name: Post clang-tidy review comments
+
+on:
+  workflow_run:
+    workflows: ["🔍 Check improvements with Mudlet's C++ style guide"]
+    types:
+      - completed
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: ZedThree/clang-tidy-review/post@v0.12.0
