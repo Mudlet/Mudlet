@@ -336,7 +336,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
             continue;
         }
         mpEasyButtonBar = pT;
-        auto newAction = new EAction(mpHost, QIcon(mIcon), action->mName, mID);
+        auto newAction = new EAction(mpHost, QIcon(mIcon), action->mName, action->mID);
         newAction->setStatusTip(action->mName);
         newAction->setCheckable(action->mIsPushDownButton);
         if (action->mIsPushDownButton) {
