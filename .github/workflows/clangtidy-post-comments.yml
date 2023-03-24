@@ -2,7 +2,7 @@ name: Post clang-tidy review comments
 
 on:
   workflow_run:
-    workflows: ["Check improvements with Mudlet's C++ style guide"]
+    workflows: ["Check improvements with C++ style guide"]
     types:
       - completed
 
