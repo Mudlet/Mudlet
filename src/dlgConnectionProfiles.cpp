@@ -1163,19 +1163,19 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
 
     job->setKey(profile);
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
-        if (job->error()) {
-            const auto error = job->errorString();
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+        if (task->error()) {
+            const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
                 qDebug().nospace().noquote() << "dlgConnectionProfiles::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << profile << "\", error is: " << error << ".";
             }
 
         }
 
-        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
         callback(readJob->textData());
 
-        job->deleteLater();
+        task->deleteLater();
     });
 
     job->start();
@@ -1327,7 +1327,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
         mProfileList << profile_name;
         slot_itemClicked(pItem);
         // Clear the Discord optin on the copied profile - just because the source
