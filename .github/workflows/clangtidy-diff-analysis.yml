@@ -134,4 +134,4 @@ jobs:
         split_workflow: true
 
     - name: Upload check results
-      uses: ZedThree/clang-tidy-review/upload@v0.12.0
+      uses: ZedThree/clang-tidy-review/upload@v0.12.1
