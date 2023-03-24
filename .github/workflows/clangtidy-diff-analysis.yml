@@ -1,4 +1,4 @@
-name: "Check improvements with C++ style guide"
+name: "Check improvements with Mudlet's C++ style guide"
 
 on:
   pull_request_target:
