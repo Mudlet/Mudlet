@@ -4486,6 +4486,12 @@ void mudlet::activateProfile(Host* pHost)
         mpTabBar->blockSignals(false);
     }
 
+    // Reset the tab back to "normal" to undo the effect of it having its style
+    // changed on new data:
+    mpTabBar->setTabBold(newActiveTabIndex, false);
+    mpTabBar->setTabItalic(newActiveTabIndex, false);
+    mpTabBar->setTabUnderline(newActiveTabIndex, false);
+
     mpCurrentActiveHost = pHost;
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
