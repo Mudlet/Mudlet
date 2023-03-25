@@ -134,6 +134,10 @@ bool TCommandLine::event(QEvent* event)
         }
 
         if (ke->matches(QKeySequence::Find)){ // Find is Ctrl+F
+            if (keybindingMatched(ke)) { // If user has set up a keybind then do that instead.
+                return true;
+            }
+
             if (mudlet::self()->dactionInputLine->isChecked()) {
                 // If hidden then reveal as if pressed Alt-L
                 mudlet::self()->dactionInputLine->setChecked(false);
