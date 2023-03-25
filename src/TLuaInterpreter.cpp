@@ -17976,11 +17976,11 @@ int TLuaInterpreter::getConfig(lua_State *L) {
     }
 
     static const std::unordered_map<QString, std::function<void(lua_State*, Host&)>> configMap = {
-        { "mapRoomSize", [](lua_State* L, Host& host){ lua_pushnumber(L, host.mRoomSize); } },
-        { "mapExitSize", [](lua_State* L, Host& host){ lua_pushnumber(L, host.mLineSize); } },
-        { "mapRoundRooms", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mBubbleMode); } },
-        { "showRoomIdsOnMap", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mShowRoomID); } },
-        { "show3dMapView", [](lua_State* L, Host& host){
+        { qsl("mapRoomSize"), [](lua_State* L, Host& host){ lua_pushnumber(L, host.mRoomSize); } },
+        { qsl("mapExitSize"), [](lua_State* L, Host& host){ lua_pushnumber(L, host.mLineSize); } },
+        { qsl("mapRoundRooms"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mBubbleMode); } },
+        { qsl("showRoomIdsOnMap"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mShowRoomID); } },
+        { qsl("show3dMapView"), [](lua_State* L, Host& host){
             #if defined(INCLUDE_3DMAPPER)
             if (host.mpMap && host.mpMap->mpMapper) {
                 auto widget = host.mpMap->mpMapper->glWidget;
@@ -17990,24 +17990,24 @@ int TLuaInterpreter::getConfig(lua_State *L) {
             #endif
             lua_pushboolean(L, false);
         }},
-        { "mapperPanelVisible", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mShowPanel); } },
-        { "mapShowRoomBorders", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
-        { "enableGMCP", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableGMCP); } },
-        { "enableMSDP", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableMSDP); } },
-        { "enableMSSP", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableMSSP); } },
-        { "enableMSP", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableMSP); } },
-        { "askTlsAvailable", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mAskTlsAvailable); } },
-        { "inputLineStrictUnixEndings", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
-        { "autoClearInputLine", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
-        { "showSentText", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mPrintCommand); } },
-        { "fixUnnecessaryLinebreaks", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX); } },
-        { "specialForceCompressionOff", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
-        { "specialForceGAOff", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
-        { "specialForceCharsetNegotiationOff", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { "specialForceMxpNegotiationOff", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
-        { "compactInputLine", [](lua_State* L, Host& host){ lua_pushboolean(L, host.getCompactInputLine()); } },
-        { "announceIncomingText", [](lua_State* L, Host& host){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
-        { "blankLinesBehaviour", [](lua_State* L, Host& host){
+        { qsl("mapperPanelVisible"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mShowPanel); } },
+        { qsl("mapShowRoomBorders"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
+        { qsl("enableGMCP"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableGMCP); } },
+        { qsl("enableMSDP"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableMSDP); } },
+        { qsl("enableMSSP"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableMSSP); } },
+        { qsl("enableMSP"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableMSP); } },
+        { qsl("askTlsAvailable"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mAskTlsAvailable); } },
+        { qsl("inputLineStrictUnixEndings"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
+        { qsl("autoClearInputLine"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
+        { qsl("showSentText"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mPrintCommand); } },
+        { qsl("fixUnnecessaryLinebreaks"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX); } },
+        { qsl("specialForceCompressionOff"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
+        { qsl("specialForceGAOff"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
+        { qsl("specialForceCharsetNegotiationOff"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
+        { qsl("specialForceMxpNegotiationOff"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
+        { qsl("compactInputLine"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.getCompactInputLine()); } },
+        { qsl("announceIncomingText"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
+        { qsl("blankLinesBehaviour"), [](lua_State* L, Host& host){
             const auto behaviour = host.mBlankLineBehaviour;
             if (behaviour == Host::BlankLineBehaviour::Show) {
                 lua_pushstring(L, "show");
@@ -18017,7 +18017,7 @@ int TLuaInterpreter::getConfig(lua_State *L) {
                 lua_pushstring(L, "replacewithspace");
             }
         } },
-        { "caretShortcut", [](lua_State* L, Host& host){
+        { qsl("caretShortcut"), [](lua_State* L, Host& host){
             const auto caret = host.mCaretShortcut;
             if (caret == Host::CaretShortcut::None) {
                 lua_pushstring(L, "none");
