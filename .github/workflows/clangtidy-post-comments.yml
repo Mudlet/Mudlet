@@ -2,7 +2,7 @@ name: Post clang-tidy review comments
 
 on:
   workflow_run:
-    workflows: ["Check improvements with cpp style guide"]
+    workflows: ["🔍 Check improvements with cpp style guide"]
     types:
       - completed
 
