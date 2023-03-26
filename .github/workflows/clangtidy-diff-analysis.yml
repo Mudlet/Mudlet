@@ -41,7 +41,7 @@ jobs:
       if: runner.os == 'Windows'
       with:
         version: ${{matrix.qt}}
-        dir: ${{runner.workspace}}
+        dir: ${{github.workspace}}
         arch: win64_mingw73
         cache: true
 
@@ -50,7 +50,7 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       with:
         version: ${{matrix.qt}}
-        dir: ${{runner.workspace}}
+        dir: ${{github.workspace}}
         cache: true
 
     - name: Restore Boost cache
@@ -128,8 +128,8 @@ jobs:
         build_dir: 'b/ninja' # path is relative to checkout directory
         exclude: '3rdparty'
         config_file: '.clang-tidy'
-        # the action doesn't see system-level libraries, need to replicate them here
-        apt_packages: 'pkg-config,libzip-dev,libglu1-mesa-dev,libpulse-dev'
+        # the action doesn't see system-level libraries need to replicate them here
+        apt_packages: 'gettext, pkg-config, libzip-dev, libglu1-mesa-dev, libpulse-dev'
         split_workflow: true
 
     - name: Upload check results
