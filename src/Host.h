@@ -863,6 +863,8 @@ private:
     // return to it when switching between profiles:
     QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
 
+    bool mPendingSetFocusOnCommandLine = false;
+
     QMargins mBorders;
 };
 
