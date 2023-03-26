@@ -17981,13 +17981,13 @@ int TLuaInterpreter::getConfig(lua_State *L) {
         { qsl("mapRoundRooms"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mBubbleMode); } },
         { qsl("showRoomIdsOnMap"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mShowRoomID); } },
         { qsl("show3dMapView"), [](lua_State* L, Host& host){
-            #if defined(INCLUDE_3DMAPPER)
+#if defined(INCLUDE_3DMAPPER)
             if (host.mpMap && host.mpMap->mpMapper) {
                 auto widget = host.mpMap->mpMapper->glWidget;
                 lua_pushboolean(L, (widget && widget->isVisible()));
                 return;
             }
-            #endif
+#endif
             lua_pushboolean(L, false);
         }},
         { qsl("mapperPanelVisible"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mShowPanel); } },
