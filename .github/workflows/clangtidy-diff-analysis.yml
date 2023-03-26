@@ -1,4 +1,4 @@
-name: "Check improvements with cpp style guide"
+name: "🔍 Check improvements with cpp style guide"
 
 on:
   pull_request_target:
