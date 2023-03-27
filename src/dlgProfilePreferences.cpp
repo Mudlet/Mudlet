@@ -349,20 +349,20 @@ void dlgProfilePreferences::setupPasswordsMigration()
     hidePasswordMigrationLabelTimer = std::make_unique<QTimer>(this);
     hidePasswordMigrationLabelTimer->setSingleShot(true);
 
-    connect(hidePasswordMigrationLabelTimer.get(), &QTimer::timeout, this, &dlgProfilePreferences::hidePasswordMigrationLabel);
+    connect(hidePasswordMigrationLabelTimer.get(), &QTimer::timeout, this, &dlgProfilePreferences::slot_hidePasswordMigrationLabel);
 
-    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, [=]() {
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, this, [=]() {
         label_password_migration_notification->setText(tr("Migrated all passwords to secure storage."));
         comboBox_store_passwords_in->setEnabled(true);
         hidePasswordMigrationLabelTimer->start(10s);
     });
 
-    connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, [=](const QString& profile) {
+    connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, this, [=](const QString& profile) {
         label_password_migration_notification->setText(
                 tr("Migrated %1...", "This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely").arg(profile));
     });
 
-    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, [=]() {
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, this, [=]() {
         label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         comboBox_store_passwords_in->setEnabled(true);
         hidePasswordMigrationLabelTimer->start(10s);
@@ -498,7 +498,7 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupBox_debug -----
     checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
     // This acts on a label within this groupBox:
-    hidePasswordMigrationLabel();
+    slot_hidePasswordMigrationLabel();
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
@@ -903,7 +903,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // label to show on successful map file action
     label_mapFileActionResult->hide();
 
-    hidePasswordMigrationLabel();
+    slot_hidePasswordMigrationLabel();
 
     //double-click ignore
     QString ignore;
@@ -1406,7 +1406,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     label_mapFileActionResult->hide();
 
-    hidePasswordMigrationLabel();
+    slot_hidePasswordMigrationLabel();
 
     doubleclick_ignore_lineedit->clear();
 
@@ -2305,7 +2305,7 @@ void dlgProfilePreferences::slot_hideActionLabel()
     label_mapFileActionResult->hide();
 }
 
-void dlgProfilePreferences::hidePasswordMigrationLabel()
+void dlgProfilePreferences::slot_hidePasswordMigrationLabel()
 {
     label_password_migration_notification->hide();
 }
@@ -3238,7 +3238,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
                         // perform unzipping in a worker thread so as not to freeze the UI
                         auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
-                        QObject::connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
+                        connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
                             if (future.result()) {
                                 populateThemesList();
 
@@ -4193,10 +4193,10 @@ void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
         }
 
         // in case no theme index is available yet, so it as soon as one is available
-        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted,  [=]() {
-            auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
-            if (monokaiIndex != -1) {
-                code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
+        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted, this, [=]() {
+            auto index = code_editor_theme_selection_combobox->findText(darkTheme);
+            if (index != -1) {
+                code_editor_theme_selection_combobox->setCurrentIndex(index);
             }
         });
 

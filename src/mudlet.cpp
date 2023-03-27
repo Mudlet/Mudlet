@@ -475,7 +475,7 @@ mudlet::mudlet()
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudletDiscord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
-    connect(dactionShowErrors, &QAction::triggered, [=]() {
+    connect(dactionShowErrors, &QAction::triggered, this, [=]() {
         auto host = getActiveHost();
         if (!host) {
             return;
@@ -3599,7 +3599,7 @@ void mudlet::slot_updateInstalled()
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
     // rejig to restart Mudlet instead
-    QObject::connect(dactionUpdate, &QAction::triggered, this, [=]() {
+    connect(dactionUpdate, &QAction::triggered, this, [=]() {
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
@@ -3822,11 +3822,11 @@ void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
         writeProfileData(profileName, qsl("password"), readJob->textData());
 
         // delete from secure storage
-        auto *job = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
-        job->setAutoDelete(true);
-        job->setKey(profileName);
-        job->setProperty("profile", profileName);
-        job->start();
+        auto *deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
+        deleteJob->setAutoDelete(true);
+        deleteJob->setKey(profileName);
+        deleteJob->setProperty("profile", profileName);
+        deleteJob->start();
     }
     mProfilePasswordsToMigrate.removeAll(profileName);
     job->deleteLater();

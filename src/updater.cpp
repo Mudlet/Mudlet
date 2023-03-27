@@ -75,7 +75,7 @@ void Updater::checkUpdatesOnStart()
 #endif
 
     mDailyCheck->setInterval(12h);
-    QObject::connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
+    connect(mDailyCheck.get(), &QTimer::timeout, this, [this] {
           auto updates = feed->getUpdates(dblsqd::Release::getCurrentRelease());
           qWarning() << "Daily check for updates:" << updates.size() << "update(s) available";
           if (updates.isEmpty()) {
@@ -116,7 +116,7 @@ void Updater::manuallyCheckUpdates()
     msparkleUpdater->checkForUpdates();
 #else
     feed->load();
-    QObject::connect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
+    connect(feed, &dblsqd::Feed::ready, this, &Updater::showDialogManually);
 #endif
 }
 
@@ -159,7 +159,7 @@ void Updater::setupOnMacOS()
 void Updater::setupOnWindows()
 {
     // Setup to automatically download the new release when an update is available
-    QObject::connect(feed, &dblsqd::Feed::ready, [=]() {
+    connect(feed, &dblsqd::Feed::ready, feed, [=]() {
         if (mudlet::scmIsDevelopmentVersion) {
             return;
         }
@@ -176,7 +176,7 @@ void Updater::setupOnWindows()
     });
 
     // Setup to run setup.exe to replace the old installation
-    QObject::connect(feed, &dblsqd::Feed::downloadFinished, [=]() {
+    connect(feed, &dblsqd::Feed::downloadFinished, this, [=]() {
         // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
         if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;
@@ -222,7 +222,7 @@ void Updater::setupOnLinux()
     // Setup to automatically download the new release when an update is
     // available or wave a flag when it is to be done manually
     // Setup to automatically download the new release when an update is available
-    QObject::connect(feed, &dblsqd::Feed::ready, this, [=]() {
+    connect(feed, &dblsqd::Feed::ready, this, [=]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
         if (mudlet::scmIsDevelopmentVersion) {
@@ -242,7 +242,7 @@ void Updater::setupOnLinux()
     });
 
     // Setup to unzip and replace old binary when the download is done
-    QObject::connect(feed, &dblsqd::Feed::downloadFinished, this, [=]() {
+    connect(feed, &dblsqd::Feed::downloadFinished, this, [=]() {
         // if automatic updates are enabled, and this isn't a manual check, perform the automatic update
         if (!(updateAutomatically() && updateDialog->isHidden())) {
             return;

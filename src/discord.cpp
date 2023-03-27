@@ -112,7 +112,7 @@ Discord::Discord(QObject* parent)
     Discord_Initialize(mHostApplicationIDs.value(nullptr).toUtf8().constData(), mpHandlers, 0, nullptr);
 
     // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
-    QTimer::singleShot(0, [this]() {
+    QTimer::singleShot(0, this, [this]() {
         Q_ASSERT(mudlet::self());
         connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
 

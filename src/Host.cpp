@@ -828,7 +828,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
-    QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
         // reload, or queue module reload for when xml is ready
         if (syncModules) {
             reloadModules();
@@ -2746,19 +2746,19 @@ void Host::loadSecuredPassword()
 
     job->setKey(getName());
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
-        if (job->error()) {
-            const auto error = job->errorString();
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+        if (task->error()) {
+            const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
                 qDebug().nospace().noquote() << "Host::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << getName() << "\", error is: " << error << ".";
             }
 
         } else {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
             setPass(readJob->textData());
         }
 
-        job->deleteLater();
+        task->deleteLater();
     });
 
     job->start();
