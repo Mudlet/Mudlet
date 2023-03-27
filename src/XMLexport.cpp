@@ -486,8 +486,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     }
 
     { // Blocked so that indentation reflects that of the XML file
-        host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
-
         auto mInstalledPackages = host.append_child("mInstalledPackages");
 
         for (int i = 0; i < pHost->mInstalledPackages.size(); ++i) {
@@ -517,10 +515,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
 
-        host.append_child("url").text().set(pHost->mUrl.toUtf8().constData());
         host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
         host.append_child("serverPackageVersion").text().set(pHost->mServerGUI_Package_version.toUtf8().constData());
-        host.append_child("port").text().set(QString::number(pHost->mPort).toUtf8().constData());
         auto borders = pHost->borders();
         host.append_child("borderTopHeight").text().set(QString::number(borders.top()).toUtf8().constData());
         host.append_child("borderBottomHeight").text().set(QString::number(borders.bottom()).toUtf8().constData());

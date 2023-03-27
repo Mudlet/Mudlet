@@ -956,7 +956,13 @@ void XMLimport::readHost(Host* pHost)
         }
         if (isStartElement()) {
             if (name() == qsl("name")) {
-                pHost->mHostName = readElementText();
+                // Ignore this detail it has been removed from the Xml format
+                // as it is actually stored outside of the game save in the
+                // profile base directory but will appear in older files and
+                // trip the QDebug() error reporting associated with the
+                // following readUnknownElement(...) for "anything not otherwise
+                // parsed":
+                Q_UNUSED(readElementText())
             } else if (name() == qsl("mInstalledModules")) {
                 QMap<QString, QStringList> entry;
 
@@ -975,13 +981,25 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("mInstalledPackages")) {
                 readStringList(pHost->mInstalledPackages, qsl("Host"));
             } else if (name() == qsl("url")) {
-                pHost->mUrl = readElementText();
+                // Ignore this detail it has been removed from the Xml format
+                // as it is actually stored outside of the game save in the
+                // profile base directory but will appear in older files and
+                // trip the QDebug() error reporting associated with the
+                // following readUnknownElement(...) for "anything not otherwise
+                // parsed":
+                Q_UNUSED(readElementText())
             } else if (name() == qsl("serverPackageName")) {
                 pHost->mServerGUI_Package_name = readElementText();
             } else if (name() == qsl("serverPackageVersion")) {
                 pHost->mServerGUI_Package_version = readElementText();
             } else if (name() == qsl("port")) {
-                pHost->mPort = readElementText().toInt();
+                // Ignore this detail it has been removed from the Xml format
+                // as it is actually stored outside of the game save in the
+                // profile base directory but will appear in older files and
+                // trip the QDebug() error reporting associated with the
+                // following readUnknownElement(...) for "anything not otherwise
+                // parsed":
+                Q_UNUSED(readElementText())
             } else if (name() == qsl("borderTopHeight")) {
                 borders.setTop(readElementText().toInt());
             } else if (name() == qsl("borderBottomHeight")) {
@@ -1057,7 +1075,7 @@ void XMLimport::readHost(Host* pHost)
                 // the Xml format but will appear in older files and trip the
                 // QDebug() error reporting associated with the following
                 // readUnknownElement(...) for "anything not otherwise parsed"
-                Q_UNUSED(readElementText());
+                Q_UNUSED(readElementText())
             } else if (name() == qsl("mFgColor2")) {
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == qsl("mBgColor2")) {
