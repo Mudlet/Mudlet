@@ -775,16 +775,16 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged, nullptr, nullptr);
-    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged,
+    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged, this,
             [&](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, pPlayer); });
 #else
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::playbackStateChanged, nullptr, nullptr);
-    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::playbackStateChanged,
+    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::playbackStateChanged, this,
             [&](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, pPlayer); });
 #endif
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
 
-    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, [&](qint64 progress) {
+    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, this, [&](qint64 progress) {
         int volume = pPlayer.getMediaData().getMediaVolume();
         int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
         int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();

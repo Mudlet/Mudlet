@@ -4479,7 +4479,7 @@ int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
         }
         movie->setScaledSize(pN->size());
         if (autoScale) {
-            connect(pN, &TLabel::resized, [=] {movie->setScaledSize(pN->size());} );
+            connect(pN, &TLabel::resized, pN, [=] { movie->setScaledSize(pN->size()); });
         } else {
             pN->disconnect(SIGNAL(resized()));
         }
@@ -10382,7 +10382,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     host.updateProxySettings(host.mLuaInterpreter.mpFileDownloader);
     QNetworkReply* reply = host.mLuaInterpreter.mpFileDownloader->get(request);
     host.mLuaInterpreter.downloadMap.insert(reply, localFile);
-    connect(reply, &QNetworkReply::downloadProgress, [=](qint64 bytesDownloaded, qint64 totalBytes) {
+    connect(reply, &QNetworkReply::downloadProgress, reply, [=](qint64 bytesDownloaded, qint64 totalBytes) {
         raiseDownloadProgressEvent(L, urlString, bytesDownloaded, totalBytes);
         if (mudlet::smDebugMode) {
             auto& lHost = getHostFromLua(L);
@@ -14918,7 +14918,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
 
     auto future = QtConcurrent::run(mudlet::unzip, zipLocation, extractLocation, temporaryDir.path());
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, watcher, [=]() {
         TEvent event {};
         Host& host = getHostFromLua(L);
 
