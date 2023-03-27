@@ -2,5 +2,7 @@ Checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguide
 # Use .clang-format for formatting
 FormatStyle: file
 CheckOptions:
+  - key:             readability-identifier-length.IgnoredParameterNames
+    value:           'i|r|g|b|a|x|y|z|c|L|rr|fg|bg|gg|bb|id|pC|pT|pH|to|it|pW'
   - key:             readability-identifier-length.IgnoredVariableNames
-    value:           'x|y'
+    value:           'i|r|g|b|a|x|y|z|c|L|rr|fg|bg|gg|bb|id|pC|pT|pH|to|it|pW'
