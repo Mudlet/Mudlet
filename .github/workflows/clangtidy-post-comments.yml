@@ -12,3 +12,6 @@ jobs:
 
     steps:
       - uses: ZedThree/clang-tidy-review/post@v0.12.2
+        with:
+          # post comments instead of annotations - limited to just 10 however
+          annotations: true
