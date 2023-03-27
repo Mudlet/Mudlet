@@ -131,6 +131,10 @@ jobs:
         # the action doesn't see system-level libraries need to replicate them here
         apt_packages: 'gettext, pkg-config, libzip-dev, libglu1-mesa-dev, libpulse-dev'
         split_workflow: true
+        # don't post any comments if the PR is fine
+        lgtm_comment_body: ''
+        # post comments instead of annotations - limited to just 10 however
+        annotations: true
 
     - name: Upload check results
       uses: ZedThree/clang-tidy-review/upload@v0.12.2
