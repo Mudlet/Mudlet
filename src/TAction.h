@@ -56,16 +56,16 @@ public:
     void compileAll();
     QString getName() { return mName; }
     void setName(const QString& name);
-    void setButtonRotation(int r) { if(r != mButtonRotation) { setDataChanged(); mButtonRotation = r; } }
+    void setButtonRotation(int rotation) { if(rotation != mButtonRotation) { setDataChanged(); mButtonRotation = rotation; } }
     int getButtonRotation() { return mButtonRotation; }
-    void setButtonColumns(int c) { if(c != mButtonColumns) { setDataChanged(); mButtonColumns = c; } }
+    void setButtonColumns(int columns) { if(columns != mButtonColumns) { setDataChanged(); mButtonColumns = columns; } }
     int getButtonColumns() { return mButtonColumns; }
     bool getButtonFlat() { return mButtonFlat; }
     void setButtonFlat(bool flat) { if(flat != mButtonFlat) { setDataChanged(); mButtonFlat = flat; } }
 
-    void setSizeX(int s) { if(s != mSizeX) { setDataChanged(); mSizeX = s; } }
+    void setSizeX(int size) { if(size != mSizeX) { setDataChanged(); mSizeX = size; } }
     int getSizeX() { return mSizeX; }
-    void setSizeY(int s) { if(s != mSizeY) { setDataChanged(); mSizeY = s; } }
+    void setSizeY(int size) { if(size != mSizeY) { setDataChanged(); mSizeY = size; } }
     int getSizeY() { return mSizeY; }
 
     void fillMenu(TEasyButtonBar* pT, QMenu* menu);
@@ -81,9 +81,9 @@ public:
     void setCommandButtonDown(const QString& cmd) { if(cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
     QString getCommandButtonDown() { return mCommandButtonDown; }
     bool isPushDownButton() { return mIsPushDownButton; }
-    void setIsPushDownButton(bool b) { if(b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
+    void setIsPushDownButton(bool button) { if(button != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = button; } }
 
-    void setIsFolder(bool b) { if(b != isFolder()) { setDataChanged(); this->Tree::setIsFolder(b);} }
+    void setIsFolder(bool folder) { if(folder != isFolder()) { setDataChanged(); this->Tree::setIsFolder(folder);} }
 
     bool registerAction();
     void insertActions(TToolBar* pT, QMenu* menu);

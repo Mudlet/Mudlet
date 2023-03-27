@@ -50,9 +50,9 @@ InvisibleNotification* InvisibleAccessibleNotification::notification() const
     return static_cast<InvisibleNotification*>(object());
 }
 
-QString InvisibleAccessibleNotification::text(QAccessible::Text t) const
+QString InvisibleAccessibleNotification::text(QAccessible::Text text) const
 {
-    Q_UNUSED(t)
+    Q_UNUSED(text)
 
     // return the notifications contents regardless of the request as part of the workaround
     return notification()->text();

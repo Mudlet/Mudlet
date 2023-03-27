@@ -27,8 +27,8 @@
 #include "post_guard.h"
 
 
-ExitsTreeWidget::ExitsTreeWidget(QWidget* pW)
-: QTreeWidget(pW)
+ExitsTreeWidget::ExitsTreeWidget(QWidget* widget)
+: QTreeWidget(widget)
 {
     setSelectionMode(QAbstractItemView::ExtendedSelection);
     setUniformRowHeights(true);

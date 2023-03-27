@@ -58,14 +58,14 @@ bool VarUnit::isHidden(const QString& fullname)
     return hiddenByUser.contains(fullname);
 }
 
-void VarUnit::addPointer(const void* p)
+void VarUnit::addPointer(const void* pointer)
 {
-    pointers.insert(p);
+    pointers.insert(pointer);
 }
 
-bool VarUnit::shouldSave(QTreeWidgetItem* p)
+bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
 {
-    auto var = getWVar(p);
+    auto var = getWVar(pWidgetItem);
 
     return !(!var || var->getValueType() == 6 || var->isReference());
 }

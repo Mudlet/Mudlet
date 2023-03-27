@@ -55,9 +55,9 @@
 //#define DEBUG_MXP_PROCESSING
 
 
-TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags, const int linkIndex)
-: mFgColor(fg)
-, mBgColor(bg)
+TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
+: mFgColor(foreground)
+, mBgColor(background)
 , mFlags(flags)
 , mLinkIndex(linkIndex)
 {
@@ -412,8 +412,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             return;
         }
 
-        char& ch = localBuffer[localBufferPosition];
-        if (ch == '\033') {
+        char& character = localBuffer[localBufferPosition];
+        if (character == '\033') {
             if (!mGotOSC) {
                 // The terminator for an OSC is the String Terminator but that
                 // is the ESC character followed by (the single character)
@@ -426,10 +426,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
         }
 
-        if (mGotESC && (ch == '[' || ch == ']')) {
+        if (mGotESC && (character == '[' || character == ']')) {
             mGotESC = false;
-            mGotCSI = (ch == '[');
-            mGotOSC = (ch == ']');
+            mGotCSI = (character == '[');
+            mGotOSC = (character == ']');
             ++localBufferPosition;
             continue;
         }
@@ -653,29 +653,29 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         if (mpHost->mMxpProcessor.isEnabled()) {
             if (mpHost->mServerMXPenabled) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
-                    TMxpProcessingResult result = mpHost->mMxpProcessor.processMxpInput(ch);
+                    TMxpProcessingResult result = mpHost->mMxpProcessor.processMxpInput(character);
                     if (result == HANDLER_NEXT_CHAR) {
                         localBufferPosition++;
                         continue;
                     } else if (result == HANDLER_COMMIT_LINE) { // BR tag
-                        ch = '\n';
+                        character = '\n';
                         goto COMMIT_LINE;
                     } else { //HANDLER_FALL_THROUGH -> do nothing
-                        assert(localBuffer[localBufferPosition] == ch);
+                        assert(localBuffer[localBufferPosition] == character);
                     }
                 } else {
-                    mpHost->mMxpProcessor.processRawInput(ch);
+                    mpHost->mMxpProcessor.processRawInput(character);
                 }
             }
 
-            if (CHAR_IS_COMMIT_CHAR(ch)) {
+            if (CHAR_IS_COMMIT_CHAR(character)) {
                 // after a newline (but not a <br>) return to default mode
                 mpHost->mMxpProcessor.resetToDefaultMode();
             }
         }
 
 COMMIT_LINE:
-        if (CHAR_IS_COMMIT_CHAR(ch)) {
+        if (CHAR_IS_COMMIT_CHAR(character)) {
             // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
             // EN: MUD lines are always written at the beginning of the line
 
@@ -683,7 +683,7 @@ COMMIT_LINE:
             // data - of course there is the theoretical chance that the new
             // text would alter the prior contents but as that is on a separate
             // line there should not be any changes to text before a line feed
-            // which sort of seems to be implied by the current value of ch:
+            // which sort of seems to be implied by the current value of character:
 
             // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
             // https://bugreports.qt.io/browse/QTBUG-105035
@@ -717,7 +717,7 @@ COMMIT_LINE:
                 if (!mMudLine.isEmpty()) {
                     lineBuffer << mMudLine;
                 } else {
-                    if (ch == '\r') {
+                    if (character == '\r') {
                         ++localBufferPosition;
                         continue; //empty timer posting
                     }
@@ -725,7 +725,7 @@ COMMIT_LINE:
                 }
                 buffer.push_back(mMudBuffer);
                 timeBuffer << QTime::currentTime().toString(timeStampFormat);
-                if (ch == '\xff') {
+                if (character == '\xff') {
                     promptBuffer.append(true);
                 } else {
                     promptBuffer.append(false);
@@ -734,7 +734,7 @@ COMMIT_LINE:
                 if (!mMudLine.isEmpty()) {
                     lineBuffer.back().append(mMudLine);
                 } else {
-                    if (ch == '\r') {
+                    if (character == '\r') {
                         ++localBufferPosition;
                         continue; //empty timer posting
                     }
@@ -742,7 +742,7 @@ COMMIT_LINE:
                 }
                 buffer.back() = mMudBuffer;
                 timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
-                if (ch == '\xff') {
+                if (character == '\xff') {
                     promptBuffer.back() = true;
                 } else {
                     promptBuffer.back() = false;
@@ -776,14 +776,14 @@ COMMIT_LINE:
         bool isTwoTCharsNeeded = false;
 
         if (!encodingLookupTable.isEmpty()) {
-            auto index = static_cast<quint8>(ch);
+            auto index = static_cast<quint8>(character);
             if (index < 128) {
-                mMudLine.append(QChar::fromLatin1(ch));
+                mMudLine.append(QChar::fromLatin1(character));
             } else {
                 mMudLine.append(encodingLookupTable.at(index - 128));
             }
         } else if (mEncoding == "ISO 8859-1") {
-            mMudLine.append(QString(QChar::fromLatin1(ch)));
+            mMudLine.append(QString(QChar::fromLatin1(character)));
         } else if (mEncoding == "GBK") {
             if (!processGBSequence(localBuffer, isFromServer, false, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
@@ -817,7 +817,7 @@ COMMIT_LINE:
         } else {
             // Default - no encoding case - reject anything that has MS Bit set
             // as that isn't ASCII which is what no encoding specifies!
-            if (ch & 0x80) {
+            if (character & 0x80) {
                 // Was going to ignore this byte, not add a TChar instance
                 // either and move on:
                 // ++localBufferPosition;
@@ -825,7 +825,7 @@ COMMIT_LINE:
                 // but instead insert the "Replacement Character Marker"
                 mMudLine.append(QChar::ReplacementCharacter);
             } else {
-                mMudLine.append(ch);
+                mMudLine.append(character);
             }
         }
 
@@ -1915,8 +1915,8 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
 #endif
-    unsigned short ch = sequence.at(0).unicode();
-    switch (ch) {
+    unsigned short character = sequence.at(0).unicode();
+    switch (character) {
     case static_cast<quint8>('P'):
         if (serverMayRedefineDefaultColors) {
             if (sequence.size() == 8) {
@@ -2122,12 +2122,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
+                    int restOfLine = lineRest.size();
+                    if (restOfLine > 0) {
+                        while (restOfLine > 0) {
                             newLine.push_front(buffer.back().back());
                             buffer.back().pop_back();
-                            k--;
+                            restOfLine--;
                         }
                     }
 
@@ -2215,12 +2215,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
+                    int restOfLine = lineRest.size();
+                    if (restOfLine > 0) {
+                        while (restOfLine > 0) {
                             newLine.push_front(buffer.back().back());
                             buffer.back().pop_back();
-                            k--;
+                            restOfLine--;
                         }
                     }
 
@@ -2754,12 +2754,12 @@ bool TBuffer::moveCursor(QPoint& where)
 // requested by lua function getLines(...):
 QString badLineError = qsl("ERROR: invalid line number");
 
-QString& TBuffer::line(int n)
+QString& TBuffer::line(int lineNumber)
 {
-    if ((n >= lineBuffer.size()) || (n < 0)) {
+    if ((lineNumber >= lineBuffer.size()) || (n < 0)) {
         return badLineError;
     }
-    return lineBuffer[n];
+    return lineBuffer[lineNumber];
 }
 
 int TBuffer::find(int line, const QString& what, int pos = 0)
