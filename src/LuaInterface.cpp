@@ -79,10 +79,10 @@ QStringList LuaInterface::varName(TVar* var)
     return names;
 }
 
-bool LuaInterface::validMove(QTreeWidgetItem* widgetItem)
+bool LuaInterface::validMove(QTreeWidgetItem* pWidget)
 {
-    TVar* newParent = varUnit->getWVar(widgetItem);
-    if (newParent && newParent->getValueType() != LUA_TTABLE) {
+    TVar* pNewParent = varUnit->getWVar(pWidget);
+    if (pNewParent && pNewParent->getValueType() != LUA_TTABLE) {
         return false;
     }
     return true;
@@ -299,10 +299,10 @@ QList<TVar*> LuaInterface::varOrder(TVar* var)
         return vars;
     }
     vars << var;
-    TVar* parent = var->getParent();
-    while (parent && parent->getName() != "_G") {
-        vars.insert(0, parent);
-        parent = parent->getParent();
+    TVar* pParent = var->getParent();
+    while (pParent && pParent->getName() != "_G") {
+        vars.insert(0, pParent);
+        pParent = pParent->getParent();
     }
     return vars;
 }
@@ -750,10 +750,10 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         var->setParent(tVar);
         var->hidden = hide;
         tVar->addChild(var);
-        const void* kpointer = lua_topointer(L, -1);
-        var->kpointer = kpointer;
-        const void* vpointer = lua_topointer(L, -2);
-        var->vpointer = vpointer;
+        const void* pKey = lua_topointer(L, -1);
+        var->kpointer = pKey;
+        const void* pValue = lua_topointer(L, -2);
+        var->vpointer = pValue;
         if (varUnit->varExists(var) || keyName == "_G") {
             lua_pop(L, 1);
             tVar->removeChild(var);
@@ -762,9 +762,9 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         }
         varUnit->addVariable(var);
 
-        varUnit->addPointer(kpointer);
+        varUnit->addPointer(pKey);
 
-        varUnit->addPointer(vpointer);
+        varUnit->addPointer(pValue);
         if (vType == LUA_TTABLE) {
             if (depth <= 99 && lua_checkstack(L, 3)) { //depth is historical now
                 //put the table on top

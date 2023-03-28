@@ -34,8 +34,8 @@
 class TAccessibleConsole : public QAccessibleWidget
 {
 public:
-    explicit TAccessibleConsole(QWidget* widget)
-    : QAccessibleWidget(widget, QAccessible::Pane)
+    explicit TAccessibleConsole(QWidget* pWidget)
+    : QAccessibleWidget(pWidget, QAccessible::Pane)
     {
         Q_ASSERT(isValid());
     }

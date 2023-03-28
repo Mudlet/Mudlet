@@ -54,7 +54,7 @@ class ExitsTreeWidget : public QTreeWidget
 
 public:
     Q_DISABLE_COPY(ExitsTreeWidget)
-    explicit ExitsTreeWidget(QWidget* widget);
+    explicit ExitsTreeWidget(QWidget* pParent);
     void keyPressEvent(QKeyEvent* event) override;
 };
 

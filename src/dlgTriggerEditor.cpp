@@ -8747,20 +8747,20 @@ void dlgTriggerEditor::slot_changeEditorTextOptions(QTextOption::Flags state)
     config->endChanges();
 }
 
-// clearDocument( edbee::TextEditorWidget* editorWidget)
+// clearDocument( edbee::TextEditorWidget* pEditorWidget)
 //
 // A temporary measure for dealing with the undo spanning over multiple documents bug,
 // in place until we create a proper multi-document solution. This gets called whenever
 // the editor needs to be "cleared", usually when a different alias/trigger/etc is
 // made or selected.
-void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* editorWidget, const QString& initialText)
+void dlgTriggerEditor::clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText)
 {
     mpSourceEditorFindArea->hide();
     mpSourceEditorEdbeeDocument = new edbee::CharTextDocument();
     // Buck.lua is a fake filename for edbee to figure out its lexer type with. Referencing the
     // lexer directly by name previously gave problems.
     mpSourceEditorEdbeeDocument->setLanguageGrammar(edbee::Edbee::instance()->grammarManager()->detectGrammarWithFilename(QLatin1String("Buck.lua")));
-    editorWidget->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
+    pEditorWidget->controller()->giveTextDocument(mpSourceEditorEdbeeDocument);
 
     auto config = mpSourceEditorEdbee->config();
     config->beginChanges();

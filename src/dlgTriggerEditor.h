@@ -368,7 +368,7 @@ private:
     void exportScriptToClipboard();
     void exportKeyToClipboard();
 
-    void clearDocument(edbee::TextEditorWidget* editorWidget, const QString& initialText = QString());
+    void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
     void setAllSearchData(QTreeWidgetItem* pItem, const EditorViewType& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
         // Which is it? A Trigger, an alias etc:

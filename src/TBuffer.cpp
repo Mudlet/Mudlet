@@ -412,36 +412,36 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             return;
         }
 
-        char& character = localBuffer[localBufferPosition];
-        if (character == '\033') {
+        char& ch = localBuffer[localBufferPosition];
+        if (ch == '\033') {
             if (!mGotOSC) {
                 // The terminator for an OSC is the String Terminator but that
-                // is the ESC character followed by (the single character)
+                // is the ESC ch followed by (the single ch)
                 // '\\' so must not respond to an ESC here - though the code
                 // arrangement should avoid looping around this loop while
-                // seeking this character pair anyhow...
+                // seeking this ch pair anyhow...
                 mGotESC = true;
                 ++localBufferPosition;
                 continue;
             }
         }
 
-        if (mGotESC && (character == '[' || character == ']')) {
+        if (mGotESC && (ch == '[' || ch == ']')) {
             mGotESC = false;
-            mGotCSI = (character == '[');
-            mGotOSC = (character == ']');
+            mGotCSI = (ch == '[');
+            mGotOSC = (ch == ']');
             ++localBufferPosition;
             continue;
         }
 
         if (mGotCSI) {
             // Lookahead and try and see what we are processing
-            // At the start of a CSI sequence the only valid character is one of:
+            // At the start of a CSI sequence the only valid ch is one of:
             // "0-9:;<=>?" if it is one of "0-9:;" then it is a
             // "parameter-string" ELSE if it is one of '<', '=', '>' or '?' it
             // IS a private/experimental and not covered by the ECMA-48
             // specifications..
-            // After the first character the remaining characters of the
+            // After the first ch the remaining characters of the
             // parameter string will be in the range "0-9:;" only
             size_t spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
@@ -468,7 +468,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             if (spanEnd >= localBufferLength || cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
-                // We have gone to the end of the buffer OR the last character
+                // We have gone to the end of the buffer OR the last ch
                 // in the buffer is still within a CSI sequence - therefore we
                 // have got a split between data packets and are not in a
                 // position to process the current line further...
@@ -477,7 +477,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 return;
             }
 
-            // Now we can take a peek at what the next character is, it could
+            // Now we can take a peek at what the next ch is, it could
             // be an optional (and we are not expecting this) "intermediate
             // byte" which is space or one of "!"#$%&'()*+,-./" or a "final
             // byte" which is what determines what on earth the CSI is for, it
@@ -613,10 +613,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             // terminator then all data will just be swallowed into the buffer
 
             // Valid characters inside an OSC are: a "command string" or a
-            // "character string".
+            // "ch string".
             // A "command string" is a sequence of bit combinations in the range
             // <BS><TAB><LF><VT><FF><CR> and ASCII printables from Space to '~'
-            // A "character string" is a sequence of any character except Start
+            // A "ch string" is a sequence of any ch except Start
             // of String (SOS) or String Terminator (ST) and the latter is ESC
             // followed by '\\' (a single \ BTW) in the 7-bit code case (the
             // former is encoded as ESC followed by 'X'):
@@ -624,7 +624,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             size_t spanEnd = spanStart;
             // It is safe to look at spanEnd-1 even at the starting position
             // because we already know that the localBuffer extends backwards
-            // that far (it will be the ']' character!)
+            // that far (it will be the ']' ch!)
             while (spanEnd < localBufferLength
                    && (localBuffer[spanEnd-1] != '\033')
                    && (localBuffer[spanEnd] != '\\')) {
@@ -632,7 +632,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             if (localBuffer[spanEnd] != '\\') {
-                // The last character in the buffer is NOT the expected ST
+                // The last ch in the buffer is NOT the expected ST
                 // - therefore we have probably got a split between
                 // data packets and are not in a position to process the
                 // current line further...
@@ -653,29 +653,29 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         if (mpHost->mMxpProcessor.isEnabled()) {
             if (mpHost->mServerMXPenabled) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
-                    TMxpProcessingResult result = mpHost->mMxpProcessor.processMxpInput(character);
+                    TMxpProcessingResult result = mpHost->mMxpProcessor.processMxpInput(ch);
                     if (result == HANDLER_NEXT_CHAR) {
                         localBufferPosition++;
                         continue;
                     } else if (result == HANDLER_COMMIT_LINE) { // BR tag
-                        character = '\n';
+                        ch = '\n';
                         goto COMMIT_LINE;
                     } else { //HANDLER_FALL_THROUGH -> do nothing
-                        assert(localBuffer[localBufferPosition] == character);
+                        assert(localBuffer[localBufferPosition] == ch);
                     }
                 } else {
-                    mpHost->mMxpProcessor.processRawInput(character);
+                    mpHost->mMxpProcessor.processRawInput(ch);
                 }
             }
 
-            if (CHAR_IS_COMMIT_CHAR(character)) {
+            if (CHAR_IS_COMMIT_CHAR(ch)) {
                 // after a newline (but not a <br>) return to default mode
                 mpHost->mMxpProcessor.resetToDefaultMode();
             }
         }
 
 COMMIT_LINE:
-        if (CHAR_IS_COMMIT_CHAR(character)) {
+        if (CHAR_IS_COMMIT_CHAR(ch)) {
             // DE: MUD Zeilen werden immer am Zeilenanfang geschrieben
             // EN: MUD lines are always written at the beginning of the line
 
@@ -683,7 +683,7 @@ COMMIT_LINE:
             // data - of course there is the theoretical chance that the new
             // text would alter the prior contents but as that is on a separate
             // line there should not be any changes to text before a line feed
-            // which sort of seems to be implied by the current value of character:
+            // which sort of seems to be implied by the current value of ch:
 
             // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
             // https://bugreports.qt.io/browse/QTBUG-105035
@@ -710,14 +710,14 @@ COMMIT_LINE:
 
             if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
                 qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
-                              "data character and attribute data items!";
+                              "data ch and attribute data items!";
             }
 
             if (!lineBuffer.back().isEmpty()) {
                 if (!mMudLine.isEmpty()) {
                     lineBuffer << mMudLine;
                 } else {
-                    if (character == '\r') {
+                    if (ch == '\r') {
                         ++localBufferPosition;
                         continue; //empty timer posting
                     }
@@ -725,7 +725,7 @@ COMMIT_LINE:
                 }
                 buffer.push_back(mMudBuffer);
                 timeBuffer << QTime::currentTime().toString(timeStampFormat);
-                if (character == '\xff') {
+                if (ch == '\xff') {
                     promptBuffer.append(true);
                 } else {
                     promptBuffer.append(false);
@@ -734,7 +734,7 @@ COMMIT_LINE:
                 if (!mMudLine.isEmpty()) {
                     lineBuffer.back().append(mMudLine);
                 } else {
-                    if (character == '\r') {
+                    if (ch == '\r') {
                         ++localBufferPosition;
                         continue; //empty timer posting
                     }
@@ -742,7 +742,7 @@ COMMIT_LINE:
                 }
                 buffer.back() = mMudBuffer;
                 timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
-                if (character == '\xff') {
+                if (ch == '\xff') {
                     promptBuffer.back() = true;
                 } else {
                     promptBuffer.back() = false;
@@ -776,14 +776,14 @@ COMMIT_LINE:
         bool isTwoTCharsNeeded = false;
 
         if (!encodingLookupTable.isEmpty()) {
-            auto index = static_cast<quint8>(character);
+            auto index = static_cast<quint8>(ch);
             if (index < 128) {
-                mMudLine.append(QChar::fromLatin1(character));
+                mMudLine.append(QChar::fromLatin1(ch));
             } else {
                 mMudLine.append(encodingLookupTable.at(index - 128));
             }
         } else if (mEncoding == "ISO 8859-1") {
-            mMudLine.append(QString(QChar::fromLatin1(character)));
+            mMudLine.append(QString(QChar::fromLatin1(ch)));
         } else if (mEncoding == "GBK") {
             if (!processGBSequence(localBuffer, isFromServer, false, localBufferLength, localBufferPosition, isTwoTCharsNeeded)) {
                 // We have run out of bytes and we have stored the unprocessed
@@ -817,7 +817,7 @@ COMMIT_LINE:
         } else {
             // Default - no encoding case - reject anything that has MS Bit set
             // as that isn't ASCII which is what no encoding specifies!
-            if (character & 0x80) {
+            if (ch & 0x80) {
                 // Was going to ignore this byte, not add a TChar instance
                 // either and move on:
                 // ++localBufferPosition;
@@ -825,7 +825,7 @@ COMMIT_LINE:
                 // but instead insert the "Replacement Character Marker"
                 mMudLine.append(QChar::ReplacementCharacter);
             } else {
-                mMudLine.append(character);
+                mMudLine.append(ch);
             }
         }
 
@@ -2756,7 +2756,7 @@ QString badLineError = qsl("ERROR: invalid line number");
 
 QString& TBuffer::line(int lineNumber)
 {
-    if ((lineNumber >= lineBuffer.size()) || (n < 0)) {
+    if ((lineNumber < 0) || (lineNumber >= lineBuffer.size())) {
         return badLineError;
     }
     return lineBuffer[lineNumber];
