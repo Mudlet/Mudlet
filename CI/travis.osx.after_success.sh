@@ -61,6 +61,18 @@ if [ "${DEPLOY}" = "deploy" ]; then
     echo "----"
   fi
 
+  # install Sparkle private signing key
+  if [ -n "$SPARKLE_PRIVATEKEY" ]; then
+    wget https://github.com/sparkle-project/Sparkle/releases/download/2.4.0/Sparkle-2.4.0.tar.xz
+    7z x Sparkle-2.4.0.tar.xz
+    7z x Sparkle-2.4.0.tar -oSparkle
+    cd Sparkle/bin
+    echo "$SPARKLE_PRIVATEKEY" > ./private-key-file
+    chmod +x ./generate_keys
+    ./generate_keys -f ./private-key-file
+    cd "${BUILD_DIR}/../installers/osx"
+  fi
+
   if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
     appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
