@@ -3,6 +3,6 @@ Checks: '-*,performance-*,readability-*,bugprone-*,clang-analyzer-*,cppcoreguide
 FormatStyle: file
 CheckOptions:
   - key:             readability-identifier-length.IgnoredParameterNames
-    value:           'i|r|g|b|a|x|y|z|c|L|rr|fg|bg|gg|bb|id|pC|pT|pH|to|it|pW'
+    value:           'i|r|g|b|a|x|y|z|c|L|rr|fg|bg|gg|bb|id|pC|pT|pH|to|it|pW|ch'
   - key:             readability-identifier-length.IgnoredVariableNames
-    value:           'i|r|g|b|a|x|y|z|c|L|rr|fg|bg|gg|bb|id|pC|pT|pH|to|it|pW'
+    value:           'i|r|g|b|a|x|y|z|c|L|rr|fg|bg|gg|bb|id|pC|pT|pH|to|it|pW|ch'
