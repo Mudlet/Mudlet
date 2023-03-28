@@ -277,7 +277,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         widget_2DControls->setVisible(false);
     } else {
         // workaround for buttons reloading oddly
-        QTimer::singleShot(100ms, [this]() {
+        QTimer::singleShot(100ms, this, [this]() {
             widget_3DControls->setVisible(false);
             widget_2DControls->setVisible(true);
         });

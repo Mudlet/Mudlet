@@ -169,6 +169,7 @@ private slots:
     void slot_toggleMapDeleteButton(const bool);
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
+    void slot_hidePasswordMigrationLabel();
 
 signals:
     void signal_themeUpdateCompleted();
@@ -197,7 +198,6 @@ private:
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
     void generateDiscordTooltips();
-    void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
     QString mapSaveLoadDirectory(Host* pHost);
 
