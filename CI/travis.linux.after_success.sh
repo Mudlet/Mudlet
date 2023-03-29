@@ -45,6 +45,7 @@ then
   git clone https://github.com/Mudlet/installers.git "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/generic-linux"
+  sed -i '121i -unsupported-allow-new-glibc \\' make-installer.sh
 
   ln -s "${BUILD_DIR}" source
 
