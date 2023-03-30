@@ -55,7 +55,7 @@ public:
     HostManager() = default; /* : mpActiveHost() - Not needed */
 
     Host* getHost(const QString& hostname);
-    bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
+    bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass, const QString& mapFile);
     int getHostCount();
     bool deleteHost(const QString&);
     void postIrcMessage(const QString&, const QString&, const QString&);

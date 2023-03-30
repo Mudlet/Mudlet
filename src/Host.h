@@ -144,7 +144,7 @@ class Host : public QObject
     friend class dlgProfilePreferences;
 
 public:
-    Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
+    Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id, const QString& mapFile);
     ~Host();
 
     enum DiscordOptionFlag {
@@ -864,6 +864,9 @@ private:
     QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
 
     QMargins mBorders;
+
+    // Map file specified on "Connect profile" dialog:
+    QString mMapPathFileName;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

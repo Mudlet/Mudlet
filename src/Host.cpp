@@ -200,7 +200,7 @@ QString stopWatch::getElapsedDayTimeString() const
     return qsl("%1:%2:%3:%4:%5:%6").arg((isNegative ? QLatin1String("-") : QLatin1String("+")), QString::number(days), QString::number(hours), QString::number(minutes), QString::number(seconds), QString::number(milliSeconds));
 }
 
-Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
+Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id, const QString& mapFile)
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
 , mpPackageManager(nullptr)
@@ -359,6 +359,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
+, mMapPathFileName(mapFile)
 {
     TDebug::addHost(this);
 
@@ -397,14 +398,39 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     QTimer::singleShot(0, this, [this]() {
         qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
-        if (mpMap->restore(QString(), false)) {
-            mpMap->audit();
-            if (mpMap->mpMapper) {
-                mpMap->mpMapper->mp2dMap->init();
-                mpMap->mpMapper->updateAreaComboBox();
-                mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                mpMap->mpMapper->show();
+        bool success = false;
+        if (mMapPathFileName.endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
+            QFile mapFile(mMapPathFileName);
+            if (mpMap->importMap(mapFile)) {
+                // audit() is what produces the map loaded okay message on main
+                // console - TMap::importMap(...) will have called
+                // T2DMap::init() but that method is idempotent
+                mpMap->audit();
+                success = true;
             }
+        } else {
+            if (mMapPathFileName.endsWith(QLatin1String("json"), Qt::CaseInsensitive)) {
+                auto [localSuccess, errorMessage] = mpMap->readJsonMapFile(mMapPathFileName, true, false);
+                success = localSuccess;
+                if (localSuccess) {
+                    mpMap->audit();
+                } else {
+                    postMessage(tr("[ERROR] - Unable to load JSON map file: %1\n"
+                                   "reason: %2.").arg(mMapPathFileName, errorMessage));
+                }
+            } else {
+                // The normal Mudlet binary .dat map file format:
+                if (mpMap->restore(mMapPathFileName, false)) {
+                    mpMap->audit();
+                    success = true;
+                }
+            }
+        }
+        if (success && mpMap->mpMapper) {
+            mpMap->mpMapper->mp2dMap->init();
+            mpMap->mpMapper->updateAreaComboBox();
+            mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            mpMap->mpMapper->show();
         }
     });
 
