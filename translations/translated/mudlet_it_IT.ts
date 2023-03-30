@@ -6195,7 +6195,7 @@ Utilizzi</translation>
       <location filename="../src/dlgPackageExporter.cpp" line="128"/>
       <source>Package Exporter - %1</source>
       <comment>Title of the window. The %1 will be replaced by the current profile&apos;s name.</comment>
-      <translation type="unfinished"/>
+      <translation>Esportatore Package - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="174"/>
@@ -6727,7 +6727,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="208"/>
       <source>&lt;p&gt;If &lt;b&gt;not&lt;/b&gt; checked Mudlet will only react to the first matching keybinding (combination of key and modifiers) even if more than one of them is set to be active. This means that a temporary keybinding (not visible in the Editor) created by a script or package may be used in preference to a permanent one that is shown and is set to be active. If checked then all matching keybindings will be run.&lt;/p&gt;&lt;p&gt;&lt;i&gt;It is recommended to not enable this option if you need to maintain compatibility with scripts or packages for Mudlet versions prior to &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Se &lt;b&gt;non&lt;/b&gt; selezionata, Mudlet eseguirà solo le azioni associate alla prima combinazione di tasti anche se ve ne è più di una configurata e attiva. Questo significa che una combinazione di tasti temporanea (non visibile nell'editor) creata da uno script o da un pacchetto/modulo può essere usata in modo prioritaria rispetto ad una permanente. Se l'opzione è selezionata, sono eseguite invece tutte le combinazioni di tasti corrispondenti.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Non abilitare questa opzione se è necessario mantenere la compatibilità con gli script o i pacchetti/moduli in versioni di Mudlet precedenti alla &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Se &lt;b&gt;non&lt;/b&gt; selezionata, Mudlet eseguirà solo le azioni associate alla prima combinazione di tasti anche se ve ne è più di una configurata e attiva. Questo significa che una combinazione di tasti temporanea (non visibile nell'editor) creata da uno script o da un pacchetto/modulo può essere usata in modo prioritaria rispetto ad una permanente. Se l'opzione è selezionata, sono eseguite invece tutte le combinazioni di tasti corrispondenti.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Non abilitare questa opzione se è necessario mantenere la compatibilità con gli script o i package/moduli in versioni di Mudlet precedenti alla &lt;b&gt;3.9.0&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="216"/>
@@ -9937,7 +9937,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/mudlet.cpp" line="557"/>
       <source>Package manager</source>
-      <translation>Gestione pacchetti</translation>
+      <translation>Gestione package</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="558"/>
@@ -11100,7 +11100,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
       <location filename="../src/mudlet.cpp" line="351"/>
       <location filename="../src/mudlet.cpp" line="360"/>
       <source>Packages</source>
-      <translation>Pacchetti</translation>
+      <translation>Package</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
