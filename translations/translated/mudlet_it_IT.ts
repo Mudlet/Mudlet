@@ -763,7 +763,7 @@ attendere prego...</translation>
       <location filename="../src/T2DMap.cpp" line="2903"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>Imposta il nome e colore dell'icona, pesi e blocchi per lo speedwalk e un simbolo per contrassegnare le stanze speciali</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2929"/>
@@ -1173,13 +1173,13 @@ evidenziata, di un fattore:</translation>
       <location filename="../src/TCommandLine.cpp" line="1310"/>
       <source>Input line for &quot;%1&quot; profile.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Linea dei comandi per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1316"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Digita il testo da inviare al server di gioco per il profilo &quot;%1&quot; oppure inserisci un alias per eseguire comandi localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1324"/>
@@ -1191,55 +1191,55 @@ evidenziata, di un fattore:</translation>
       <location filename="../src/TCommandLine.cpp" line="1329"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Digita il testo da inviare al server di gioco oppure inserisci un alias per eseguire comandi localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1339"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</comment>
-      <translation type="unfinished"/>
+      <translation>Linea dei comandi aggiuntiva &quot;%1&quot; sulla finestra &quot;%2&quot; del profilo &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1346"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.</comment>
-      <translation type="unfinished"/>
+      <translation>Digita il testo da inviare al server di gioco per il profilo &quot;%1&quot; oppure inserisci un alias per eseguire comandi localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1353"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</comment>
-      <translation type="unfinished"/>
+      <translation>Linea dei comandi aggiuntiva &quot;%1&quot; sulla finestra &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1360"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for an extra command line on top of a console/window when only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Digita il testo da inviare al server di gioco oppure inserisci un alias per eseguire comandi localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1370"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <comment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</comment>
-      <translation type="unfinished"/>
+      <translation>Linea dei comandi della finestra &quot;%1&quot; del profilo &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1376"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</comment>
-      <translation type="unfinished"/>
+      <translation>Digita il testo da inviare al server di gioco per il profilo &quot;%1&quot; oppure inserisci un alias per eseguire comandi localmente.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1383"/>
       <source>Input line of &quot;%1&quot; window.</source>
       <comment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</comment>
-      <translation type="unfinished"/>
+      <translation>Linea dei comandi per la finestra &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1389"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Digita il testo da inviare al server di gioco oppure inserisci un alias per eseguire comandi localmente.</translation>
     </message>
   </context>
   <context>
@@ -4273,7 +4273,7 @@ non sarà variata nuovamente.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2217"/>
       <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Una connessione sicura è disponibile sulla porta %1.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2222"/>
@@ -7217,35 +7217,35 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomProperties.cpp" line="241"/>
       <source>count</source>
       <comment>This text will be part of a list of room values shown, which will show the value itself, followed by the counted number of rooms with this very value like: grey {count:2} - so please translate like counted ammount, number of, etc.</comment>
-      <translation type="unfinished"/>
+      <translation>totale</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="280"/>
       <source>count</source>
       <comment>This text will be part of a list of room values shown, which will name the value itself, followed by the counted number of rooms with that very value like: grey {count: 2} - So please translate like counted amount, number of, etc.</comment>
-      <translation type="unfinished"/>
+      <translation>totale</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="440"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Imposta colore simbolo</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="477"/>
       <location filename="../src/dlgRoomProperties.cpp" line="533"/>
       <source>Define new room color</source>
-      <translation type="unfinished"/>
+      <translation>Definisci nuovo colore della stanza</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="500"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Imposta colore stanza</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="514"/>
       <source>Delete room color</source>
       <comment>This action deletes a color from the list of all room colors</comment>
-      <translation type="unfinished"/>
+      <translation>Elimina colore stanza</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="541"/>
@@ -7262,7 +7262,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
       <source>(Multiple values...)</source>
-      <translation type="unfinished"/>
+      <translation>(valori multipli)</translation>
     </message>
   </context>
   <context>
@@ -7369,7 +7369,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="449"/>
       <source>Delete Item</source>
-      <translation>Cancella</translation>
+      <translation>Elimina</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.h" line="445"/>
@@ -7848,166 +7848,166 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6773"/>
       <source>Add Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6774"/>
       <source>Add new trigger</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6775"/>
       <source>Add Trigger Group</source>
-      <translation type="unfinished"/>
+      <translation>Nuovo gruppo di trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6776"/>
       <source>Add new group of triggers</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo gruppo di trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6777"/>
       <source>Delete Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Elimina Trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6778"/>
       <source>Delete the selected trigger</source>
-      <translation type="unfinished"/>
+      <translation>Elimina il trigger selezionato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6779"/>
       <location filename="../src/dlgTriggerEditor.h" line="446"/>
       <source>Save Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Salva trigger</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6780"/>
       <source>Saves the selected trigger, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Salva il trigger selezionato, applicando le modifiche - non salva l'elemento su disco...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6783"/>
       <source>Add Timer</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6784"/>
       <source>Add new timer</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6785"/>
       <source>Add Timer Group</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi gruppo di timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6786"/>
       <source>Add new group of timers</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo gruppo di timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6787"/>
       <source>Delete Timer</source>
-      <translation type="unfinished"/>
+      <translation>Elimina timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6788"/>
       <source>Delete the selected timer</source>
-      <translation type="unfinished"/>
+      <translation>Elimina il timer selezionato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6789"/>
       <location filename="../src/dlgTriggerEditor.h" line="447"/>
       <source>Save Timer</source>
-      <translation type="unfinished"/>
+      <translation>Salva timer</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6790"/>
       <source>Saves the selected timer, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Salva il timer selezionato, applicando le modifiche - non salva l'elemento su disco...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6793"/>
       <source>Add Alias</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6794"/>
       <source>Add new alias</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6795"/>
       <source>Add Alias Group</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi gruppo alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6796"/>
       <source>Add new group of aliases</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo gruppo di alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6797"/>
       <source>Delete Alias</source>
-      <translation type="unfinished"/>
+      <translation>Elimina alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6798"/>
       <source>Delete the selected alias</source>
-      <translation type="unfinished"/>
+      <translation>Elimina l'alias selezionata</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6799"/>
       <location filename="../src/dlgTriggerEditor.h" line="448"/>
       <source>Save Alias</source>
-      <translation type="unfinished"/>
+      <translation>Salva alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6800"/>
       <source>Saves the selected alias, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Salva l'alias selezionato, applicando le modifiche - non salva l'elemento su disco...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6803"/>
       <source>Add Script</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6804"/>
       <source>Add new script</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6805"/>
       <source>Add Script Group</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi gruppo script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6806"/>
       <source>Add new group of scripts</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo gruppo di script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6807"/>
       <source>Delete Script</source>
-      <translation type="unfinished"/>
+      <translation>Elimina script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6808"/>
       <source>Delete the selected script</source>
-      <translation type="unfinished"/>
+      <translation>Elimina script selezionato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6809"/>
       <location filename="../src/dlgTriggerEditor.h" line="449"/>
       <source>Save Script</source>
-      <translation type="unfinished"/>
+      <translation>Salva script</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6810"/>
       <source>Saves the selected script, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Salva lo script selezionato, applicando le modifiche - non salva l'elemento su disco...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6813"/>
@@ -8048,89 +8048,89 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6820"/>
       <source>Saves the selected button, causing new changes to take effect - does not save to disk though...</source>
-      <translation>Salva il pulsante selezionato, applicando le modifiche effettuate - non salva l'elemento su disco...</translation>
+      <translation>Salva il pulsante selezionato, applicando le modifiche - non salva l'elemento su disco...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6823"/>
       <source>Add Key</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi tasto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6824"/>
       <source>Add new key</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo tasto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6825"/>
       <source>Add Key Group</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi gruppo tasti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6826"/>
       <source>Add new group of keys</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuovo gruppo di tasti</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6827"/>
       <source>Delete Key</source>
-      <translation type="unfinished"/>
+      <translation>Elimina tasto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6828"/>
       <source>Delete the selected key</source>
-      <translation type="unfinished"/>
+      <translation>Elimina il tasto selezionato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6829"/>
       <location filename="../src/dlgTriggerEditor.h" line="451"/>
       <source>Save Key</source>
-      <translation type="unfinished"/>
+      <translation>Salva tasto</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6830"/>
       <source>Saves the selected key, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Salva il tasto selezionato, applicando le modifiche - non salva l'elemento su disco...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6833"/>
       <source>Add Variable</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi variabile</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6834"/>
       <source>Add new variable</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi nuova variabile</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6835"/>
       <source>Add Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi tabella Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6836"/>
       <source>Add new Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Aggiungi tabella Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6837"/>
       <source>Delete Variable</source>
-      <translation type="unfinished"/>
+      <translation>Elimina variabile</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6838"/>
       <source>Delete the selected variable</source>
-      <translation type="unfinished"/>
+      <translation>Elimina la variabile selezionata</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6839"/>
       <location filename="../src/dlgTriggerEditor.h" line="452"/>
       <source>Save Variable</source>
-      <translation type="unfinished"/>
+      <translation>Salva Variabile</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="6840"/>
       <source>Saves the selected variable, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Salva la variabile selezionata, applicando le modifiche - non salva l'elemento su disco...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7414"/>
@@ -8896,13 +8896,14 @@ dalla GUI)</translation>
       <location filename="../src/main.cpp" line="273"/>
       <source>Warning: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Attenzione: %1
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="278"/>
       <source>Usage: %1 [OPTION...]</source>
       <comment>%1 is the name of the executable as it is on this OS.</comment>
-      <translation type="unfinished"/>
+      <translation>Utilizzo: %1 [OPTION...]</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="282"/>
@@ -12124,7 +12125,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3380"/>
       <source>Allow secure connection reminder</source>
-      <translation type="unfinished"/>
+      <translation>Permetti promemoria sulle connessioni sicure</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3383"/>
@@ -12154,7 +12155,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3638"/>
       <source>Clear stored media</source>
-      <translation type="unfinished"/>
+      <translation>Elimina file memorizzati</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3644"/>
@@ -12165,12 +12166,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3647"/>
       <source>Purge stored media files for the current profile:</source>
-      <translation type="unfinished"/>
+      <translation>Elimina i file multimediali memorizzati per il profilo corrente:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3660"/>
       <source>Clear</source>
-      <translation type="unfinished"/>
+      <translation>Svuota</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3824"/>
@@ -13161,7 +13162,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3927"/>
       <source>Switch between input line and main window using:</source>
-      <translation>Passa dalla linea di input alla finestra principale utilizzando:</translation>
+      <translation>Passa dalla linea di comandi alla finestra principale utilizzando:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3938"/>
@@ -13666,7 +13667,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="20"/>
       <source>Room properties</source>
-      <translation type="unfinished"/>
+      <translation>Proprietà stanza</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
@@ -13676,17 +13677,17 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
       <source>Room name...</source>
-      <translation type="unfinished"/>
+      <translation>Nome stanza...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="61"/>
       <source>Icon:</source>
-      <translation type="unfinished"/>
+      <translation>Icona:</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="111"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Imposta colore stanza</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
@@ -13696,7 +13697,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="167"/>
       <source>Room symbol...</source>
-      <translation type="unfinished"/>
+      <translation>Simbolo stanza...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="210"/>
@@ -13706,7 +13707,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Colore simbolo</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="229"/>
@@ -13722,7 +13723,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
       <source>1 (default)</source>
-      <translation type="unfinished"/>
+      <translation>1 (predefinito)</translation>
     </message>
   </context>
   <context>
