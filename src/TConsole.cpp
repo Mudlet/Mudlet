@@ -344,23 +344,29 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
     mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-    int width;
-    int maxWidth = 120;
-    width = QFontMetrics(latencyFont).boundingRect(QString("N:0.000 S:0.000")).width();
-    if (width < maxWidth) {
-        mpLineEdit_networkLatency->setFont(latencyFont);
-    } else {
-        QFont latencyFont2 = QFont("Bitstream Vera Sans Mono", 9, QFont::Normal);
-        width = QFontMetrics(latencyFont2).boundingRect(QString("N:0.000 S:0.000")).width();
-        if (width < maxWidth) {
-            mpLineEdit_networkLatency->setFont(latencyFont2);
-        } else {
-            QFont latencyFont3 = QFont("Bitstream Vera Sans Mono", 8, QFont::Normal);
-            width = QFontMetrics(latencyFont3).boundingRect(QString("N:0.000 S:0.000")).width();
-            mpLineEdit_networkLatency->setFont(latencyFont3);
-        }
-    }
+    int latencyFontPointSize = 21;
+    const int latencyFontSizeMargin = 10;
+    QString dummyTextA = tr("N:%1 S:%2",
+                            // intentional comment to separate arguments
+                            "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
+                            "'S'ystem (processing) time")
+                         .arg(0.0, 0, 'f', 3)
+                         .arg(0.0, 0, 'f', 3);
+    QString dummyTextB = tr("<no GA> S:%1",
+                            // intentional comment to separate arguments
+                            "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
+                            "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
+                            "network latency...")
+                         .arg(0.0, 0, 'f', 3);
+    QFont latencyFont = QFont(qsl("Bitstream Vera Sans Mono"), latencyFontPointSize, QFont::Normal);
+    do {
+        latencyFont.setPointSize(--latencyFontPointSize);
+    } while (latencyFontPointSize > 6
+             && qMax(QFontMetrics(latencyFont).boundingRect(dummyTextA).width(),
+                     QFontMetrics(latencyFont).boundingRect(dummyTextB).width()) + latencyFontSizeMargin
+             > mpLineEdit_networkLatency->maximumWidth());
+
+    mpLineEdit_networkLatency->setFont(latencyFont);
 
     emergencyStop->setMinimumSize(QSize(30, 30));
     emergencyStop->setMaximumSize(QSize(30, 30));
