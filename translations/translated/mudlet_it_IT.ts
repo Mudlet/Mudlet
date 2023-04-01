@@ -1416,29 +1416,29 @@ evidenziata, di un fattore:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2082"/>
       <source>Error messages for the &quot;%1&quot; profile are shown here in the editor.</source>
-      <translation>I messaggi di errore per il profilo &quot;%1&quot; vengono mostrati qui nell'editor.</translation>
+      <translation>I messaggi di errore per il profilo &quot;%1&quot; sono mostrati qui nell'editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2085"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Console di errore dell'editor per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2087"/>
       <source>Editor&apos;s error window</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Console di errore dell'editor</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2090"/>
       <source>Error messages are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>I messaggi di errore sono mostrati qui nell'editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2096"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Finestra Principale per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2098"/>
@@ -1449,139 +1449,139 @@ evidenziata, di un fattore:</translation>
       <location filename="../src/TConsole.cpp" line="2102"/>
       <source>Profile &quot;%1&quot; main window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto precedente della finestra principale del profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2103"/>
       <source>Profile &quot;%1&quot; main window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto attuale della finestra principale del profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2105"/>
       <source>Profile main window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto precedente della finestra principale del profilo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2106"/>
       <source>Profile main window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto attuale della finestra principale del profilo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2110"/>
       <source>Profile &quot;%1&quot; main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Finestra principale del profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2112"/>
       <source>Profile main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Finestra principale del profilo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2119"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Finestra incorporata &quot;%1&quot; per il profilo &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2121"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Finestra incorporata &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2123"/>
       <source>Game content or locally generated text may be sent here.</source>
-      <translation type="unfinished"/>
+      <translation>Il contenuto di gioco e il testo generato localmente saranno inviati qui.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2126"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto precedente della finestra incorporata &quot;%2&quot; per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2127"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto attuale della finestra incorporata &quot;%2&quot; per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2129"/>
       <source>Profile embedded window &quot;%1&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto precedente della finestra incorporata &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2130"/>
       <source>Profile embedded window &quot;%1&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto attuale della finestra incorporata &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2134"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Finestra incorporata &quot;%2&quot; per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2136"/>
       <source>Profile embedded window &quot;%1&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Finestra incorporata &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2143"/>
       <source>User window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>Finestra utente &quot;%1&quot; per il profilo &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2145"/>
       <source>User window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Finestra utente &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2147"/>
       <source>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</source>
-      <translation type="unfinished"/>
+      <translation>Il contenuto di gioco e il testo generato localmente saranno inviati in questa finestra che può essere spostata fuori da Mudlet o agganciata alla finestra principale dell'applicazione.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2150"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto precedente della finestra utente &quot;%2&quot; per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2151"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto attuale della finestra utente &quot;%2&quot; per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2153"/>
       <source>Profile user window &quot;%1&quot; past content.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto precedente della finestra utente &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2154"/>
       <source>Profile user window &quot;%1&quot; live content.</source>
       <comment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto attuale della finestra utente &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2158"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Finestra utente &quot;%2&quot; per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2160"/>
       <source>Profile user window &quot;%1&quot;.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the window.</comment>
-      <translation type="unfinished"/>
+      <translation>Finestra utente &quot;%1&quot;.</translation>
     </message>
   </context>
   <context>
@@ -4278,12 +4278,12 @@ non sarà variata nuovamente.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="2222"/>
       <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
-      <translation type="unfinished"/>
+      <translation>Per la protezione dei dati e la privacy, questa connessione pubblicizza una porta sicura.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2223"/>
       <source>Update to port %1 and connect with encryption?</source>
-      <translation type="unfinished"/>
+      <translation>Cambio la porta in %1 e mi ricollego utilizzando la crittografia?</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2371"/>
@@ -7188,7 +7188,10 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomProperties.cpp" line="167"/>
       <source>Enter a new room weight to use as the travel time for all of the %n selected room(s). This will be used for calculating the best path. The minimum and default is 1.</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Inserisci un nuovo peso della stanza da usare come tempo di viaggio per la stanza selezionata. Questo sarà usato per calcolare il percorso migliore. Il minimo e predefinito è 1.</numerusform>
+        <numerusform>Inserisci un nuovo peso della stanza da usare come tempo di viaggio per tutte le %n stanze selezionate. Questo sarà usato per calcolare il percorso migliore. Il minimo e predefinito è 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="173"/>
@@ -7196,13 +7199,23 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
  • an existing room weight from the list below (sorted by most commonly used first)
  • enter a new positive integer value to use as a new weight. The default is 1.</source>
       <comment>This is for when applying a new room weight to one or more rooms and some have different weights at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Per cambiare il peso della stanza selezionata, scegliere:
+ • il peso di unas tanza esistente dalla lista qui sotto (precedenza ai più comunemente utilizzati)
+ • inserire un nuovo valore intero positivo da utilizzare come nuovo peso. Il valore predefinito è 1.</numerusform>
+        <numerusform>Per cambiare il peso della stanza per tutte le %n stanze selezionate, scegliere:
+ • il peso di una stanza esistente dalla lista qui sotto (precedenza ai più comunemente utilizzati)
+ • inserire un nuovo valore intero positivo da utilizzare come nuovo peso. Il valore predefinito è 1.</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="195"/>
       <source>Type one or more graphemes (&quot;visible characters&quot;) to use as a symbol for all of the %n selected room(s), or enter a space to clear the symbol:</source>
       <comment>%n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Digita uno o più grafemi (&quot;caratteri visibili&quot;) da utilizzare come simbolo per la stanza selezionata, oppure inserisci uno spazio per cancellare il simbolo:</numerusform>
+        <numerusform>Digita uno o più grafemi (&quot;caratteri visibili&quot;) da utilizzare come simbolo per tutte le %n stanze selezionate, oppure inserisci uno spazio per cancellare il simbolo:</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="201"/>
@@ -7211,7 +7224,16 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
  • enter one or more graphemes (&quot;visible characters&quot;) as a new symbol
  • enter a space to clear any existing symbols</source>
       <comment>This is for when applying a new room symbol to one or more rooms and some have different symbols or no symbol at present. %n is the total number of rooms involved.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Per cambiare il simbolo della stanza selezionata, scegli:
+ • un simbolo esistente dalla lista sottostante (precedenza ai più comunemente usati)
+ • inserisci uno o più grafemi (&quot;caratteri visibili&quot;) come nuovo simbolo
+ • inserisci uno spazio per cancellare qualsiasi simbolo esistente</numerusform>
+        <numerusform>Per cambiare il simbolo delle %n stanze selezionate, scegli:
+ • un simbolo esistente dalla lista sottostante (precedenza ai più comunemente usati)
+ • inserisci uno o più grafemi (&quot;caratteri visibili&quot;) come nuovo simbolo
+ • inserisci uno spazio per cancellare qualsiasi simbolo esistente</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="241"/>
@@ -8908,29 +8930,31 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/main.cpp" line="282"/>
       <source>       -h, --help                   displays this message.</source>
-      <translation type="unfinished"/>
+      <translation>       -h, --help                   mostra questo messaggio.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="283"/>
       <source>       -v, --version                displays version information.</source>
-      <translation type="unfinished"/>
+      <translation>       -v, --version                mostra informazioni sulla versione.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="284"/>
       <source>       -q, --quiet                  no splash screen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>       -q, --quiet                  nessuna finestra di avvio.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="285"/>
       <source>       -p, --profile=&lt;profile&gt;      additional profile to open, may be
                                     repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -p, --profile=&lt;profile&gt;      profili addizionali da aprire all'avvio,
+                                    puo' essere utilizzato piu' volte.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="287"/>
       <source>       -o, --only=&lt;predefined&gt;      make Mudlet only show the specific
                                     predefined game, may be repeated.</source>
-      <translation type="unfinished"/>
+      <translation>       -o, --only=&lt;predefined&gt;      Mudlet mostrerà solo questo specifico
+                                    gioco predefinito, puo' essere utilizzato piu' volte.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="289"/>
@@ -9403,7 +9427,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/map_label.ui" line="192"/>
       <source>&lt;p&gt;If deselected the label will have the same size when you zoom in and out in the mapper. If it is selected the label will scale when you zoom the mapper.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Se è deselezionato, l'etichetta avrà la medesima dimensione al variare dello zoom della mappa. Se è selezionata l'etichetta si ridimensiona mantenendo la stessa scala della mappa.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/map_label.ui" line="168"/>
@@ -12130,7 +12154,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3383"/>
       <source>&lt;p&gt;To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Per favorire la protezione e la privacy del trasferimento dati, viene richiesto di scegliere se passare a una porta crittografata quando viene indicata tramite MSSP (Mud Server Status Protocol).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3490"/>
@@ -12161,7 +12185,7 @@ tenta di nuovo quando sarà terminato.</translation>
       <location filename="../src/ui/profile_preferences.ui" line="3644"/>
       <location filename="../src/ui/profile_preferences.ui" line="3657"/>
       <source>&lt;p&gt;Media files used with Mudlet&apos;s Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;I file multimediali utilizzati da API Lua di Mudlet, Mud Client Media Protocol (MCMP) e Mud Sound Protocol (MSP) sono memorizzati con il profilo di gioco. È possibile premere questo pulsante per cancellarne la cache. Per molti giochi i media verranno scaricati nuovamente a richiesta.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3647"/>
@@ -13718,7 +13742,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
       <source>Pathfinding</source>
-      <translation type="unfinished"/>
+      <translation>Percorso</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
