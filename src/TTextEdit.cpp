@@ -663,7 +663,6 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     } // End of switch
     charWidths.append(charWidth);
 
-    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     QRect textRect;
     if (charWidth > 0) {
         textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
@@ -671,19 +670,29 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     textRects.append(textRect);
     QColor bgColor;
     bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
-    if (Q_UNLIKELY(static_cast<bool>(attributes & TChar::Reverse) != (charStyle.isSelected() != caretIsHere))) {
-        fgColors.append(charStyle.background());
-        bgColor = charStyle.foreground();
+    if (Q_UNLIKELY(charStyle.isFound())) {
+        if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
+            fgColors.append(mSearchHighlightBgColor);
+            bgColor = mSearchHighlightFgColor;
+        } else {
+            fgColors.append(mSearchHighlightFgColor);
+            bgColor = mSearchHighlightBgColor;
+        }
     } else {
-        fgColors.append(charStyle.foreground());
-        bgColor = charStyle.background();
+        if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
+            fgColors.append(charStyle.background());
+            bgColor = charStyle.foreground();
+        } else {
+            fgColors.append(charStyle.foreground());
+            bgColor = charStyle.background();
+        }
     }
     if (caretIsHere) {
         bgColor = mCaretColor;
     }
     if (!textRect.isNull()) {
         painter.fillRect(textRect, bgColor);
-}
+    }
     return charWidth;
 }
 
