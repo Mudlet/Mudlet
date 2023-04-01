@@ -78,6 +78,9 @@ public:
         // The attributes that are currently user settable and what should be
         // consider in HTML generation:
         TestMask = 0x3f,
+        // Has been found in a search operation (currently Main Console only)
+        // and has been given a highlight to indicate that:
+        SearchFind = 0x40,
         // Replaces TCHAR_ECHO 16
         Echo = 0x100
     };
@@ -119,6 +122,13 @@ public:
     void deselect() { mIsSelected = false; }
     bool isSelected() const { return mIsSelected; }
     int linkIndex () const { return mLinkIndex; }
+    bool isBold() const { return mFlags & Bold; }
+    bool isItalic() const { return mFlags & Italic; }
+    bool isUnderlined() const { return mFlags & Underline; }
+    bool isOverlined() const { return mFlags & Overline; }
+    bool isStruckOut() const { return mFlags & StrikeOut; }
+    bool isReversed() const { return mFlags & Reverse; }
+    bool isSearchFind() const { return mFlags & SearchFind; }
 
 private:
     QColor mFgColor;
@@ -191,6 +201,8 @@ public:
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
+    void clearSearchHighlights();
+
     static int lengthInGraphemes(const QString& text);
 
 
