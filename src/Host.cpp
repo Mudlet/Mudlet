@@ -1797,9 +1797,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             file2.open(QFile::ReadOnly | QFile::Text);
-            QString profileName = getName();
-            QString login = getLogin();
-            QString pass = getPass();
             XMLimport reader(this);
             if (module) {
                 QStringList moduleEntry;
@@ -1811,18 +1808,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
                 mInstalledPackages.append(packageName);
             }
             reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
-            setName(profileName);
-            setLogin(login);
-            setPass(pass);
             file2.close();
         }
     } else {
         file2.setFileName(fileName);
         file2.open(QFile::ReadOnly | QFile::Text);
         //mInstalledPackages.append( packageName );
-        QString profileName = getName();
-        QString login = getLogin();
-        QString pass = getPass();
         XMLimport reader(this);
         if (module) {
             QStringList moduleEntry;
@@ -1834,9 +1825,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
             mInstalledPackages.append(packageName);
         }
         reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
-        setName(profileName);
-        setLogin(login);
-        setPass(pass);
         file2.close();
     }
     if (mpEditorDialog) {

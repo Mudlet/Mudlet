@@ -523,6 +523,10 @@ public:
 
     QString mUrl;
 
+    QString mBackupHostName;
+    int mBackupPort = 23;
+    QString mBackupUrl;
+
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
