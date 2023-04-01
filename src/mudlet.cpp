@@ -1435,6 +1435,12 @@ void mudlet::addConsoleForNewHost(Host* pH)
     QResizeEvent event(s, s);
     updateDiscordNamedIcon();
     QApplication::sendEvent(pH->mpConsole, &event);
+    // This is needed to completely show the first autoloaded profile so that
+    // it can be properly hidden by a second one (without it the:
+    // mpCurrentActiveHost->mpConsole->hide() does not work correctly and two
+    // profiles get shown across a split screen - even though mMultiView is NOT
+    // set)!
+    qApp->processEvents();
 }
 
 
