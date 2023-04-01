@@ -17975,12 +17975,12 @@ int TLuaInterpreter::getConfig(lua_State *L) {
         return warnArgumentValue(L, __func__, "you must provide a key");
     }
 
-    static const std::unordered_map<QString, std::function<void(lua_State*, Host&)>> configMap = {
-        { qsl("mapRoomSize"), [](lua_State* L, Host& host){ lua_pushnumber(L, host.mRoomSize); } },
-        { qsl("mapExitSize"), [](lua_State* L, Host& host){ lua_pushnumber(L, host.mLineSize); } },
-        { qsl("mapRoundRooms"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mBubbleMode); } },
-        { qsl("showRoomIdsOnMap"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mShowRoomID); } },
-        { qsl("show3dMapView"), [](lua_State* L, Host& host){
+    const std::unordered_map<QString, std::function<void()>> configMap = {
+        { qsl("mapRoomSize"), [&L, &host](){ lua_pushnumber(L, host.mRoomSize); } },
+        { qsl("mapExitSize"), [&L, &host](){ lua_pushnumber(L, host.mLineSize); } },
+        { qsl("mapRoundRooms"), [&L, &host](){ lua_pushboolean(L, host.mBubbleMode); } },
+        { qsl("showRoomIdsOnMap"), [&L, &host](){ lua_pushboolean(L, host.mShowRoomID); } },
+        { qsl("show3dMapView"), [&L, &host](){
 #if defined(INCLUDE_3DMAPPER)
             if (host.mpMap && host.mpMap->mpMapper) {
                 auto widget = host.mpMap->mpMapper->glWidget;
@@ -17990,24 +17990,24 @@ int TLuaInterpreter::getConfig(lua_State *L) {
 #endif
             lua_pushboolean(L, false);
         }},
-        { qsl("mapperPanelVisible"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mShowPanel); } },
-        { qsl("mapShowRoomBorders"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
-        { qsl("enableGMCP"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableGMCP); } },
-        { qsl("enableMSDP"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableMSDP); } },
-        { qsl("enableMSSP"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableMSSP); } },
-        { qsl("enableMSP"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mEnableMSP); } },
-        { qsl("askTlsAvailable"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mAskTlsAvailable); } },
-        { qsl("inputLineStrictUnixEndings"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
-        { qsl("autoClearInputLine"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
-        { qsl("showSentText"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mPrintCommand); } },
-        { qsl("fixUnnecessaryLinebreaks"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX); } },
-        { qsl("specialForceCompressionOff"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
-        { qsl("specialForceGAOff"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
-        { qsl("specialForceCharsetNegotiationOff"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
-        { qsl("specialForceMxpNegotiationOff"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
-        { qsl("compactInputLine"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.getCompactInputLine()); } },
-        { qsl("announceIncomingText"), [](lua_State* L, Host& host){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
-        { qsl("blankLinesBehaviour"), [](lua_State* L, Host& host){
+        { qsl("mapperPanelVisible"), [&L, &host](){ lua_pushboolean(L, host.mShowPanel); } },
+        { qsl("mapShowRoomBorders"), [&L, &host](){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
+        { qsl("enableGMCP"), [&L, &host](){ lua_pushboolean(L, host.mEnableGMCP); } },
+        { qsl("enableMSDP"), [&L, &host](){ lua_pushboolean(L, host.mEnableMSDP); } },
+        { qsl("enableMSSP"), [&L, &host](){ lua_pushboolean(L, host.mEnableMSSP); } },
+        { qsl("enableMSP"), [&L, &host](){ lua_pushboolean(L, host.mEnableMSP); } },
+        { qsl("askTlsAvailable"), [&L, &host](){ lua_pushboolean(L, host.mAskTlsAvailable); } },
+        { qsl("inputLineStrictUnixEndings"), [&L, &host](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
+        { qsl("autoClearInputLine"), [&L, &host](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
+        { qsl("showSentText"), [&L, &host](){ lua_pushboolean(L, host.mPrintCommand); } },
+        { qsl("fixUnnecessaryLinebreaks"), [&L, &host](){ lua_pushboolean(L, host.mUSE_IRE_DRIVER_BUGFIX); } },
+        { qsl("specialForceCompressionOff"), [&L, &host](){ lua_pushboolean(L, host.mFORCE_NO_COMPRESSION); } },
+        { qsl("specialForceGAOff"), [&L, &host](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
+        { qsl("specialForceCharsetNegotiationOff"), [&L, &host](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
+        { qsl("specialForceMxpNegotiationOff"), [&L, &host](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
+        { qsl("compactInputLine"), [&L, &host](){ lua_pushboolean(L, host.getCompactInputLine()); } },
+        { qsl("announceIncomingText"), [&L, &host](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
+        { qsl("blankLinesBehaviour"), [&L, &host](){
             const auto behaviour = host.mBlankLineBehaviour;
             if (behaviour == Host::BlankLineBehaviour::Show) {
                 lua_pushstring(L, "show");
@@ -18017,7 +18017,7 @@ int TLuaInterpreter::getConfig(lua_State *L) {
                 lua_pushstring(L, "replacewithspace");
             }
         } },
-        { qsl("caretShortcut"), [](lua_State* L, Host& host){
+        { qsl("caretShortcut"), [&L, &host](){
             const auto caret = host.mCaretShortcut;
             if (caret == Host::CaretShortcut::None) {
                 lua_pushstring(L, "none");
@@ -18033,7 +18033,7 @@ int TLuaInterpreter::getConfig(lua_State *L) {
 
     auto it = configMap.find(key);
     if (it != configMap.end()) {
-        it->second(L, host);
+        it->second();
         return 1;
     }
 
