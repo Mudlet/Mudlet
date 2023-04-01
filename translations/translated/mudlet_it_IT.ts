@@ -141,12 +141,12 @@ attendere prego...</translation>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="34"/>
       <source>InvisibleNotification</source>
-      <translation type="unfinished"/>
+      <translation>Notifica Invisibile</translation>
     </message>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
       <source>An invisible widget used as a workaround to announce text to the screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Un widget invisibile utilizzato per mostrare il testo agli screen reader</translation>
     </message>
   </context>
   <context>
@@ -1287,7 +1287,7 @@ evidenziata, di un fattore:</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="2063"/>
       <source>Debug messages from all profiles are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>I messaggi di Debug di tutti i profili sono mostrati qui.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
@@ -1370,53 +1370,53 @@ evidenziata, di un fattore:</translation>
       <location filename="../src/TConsole.cpp" line="2065"/>
       <source>Central debug console past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto precedente della console principale di debug.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2066"/>
       <source>Central debug console live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto attuale della console principale di debug.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2068"/>
       <source>Central debug console.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>Console principale di debug.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2073"/>
       <source>Error Console in editor.</source>
-      <translation type="unfinished"/>
+      <translation>Console di errore dell'editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2076"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto precedente della console di errore dell'editor per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2077"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto attuale della console di errore dell'editor per il profilo &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2079"/>
       <source>Editor&apos;s error window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto precedente della console di errore dell'editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2080"/>
       <source>Editor&apos;s error window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>Contenuto attuale della console di errore dell'editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2082"/>
       <source>Error messages for the &quot;%1&quot; profile are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>I messaggi di errore per il profilo &quot;%1&quot; vengono mostrati qui nell'editor.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2085"/>
