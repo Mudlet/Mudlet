@@ -670,7 +670,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     textRects.append(textRect);
     QColor bgColor;
     bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
-    if (Q_UNLIKELY(charStyle.isSearchFind())) {
+    if (Q_UNLIKELY(charStyle.isFound())) {
         if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
             fgColors.append(mSearchHighlightBgColor);
             bgColor = mSearchHighlightFgColor;

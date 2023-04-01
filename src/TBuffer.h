@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018, 2020, 2022 by Stephen Lyons            *
+ *   Copyright (C) 2015, 2017-2018, 2020, 2022-2023 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -80,7 +80,7 @@ public:
         TestMask = 0x3f,
         // Has been found in a search operation (currently Main Console only)
         // and has been given a highlight to indicate that:
-        SearchFind = 0x40,
+        Found = 0x40,
         // Replaces TCHAR_ECHO 16
         Echo = 0x100
     };
@@ -128,7 +128,7 @@ public:
     bool isOverlined() const { return mFlags & Overline; }
     bool isStruckOut() const { return mFlags & StrikeOut; }
     bool isReversed() const { return mFlags & Reverse; }
-    bool isSearchFind() const { return mFlags & SearchFind; }
+    bool isFound() const { return mFlags & Found; }
 
 private:
     QColor mFgColor;
