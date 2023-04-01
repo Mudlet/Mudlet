@@ -867,7 +867,10 @@ private:
     // return to it when switching between profiles:
     QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
 
-    bool mPendingSetFocusOnCommandLine = false;
+    // ensures that only one "zero-time" timer is created by the lambda in
+    // setFocusOnHostActiveCommandLine(), even when it is called multiple
+    // times:
+    bool mFocusTimerRunning = false;
 
     QMargins mBorders;
 };
