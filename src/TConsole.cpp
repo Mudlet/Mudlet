@@ -371,8 +371,17 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers.")));
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
 
-    mpBufferSearchBox->setMinimumSize(QSize(100, 30));
-    mpBufferSearchBox->setMaximumSize(QSize(150, 30));
+    mpBufferSearchBox->setClearButtonEnabled(true);
+    for (auto child : mpBufferSearchBox->children()) {
+        auto *pAction_clear(qobject_cast<QAction *>(child));
+        if (pAction_clear && pAction_clear->objectName() == QLatin1String("_q_qlineeditclearaction")) {
+            connect(pAction_clear, &QAction::triggered, this, &TConsole::slot_clearSearchResults, Qt::QueuedConnection);
+            break;
+        }
+    }
+
+    mpBufferSearchBox->setMinimumSize(QSize(150, 30));
+    mpBufferSearchBox->setMaximumSize(QSize(250, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
@@ -1831,9 +1840,9 @@ void TConsole::slot_searchBufferUp()
     // happen:
     mudlet::self()->activateProfile(mpHost);
 
-    QString _txt = mpBufferSearchBox->text();
-    if (_txt != mSearchQuery) {
-        mSearchQuery = _txt;
+    if (mSearchQuery != mpBufferSearchBox->text()) {
+        mSearchQuery = mpBufferSearchBox->text();
+        buffer.clearSearchHighlights();
         mCurrentSearchResult = buffer.lineBuffer.size();
     } else {
         // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
@@ -1842,26 +1851,22 @@ void TConsole::slot_searchBufferUp()
     if (buffer.lineBuffer.empty()) {
         return;
     }
-    bool _found = false;
-    for (int i = mCurrentSearchResult - 1; i >= 0; i--) {
-        int begin = -1;
+
+    bool found = false;
+    for (int searchY = mCurrentSearchResult - 1; searchY >= 0; --searchY) {
+        int searchX = -1;
         do {
-            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
-            if (begin > -1) {
-                int length = mSearchQuery.size();
-                moveCursor(0, i);
-                selectSection(begin, length);
-                setBgColor(255, 255, 0, 255);
-                setFgColor(0, 0, 0);
-                deselect();
-                reset();
-                _found = true;
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            if (searchX > -1) {
+                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
+                found = true;
             }
-        } while (begin > -1);
-        if (_found) {
-            scrollUp(buffer.mCursorY - i - 3);
+        } while (searchX > -1);
+
+        if (found) {
+            scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
-            mCurrentSearchResult = i;
+            mCurrentSearchResult = searchY;
             return;
         }
     }
@@ -1870,9 +1875,9 @@ void TConsole::slot_searchBufferUp()
 
 void TConsole::slot_searchBufferDown()
 {
-    QString _txt = mpBufferSearchBox->text();
-    if (_txt != mSearchQuery) {
-        mSearchQuery = _txt;
+    if (mSearchQuery != mpBufferSearchBox->text()) {
+        mSearchQuery = mpBufferSearchBox->text();
+        buffer.clearSearchHighlights();
         mCurrentSearchResult = buffer.lineBuffer.size();
     }
     if (buffer.lineBuffer.empty()) {
@@ -1881,26 +1886,22 @@ void TConsole::slot_searchBufferDown()
     if (mCurrentSearchResult >= buffer.lineBuffer.size()) {
         return;
     }
-    bool _found = false;
-    for (int i = mCurrentSearchResult + 1; i < buffer.lineBuffer.size(); i++) {
-        int begin = -1;
+
+    bool found = false;
+    for (int searchY = mCurrentSearchResult + 1; searchY < buffer.lineBuffer.size(); ++searchY) {
+        int searchX = -1;
         do {
-            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
-            if (begin > -1) {
-                int length = mSearchQuery.size();
-                moveCursor(0, i);
-                selectSection(begin, length);
-                setBgColor(255, 255, 0, 255);
-                setFgColor(0, 0, 0);
-                deselect();
-                reset();
-                _found = true;
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            if (searchX > -1) {
+                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
+                found = true;
             }
-        } while (begin > -1);
-        if (_found) {
-            scrollUp(buffer.mCursorY - i - 3);
+        } while (searchX > -1);
+
+        if (found) {
+            scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
-            mCurrentSearchResult = i;
+            mCurrentSearchResult = searchY;
             return;
         }
     }
@@ -2300,4 +2301,11 @@ void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
         createSearchOptionIcon();
         mpHost->mBufferSearchOptions = mSearchOptions;
     }
+}
+
+void TConsole::slot_clearSearchResults()
+{
+    buffer.clearSearchHighlights();
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }
