@@ -4112,6 +4112,11 @@ void Host::setCaretEnabled(bool enabled) {
 
 void Host::setFocusOnHostActiveCommandLine()
 {
+    if (mFocusTimerRunning) {
+        return;
+    }
+
+    mFocusTimerRunning = true;
     QTimer::singleShot(0, this, [this]() {
         auto pCommandLine = activeCommandLine();
         if (pCommandLine) {
@@ -4127,6 +4132,7 @@ void Host::setFocusOnHostActiveCommandLine()
             mpConsole->repaint();
             mpConsole->mpCommandLine->setFocus(Qt::OtherFocusReason);
         }
+        mFocusTimerRunning = false;
     });
 }
 
