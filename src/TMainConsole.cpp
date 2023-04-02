@@ -1145,6 +1145,7 @@ bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, con
 
 void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
 {
+    Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::printOnDisplay(...)", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mProcessingTimer.restart();
     mTriggerEngineMode = true;
     buffer.translateToPlainText(incomingSocketData, isFromServer);

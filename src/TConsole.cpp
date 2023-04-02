@@ -71,7 +71,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
-, mpLineEdit_networkLatency(new QLineEdit)
 , mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
@@ -333,33 +332,43 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     logButton->setIcon(logIcon);
     connect(logButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleLogging);
 
-    mpLineEdit_networkLatency->setReadOnly(true);
-    mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
-    mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
-    mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds),<br>"
-                                                             "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
-    mpLineEdit_networkLatency->setMaximumSize(120, 30);
-    mpLineEdit_networkLatency->setMinimumSize(120, 30);
-    mpLineEdit_networkLatency->setAutoFillBackground(true);
-    mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
-    mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    if (mType == MainConsole) {
+        mpLineEdit_networkLatency = new QLineEdit(this);
+        mpLineEdit_networkLatency->setReadOnly(true);
+        mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
+        mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
+        mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds),<br>"
+                                                                 "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
+        mpLineEdit_networkLatency->setMaximumSize(120, 30);
+        mpLineEdit_networkLatency->setMinimumSize(120, 30);
+        mpLineEdit_networkLatency->setAutoFillBackground(true);
+        mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
+        mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-    int width;
-    int maxWidth = 120;
-    width = QFontMetrics(latencyFont).boundingRect(QString("N:0.000 S:0.000")).width();
-    if (width < maxWidth) {
+        int latencyFontPointSize = 21;
+        QFont latencyFont = QFont(qsl("Bitstream Vera Sans Mono"), latencyFontPointSize, QFont::Normal);
+        const int latencyFontSizeMargin = 10;
+        QString dummyTextA = tr("N:%1 S:%2",
+                                // intentional comment to separate arguments
+                                "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
+                                "'S'ystem (processing) time")
+                                     .arg(0.0, 0, 'f', 3)
+                                     .arg(0.0, 0, 'f', 3);
+        QString dummyTextB = tr("<no GA> S:%1",
+                                // intentional comment to separate arguments
+                                "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
+                                "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
+                                "network latency...")
+                                     .arg(0.0, 0, 'f', 3);
+        do {
+            latencyFont.setPointSize(--latencyFontPointSize);
+        } while (latencyFontPointSize > 6
+                 && qMax(QFontMetrics(latencyFont).boundingRect(dummyTextA).width(),
+                         QFontMetrics(latencyFont).boundingRect(dummyTextB).width()) + latencyFontSizeMargin
+                            > mpLineEdit_networkLatency->maximumWidth());
+
         mpLineEdit_networkLatency->setFont(latencyFont);
-    } else {
-        QFont latencyFont2 = QFont("Bitstream Vera Sans Mono", 9, QFont::Normal);
-        width = QFontMetrics(latencyFont2).boundingRect(QString("N:0.000 S:0.000")).width();
-        if (width < maxWidth) {
-            mpLineEdit_networkLatency->setFont(latencyFont2);
-        } else {
-            QFont latencyFont3 = QFont("Bitstream Vera Sans Mono", 8, QFont::Normal);
-            width = QFontMetrics(latencyFont3).boundingRect(QString("N:0.000 S:0.000")).width();
-            mpLineEdit_networkLatency->setFont(latencyFont3);
-        }
+        mpLineEdit_networkLatency->setFrame(false);
     }
 
     emergencyStop->setMinimumSize(QSize(30, 30));
@@ -444,10 +453,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutButtonLayer->addWidget(replayButton, 0, 8);
     layoutButtonLayer->addWidget(logButton, 0, 9);
     layoutButtonLayer->addWidget(emergencyStop, 0, 10);
-    layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
+    if (mType == MainConsole) {
+        // In fact a whole lot more could be inside this "if"!
+        layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
+    }
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
-    mpLineEdit_networkLatency->setFrame(false);
     layerCommandLine->setAutoFillBackground(true);
 
     centralLayout->addWidget(layerCommandLine);

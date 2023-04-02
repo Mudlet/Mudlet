@@ -339,7 +339,6 @@
         </property>
         <property name="font">
          <font>
-          <family>Bitstream Vera Sans Mono</family>
           <pointsize>8</pointsize>
          </font>
         </property>

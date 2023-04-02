@@ -49,12 +49,6 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <property name="font">
-      <font>
-       <family>Courier New</family>
-       <pointsize>11</pointsize>
-      </font>
-     </property>
     </widget>
    </item>
   </layout>
