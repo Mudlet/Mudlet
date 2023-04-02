@@ -523,6 +523,10 @@ public:
 
     QString mUrl;
 
+    QString mBackupHostName;
+    int mBackupPort = 23;
+    QString mBackupUrl;
+
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
@@ -862,6 +866,11 @@ private:
     // Tracks which command line was last used for this profile so that we can
     // return to it when switching between profiles:
     QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+
+    // ensures that only one "zero-time" timer is created by the lambda in
+    // setFocusOnHostActiveCommandLine(), even when it is called multiple
+    // times:
+    bool mFocusTimerRunning = false;
 
     QMargins mBorders;
 };
