@@ -37,7 +37,7 @@ bool HostManager::deleteHost(const QString& hostname)
     }
 }
 
-bool HostManager::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass, const QString& mapFile)
+bool HostManager::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)
 {
     if (hostname.isEmpty()) {
         qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: an unnamed Host is not permitted, aborting and returning false!";
@@ -55,7 +55,7 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
     }
 
     int id = mHostPool.size() + 1;
-    QSharedPointer<Host> pNewHost(new Host(portnumber, hostname, login, pass, id, mapFile));
+    QSharedPointer<Host> pNewHost(new Host(portnumber, hostname, login, pass, id));
 
     if (Q_UNLIKELY(!pNewHost)) {
         qDebug() << "HostManager::addHost(" << hostname.toUtf8().constData() << ") ERROR: failed to create new Host for the host pool... aborting!";

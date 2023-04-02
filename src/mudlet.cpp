@@ -2654,7 +2654,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
 
     // load an old profile if there is any
     // PLACEMARKER: Host creation (2) - autoload case
-    if (mHostManager.addHost(profile_name, QString(), QString(), QString(), QString())) {
+    if (mHostManager.addHost(profile_name, QString(), QString(), QString())) {
         pHost = mHostManager.getHost(profile_name);
         if (!pHost) {
             return;
@@ -2779,8 +2779,6 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     }
 
     mPackagesToInstallList.clear();
-
-    pHost->loadMap();
 
     pHost->mIsProfileLoadingSequence = false;
 

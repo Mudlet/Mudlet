@@ -144,7 +144,7 @@ class Host : public QObject
     friend class dlgProfilePreferences;
 
 public:
-    Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id, const QString& mapFile);
+    Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
     ~Host();
 
     enum DiscordOptionFlag {
@@ -407,7 +407,6 @@ public:
     QPointer<TConsole> parentTConsole(QObject*) const;
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
-    void loadMap();
 
 
     cTelnet mTelnet;
@@ -874,9 +873,6 @@ private:
     bool mFocusTimerRunning = false;
 
     QMargins mBorders;
-
-    // Map file specified on "Connect profile" dialog:
-    QString mMapPathFileName;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

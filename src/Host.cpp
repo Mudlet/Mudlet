@@ -200,7 +200,7 @@ QString stopWatch::getElapsedDayTimeString() const
     return qsl("%1:%2:%3:%4:%5:%6").arg((isNegative ? QLatin1String("-") : QLatin1String("+")), QString::number(days), QString::number(hours), QString::number(minutes), QString::number(seconds), QString::number(milliSeconds));
 }
 
-Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id, const QString& mapFile)
+Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
 : mTelnet(this, hostname)
 , mpConsole(nullptr)
 , mpPackageManager(nullptr)
@@ -359,7 +359,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPlayerRoomInnerDiameterPercentage(70)
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
-, mMapPathFileName(mapFile)
 {
     TDebug::addHost(this);
 
@@ -395,6 +394,19 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
+
+    QTimer::singleShot(0, this, [this]() {
+        qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
+        if (mpMap->restore(QString(), false)) {
+            mpMap->audit();
+            if (mpMap->mpMapper) {
+                mpMap->mpMapper->mp2dMap->init();
+                mpMap->mpMapper->updateAreaComboBox();
+                mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+                mpMap->mpMapper->show();
+            }
+        }
+    });
 
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
@@ -459,44 +471,6 @@ Host::~Host()
     mErrorLogStream.flush();
     mErrorLogFile.close();
     TDebug::removeHost(this);
-}
-
-void Host::loadMap()
-{
-    // It is not okay to call TMap::audit() until after the Lua sub-system has
-    // been set up - which is why this has been moved out of a zero-timer in
-    // the constructor:
-    qDebug() << "Host::loadMap() - restore map case 4.";
-    bool success = false;
-    if (mMapPathFileName.endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
-        success = mpConsole->importMap(mMapPathFileName);
-    } else {
-        if (mMapPathFileName.endsWith(QLatin1String("json"), Qt::CaseInsensitive)) {
-            auto [localSuccess, errorMessage] = mpMap->readJsonMapFile(mMapPathFileName, true, false);
-            success = localSuccess;
-            if (!success) {
-                postMessage(tr("[ ERROR ] - Unable to load JSON map file: \"%1\"\n"
-                               "reason: %2.")
-                                    .arg(mMapPathFileName, errorMessage));
-            }
-
-        } else {
-            success = mpConsole->loadMap(mMapPathFileName);
-        }
-    }
-
-    if (success) {
-        mpMap->audit();
-        // audit() is what produces the map loaded okay message on main
-        // console - TMap::importMap(...) will have called
-        // T2DMap::init() but that method is idempotent
-        if (mpMap->mpMapper) {
-            mpMap->mpMapper->mp2dMap->init();
-            mpMap->mpMapper->updateAreaComboBox();
-            mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            mpMap->mpMapper->show();
-        }
-    }
 }
 
 void Host::startMapAutosave()

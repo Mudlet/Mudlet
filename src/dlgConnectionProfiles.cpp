@@ -44,9 +44,6 @@
 
 using namespace std::chrono_literals;
 
-const QRegularExpression dlgConnectionProfiles::csmGameSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)\\.xml"), QRegularExpression::CaseInsensitiveOption};
-const QRegularExpression dlgConnectionProfiles::csmMapSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)(?:map)?\\.(dat|xml|json)"), QRegularExpression::CaseInsensitiveOption};
-
 dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
 : QDialog(parent)
 {
@@ -763,8 +760,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         return;
     }
 
-    auto const locale = mudlet::self()->getUserLocale();
-
     slot_togglePasswordVisibility(false);
 
     const QString profile_name = pItem->data(csmNameRole).toString();
@@ -865,20 +860,16 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     }
     website_entry->setText(val);
 
-    comboBox_profileHistory->clear();
-    mLongestGameHistoryLength = 0;
-    comboBox_mapHistory->clear();
-    mLongestMapHistoryLength = 0;
+    profile_history->clear();
 
-    QIcon icon_autoSave{QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png")))};
-    QIcon icon_xmlFile{QIcon::fromTheme(qsl("application-xml"), QIcon(qsl(":/icons/application-xml.png")))};
-    QIcon icon_jsonFile{QIcon::fromTheme(qsl("application-json"), QIcon(qsl(":/icons/application-json.png")))};
+    QDir dir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
+    dir.setSorting(QDir::Time);
+    QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
-    QDir gameSaveDir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
-    gameSaveDir.setSorting(QDir::Time);
-    QStringList gameSaveEntries = gameSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
-    for (const auto& entry : gameSaveEntries) {
-        QRegularExpressionMatch match = csmGameSaveRegularExpression.match(entry);
+    for (const auto& entry : entries) {
+        QRegularExpression rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
+        QRegularExpressionMatch match = rx.match(entry);
+
         if (match.capturedStart() != -1) {
             QString day;
             QString month = match.captured(2);
@@ -887,6 +878,9 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             QString minute = match.captured(5);
             QString second = match.captured(6);
             if (match.captured(1).toInt() > 31 && match.captured(3).toInt() >= 1 && match.captured(3).toInt() <= 31) {
+                // I have been experimenting with code that puts the year first
+                // which is actually quite useful - this accommodates such cases
+                // as well... - SlySven
                 year = match.captured(1);
                 day = match.captured(3);
             } else {
@@ -894,79 +888,23 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
                 year = match.captured(3);
             }
 
-            QDateTime datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
-            QString itemText = locale.toString(datetime, mDateTimeFormat);
-            mLongestGameHistoryLength = qMax(mLongestGameHistoryLength, itemText.size());
-            comboBox_profileHistory->addItem(itemText, QVariant(entry));
-        } else if (!entry.compare(QLatin1String("autosave.xml"), Qt::CaseInsensitive)) {
-            mLongestGameHistoryLength = qMax(mLongestGameHistoryLength, entry.size());
-            QFileInfo fileInfo(gameSaveDir, entry);
-            comboBox_profileHistory->addItem(icon_autoSave,
-                                     locale.toString(fileInfo.lastModified(), mDateTimeFormat),
+
+            QDateTime datetime;
+            datetime.setTime(QTime(hour.toInt(), minute.toInt(), second.toInt()));
+            datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
+            profile_history->addItem(mudlet::self()->getUserLocale().toString(datetime, mDateTimeFormat), QVariant(entry));
+        } else if (entry == QLatin1String("autosave.xml")) {
+            QFileInfo fileInfo(dir, entry);
+            auto lastModified = fileInfo.lastModified();
+            profile_history->addItem(QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))),
+                                     mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat),
                                      QVariant(entry));
         } else {
-            mLongestGameHistoryLength = qMax(mLongestGameHistoryLength, entry.size());
-            comboBox_profileHistory->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
+            profile_history->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
         }
     }
-    comboBox_profileHistory->setEnabled(static_cast<bool>(comboBox_profileHistory->count()));
 
-    QDir mapSaveDir(mudlet::getMudletPath(mudlet::profileMapsPath, profile_name).append(QLatin1Char('/')));
-    mapSaveDir.setSorting(QDir::Time);
-    QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
-    for (const auto& entry : mapSaveEntries) {
-        QRegularExpressionMatch match = csmMapSaveRegularExpression.match(entry);
-        if (match.capturedStart() != -1) {
-            // A recognised date-time stamp file name of any Mudlet map file type:
-            QString day;
-            QString month = match.captured(2);
-            QString year;
-            QString hour = match.captured(4);
-            QString minute = match.captured(5);
-            QString second = match.captured(6);
-            if (match.captured(1).toInt() > 31 && match.captured(3).toInt() >= 1 && match.captured(3).toInt() <= 31) {
-                year = match.captured(1);
-                day = match.captured(3);
-            } else {
-                day = match.captured(1);
-                year = match.captured(3);
-            }
-            QString extension = match.captured(7);
-            QDateTime datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
-            QString itemText = locale.toString(datetime, mDateTimeFormat);
-            mLongestMapHistoryLength = qMax(mLongestMapHistoryLength, itemText.size());
-            if (!extension.compare(QLatin1String("xml"), Qt::CaseInsensitive)) {
-                comboBox_mapHistory->addItem(icon_xmlFile, itemText, QVariant(entry));
-            } else {
-                if (!extension.compare(QLatin1String("json"), Qt::CaseInsensitive)) {
-                    comboBox_mapHistory->addItem(icon_jsonFile, itemText, QVariant(entry));
-                } else {
-                    // Must be a .dat
-                    comboBox_mapHistory->addItem(itemText, QVariant(entry));
-                }
-            }
-        } else if (!entry.compare(QLatin1String("autosave.dat"), Qt::CaseInsensitive)) {
-            // The auto-saved file:
-            QFileInfo fileInfo(mapSaveDir, entry);
-            auto lastModified = fileInfo.lastModified();
-            QString itemText = locale.toString(lastModified, mDateTimeFormat);
-            mLongestMapHistoryLength = qMax(mLongestMapHistoryLength, itemText.size());
-            comboBox_mapHistory->addItem(icon_autoSave, itemText, QVariant(entry));
-        } else {
-            // Some other file name with a recognised extension:
-            mLongestMapHistoryLength = qMax(mLongestMapHistoryLength, entry.size());
-            if (entry.endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
-                comboBox_mapHistory->addItem(icon_xmlFile, entry, QVariant(entry));
-            } else {
-                if (entry.endsWith(QLatin1String("json"), Qt::CaseInsensitive)) {
-                    comboBox_mapHistory->addItem(icon_jsonFile, entry, QVariant(entry));
-                } else {
-                    comboBox_mapHistory->addItem(entry, QVariant(entry)); // if it has a custom name, use it as it is
-                }
-            }
-        }
-    }
-    comboBox_mapHistory->setEnabled(static_cast<bool>(comboBox_mapHistory->count()));
+    profile_history->setEnabled(static_cast<bool>(profile_history->count()));
 
     const QString profileLoadedMessage = tr("This profile is currently loaded - close it before changing the connection parameters.");
 
@@ -1006,7 +944,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             clearNotificationArea();
         }
     }
-    adjustWidthsBasedOnComboBoxWidths();
 }
 
 void dlgConnectionProfiles::updateDiscordStatus()
@@ -1148,7 +1085,6 @@ void dlgConnectionProfiles::fillout_form()
     }
 
     if (toselectRow != -1) {
-        // This will cause the (wanted) emission of the currentRowChanged signal:
         profiles_tree_widget->setCurrentRow(toselectRow);
     }
 
@@ -1587,11 +1523,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
     // load an old profile if there is any
     // PLACEMARKER: Host creation (1) - normal case
-    QString mapPathFileName;
-    if (comboBox_mapHistory->currentIndex() >= 0) {
-        mapPathFileName = mudlet::getMudletPath(mudlet::profileMapPathFileName, profile_name, comboBox_mapHistory->itemData(comboBox_mapHistory->currentIndex()).toString());
-    }
-    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString(), mapPathFileName)) {
+    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
         pHost = hostManager.getHost(profile_name);
         if (!pHost) {
             return;
@@ -1610,10 +1542,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     if (entries.isEmpty()) {
         firstTimeLoad = true;
     } else {
-        QFile file(qsl("%1%2").arg(folder, comboBox_profileHistory->itemData(comboBox_profileHistory->currentIndex()).toString()));
+        QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
-        qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << (alsoConnect ? "connect" : "onlyLoad") << ") INFO - loading: \"" << file.fileName() << "\".";
+        qDebug() << "[LOADING PROFILE]:" << file.fileName();
         importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
         pHost->refreshPackageFonts();
 
@@ -2124,36 +2056,4 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
     }
 
     profiles_tree_widget->setCurrentRow(indexes.first());
-}
-
-// The contents of the map/game saves QComboBoxes can be rather long and get
-// cropped unless we resize the dialog to accomodate them:
-void dlgConnectionProfiles::adjustWidthsBasedOnComboBoxWidths()
-{
-    static int adjustSpaceForLeftSide = 50;
-    static int adjustSpaceForRightSide = -30;
-    comboBox_profileHistory->setMinimumContentsLength(mLongestGameHistoryLength);
-    comboBox_profileHistory->adjustSize();
-    comboBox_mapHistory->setMinimumContentsLength(mLongestMapHistoryLength);
-    comboBox_mapHistory->adjustSize();
-
-    // We need to specify a minimum as otherwise uninstantiated predefined MUDS
-    // with both QComboBoxes empty cause the widget_topRight to be far too small:
-    int rightSideWidthNeeded = qMax(comboBox_mapHistory->sizeHint().width(), 300);
-    rightSideWidthNeeded = qMax(rightSideWidthNeeded, comboBox_profileHistory->sizeHint().width());
-    rightSideWidthNeeded += qMax(label_mapHistory->sizeHint().width(), label_profileHistory->sizeHint().width());
-    rightSideWidthNeeded += adjustSpaceForRightSide;
-
-    // Ensure that there is space for three columns:
-    int leftSideWidthNeeded = (profiles_tree_widget->iconSize().width()
-                               + profiles_tree_widget->contentsMargins().left()
-                               + profiles_tree_widget->contentsMargins().right()) * 3;
-    leftSideWidthNeeded += adjustSpaceForLeftSide;
-
-    widget_topLeft->setMinimumWidth(leftSideWidthNeeded);
-
-    widget_topRight->setMinimumWidth(rightSideWidthNeeded);
-    widget_topRight->setMaximumWidth(rightSideWidthNeeded);
-
-    setMinimumWidth(leftSideWidthNeeded + rightSideWidthNeeded);
 }

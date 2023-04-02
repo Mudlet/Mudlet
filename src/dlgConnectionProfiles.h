@@ -60,8 +60,6 @@ public:
     QString btn_connOrLoad_disabled_accessDesc;
     QString item_profile_accessName;
     QString item_profile_accessDesc;
-    static const QRegularExpression csmGameSaveRegularExpression;
-    static const QRegularExpression csmMapSaveRegularExpression;
 
 signals:
     void signal_load_profile(QString profile_name, bool alsoConnect);
@@ -123,8 +121,6 @@ private:
     QIcon customIcon(const QString&, const std::optional<QColor>&) const;
     void addLetterToProfileSearch(const int);
     inline void clearNotificationArea();
-    void adjustWidthsBasedOnComboBoxWidths();
-
 
     // split into 3 properties so each one can be checked individually
     // important for creation of a folder on disk, for example: name has
@@ -152,9 +148,6 @@ private:
     QVector<QColor> mCustomIconColors;
     QTimer mSearchTextTimer;
     QString mSearchText;
-    // Records the longest text in each QComboBox each time it is populated
-    int mLongestMapHistoryLength = 0;
-    int mLongestGameHistoryLength = 0;
 
 
 private slots:
