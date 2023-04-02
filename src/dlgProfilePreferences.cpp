@@ -899,6 +899,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     pushButton_chooseProfiles->setMenu(mpMenu);
 
+    fillOutMapHistory();
 
     // label to show on successful map file action
     label_mapFileActionResult->hide();
@@ -2174,6 +2175,142 @@ void dlgProfilePreferences::slot_downloadMap()
     pHost->mpMap->downloadMap();
 }
 
+void dlgProfilePreferences::fillOutMapHistory()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    QString profile_name = pHost->getName();
+    auto const locale = mudlet::self()->getUserLocale();
+    int longestMapHistoryLength = 0;
+    QIcon icon_autoSave{QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png")))};
+    QIcon icon_xmlFile{QIcon::fromTheme(qsl("application-xml"), QIcon(qsl(":/icons/application-xml.png")))};
+    QIcon icon_jsonFile{QIcon::fromTheme(qsl("application-json"), QIcon(qsl(":/icons/application-json.png")))};
+    QString dateTimeFormat = mudlet::self()->getUserLocale().dateTimeFormat();
+    if (dateTimeFormat.contains(QLatin1Char('t'))) {
+        // There is a timezone identifier in there - which (apart from perhaps
+        // the period around DST changes) we don't really need and which takes
+        // up space:
+        if (dateTimeFormat.contains(QLatin1String(" t"))) {
+            // Deal with the space if the time zone is appended to the end of
+            // the string:
+            dateTimeFormat.remove(QLatin1String(" t"), Qt::CaseSensitive);
+        } else {
+            dateTimeFormat.remove(QLatin1Char('t'), Qt::CaseSensitive);
+        }
+    }
+    const QRegularExpression mapSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)(?:map)?\\.(dat|xml|json)"), QRegularExpression::CaseInsensitiveOption};
+    QDir mapSaveDir(mudlet::getMudletPath(mudlet::profileMapsPath, profile_name).append(QLatin1Char('/')));
+    mapSaveDir.setSorting(QDir::Time);
+    QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    for (const auto& entry : mapSaveEntries) {
+        QRegularExpressionMatch match = mapSaveRegularExpression.match(entry);
+        const QString mapPathFileName = mapSaveDir.absoluteFilePath(entry);
+        if (match.capturedStart() != -1) {
+            // A recognised date-time stamp file name of any Mudlet map file type:
+            QString day;
+            QString month = match.captured(2);
+            QString year;
+            QString hour = match.captured(4);
+            QString minute = match.captured(5);
+            QString second = match.captured(6);
+            if (match.captured(1).toInt() > 31 && match.captured(3).toInt() >= 1 && match.captured(3).toInt() <= 31) {
+                year = match.captured(1);
+                day = match.captured(3);
+            } else {
+                day = match.captured(1);
+                year = match.captured(3);
+            }
+            QString extension = match.captured(7);
+            QDateTime datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
+            QString itemText = locale.toString(datetime, dateTimeFormat);
+            longestMapHistoryLength = qMax(longestMapHistoryLength, itemText.size());
+            if (!extension.compare(QLatin1String("xml"), Qt::CaseInsensitive)) {
+                comboBox_mapHistory->addItem(icon_xmlFile, itemText, QVariant(mapPathFileName));
+            } else {
+                if (!extension.compare(QLatin1String("json"), Qt::CaseInsensitive)) {
+                    comboBox_mapHistory->addItem(icon_jsonFile, itemText, QVariant(mapPathFileName));
+                } else {
+                    // Must be a .dat
+                    comboBox_mapHistory->addItem(itemText, QVariant(mapPathFileName));
+                }
+            }
+        } else if (!entry.compare(QLatin1String("autosave.dat"), Qt::CaseInsensitive)) {
+            // The auto-saved file:
+            QFileInfo fileInfo(mapSaveDir, entry);
+            auto lastModified = fileInfo.lastModified();
+            QString itemText = locale.toString(lastModified, dateTimeFormat);
+            longestMapHistoryLength = qMax(longestMapHistoryLength, itemText.size());
+            comboBox_mapHistory->addItem(icon_autoSave, itemText, QVariant(mapPathFileName));
+        } else {
+            // Some other file name with a recognised extension:
+            longestMapHistoryLength = qMax(longestMapHistoryLength, entry.size());
+            if (entry.endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
+                comboBox_mapHistory->addItem(icon_xmlFile, entry, QVariant(mapPathFileName));
+            } else {
+                if (entry.endsWith(QLatin1String("json"), Qt::CaseInsensitive)) {
+                    comboBox_mapHistory->addItem(icon_jsonFile, entry, QVariant(mapPathFileName));
+                } else {
+                    comboBox_mapHistory->addItem(entry, QVariant(mapPathFileName)); // if it has a custom name, use it as it is
+                }
+            }
+        }
+    }
+    if (comboBox_mapHistory->count()) {
+        comboBox_mapHistory->setEnabled(true);
+        pushButton_loadHistoricMap->setEnabled(true);
+        connect(pushButton_loadHistoricMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_loadHistoryMap);
+    }
+}
+
+void dlgProfilePreferences::loadMap(const QString& fileName)
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    label_mapFileActionResult->show();
+
+    // Ensure the setting is already made as the TConsole::loadMap(...) uses
+    // the set value:
+    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+
+    bool success = false;
+    label_mapFileActionResult->setText(tr("Loading map - please wait..."));
+    qApp->processEvents(); // Needed to make the above message show up when loading big maps
+    if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+        qApp->processEvents(); // Needed to make the above message show up when loading big maps
+        success = pHost->mpConsole->importMap(fileName);
+    } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+        success = pHost->mpMap->readJsonMapFile(fileName).first;
+    } else {
+        success = pHost->mpConsole->loadMap(fileName);
+    }
+
+    if (success) {
+        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
+    } else {
+        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
+    }
+
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
+
+    // Restore setting immediately before we used it
+    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+}
+
+void dlgProfilePreferences::slot_loadHistoryMap()
+{
+    auto mapPathFileData = comboBox_mapHistory->currentData();
+    if (!mapPathFileData.isValid() || mapPathFileData.toString().isEmpty()) {
+        return;
+    }
+    loadMap(mapPathFileData.toString());
+}
+
 void dlgProfilePreferences::slot_loadMap()
 {
     Host* pHost = mpHost;
@@ -2198,36 +2335,9 @@ void dlgProfilePreferences::slot_loadMap()
             return;
         }
 
-        auto fileName = dialog->selectedFiles().first();
+        auto fileName = dialog->selectedFiles().constFirst();
 
-        label_mapFileActionResult->show();
-
-        // Ensure the setting is already made as the loadMap(...) uses the set value
-        bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-        mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
-
-        bool success = false;
-        label_mapFileActionResult->setText(tr("Loading map - please wait..."));
-        qApp->processEvents(); // Needed to make the above message show up when loading big maps
-        if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
-            qApp->processEvents(); // Needed to make the above message show up when loading big maps
-            success = pHost->mpConsole->importMap(fileName);
-        } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-            success = pHost->mpMap->readJsonMapFile(fileName).first;
-        } else {
-            success = pHost->mpConsole->loadMap(fileName);
-        }
-
-        if (success) {
-            label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
-        } else {
-            label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
-        }
-
-        QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
-
-        // Restore setting immediately before we used it
-        mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+        loadMap(fileName);
     });
     dialog->open();
 }
@@ -2294,7 +2404,8 @@ void dlgProfilePreferences::slot_saveMap()
     dialog->open();
 }
 
-QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost) {
+QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost)
+{
     QString mapsPath = mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName());
     QDir mapsDir = QDir(mapsPath);
     return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName());

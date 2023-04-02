@@ -935,7 +935,6 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             QDateTime datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
             QString itemText = locale.toString(datetime, mDateTimeFormat);
             mLongestMapHistoryLength = qMax(mLongestMapHistoryLength, itemText.size());
-            comboBox_profileHistory->addItem(itemText, QVariant(entry));
             if (!extension.compare(QLatin1String("xml"), Qt::CaseInsensitive)) {
                 comboBox_mapHistory->addItem(icon_xmlFile, itemText, QVariant(entry));
             } else {
