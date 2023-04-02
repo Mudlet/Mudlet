@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -212,9 +212,10 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         // We have to set a codec here to convert the QString based QTextStream
         // encoding (from UTF-16) to UTF-8 - by default a local 8-Bit one would
         // be used, which is problematic on Windows for non-ASCII (or Latin1?)
-        // characters:
-        QTextCodec* pLogCodec = QTextCodec::codecForName("UTF-8");
-        mLogStream.setCodec(pLogCodec);
+        // characters. The default in Qt6 is UTF-8:
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        out.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
         if (isMessageEnabled) {
             QString message = qsl("%1\n").arg(tr("Logging has started. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
@@ -498,7 +499,6 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         mSubConsoleMap[name] = pC;
         pC->setObjectName(name);
         pC->mConsoleName = name;
-        pC->setFocusPolicy(Qt::NoFocus);
         const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
         pC->setFocusProxy(hostCommandLine);
         pC->mUpperPane->setFocusProxy(hostCommandLine);
@@ -535,7 +535,6 @@ TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QStri
         }
         mScrollBoxMap[name] = pS;
         pS->setObjectName(name);
-        pS->setFocusPolicy(Qt::NoFocus);
         pS->resize(width, height);
         pS->setContentsMargins(0, 0, 0, 0);
         pS->move(x, y);

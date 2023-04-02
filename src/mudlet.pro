@@ -93,6 +93,9 @@ qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
 }
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QT += core5compat
+}
 
 TEMPLATE = app
 
@@ -248,7 +251,10 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # the map file gets requested and when such a request gets actioned (or
 # rejected because the profile is being loaded):
 # DEFINES+=DEBUG_MAPAUTOSAVE
-
+#
+# * Produce all the time the surprise that normally will only occur on the first
+# day of the fourth month of the Gregorian calendar year:
+# DEFINES+=DEBUG_EASTER_EGGS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -828,6 +834,11 @@ FORMS += \
 RESOURCES += \
     mudlet.qrc \
     ../translations/translated/qm.qrc
+
+contains(DEFINES, "INCLUDE_VARIABLE_SPLASH_SCREEN") {
+    RESOURCES += \
+        additional_splash_screens.qrc
+}
 
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += \

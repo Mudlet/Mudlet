@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -43,7 +43,9 @@
 #include <QFile>
 #include <QFont>
 #include <QList>
+#include <QMargins>
 #include <QPointer>
+#include <QStack>
 #include <QTextStream>
 #include "post_guard.h"
 
@@ -399,8 +401,13 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
-    void setFocusOnHostMainConsole();
+    void setFocusOnHostActiveCommandLine();
+    void recordActiveCommandLine(TCommandLine*);
+    void forgetCommandLine(TCommandLine*);
     QPointer<TConsole> parentTConsole(QObject*) const;
+    QMargins borders() const { return mBorders; }
+    void setBorders(const QMargins);
+
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -420,10 +427,6 @@ public:
     bool mBlockScriptCompile;
     bool mBlockStopWatchCreation;
     bool mEchoLuaErrors;
-    int mBorderBottomHeight;
-    int mBorderLeftWidth;
-    int mBorderRightWidth;
-    int mBorderTopHeight;
     QFont mCommandLineFont;
     QString mCommandSeparator;
     bool mEnableGMCP;
@@ -519,6 +522,10 @@ public:
     int mTimeout;
 
     QString mUrl;
+
+    QString mBackupHostName;
+    int mBackupPort = 23;
+    QString mBackupUrl;
 
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
@@ -713,6 +720,8 @@ private:
     void timerEvent(QTimerEvent *event) override;
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
+    TCommandLine* activeCommandLine();
+
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
@@ -724,6 +733,8 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
+    // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
+    std::optional<bool> mSaveTimer;
 
     QFile mErrorLogFile;
 
@@ -851,6 +862,17 @@ private:
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;
+
+    // Tracks which command line was last used for this profile so that we can
+    // return to it when switching between profiles:
+    QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+
+    // ensures that only one "zero-time" timer is created by the lambda in
+    // setFocusOnHostActiveCommandLine(), even when it is called multiple
+    // times:
+    bool mFocusTimerRunning = false;
+
+    QMargins mBorders;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

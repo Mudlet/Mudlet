@@ -38,7 +38,6 @@
 #include <QSettings>
 #include <QSplashScreen>
 #include <QStringList>
-#include <QStringListIterator>
 #include <QTranslator>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
@@ -54,8 +53,6 @@ using namespace std::chrono_literals;
 #include <Windows.h>
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
-
-TConsole* spDebugConsole = nullptr;
 
 #if defined(Q_OS_WIN32)
 bool runUpdate();
@@ -90,15 +87,28 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
 #if defined(Q_OS_LINUX)
 void removeOldNoteColorEmojiFonts()
 {
+    // PLACEMARKER: previous Noto Color Emoji font versions removal
     // Identify old versions so that we can remove them and later on only try
     // to load the latest (otherwise, as they all have the same family name
     // only the first one found will be loaded by the FontManager class):
     QStringList oldNotoFontDirectories;
+    // The directory name format is made by Mudlet and is based upon the
+    // release date of the version on upstream's Github site, currently:
+    // https://github.com/googlefonts/noto-emoji/releases
+    // Not all previously released versions have been carried by Mudlet only
+    // the ones listed here have been.
+    // When adding a later version, append the path and version comment of the
+    // replaced one comment to this area:
+    // Tag: "v2018-04-24-pistol-update"
     oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    // Release: "v2019-11-19-unicode12"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    // Release: "Noto Emoji v2.0238"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    // Release: "Unicode 14.0"
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
 
-    QStringListIterator itOldNotoFontDirectory(oldNotoFontDirectories);
+    QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
         auto oldNotoFontDirectory = itOldNotoFontDirectory.next();
         QDir oldDir{oldNotoFontDirectory};
@@ -131,7 +141,10 @@ QTranslator* loadTranslationsForCommandLine()
     // If we allow the translations to be outside of the resource file inside
     // the application executable then this will have to be revised to handle
     // it:
-    pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
+    bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
+    if (!isOk) {
+        return nullptr;
+    }
     QCoreApplication::installTranslator(pMudletTranslator);
     return pMudletTranslator;
 }
@@ -177,11 +190,6 @@ int main(int argc, char* argv[])
         pcre_stack_free = pcre_free_dbg;
     }
 #endif // _MSC_VER && _DEBUG
-    spDebugConsole = nullptr;
-
-#if defined (Q_OS_UNIX)
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
 
 #if defined(Q_OS_MACOS)
     // Workaround for horrible mac rendering issues once the mapper widget
@@ -367,13 +375,7 @@ int main(int argc, char* argv[])
     QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
     bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
-#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
-    QImage splashImage(mudlet::scmIsReleaseVersion ? qsl(":/Mudlet_splashscreen_main.png")
-                                                   : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
-                                                                                    : qsl(":/Mudlet_splashscreen_development.png"));
-#else
-    QImage splashImage(qsl(":/Mudlet_splashscreen_main.png"));
-#endif
+    QImage splashImage = mudlet::getSplashScreen();
 
     if (show_splash) {
         QPainter painter(&splashImage);
@@ -464,7 +466,9 @@ int main(int argc, char* argv[])
 #if defined(Q_OS_LINUX)
     // Only needed/works on Linux to provide color emojis:
     removeOldNoteColorEmojiFonts();
-    QString notoFontDirectory{qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
+    // PLACEMARKER: current Noto Color Emoji font directory specification:
+    // Release: "Unicode 15.0"
+    QString notoFontDirectory{qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -519,9 +523,9 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
 #if defined(Q_OS_LINUX)
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-11-01-v2.034"), qsl("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-11-01-v2.034"), qsl("LICENSE"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-11-01-v2.034"), qsl("README"));
+    // PLACEMARKER: current Noto Color Emoji font version file extraction
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("LICENSE"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
