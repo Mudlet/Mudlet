@@ -17968,7 +17968,8 @@ int TLuaInterpreter::getScroll(lua_State* L)
 // Please use same options with same names in setConfig and getConfig and keep them in sync
 // The no args case that returns a table is handled by getConfig in Other.lua
 // that runs a loop with a list of these properties, please update that list.
-int TLuaInterpreter::getConfig(lua_State *L) {
+int TLuaInterpreter::getConfig(lua_State *L) 
+{
     auto &host = getHostFromLua(L);
     QString key = getVerifiedString(L, __func__, 1, "key");
     if (key.isEmpty()) {
