@@ -10,6 +10,11 @@
     <height>682</height>
    </rect>
   </property>
+  <property name="font">
+   <font>
+    <family>Bitstream Vera Sans</family>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Select a profile to connect with</string>
   </property>
