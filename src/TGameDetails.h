@@ -540,19 +540,32 @@ public:
              qsl("mg.mud.de"),
              4711,
              false,
-             qsl("<a href='http://mg.mud.de/'>mg.mud.de</a>"),
+             qsl("<a href='http://mg.mud.de/'>MorgenGrauen Webseite</a><br>"
+                 "<a href='https://www.youtube.com/MorgenGrauen'>YouTube Kanal</a><br>"
+                 "<a href='https://discord.gg/nHJnYHk'>Discord Server</a>"),
              qsl(":/icons/morgengrauen_480x120.png"),
-             /* English translation, provided by Game:
+             /* English translation, provided by game:
               * "Welcome to Morgengrauen, the largest German-language "
-              *  "MUD, which has been continuously developed since 1992."
+              * "MUD, which has been continuously developed since 1992."
+              * "\n\n"
+              * "Discover hundrets of unique quests! Raise your skills "
+              * "in special guilds: demonnic warriors of chaos, drunken "
+              * "beer shakers, werewolves, orcs, elves, and many more."
+              * "\n\n"
+              * "Our friendly player base is glad to help you with your first steps."
               * "\n\n"
               * "Play now or never!"
               */
              qsl("Willkommen im Morgengrauen, dem größten deutschsprachigen "
                  "MUD, das seit 1992 kontinuierlich weiterentwickelt wird."
                  "\n\n"
+                 "Entdecke hunderte einzigartige Abenteuer! Steigere Deine "
+                 "Fähigkeiten in besonderen Gilden: Dämonische Krieger des Chaos, "
+                 "betrunkene Bierschüttler, Werwölfe, Orks, Elfen, und viele weitere."
+                 "\n\n"
+                 "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
+                 "\n\n"
                  "Spiel jetzt oder nie!")},
-
             };
     // clang-format on
 };
