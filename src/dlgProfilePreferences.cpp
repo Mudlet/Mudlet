@@ -2284,13 +2284,25 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
         qApp->processEvents(); // Needed to make the above message show up when loading big maps
         success = pHost->mpConsole->importMap(fileName);
-    } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-        success = pHost->mpMap->readJsonMapFile(fileName).first;
+
     } else {
-        success = pHost->mpConsole->loadMap(fileName);
+        if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            auto [localSuccess, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+            success = localSuccess;
+            if (!localSuccess) {
+                pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
+                                      "reason: %2.")
+                                           .arg(fileName, errorMessage));
+            }
+
+        } else {
+            success = pHost->mpConsole->loadMap(fileName);
+        }
     }
 
     if (success) {
+        // TMap::audit() is what paints up the "[  OK  ]" message for the map load.
+        pHost->mpMap->audit();
         label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
     } else {
         label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));

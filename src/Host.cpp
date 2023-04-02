@@ -415,7 +415,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                 if (localSuccess) {
                     mpMap->audit();
                 } else {
-                    postMessage(tr("[ERROR] - Unable to load JSON map file: %1\n"
+                    postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
                                    "reason: %2.").arg(mMapPathFileName, errorMessage));
                 }
             } else {
