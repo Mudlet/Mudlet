@@ -525,7 +525,8 @@ target_link_libraries(
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
-        ${QT_LIBS})
+        ${QT_LIBS}
+        nanobench)
 
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)

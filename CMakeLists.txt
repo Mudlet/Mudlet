@@ -173,6 +173,15 @@ git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
 
+include(FetchContent)
+FetchContent_Declare(
+    nanobench
+    GIT_REPOSITORY https://github.com/martinus/nanobench.git
+    GIT_TAG v4.3.11
+    GIT_SHALLOW TRUE)
+
+FetchContent_MakeAvailable(nanobench)
+
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
                      "3rdparty/dblsqd" READABLE_NAME "DBLSQD updater")

@@ -611,6 +611,25 @@ mudlet::mudlet()
         mpAnnouncer = new Announcer(this);
         emit signal_adjustAccessibleNames();
     });
+
+    // looking to benchmark old/new code? Use this example
+    // full docs at https://nanobench.ankerl.com
+    ankerl::nanobench::Bench benchmark;
+    benchmark.title("Example benchmark")
+            .minEpochIterations(2000)
+            .warmup(100)
+            .relative(true);
+
+    benchmark.run("new code", [&] {
+        loadMaps();
+    });
+
+    benchmark.run("old code", [&] {
+        for (int = 0; i < 500; i++) {
+            loadMaps();
+        }
+    });
+
 }
 
 QSettings* mudlet::getQSettings()
