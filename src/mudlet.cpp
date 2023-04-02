@@ -2780,6 +2780,8 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     mPackagesToInstallList.clear();
 
+    pHost->loadMap();
+
     pHost->mIsProfileLoadingSequence = false;
 
     TEvent event {};

@@ -1296,8 +1296,8 @@ bool TMainConsole::loadMap(const QString& location)
     return result;
 }
 
-// Used by TLuaInterpreter::loadMap() and dlgProfilePreferences for import/load
-// of files ending in ".xml"
+// Used by TLuaInterpreter::loadMap(), dlgProfilePreferences and Host::loadMap()
+// for import/load of files ending in ".xml"
 // The TLuaInterpreter::loadMap() supplies a pointer to an error Message which
 // it requires in the event of an error (it should be written in a structure
 // to match "loadMap: XXXXX." format) - the presence of a non-null pointer here

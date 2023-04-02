@@ -396,44 +396,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
 
-    QTimer::singleShot(0, this, [this]() {
-        qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
-        bool success = false;
-        if (mMapPathFileName.endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
-            QFile mapFile(mMapPathFileName);
-            if (mpMap->importMap(mapFile)) {
-                // audit() is what produces the map loaded okay message on main
-                // console - TMap::importMap(...) will have called
-                // T2DMap::init() but that method is idempotent
-                mpMap->audit();
-                success = true;
-            }
-        } else {
-            if (mMapPathFileName.endsWith(QLatin1String("json"), Qt::CaseInsensitive)) {
-                auto [localSuccess, errorMessage] = mpMap->readJsonMapFile(mMapPathFileName, true, false);
-                success = localSuccess;
-                if (localSuccess) {
-                    mpMap->audit();
-                } else {
-                    postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
-                                   "reason: %2.").arg(mMapPathFileName, errorMessage));
-                }
-            } else {
-                // The normal Mudlet binary .dat map file format:
-                if (mpMap->restore(mMapPathFileName, false)) {
-                    mpMap->audit();
-                    success = true;
-                }
-            }
-        }
-        if (success && mpMap->mpMapper) {
-            mpMap->mpMapper->mp2dMap->init();
-            mpMap->mpMapper->updateAreaComboBox();
-            mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-            mpMap->mpMapper->show();
-        }
-    });
-
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
@@ -497,6 +459,44 @@ Host::~Host()
     mErrorLogStream.flush();
     mErrorLogFile.close();
     TDebug::removeHost(this);
+}
+
+void Host::loadMap()
+{
+    // It is not okay to call TMap::audit() until after the Lua sub-system has
+    // been set up - which is why this has been moved out of a zero-timer in
+    // the constructor:
+    qDebug() << "Host::loadMap() - restore map case 4.";
+    bool success = false;
+    if (mMapPathFileName.endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
+        success = mpConsole->importMap(mMapPathFileName);
+    } else {
+        if (mMapPathFileName.endsWith(QLatin1String("json"), Qt::CaseInsensitive)) {
+            auto [localSuccess, errorMessage] = mpMap->readJsonMapFile(mMapPathFileName, true, false);
+            success = localSuccess;
+            if (!success) {
+                postMessage(tr("[ ERROR ] - Unable to load JSON map file: \"%1\"\n"
+                               "reason: %2.")
+                                    .arg(mMapPathFileName, errorMessage));
+            }
+
+        } else {
+            success = mpConsole->loadMap(mMapPathFileName);
+        }
+    }
+
+    if (success) {
+        mpMap->audit();
+        // audit() is what produces the map loaded okay message on main
+        // console - TMap::importMap(...) will have called
+        // T2DMap::init() but that method is idempotent
+        if (mpMap->mpMapper) {
+            mpMap->mpMapper->mp2dMap->init();
+            mpMap->mpMapper->updateAreaComboBox();
+            mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            mpMap->mpMapper->show();
+        }
+    }
 }
 
 void Host::startMapAutosave()
