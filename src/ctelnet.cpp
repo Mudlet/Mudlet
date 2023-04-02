@@ -736,7 +736,7 @@ void cTelnet::sendNAWS(int width, int height)
     char widthLowByte = static_cast<char>(width % 256);
     char heightHighByte = static_cast<char>(height / 256);
     char heightLowByte = static_cast<char>(height % 256);
-    // Double IAC characters to avoid confusion
+    // Double 0xff (IAC) byte values as required by protocol to prevent confusion with a real IAC
     message += widthHighByte;
     if (widthHighByte == TN_IAC) {
         message += TN_IAC;
