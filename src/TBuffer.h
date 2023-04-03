@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018, 2020, 2022 by Stephen Lyons            *
+ *   Copyright (C) 2015, 2017-2018, 2020, 2022-2023 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -78,6 +78,9 @@ public:
         // The attributes that are currently user settable and what should be
         // consider in HTML generation:
         TestMask = 0x3f,
+        // Has been found in a search operation (currently Main Console only)
+        // and has been given a highlight to indicate that:
+        Found = 0x40,
         // Replaces TCHAR_ECHO 16
         Echo = 0x100
     };
@@ -119,6 +122,13 @@ public:
     void deselect() { mIsSelected = false; }
     bool isSelected() const { return mIsSelected; }
     int linkIndex () const { return mLinkIndex; }
+    bool isBold() const { return mFlags & Bold; }
+    bool isItalic() const { return mFlags & Italic; }
+    bool isUnderlined() const { return mFlags & Underline; }
+    bool isOverlined() const { return mFlags & Overline; }
+    bool isStruckOut() const { return mFlags & StrikeOut; }
+    bool isReversed() const { return mFlags & Reverse; }
+    bool isFound() const { return mFlags & Found; }
 
 private:
     QColor mFgColor;
@@ -191,6 +201,8 @@ public:
     // It would have been nice to do this with Qt's signals and slots but that
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
+    void clearSearchHighlights();
+
     static int lengthInGraphemes(const QString& text);
 
 
@@ -219,6 +231,7 @@ private:
     bool processUtf8Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
+    bool processEUC_KRSequence(const std::string&, bool, size_t, size_t&, bool&);
     void decodeSGR(const QString&);
     void decodeSGR38(const QStringList&, bool isColonSeparated = true);
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);

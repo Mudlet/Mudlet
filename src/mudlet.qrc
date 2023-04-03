@@ -127,6 +127,7 @@
         <file>icons/media-tape.png</file>
         <file>icons/midnightsun2.png</file>
         <file>icons/module-manager.png</file>
+        <file>icons/morgengrauen_480x120.png</file>
         <file>icons/mudlet.png</file>
         <file>icons/mudlet_color.png</file>
         <file>icons/mudlet_configure.png</file>
@@ -190,14 +191,13 @@
         <file>icons/wotmudicon.png</file>
         <file>icons/zombiemud.png</file>
         <file>lua-function-list.json</file>
+        <file>mg-loader.xml</file>
         <file>mudlet-lua/lua/generic-mapper/generic_mapper.xml</file>
         <file>mudlet-lua/lua/enable-accessibility/enable-accessibility.xml</file>
         <file>mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml</file>
         <file>mudlet-lua/lua/utf8_filenames.lua</file>
         <file>mudlet-mapper.xml</file>
-        <file>Mudlet_splashscreen_development.png</file>
-        <file>Mudlet_splashscreen_main.png</file>
-        <file>Mudlet_splashscreen_ptb.png</file>
+        <file>splash/Mudlet_splashscreen_main.png</file>
         <file>run-lua-code-v4.xml</file>
         <file>run-tests.xml</file>
         <file>ui/custom_lines.ui</file>

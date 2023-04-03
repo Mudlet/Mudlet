@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -62,16 +62,17 @@
 #include <QApplication>
 #include <QtUiTools/quiloader.h>
 #include <QDesktopServices>
-#include <QDesktopWidget>
 #include <QFile>
 #include <QFileDialog>
 #include <QJsonDocument>
+#include <QImage>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QNetworkDiskCache>
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
+#include <QScreen>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSplitter>
@@ -101,6 +102,7 @@ namespace coreMacOS {
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
+
 
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
@@ -137,7 +139,11 @@ mudlet::mudlet()
         qApp->setAttribute(Qt::AA_DontShowIconsInMenus, (mShowIconsOnMenuCheckedState == Qt::Unchecked));
     }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // 'AA_UseHighDpiPixmaps' is deprecated in Qt6: High-DPI pixmaps are always enabled.
     qApp->setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
+
     // We need to record this before we clobber it with our own substitute...
     mDefaultStyle = qApp->style()->objectName();
     // ... which is applied here:
@@ -189,7 +195,6 @@ mudlet::mudlet()
     mpMainToolBar->setMovable(false);
     addToolBarBreak();
     auto frame = new QWidget(this);
-    frame->setFocusPolicy(Qt::NoFocus);
     setCentralWidget(frame);
     mpTabBar = new TTabBar(frame);
     mpTabBar->setMaximumHeight(30);
@@ -209,7 +214,6 @@ mudlet::mudlet()
     mpWidget_profileContainer->setPalette(mainPalette);
     mpWidget_profileContainer->setContentsMargins(0, 0, 0, 0);
     mpWidget_profileContainer->setSizePolicy(sizePolicy);
-    mpWidget_profileContainer->setFocusPolicy(Qt::NoFocus);
     mpWidget_profileContainer->setAutoFillBackground(true);
 
     layoutTopLevel->addWidget(mpWidget_profileContainer);
@@ -471,7 +475,7 @@ mudlet::mudlet()
     connect(dactionDiscord, &QAction::triggered, this, &mudlet::slot_profileDiscord);
     connect(dactionMudletDiscord, &QAction::triggered, this, &mudlet::slot_mudletDiscord);
     connect(dactionLiveHelpChat, &QAction::triggered, this, &mudlet::slot_irc);
-    connect(dactionShowErrors, &QAction::triggered, [=]() {
+    connect(dactionShowErrors, &QAction::triggered, this, [=]() {
         auto host = getActiveHost();
         if (!host) {
             return;
@@ -927,6 +931,7 @@ void mudlet::loadMaps()
 
     mEncodingNameMap = {{"ASCII", tr("ASCII (Basic)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"UTF-8", tr("UTF-8 (Recommended)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
+                        {"EUC-KR", tr("EUC-KR (Korean)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"GBK", tr("GBK (Chinese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"GB18030", tr("GB18030 (Chinese)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
                         {"BIG5", tr("Big5-ETen (Taiwan)", "Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)")},
@@ -992,6 +997,9 @@ void mudlet::migrateDebugConsole(Host* currentHost)
 // selectable location, or even from a read-only part of their computer's
 // file-system we would have to do this each time they looked to change
 // language/locale:
+// If we ever change the usage of this to take a path other than the
+// resource file's one then the code in the main.cpp file's
+// (void) loadTranslationsForCommandLine() will have to be revised as well:
 void mudlet::scanForMudletTranslations(const QString& path)
 {
     mPathNameMudletTranslations = path;
@@ -1146,8 +1154,8 @@ void mudlet::loadTranslators(const QString& languageCode)
         // mangles the former to find the actual best one to use, but we
         // shouldn't include the path in the first element as it seems to mess
         // up the process of locating the file:
-        pQtTranslator->load(qtTranslatorFileName, mPathNameQtTranslations);
-        if (!pQtTranslator->isEmpty()) {
+        bool isOk = pQtTranslator->load(qtTranslatorFileName, mPathNameQtTranslations);
+        if (isOk && !pQtTranslator->isEmpty()) {
             // qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << mPathNameQtTranslations << "/"<< qtTranslatorFileName << "\"...";
             qApp->installTranslator(pQtTranslator);
             mTranslatorsLoadedList.append(pQtTranslator);
@@ -1157,8 +1165,8 @@ void mudlet::loadTranslators(const QString& languageCode)
     QPointer<QTranslator> pMudletTranslator = new QTranslator;
     QString mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
     if (!mudletTranslatorFileName.isEmpty()) {
-        pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
-        if (!pMudletTranslator->isEmpty()) {
+        bool isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
+        if (isOk && !pMudletTranslator->isEmpty()) {
 //            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mPathNameMudletTranslations << "/"
 //                                         << mudletTranslatorFileName << "\"...";
             qApp->installTranslator(pMudletTranslator);
@@ -1337,9 +1345,9 @@ void mudlet::updateMultiViewControls()
 void mudlet::reshowRequiredMainConsoles()
 {
     if (mpTabBar->count() > 1 && mMultiView) {
-        for (auto pHost: mHostManager) {
-            if (pHost->mpConsole) {
-                pHost->mpConsole->show();
+        for (const auto& host: mHostManager) {
+            if (host->mpConsole) {
+                host->mpConsole->show();
             }
         }
     }
@@ -1432,6 +1440,12 @@ void mudlet::addConsoleForNewHost(Host* pH)
     QResizeEvent event(s, s);
     updateDiscordNamedIcon();
     QApplication::sendEvent(pH->mpConsole, &event);
+    // This is needed to completely show the first autoloaded profile so that
+    // it can be properly hidden by a second one (without it the:
+    // mpCurrentActiveHost->mpConsole->hide() does not work correctly and two
+    // profiles get shown across a split screen - even though mMultiView is NOT
+    // set)!
+    qApp->processEvents();
 }
 
 
@@ -2620,7 +2634,7 @@ void mudlet::attachDebugArea(const QString& hostname)
     auto consoleCloser = new TConsoleMonitor(smpDebugArea);
     smpDebugArea->installEventFilter(consoleCloser);
 
-    QSize generalRule(qApp->desktop()->size());
+    QSize generalRule(QGuiApplication::primaryScreen()->availableSize());
     generalRule -= QSize(30, 30);
     smpDebugArea->resize(QSize(800, 600).boundedTo(generalRule));
     smpDebugArea->hide();
@@ -3395,7 +3409,11 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
         // when saving/resyncing packages/modules - ends in a '/'
         return qsl("%1/.config/mudlet/moduleBackups/").arg(QDir::homePath());
     case qtTranslationsPath:
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         return QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+#else
+        return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+#endif
     case hunspellDictionaryPath:
         // Added for 3.18.0 when user dictionary capability added
 #if defined(Q_OS_MACOS)
@@ -3587,7 +3605,7 @@ void mudlet::slot_updateInstalled()
     disconnect(dactionUpdate, &QAction::triggered, this, nullptr);
 
     // rejig to restart Mudlet instead
-    QObject::connect(dactionUpdate, &QAction::triggered, this, [=]() {
+    connect(dactionUpdate, &QAction::triggered, this, [=]() {
         forceClose();
         QProcess::startDetached(qApp->arguments()[0], qApp->arguments());
     });
@@ -3810,11 +3828,11 @@ void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
         writeProfileData(profileName, qsl("password"), readJob->textData());
 
         // delete from secure storage
-        auto *job = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
-        job->setAutoDelete(true);
-        job->setKey(profileName);
-        job->setProperty("profile", profileName);
-        job->start();
+        auto *deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
+        deleteJob->setAutoDelete(true);
+        deleteJob->setKey(profileName);
+        deleteJob->setProperty("profile", profileName);
+        deleteJob->start();
     }
     mProfilePasswordsToMigrate.removeAll(profileName);
     job->deleteLater();
@@ -3907,7 +3925,7 @@ QString mudlet::autodetectPreferredLanguage()
     // translation is still only at 20%
     QVector<QString> availableQualityTranslations {qsl("en_GB")};
     for (auto& code : getAvailableTranslationCodes()) {
-        auto& translation = mTranslationsMap.value(code);
+        auto& translation = mTranslationsMap[code];
         if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();
             if (translatedPc >= scmTranslationGoldStar) {
@@ -3916,7 +3934,11 @@ QString mudlet::autodetectPreferredLanguage()
         }
     }
 
-    for (auto language : QLocale::system().uiLanguages()) {
+    QStringList systemUiLanguages = QLocale::system().uiLanguages();
+    // The code in the loop may modify the value anyway so explicity detach
+    // from the original:
+    systemUiLanguages.detach();
+    for (auto& language : systemUiLanguages) {
         if (availableQualityTranslations.contains(language.replace(qsl("-"), qsl("_")))) {
             return language;
         }
@@ -3939,7 +3961,10 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
     }
 
     QTextStream ds(&dict);
+    // In Qt6 the default encoding is UTF-8 instead
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     ds.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     QString dictionaryLine;
     ds.readLineInto(&dictionaryLine);
 
@@ -4007,7 +4032,10 @@ bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
     }
 
     QTextStream ds(&dict);
+    // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     ds.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     ds << qMax(0, wl.count());
     if (!wl.isEmpty()) {
       ds << QChar(QChar::LineFeed);
@@ -4031,7 +4059,10 @@ int mudlet::getDictionaryWordCount(QFile &dict)
     }
 
     QTextStream ds(&dict);
+    // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     ds.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     QString dictionaryLine;
     // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
@@ -4046,7 +4077,7 @@ int mudlet::getDictionaryWordCount(QFile &dict)
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
-bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
+bool mudlet::overwriteAffixFile(QFile& aff, const QHash<QString, unsigned int>& gc)
 {
     QMultiMap<unsigned int, QString> sortedGraphemeCounts;
     // Sort the graphemes into a descending order list:
@@ -4060,7 +4091,7 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
 
     // Generate TRY line:
     QString tryLine = qsl("TRY ");
-    QMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
+    QMultiMapIterator<unsigned int, QString> itGrapheme(sortedGraphemeCounts);
     itGrapheme.toBack();
     while (itGrapheme.hasPrevious()) {
         itGrapheme.previous();
@@ -4078,7 +4109,10 @@ bool mudlet::overwriteAffixFile(QFile& aff, QHash<QString, unsigned int>& gc)
     }
 
     QTextStream as(&aff);
+    // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     as.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
@@ -4458,12 +4492,17 @@ void mudlet::activateProfile(Host* pHost)
         mpTabBar->blockSignals(false);
     }
 
+    // Reset the tab back to "normal" to undo the effect of it having its style
+    // changed on new data:
+    mpTabBar->setTabBold(newActiveTabIndex, false);
+    mpTabBar->setTabItalic(newActiveTabIndex, false);
+    mpTabBar->setTabUnderline(newActiveTabIndex, false);
+
     mpCurrentActiveHost = pHost;
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
     mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
-    // CHECKME: Why are we only repainting the main command line, what about the others?
 
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();
@@ -4502,8 +4541,12 @@ void mudlet::activateProfile(Host* pHost)
 
     mpCurrentActiveHost->updateDisplayDimensions();
 
+    // Currently used to update the Discord Rich Presence
     emit signal_tabChanged(mpCurrentActiveHost->getName());
+    // Currently used to assign the shortcuts for the activated profile:-
     emit signal_profileActivated(pHost, newActiveTabIndex);
+
+    mpCurrentActiveHost->setFocusOnHostActiveCommandLine();
 }
 
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
@@ -4579,6 +4622,7 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
         {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),          {qsl("carrionfields.net")}},
+        {qsl(":/mg-loader.xml"),          {qsl("mg.mud.de")}},
         {qsl(":/run-tests.xml"),          {qsl("mudlet.org")}},
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
         {qsl(":/mudlet-mapper.xml"),      {qsl("aetolia.com"),
@@ -4649,4 +4693,41 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
         }
         // Don't do anything if it was NOT found
     }
+}
+
+/*static*/ QImage mudlet::getSplashScreen()
+{
+#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
+    auto now = QDateTime::currentDateTime();
+    // clang-format off
+#if defined(DEBUG_EASTER_EGGS)
+    if (bool layEasterEgg = (now.time().second() < 30); layEasterEgg) {
+        // Only do it in the first half of any minute:
+#else
+    if (bool layEasterEgg = (now.date().month() == 4
+                        && now.date().day() == 1); layEasterEgg) {
+#endif // ! DEBUG_EASTER_EGGS
+        // clang-format on
+        // Set to one more than the highest number Mudlet_splashscreen_other_NN.png:
+        auto egg = QRandomGenerator::global()->bounded(24);
+        if (egg) {
+            auto eggFileName = qsl(":/splash/Mudlet_splashscreen_other_%1.png").arg(egg, 2, 10, QLatin1Char('0'));
+            return QImage(eggFileName);
+        } else {
+            // For the zeroth case just rotate the picture 180 degrees:
+            QImage original(mudlet::scmIsReleaseVersion
+                                    ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                                    : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                                                     : qsl(":/splash/Mudlet_splashscreen_development.png"));
+            return original.mirrored(true, true);
+        }
+    } else {
+        return QImage(mudlet::scmIsReleaseVersion
+                              ? qsl(":/splash/Mudlet_splashscreen_main.png")
+                              : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                                               : qsl(":/splash/Mudlet_splashscreen_development.png"));
+    }
+#else
+    return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
+#endif // INCLUDE_VARIABLE_SPLASH_SCREEN
 }

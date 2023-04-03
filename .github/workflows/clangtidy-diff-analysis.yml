@@ -1,4 +1,4 @@
-name: 🔍 Check improvements with Mudlet's C++ style guide
+name: "🔍 Check improvements with cpp style guide"
 
 on:
   pull_request_target:
@@ -41,7 +41,7 @@ jobs:
       if: runner.os == 'Windows'
       with:
         version: ${{matrix.qt}}
-        dir: ${{runner.workspace}}
+        dir: ${{github.workspace}}
         arch: win64_mingw73
         cache: true
 
@@ -50,7 +50,7 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       with:
         version: ${{matrix.qt}}
-        dir: ${{runner.workspace}}
+        dir: ${{github.workspace}}
         cache: true
 
     - name: Restore Boost cache
@@ -122,15 +122,15 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.10.1
+      uses: ZedThree/clang-tidy-review@v0.12.2
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory
         exclude: '3rdparty'
         config_file: '.clang-tidy'
         # the action doesn't see system-level libraries, need to replicate them here
-        apt_packages: 'pkg-config,libzip-dev,libglu1-mesa-dev,libpulse-dev'
+        apt_packages: 'gettext, pkg-config, libzip-dev, libglu1-mesa-dev, libpulse-dev'
+        split_workflow: true
 
-    - name: Passed C++ style guide checks
-      if: steps.static_analysis.outputs.total_comments > 0
-      run: exit 1
+    - name: Upload check results
+      uses: ZedThree/clang-tidy-review/upload@v0.12.2

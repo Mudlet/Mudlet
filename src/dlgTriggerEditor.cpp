@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -223,8 +223,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorMovementNecessary, this, &dlgTriggerEditor::slot_sourceFindMove);
     connect(mpSourceEditorFindArea->pushButton_findPrevious, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceFindPrevious);
     connect(mpSourceEditorFindArea->pushButton_findNext, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceFindNext);
+    connect(mpSourceEditorFindArea->pushButton_replace, &QPushButton::clicked, this, &dlgTriggerEditor::slot_sourceReplace);
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindPrevious, this, &dlgTriggerEditor::slot_sourceFindPrevious);
     connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorFindNext, this, &dlgTriggerEditor::slot_sourceFindNext);
+    connect(mpSourceEditorFindArea, &dlgSourceEditorFindArea::signal_sourceEditorReplace, this, &dlgTriggerEditor::slot_sourceReplace);
     connect(mpSourceEditorFindArea->pushButton_close, &QPushButton::clicked, this, &dlgTriggerEditor::slot_closeSourceFind);
 
     auto openSourceFindAction = new QAction(this);
@@ -521,14 +523,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mProfileSaveAsAction->setEnabled(true);
     connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
 
-    auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
-    QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_nextSection);
+    auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab), this);
+    connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_nextSection);
 
-    QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_Tab), this);
-    QObject::connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previousSection);
+    QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab), this);
+    connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previousSection);
 
     QShortcut *activateMainWindowAction = new QShortcut(QKeySequence((Qt::ALT | Qt::Key_E)), this);
-    QObject::connect(activateMainWindowAction, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
+    connect(activateMainWindowAction, &QShortcut::activated, this, &dlgTriggerEditor::slot_activateMainWindow);
 
     toolBar = new QToolBar();
     toolBar2 = new QToolBar();
@@ -5431,9 +5433,7 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     mpSourceEditorArea->show();
 
     mpCurrentVarItem = pItem; //remember what has been clicked to save it
-    // There was repeated test for pItem being null here but we have NOT altered
-    // it since the start of the function where it was already tested for not
-    // being zero so we don't need to retest it! - Slysven
+
     if (column) {
         mChangingVar = false;
         return;
@@ -5690,7 +5690,7 @@ void dlgTriggerEditor::slot_treeSelectionChanged()
     auto * sender = qobject_cast<TTreeWidget*>(QObject::sender());
     if (sender) {
         QList<QTreeWidgetItem*> items = sender->selectedItems();
-        if (items.length()) {
+        if (!items.empty()) {
             QTreeWidgetItem* item = items.first();
             if (sender == treeWidget_scripts) {
                 slot_scriptsSelected(item);
@@ -6648,7 +6648,7 @@ void dlgTriggerEditor::autoSave()
     mpHost->saveProfile(QString(), qsl("autosave"));
 }
 
-void dlgTriggerEditor::enterEvent(QEvent* pE)
+void dlgTriggerEditor::enterEvent(TEnterEvent* pE)
 {
     Q_UNUSED(pE)
     if (mNeedUpdateData) {
@@ -7231,6 +7231,25 @@ void dlgTriggerEditor::slot_closeSourceFind()
     controller->update();
     mpSourceEditorFindArea->hide();
     mpSourceEditorEdbee->setFocus();
+}
+
+void dlgTriggerEditor::slot_sourceReplace()
+{
+    auto controller = mpSourceEditorEdbee->controller();
+    auto replaceText = mpSourceEditorFindArea->lineEdit_replaceText->text();
+    for (int i = 0; i < controller->textSelection()->rangeCount(); i++) {
+        auto &range = controller->textSelection()->range(i);
+        if (mpSourceEditorEdbee->textDocument()->text().mid(range.anchor(), range.length()) == replaceText) {
+            slot_sourceFindNext();
+            continue;
+        }
+        if (!range.hasSelection()) {
+            slot_sourceFindPrevious();
+            continue;
+        }
+        mpSourceEditorEdbee->textDocument()->replace(range.anchor(), range.length(), replaceText);
+        range.setLength(mpSourceEditorFindArea->lineEdit_replaceText->text().length());
+    }
 }
 
 void dlgTriggerEditor::slot_sourceFindPrevious()

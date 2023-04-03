@@ -244,7 +244,7 @@ private:
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
 
-    void processTelnetCommand(const std::string& command);
+    void processTelnetCommand(const std::string& telnetCommand);
     void sendTelnetOption(char type, char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
@@ -252,7 +252,9 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
+#if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
+#endif
     void sendNAWS(int x, int y);
     static std::pair<bool, bool> testReadReplayFile();
 

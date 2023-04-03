@@ -16,6 +16,11 @@
     <height>0</height>
    </size>
   </property>
+  <property name="font">
+   <font>
+    <family>Bitstream Vera Sans</family>
+   </font>
+  </property>
   <property name="windowTitle">
    <string>Select a profile to connect with</string>
   </property>
@@ -127,7 +132,6 @@
            </property>
            <property name="font">
             <font>
-             <family>Arial Black</family>
              <pointsize>16</pointsize>
              <stylestrategy>PreferAntialias</stylestrategy>
             </font>
@@ -278,7 +282,6 @@
               </property>
               <property name="font">
                <font>
-                <family>Arial</family>
                 <pointsize>8</pointsize>
                 <stylestrategy>PreferAntialias</stylestrategy>
                </font>
@@ -499,7 +502,6 @@
                </property>
                <property name="font">
                 <font>
-                 <family>Bitstream Charter</family>
                  <pointsize>9</pointsize>
                 </font>
                </property>
@@ -549,7 +551,6 @@
                </property>
                <property name="font">
                 <font>
-                 <family>Bitstream Charter</family>
                  <pointsize>9</pointsize>
                 </font>
                </property>
@@ -565,7 +566,6 @@
               <widget class="QLineEdit" name="profile_name_entry">
                <property name="font">
                 <font>
-                 <family>Bitstream Charter</family>
                  <pointsize>9</pointsize>
                 </font>
                </property>
@@ -832,7 +832,6 @@
               </property>
               <property name="font">
                <font>
-                <family>DejaVu Sans</family>
                 <pointsize>9</pointsize>
                </font>
               </property>
