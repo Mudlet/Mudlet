@@ -32,8 +32,13 @@
     <layout class="QHBoxLayout" name="layout_footer">
      <item>
       <widget class="QLabel" name="label_info">
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+        </font>
+       </property>
        <property name="text">
-        <string/>
+        <string>Input new area name to create one.</string>
        </property>
        <property name="textFormat">
         <enum>Qt::AutoText</enum>
