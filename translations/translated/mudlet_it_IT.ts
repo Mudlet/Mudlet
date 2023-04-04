@@ -2196,14 +2196,18 @@ Consiglio di esaminare il report più recente nel file:
       <source>[ WARN ]  - Attempt made to download an XML map when one has already been
 requested or is being imported from a local file - wait for that
 operation to complete (if it cannot be canceled) before retrying!</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Tentativo di scaricare una mappa XML mentre una è già stata richiesta
+o importata da un file locale - aspetta che la procedura sia terminata (se non può
+essere cancellata) prima di riprovare!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2438"/>
       <source>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
 %1
 and the error message (may contain technical details) was:&quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Tentativo di scaricare un XML da un URL non valida.  L'URL era:
+%1
+e il messaggio di errore (può contenere dettagli tecnici) era:&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2452"/>
@@ -7182,7 +7186,10 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgRoomProperties.cpp" line="150"/>
       <source>Lock room(s), so it/they will never be used for speedwalking</source>
       <comment>This text will be shown at a checkbox, where you can set/unset a number of room&apos;s lock.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Blocca la stanza, così non verrà utilizzata durante lo speedwalking</numerusform>
+        <numerusform>Blocca le stanze, così non verranno utilizzate durante lo speedwalking</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgRoomProperties.cpp" line="167"/>
@@ -8960,32 +8967,38 @@ dalla GUI)</translation>
       <location filename="../src/main.cpp" line="289"/>
       <source>There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Ci sono altre opzioni ereditate che provengono dalla libreria Qt e che di solito
+sono meno utili durante l'uso normale di questa applicazione:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="292"/>
       <source>       --dograb                     ignore any implicit or explicit -nograb.
                                     --dograb wins over --nograb even when --nograb is last on
                                     the command line.</source>
-      <translation type="unfinished"/>
+      <translation>       --dograb                     ignora ogni uso di -nograb sia implicito che esplicito.
+                                    --dograb ha la priorita' su --nograb anche se --nograb e' l'ultima
+                                    opzione specificata da linea di comando.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="296"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard. This option is set by default when Mudlet is
                                     running in the gdb debugger under Linux.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     l'applicazione non deve catturare l'attività del mouse
+                                    o della tastiera. Questa opzione e' impostata automaticamente
+                                    quando Mudlet e' eseguito nel debugger gdb per Linux.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="300"/>
       <source>       --nograb                     the application should never grab the mouse or the
                                     keyboard.</source>
-      <translation type="unfinished"/>
+      <translation>       --nograb                     l'applicazione non deve catturare l'attività del mouse
+                                    o della tastiera.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="303"/>
       <source>       --reverse                    sets the application&apos;s layout direction to right to left.</source>
-      <translation type="unfinished"/>
+      <translation>       --reverse                    imposta l'orientamento del testo da destra a sinistra.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="304"/>
@@ -8996,12 +9009,18 @@ less likely to be useful for normal use of this application:</source>
                                     option. You can also set the style for all Qt
                                     applications by setting the QT_STYLE_OVERRIDE environment
                                     variable.</source>
-      <translation type="unfinished"/>
+      <translation>       --style=style                imposta lo stile della GUI dell'applicazione. I valori
+                                    dipendono dalla configurazione del tuo sistema. Se Qt
+                                    e' stato compilato con stili addizionali oppure ne sono
+                                    stati aggiunti con dei plugin, questi sono disponibili con
+                                    l'opzione style. Puoi anche impostare lo stile di tutte le
+                                    applicazioni Qt impostato la variabile d'ambiente
+                                    QT_STYLE_OVERRIDE.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="311"/>
       <source>       --style style                is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --style style                ha la stessa funzione dell'opzione precedente.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="312"/>
@@ -9009,12 +9028,15 @@ less likely to be useful for normal use of this application:</source>
                                     The value must be a path to a file that contains the
                                     Style Sheet. Note: Relative URLs in the Style Sheet file
                                     are relative to the Style Sheet file&apos;s path.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet=stylesheet      Imposta il foglio di stile dell'applicazione.
+                                    Deve essere il percorso di un file che contiene il foglio
+                                    di stile. Nota: eventuali URL presenti nel foglio di stile
+                                    saranno valutate relativamente al percorso dello stesso.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="316"/>
       <source>       --stylesheet stylesheet      is the same as listed above.</source>
-      <translation type="unfinished"/>
+      <translation>       --stylesheet stylesheet      ha la stessa funzione dell'opzione precedente.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="319"/>
@@ -9022,14 +9044,19 @@ less likely to be useful for normal use of this application:</source>
                                     immediately and not use buffer optimization. It makes the
                                     program easier to debug and often much slower. The --sync
                                     option is only valid for the X11 version of Qt.</source>
-      <translation type="unfinished"/>
+      <translation>       --sync                       obbliga il server X a effettuare ogni richiesta client
+                                    immediatamente e non utilizzare l'ottimizzazione del buffer.
+                                    Rendere piu' semplice il debug e spesso rallenta l'esecuzione.
+                                    L' opzione --sync è valida solo per la versione X11 di Qt.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="324"/>
       <source>       --widgetcount                prints debug message at the end about number of widgets
                                     left undestroyed and maximum number of widgets existing
                                     at the same time.</source>
-      <translation type="unfinished"/>
+      <translation>       --widgetcount                stampa un messaggio di debug relativo al numero di widget
+                                    rimasti instanziati e il massimo numero di widget attivi nello
+                                    stesso momento.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="327"/>
@@ -9037,7 +9064,10 @@ less likely to be useful for normal use of this application:</source>
                                     specified port. The number is the port value and block is
                                     optional and will make the application wait until a
                                     debugger connects to it.</source>
-      <translation type="unfinished"/>
+      <translation>       --qmljsdebugger=1234[,block] attiva il debug QML/JS sulla porta specificata.
+                                    Il numero di porta e il campo block sono opzionali e faranno
+                                    in modo che l'applicazione resti in attesa finche' il programma
+                                    di debug non si collega.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="349"/>
