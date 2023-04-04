@@ -723,17 +723,17 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
     auto f = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item);
-    QFile file(f);
+    QSaveFile file(f);
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << what;
-        file.close();
+        file.commit();
     }
 
-    if (file.error() == QFile::NoError) {
+    if (file.error() == QFileDevice::NoError) {
         return qMakePair(true, QString());
     } else {
         return qMakePair(false, file.errorString());
@@ -1254,11 +1254,13 @@ void dlgConnectionProfiles::slot_setCustomColor()
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
         auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profilecolor"));
-        QFile file(profileColorPath);
+        QSaveFile file(profileColorPath);
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         auto colorName = color.name();
         file.write(colorName.toUtf8(), colorName.length());
-        file.close();
+        if (!file.commit()) {
+            qDebug() << "dlgConnectionProfiles::slot_setCustomColor: error saving custom icon color: " << file.errorString();
+        }
         profiles_tree_widget->currentItem()->setIcon(customIcon(profileName, {color}));
     }
 }
@@ -1482,7 +1484,7 @@ bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newPr
 // save profile using Qt's API's which handle non-ASCII characters in Windows paths fine
 void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const
 {
-    QFile file(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")));
+    QSaveFile file(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")));
     if (!file.open(QFile::WriteOnly)) {
         qDebug() << "dlgConnectionProfiles::copyProfileSettingsOnly ERROR - couldn't create new profile file:" << file.fileName() << "-" << file.errorString();
         return;
@@ -1492,7 +1494,9 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
     newProfileXml.save(saveStringStream);
     std::string output(saveStringStream.str());
     file.write(output.data());
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "dlgConnectionProfiles::saveProfileCopy: error copying profile: " << file.errorString();
+    }
 }
 
 void dlgConnectionProfiles::slot_load()
