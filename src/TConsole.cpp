@@ -71,7 +71,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
-, mpLineEdit_networkLatency(new QLineEdit)
 , mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
@@ -333,33 +332,43 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     logButton->setIcon(logIcon);
     connect(logButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleLogging);
 
-    mpLineEdit_networkLatency->setReadOnly(true);
-    mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
-    mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
-    mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds),<br>"
-                                                             "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
-    mpLineEdit_networkLatency->setMaximumSize(120, 30);
-    mpLineEdit_networkLatency->setMinimumSize(120, 30);
-    mpLineEdit_networkLatency->setAutoFillBackground(true);
-    mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
-    mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    if (mType == MainConsole) {
+        mpLineEdit_networkLatency = new QLineEdit(this);
+        mpLineEdit_networkLatency->setReadOnly(true);
+        mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
+        mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
+        mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds),<br>"
+                                                                 "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
+        mpLineEdit_networkLatency->setMaximumSize(120, 30);
+        mpLineEdit_networkLatency->setMinimumSize(120, 30);
+        mpLineEdit_networkLatency->setAutoFillBackground(true);
+        mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
+        mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-    int width;
-    int maxWidth = 120;
-    width = QFontMetrics(latencyFont).boundingRect(QString("N:0.000 S:0.000")).width();
-    if (width < maxWidth) {
+        int latencyFontPointSize = 21;
+        QFont latencyFont = QFont(qsl("Bitstream Vera Sans Mono"), latencyFontPointSize, QFont::Normal);
+        const int latencyFontSizeMargin = 10;
+        QString dummyTextA = tr("N:%1 S:%2",
+                                // intentional comment to separate arguments
+                                "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
+                                "'S'ystem (processing) time")
+                                     .arg(0.0, 0, 'f', 3)
+                                     .arg(0.0, 0, 'f', 3);
+        QString dummyTextB = tr("<no GA> S:%1",
+                                // intentional comment to separate arguments
+                                "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
+                                "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
+                                "network latency...")
+                                     .arg(0.0, 0, 'f', 3);
+        do {
+            latencyFont.setPointSize(--latencyFontPointSize);
+        } while (latencyFontPointSize > 6
+                 && qMax(QFontMetrics(latencyFont).boundingRect(dummyTextA).width(),
+                         QFontMetrics(latencyFont).boundingRect(dummyTextB).width()) + latencyFontSizeMargin
+                            > mpLineEdit_networkLatency->maximumWidth());
+
         mpLineEdit_networkLatency->setFont(latencyFont);
-    } else {
-        QFont latencyFont2 = QFont("Bitstream Vera Sans Mono", 9, QFont::Normal);
-        width = QFontMetrics(latencyFont2).boundingRect(QString("N:0.000 S:0.000")).width();
-        if (width < maxWidth) {
-            mpLineEdit_networkLatency->setFont(latencyFont2);
-        } else {
-            QFont latencyFont3 = QFont("Bitstream Vera Sans Mono", 8, QFont::Normal);
-            width = QFontMetrics(latencyFont3).boundingRect(QString("N:0.000 S:0.000")).width();
-            mpLineEdit_networkLatency->setFont(latencyFont3);
-        }
+        mpLineEdit_networkLatency->setFrame(false);
     }
 
     emergencyStop->setMinimumSize(QSize(30, 30));
@@ -371,8 +380,17 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers.")));
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
 
-    mpBufferSearchBox->setMinimumSize(QSize(100, 30));
-    mpBufferSearchBox->setMaximumSize(QSize(150, 30));
+    mpBufferSearchBox->setClearButtonEnabled(true);
+    for (auto child : mpBufferSearchBox->children()) {
+        auto *pAction_clear(qobject_cast<QAction *>(child));
+        if (pAction_clear && pAction_clear->objectName() == QLatin1String("_q_qlineeditclearaction")) {
+            connect(pAction_clear, &QAction::triggered, this, &TConsole::slot_clearSearchResults, Qt::QueuedConnection);
+            break;
+        }
+    }
+
+    mpBufferSearchBox->setMinimumSize(QSize(150, 30));
+    mpBufferSearchBox->setMaximumSize(QSize(250, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
@@ -435,10 +453,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutButtonLayer->addWidget(replayButton, 0, 8);
     layoutButtonLayer->addWidget(logButton, 0, 9);
     layoutButtonLayer->addWidget(emergencyStop, 0, 10);
-    layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
+    if (mType == MainConsole) {
+        // In fact a whole lot more could be inside this "if"!
+        layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
+    }
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
-    mpLineEdit_networkLatency->setFrame(false);
     layerCommandLine->setAutoFillBackground(true);
 
     centralLayout->addWidget(layerCommandLine);
@@ -1831,9 +1851,9 @@ void TConsole::slot_searchBufferUp()
     // happen:
     mudlet::self()->activateProfile(mpHost);
 
-    QString _txt = mpBufferSearchBox->text();
-    if (_txt != mSearchQuery) {
-        mSearchQuery = _txt;
+    if (mSearchQuery != mpBufferSearchBox->text()) {
+        mSearchQuery = mpBufferSearchBox->text();
+        buffer.clearSearchHighlights();
         mCurrentSearchResult = buffer.lineBuffer.size();
     } else {
         // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
@@ -1842,26 +1862,22 @@ void TConsole::slot_searchBufferUp()
     if (buffer.lineBuffer.empty()) {
         return;
     }
-    bool _found = false;
-    for (int i = mCurrentSearchResult - 1; i >= 0; i--) {
-        int begin = -1;
+
+    bool found = false;
+    for (int searchY = mCurrentSearchResult - 1; searchY >= 0; --searchY) {
+        int searchX = -1;
         do {
-            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
-            if (begin > -1) {
-                int length = mSearchQuery.size();
-                moveCursor(0, i);
-                selectSection(begin, length);
-                setBgColor(255, 255, 0, 255);
-                setFgColor(0, 0, 0);
-                deselect();
-                reset();
-                _found = true;
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            if (searchX > -1) {
+                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
+                found = true;
             }
-        } while (begin > -1);
-        if (_found) {
-            scrollUp(buffer.mCursorY - i - 3);
+        } while (searchX > -1);
+
+        if (found) {
+            scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
-            mCurrentSearchResult = i;
+            mCurrentSearchResult = searchY;
             return;
         }
     }
@@ -1870,9 +1886,9 @@ void TConsole::slot_searchBufferUp()
 
 void TConsole::slot_searchBufferDown()
 {
-    QString _txt = mpBufferSearchBox->text();
-    if (_txt != mSearchQuery) {
-        mSearchQuery = _txt;
+    if (mSearchQuery != mpBufferSearchBox->text()) {
+        mSearchQuery = mpBufferSearchBox->text();
+        buffer.clearSearchHighlights();
         mCurrentSearchResult = buffer.lineBuffer.size();
     }
     if (buffer.lineBuffer.empty()) {
@@ -1881,26 +1897,22 @@ void TConsole::slot_searchBufferDown()
     if (mCurrentSearchResult >= buffer.lineBuffer.size()) {
         return;
     }
-    bool _found = false;
-    for (int i = mCurrentSearchResult + 1; i < buffer.lineBuffer.size(); i++) {
-        int begin = -1;
+
+    bool found = false;
+    for (int searchY = mCurrentSearchResult + 1; searchY < buffer.lineBuffer.size(); ++searchY) {
+        int searchX = -1;
         do {
-            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
-            if (begin > -1) {
-                int length = mSearchQuery.size();
-                moveCursor(0, i);
-                selectSection(begin, length);
-                setBgColor(255, 255, 0, 255);
-                setFgColor(0, 0, 0);
-                deselect();
-                reset();
-                _found = true;
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            if (searchX > -1) {
+                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
+                found = true;
             }
-        } while (begin > -1);
-        if (_found) {
-            scrollUp(buffer.mCursorY - i - 3);
+        } while (searchX > -1);
+
+        if (found) {
+            scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
-            mCurrentSearchResult = i;
+            mCurrentSearchResult = searchY;
             return;
         }
     }
@@ -2300,4 +2312,11 @@ void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
         createSearchOptionIcon();
         mpHost->mBufferSearchOptions = mSearchOptions;
     }
+}
+
+void TConsole::slot_clearSearchResults()
+{
+    buffer.clearSearchHighlights();
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }

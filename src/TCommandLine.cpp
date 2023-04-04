@@ -564,8 +564,6 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
         mpHost->recordActiveCommandLine(this);
     }
 
-    mudlet::self()->activateProfile(mpHost);
-
     QPlainTextEdit::focusInEvent(event);
 }
 
