@@ -255,7 +255,7 @@ private:
 #if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
 #endif
-    void sendNAWS(int x, int y);
+    void sendNAWS(int width, int height);
     static std::pair<bool, bool> testReadReplayFile();
 
 
