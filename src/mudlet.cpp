@@ -1313,6 +1313,10 @@ void mudlet::closeHost(const QString& name)
 
     migrateDebugConsole(pH);
 
+    if (pH->mSaveHistory) {
+        pH->mpConsole->mpCommandLine->saveHistory();
+    }
+
     pH->mpConsole->close();
 
     mpTabBar->removeTab(name);

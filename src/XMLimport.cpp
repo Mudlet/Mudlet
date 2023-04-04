@@ -724,6 +724,7 @@ void XMLimport::readHost(Host* pHost)
     pHost->mNoAntiAlias = attributes().value(qsl("mNoAntiAlias")) == YES;
     pHost->mEchoLuaErrors = attributes().value(qsl("mEchoLuaErrors")) == YES;
     pHost->mHighlightHistory = readDefaultTrueBool(qsl("HighlightHistory"));
+    pHost->mSaveHistory = readDefaultFalseBool(qsl("saveHistory"));
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
         const QStringView ambiguousWidthSetting(attributes().value(qsl("AmbigousWidthGlyphsToBeWide")));
         if (ambiguousWidthSetting == YES) {
@@ -1147,6 +1148,10 @@ void XMLimport::readHost(Host* pHost)
 
 bool XMLimport::readDefaultTrueBool(QString name) {
     return attributes().value(name) == YES || !attributes().hasAttribute(name);
+}
+
+bool XMLimport::readDefaultFalseBool(QString name) {
+    return attributes().hasAttribute(name) && attributes().value(name) == YES;
 }
 
 // returns the ID of the root imported trigger/group

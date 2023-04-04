@@ -75,6 +75,8 @@ public:
     void removeBlacklist(const QString&);
     void clearBlacklist();
     void adjustHeight();
+    void saveHistory();
+    void restoreHistory();
     TConsole* console() const { return mpConsole; }
 
     int mActionFunction = 0;

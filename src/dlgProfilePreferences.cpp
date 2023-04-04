@@ -213,6 +213,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                               "will be run.</p>"
                                               "<p><i>It is recommended to not enable this option if you need to maintain compatibility "
                                               "with scripts or packages for Mudlet versions prior to <b>3.9.0</b>.</i></p>"));
+    checkBox_saveHistory->setToolTip(tr("<p>If checked then when a profile is closed and reopened, it will retain the history of commands.</p>"
+                                        "<p><i>It is unchecked by default</i></p>"
+                                        "<p>Be aware that it may include private information such as passwords, if they are typed in as input.</p>"));
     checkBox_useWideAmbiguousEastAsianGlyphs->setToolTip(tr("<p>Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being "
                                                             "of <i>Ambiguous</i> width when drawn in a font with a so-called <i>fixed</i> pitch; in "
                                                             "fact such text is <i>duo-spaced</i> when not using a proportional font. These symbols can be "
@@ -777,6 +780,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
+    checkBox_saveHistory->setChecked(pHost->mSaveHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
@@ -2635,6 +2639,15 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
+        bool newSaveHistory = checkBox_saveHistory->isChecked();
+        if (pHost->mSaveHistory && !newSaveHistory) {
+            // If user stops saving command history, then remove the old file when they click Save.
+            QFile historyFile(mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), qsl("commandHistory")));
+            if (historyFile.exists()) {
+                historyFile.remove();
+            }
+        }
+        pHost->mSaveHistory = newSaveHistory;
         pHost->mCommandSeparator = command_separator_lineedit->text();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mAcceptServerMedia = acceptServerMedia->isChecked();

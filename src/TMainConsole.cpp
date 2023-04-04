@@ -72,6 +72,10 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
 
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
+
+    if (mpHost->mSaveHistory) {
+        mpCommandLine->restoreHistory();
+    }
 }
 
 TMainConsole::~TMainConsole()

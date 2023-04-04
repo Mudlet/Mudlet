@@ -1412,3 +1412,48 @@ void TCommandLine::slot_adjustAccessibleNames()
         Q_UNREACHABLE();
     }
 }
+
+void TCommandLine::saveHistory()
+{
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("commandHistory")));
+    if (!file.open(QFile::ReadWrite | QFile::Truncate | QFile::Text)) {
+        qDebug() << "Problem creating commandHistory file";
+        return;
+    }
+    QTextStream output(&file);
+
+    int i = mHistoryList.size();
+    while (i--) {
+        output << mHistoryList[i].toUtf8() << "\n";
+    }
+    file.close();
+}
+
+void TCommandLine::restoreHistory()
+{
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("commandHistory")));
+    file.open(QFile::ReadOnly | QFile::Text);
+    QTextStream input(&file);
+    if (!file.exists()) {
+        qDebug() << "Command history file not found";
+        return;
+    } else {
+        qDebug() << "Restoring command history";
+    }
+    int count = 0;
+    QString line;
+    while (!input.atEnd()) {
+        line = input.readLine();
+        if (!line.isEmpty()) {
+            mHistoryList.push_front(line);
+            count++;
+        }
+    }
+    file.close();
+    if (!count) {
+        return;
+    }
+    mHistoryList.push_front(QString());
+    QString infoMsg = tr("[ INFO ]  - Command history restored %1 line(s).").arg(QString::number(count));
+    mpHost->postMessage(infoMsg);
+}
