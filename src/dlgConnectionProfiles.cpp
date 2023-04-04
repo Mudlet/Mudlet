@@ -722,22 +722,23 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    auto f = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item);
-    QSaveFile file(f);
+    QSaveFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << what;
-        file.commit();
+        if (!file.commit()) {
+            qDebug() << "dlgConnectionProfiles::writeProfileData: error writing custom profile data: " << file.errorString();
+        }
     }
 
     if (file.error() == QFileDevice::NoError) {
         return qMakePair(true, QString());
-    } else {
-        return qMakePair(false, file.errorString());
     }
+
+    return qMakePair(false, file.errorString());
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const

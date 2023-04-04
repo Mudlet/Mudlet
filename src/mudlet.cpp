@@ -1574,7 +1574,7 @@ bool mudlet::saveWindowLayout()
 
     QString layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
 
-    QFile layoutFile(layoutFilePath);
+    QSaveFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
         // revert update markers to ready objects for saving.
         commitLayoutUpdates();
@@ -1585,7 +1585,9 @@ bool mudlet::saveWindowLayout()
             ofs.setVersion(scmQDataStreamFormat_5_12);
         }
         ofs << layoutData;
-        layoutFile.close();
+        if (!layoutFile.commit()) {
+            qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
+        }
         mHasSavedLayout = true;
         return true;
     } else {
@@ -2493,19 +2495,20 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 
 QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    auto f = getMudletPath(mudlet::profileDataItemPath, profile, item);
-    QFile file(f);
+    QSaveFile file(getMudletPath(mudlet::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs << what;
-        file.close();
+        if (!file.commit()) {
+            qDebug() << "dmudlet::writeProfileData: error saving profile data: " << file.errorString();
+        }
     }
 
     if (file.error() == QFile::NoError) {
         return qMakePair(true, QString());
-    } else {
-        return qMakePair(false, file.errorString());
     }
+
+    return qMakePair(false, file.errorString());
 }
 
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
@@ -3708,14 +3711,17 @@ void mudlet::setEnableFullScreenMode(const bool state)
     // PLACEMARKER: Full-screen mode controlled by File (2 of 2) At some point we might consider removal of all but the first line of the "if" branch of code and drop maintaining the sentinel file presence/absence:
     if (state != mEnableFullScreenMode) {
         mEnableFullScreenMode = state;
-        QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
+        auto filePath = mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_option_use_smallscreen"));
+        QSaveFile file(filePath);
         if (state) {
-            file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
-            QTextStream out(&file_use_smallscreen);
+            file.open(QIODevice::WriteOnly | QIODevice::Text);
+            QTextStream out(&file);
             Q_UNUSED(out);
-            file_use_smallscreen.close();
+            if (!file.commit()) {
+                qDebug() << "mudlet::setEnableFullScreenMode: error saving fullscreen state: " << file.errorString();
+            }
         } else {
-            file_use_smallscreen.remove();
+            QFile::remove(filePath);
         }
     }
 
