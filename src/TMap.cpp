@@ -2697,8 +2697,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         cleanup();
         return;
     }
-    file.flush();
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "TMap::slot_replyFinished: error saving downloaded map: " << file.errorString();
+    }
 
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2885,7 +2886,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mpProgressDialog->setAutoReset(false);
     mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
     qApp->processEvents();
-    QFile file(destination);
+    QSaveFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text|QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -2925,7 +2926,9 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         }
     }
     if (abort) {
-        file.close();
+        if (!file.commit()) {
+            qDebug() << "TMap::writeJsonMapFile: error saving JSON map: " << file.errorString();
+        }
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
         mpProgressDialog->close();
         mpProgressDialog = nullptr;
@@ -3013,7 +3016,9 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     // Hide the cancel button as we can't stop now:
     mpProgressDialog->setCancelButton(nullptr);
     file.write(QJsonDocument(mapObj).toJson(QJsonDocument::Indented));
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "TMap::writeJsonMapFile: error saving JSON map: " << file.errorString();
+    }
 
     mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     mpProgressDialog->close();

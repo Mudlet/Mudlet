@@ -1213,34 +1213,36 @@ void TMainConsole::finalize()
 // to the TMap class...?
 bool TMainConsole::saveMap(const QString& location, int saveVersion)
 {
-    QDir dir_map;
-    QString filename_map;
-    QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+    QString filename_map = location.isEmpty() ?
+        mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"))) :
+        location;
 
-    if (location.isEmpty()) {
-        filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-    } else {
-        filename_map = location;
+    QDir dir_map(mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName));
+    if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
+        return false;
     }
 
-    if (!dir_map.exists(directory_map)) {
-        dir_map.mkpath(directory_map);
-    }
-    QFile file_map(filename_map);
-    if (file_map.open(QIODevice::WriteOnly)) {
-        QDataStream out(&file_map);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
-        bool saved = mpHost->mpMap->serialize(out, saveVersion);
-        file_map.close();
-        if (saved) {
-            mpHost->mpMap->resetUnsaved();
-        }
-        return saved;
+    QSaveFile file_map(filename_map);
+    if (!file_map.open(QIODevice::WriteOnly)) {
+        return false;
     }
 
-    return false;
+    QDataStream out(&file_map);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        out.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
+
+    bool saved = mpHost->mpMap->serialize(out, saveVersion);
+    if (saved && !file_map.commit()) {
+        qDebug() << "Error saving map: " << file_map.errorString();
+        saved = false;
+    }
+
+    if (saved) {
+        mpHost->mpMap->resetUnsaved();
+    }
+
+    return saved;
 }
 
 bool TMainConsole::loadMap(const QString& location)
