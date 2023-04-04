@@ -7808,11 +7808,12 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     QString name = getVerifiedString(L, __func__, 1, "name");
     QString css = getVerifiedString(L, __func__, 2, "css");
     Host& host = getHostFromLua(L);
-    auto actionsList = host.getActionUnit()->findActionsByName(name);
-    if (actionsList.empty()) {
+    auto actionIds = host.getActionUnit()->findItems(name);
+    if (actionIds.empty()) {
         return warnArgumentValue(L, __func__, qsl("no button named '%1' found").arg(name));
     }
-    for (auto action : actionsList) {
+    for (auto actionId : actionIds) {
+        auto action = host.getActionUnit()->getAction(actionId);
         action->css = css;
     }
     host.getActionUnit()->updateToolbar();
@@ -7945,11 +7946,70 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#findItems
+int TLuaInterpreter::findItems(lua_State* L)
+{
+    int n = lua_gettop(L);
+    auto name = getVerifiedString(L, __func__, 1, "item name");
+    // Although we only use 6 ASCII strings the user may not enter a purely
+    // ASCII value which we might have to report...
+    QString type = getVerifiedString(L, __func__, 2, "item type").toLower();
+    bool exactMatch = true;
+    bool caseSensitive = true;
+    if (n > 2) {
+        exactMatch = getVerifiedBool(L, __func__, 3, "exact match", true);
+    }
+    if (n > 3) {
+        caseSensitive = getVerifiedBool(L, __func__, 3, "case sensitive", true);
+    }
+    Host& host = getHostFromLua(L);
+    auto generateList = [](auto vector, auto l) {
+        lua_newtable(l);
+        int index = 0;
+        for (const auto& item : vector) {
+            lua_pushnumber(l, ++index);
+            lua_pushnumber(l, item);
+            lua_settable(l, -3);
+        }
+    };
+    if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        auto itemList = host.getTimerUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
+        auto itemList = host.getTriggerUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
+        auto itemList = host.getAliasUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
+        auto itemList = host.getKeyUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
+        auto itemList = host.getActionUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+        auto itemList = host.getScriptUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exists
 int TLuaInterpreter::exists(lua_State* L)
 {
     auto [isId, nameOrId] = getVerifiedStringOrInteger(L, __func__, 1, "itemID or item name");
-    // Although we only use 4 ASCII strings the user may not enter a purely
+    // Although we only use 6 ASCII strings the user may not enter a purely
     // ASCII value which we might have to report...
     QString type = getVerifiedString(L, __func__, 2, "item type").toLower();
     bool isOk = false;
@@ -8004,7 +8064,7 @@ int TLuaInterpreter::exists(lua_State* L)
             return 1;
         }
 
-        count = host.getActionUnit()->findActionsByName(nameOrId).size();
+        count = host.getActionUnit()->findItems(nameOrId).size();
     } else if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getScriptUnit()->getScript(id);
@@ -8012,7 +8072,7 @@ int TLuaInterpreter::exists(lua_State* L)
             return 1;
         }
 
-        count = host.getScriptUnit()->findScriptId(nameOrId).size();
+        count = host.getScriptUnit()->findItems(nameOrId).size();
     } else {
         return warnArgumentValue(L, __func__, qsl(
             "invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
@@ -8168,17 +8228,18 @@ int TLuaInterpreter::getScript(lua_State* L)
     }
     Host& host = getHostFromLua(L);
 
-    auto ids = host.getScriptUnit()->findScriptId(name);
-    auto pS = host.getScriptUnit()->getScript(ids.value(--pos, -1));
-    if (!pS) {
-        lua_pushnumber(L, -1);
-        lua_pushstring(L, qsl("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos).toUtf8().constData());
-        return 2;
+    auto ids = host.getScriptUnit()->findItems(name);
+    if (pos > 1 && pos < static_cast<int>(ids.size())) {
+        auto pS = host.getScriptUnit()->getScript(ids.at(pos - 1));
+        if (pS) {
+            lua_pushstring(L, pS->getScript().toUtf8().constData());
+            lua_pushnumber(L, ids.at(pos - 1));
+            return 2;
+        }
     }
 
-    int id = pS->getID();
-    lua_pushstring(L, pS->getScript().toUtf8().constData());
-    lua_pushnumber(L, id);
+    lua_pushnumber(L, -1);
+    lua_pushstring(L, qsl("script \"%1\" at position %2 not found").arg(name, QString::number(pos)).toUtf8().constData());
     return 2;
 }
 
@@ -15650,6 +15711,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
     lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
     lua_register(pGlobalLua, "getConfig", TLuaInterpreter::getConfig);
+    lua_register(pGlobalLua, "findItems", TLuaInterpreter::findItems);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -16118,11 +16180,11 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
         // FIXME: There can be more than one script with the same name - we will
         // use only the FIRST one for now, but we really ought to enhance the
         // API to handle more than one potential parent with the same name:
-        auto ids = mpHost->getScriptUnit()->findScriptId(parent);
-        auto pParentScript = mpHost->getScriptUnit()->getScript(ids.value(0, -1));
-        if (!pParentScript) {
+        auto ids = mpHost->getScriptUnit()->findItems(parent);
+        if (ids.empty()) {
             return {-1, qsl("parent '%1' not found").arg(parent)}; //parent not found
         }
+        auto pParentScript = mpHost->getScriptUnit()->getScript(ids.at(0));
         pS = new TScript(pParentScript, mpHost);
     }
     pS->setIsFolder((luaCode.isEmpty()));
@@ -16148,18 +16210,22 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QStr
         return {-1, qsl("cannot have an empty string as name")};
     }
 
-    auto ids = mpHost->getScriptUnit()->findScriptId(name);
-    TScript* pS = mpHost->getScriptUnit()->getScript(ids.value(pos, -1));
+    auto ids = mpHost->getScriptUnit()->findItems(name);
+    auto id = -1;
+    TScript* pS = nullptr;
+    if (pos > 0 || pos <= static_cast<int>(ids.size())) {
+        id = ids.at(static_cast<size_t>(pos - 1));
+        pS = mpHost->getScriptUnit()->getScript(id);
+    }
     if (!pS) {
-        return {-1, qsl("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos)}; //script not found
+        return {-1, qsl("script \"%1\" at position %2 not found").arg(name, QString::number(pos))}; //script not found
     }
     auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
         QString errMsg = pS->getError();
         pS->setScript(oldCode);
-        return {-1, qsl("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg)};
+        return {-1, qsl("unable to compile \"%1\" at position %2, reason: %3").arg(luaCode, QString::number(pos), errMsg)};
     }
-    int id = pS->getID();
     mpHost->mpEditorDialog->writeScript(id);
     return {id, QString()};
 }

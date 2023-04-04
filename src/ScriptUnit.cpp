@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -213,12 +213,18 @@ void ScriptUnit::compileAll()
     }
 }
 
-QVector<int> ScriptUnit::findScriptId(const QString& name) const
+std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
 {
-    QVector<int> Ids;
-    for (auto script : mScriptMap) {
-        if (script->getName() == name) {
-            Ids.append(script->getID());
+    std::vector<int> Ids;
+    for (auto& item : qAsConst(mScriptMap)) {
+        if (exactMatch) {
+            if (!item->getName().compare(name, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
+                Ids.push_back(item->getID());
+            }
+        } else {
+            if (item->getName().contains(name, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
+                Ids.push_back(item->getID());
+            }
         }
     }
     return Ids;

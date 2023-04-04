@@ -649,6 +649,7 @@ public:
     static int scrollTo(lua_State*);
     static int getScroll(lua_State*);
     static int getConfig(lua_State*);
+    static int findItems(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

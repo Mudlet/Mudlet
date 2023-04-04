@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2020, 2022 by Stephen Lyons                       *
+ *   Copyright (C) 2018, 2020, 2022-2023 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -113,6 +113,23 @@ TKey* KeyUnit::findFirstKey(QString& name)
         return it.value();
     }
     return nullptr;
+}
+
+std::vector<int> KeyUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
+{
+    std::vector<int> Ids;
+    for (auto& item : qAsConst(mKeyMap)) {
+        if (exactMatch) {
+            if (!item->getName().compare(name, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
+                Ids.push_back(item->getID());
+            }
+        } else {
+            if (item->getName().contains(name, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
+                Ids.push_back(item->getID());
+            }
+        }
+    }
+    return Ids;
 }
 
 bool KeyUnit::enableKey(const QString& name)
