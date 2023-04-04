@@ -68,7 +68,7 @@ constexpr size_t BUFFER_SIZE = 100000L;
 char loadBuffer[BUFFER_SIZE + 1];
 int loadedBytes;
 QDataStream replayStream;
-QSaveFile replayFile;
+QFile replayFile;
 
 
 cTelnet::cTelnet(Host* pH, const QString& profileName)
@@ -161,9 +161,7 @@ cTelnet::~cTelnet()
         // NOT the "last profile standing" the replay system gets reset for
         // another profile to use:
         loadingReplay = false;
-        if (!replayFile.commit()) {
-            qDebug() << "cTelnet::~cTelnet: error saving replay file: " << replayFile.errorString();
-        }
+        replayFile.close();
         qDebug() << "cTelnet::~cTelnet() INFO - A replay was in progress on this profile but has been aborted.";
         mudlet::self()->replayOver();
     }
@@ -2646,6 +2644,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
             } else {
                 // Amelioration code should now prevent this from happening
                 loadingReplay = false;
+                replayFile.close();
                 if (pErrMsg) {
                     // Called from lua case:
                     *pErrMsg = tr("Cannot replay file \"%1\", error message was: \"replay file seems to be corrupt\".").arg(name);
@@ -2709,10 +2708,7 @@ void cTelnet::loadReplayChunk()
         QTimer::singleShot(offset / mudlet::self()->mReplaySpeed, this, &cTelnet::slot_processReplayChunk);
     } else {
         loadingReplay = false;
-        if (!replayFile.commit()) {
-            postMessage(tr("[ ERROR ]  - The replay ended, but couldn't be saved."));
-            qDebug() << "cTelnet::loadReplayChunk: error saving replay file changes: " << replayFile.errorString();
-        }
+        replayFile.close();
         if (!mIsReplayRunFromLua) {
             postMessage(tr("[  OK  ]  - The replay has ended."));
         }
