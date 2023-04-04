@@ -556,6 +556,16 @@
             </property>
            </widget>
           </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="checkBox_saveHistory">
+            <property name="toolTip">
+             <string>placeholder text, not sure where it is used, appears to be changed by cpp file? maybe only in the designer thing?</string>
+            </property>
+            <property name="text">
+             <string>Save command history between sessions</string>
+            </property>
+           </widget>
+          </item>
           <item row="3" column="0" alignment="Qt::AlignRight">
            <widget class="QLabel" name="label_commandSeparator">
             <property name="toolTip">
@@ -4057,6 +4067,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>show_sent_text_checkbox</tabstop>
   <tabstop>checkBox_highlightHistory</tabstop>
   <tabstop>checkBox_runAllKeyBindings</tabstop>
+  <tabstop>checkBox_saveHistory</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>commandLineMinimumHeight</tabstop>
   <tabstop>checkBox_spellCheck</tabstop>
