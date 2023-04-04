@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>884</width>
-    <height>867</height>
+    <height>666</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -42,7 +42,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>5</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_general">
       <property name="sizePolicy">
@@ -1848,13 +1848,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="13" column="2" colspan="2">
-           <widget class="QPushButton" name="pushButton_resetColors">
-            <property name="text">
-             <string>Reset all colors to default</string>
-            </property>
-           </widget>
-          </item>
           <item row="13" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_allowServerToRedefineColors">
             <property name="toolTip">
@@ -1862,6 +1855,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="text">
              <string>Server allowed to redefine these colors</string>
+            </property>
+           </widget>
+          </item>
+          <item row="13" column="2" colspan="2">
+           <widget class="QPushButton" name="pushButton_resetColors">
+            <property name="text">
+             <string>Reset all colors to default</string>
             </property>
            </widget>
           </item>
@@ -1894,13 +1894,30 @@ you can use it but there could be issues with aligning columns of text</string>
           <string>Map files</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_mapFiles">
-          <item row="5" column="0">
-           <widget class="QLabel" name="label_copyMap">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_saveMap">
             <property name="text">
-             <string>Copy map to other profile(s):</string>
+             <string>Save your current map:</string>
             </property>
             <property name="buddy">
-             <cstring>pushButton_chooseProfiles</cstring>
+             <cstring>pushButton_saveMap</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="pushButton_saveMap">
+            <property name="text">
+             <string>choose location ...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
+            <property name="toolTip">
+             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>report map issues on screen</string>
             </property>
            </widget>
           </item>
@@ -1914,30 +1931,10 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="2">
-           <widget class="QPushButton" name="pushButton_loadHistoricMap">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
+          <item row="1" column="1">
+           <widget class="QPushButton" name="pushButton_loadMap">
             <property name="text">
-             <string>load map</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_saveMap">
-            <property name="text">
-             <string>Save your current map:</string>
-            </property>
-            <property name="buddy">
-             <cstring>pushButton_saveMap</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="2">
-           <widget class="QCheckBox" name="checkBox_enablMapDeleteButton">
-            <property name="text">
-             <string>enable 'Delete map' button</string>
+             <string>choose map ...</string>
             </property>
            </widget>
           </item>
@@ -1948,50 +1945,27 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="0">
-           <widget class="QLabel" name="label_mapFileSaveFormatVersion">
-            <property name="text">
-             <string>Map format version:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_mapFileSaveFormatVersion</cstring>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="comboBox_mapHistory">
+            <property name="enabled">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="pushButton_saveMap">
-            <property name="text">
-             <string>choose location</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QPushButton" name="pushButton_deleteMap">
+          <item row="2" column="2">
+           <widget class="QPushButton" name="pushButton_loadHistoricMap">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>Press to delete map</string>
+             <string>◀ load this map</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1">
-           <widget class="QPushButton" name="pushButton_chooseProfiles">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Press to pick destination(s)...</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QPushButton" name="pushButton_loadMap">
-            <property name="text">
-             <string>choose map</string>
+          <item row="3" column="0" colspan="3">
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -2005,10 +1979,66 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
-           <widget class="QComboBox" name="comboBox_mapHistory">
+          <item row="4" column="1">
+           <widget class="QPushButton" name="pushButton_deleteMap">
             <property name="enabled">
              <bool>false</bool>
+            </property>
+            <property name="text">
+             <string comment="Text on the button to delete a map, ensure the text matches the word or words `quoted` for the adjacent checkbox">delete</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="2">
+           <widget class="QCheckBox" name="checkBox_enablMapDeleteButton">
+            <property name="text">
+             <string comment="Text for a checkbox adjacent to the delete map button, ensure the text 'quoted' matches the word or words on the button">enable 'delete' button</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_copyMap">
+            <property name="text">
+             <string>Copy map to other profile(s):</string>
+            </property>
+            <property name="buddy">
+             <cstring>pushButton_chooseProfiles</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1">
+           <widget class="QPushButton" name="pushButton_chooseProfiles">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string comment="text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected">pick destinations ...</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="2">
+           <widget class="QPushButton" name="pushButton_copyMap">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="toolTip">
+             <string>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string notr="true" comment="text will be placed on this button by the C++ code"/>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="label_mapFileSaveFormatVersion">
+            <property name="text">
+             <string>Map format version:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_mapFileSaveFormatVersion</cstring>
             </property>
            </widget>
           </item>
@@ -2042,16 +2072,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="0" column="2">
-           <widget class="QCheckBox" name="checkBox_reportMapIssuesOnScreen">
-            <property name="toolTip">
-             <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>report map issues on screen</string>
-            </property>
-           </widget>
-          </item>
           <item row="7" column="0" colspan="3">
            <widget class="QLabel" name="label_mapFileActionResult">
             <property name="font">
@@ -2061,26 +2081,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="text">
              <string>An action above happened</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="2">
-           <widget class="QPushButton" name="pushButton_copyMap">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Copy to destination(s)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="3">
-           <widget class="Line" name="line">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
             </property>
            </widget>
           </item>
@@ -2125,6 +2125,16 @@ you can use it but there could be issues with aligning columns of text</string>
           <string>Map view</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_mapViewOptions">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="mMapperUseAntiAlias">
+            <property name="toolTip">
+             <string>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Use high quality graphics in 2D view</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_showDefaultArea">
             <property name="toolTip">
@@ -2138,8 +2148,18 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1" alignment="Qt::AlignLeft">
-           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkbox_mMapperShowRoomBorders">
+            <property name="toolTip">
+             <string>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show room borders</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
           </item>
           <item row="1" column="1">
            <widget class="QCheckBox" name="checkBox_largeAreaExitArrows">
@@ -2158,23 +2178,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="2" column="1" alignment="Qt::AlignLeft">
+           <widget class="QFontComboBox" name="fontComboBox_mapSymbols"/>
+          </item>
           <item row="3" column="0">
            <widget class="QCheckBox" name="checkBox_isOnlyMapSymbolFontToBeUsed">
             <property name="text">
              <string>Only use symbols (glyphs) from chosen font</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkbox_mMapperShowRoomBorders">
-            <property name="toolTip">
-             <string>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Show room borders</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -2308,16 +2318,6 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
             </layout>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="mMapperUseAntiAlias">
-            <property name="toolTip">
-             <string>&lt;p&gt;This enables anti-aliasing (AA) for the 2D map view, making it look smoother and nicer. Disable this if you're on a very slow computer.&lt;/p&gt;&lt;p&gt;3D map view always has anti-aliasing enabled.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Use high quality graphics in 2D view</string>
-            </property>
            </widget>
           </item>
          </layout>
@@ -3425,8 +3425,8 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="checked">
           <bool>false</bool>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_proxy">
-          <item row="0" column="0">
+         <layout class="QVBoxLayout" name="vBoxLayout_groupBox_proxy">
+          <item>
            <widget class="QLineEdit" name="lineEdit_proxyAddress">
             <property name="text">
              <string/>
@@ -3439,14 +3439,14 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item>
            <widget class="QLabel" name="label_5">
             <property name="text">
              <string notr="true">:</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
+          <item>
            <widget class="QLineEdit" name="lineEdit_proxyPort">
             <property name="inputMask">
              <string notr="true">00009</string>
@@ -3459,7 +3459,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="3">
+          <item>
            <widget class="QLineEdit" name="lineEdit_proxyUsername">
             <property name="toolTip">
              <string>Username for logging into the proxy if required</string>
@@ -3475,7 +3475,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="4">
+          <item>
            <widget class="QLineEdit" name="lineEdit_proxyPassword">
             <property name="toolTip">
              <string>Password for logging into the proxy if required</string>

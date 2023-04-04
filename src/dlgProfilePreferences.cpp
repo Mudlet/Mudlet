@@ -151,6 +151,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     label_logFileNameExtension->setVisible(false);
     label_logFileName->setVisible(false);
     lineEdit_logFileName->setVisible(false);
+    pushButton_copyMap->setText(tr("copy to %n destination(s)",
+                                   // Intentional comment to separate arguments
+                                   "text on button to put the map from this profile into the other profiles to "
+                                   "receive the map from this profile, %n is the number of other profiles that "
+                                   "have already been selected to receive it and will be zero or more. The button "
+                                   "will also be disabled (greyed out) in the zero case but the text will still be "
+                                   "visible.",
+                                   0));
 
     if (pHost) {
         initWithHost(pHost);
@@ -3080,12 +3088,27 @@ void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
             ++selectionCount;
         }
     }
+    pushButton_copyMap->setText(tr("copy to %n destination(s)",
+                                   // Intentional comment to separate arguments
+                                   "text on button to put the map from this profile into the other profiles to "
+                                   "receive the map from this profile, %n is the number of other profiles that "
+                                   "have already been selected to receive it and will be zero or more. The button "
+                                   "will also be disabled (greyed out) in the zero case but the text will still be "
+                                   "visible.",
+                                   selectionCount));
     if (selectionCount) {
         pushButton_copyMap->setEnabled(true);
-        pushButton_chooseProfiles->setText(tr("%1 selected - press to change").arg(selectionCount));
+        pushButton_chooseProfiles->setText(tr("%n selected - change destinations ...",
+                                              // Intentional comment to separate arguments
+                                              "text on button to select other profiles to receive the map from this profile, "
+                                              "%n is the number of other profiles that have already been selected to receive it and will always be 1 or more",
+                                              selectionCount));
     } else {
         pushButton_copyMap->setEnabled(false);
-        pushButton_chooseProfiles->setText(tr("Press to pick destination(s)"));
+        pushButton_chooseProfiles->setText(tr("pick destinations ...",
+                                              // Intentional comment to separate arguments
+                                              "text on button to select other profiles to receive the map from this profile, "
+                                              "this is used when no profiles have been selected"));
     }
 }
 
