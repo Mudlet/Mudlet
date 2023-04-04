@@ -307,23 +307,24 @@ bool XMLexport::saveXml(const QString& fileName)
 {
     QSaveFile file(fileName);
 
+    auto printErrorMessage = [&](const QString& errorString) {
+        qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << errorString << ".";
+    };
+
     if (!file.open(QIODevice::WriteOnly)) {
-        qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to open file, reason: " << file.errorString() << ".";
+        printErrorMessage(file.errorString().prepend("failed to open file, "));
         return false;
     }
 
-    const bool result = saveXmlFile(file);
-    if (!result) {
-        if (file.error() != QFileDevice::NoError) {
-            // Error reason was related to writing contents to disk
-            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << file.errorString() << ".";
-        } else {
-            // Error was due to failure in document preparation
-            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: XML document preparation failure.";
-        }
+    bool success = saveXmlFile(file);
+    if (!success) {
+        printErrorMessage((file.error() != QFileDevice::NoError) ? file.errorString() : "XML document preparation failure");
+    } else if (!file.commit()) {
+        printErrorMessage(file.errorString());
+        success = false;
     }
 
-    return file.commit();
+    return success;
 }
 
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
