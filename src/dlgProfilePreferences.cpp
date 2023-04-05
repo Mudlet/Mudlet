@@ -489,8 +489,16 @@ void dlgProfilePreferences::disableHostDetails()
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(false);
 
+    // ===== tab_accessibility =====
+    label_blankLinesBehaviour->setEnabled(false);
+    label_caretModeKey->setEnabled(false);
+    checkBox_announceIncomingText->setEnabled(false);
+    comboBox_blankLinesBehaviour->setEnabled(false);
+    comboBox_caretModeKey->setEnabled(false);
+
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(false);
+    groupBox_purgeMediaCache->setEnabled(false);
     // ----- groupBox_specialOptions -----
     need_reconnect_for_specialoption->hide();
 
@@ -500,12 +508,9 @@ void dlgProfilePreferences::disableHostDetails()
     // This acts on a label within this groupBox:
     slot_hidePasswordMigrationLabel();
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
-    checkBox_announceIncomingText->setEnabled(false);
-    comboBox_blankLinesBehaviour->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
-    comboBox_caretModeKey->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -586,8 +591,6 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
     checkBox_askTlsAvailable->setEnabled(true);
 #endif
-    checkBox_announceIncomingText->setEnabled(true);
-    comboBox_blankLinesBehaviour->setEnabled(true);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(true);
@@ -595,9 +598,16 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(true);
 
+    // ===== tab_accessibility =====
+    label_blankLinesBehaviour->setEnabled(true);
+    label_caretModeKey->setEnabled(true);
+    checkBox_announceIncomingText->setEnabled(true);
+    comboBox_blankLinesBehaviour->setEnabled(true);
+    comboBox_caretModeKey->setEnabled(true);
+
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
-
+    groupBox_purgeMediaCache->setEnabled(true);
     groupbox_searchEngineSelection->setEnabled(true);
     // ----- groupBox_debug -----
     checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
@@ -605,7 +615,6 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
-    comboBox_caretModeKey->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
