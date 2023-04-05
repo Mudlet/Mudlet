@@ -462,9 +462,6 @@ Host::~Host()
 
 void Host::loadMap()
 {
-    // It is not okay to call TMap::audit() until after the Lua sub-system has
-    // been set up - which is why this has been moved out of a zero-timer in
-    // the constructor:
     qDebug() << "Host::loadMap() - restore map case 4.";
     if (mpMap->restore(QString(), false)) {
         mpMap->audit();

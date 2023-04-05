@@ -2768,7 +2768,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     pHost->mBlockStopWatchCreation = false;
     // This will build all the scripts in the collection of script items (but
-    // NOT the other Mudlet item types) - prisumably so that the event handlers
+    // not triggers/aliases/etc) - presumably so that the event handlers
     // are ready for use.
     pHost->getScriptUnit()->compileAll();
     pHost->updateAnsi16ColorsInTable();
