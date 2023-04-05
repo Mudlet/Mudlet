@@ -192,9 +192,9 @@ void XMLexport::writeModuleXML(const QString& moduleName, const QString& fileNam
         helpPackage.append_child("helpURL").text().set("");
     }
     if (async) {
-        auto future = QtConcurrent::run(this, &XMLexport::saveXml, fileName);
+        auto future = QtConcurrent::run([&, fileName]() { return saveXml(fileName); });
         auto watcher = new QFutureWatcher<bool>;
-        QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
+        connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(fileName); });
         watcher->setFuture(future);
         saveFutures.append(future);
     } else {
@@ -207,10 +207,10 @@ void XMLexport::exportHost(const QString& filename_pugi_xml)
 {
     auto mudletPackage = writeXmlHeader();
     writeHost(mpHost, mudletPackage);
-    auto future = QtConcurrent::run(this, &XMLexport::saveXml, filename_pugi_xml);
+    auto future = QtConcurrent::run([&, filename_pugi_xml]() { return saveXml(filename_pugi_xml); });
 
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
+    connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
     watcher->setFuture(future);
     saveFutures.append(future);
 }
@@ -461,9 +461,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("CompactInputLine") = pHost->getCompactInputLine() ? "yes" : "no";
 
     QString ignore;
-    QSetIterator<QChar> it(pHost->mDoubleClickIgnore);
-    while (it.hasNext()) {
-        ignore = ignore.append(it.next());
+    QSetIterator<QChar> ignoreIterator(pHost->mDoubleClickIgnore);
+    while (ignoreIterator.hasNext()) {
+        ignore = ignore.append(ignoreIterator.next());
     }
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
@@ -475,8 +475,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
     if (int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
-        // Don't bother to include the attribute if it is the default (zero)
-        // value - and as it is an ASCII digit it only needs
+        // Don't bother to include the attribute if ignoreIterator is the default (zero)
+        // value - and as ignoreIterator is an ASCII digit ignoreIterator only needs
         // QString::toLatin1() encoding:
         host.append_attribute("ControlCharacterHandling") = QString::number(mode).toLatin1().constData();
     }
@@ -521,10 +521,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
         host.append_child("serverPackageVersion").text().set(pHost->mServerGUI_Package_version.toUtf8().constData());
         host.append_child("port").text().set(QString::number(pHost->mPort).toUtf8().constData());
-        host.append_child("borderTopHeight").text().set(QString::number(pHost->mBorderTopHeight).toUtf8().constData());
-        host.append_child("borderBottomHeight").text().set(QString::number(pHost->mBorderBottomHeight).toUtf8().constData());
-        host.append_child("borderLeftWidth").text().set(QString::number(pHost->mBorderLeftWidth).toUtf8().constData());
-        host.append_child("borderRightWidth").text().set(QString::number(pHost->mBorderRightWidth).toUtf8().constData());
+        auto borders = pHost->borders();
+        host.append_child("borderTopHeight").text().set(QString::number(borders.top()).toUtf8().constData());
+        host.append_child("borderBottomHeight").text().set(QString::number(borders.bottom()).toUtf8().constData());
+        host.append_child("borderLeftWidth").text().set(QString::number(borders.left()).toUtf8().constData());
+        host.append_child("borderRightWidth").text().set(QString::number(borders.right()).toUtf8().constData());
         host.append_child("wrapAt").text().set(QString::number(pHost->mWrapAt).toUtf8().constData());
         host.append_child("wrapIndentCount").text().set(QString::number(pHost->mWrapIndentCount).toUtf8().constData());
         host.append_child("mFgColor").text().set(pHost->mFgColor.name().toUtf8().constData());
@@ -764,7 +765,7 @@ bool XMLexport::exportProfile(const QString& exportFileName)
     auto mudletPackage = writeXmlHeader();
 
     if (writeGenericPackage(mpHost, mudletPackage)) {
-        auto future = QtConcurrent::run(this, &XMLexport::saveXml, exportFileName);
+        auto future = QtConcurrent::run([&, exportFileName]() { return saveXml(exportFileName); });
         auto watcher = new QFutureWatcher<bool>;
         QObject::connect(watcher, &QFutureWatcher<bool>::finished, mpHost, [=]() { mpHost->xmlSaved(qsl("profile")); });
         watcher->setFuture(future);

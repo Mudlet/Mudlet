@@ -1170,11 +1170,58 @@ function setConfig(...)
   local args = {...}
 
   if type(args[1]) ~= "table" then
-    oldsetConfig(...)
-    return
+    return oldsetConfig(...)
   end
 
   for k,v in pairs(args[1]) do
     oldsetConfig(k, v)
   end
+end
+
+local oldgetConfig = getConfig
+function getConfig(...)
+  local args = {...}
+  local result = {}
+
+  if #args == 0 then
+    local list = {
+      "mapRoomSize", 
+      "mapExitSize", 
+      "mapRoundRooms", 
+      "showRoomIdsOnMap", 
+      "show3dMapView", 
+      "mapperPanelVisible", 
+      "mapShowRoomBorders", 
+      "enableGMCP", 
+      "enableMSDP", 
+      "enableMSSP", 
+      "enableMSP", 
+      "askTlsAvailable", 
+      "inputLineStrictUnixEndings", 
+      "autoClearInputLine", 
+      "showSentText", 
+      "fixUnnecessaryLinebreaks", 
+      "specialForceCompressionOff", 
+      "specialForceGAOff", 
+      "specialForceCharsetNegotiationOff", 
+      "specialForceMxpNegotiationOff", 
+      "compactInputLine", 
+      "announceIncomingText", 
+      "blankLinesBehaviour", 
+      "caretShortcut", 
+    }
+    for _,v in ipairs(list) do
+      result[v] = oldgetConfig(v)
+    end
+    return result
+  end
+
+  if type(args[1]) == "table" then
+    for _,v in pairs(args[1]) do
+      result[v] = oldgetConfig(v)
+    end
+    return result
+  end
+
+  return oldgetConfig(args[1])
 end

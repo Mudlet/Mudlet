@@ -214,10 +214,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBlockScriptCompile(true)
 , mBlockStopWatchCreation(true)
 , mEchoLuaErrors(false)
-, mBorderBottomHeight(0)
-, mBorderLeftWidth(0)
-, mBorderRightWidth(0)
-, mBorderTopHeight(0)
 , mCommandLineFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(qsl(";;"))
 , mEnableGMCP(true)
@@ -225,6 +221,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEnableMSP(true)
 , mEnableMSDP(false)
 , mServerMXPenabled(true)
+, mAskTlsAvailable(true)
+, mMSSPTlsPort(0)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
 , mFORCE_GA_OFF(false)
@@ -234,8 +232,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSslIgnoreExpired(false)
 , mSslIgnoreSelfSigned(false)
 , mSslIgnoreAll(false)
-, mAskTlsAvailable(true)
-, mMSSPTlsPort(0)
 , mUseProxy(false)
 , mProxyPort(0)
 , mIsGoingDown(false)
@@ -394,7 +390,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
      * otherwise - note that this must be done AFTER setDevice(...):
      */
     mErrorLogStream.setDevice(&mErrorLogFile);
+    // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
 
     QTimer::singleShot(0, this, [this]() {
         qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
@@ -829,7 +828,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         waitForAsyncXmlSave();
         saveModules(saveName != qsl("autosave"));
     });
-    QObject::connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
+    connect(watcher, &QFutureWatcher<void>::finished, this, [=]() {
         // reload, or queue module reload for when xml is ready
         if (syncModules) {
             reloadModules();
@@ -1772,9 +1771,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             file2.open(QFile::ReadOnly | QFile::Text);
-            QString profileName = getName();
-            QString login = getLogin();
-            QString pass = getPass();
             XMLimport reader(this);
             if (module) {
                 QStringList moduleEntry;
@@ -1786,18 +1782,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
                 mInstalledPackages.append(packageName);
             }
             reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
-            setName(profileName);
-            setLogin(login);
-            setPass(pass);
             file2.close();
         }
     } else {
         file2.setFileName(fileName);
         file2.open(QFile::ReadOnly | QFile::Text);
         //mInstalledPackages.append( packageName );
-        QString profileName = getName();
-        QString login = getLogin();
-        QString pass = getPass();
         XMLimport reader(this);
         if (module) {
             QStringList moduleEntry;
@@ -1809,9 +1799,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
             mInstalledPackages.append(packageName);
         }
         reader.importPackage(&file2, packageName, module); // TODO: Missing false return value handler
-        setName(profileName);
-        setLogin(login);
-        setPass(pass);
         file2.close();
     }
     if (mpEditorDialog) {
@@ -1921,6 +1908,12 @@ bool Host::uninstallPackage(const QString& packageName, int module)
     //     0=package, 1=uninstall from dialog, 2=uninstall due to module syncing,
     //     3=uninstall from a script
 
+    // block packages/modules from being uninstalled while a profile save is in progress
+    // just so the save mechanism doesn't get surprised with something getting removed from memory under its feet
+    if (currentlySavingProfile()) {
+        return false;
+    }
+
     if (module) {
         if (!mInstalledModules.contains(packageName)) {
             return false;
@@ -2017,7 +2010,20 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     QString dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
-    saveProfile();
+
+    // ensure only one timer is running in case multiple modules are uninstalled at once
+    if (!mSaveTimer.has_value() || !mSaveTimer.value()) {
+        mSaveTimer = true;
+        // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
+        // not to try to write to disk a package/module that just got uninstalled and removed from memory
+        QTimer::singleShot(0, this, [this]() {
+            mSaveTimer = false;
+            if (auto [ok, filename, error] = saveProfile(); !ok) {
+                qDebug() << qsl("Host::uninstallPackage: Couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
+            }
+        });
+    }
+
     //NOW we reset if we're uninstalling a module
     if (mpEditorDialog && module == 3) {
         mpEditorDialog->doCleanReset();
@@ -2047,11 +2053,13 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
         QTextStream in(&configFile);
         /*
          * We also have to explicit set the codec to use whilst reading the file
-         * as otherwise QTextCodec::codecForLocale() is used which might be a
-         * local8Bit codec that thus will not handle all the characters
-         * contained in Unicode:
+         * as otherwise QTextCodec::codecForLocale() is used which for Qt5
+         * might be a local8Bit codec that thus will not handle all the
+         * characters contained in Unicode. In Qt6 the default is UTF-8.
          */
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         in.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
         while (!in.atEnd()) {
             strings += in.readLine();
         }
@@ -2208,7 +2216,8 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
         if (encoding == "GBK"
             || encoding == "GB18030"
             || encoding == "BIG5"
-            || encoding == "BIG5-HKSCS") {
+            || encoding == "BIG5-HKSCS"
+            || encoding == "EUC-KR") {
 
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
@@ -2725,19 +2734,19 @@ void Host::loadSecuredPassword()
 
     job->setKey(getName());
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
-        if (job->error()) {
-            const auto error = job->errorString();
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+        if (task->error()) {
+            const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
                 qDebug().nospace().noquote() << "Host::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << getName() << "\", error is: " << error << ".";
             }
 
         } else {
-            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+            auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
             setPass(readJob->textData());
         }
 
-        job->deleteLater();
+        task->deleteLater();
     });
 
     job->start();
@@ -4075,11 +4084,61 @@ void Host::setCaretEnabled(bool enabled) {
     mpConsole->setCaretMode(enabled);
 }
 
-void Host::setFocusOnHostMainConsole()
+void Host::setFocusOnHostActiveCommandLine()
 {
-    mudlet::self()->activateProfile(this);
-    mpConsole->activateWindow();
-    mpConsole->setFocus();
+    if (mFocusTimerRunning) {
+        return;
+    }
+
+    mFocusTimerRunning = true;
+    QTimer::singleShot(0, this, [this]() {
+        auto pCommandLine = activeCommandLine();
+        if (pCommandLine) {
+            pCommandLine->activateWindow();
+            pCommandLine->console()->show();
+            pCommandLine->console()->raise();
+            pCommandLine->console()->repaint();
+            pCommandLine->setFocus(Qt::OtherFocusReason);
+        } else {
+            mpConsole->mpCommandLine->activateWindow();
+            mpConsole->show();
+            mpConsole->raise();
+            mpConsole->repaint();
+            mpConsole->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        }
+        mFocusTimerRunning = false;
+    });
+}
+
+void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
+{
+    mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    mpLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
+}
+
+void Host::forgetCommandLine(TCommandLine* pCommandLine)
+{
+    if (pCommandLine) {
+        mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    }
+}
+
+// Returns a pointer to the last used TCommandLine for this profile:
+TCommandLine* Host::activeCommandLine()
+{
+    TCommandLine* pCommandLine = nullptr;
+    if (mpLastCommandLineUsed.isEmpty()) {
+        return nullptr;
+    }
+
+    do {
+        pCommandLine = mpLastCommandLineUsed.top();
+        if (!pCommandLine) {
+            mpLastCommandLineUsed.pop();
+        }
+    } while (!mpLastCommandLineUsed.isEmpty() && !pCommandLine);
+
+    return pCommandLine;
 }
 
 QPointer<TConsole> Host::parentTConsole(QObject* start) const
@@ -4098,6 +4157,23 @@ QPointer<TConsole> Host::parentTConsole(QObject* start) const
         // Handle not found case:
         return result;
     }
-    result = qobject_cast<TConsole*>(ptr);
-    return result;
+    return qobject_cast<TConsole*>(ptr);
+}
+
+void Host::setBorders(QMargins borders)
+{
+    auto original = mBorders;
+    if (borders == original) {
+        return;
+    }
+    mBorders = borders;
+    if (mpConsole.isNull()) {
+        return;
+    }
+    auto x = mpConsole->width();
+    auto y = mpConsole->height();
+    QSize s = QSize(x, y);
+    QResizeEvent event(s, s);
+    QApplication::sendEvent(mpConsole, &event);
+    mpConsole->raiseMudletSysWindowResizeEvent(x, y);
 }

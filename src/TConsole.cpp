@@ -71,7 +71,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mpMainDisplay(new QWidget(mpMainFrame))
 , mpScrollBar(new QScrollBar)
 , mpHScrollBar(new QScrollBar(Qt::Horizontal))
-, mpLineEdit_networkLatency(new QLineEdit)
 , mProfileName(mpHost ? mpHost->getName() : qsl("debug console"))
 , mpBufferSearchBox(new QLineEdit)
 , mpBufferSearchUp(new QToolButton)
@@ -80,39 +79,18 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mType(type)
 {
     auto ps = new QShortcut(this);
-    ps->setKey(Qt::CTRL + Qt::Key_W);
+    ps->setKey(Qt::CTRL | Qt::Key_W);
     ps->setContext(Qt::WidgetShortcut);
 
-    if (mType & CentralDebugConsole) {
+    if (mType == CentralDebugConsole) {
         // Probably will not show up as this is used inside a QMainWindow widget
         // which has its own title and icon set.
         setWindowTitle(tr("Debug Console"));
-        // mIsSubConsole was left false for this
         mWrapAt = 50;
-    } else {
-        if (mType & (ErrorConsole|SubConsole|UserWindow)) {
-            // Originally this was for TConsole instances with a parent pointer
-            // This branch for: UserWindows, SubConsole, ErrorConsole
-            // mIsSubConsole was true for these
-            mMainFrameTopHeight = 0;
-            mMainFrameBottomHeight = 0;
-            mMainFrameLeftWidth = 0;
-            mMainFrameRightWidth = 0;
-
-        } else if (mType & (MainConsole|Buffer)) {
-            // Originally this was for TConsole instances without a parent pointer
-            // This branch for: Buffers, MainConsole
-            // mIsSubConsole was false for these
-            mMainFrameTopHeight = mpHost->mBorderTopHeight;
-            mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
-            mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
-            mMainFrameRightWidth = mpHost->mBorderRightWidth;
-            mCommandBgColor = mpHost->mCommandBgColor;
-            mCommandFgColor = mpHost->mCommandFgColor;
-
-        } else {
-            Q_ASSERT_X(false, "TConsole::TConsole(...)", "invalid TConsole type detected");
-        }
+    } else if (mType == MainConsole) {
+        mBorders = mpHost->borders();
+        mCommandBgColor = mpHost->mCommandBgColor;
+        mCommandFgColor = mpHost->mCommandFgColor;
     }
     setContentsMargins(0, 0, 0, 0);
     setAttribute(Qt::WA_DeleteOnClose);
@@ -196,7 +174,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mpBaseHFrame->setContentsMargins(0, 0, 0, 0);
     centralLayout->setSpacing(0);
     centralLayout->setContentsMargins(0, 0, 0, 0);
-    mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     mpMainFrame->show();
     mpMainDisplay->show();
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
@@ -209,8 +187,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     mpBaseVFrame->setSizePolicy(sizePolicy);
     mpBaseHFrame->setSizePolicy(sizePolicy);
-    mpBaseVFrame->setFocusPolicy(Qt::NoFocus);
-    mpBaseHFrame->setFocusPolicy(Qt::NoFocus);
 
     baseVFrameLayout->setContentsMargins(0, 0, 0, 0);
     baseHFrameLayout->setContentsMargins(0, 0, 0, 0);
@@ -220,7 +196,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         mpCommandLine = new TCommandLine(pH, qsl("main"), TCommandLine::MainCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
-        mpCommandLine->setFocusPolicy(Qt::StrongFocus);
+        // Setting the focusProxy cannot be done here because things have not
+        // been completed enough at this point - it has been defered to a
+        // zero-timer at the end of this constructor
     }
 
     layer = new QWidget(mpMainDisplay);
@@ -228,7 +206,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layer->setStyleSheet("QWidget#layer{background-color: rgba(0,0,0,0)}");
     layer->setContentsMargins(0, 0, 0, 0);
     layer->setSizePolicy(sizePolicy);
-    layer->setFocusPolicy(Qt::NoFocus);
 
     auto vLayoutLayer = new QVBoxLayout;
     auto layoutLayer = new QHBoxLayout;
@@ -252,19 +229,19 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mUpperPane = new TTextEdit(this, splitter, &buffer, mpHost, false);
     mUpperPane->setContentsMargins(0, 0, 0, 0);
     mUpperPane->setSizePolicy(sizePolicy3);
-    mUpperPane->setFocusPolicy(Qt::NoFocus);
     mUpperPane->setAccessibleName(tr("main window"));
 
     mLowerPane = new TTextEdit(this, splitter, &buffer, mpHost, true);
     mLowerPane->setContentsMargins(0, 0, 0, 0);
     mLowerPane->setSizePolicy(sizePolicy3);
-    mLowerPane->setFocusPolicy(Qt::NoFocus);
 
     if (mType == MainConsole) {
         setFocusProxy(mpCommandLine);
         mUpperPane->setFocusProxy(mpCommandLine);
         mLowerPane->setFocusProxy(mpCommandLine);
-    } else if (mType == UserWindow) {
+    } else if (mType & (UserWindow|SubConsole)) {
+        // These will need to be changed when the built in TCommandLine is
+        // enabled or an additional one is added to them:
         setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
         mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
@@ -355,33 +332,43 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     logButton->setIcon(logIcon);
     connect(logButton, &QAbstractButton::clicked, this, &TConsole::slot_toggleLogging);
 
-    mpLineEdit_networkLatency->setReadOnly(true);
-    mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
-    mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
-    mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds),<br>"
-                                                             "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
-    mpLineEdit_networkLatency->setMaximumSize(120, 30);
-    mpLineEdit_networkLatency->setMinimumSize(120, 30);
-    mpLineEdit_networkLatency->setAutoFillBackground(true);
-    mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
-    mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+    if (mType == MainConsole) {
+        mpLineEdit_networkLatency = new QLineEdit(this);
+        mpLineEdit_networkLatency->setReadOnly(true);
+        mpLineEdit_networkLatency->setSizePolicy(sizePolicy4);
+        mpLineEdit_networkLatency->setFocusPolicy(Qt::NoFocus);
+        mpLineEdit_networkLatency->setToolTip(utils::richText(tr("<i>N:</i> is the latency of the game server and network (aka ping, in seconds),<br>"
+                                                                 "<i>S:</i> is the system processing time - how long your triggers took to process the last line(s).")));
+        mpLineEdit_networkLatency->setMaximumSize(120, 30);
+        mpLineEdit_networkLatency->setMinimumSize(120, 30);
+        mpLineEdit_networkLatency->setAutoFillBackground(true);
+        mpLineEdit_networkLatency->setContentsMargins(0, 0, 0, 0);
+        mpLineEdit_networkLatency->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 
-    QFont latencyFont = QFont("Bitstream Vera Sans Mono", 10, QFont::Normal);
-    int width;
-    int maxWidth = 120;
-    width = QFontMetrics(latencyFont).boundingRect(QString("N:0.000 S:0.000")).width();
-    if (width < maxWidth) {
+        int latencyFontPointSize = 21;
+        QFont latencyFont = QFont(qsl("Bitstream Vera Sans Mono"), latencyFontPointSize, QFont::Normal);
+        const int latencyFontSizeMargin = 10;
+        QString dummyTextA = tr("N:%1 S:%2",
+                                // intentional comment to separate arguments
+                                "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
+                                "'S'ystem (processing) time")
+                                     .arg(0.0, 0, 'f', 3)
+                                     .arg(0.0, 0, 'f', 3);
+        QString dummyTextB = tr("<no GA> S:%1",
+                                // intentional comment to separate arguments
+                                "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
+                                "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
+                                "network latency...")
+                                     .arg(0.0, 0, 'f', 3);
+        do {
+            latencyFont.setPointSize(--latencyFontPointSize);
+        } while (latencyFontPointSize > 6
+                 && qMax(QFontMetrics(latencyFont).boundingRect(dummyTextA).width(),
+                         QFontMetrics(latencyFont).boundingRect(dummyTextB).width()) + latencyFontSizeMargin
+                            > mpLineEdit_networkLatency->maximumWidth());
+
         mpLineEdit_networkLatency->setFont(latencyFont);
-    } else {
-        QFont latencyFont2 = QFont("Bitstream Vera Sans Mono", 9, QFont::Normal);
-        width = QFontMetrics(latencyFont2).boundingRect(QString("N:0.000 S:0.000")).width();
-        if (width < maxWidth) {
-            mpLineEdit_networkLatency->setFont(latencyFont2);
-        } else {
-            QFont latencyFont3 = QFont("Bitstream Vera Sans Mono", 8, QFont::Normal);
-            width = QFontMetrics(latencyFont3).boundingRect(QString("N:0.000 S:0.000")).width();
-            mpLineEdit_networkLatency->setFont(latencyFont3);
-        }
+        mpLineEdit_networkLatency->setFrame(false);
     }
 
     emergencyStop->setMinimumSize(QSize(30, 30));
@@ -393,8 +380,17 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     emergencyStop->setToolTip(utils::richText(tr("Emergency Stop. Stops all timers and triggers.")));
     connect(emergencyStop, &QAbstractButton::clicked, this, &TConsole::slot_stopAllItems);
 
-    mpBufferSearchBox->setMinimumSize(QSize(100, 30));
-    mpBufferSearchBox->setMaximumSize(QSize(150, 30));
+    mpBufferSearchBox->setClearButtonEnabled(true);
+    for (auto child : mpBufferSearchBox->children()) {
+        auto *pAction_clear(qobject_cast<QAction *>(child));
+        if (pAction_clear && pAction_clear->objectName() == QLatin1String("_q_qlineeditclearaction")) {
+            connect(pAction_clear, &QAction::triggered, this, &TConsole::slot_clearSearchResults, Qt::QueuedConnection);
+            break;
+        }
+    }
+
+    mpBufferSearchBox->setMinimumSize(QSize(150, 30));
+    mpBufferSearchBox->setMaximumSize(QSize(250, 30));
     mpBufferSearchBox->setSizePolicy(sizePolicy5);
     mpBufferSearchBox->setFont(mpHost->mCommandLineFont);
     mpBufferSearchBox->setFocusPolicy(Qt::ClickFocus);
@@ -457,10 +453,12 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     layoutButtonLayer->addWidget(replayButton, 0, 8);
     layoutButtonLayer->addWidget(logButton, 0, 9);
     layoutButtonLayer->addWidget(emergencyStop, 0, 10);
-    layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
+    if (mType == MainConsole) {
+        // In fact a whole lot more could be inside this "if"!
+        layoutButtonLayer->addWidget(mpLineEdit_networkLatency, 0, 11);
+    }
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
-    mpLineEdit_networkLatency->setFrame(false);
     layerCommandLine->setAutoFillBackground(true);
 
     centralLayout->addWidget(layerCommandLine);
@@ -507,9 +505,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     buttonLayer->setMaximumWidth(400);
     mpButtonMainLayer->setMinimumWidth(400);
     mpButtonMainLayer->setMaximumWidth(400);
-    setFocusPolicy(Qt::ClickFocus);
-    mUpperPane->setFocusPolicy(Qt::ClickFocus);
-    mLowerPane->setFocusPolicy(Qt::ClickFocus);
 
     mpButtonMainLayer->setAutoFillBackground(true);
     mpButtonMainLayer->setPalette(commandLinePalette);
@@ -546,6 +541,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TConsole::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
+    // Need to delay doing this because it uses elements that may not have
+    // been constructed yet:
+    if (mType == MainConsole) {
+        QTimer::singleShot(0, this, [this]() { setProxyForFocus(mpCommandLine); });
+    }
 }
 
 TConsole::~TConsole()
@@ -569,13 +569,27 @@ void TConsole::resizeConsole()
 }
 
 
+void TConsole::raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight)
+{
+    if (mpHost.isNull()) {
+        return;
+    }
+    TEvent mudletEvent {};
+    mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
+    mudletEvent.mArgumentList.append(QString::number(overallWidth - mBorders.left() - mBorders.right()));
+    mudletEvent.mArgumentList.append(QString::number(overallHeight - mBorders.top() - mBorders.bottom() - mpCommandLine->height()));
+    mudletEvent.mArgumentList.append(mConsoleName);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(mudletEvent);
+}
+
 void TConsole::resizeEvent(QResizeEvent* event)
 {
     if (mType & MainConsole) {
-        mMainFrameTopHeight = mpHost->mBorderTopHeight;
-        mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
-        mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
-        mMainFrameRightWidth = mpHost->mBorderRightWidth;
+        mBorders = mpHost->borders();
     }
     int x = event->size().width();
     int y = event->size().height();
@@ -589,18 +603,20 @@ void TConsole::resizeEvent(QResizeEvent* event)
         return;
     }
 
-    if (mType & (MainConsole|Buffer|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
+    if (mType & (MainConsole|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
-        x = x - mpLeftToolBar->width() - mpRightToolBar->width();
-        y = y - mpTopToolBar->height();
-        mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+        x -= (mpLeftToolBar->width() + mpRightToolBar->width());
+        y -= mpTopToolBar->height();
+        // The mBorders components will be all zeros for all but the MainConsole:
+        mpMainDisplay->resize(x - mBorders.left() - mBorders.right(),
+                              y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
-        mpMainDisplay->resize(x, y); //x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight );
+        mpMainDisplay->resize(x, y);
     }
-    mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
 
     if (mType & (CentralDebugConsole|ErrorConsole)) {
         layerCommandLine->hide();
@@ -618,24 +634,17 @@ void TConsole::resizeEvent(QResizeEvent* event)
         if (preventLuaEvent) {
             return;
         }
-        TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-        QString func = "handleWindowResizeEvent";
-        QString n = "WindowResizeEvent";
-        pLua->call(func, n);
+        if (!mpHost.isNull()) {
+            TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
+            QString func = "handleWindowResizeEvent";
+            QString n = "WindowResizeEvent";
+            pLua->call(func, n);
 
-        TEvent mudletEvent {};
-        mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
-        mudletEvent.mArgumentList.append(QString::number(x - mMainFrameLeftWidth - mMainFrameRightWidth));
-        mudletEvent.mArgumentList.append(QString::number(y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height()));
-        mudletEvent.mArgumentList.append(mConsoleName);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mudletEvent);
+            raiseMudletSysWindowResizeEvent(x, y);
+        }
     }
 //create the sysUserWindowResize Event for automatic resizing with Geyser
-    if (mType & (UserWindow)) {
+    if (mType & (UserWindow) && !mpHost.isNull()) {
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
         QString func = "handleWindowResizeEvent";
         QString n = "WindowResizeEvent";
@@ -656,11 +665,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
 void TConsole::refresh()
 {
-    if (mType & (ErrorConsole|MainConsole|SubConsole|UserWindow|Buffer)) {
-        mMainFrameTopHeight = mpHost->mBorderTopHeight;
-        mMainFrameBottomHeight = mpHost->mBorderBottomHeight;
-        mMainFrameLeftWidth = mpHost->mBorderLeftWidth;
-        mMainFrameRightWidth = mpHost->mBorderRightWidth;
+    if (mType == MainConsole) {
+        mBorders = mpHost->borders();
     }
 
     int x = width();
@@ -682,13 +688,13 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
-    mpMainDisplay->resize(x - mMainFrameLeftWidth - mMainFrameRightWidth, y - mMainFrameTopHeight - mMainFrameBottomHeight - mpCommandLine->height());
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
     if (mType & MainConsole) {
         mpCommandLine->adjustHeight();
     }
 
-    mpMainDisplay->move(mMainFrameLeftWidth, mMainFrameTopHeight);
+    mpMainDisplay->move(mBorders.left(), mBorders.top());
     x = width();
     y = height();
     QSize s = QSize(x, y);
@@ -1081,7 +1087,7 @@ void TConsole::scrollUp(int lines)
     mLowerPane->forceUpdate();
 
     if (lowerAppears) {
-        QTimer::singleShot(0, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
+        QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
     }
     mUpperPane->scrollUp(lines);
     slot_adjustAccessibleNames();
@@ -1462,6 +1468,12 @@ void TConsole::setCmdVisible(bool isVisible)
     mpCommandLine->setVisible(isVisible);
     //resizes miniconsole if command line gets enabled/disabled
     resizeConsole();
+    setProxyForFocus(isVisible ? mpCommandLine : nullptr);
+    // Need to remove the TCommandLine from the last used stack
+    // if it has been explicitly hidden:
+    if (!isVisible && mpHost) {
+        mpHost->forgetCommandLine(mpCommandLine);
+    }
 }
 
 void TConsole::refreshView() const
@@ -1839,37 +1851,33 @@ void TConsole::slot_searchBufferUp()
     // happen:
     mudlet::self()->activateProfile(mpHost);
 
-    QString _txt = mpBufferSearchBox->text();
-    if (_txt != mSearchQuery) {
-        mSearchQuery = _txt;
+    if (mSearchQuery != mpBufferSearchBox->text()) {
+        mSearchQuery = mpBufferSearchBox->text();
+        buffer.clearSearchHighlights();
         mCurrentSearchResult = buffer.lineBuffer.size();
     } else {
         // make sure the line to search from does not exceed the buffer, which can grow and shrink dynamically
-        mCurrentSearchResult = std::min(mCurrentSearchResult, buffer.lineBuffer.size());
+        mCurrentSearchResult = std::min<qsizetype>(mCurrentSearchResult, buffer.lineBuffer.size());
     }
     if (buffer.lineBuffer.empty()) {
         return;
     }
-    bool _found = false;
-    for (int i = mCurrentSearchResult - 1; i >= 0; i--) {
-        int begin = -1;
+
+    bool found = false;
+    for (int searchY = mCurrentSearchResult - 1; searchY >= 0; --searchY) {
+        int searchX = -1;
         do {
-            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
-            if (begin > -1) {
-                int length = mSearchQuery.size();
-                moveCursor(0, i);
-                selectSection(begin, length);
-                setBgColor(255, 255, 0, 255);
-                setFgColor(0, 0, 0);
-                deselect();
-                reset();
-                _found = true;
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            if (searchX > -1) {
+                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
+                found = true;
             }
-        } while (begin > -1);
-        if (_found) {
-            scrollUp(buffer.mCursorY - i - 3);
+        } while (searchX > -1);
+
+        if (found) {
+            scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
-            mCurrentSearchResult = i;
+            mCurrentSearchResult = searchY;
             return;
         }
     }
@@ -1878,9 +1886,9 @@ void TConsole::slot_searchBufferUp()
 
 void TConsole::slot_searchBufferDown()
 {
-    QString _txt = mpBufferSearchBox->text();
-    if (_txt != mSearchQuery) {
-        mSearchQuery = _txt;
+    if (mSearchQuery != mpBufferSearchBox->text()) {
+        mSearchQuery = mpBufferSearchBox->text();
+        buffer.clearSearchHighlights();
         mCurrentSearchResult = buffer.lineBuffer.size();
     }
     if (buffer.lineBuffer.empty()) {
@@ -1889,26 +1897,22 @@ void TConsole::slot_searchBufferDown()
     if (mCurrentSearchResult >= buffer.lineBuffer.size()) {
         return;
     }
-    bool _found = false;
-    for (int i = mCurrentSearchResult + 1; i < buffer.lineBuffer.size(); i++) {
-        int begin = -1;
+
+    bool found = false;
+    for (int searchY = mCurrentSearchResult + 1; searchY < buffer.lineBuffer.size(); ++searchY) {
+        int searchX = -1;
         do {
-            begin = buffer.lineBuffer[i].indexOf(mSearchQuery, begin + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
-            if (begin > -1) {
-                int length = mSearchQuery.size();
-                moveCursor(0, i);
-                selectSection(begin, length);
-                setBgColor(255, 255, 0, 255);
-                setFgColor(0, 0, 0);
-                deselect();
-                reset();
-                _found = true;
+            searchX = buffer.lineBuffer[searchY].indexOf(mSearchQuery, searchX + 1, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive));
+            if (searchX > -1) {
+                buffer.applyAttribute(QPoint(searchX, searchY), QPoint(searchX + mSearchQuery.size(), searchY), TChar::Found, true);
+                found = true;
             }
-        } while (begin > -1);
-        if (_found) {
-            scrollUp(buffer.mCursorY - i - 3);
+        } while (searchX > -1);
+
+        if (found) {
+            scrollUp(buffer.mCursorY - searchY - 3);
             mUpperPane->forceUpdate();
-            mCurrentSearchResult = i;
+            mCurrentSearchResult = searchY;
             return;
         }
     }
@@ -1948,7 +1952,11 @@ void TConsole::dropEvent(QDropEvent* e)
         QString fname = url.toLocalFile();
         QFileInfo info(fname);
         if (info.exists()) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             QPoint pos = e->pos();
+#else
+            QPoint pos = e->position().toPoint();
+#endif
             TEvent mudletEvent{};
             mudletEvent.mArgumentList.append(QLatin1String("sysDropEvent"));
             mudletEvent.mArgumentList.append(fname);
@@ -1967,7 +1975,11 @@ void TConsole::dropEvent(QDropEvent* e)
     }
     if (e->mimeData()->hasText()) {
         if (QUrl url(e->mimeData()->text()); url.isValid()) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             QPoint pos = e->pos();
+#else
+            QPoint pos = e->position().toPoint();
+#endif
             TEvent mudletEvent{};
             mudletEvent.mArgumentList.append(QLatin1String("sysDropUrlEvent"));
             mudletEvent.mArgumentList.append(url.toString());
@@ -1986,26 +1998,15 @@ void TConsole::dropEvent(QDropEvent* e)
     }
 }
 
-// Ensure that the correct TConsole is selected in a multi-view situation:
-void TConsole::setFocusOnAppropriateConsole()
-{
-    if (mType & (SubConsole|UserWindow) && mpCommandLine && mpCommandLine->isVisible()) {
-        // The activateProfile will tend to move the focus to the TCommandLine
-        // in the TMainConsole, but if we have a TCommandLine visible in this
-        // TConsole then we want the focus to stay there:
-        mudlet::self()->activateProfile(mpHost);
-        mpCommandLine->setFocus(Qt::OtherFocusReason);
-    } else {
-        // Otherwise return focus to the main TConsole command line
-        mpHost->setFocusOnHostMainConsole();
-    }
-}
-
 // This is also called from the TTextEdit mouse(Press|Release)Event()s:
 void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const bool isPressEvent)
 {
-    setFocusOnAppropriateConsole();
+    if (mType & (CentralDebugConsole | ErrorConsole)) {
+        return;
+    }
 
+    // Else if NOT the CentralDebugConsole or the ErrorConsole then bring the
+    // focus to the current profile in the main application window:
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(isPressEvent ? qsl("sysWindowMousePressEvent") : qsl("sysWindowMouseReleaseEvent"));
     switch (event->button()) {
@@ -2038,8 +2039,13 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     case Qt::ExtraButton24: mudletEvent.mArgumentList.append(QString::number(27));  break;
     default:                mudletEvent.mArgumentList.append(QString::number(0));
     }
-    mudletEvent.mArgumentList.append(QString::number(event->x()));
-    mudletEvent.mArgumentList.append(QString::number(event->y()));
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QPoint pos = event->pos();
+#else
+    QPoint pos = event->position().toPoint();
+#endif
+    mudletEvent.mArgumentList.append(QString::number(pos.x()));
+    mudletEvent.mArgumentList.append(QString::number(pos.y()));
     mudletEvent.mArgumentList.append(mConsoleName);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -2047,6 +2053,8 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mpHost->raiseEvent(mudletEvent);
+
+    mpHost->setFocusOnHostActiveCommandLine();
 }
 
 void TConsole::mousePressEvent(QMouseEvent* event)
@@ -2060,7 +2068,7 @@ void TConsole::slot_adjustAccessibleNames()
     switch (mType) {
     case CentralDebugConsole:
         setAccessibleName(tr("Debug Console."));
-        setAccessibleDescription(tr("Debug messages from all profile are shown here."));
+        setAccessibleDescription(tr("Debug messages from all profiles are shown here."));
         if (mLowerPane->isVisible()) {
             mUpperPane->setAccessibleName(tr("Central debug console past content.", "accessibility-friendly name to describe the upper half of the Mudlet central debug window when you've scrolled up"));
             mLowerPane->setAccessibleName(tr("Central debug console live content.", "accessibility-friendly name to describe the lower half of the Mudlet central debug when you've scrolled up"));
@@ -2185,6 +2193,48 @@ void TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mo
     }
 }
 
+void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
+{
+    if (mType == MainConsole) {
+        mUpperPane->setFocusProxy(pCommandLine);
+        QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+        QAccessible::updateAccessibility(&event);
+    } else if (mType == UserWindow) {
+        if (pCommandLine && pCommandLine->isVisible()) {
+            mUpperPane->setFocusProxy(pCommandLine);
+            QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        } else {
+            mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+            QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        }
+    } else if (mType == SubConsole) {
+        if (pCommandLine && pCommandLine->isVisible()) {
+            mUpperPane->setFocusProxy(pCommandLine);
+            QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        } else {
+            // Need to search ancestors to find the TConsole that this one
+            // is inserted into - and if it has a TCommandLine
+            auto parentConsole = mpHost->parentTConsole(this);
+            if (!parentConsole.isNull() && parentConsole->mpCommandLine && parentConsole->mpCommandLine->isVisible()) {
+                // TBH We ought to also check for any added TCommandLine but
+                // that can wait for a future development...
+                mUpperPane->setFocusProxy(parentConsole->mpCommandLine);
+                QAccessibleEvent event(parentConsole->mpCommandLine, QAccessible::Focus);
+                QAccessible::updateAccessibility(&event);
+            } else {
+                // Somehow that has failed so fall back to the main console
+                mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+                QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+                QAccessible::updateAccessibility(&event);
+            }
+        }
+    }
+}
+
+// At present this only supports/works on the main console
 void TConsole::setCaretMode(bool enabled)
 {
     mUpperPane->updateCaret();
@@ -2192,9 +2242,11 @@ void TConsole::setCaretMode(bool enabled)
 
     if (enabled) {
         mUpperPane->initializeCaret();
+        // Remove the focusProxy before setting the focusPolicy otherwise
+        // the Policy gets sent to the Proxy!
+        mUpperPane->setFocusProxy(nullptr);
         // This adds TabFocus to the otherwise used ClickFocus:
         mUpperPane->setFocusPolicy(Qt::StrongFocus);
-        mUpperPane->setFocusProxy(nullptr);
 #if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
         // windows & linux don't move keyboard focus to the main window without this
         mUpperPane->setFocus(Qt::MouseFocusReason);
@@ -2203,53 +2255,21 @@ void TConsole::setCaretMode(bool enabled)
         QAccessibleEvent event(mUpperPane, QAccessible::Focus);
         QAccessible::updateAccessibility(&event);
 #endif
-
+        // The overload without an argument uses Qt::OtherFocusReason according
+        // to the Qt source code:
+        mUpperPane->setFocus();
     } else {
-        mUpperPane->setFocusPolicy(Qt::ClickFocus);
 #if defined(Q_OS_WIN32) || defined(Q_OS_LINUX)
         // NVDA breaks focus reset, so do it on a timer
         QTimer::singleShot(0, this, [this] () {
             mUpperPane->releaseKeyboard();
         });
 #endif
-        if (mType == MainConsole) {
-            mUpperPane->setFocusProxy(mpCommandLine);
-            QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-            QAccessible::updateAccessibility(&event);
-        } else if (mType == UserWindow) {
-            if (mpCommandLine && mpCommandLine->isVisible()) {
-                mUpperPane->setFocusProxy(mpCommandLine);
-                QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-                QAccessible::updateAccessibility(&event);
-            } else {
-                mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
-                QAccessible::updateAccessibility(&event);
-            }
-        } else if (mType == SubConsole) {
-            if (mpCommandLine && mpCommandLine->isVisible()) {
-                mUpperPane->setFocusProxy(mpCommandLine);
-                QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-                QAccessible::updateAccessibility(&event);
-            } else {
-                // Need to search ancestors to find the TConsole that this one
-                // is inserted into
-                auto parentConsole = mpHost->parentTConsole(mpCommandLine);
-                if (!parentConsole.isNull()) {
-                    parentConsole->mUpperPane->setFocusProxy(parentConsole->mpCommandLine);
-                    QAccessibleEvent event(mpCommandLine, QAccessible::Focus);
-                    QAccessible::updateAccessibility(&event);
-                } else {
-                    // Somehow that has failed so fall back to the main console
-                    mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                    QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
-                    QAccessible::updateAccessibility(&event);
-                }
-            }
-        }
+        Q_ASSERT_X(!mUpperPane->focusProxy(), "TConsole:setCaretMode(false) FAIL", "About to set a focusPolicy but there is a focusProxy in place that will get it instead!");
+        mUpperPane->setFocusPolicy(Qt::ClickFocus);
+        setProxyForFocus(mpCommandLine);
+        // Carefull - if there is a FocusProxy for this element then IT gets the policy
     }
-
-    mUpperPane->setFocus();
 }
 
 void TConsole::createSearchOptionIcon()
@@ -2292,4 +2312,11 @@ void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
         createSearchOptionIcon();
         mpHost->mBufferSearchOptions = mSearchOptions;
     }
+}
+
+void TConsole::slot_clearSearchResults()
+{
+    buffer.clearSearchHighlights();
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
 }

@@ -222,7 +222,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                                             "<ul><li><b>Unchecked</b> '<i>narrow</i>' = Draw ambiguous width characters in a single 'space'.</li>"
                                                             "<li><b>Checked</b> '<i>wide</i>' = Draw ambiguous width characters two 'spaces' wide.</li>"
                                                             "<li><b>Partly checked</b> <i>(Default) 'auto'</i> = Use 'wide' setting for MUD Server "
-                                                            "encodings of <b>Big5</b>, <b>GBK</b> or <b>GBK18030</b> and 'narrow' for all others.</li></ul></p>"
+                                                            "encodings of <b>Big5</b>/<b>Big5-HKSCS</b>, <b>GBK</b>, <b>GBK18030</b> or <b>EUC-KR</b> and 'narrow' for all others.</li></ul></p>"
                                                             "<p><i>This is a temporary arrangement and will probably change when Mudlet gains "
                                                             "full support for languages other than English.</i></p>"));
     checkBox_enableTextAnalyzer->setToolTip(tr("<p>Enable a context (right click) menu action on any console/user window that, "
@@ -282,7 +282,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
-        auto& translation = pMudlet->mTranslationsMap.value(code);
+        auto& translation = pMudlet->mTranslationsMap[code];
         auto& nativeName = translation.getNativeName();
         if (translation.fromResourceFile()) {
             auto& translatedPc = translation.getTranslatedPercentage();
@@ -349,20 +349,20 @@ void dlgProfilePreferences::setupPasswordsMigration()
     hidePasswordMigrationLabelTimer = std::make_unique<QTimer>(this);
     hidePasswordMigrationLabelTimer->setSingleShot(true);
 
-    connect(hidePasswordMigrationLabelTimer.get(), &QTimer::timeout, this, &dlgProfilePreferences::hidePasswordMigrationLabel);
+    connect(hidePasswordMigrationLabelTimer.get(), &QTimer::timeout, this, &dlgProfilePreferences::slot_hidePasswordMigrationLabel);
 
-    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, [=]() {
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToSecure, this, [=]() {
         label_password_migration_notification->setText(tr("Migrated all passwords to secure storage."));
         comboBox_store_passwords_in->setEnabled(true);
         hidePasswordMigrationLabelTimer->start(10s);
     });
 
-    connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, [=](const QString& profile) {
+    connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, this, [=](const QString& profile) {
         label_password_migration_notification->setText(
                 tr("Migrated %1...", "This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely").arg(profile));
     });
 
-    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, [=]() {
+    connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, this, [=]() {
         label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         comboBox_store_passwords_in->setEnabled(true);
         hidePasswordMigrationLabelTimer->start(10s);
@@ -498,7 +498,7 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupBox_debug -----
     checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
     // This acts on a label within this groupBox:
-    hidePasswordMigrationLabel();
+    slot_hidePasswordMigrationLabel();
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
@@ -815,10 +815,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
-    topBorderHeight->setValue(pHost->mBorderTopHeight);
-    bottomBorderHeight->setValue(pHost->mBorderBottomHeight);
-    leftBorderWidth->setValue(pHost->mBorderLeftWidth);
-    rightBorderWidth->setValue(pHost->mBorderRightWidth);
+    auto originalBorders = pHost->borders();
+    topBorderHeight->setValue(originalBorders.top());
+    bottomBorderHeight->setValue(originalBorders.bottom());
+    leftBorderWidth->setValue(originalBorders.left());
+    rightBorderWidth->setValue(originalBorders.right());
 
     // Set the properties in groupBox_logOptions
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
@@ -902,7 +903,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // label to show on successful map file action
     label_mapFileActionResult->hide();
 
-    hidePasswordMigrationLabel();
+    slot_hidePasswordMigrationLabel();
 
     //double-click ignore
     QString ignore;
@@ -1405,7 +1406,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     label_mapFileActionResult->hide();
 
-    hidePasswordMigrationLabel();
+    slot_hidePasswordMigrationLabel();
 
     doubleclick_ignore_lineedit->clear();
 
@@ -2304,7 +2305,7 @@ void dlgProfilePreferences::slot_hideActionLabel()
     label_mapFileActionResult->hide();
 }
 
-void dlgProfilePreferences::hidePasswordMigrationLabel()
+void dlgProfilePreferences::slot_hidePasswordMigrationLabel()
 {
     label_password_migration_notification->hide();
 }
@@ -2672,10 +2673,8 @@ void dlgProfilePreferences::slot_saveAndClose()
             pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
             pHost->mpMap->mpMapper->update();
         }
-        pHost->mBorderTopHeight = topBorderHeight->value();
-        pHost->mBorderBottomHeight = bottomBorderHeight->value();
-        pHost->mBorderLeftWidth = leftBorderWidth->value();
-        pHost->mBorderRightWidth = rightBorderWidth->value();
+        QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
+        pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
@@ -3239,7 +3238,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
                         // perform unzipping in a worker thread so as not to freeze the UI
                         auto future = QtConcurrent::run(mudlet::unzip, tempThemesArchive->fileName(), mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("edbee/")), temporaryDir.path());
                         auto watcher = new QFutureWatcher<bool>;
-                        QObject::connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
+                        connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
                             if (future.result()) {
                                 populateThemesList();
 
@@ -3412,8 +3411,6 @@ void dlgProfilePreferences::slot_handleHostAddition(Host* pHost, const quint8 co
  * functionality to handle the situation of having a mainly disabled preference
  * dialog opened when no profiles were, it makes for a slightly more friendly
  * UX to also do this and adds a certain "balance" in the "code functionality".
- * Note that although pHost is not equal to nullptr when this is called, it is
- * now NOT valid or safe to dereference!
  */
 void dlgProfilePreferences::slot_handleHostDeletion(Host* pHost)
 {
@@ -4196,10 +4193,10 @@ void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
         }
 
         // in case no theme index is available yet, so it as soon as one is available
-        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted,  [=]() {
-            auto monokaiIndex = code_editor_theme_selection_combobox->findText(darkTheme);
-            if (monokaiIndex != -1) {
-                code_editor_theme_selection_combobox->setCurrentIndex(monokaiIndex);
+        KDToolBox::connectSingleShot(this, &dlgProfilePreferences::signal_themeUpdateCompleted, this, [=]() {
+            auto index = code_editor_theme_selection_combobox->findText(darkTheme);
+            if (index != -1) {
+                code_editor_theme_selection_combobox->setCurrentIndex(index);
             }
         });
 
