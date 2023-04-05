@@ -107,7 +107,6 @@ private:
     void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
     bool readDefaultTrueBool(QString name);
-    bool readDefaultFalseBool(QString name);
 
     QPointer<Host> mpHost;
     QString mPackageName;
