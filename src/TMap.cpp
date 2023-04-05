@@ -2683,22 +2683,24 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // else was QNetworkReply::OperationCanceledError and we already handle
         // THAT in slot_downloadCancel()
     }
-    QFile file(mLocalMapFileName);
-    if (!file.open(QFile::WriteOnly)) {
+    // Separate the two kinds of files to gain QSaveFile's atomic write behavior
+    QSaveFile writeFile(mLocalMapFileName);
+    QFile readFile(mLocalMapFileName);
+    if (!writeFile.open(QFile::WriteOnly)) {
         QString alertMsg = tr("[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
         return;
     }
     // The QNetworkReply is Ok here:
-    if (file.write(reply->readAll()) == -1) {
+    if (writeFile.write(reply->readAll()) == -1) {
         QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
         return;
     }
-    if (!file.commit()) {
-        qDebug() << "TMap::slot_replyFinished: error saving downloaded map: " << file.errorString();
+    if (!writeFile.commit()) {
+        qDebug() << "TMap::slot_replyFinished: error saving downloaded map: " << writeFile.errorString();
     }
 
     Host* pHost = mpHost;
@@ -2718,12 +2720,12 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 
     bool parsingWasSuccessful;
     QString parsingFileName;
-    if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
-        parsingFileName = file.fileName();
+    if (!readFile.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
+        parsingFileName = readFile.fileName();
         parsingWasSuccessful = pHost->mpConsole->loadMap(parsingFileName);
     } else {
         parsingFileName = mLocalMapFileName;
-        if (!file.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
+        if (!readFile.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
             QString alertMsg = tr("[ ERROR ] - Map download problem, unable to read destination file:\n%1.").arg(parsingFileName);
             postMessage(alertMsg);
             cleanup();
@@ -2733,8 +2735,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // The action to parse the XML file has been refactored to
         // a separate method so that it can be shared with the
         // direct importation of a local copy of a map file.
-        parsingWasSuccessful = readXmlMapFile(file);
-        file.close();
+        parsingWasSuccessful = readXmlMapFile(readFile);
+        readFile.close();
     }
 
     if (parsingWasSuccessful) {

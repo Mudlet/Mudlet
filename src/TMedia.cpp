@@ -534,9 +534,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 event.mArgumentList << QString::number(bytesWritten);
                 event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
 
-                localFile.close();
                 if (!localFile.commit()) {
-                    qDebug() << "TMedia::slot_writeFile: error saving downloaded media: " << file.errorString();
+                    qDebug() << "TMedia::slot_writeFile: error saving downloaded media: " << localFile.errorString();
                 }
 
                 reply->deleteLater();

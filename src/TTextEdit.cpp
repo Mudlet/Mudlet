@@ -181,7 +181,7 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
         mShowTimeStamps = state;
         if (mpConsole->getType() == TConsole::MainConsole) {
             const auto filePath = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
-            QSaveFile file();
+            QSaveFile file(filePath);
             if (state) {
                 file.open(QIODevice::WriteOnly | QIODevice::Text);
                 QTextStream out(&file);
