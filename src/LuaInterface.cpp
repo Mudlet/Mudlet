@@ -71,10 +71,10 @@ QStringList LuaInterface::varName(TVar* var)
         return names;
     }
     names << var->getName();
-    TVar* parent = var->getParent();
-    while (parent && parent->getName() != "_G") {
-        names.insert(0, parent->getName());
-        parent = parent->getParent();
+    TVar* pParent = var->getParent();
+    while (pParent && pParent->getName() != "_G") {
+        names.insert(0, pParent->getName());
+        pParent = pParent->getParent();
     }
     return names;
 }
@@ -751,9 +751,9 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         var->hidden = hide;
         tVar->addChild(var);
         const void* pKey = lua_topointer(L, -1);
-        var->kpointer = pKey;
+        var->pKey = pKey;
         const void* pValue = lua_topointer(L, -2);
-        var->vpointer = pValue;
+        var->pValue = pValue;
         if (varUnit->varExists(var) || keyName == "_G") {
             lua_pop(L, 1);
             tVar->removeChild(var);

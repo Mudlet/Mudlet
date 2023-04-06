@@ -179,19 +179,19 @@ QStringList VarUnit::shortVarName(TVar* var)
         return names;
     }
     names << var->getName();
-    TVar* p = var->getParent();
-    while (p && p->getName() != "_G") {
-        names.insert(0, p->getName());
-        p = p->getParent();
+    TVar* pParent = var->getParent();
+    while (pParent && pParent->getName() != "_G") {
+        names.insert(0, pParent->getName());
+        pParent = pParent->getParent();
     }
     return names;
 }
 
 void VarUnit::addVariable(TVar* var)
 {
-    QString n = varName(var).join(".");
+    QString fullName = varName(var).join(".");
     // pointers.insert(var->pointer);
-    varList.insert(n);
+    variableList.insert(fullName);
     if (var->hidden) {
         hidden.insert(shortVarName(var).join("."));
     }
@@ -214,9 +214,9 @@ void VarUnit::addHidden(const QString& var)
 
 void VarUnit::removeHidden(TVar* var)
 {
-    QString n = shortVarName(var).join(".");
-    hidden.remove(n);
-    hiddenByUser.remove(n);
+    QString fullName = shortVarName(var).join(".");
+    hidden.remove(fullName);
+    hiddenByUser.remove(fullName);
     var->hidden = false;
 }
 
@@ -229,32 +229,32 @@ void VarUnit::removeHidden(const QString& name)
 
 void VarUnit::addSavedVar(TVar* var)
 {
-    QString n = shortVarName(var).join(".");
+    QString fullName = shortVarName(var).join(".");
     var->saved = true;
-    savedVars.insert(n);
+    savedVars.insert(fullName);
 }
 
 void VarUnit::removeSavedVar(TVar* var)
 {
-    QString n = shortVarName(var).join(".");
-    savedVars.remove(n);
+    QString fullName = shortVarName(var).join(".");
+    savedVars.remove(fullName);
     var->saved = false;
 }
 
 bool VarUnit::isSaved(TVar* var)
 {
-    QString n = shortVarName(var).join(".");
-    return (savedVars.contains(n) || var->saved);
+    QString fullName = shortVarName(var).join(".");
+    return (savedVars.contains(fullName) || var->saved);
 }
 
 void VarUnit::removeVariable(TVar* var)
 {
-    varList.remove(varName(var).join("."));
+    variableList.remove(varName(var).join("."));
 }
 
 bool VarUnit::varExists(TVar* var)
 {
-    return ((var->kpointer && pointers.contains(var->kpointer)) || (var->vpointer && pointers.contains(var->vpointer)));
+    return ((var->pKey && pointers.contains(var->pKey)) || (var->pValue && pointers.contains(var->pValue)));
 }
 
 TVar* VarUnit::getBase()
@@ -262,9 +262,9 @@ TVar* VarUnit::getBase()
     return base;
 }
 
-void VarUnit::setBase(TVar* t)
+void VarUnit::setBase(TVar* pVariable)
 {
-    base = t;
+    base = pVariable;
 }
 
 void VarUnit::clear()
@@ -272,6 +272,6 @@ void VarUnit::clear()
     // delete base;
     tVars.clear();
     wVars.clear();
-    varList.clear();
+    variableList.clear();
     pointers.clear();
 }

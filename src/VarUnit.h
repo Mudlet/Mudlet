@@ -76,7 +76,7 @@ public:
 
 private:
     TVar* base;
-    QSet<QString> varList;
+    QSet<QString> variableList;
     // ?? variables
     QMap<QTreeWidgetItem*, TVar*> wVars;
     // temporary variables
