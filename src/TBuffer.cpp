@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018, 2020, 2022-2023 by Stephen Lyons             *
+ *   Copyright (C) 2014-2018, 2020, 2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -55,9 +55,9 @@
 //#define DEBUG_MXP_PROCESSING
 
 
-TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags, const int linkIndex)
-: mFgColor(fg)
-, mBgColor(bg)
+TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
+: mFgColor(foreground)
+, mBgColor(background)
 , mFlags(flags)
 , mLinkIndex(linkIndex)
 {
@@ -416,10 +416,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         if (ch == '\033') {
             if (!mGotOSC) {
                 // The terminator for an OSC is the String Terminator but that
-                // is the ESC character followed by (the single character)
+                // is the ESC ch followed by (the single ch)
                 // '\\' so must not respond to an ESC here - though the code
                 // arrangement should avoid looping around this loop while
-                // seeking this character pair anyhow...
+                // seeking this ch pair anyhow...
                 mGotESC = true;
                 ++localBufferPosition;
                 continue;
@@ -436,12 +436,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         if (mGotCSI) {
             // Lookahead and try and see what we are processing
-            // At the start of a CSI sequence the only valid character is one of:
+            // At the start of a CSI sequence the only valid ch is one of:
             // "0-9:;<=>?" if it is one of "0-9:;" then it is a
             // "parameter-string" ELSE if it is one of '<', '=', '>' or '?' it
             // IS a private/experimental and not covered by the ECMA-48
             // specifications..
-            // After the first character the remaining characters of the
+            // After the first ch the remaining characters of the
             // parameter string will be in the range "0-9:;" only
             size_t spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
@@ -468,7 +468,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             if (spanEnd >= localBufferLength || cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
-                // We have gone to the end of the buffer OR the last character
+                // We have gone to the end of the buffer OR the last ch
                 // in the buffer is still within a CSI sequence - therefore we
                 // have got a split between data packets and are not in a
                 // position to process the current line further...
@@ -477,7 +477,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 return;
             }
 
-            // Now we can take a peek at what the next character is, it could
+            // Now we can take a peek at what the next ch is, it could
             // be an optional (and we are not expecting this) "intermediate
             // byte" which is space or one of "!"#$%&'()*+,-./" or a "final
             // byte" which is what determines what on earth the CSI is for, it
@@ -613,10 +613,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             // terminator then all data will just be swallowed into the buffer
 
             // Valid characters inside an OSC are: a "command string" or a
-            // "character string".
+            // "ch string".
             // A "command string" is a sequence of bit combinations in the range
             // <BS><TAB><LF><VT><FF><CR> and ASCII printables from Space to '~'
-            // A "character string" is a sequence of any character except Start
+            // A "ch string" is a sequence of any ch except Start
             // of String (SOS) or String Terminator (ST) and the latter is ESC
             // followed by '\\' (a single \ BTW) in the 7-bit code case (the
             // former is encoded as ESC followed by 'X'):
@@ -624,7 +624,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             size_t spanEnd = spanStart;
             // It is safe to look at spanEnd-1 even at the starting position
             // because we already know that the localBuffer extends backwards
-            // that far (it will be the ']' character!)
+            // that far (it will be the ']' ch!)
             while (spanEnd < localBufferLength
                    && (localBuffer[spanEnd-1] != '\033')
                    && (localBuffer[spanEnd] != '\\')) {
@@ -632,7 +632,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             if (localBuffer[spanEnd] != '\\') {
-                // The last character in the buffer is NOT the expected ST
+                // The last ch in the buffer is NOT the expected ST
                 // - therefore we have probably got a split between
                 // data packets and are not in a position to process the
                 // current line further...
@@ -710,7 +710,7 @@ COMMIT_LINE:
 
             if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
                 qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
-                              "data character and attribute data items!";
+                              "data ch and attribute data items!";
             }
 
             if (!lineBuffer.back().isEmpty()) {
@@ -1915,8 +1915,8 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
 #endif
-    unsigned short ch = sequence.at(0).unicode();
-    switch (ch) {
+    unsigned short character = sequence.at(0).unicode();
+    switch (character) {
     case static_cast<quint8>('P'):
         if (serverMayRedefineDefaultColors) {
             if (sequence.size() == 8) {
@@ -2122,12 +2122,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
+                    int restOfLine = lineRest.size();
+                    if (restOfLine > 0) {
+                        while (restOfLine > 0) {
                             newLine.push_front(buffer.back().back());
                             buffer.back().pop_back();
-                            k--;
+                            restOfLine--;
                         }
                     }
 
@@ -2215,12 +2215,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
+                    int restOfLine = lineRest.size();
+                    if (restOfLine > 0) {
+                        while (restOfLine > 0) {
                             newLine.push_front(buffer.back().back());
                             buffer.back().pop_back();
-                            k--;
+                            restOfLine--;
                         }
                     }
 
@@ -2754,12 +2754,12 @@ bool TBuffer::moveCursor(QPoint& where)
 // requested by lua function getLines(...):
 QString badLineError = qsl("ERROR: invalid line number");
 
-QString& TBuffer::line(int n)
+QString& TBuffer::line(int lineNumber)
 {
-    if ((n >= lineBuffer.size()) || (n < 0)) {
+    if ((lineNumber < 0) || (lineNumber >= lineBuffer.size())) {
         return badLineError;
     }
-    return lineBuffer[n];
+    return lineBuffer[lineNumber];
 }
 
 int TBuffer::find(int line, const QString& what, int pos = 0)
@@ -2878,9 +2878,6 @@ void TBuffer::shrinkBuffer()
         buffer.pop_front();
         mCursorY--;
     }
-    // We need to adjust the search result line as some lines have now gone
-    // away:
-    mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
 
     if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole|TConsole::Buffer)) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
@@ -3081,8 +3078,9 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
             }
         }
         return true;
+    } else {
+        return false;
     }
-    return false;
 }
 
 QStringList TBuffer::getEndLines(int n)
@@ -4196,13 +4194,4 @@ int TBuffer::lengthInGraphemes(const QString& text)
 const QList<QByteArray> TBuffer::getEncodingNames()
 {
      return csmEncodingTable.getEncodingNames();
-}
-
-void TBuffer::clearSearchHighlights()
-{
-    for (auto& line : buffer) {
-        for (auto& character : line) {
-            character.mFlags &= ~TChar::AttributeFlag::Found;
-        }
-    }
 }

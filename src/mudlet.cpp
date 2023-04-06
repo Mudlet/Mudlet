@@ -1440,12 +1440,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     QResizeEvent event(s, s);
     updateDiscordNamedIcon();
     QApplication::sendEvent(pH->mpConsole, &event);
-    // This is needed to completely show the first autoloaded profile so that
-    // it can be properly hidden by a second one (without it the:
-    // mpCurrentActiveHost->mpConsole->hide() does not work correctly and two
-    // profiles get shown across a split screen - even though mMultiView is NOT
-    // set)!
-    qApp->processEvents();
 }
 
 
@@ -4622,7 +4616,6 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
         {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
         {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
         {qsl(":/CF-loader.xml"),          {qsl("carrionfields.net")}},
-        {qsl(":/mg-loader.xml"),          {qsl("mg.mud.de")}},
         {qsl(":/run-tests.xml"),          {qsl("mudlet.org")}},
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
         {qsl(":/mudlet-mapper.xml"),      {qsl("aetolia.com"),
