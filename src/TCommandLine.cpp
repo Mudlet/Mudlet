@@ -1428,7 +1428,7 @@ void TCommandLine::saveHistory()
     }
     int i = mHistoryList.size();
     while (i--) {
-        qDebug()<<"TIM writing line "<<i<<": "<<mHistoryList[i];
+        qDebug() << "TIM writing line " << i << ": " << mHistoryList[i];
         ofs << mHistoryList[i];
     }
     file.close();
@@ -1456,10 +1456,10 @@ void TCommandLine::restoreHistory()
         ifs >> line;
         mHistoryList.push_front(line);
         count++;
-        qDebug()<<"TIM got line: "<<line;
+        qDebug() << "TIM got line: " << line;
     }
     count--; // Empty string at the end
-    qDebug()<<"TIM have read file";
+    qDebug() << "TIM have read file";
     if (!count) {
         return;
     }
