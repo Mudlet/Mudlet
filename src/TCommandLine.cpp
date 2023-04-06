@@ -1413,37 +1413,46 @@ void TCommandLine::slot_adjustAccessibleNames()
     }
 }
 
+const QString historyFileName{qsl("commandHistory")};
+
 void TCommandLine::saveHistory()
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("commandHistory")));
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), historyFileName));
     if (!file.open(QFile::ReadWrite | QFile::Truncate | QFile::Text)) {
-        qDebug() << "Problem creating commandHistory file";
+        qDebug() << "Problem creating command history file";
         return;
     }
-    QTextStream output(&file);
-
+    QTextStream fileStream(&file);
+    // fileStream.setCodec is removed in Qt6 and UTF-8 is the default
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     int i = mHistoryList.size();
     while (i--) {
-        output << mHistoryList[i].toUtf8() << "\n";
+        fileStream << mHistoryList[i] << "\n";
     }
     file.close();
 }
 
 void TCommandLine::restoreHistory()
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("commandHistory")));
-    file.open(QFile::ReadOnly | QFile::Text);
-    QTextStream input(&file);
+    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), historyFileName));
+    file.open(QIODevice::ReadOnly);
+    QTextStream fileStream(&file);
     if (!file.exists()) {
         qDebug() << "Command history file not found";
         return;
     } else {
         qDebug() << "Restoring command history";
     }
+    // In Qt6 the default encoding is UTF-8 instead of the system default
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     int count = 0;
     QString line;
-    while (!input.atEnd()) {
-        line = input.readLine();
+    while (!fileStream.atEnd()) {
+        line = fileStream.readLine();
         if (!line.isEmpty()) {
             mHistoryList.push_front(line);
             count++;
