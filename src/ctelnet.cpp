@@ -725,40 +725,38 @@ void cTelnet::checkNAWS()
     }
 }
 
-// https://www.rfc-editor.org/rfc/rfc1073
-void cTelnet::sendNAWS(int width, int height)
+void cTelnet::sendNAWS(int x, int y)
 {
-    std::string message;
-    message += TN_IAC; // Interpret As Command
-    message += TN_SB;  // Sub-negotiation begins
-    message += OPT_NAWS; // NAWS - Negotiate About Window Size
-    char widthHighByte = static_cast<char>(width / 256);
-    char widthLowByte = static_cast<char>(width % 256);
-    char heightHighByte = static_cast<char>(height / 256);
-    char heightLowByte = static_cast<char>(height % 256);
-    // Double 0xff (IAC) byte values as required by protocol to prevent confusion with a real IAC
-    message += widthHighByte;
-    if (widthHighByte == TN_IAC) {
-        message += TN_IAC;
+    std::string s;
+    s = TN_IAC;
+    s += TN_SB;
+    s += OPT_NAWS;
+    char x1 = static_cast<char>(x / 256);
+    char x2 = static_cast<char>(x % 256);
+    char y1 = static_cast<char>(y / 256);
+    char y2 = static_cast<char>(y % 256);
+    //IAC must be doubled
+    s += x1;
+    if (x1 == TN_IAC) {
+        s += TN_IAC;
     }
-    message += widthLowByte;
-    if (widthLowByte == TN_IAC) {
-        message += TN_IAC;
+    s += x2;
+    if (x2 == TN_IAC) {
+        s += TN_IAC;
     }
-    message += heightHighByte;
-    if (heightHighByte == TN_IAC) {
-        message += TN_IAC;
+    s += y1;
+    if (y1 == TN_IAC) {
+        s += TN_IAC;
     }
-    message += heightLowByte;
-    if (heightLowByte == TN_IAC) {
-        message += TN_IAC;
+    s += y2;
+    if (y2 == TN_IAC) {
+        s += TN_IAC;
     }
 
-    message += TN_IAC; // Interpret As Command
-    message += TN_SE;  // Sub-negotiation ends
-    socketOutRaw(message);
+    s += TN_IAC;
+    s += TN_SE;
+    socketOutRaw(s);
 }
-
 
 void cTelnet::sendTelnetOption(char type, char option)
 {

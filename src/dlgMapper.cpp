@@ -197,26 +197,22 @@ void dlgMapper::updateAreaComboBox()
     comboBox_showArea->setCurrentText(oldValue); // Try and reset to previous value
 }
 
-void dlgMapper::slot_toggleShowRoomIDs(int s)
+void dlgMapper::slot_toggleShowRoomIDs(int toggle)
 {
-    if (s == Qt::Checked) {
-        mp2dMap->mShowRoomID = true;
-    } else {
-        mp2dMap->mShowRoomID = false;
-    }
+    mp2dMap->mShowRoomID = toggle == Qt::Checked;
     mp2dMap->mpHost->mShowRoomID = mp2dMap->mShowRoomID;
     mp2dMap->update();
 }
 
-void dlgMapper::slot_toggleShowRoomNames(int s)
+void dlgMapper::slot_toggleShowRoomNames(int toggle)
 {
-    mpMap->setRoomNamesShown(s == Qt::Checked);
+    mpMap->setRoomNamesShown(toggle == Qt::Checked);
     mp2dMap->update();
 }
 
-void dlgMapper::slot_toggleStrongHighlight(int v)
+void dlgMapper::slot_toggleStrongHighlight(int toggle)
 {
-    mpHost->mMapStrongHighlight = v == Qt::Checked ? true : false;
+    mpHost->mMapStrongHighlight = toggle == Qt::Checked ? true : false;
     mp2dMap->update();
 }
 
@@ -291,29 +287,29 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
 #endif
 }
 
-void dlgMapper::slot_roomSize(int d)
+void dlgMapper::slot_roomSize(int size)
 {
-    float s = static_cast<float>(d / 10.0);
-    mp2dMap->setRoomSize(s);
+    float floatSize = static_cast<float>(size / 10.0);
+    mp2dMap->setRoomSize(floatSize);
     mp2dMap->update();
 }
 
-void dlgMapper::slot_exitSize(int d)
+void dlgMapper::slot_exitSize(int size)
 {
-    mp2dMap->setExitSize(d);
+    mp2dMap->setExitSize(size);
     mp2dMap->update();
 }
 
-void dlgMapper::slot_setRoomSize(int d)
+void dlgMapper::slot_setRoomSize(int size)
 {
-    dlgMapper::slot_roomSize(d);
-    spinBox_roomSize->setValue(d);
+    dlgMapper::slot_roomSize(size);
+    spinBox_roomSize->setValue(size);
 }
 
-void dlgMapper::slot_setExitSize(int d)
+void dlgMapper::slot_setExitSize(int size)
 {
-    dlgMapper::slot_exitSize(d);
-    spinBox_exitSize->setValue(d);
+    dlgMapper::slot_exitSize(size);
+    spinBox_exitSize->setValue(size);
 }
 
 void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
