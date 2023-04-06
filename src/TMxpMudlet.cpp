@@ -101,13 +101,13 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
 
 void TMxpMudlet::enqueueMxpEvent(MxpStartTag* tag)
 {
-    TMxpEvent ev;
-    ev.name = tag->getName();
+    TMxpEvent event;
+    event.name = tag->getName();
     for (const auto& attrName : tag->getAttributesNames()) {
-        ev.attrs[attrName] = tag->getAttributeValue(attrName);
+        event.attrs[attrName] = tag->getAttributeValue(attrName);
     }
-    ev.actions = getLinkStore().getCurrentLinks();
-    mMxpEvents.enqueue(ev);
+    event.actions = getLinkStore().getCurrentLinks();
+    mMxpEvents.enqueue(event);
 }
 
 TLinkStore& TMxpMudlet::getLinkStore()

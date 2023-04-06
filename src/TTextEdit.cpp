@@ -663,6 +663,7 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     } // End of switch
     charWidths.append(charWidth);
 
+    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     QRect textRect;
     if (charWidth > 0) {
         textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
@@ -670,29 +671,19 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
     textRects.append(textRect);
     QColor bgColor;
     bool caretIsHere = mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
-    if (Q_UNLIKELY(charStyle.isFound())) {
-        if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
-            fgColors.append(mSearchHighlightBgColor);
-            bgColor = mSearchHighlightFgColor;
-        } else {
-            fgColors.append(mSearchHighlightFgColor);
-            bgColor = mSearchHighlightBgColor;
-        }
+    if (Q_UNLIKELY(static_cast<bool>(attributes & TChar::Reverse) != (charStyle.isSelected() != caretIsHere))) {
+        fgColors.append(charStyle.background());
+        bgColor = charStyle.foreground();
     } else {
-        if (Q_UNLIKELY(charStyle.isReversed() != (charStyle.isSelected() != caretIsHere))) {
-            fgColors.append(charStyle.background());
-            bgColor = charStyle.foreground();
-        } else {
-            fgColors.append(charStyle.foreground());
-            bgColor = charStyle.background();
-        }
+        fgColors.append(charStyle.foreground());
+        bgColor = charStyle.background();
     }
     if (caretIsHere) {
         bgColor = mCaretColor;
     }
     if (!textRect.isNull()) {
         painter.fillRect(textRect, bgColor);
-    }
+}
     return charWidth;
 }
 
@@ -1716,9 +1707,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto widthpx = std::min(65500, largestLine);
     auto rect = QRect(mPA.x(), mPA.y(), widthpx, heightpx);
     auto pixmap = QPixmap(widthpx, heightpx);
-    auto solidColor = QColor(mBgColor);
-    solidColor.setAlpha(255);
-    pixmap.fill(solidColor);
+    pixmap.fill(mBgColor);
 
     QPainter painter(&pixmap);
     if (!painter.isActive()) {

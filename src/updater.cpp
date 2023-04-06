@@ -343,9 +343,9 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 
 // otherwise the button says 'Install', so install the update
 #if defined(Q_OS_LINUX)
-    QFuture<void> future = QtConcurrent::run([&, filePath]() { untarOnLinux(filePath); });
+    QFuture<void> future = QtConcurrent::run([&]() { untarOnLinux(filePath); });
 #elif defined(Q_OS_WIN32)
-    QFuture<void> future = QtConcurrent::run([&, filePath]() { prepareSetupOnWindows(filePath); });
+    QFuture<void> future = QtConcurrent::run([&]() { prepareSetupOnWindows(filePath); });
 #endif
 
     // replace current binary with the unzipped one

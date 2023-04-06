@@ -956,12 +956,7 @@ void XMLimport::readHost(Host* pHost)
         }
         if (isStartElement()) {
             if (name() == qsl("name")) {
-                // Only read this detail into a backup location so that it can
-                // be imported without changing the main setting unless it is
-                // needed (intended for use when importing a profile but not
-                // otherwise). In fact this detail is normally stored outside of
-                // the game save in the profile base directory:
-                pHost->mBackupHostName = readElementText();
+                pHost->mHostName = readElementText();
             } else if (name() == qsl("mInstalledModules")) {
                 QMap<QString, QStringList> entry;
 
@@ -980,23 +975,13 @@ void XMLimport::readHost(Host* pHost)
             } else if (name() == qsl("mInstalledPackages")) {
                 readStringList(pHost->mInstalledPackages, qsl("Host"));
             } else if (name() == qsl("url")) {
-                // Only read this detail into a backup location so that it can
-                // be imported without changing the main setting unless it is
-                // needed (intended for use when importing a profile but not
-                // otherwise). In fact this detail is normally stored outside of
-                // the game save in the profile base directory:
-                pHost->mBackupUrl = readElementText();
+                pHost->mUrl = readElementText();
             } else if (name() == qsl("serverPackageName")) {
                 pHost->mServerGUI_Package_name = readElementText();
             } else if (name() == qsl("serverPackageVersion")) {
                 pHost->mServerGUI_Package_version = readElementText();
             } else if (name() == qsl("port")) {
-                // Only read this detail into a backup location so that it can
-                // be imported without changing the main setting unless it is
-                // needed (intended for use when importing a profile but not
-                // otherwise). In fact this detail is normally stored outside of
-                // the game save in the profile base directory:
-                pHost->mBackupPort = readElementText().toInt();
+                pHost->mPort = readElementText().toInt();
             } else if (name() == qsl("borderTopHeight")) {
                 borders.setTop(readElementText().toInt());
             } else if (name() == qsl("borderBottomHeight")) {
@@ -1072,7 +1057,7 @@ void XMLimport::readHost(Host* pHost)
                 // the Xml format but will appear in older files and trip the
                 // QDebug() error reporting associated with the following
                 // readUnknownElement(...) for "anything not otherwise parsed"
-                Q_UNUSED(readElementText())
+                Q_UNUSED(readElementText());
             } else if (name() == qsl("mFgColor2")) {
                 pHost->mFgColor_2.setNamedColor(readElementText());
             } else if (name() == qsl("mBgColor2")) {

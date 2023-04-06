@@ -40,7 +40,7 @@ class TStringUtils
 {
 public:
     static bool isQuote(QChar ch);
-    static bool isOneOf(QChar ch, const QString &chars);
+    static bool isOneOf(QChar inputCharacter, const QString& characterSet);
 };
 
 #endif //MUDLET_TSTRINGUTILS_H
