@@ -407,6 +407,7 @@ public:
     QPointer<TConsole> parentTConsole(QObject*) const;
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
+    void loadMap();
 
 
     cTelnet mTelnet;
