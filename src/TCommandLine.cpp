@@ -1418,18 +1418,18 @@ const QString historyFileName{qsl("commandHistory")};
 void TCommandLine::saveHistory()
 {
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), historyFileName));
-    if (!file.open(QFile::ReadWrite | QFile::Truncate | QFile::Text)) {
-        qDebug() << "Problem creating command history file";
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qWarning() << "Problem creating command history file";
         return;
     }
-    QTextStream fileStream(&file);
-    // fileStream.setCodec is removed in Qt6 and UTF-8 is the default
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
+    QDataStream ofs(&file);
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
     int i = mHistoryList.size();
     while (i--) {
-        fileStream << mHistoryList[i] << "\n";
+        qDebug()<<"TIM writing line "<<i<<": "<<mHistoryList[i];
+        ofs << mHistoryList[i];
     }
     file.close();
 }
@@ -1438,31 +1438,31 @@ void TCommandLine::restoreHistory()
 {
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), historyFileName));
     file.open(QIODevice::ReadOnly);
-    QTextStream fileStream(&file);
+    QDataStream ifs(&file);
     if (!file.exists()) {
         qDebug() << "Command history file not found";
         return;
     } else {
         qDebug() << "Restoring command history";
     }
-    // In Qt6 the default encoding is UTF-8 instead of the system default
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
-#endif
+    QStringList cmdList;
+    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+        ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+    }
+
     int count = 0;
     QString line;
-    while (!fileStream.atEnd()) {
-        line = fileStream.readLine();
-        if (!line.isEmpty()) {
-            mHistoryList.push_front(line);
-            count++;
-        }
+    while (!ifs.atEnd()) {
+        ifs >> line;
+        mHistoryList.push_front(line);
+        count++;
+        qDebug()<<"TIM got line: "<<line;
     }
-    file.close();
+    count--; // Empty string at the end
+    qDebug()<<"TIM have read file";
     if (!count) {
         return;
     }
-    mHistoryList.push_front(QString());
-    QString infoMsg = tr("[ INFO ]  - Command history restored %1 line(s).").arg(QString::number(count));
+    QString infoMsg = tr("[ INFO ]  - Command history (size %1) restored.").arg(QString::number(count));
     mpHost->postMessage(infoMsg);
 }
