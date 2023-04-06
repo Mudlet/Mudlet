@@ -3098,14 +3098,14 @@ void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
                                    selectionCount));
     if (selectionCount) {
         pushButton_copyMap->setEnabled(true);
-        pushButton_chooseProfiles->setText(tr("%n selected - change destinations ...",
+        pushButton_chooseProfiles->setText(tr("%n selected - change destinations...",
                                               // Intentional comment to separate arguments
                                               "text on button to select other profiles to receive the map from this profile, "
                                               "%n is the number of other profiles that have already been selected to receive it and will always be 1 or more",
                                               selectionCount));
     } else {
         pushButton_copyMap->setEnabled(false);
-        pushButton_chooseProfiles->setText(tr("pick destinations ...",
+        pushButton_chooseProfiles->setText(tr("pick destinations...",
                                               // Intentional comment to separate arguments
                                               "text on button to select other profiles to receive the map from this profile, "
                                               "this is used when no profiles have been selected"));

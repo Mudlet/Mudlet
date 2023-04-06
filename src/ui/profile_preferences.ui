@@ -1907,7 +1907,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_saveMap">
             <property name="text">
-             <string>choose location ...</string>
+             <string>choose location...</string>
             </property>
            </widget>
           </item>
@@ -1934,7 +1934,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="1" column="1">
            <widget class="QPushButton" name="pushButton_loadMap">
             <property name="text">
-             <string>choose map ...</string>
+             <string>choose map...</string>
             </property>
            </widget>
           </item>
@@ -2015,7 +2015,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string comment="text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected">pick destinations ...</string>
+             <string comment="text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected">pick destinations...</string>
             </property>
            </widget>
           </item>
