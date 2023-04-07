@@ -854,7 +854,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="92"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij na linię, aby zaznaczyć lub odznaczyć numer pokoju (z podaną nazwą, jeśli pokoje są nazwane), aby dodać lub usunąć pokój z zaznaczenia.  Kliknij na odpowiedni nagłówek, aby posortować go według tej metody.  Zwróć uwagę, że kolumna z nazwą będzie wyświetlana tylko wtedy, gdy przynajmniej jeden z pokoi ma swoją nazwę.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2682"/>
@@ -1187,7 +1187,7 @@ factor of:</source>
       <location filename="../src/TCommandLine.cpp" line="1343"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>Wpisz tekst, aby wysłać na serwer gry, lub wprowadź alias, aby uruchomić polecenia lokalnie.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1353"/>
@@ -1309,13 +1309,13 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="351"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="357"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="380"/>
@@ -5428,32 +5428,32 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="59"/>
       <source>Click to make the color trigger ignore the text&apos;s background color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij, aby wyzwalacz kolorów ignorował koloru tła tekstu. Wybranie tego zarówno dla tła jak i dla koloru samego tekstu jest błędem.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="60"/>
       <source>Click to make the color trigger ignore the text&apos;s foreground color - however choosing this for both foreground and background is an error.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij, aby wyzwalacz kolorów ignorował koloru tekstu. Wybranie tego zarówno dla koloru tekstu jak i dla tła tekstu jest błędem.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="66"/>
       <source>Click to make the color trigger when the text&apos;s background color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij, aby ustawić wyzwalacz koloru, gdy tekst kolor tła nie został zmodyfikowany z jego wartości normalnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="67"/>
       <source>Click to make the color trigger when the text&apos;s foreground color has not been modified from its normal value.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij, aby ustawić wyzwalacz koloru, gdy tekst kolor pierwszoplanowy nie został zmodyfikowany z wartości normalnej.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="71"/>
       <source>Click a color to make the trigger fire only when the text&apos;s background color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij na kolor, aby wyzwalać tylko wtedy, gdy kolor tła odpowiada wskazanemu numerowi koloru.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="72"/>
       <source>Click a color to make the trigger fire only when the text&apos;s foreground color matches the color number indicated.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij na kolor, aby wyzwalać tylko wtedy, gdy kolor na pierwszym planie odpowiada wskazanemu numerowi koloru.</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
@@ -5749,7 +5749,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1763"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
-      <translation type="unfinished"/>
+      <translation>Proszę ustawić prawidłową nazwę profilu, adres serwera gry i port gry przed załadowaniem</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1768"/>
@@ -5759,7 +5759,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1822"/>
       <source>Click to hide the password; it will also hide if another profile is selected.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij, aby ukryć hasło; ukryje również po wybraniu innego profilu.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1826"/>
@@ -6301,7 +6301,7 @@ Count</source>
       <location filename="../src/dlgPackageManager.cpp" line="240"/>
       <source>Remove package</source>
       <comment>Message on button in package manager initially and when there is no packages to remove.</comment>
-      <translation type="unfinished"/>
+      <translation>Usuń pakiet</translation>
     </message>
   </context>
   <context>
@@ -6315,7 +6315,7 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="141"/>
       <source>Location which will be used to store log files - matching logs will be appended to.</source>
-      <translation type="unfinished"/>
+      <translation>Lokalizacja, która będzie używana do przechowywania plików dziennika - pasujące dzienniki zostaną dołączone do.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="142"/>
@@ -6330,12 +6330,12 @@ Count</source>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="147"/>
       <source>Set a custom name for your log. (New logs are appended if a log file of the same name already exists).</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw niestandardową nazwę dla swojego logu. (Nowe logi są dołączone, jeśli plik dziennika o tej samej nazwie już istnieje.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="168"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>Automatyczne aktualizacje są wyłączone w wersjach programistycznych, aby zapobiec nadpisaniu aktualizacji twojego Mudleta</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="195"/>
@@ -6616,22 +6616,22 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3467"/>
       <source>The room symbol will appear like this if only symbols (glyphs) from the specific font are used.</source>
-      <translation type="unfinished"/>
+      <translation>Symbol pomieszczenia będzie wyglądał w ten sposób, jeśli używane są tylko symbole (glify) z wybranej czcionki.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3472"/>
       <source>The room symbol will appear like this if symbols (glyphs) from any font can be used.</source>
-      <translation type="unfinished"/>
+      <translation>Symbol pomieszczenia będzie wyglądał w ten sposób, jeśli można użyć symboli (glifów) z dowolnej czcionki.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3512"/>
       <source>How many rooms in the whole map have this symbol.</source>
-      <translation type="unfinished"/>
+      <translation>Jak wiele pokoi w całej mapie ma ten symbol.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3530"/>
       <source>The rooms with this symbol, up to a maximum of thirty-two, if there are more than this, it is indicated but they are not shown.</source>
-      <translation type="unfinished"/>
+      <translation>Pokoje z tym symbolem, maksymalnie do trzydziestu dwóch, jeśli jest ich więcej, jest to wskazane, ale nie są one wyświetlane.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3538"/>
@@ -13603,7 +13603,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="111"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw kolor lokacji</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
@@ -13623,7 +13623,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw kolor symbolu</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="229"/>
