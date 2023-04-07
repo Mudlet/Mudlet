@@ -5618,12 +5618,12 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1763"/>
       <source>Please set a valid profile name, game server address and the game port before loading.</source>
-      <translation type="unfinished"/>
+      <translation>Yüklemeden önce, lütfen geçerli bir profil adı, oyun sunucu adresi ve oyun portunu ayarlayın.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1768"/>
       <source>Please set a valid profile name, game server address and the game port before connecting.</source>
-      <translation type="unfinished"/>
+      <translation>Bağlanmadan önce lütfen geçerli bir profil adı, oyun sunucu adresi ve oyun portunu ayarlayın.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1822"/>
