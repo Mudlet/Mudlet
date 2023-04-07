@@ -442,6 +442,7 @@ void dlgProfilePreferences::disableHostDetails()
     theme_download_label->hide();
 
     groupBox_autoComplete->setEnabled(false);
+    groupBox_editorDisplayOptions->setEnabled(false);
     groupBox_advancedEditor->setEnabled(false);
 
     // ===== tab_displayColors =====
@@ -497,8 +498,16 @@ void dlgProfilePreferences::disableHostDetails()
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(false);
 
+    // ===== tab_accessibility =====
+    label_blankLinesBehaviour->setEnabled(false);
+    label_caretModeKey->setEnabled(false);
+    checkBox_announceIncomingText->setEnabled(false);
+    comboBox_blankLinesBehaviour->setEnabled(false);
+    comboBox_caretModeKey->setEnabled(false);
+
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(false);
+    groupBox_purgeMediaCache->setEnabled(false);
     // ----- groupBox_specialOptions -----
     need_reconnect_for_specialoption->hide();
 
@@ -508,12 +517,9 @@ void dlgProfilePreferences::disableHostDetails()
     // This acts on a label within this groupBox:
     slot_hidePasswordMigrationLabel();
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
-    checkBox_announceIncomingText->setEnabled(false);
-    comboBox_blankLinesBehaviour->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
-    comboBox_caretModeKey->setEnabled(false);
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -559,6 +565,7 @@ void dlgProfilePreferences::enableHostDetails()
     groupbox_codeEditorThemeSelection->setEnabled(true);
 
     groupBox_autoComplete->setEnabled(true);
+    groupBox_editorDisplayOptions->setEnabled(true);
     groupBox_advancedEditor->setEnabled(true);
 
     // ===== tab_displayColors =====
@@ -594,8 +601,6 @@ void dlgProfilePreferences::enableHostDetails()
     groupBox_ssl->setEnabled(QSslSocket::supportsSsl());
     checkBox_askTlsAvailable->setEnabled(true);
 #endif
-    checkBox_announceIncomingText->setEnabled(true);
-    comboBox_blankLinesBehaviour->setEnabled(true);
 
     // ===== tab_chat =====
     groupBox_ircOptions->setEnabled(true);
@@ -603,9 +608,16 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(true);
 
+    // ===== tab_accessibility =====
+    label_blankLinesBehaviour->setEnabled(true);
+    label_caretModeKey->setEnabled(true);
+    checkBox_announceIncomingText->setEnabled(true);
+    comboBox_blankLinesBehaviour->setEnabled(true);
+    comboBox_caretModeKey->setEnabled(true);
+
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
-
+    groupBox_purgeMediaCache->setEnabled(true);
     groupbox_searchEngineSelection->setEnabled(true);
     // ----- groupBox_debug -----
     checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
@@ -613,7 +625,6 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
-    comboBox_caretModeKey->setEnabled(true);
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -947,19 +958,19 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
     }
     if (pHost->mpMap->mpMapper) {
-        QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_debug);
-        mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_debug);
+        QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_mapViewOptions);
+        mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_mapViewOptions);
         mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
         mpDoubleSpinBox_mapSymbolFontFudge->setPrefix(qsl("×"));
         mpDoubleSpinBox_mapSymbolFontFudge->setRange(0.50, 2.00);
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
-        auto * pdebugLayout = qobject_cast<QGridLayout*>(groupBox_debug->layout());
-        if (pdebugLayout) {
-            int existingRows = pdebugLayout->rowCount();
-            pdebugLayout->addWidget(pLabel_mapSymbolFontFudge, existingRows, 0);
-            pdebugLayout->addWidget(mpDoubleSpinBox_mapSymbolFontFudge, existingRows, 1);
+        auto * pmapViewLayout = qobject_cast<QGridLayout*>(groupBox_mapViewOptions->layout());
+        if (pmapViewLayout) {
+            int existingRows = pmapViewLayout->rowCount();
+            pmapViewLayout->addWidget(pLabel_mapSymbolFontFudge, existingRows, 0);
+            pmapViewLayout->addWidget(mpDoubleSpinBox_mapSymbolFontFudge, existingRows, 1);
         } else {
-            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_debug layout to expected QGridLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
+            qWarning() << "dlgProfilePreferences::initWithHost(...) WARNING - Unable to cast groupBox_mapViewOptions layout to expected QGridLayout - someone has messed with the profile_preferences.ui file and the contents of the groupBox can not be shown...!";
         }
 
         label_mapSymbolsFont->setEnabled(true);
