@@ -843,7 +843,7 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="92"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>Clique em uma linha para selecionar ou cancelar a seleção desse número da sala (com o nome dado se as salas forem nomeadas) para incluir ou remover a sala da seleção.  Clique no cabeçalho relevante para classificar por esse método.  Observe que a coluna do nome mostrará apenas se pelo menos um dos espaços tem um nome.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2682"/>
