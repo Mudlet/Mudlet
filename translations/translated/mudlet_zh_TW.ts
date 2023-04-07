@@ -849,7 +849,7 @@ please wait...</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="92"/>
       <source>Click on a line to select or deselect that room number (with the given name if the rooms are named) to add or remove the room from the selection.  Click on the relevant header to sort by that method.  Note that the name column will only show if at least one of the rooms has a name.</source>
-      <translation type="unfinished"/>
+      <translation>透過點擊選取或取消該房間編號 (如果房間已命名，則使用該名稱)，然後加入或移除房間。點選相關標題，可按該標題排序。注意：至少需要有一個房間具有名稱時才會顯示在名稱欄。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2682"/>
@@ -1304,13 +1304,13 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="351"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="357"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="380"/>
