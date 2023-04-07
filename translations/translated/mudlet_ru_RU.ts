@@ -1315,13 +1315,13 @@ factor of:</source>
       <location filename="../src/TConsole.cpp" line="351"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="357"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="380"/>
@@ -2891,7 +2891,20 @@ Mudlet - в вашей системе не хватает ли памяти?</tr
 Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ВНИМ ] - %n область обнаружена как отсутствующая на карте: добавляем её.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этой области...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="724"/>
@@ -2899,7 +2912,20 @@ to be in this/these area(s)...</source>
 Look for further messages related to the rooms that are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ВНИМ ] - %n область обнаружена как отсутствующая на карте: добавляем её.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этой области...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+        <numerusform>[ ВНИМ ] - %n областей обнаружены как отсутствующие на карте: добавляем их.
+ Ищите дополнительные сообщения, связанные с комнатами, которые предположительно
+ должны находиться в этих областях...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="733"/>
