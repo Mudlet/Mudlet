@@ -4098,6 +4098,9 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->setAttribute(Qt::WA_DeleteOnClose);
     arealist_combobox = set_room_area_dialog->findChild<QComboBox*>("arealist_combobox");
     auto label_info = set_room_area_dialog->findChild<QLabel*>("label_info");
+    auto font = QFont(QApplication::font());
+    font.setPointSize(font.pointSize() - 1);
+    label_info->setFont(font);
     arealist_combobox->setInsertPolicy(QComboBox::NoInsert);
     if (!arealist_combobox) {
         return;
