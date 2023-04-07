@@ -1313,13 +1313,13 @@ evidenziata, di un fattore:</translation>
       <location filename="../src/TConsole.cpp" line="351"/>
       <source>N:%1 S:%2</source>
       <comment>The first argument &apos;N&apos; represents the &apos;N&apos;etwork latency; the second &apos;S&apos; the &apos;S&apos;ystem (processing) time</comment>
-      <translation type="unfinished"/>
+      <translation>N:%1 S:%2</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="357"/>
       <source>&lt;no GA&gt; S:%1</source>
       <comment>The argument &apos;S&apos; represents the &apos;S&apos;ystem (processing) time, in this situation the Game Server is not sending &quot;GoAhead&quot; signals so we cannot deduce the network latency...</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;no GA&gt; S:%1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="380"/>
@@ -2890,7 +2890,14 @@ esecuzione di Mudlet - il tuo sistema ha esaurito la memoria RAM?</translation>
 Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - %n area mancante nel file di mappa: aggiunta in corso.
+ Maggiori informazioni sono presenti nei prossimi messaggi che
+ riguardano le stanze appartenenti a questa area...</numerusform>
+        <numerusform>[ ALERT ] - %n aree mancanti nel file di mappa: aggiunta in corso.
+ Maggiori informazioni sono presenti nei prossimi messaggi che
+ riguardano le stanze appartenenti a queste aree...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="724"/>
@@ -2898,7 +2905,14 @@ to be in this/these area(s)...</source>
 Look for further messages related to the rooms that are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - %n area mancante nel file di mappa: aggiunta in corso.
+ Maggiori informazioni sono presenti nei prossimi messaggi che
+ riguardano le stanze appartenenti a questa area...</numerusform>
+        <numerusform>[ ALERT ] - %n aree mancanti nel file di mappa: aggiunta in corso.
+ Maggiori informazioni sono presenti nei prossimi messaggi che
+ riguardano le stanze appartenenti a queste aree...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="733"/>
@@ -4031,12 +4045,12 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="208"/>
       <source>Button Properties</source>
-      <translation>Proprietà del bottone</translation>
+      <translation>Proprietà del pulsante</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="214"/>
       <source>Button Rotation:</source>
-      <translation>Rotazione Bottone:</translation>
+      <translation>Rotazione Pulsante:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="231"/>
@@ -4056,7 +4070,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="249"/>
       <source>Push down button</source>
-      <translation>Bottone a due stati</translation>
+      <translation>Pulsante a due stati</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="256"/>
@@ -4077,7 +4091,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="72"/>
       <source>&lt;p&gt;Choose a good, ideally unique, name for your button, menu or toolbar. This will be displayed in the buttons tree.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il bottone, il menu o la barra degli strumenti. Sarà utilizzato nella vista ad albero dei bottoni.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Scegli un nome chiaro, idealmente univoco, per il pulsante, il menu o la barra degli strumenti. Sarà utilizzato nella vista ad albero dei pulsanti.&lt;p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="266"/>
@@ -7730,7 +7744,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3718"/>
       <source>New button</source>
-      <translation>Nuovo bottone</translation>
+      <translation>Nuovo pulsante</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="3749"/>
@@ -7855,7 +7869,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5661"/>
       <source>Button properties</source>
-      <translation>Proprietà del bottone</translation>
+      <translation>Proprietà del pulsante</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5669"/>
@@ -13968,7 +13982,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="85"/>
       <source>&lt;p&gt;Use this control to show or hide the extra controls for the trigger; this can be used to allow more space to show the trigger &lt;i&gt;items&lt;/i&gt; on smaller screen.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Utilizza questo bottone per mostrare/nascondere le opzioni avanzate per il trigger; in questo modo hai a disposizione più spazio per mostrare i &lt;i&gt;trigger&lt;/i&gt; sugli schermi di piccole dimensioni.&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Utilizza questo pulsante per mostrare/nascondere le opzioni avanzate per il trigger; in questo modo hai a disposizione più spazio per mostrare i &lt;i&gt;trigger&lt;/i&gt; sugli schermi di piccole dimensioni.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="111"/>
