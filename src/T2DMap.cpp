@@ -2349,14 +2349,13 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         return;
     }
     int yOffset = 20;
+    int initialYOffset = yOffset;
     // Left margin for info widget:
     int xOffset = 10;
     if (mMultiSelectionListWidget.isVisible()) {
         // Room Selection Widget showing, so increase margin to avoid:
         xOffset += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
     }
-
-    painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
 
     for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
         if (mpHost->mMapInfoContributors.contains(key)) {
@@ -2369,7 +2368,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     }
 
 #ifdef QT_DEBUG
-    paintMapInfoContributor(painter,
+    yOffset += paintMapInfoContributor(painter,
                          xOffset,
                          yOffset,
                          {false,
@@ -2385,6 +2384,10 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
                                   .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz))),
                           infoColor});
 #endif
+
+    if (yOffset > initialYOffset) {
+        painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
+    }
 }
 
 int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties)
