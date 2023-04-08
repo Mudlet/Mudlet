@@ -395,19 +395,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
 
-    QTimer::singleShot(0, this, [this]() {
-        qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
-        if (mpMap->restore(QString(), false)) {
-            mpMap->audit();
-            if (mpMap->mpMapper) {
-                mpMap->mpMapper->mp2dMap->init();
-                mpMap->mpMapper->updateAreaComboBox();
-                mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                mpMap->mpMapper->show();
-            }
-        }
-    });
-
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
@@ -471,6 +458,20 @@ Host::~Host()
     mErrorLogStream.flush();
     mErrorLogFile.close();
     TDebug::removeHost(this);
+}
+
+void Host::loadMap()
+{
+    qDebug() << "Host::loadMap() - restore map case 4.";
+    if (mpMap->restore(QString(), false)) {
+        mpMap->audit();
+        if (mpMap->mpMapper) {
+            mpMap->mpMapper->mp2dMap->init();
+            mpMap->mpMapper->updateAreaComboBox();
+            mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            mpMap->mpMapper->show();
+        }
+    }
 }
 
 void Host::startMapAutosave()
