@@ -2740,8 +2740,12 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         return;
     }
     pHost->mIsProfileLoadingSequence = true;
+    // The Host instance gets its TMainConsole here:
     addConsoleForNewHost(pHost);
     pHost->mBlockScriptCompile = false;
+    // This uses the external LuaGlobal.lua file to load all the other external
+    // lua files, including the condenseMapLoad() function needed by the
+    // TMap::audit() method:
     pHost->mLuaInterpreter.loadGlobal();
     pHost->hideMudletsVariables();
 
@@ -2763,6 +2767,9 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     }
 
     pHost->mBlockStopWatchCreation = false;
+    // This will build all the scripts in the collection of script items (but
+    // not triggers/aliases/etc) - presumably so that the event handlers
+    // are ready for use.
     pHost->getScriptUnit()->compileAll();
     pHost->updateAnsi16ColorsInTable();
 
@@ -2780,12 +2787,17 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     mPackagesToInstallList.clear();
 
+    // This marks the end of the profile loading process, so all the aliases
+    // triggers and other items are present in the Lua sub-system:
     pHost->mIsProfileLoadingSequence = false;
 
     TEvent event {};
     event.mArgumentList.append(QLatin1String("sysLoadEvent"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     pHost->raiseEvent(event);
+
+    // Now load the default (latest stored) map file:
+    pHost->loadMap();
 
     //NOTE: this is a potential problem if users connect by hand quickly
     //      and one host has a slower response time as the other one, but
