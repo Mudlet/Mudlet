@@ -2845,7 +2845,14 @@ Mudlet - is your system running out of memory?</translation>
 Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+Look for further messages related to the rooms that are supposed
+to be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+Look for further messages related to the rooms that are supposed
+to be in this/these area(s)...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="724"/>
@@ -2853,7 +2860,14 @@ to be in this/these area(s)...</source>
 Look for further messages related to the rooms that are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+Look for further messages related to the rooms that are supposed to
+be in this/these area(s)...</numerusform>
+        <numerusform>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+Look for further messages related to the rooms that are supposed to
+be in this/these area(s)...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="733"/>
