@@ -196,10 +196,6 @@ if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
   $prId = " ,#$Env:APPVEYOR_PULL_REQUEST_NUMBER"
 }
 
-if (Test-Path variable:DEPLOY_URL) {
-  Invoke-WebRequest -Method POST -Body "message=Deployed Mudlet ``$Env:VERSION$Env:MUDLET_VERSION_BUILD`` (windows${prId}) to [appveyor]($DEPLOY_URL)" https://webhooks.gitter.im/e/cc99072d43b642c4673a
-}
-
 echo ""
 echo "******************************************************"
 echo ""
