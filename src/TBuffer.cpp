@@ -710,7 +710,7 @@ COMMIT_LINE:
 
             if (static_cast<size_t>(mMudLine.size()) != mMudBuffer.size()) {
                 qWarning() << "TBuffer::translateToPlainText(...) WARNING: mismatch in new text "
-                              "data ch and attribute data items!";
+                              "data character and attribute data items!";
             }
 
             if (!lineBuffer.back().isEmpty()) {

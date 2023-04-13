@@ -284,7 +284,13 @@ public:
     QToolButton* mpBufferSearchUp = nullptr;
     QToolButton* mpBufferSearchDown = nullptr;
     int mCurrentSearchResult = 0;
-    QList<int> mSearchResults;
+    // The line on which the current search result has been found, or the next
+    // one is to start (currently only for the main console):
+    int mCurrentSearchResult = 0;
+    // Not used:
+    // QList<int> mSearchResults;
+    // The term that is currently being search for (currently only for the main
+    // console):
     QString mSearchQuery;
     QWidget* mpButtonMainLayer = nullptr;
     int mBgImageMode = 0;
@@ -310,8 +316,11 @@ protected:
     void mousePressEvent(QMouseEvent*) override;
 
 
-private:
+private slots:
     void slot_adjustAccessibleNames();
+    void slot_clearSearchResults();
+
+private:
     void createSearchOptionIcon();
 
     ConsoleType mType = UnknownType;
