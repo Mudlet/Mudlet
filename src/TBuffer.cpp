@@ -2878,6 +2878,9 @@ void TBuffer::shrinkBuffer()
         buffer.pop_front();
         mCursorY--;
     }
+    // We need to adjust the search result line as some lines have now gone
+    // away:
+    mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
 
     if (mpConsole->getType() & (TConsole::MainConsole|TConsole::UserWindow|TConsole::SubConsole|TConsole::Buffer)) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
@@ -3078,9 +3081,8 @@ bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 QStringList TBuffer::getEndLines(int n)
@@ -4194,4 +4196,13 @@ int TBuffer::lengthInGraphemes(const QString& text)
 const QList<QByteArray> TBuffer::getEncodingNames()
 {
      return csmEncodingTable.getEncodingNames();
+}
+
+void TBuffer::clearSearchHighlights()
+{
+    for (auto& line : buffer) {
+        for (auto& character : line) {
+            character.mFlags &= ~TChar::AttributeFlag::Found;
+        }
+    }
 }

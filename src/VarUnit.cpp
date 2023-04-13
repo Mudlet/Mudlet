@@ -254,7 +254,7 @@ void VarUnit::removeVariable(TVar* var)
 
 bool VarUnit::varExists(TVar* var)
 {
-    return ((var->kpointer && pointers.contains(var->kpointer)) || (var->vpointer && pointers.contains(var->vpointer)));
+    return ((var->pKey && pointers.contains(var->pKey)) || (var->pValue && pointers.contains(var->pValue)));
 }
 
 TVar* VarUnit::getBase()
