@@ -4,6 +4,7 @@
  *   Copyright (C) 2015-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -395,19 +396,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mErrorLogStream.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
 
-    QTimer::singleShot(0, this, [this]() {
-        qDebug() << "Host::Host() - restore map case 4 {QTimer::singleShot(0)} lambda.";
-        if (mpMap->restore(QString(), false)) {
-            mpMap->audit();
-            if (mpMap->mpMapper) {
-                mpMap->mpMapper->mp2dMap->init();
-                mpMap->mpMapper->updateAreaComboBox();
-                mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                mpMap->mpMapper->show();
-            }
-        }
-    });
-
     mGMCP_merge_table_keys.append("Char.Status");
     mDoubleClickIgnore.insert('"');
     mDoubleClickIgnore.insert('\'');
@@ -471,6 +459,20 @@ Host::~Host()
     mErrorLogStream.flush();
     mErrorLogFile.close();
     TDebug::removeHost(this);
+}
+
+void Host::loadMap()
+{
+    qDebug() << "Host::loadMap() - restore map case 4.";
+    if (mpMap->restore(QString(), false)) {
+        mpMap->audit();
+        if (mpMap->mpMapper) {
+            mpMap->mpMapper->mp2dMap->init();
+            mpMap->mpMapper->updateAreaComboBox();
+            mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+            mpMap->mpMapper->show();
+        }
+    }
 }
 
 void Host::startMapAutosave()
@@ -1699,9 +1701,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         // home directory for the PROFILE
         QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
-        _tmpDir.mkpath(_dest);
-
-        // TODO: report failure to create destination folder for package/module in profile
+        bool mkpathSuccessful = _tmpDir.mkpath(_dest);
+        if (!mkpathSuccessful) {
+            return {false, qsl("could not create destination folder")};
+        }
 
         QUiLoader loader(this);
         QFile uiFile(qsl(":/ui/package_manager_unpack.ui"));
@@ -1729,10 +1732,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         pUnzipDialog->repaint(); // Force a redraw
         qApp->processEvents();   // Try to ensure we are on top of any other dialogs and freshly drawn
 
-        auto successful = mudlet::unzip(fileName, _dest, _tmpDir);
+        auto unzipSuccessful = mudlet::unzip(fileName, _dest, _tmpDir);
         pUnzipDialog->deleteLater();
         pUnzipDialog = nullptr;
-        if (!successful) {
+        if (!unzipSuccessful) {
             return {false, qsl("could not unzip package")};
         }
 
