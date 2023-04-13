@@ -65,8 +65,8 @@ public:
 class InvisibleAccessibleNotification : public QAccessibleWidget
 {
 public:
-    explicit InvisibleAccessibleNotification(QWidget* widget)
-    : QAccessibleWidget(widget, QAccessible::Role::Notification)
+    explicit InvisibleAccessibleNotification(QWidget* pWidget)
+    : QAccessibleWidget(pWidget, QAccessible::Role::Notification)
     {}
 
 private:
@@ -79,8 +79,8 @@ protected:
 class FakeAccessibleStatusbar : public QAccessibleWidget
 {
 public:
-    explicit FakeAccessibleStatusbar(QWidget* widget)
-    : QAccessibleWidget(widget, QAccessible::Role::StatusBar)
+    explicit FakeAccessibleStatusbar(QWidget* pWidget)
+    : QAccessibleWidget(pWidget, QAccessible::Role::StatusBar)
     {}
 };
 #endif
