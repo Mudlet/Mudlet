@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018, 2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2018, 2020, 2022-2023 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -683,7 +683,7 @@ COMMIT_LINE:
             // data - of course there is the theoretical chance that the new
             // text would alter the prior contents but as that is on a separate
             // line there should not be any changes to text before a line feed
-            // which sort of seems to be implied by the current value of character:
+            // which sort of seems to be implied by the current value of ch:
 
             // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
             // https://bugreports.qt.io/browse/QTBUG-105035
