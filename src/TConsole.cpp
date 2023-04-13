@@ -2314,3 +2314,10 @@ void TConsole::slot_toggleSearchCaseSensitivity(const bool state)
         mpHost->mBufferSearchOptions = mSearchOptions;
     }
 }
+
+void TConsole::slot_clearSearchResults()
+{
+    buffer.clearSearchHighlights();
+    mUpperPane->forceUpdate();
+    mLowerPane->forceUpdate();
+}

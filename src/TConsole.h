@@ -283,7 +283,6 @@ public:
     QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
     QToolButton* mpBufferSearchDown = nullptr;
-    int mCurrentSearchResult = 0;
     // The line on which the current search result has been found, or the next
     // one is to start (currently only for the main console):
     int mCurrentSearchResult = 0;

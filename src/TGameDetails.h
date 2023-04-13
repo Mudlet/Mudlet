@@ -535,7 +535,7 @@ public:
                  "Rivendell, Goblin-town, Mirkwood, Dol Guldur, and the Mines of Moria. The game is "
                  "completely at no cost to play and has been continually enhanced since its "
                  "inception in the fall of 1991.")},
-            };
+
             {qsl("MorgenGrauen"),
              qsl("mg.mud.de"),
              4711,
@@ -566,6 +566,7 @@ public:
                  "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
                  "\n\n"
                  "Spiel jetzt oder nie!")},
+            };
     // clang-format on
 };
 
