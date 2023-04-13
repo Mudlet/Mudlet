@@ -751,9 +751,9 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         var->hidden = hide;
         tVar->addChild(var);
         const void* kp = lua_topointer(L, -1);
-        var->kpointer = kp;
+        var->pKey = kp;
         const void* vp = lua_topointer(L, -2);
-        var->vpointer = vp;
+        var->pValue = vp;
         if (varUnit->varExists(var) || keyName == "_G") {
             lua_pop(L, 1);
             tVar->removeChild(var);
