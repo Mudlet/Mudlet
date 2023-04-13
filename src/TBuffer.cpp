@@ -416,10 +416,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         if (ch == '\033') {
             if (!mGotOSC) {
                 // The terminator for an OSC is the String Terminator but that
-                // is the ESC ch followed by (the single ch)
+                // is the ESC character followed by (the single character)
                 // '\\' so must not respond to an ESC here - though the code
                 // arrangement should avoid looping around this loop while
-                // seeking this ch pair anyhow...
+                // seeking this character pair anyhow...
                 mGotESC = true;
                 ++localBufferPosition;
                 continue;
@@ -436,12 +436,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         if (mGotCSI) {
             // Lookahead and try and see what we are processing
-            // At the start of a CSI sequence the only valid ch is one of:
+            // At the start of a CSI sequence the only valid character is one of:
             // "0-9:;<=>?" if it is one of "0-9:;" then it is a
             // "parameter-string" ELSE if it is one of '<', '=', '>' or '?' it
             // IS a private/experimental and not covered by the ECMA-48
             // specifications..
-            // After the first ch the remaining characters of the
+            // After the first character the remaining characters of the
             // parameter string will be in the range "0-9:;" only
             size_t spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
@@ -468,7 +468,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             if (spanEnd >= localBufferLength || cParameter.indexOf(localBuffer[spanEnd]) >= 0) {
-                // We have gone to the end of the buffer OR the last ch
+                // We have gone to the end of the buffer OR the last character
                 // in the buffer is still within a CSI sequence - therefore we
                 // have got a split between data packets and are not in a
                 // position to process the current line further...
@@ -477,7 +477,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                 return;
             }
 
-            // Now we can take a peek at what the next ch is, it could
+            // Now we can take a peek at what the next character is, it could
             // be an optional (and we are not expecting this) "intermediate
             // byte" which is space or one of "!"#$%&'()*+,-./" or a "final
             // byte" which is what determines what on earth the CSI is for, it
@@ -613,10 +613,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             // terminator then all data will just be swallowed into the buffer
 
             // Valid characters inside an OSC are: a "command string" or a
-            // "ch string".
+            // "character string".
             // A "command string" is a sequence of bit combinations in the range
             // <BS><TAB><LF><VT><FF><CR> and ASCII printables from Space to '~'
-            // A "ch string" is a sequence of any ch except Start
+            // A "character string" is a sequence of any character except Start
             // of String (SOS) or String Terminator (ST) and the latter is ESC
             // followed by '\\' (a single \ BTW) in the 7-bit code case (the
             // former is encoded as ESC followed by 'X'):
@@ -624,7 +624,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             size_t spanEnd = spanStart;
             // It is safe to look at spanEnd-1 even at the starting position
             // because we already know that the localBuffer extends backwards
-            // that far (it will be the ']' ch!)
+            // that far (it will be the ']' character!)
             while (spanEnd < localBufferLength
                    && (localBuffer[spanEnd-1] != '\033')
                    && (localBuffer[spanEnd] != '\\')) {
@@ -632,7 +632,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
             }
 
             if (localBuffer[spanEnd] != '\\') {
-                // The last ch in the buffer is NOT the expected ST
+                // The last character in the buffer is NOT the expected ST
                 // - therefore we have probably got a split between
                 // data packets and are not in a position to process the
                 // current line further...
@@ -683,7 +683,7 @@ COMMIT_LINE:
             // data - of course there is the theoretical chance that the new
             // text would alter the prior contents but as that is on a separate
             // line there should not be any changes to text before a line feed
-            // which sort of seems to be implied by the current value of ch:
+            // which sort of seems to be implied by the current value of character:
 
             // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
             // https://bugreports.qt.io/browse/QTBUG-105035
