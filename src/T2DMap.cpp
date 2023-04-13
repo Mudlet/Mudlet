@@ -3361,17 +3361,19 @@ void T2DMap::slot_customLineProperties()
             connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
             dialog->adjustSize();
 
-            if (dialog->exec() == QDialog::Accepted) {
-                // Make the changes
+            connect(dialog, &QDialog::accepted, this, [this, room, exit]() {
                 mCurrentLineStyle = static_cast<Qt::PenStyle>(mpCurrentLineStyle->currentData().toInt());
                 room->customLinesStyle[exit] = mCurrentLineStyle;
                 room->customLinesColor[exit] = mCurrentLineColor;
                 room->customLinesArrow[exit] = mpCurrentLineArrow->checkState();
                 mCurrentLineArrow = mpCurrentLineArrow->checkState();
-            }
+
+                repaint();
+                mpMap->setUnsaved(__func__);
+            });
+            dialog->show();
+            dialog->raise();
         }
-        repaint();
-        mpMap->setUnsaved(__func__);
     } else {
         qDebug("T2DMap::slot_customLineProperties() called but no line is selected...");
     }
