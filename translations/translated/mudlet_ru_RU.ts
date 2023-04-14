@@ -1090,7 +1090,7 @@ factor of:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4136"/>
       <source>This will create new area: %1</source>
-      <translation type="unfinished"/>
+      <translation>Это создаст новую область: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4152"/>
@@ -1103,7 +1103,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4160"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Добавлена область &quot;%1&quot; (%2) к карте.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5007"/>
@@ -13858,7 +13858,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="36"/>
       <source>Input new area name to create one.</source>
-      <translation type="unfinished"/>
+      <translation>Введите имя новой области для создания.</translation>
     </message>
   </context>
   <context>
