@@ -199,7 +199,7 @@ void dlgMapper::updateAreaComboBox()
 
 void dlgMapper::slot_toggleShowRoomIDs(int toggle)
 {
-    mp2dMap->mShowRoomID = toggle == Qt::Checked;
+    mp2dMap->mShowRoomID = (toggle == Qt::Checked);
     mp2dMap->mpHost->mShowRoomID = mp2dMap->mShowRoomID;
     mp2dMap->update();
 }
@@ -212,7 +212,7 @@ void dlgMapper::slot_toggleShowRoomNames(int toggle)
 
 void dlgMapper::slot_toggleStrongHighlight(int toggle)
 {
-    mpHost->mMapStrongHighlight = toggle == Qt::Checked ? true : false;
+    mpHost->mMapStrongHighlight = (toggle == Qt::Checked);
     mp2dMap->update();
 }
 
