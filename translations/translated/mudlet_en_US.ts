@@ -27,7 +27,7 @@
 <context>
     <name>T2DMap</name>
     <message numerus="yes">
-        <location filename="../../src/T2DMap.cpp" line="1204"/>
+        <location filename="../../src/T2DMap.cpp" line="1218"/>
         <source>You have a map loaded (%n room(s)), but Mudlet does not know where you are at the moment.</source>
         <translation>
             <numerusform>You have a map loaded (%n room), but Mudlet does not know where you are at the moment.</numerusform>
@@ -38,7 +38,29 @@
 <context>
     <name>TRoomDB</name>
     <message numerus="yes">
-        <location filename="../../src/TRoomDB.cpp" line="731"/>
+        <location filename="../../src/TRoomDB.cpp" line="717"/>
+        <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+Look for further messages related to the rooms that are supposed
+to be in this/these area(s)...</source>
+        <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/TRoomDB.cpp" line="724"/>
+        <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
+Look for further messages related to the rooms that are supposed to
+be in this/these area(s)...</source>
+        <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
+        <translation type="unfinished">
+            <numerusform></numerusform>
+            <numerusform></numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../src/TRoomDB.cpp" line="733"/>
         <source>[ INFO ]  - The missing area(s) are now called:
 (ID) ==&gt; &quot;name&quot;</source>
         <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
@@ -51,12 +73,11 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/TRoomDB.cpp" line="715"/>
         <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
  Look for further messages related to the rooms that are supposed
  to be in this/these area(s)...</source>
         <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-        <translation>
+        <translation type="vanished">
             <numerusform>[ ALERT ] - %n area detected as missing in map: adding it in.
  Look for further messages related to the rooms that are supposed
  to be in this area...</numerusform>
@@ -66,12 +87,11 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/TRoomDB.cpp" line="722"/>
         <source>[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.
  Look for further messages related to the rooms that is/are supposed to
  be in this/these area(s)...</source>
         <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-        <translation>
+        <translation type="vanished">
             <numerusform>[ ALERT ] - %n area detected as missing in map: adding it in.
  Look for further messages related to the rooms that are supposed
  to be in this area...</numerusform>
@@ -95,7 +115,7 @@
 <context>
     <name>dlgPackageExporter</name>
     <message numerus="yes">
-        <location filename="../../src/dlgPackageExporter.cpp" line="1459"/>
+        <location filename="../../src/dlgPackageExporter.cpp" line="1462"/>
         <source>Select what to export (%n item(s))</source>
         <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
         <translation>
@@ -182,7 +202,7 @@
 <context>
     <name>mudlet</name>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="3547"/>
+        <location filename="../../src/mudlet.cpp" line="3576"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
         <translation>
@@ -191,7 +211,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="3565"/>
+        <location filename="../../src/mudlet.cpp" line="3594"/>
         <source>Review %n update(s)...</source>
         <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
         <translatorcomment>Could do with the insertion of &quot;the&quot; as a second word!</translatorcomment>
@@ -201,7 +221,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../src/mudlet.cpp" line="3570"/>
+        <location filename="../../src/mudlet.cpp" line="3599"/>
         <source>Review the update(s) available...</source>
         <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
         <translation>
