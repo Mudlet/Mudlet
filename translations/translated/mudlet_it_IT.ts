@@ -1088,7 +1088,7 @@ evidenziata, di un fattore:</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="4136"/>
       <source>This will create new area: %1</source>
-      <translation type="unfinished"/>
+      <translation>Questo creerà una nuova area: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4152"/>
@@ -1096,12 +1096,13 @@ evidenziata, di un fattore:</translation>
 See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <comment>The &apos;[MAP ERROR:]&apos; text should be the same as that used for the translation of &quot;[MAP ERROR:]%1
 &quot; in the &apos;TMAP::logerror(...)&apos; function.</comment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile aggiungere &quot;%1&quot; come area alla mappa.
+Controlla il messaggio &quot;[MAP ERROR:]&quot; per maggiori informazioni.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4160"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Aggiunta &quot;%1&quot; (%2) area da mappare.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5007"/>
@@ -13870,7 +13871,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="36"/>
       <source>Input new area name to create one.</source>
-      <translation type="unfinished"/>
+      <translation>Inserisci il nome dell'area per crearne una.</translation>
     </message>
   </context>
   <context>
