@@ -37,13 +37,13 @@ VarUnit::VarUnit()
 
 bool VarUnit::isHidden(TVar* var)
 {
-    if (var->getName() == "_G") { // we never hide global
+    if (var->getName() == qsl("_G")) { // we never hide global
         return false;
     }
-    if (hidden.contains(shortVarName(var).join("."))) {
+    if (hidden.contains(shortVarName(var).join(qsl(".")))) {
         return true;
     }
-    return hiddenByUser.contains(shortVarName(var).join("."));
+    return hiddenByUser.contains(shortVarName(var).join(qsl(".")));
 }
 
 
@@ -60,7 +60,7 @@ bool VarUnit::isHidden(const QString& fullname)
 
 void VarUnit::addPointer(const void* pointer)
 {
-    pointers.insert(pointer);
+    mPointers.insert(pointer);
 }
 
 bool VarUnit::shouldSave(QTreeWidgetItem* pWidgetItem)
@@ -174,13 +174,13 @@ QStringList VarUnit::varName(TVar* var)
 QStringList VarUnit::shortVarName(TVar* var)
 {
     QStringList names;
-    if (!var || var->getName() == "_G") {
+    if (!var || var->getName() == qsl("_G")) {
         names << "";
         return names;
     }
     names << var->getName();
     TVar* pParent = var->getParent();
-    while (pParent && pParent->getName() != "_G") {
+    while (pParent && pParent->getName() != qsl("_G")) {
         names.insert(0, pParent->getName());
         pParent = pParent->getParent();
     }
@@ -189,11 +189,11 @@ QStringList VarUnit::shortVarName(TVar* var)
 
 void VarUnit::addVariable(TVar* var)
 {
-    QString fullName = varName(var).join(".");
+    QString fullName = varName(var).join(qsl("."));
     // pointers.insert(var->pointer);
-    variableList.insert(fullName);
+    variableSet.insert(fullName);
     if (var->hidden) {
-        hidden.insert(shortVarName(var).join("."));
+        hidden.insert(shortVarName(var).join(qsl(".")));
     }
 }
 
@@ -201,9 +201,9 @@ void VarUnit::addHidden(TVar* var, int user)
 {
     var->hidden = true;
     if (user) {
-        hiddenByUser.insert(shortVarName(var).join("."));
+        hiddenByUser.insert(shortVarName(var).join(qsl(".")));
     } else {
-        hidden.insert(shortVarName(var).join("."));
+        hidden.insert(shortVarName(var).join(qsl(".")));
     }
 }
 
@@ -214,7 +214,7 @@ void VarUnit::addHidden(const QString& var)
 
 void VarUnit::removeHidden(TVar* var)
 {
-    QString fullName = shortVarName(var).join(".");
+    QString fullName = shortVarName(var).join(qsl("."));
     hidden.remove(fullName);
     hiddenByUser.remove(fullName);
     var->hidden = false;
@@ -229,32 +229,32 @@ void VarUnit::removeHidden(const QString& name)
 
 void VarUnit::addSavedVar(TVar* var)
 {
-    QString fullName = shortVarName(var).join(".");
+    QString fullName = shortVarName(var).join(qsl("."));
     var->saved = true;
     savedVars.insert(fullName);
 }
 
 void VarUnit::removeSavedVar(TVar* var)
 {
-    QString fullName = shortVarName(var).join(".");
+    QString fullName = shortVarName(var).join(qsl("."));
     savedVars.remove(fullName);
     var->saved = false;
 }
 
 bool VarUnit::isSaved(TVar* var)
 {
-    QString fullName = shortVarName(var).join(".");
+    QString fullName = shortVarName(var).join(qsl("."));
     return (savedVars.contains(fullName) || var->saved);
 }
 
 void VarUnit::removeVariable(TVar* var)
 {
-    variableList.remove(varName(var).join("."));
+    variableSet.remove(varName(var).join(qsl(".")));
 }
 
 bool VarUnit::varExists(TVar* var)
 {
-    return ((var->pKey && pointers.contains(var->pKey)) || (var->pValue && pointers.contains(var->pValue)));
+    return ((var->pKey && mPointers.contains(var->pKey)) || (var->pValue && mPointers.contains(var->pValue)));
 }
 
 TVar* VarUnit::getBase()
@@ -272,6 +272,6 @@ void VarUnit::clear()
     // delete base;
     tVars.clear();
     wVars.clear();
-    variableList.clear();
-    pointers.clear();
+    variableSet.clear();
+    mPointers.clear();
 }
