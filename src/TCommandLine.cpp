@@ -34,9 +34,11 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QByteArrayList>
 #include <QKeyEvent>
 #include <QRegularExpression>
 #include <QScrollBar>
+#include <QSaveFile>
 #include "post_guard.h"
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
@@ -80,6 +82,8 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TCommandLine::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
+    restoreHistory();
+    connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -1410,5 +1414,119 @@ void TCommandLine::slot_adjustAccessibleNames()
         break;
     case UnknownType:
         Q_UNREACHABLE();
+    }
+}
+
+void TCommandLine::restoreHistory()
+{
+    QString identifier;
+    switch (mType) {
+    case UnknownType:
+        identifier = qsl("command_history_unknown_%1").arg(mCommandLineName);
+        break;
+    case MainCommandLine:
+        identifier = qsl("command_history_main");
+        break;
+    case SubCommandLine:
+        identifier = qsl("command_history_sub_%1").arg(mCommandLineName);
+        break;
+    case ConsoleCommandLine:
+        identifier = qsl("command_history_extra_%1").arg(mCommandLineName);
+        break;
+    }
+
+    auto pHost = mpHost;
+    if (!pHost) {
+        qWarning().nospace().noquote() << "TCommandLine::restoreHistory() ERROR - got a Host pointer that was null - unable to restore command history for the command line called: "
+                                       << mCommandLineName << " of type: " << mType;
+        return;
+    }
+    QString pathFileName{mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), identifier)};
+    QFile historyFile(pathFileName, this);
+    if (historyFile.exists()) {
+        if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
+            QDataStream ifs(&historyFile);
+            if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+                ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+            }
+            QByteArray utf8History;
+            ifs >> utf8History;
+            if (historyFile.error() != QFileDevice::NoError) {
+                qWarning() << "TCommandLine::restoreHistory() ERROR - unable to read command history from file for the command line called: " << mCommandLineName << " of type: " << mType
+                           << " reason: " << historyFile.errorString();
+                historyFile.close();
+                return;
+            }
+            historyFile.close();
+
+            const QByteArrayList utf8HistoryList(utf8History.split('\n'));
+            QListIterator<QByteArray> itHistory(utf8HistoryList);
+            while (itHistory.hasNext()) {
+                mHistoryList.append(QString::fromUtf8(itHistory.next()));
+            }
+            // Success!
+            return;
+        }
+
+        // else failed to open the file despite it existing
+        if (historyFile.error() != QFileDevice::NoError) {
+            qWarning() << "TCommandLine::restoreHistory() ERROR - unable to open command history for the command line called: "
+                       << mCommandLineName << " of type: " << mType
+                       << " reason: " << historyFile.errorString();
+            return;
+        }
+    }
+    // else no such file - which will be the case for the first time the
+    // command line is created - so it might not be an error:
+    qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: "
+             << mCommandLineName << " of type: " << mType
+             << " because the file: " << pathFileName
+             << " does not exist, unless this is a new command line then this is an unexpected error.";
+}
+
+void TCommandLine::slot_saveHistory() const
+{
+    QString identifier;
+    switch (mType) {
+    case UnknownType:
+        identifier = qsl("command_history_unknown_%1").arg(mCommandLineName);
+        break;
+    case MainCommandLine:
+        identifier = qsl("command_history_main");
+        break;
+    case SubCommandLine:
+        identifier = qsl("command_history_sub_%1").arg(mCommandLineName);
+        break;
+    case ConsoleCommandLine:
+        identifier = qsl("command_history_extra_%1").arg(mCommandLineName);
+        break;
+    }
+
+    auto pHost = mpHost;
+    if (!pHost) {
+        qWarning().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - got a Host pointer that was null - unable to save command history for the command line called: " << mCommandLineName
+                                       << " of type: " << mType;
+        return;
+    }
+
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), identifier)};
+    QSaveFile historyFile(pathFileName);
+    if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        QDataStream ofs(&historyFile);
+        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
+            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+        }
+        // Save the lines as UTF-8 as that makes it possible/easier to edit the
+        // lines externally if wanted:
+        QByteArrayList utf8HistoryList;
+        QListIterator<QString> itHistory(mHistoryList);
+        while (itHistory.hasNext()) {
+            utf8HistoryList.append(itHistory.next().toUtf8());
+        }
+        ofs << utf8HistoryList.join('\n');
+        if (!historyFile.commit()) {
+            qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName
+                                         << " of type: " << mType << " reason: " << historyFile.errorString();
+        }
     }
 }

@@ -696,6 +696,8 @@ signals:
     // Tells all consoles associated with this Host (but NOT the Central Debug
     // one) to change the way they show  control characters:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
+    // Tells all command lines to save their history:
+    void signal_saveCommandLinesHistory();
 
 private slots:
     void slot_purgeTemps();

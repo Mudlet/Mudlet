@@ -788,20 +788,8 @@ void Host::resetProfile_phase2()
 // returns true+filepath if successful or false+error message otherwise
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, const QString& saveName, bool syncModules)
 {
-    QString directory_xml;
-    if (saveFolder.isEmpty()) {
-        directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
-    } else {
-        directory_xml = saveFolder;
-    }
-
-    QString filename_xml;
-    if (saveName.isEmpty()) {
-        filename_xml = qsl("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-    } else {
-        filename_xml = qsl("%1/%2.xml").arg(directory_xml, saveName);
-    }
-
+    QString directory_xml = (saveFolder.isEmpty()) ? mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName()) : saveFolder;
+    QString filename_xml = qsl("%1/%2.xml").arg(directory_xml, (saveName.isEmpty()) ? QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")) : saveName);
 
     if (mIsProfileLoadingSequence) {
         //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
@@ -815,6 +803,13 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     if (currentlySavingProfile()) {
         return std::make_tuple(false, QString(), qsl("a save is already in progress"));
+    }
+
+    if (saveFolder.isEmpty() && saveName.isEmpty()) {
+        // This is likely to be the save as the profile is closed
+        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments "
+                                        "so assuming it is a end of session save and the TCommandLines' histories need saving...";
+        emit signal_saveCommandLinesHistory();
     }
 
     emit profileSaveStarted();
