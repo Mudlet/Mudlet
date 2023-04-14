@@ -1097,7 +1097,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <comment>The &apos;[MAP ERROR:]&apos; text should be the same as that used for the translation of &quot;[MAP ERROR:]%1
 &quot; in the &apos;TMAP::logerror(...)&apos; function.</comment>
       <translation>[ FEHLER ] - Kann &quot;%1&quot; nicht als Gebiet zur Karte hinzufügen.
-Die &quot;[MAP ERROR:]&quot; Nachricht enthält den Grund.</translation>
+Die &quot;[KARTENFEHLER:]&quot; Nachricht enthält den Grund.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4160"/>
