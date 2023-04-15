@@ -2101,7 +2101,7 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMap.cpp" line="527"/>
       <source>[ INFO ]  - Map audit starting...</source>
-      <translation>[ INFO ]  - Controllo mappa iniziato...</translation>
+      <translation>[ INFO ]  - Controllo della mappa iniziato...</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1545"/>
@@ -2409,7 +2409,7 @@ ma verrà effettuato un tentativo! Il file è: &quot;%2&quot;.</translation>
       <source>[ INFO ]  - Reading map. Format version: %1. File:
 &quot;%2&quot;,
 please wait...</source>
-      <translation>[ INFO ] - Leggo il file di mappa. Versione: %1. File
+      <translation>[ INFO ]  - Leggo il file di mappa. Versione: %1. File
 &quot;%2&quot;,
 attendere...</translation>
     </message>
