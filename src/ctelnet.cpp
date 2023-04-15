@@ -759,7 +759,6 @@ void cTelnet::sendNAWS(int width, int height)
     socketOutRaw(message);
 }
 
-
 void cTelnet::sendTelnetOption(char type, char option)
 {
 #ifdef DEBUG_TELNET

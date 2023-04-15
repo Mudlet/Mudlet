@@ -74,7 +74,7 @@ public:
     TAction* getHeadAction(TEasyButtonBar*);
     void regenerateToolBars();
     void regenerateEasyButtonBars();
-    void constructToolbar(TAction*, TToolBar* pTB);
+    void constructToolbar(TAction*, TToolBar* pToolBar);
     void constructToolbar(TAction*, TEasyButtonBar* pTB);
     void showToolBar(const QString&);
     void hideToolBar(const QString&);
