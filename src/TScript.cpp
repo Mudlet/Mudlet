@@ -95,11 +95,11 @@ void TScript::compileAll()
     }
 }
 
-void TScript::callEventHandler(const TEvent& pE)
+void TScript::callEventHandler(const TEvent& pEvent)
 {
     // Only call this event handler if this script and all its ancestors are active:
     if (isActive() && ancestorsActive()) {
-        mpHost->mLuaInterpreter.callEventHandler(mName, pE);
+        mpHost->mLuaInterpreter.callEventHandler(mName, pEvent);
     }
 }
 

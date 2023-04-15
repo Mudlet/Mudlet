@@ -722,7 +722,7 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsgWithNoLf(tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                         "Look for further messages related to the rooms that are supposed to\n"
+                                         "Look for further messages related to the rooms that is/are supposed to\n"
                                          "be in this/these area(s)...",
                                          "Making use of %n to allow quantity dependent message form 8-) !",
                                          missingAreasNeeded.count()),
