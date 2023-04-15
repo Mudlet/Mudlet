@@ -58,8 +58,8 @@ public:
 
 public:
     bool hidden;
-    const void* kpointer;
-    const void* vpointer;
+    const void* pKey;
+    const void* pValue;
     bool saved;
 
 private:
