@@ -202,6 +202,7 @@ public:
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
     void clearSearchHighlights();
+
     static int lengthInGraphemes(const QString& text);
 
 

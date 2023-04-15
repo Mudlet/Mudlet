@@ -459,7 +459,6 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     }
     layoutLayer2->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(layer);
-    mpLineEdit_networkLatency->setFrame(false);
     layerCommandLine->setAutoFillBackground(true);
 
     centralLayout->addWidget(layerCommandLine);
