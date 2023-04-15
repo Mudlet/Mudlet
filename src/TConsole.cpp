@@ -916,7 +916,7 @@ void TConsole::slot_toggleReplayRecording()
     } else {
         if (!mReplayFile.commit()) {
             qDebug() << "TConsole::slot_toggleReplayRecording: error saving replay: " << mReplayFile.errorString();
-            printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved.")) % QChar::LineFeed);
+            printSystemMessage(tr("Replay recording has been stopped, but couldn't be saved.") % QChar::LineFeed);
         } else {
             printSystemMessage(tr("Replay recording has been stopped. File: %1").arg(mReplayFile.fileName()) % QChar::LineFeed);
         }
