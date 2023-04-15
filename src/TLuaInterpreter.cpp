@@ -568,7 +568,9 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             break;
         }
 
-        localFile.flush();
+        if (!localFile.commit()) {
+            qDebug() << "TTLuaInterpreter::handleHttpOK: error saving downloaded file: " << localFile.errorString();
+        }
 
         if (localFile.error() == QFile::NoError) {
             event.mArgumentList << QLatin1String("sysDownloadDone");
@@ -586,10 +588,6 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
             event.mArgumentList << localFile.errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-        }
-
-        if (!localFile.commit()) {
-            qDebug() << "TTLuaInterpreter::handleHttpOK: error saving downloaded file: " << localFile.errorString();
         }
         break;
 

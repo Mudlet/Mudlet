@@ -4179,7 +4179,9 @@ int mudlet::scanWordList(QStringList& wl, QHash<QString, unsigned int>& gc)
 Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QString>& wordSet)
 {
     // Need to check that the files exist first:
+    // full dictionary path+filename
     QString dictionaryPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.dic")));
+    // full affix path+filename
     QString affixPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.aff")));
 
     int oldWordCount = 0;

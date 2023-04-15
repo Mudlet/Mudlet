@@ -156,14 +156,12 @@ std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name,
 void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
     const auto loggingPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autolog"));
-    QSaveFile file(loggingPath);
+    QFile file(loggingPath);
     QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream out(&file);
-        if (!file.commit()) {
-            qDebug() << "TMainConsole::toggleLogging: error saving logging state: " << file.errorString();
-        }
+        file.close();
 
         QString directoryLogFile;
         QString logFileName;

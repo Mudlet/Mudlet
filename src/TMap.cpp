@@ -2928,9 +2928,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         }
     }
     if (abort) {
-        if (!file.commit()) {
-            qDebug() << "TMap::writeJsonMapFile: error saving JSON map: " << file.errorString();
-        }
+        file.cancelWriting();
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
         mpProgressDialog->close();
         mpProgressDialog = nullptr;

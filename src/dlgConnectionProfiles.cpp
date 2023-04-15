@@ -730,7 +730,7 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
         }
         ofs << what;
         if (!file.commit()) {
-            qDebug() << "dlgConnectionProfiles::writeProfileData: error writing custom profile data: " << file.errorString();
+            qDebug() << "dlgConnectionProfiles::writeProfileData: error writing profile data: " << file.errorString();
         }
     }
 
