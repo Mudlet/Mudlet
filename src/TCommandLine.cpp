@@ -34,7 +34,6 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
-#include <QByteArrayList>
 #include <QKeyEvent>
 #include <QRegularExpression>
 #include <QScrollBar>
@@ -1479,6 +1478,12 @@ void TCommandLine::slot_saveHistory()
         return;
     }
 
+    auto saveSize = pHost->mCommandLineHistorySaveSize;
+    if (!saveSize) {
+        // Option has been disabled so nothing to do:
+        return;
+    }
+
     QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
@@ -1487,7 +1492,7 @@ void TCommandLine::slot_saveHistory()
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         ofs.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
-        ofs << mHistoryList.join(QChar::LineFeed);
+        ofs << mHistoryList.mid(0, saveSize).join(QChar::LineFeed);
         if (!historyFile.commit()) {
             qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName
                                          << " of type: " << mType << " reason: " << historyFile.errorString();

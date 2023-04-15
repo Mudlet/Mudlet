@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -906,6 +906,13 @@ void XMLimport::readHost(Host* pHost)
     pHost->setCompactInputLine(compactInputLine);
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
+    }
+    if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
+        pHost->mCommandLineHistorySaveSize = attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt();
+    } else {
+        // This is the default valuem though prior to the introduction of this
+        // it would have effectively been zero:
+        pHost->mCommandLineHistorySaveSize = 50;
     }
 
     if (attributes().hasAttribute(QLatin1String("NetworkPacketTimeout"))) {

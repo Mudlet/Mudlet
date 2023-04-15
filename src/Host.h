@@ -686,6 +686,16 @@ public:
     Q_ENUM(CaretShortcut)
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
+    // The range - applied to ALL command lines - is 0 to 500, with the knob
+    // on the profile preferences having a step size of 10. Prior to the
+    // introduction of this feature the control would effectively have been
+    // zero - and whilst the knob shows the special value of "None" then
+    // to reproduce that behavior there is little reason (other than the
+    // corner case where a password has been entered and thus it could be
+    // saved in plain-text in the relevant file even when the user has
+    // otherwise specified "secure" storage for that detail) to not enable it
+    // by default:
+    int mCommandLineHistorySaveSize = 50;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2022 by Stephen Lyons             *
+ *   Copyright (C) 2014, 2016-2018, 2020-2023 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -797,6 +797,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     auto_clear_input_line_checkbox->setChecked(pHost->mAutoClearCommandLineAfterSend);
     checkBox_highlightHistory->setChecked(pHost->mHighlightHistory);
     command_separator_lineedit->setText(pHost->mCommandSeparator);
+    spinBox_commandLineHistorySaveSize->setValue(pHost->mCommandLineHistorySaveSize);
 
     checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(pHost->mUSE_IRE_DRIVER_BUGFIX);
     checkBox_enableTextAnalyzer->setChecked(pHost->mEnableTextAnalyzer);
@@ -2778,6 +2779,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mAutoClearCommandLineAfterSend = auto_clear_input_line_checkbox->isChecked();
         pHost->mHighlightHistory = checkBox_highlightHistory->isChecked();
         pHost->mCommandSeparator = command_separator_lineedit->text();
+        pHost->mCommandLineHistorySaveSize = spinBox_commandLineHistorySaveSize->value();
         pHost->mAcceptServerGUI = acceptServerGUI->isChecked();
         pHost->mAcceptServerMedia = acceptServerMedia->isChecked();
         pHost->set_USE_IRE_DRIVER_BUGFIX(checkBox_USE_IRE_DRIVER_BUGFIX->isChecked());
