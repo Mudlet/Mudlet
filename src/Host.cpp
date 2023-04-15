@@ -2174,15 +2174,20 @@ QString Host::readProfileIniData(const QString& item)
 // Returns the name for the file - either "command_history_main" for the main
 // command line or "command_history_##" (where ## is a leading zero number,
 // though in pathalogical cases there is nothing stopping it being more).
+// Because '/' and '\\' are used by the QSettings class in key names for
+// special purposes we MUST filter them out in the name, we'll replace them
+// with '_'s:
 QString Host::getCommandLineBackingFileName(const TCommandLine::CommandLineType type, const QString& name)
 {
     if (type == TCommandLine::MainCommandLine) {
         // This one does not need the name to be kept in a QSettings
         return qsl("command_history_main");
     }
+    QString localName{name};
+    localName.replace(QRegularExpression(qsl("[\\/]")), qsl("_"));
     // We use a '/' in the name as that donotes a grouping (section) within the QSetting's
     // (INI) format with the left-most side of the first '/' as a section header
-    auto fileName = readProfileIniData(qsl("CommandLines/NameMapping/%1").arg(name));
+    auto fileName = readProfileIniData(qsl("CommandLines/NameMapping/%1").arg(localName));
     if (!fileName.isEmpty()) {
         return fileName;
     }
