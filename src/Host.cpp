@@ -2136,6 +2136,77 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     return QString();
 }
 
+// This pair might eventually replace the ones without the "Ini" but for now
+// are just used to store some information about one or more TCommandLine's
+// mHistoryData:
+bool Host::writeProfileIniData(const QString& item, const QString& what)
+{
+    QSettings settings(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // This will ensure compatibility going forward and backward
+    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+    settings.setValue(item, what);
+    settings.sync();
+    switch (settings.status()) {
+    case QSettings::NoError:
+        return true;
+    case QSettings::FormatError:
+        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Format error\".";
+        return false;
+    case QSettings::AccessError:
+        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Access error\".";
+        return false;
+    }
+    Q_UNREACHABLE();
+}
+
+QString Host::readProfileIniData(const QString& item)
+{
+    QSettings settings(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // This will ensure compatibility going forward and backward
+    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+    return settings.value(item).toString();
+}
+
+// Returns the name for the file - either "command_history_main" for the main
+// command line or "command_history_##" (where ## is a leading zero number,
+// though in pathalogical cases there is nothing stopping it being more).
+QString Host::getCommandLineBackingFileName(const TCommandLine::CommandLineType type, const QString& name)
+{
+    if (type == TCommandLine::MainCommandLine) {
+        // This one does not need the name to be kept in a QSettings
+        return qsl("command_history_main");
+    }
+    // We use a '/' in the name as that donotes a grouping (section) within the QSetting's
+    // (INI) format with the left-most side of the first '/' as a section header
+    auto fileName = readProfileIniData(qsl("CommandLines/NameMapping/%1").arg(name));
+    if (!fileName.isEmpty()) {
+        return fileName;
+    }
+
+    // Else the name is not in the settings so we will have to create one:
+    // Get the highest number used so far:
+    bool isOk = false;
+    auto usedIndex = readProfileIniData(qsl("CommandLines/UsedIndexes")).toInt(&isOk);
+    if (!isOk || !usedIndex) {
+        // The value was not found / is null - so create one to start with
+        writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(1));
+        usedIndex = 1;
+    } else {
+        // Increment it and save the new value
+        writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(++usedIndex));
+    }
+    // Generate the name
+    fileName = qsl("command_history_%1").arg(usedIndex, 2, 10, QLatin1Char('0'));
+    // Save it:
+    writeProfileIniData(qsl("CommandLines/NameMapping/%1").arg(name), fileName);
+    // And return it:
+    return fileName;
+}
+
 // Derived from the one in dlgConnectionProfile class - but it does not need a
 // host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)

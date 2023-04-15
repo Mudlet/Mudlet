@@ -30,6 +30,7 @@
 #include "AliasUnit.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
+#include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
@@ -312,7 +313,9 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
+    bool writeProfileIniData(const QString& item, const QString& what);
     QString readProfileData(const QString&);
+    QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
@@ -408,6 +411,7 @@ public:
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
     void loadMap();
+    QString getCommandLineBackingFileName(const TCommandLine::CommandLineType, const QString&);
 
 
     cTelnet mTelnet;

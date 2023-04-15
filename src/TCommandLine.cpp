@@ -82,6 +82,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TCommandLine::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
+    mBackingFileName = mpHost->getCommandLineBackingFileName(mType, name);
     restoreHistory();
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
 }
@@ -1419,29 +1420,14 @@ void TCommandLine::slot_adjustAccessibleNames()
 
 void TCommandLine::restoreHistory()
 {
-    QString identifier;
-    switch (mType) {
-    case UnknownType:
-        identifier = qsl("command_history_unknown_%1").arg(mCommandLineName);
-        break;
-    case MainCommandLine:
-        identifier = qsl("command_history_main");
-        break;
-    case SubCommandLine:
-        identifier = qsl("command_history_sub_%1").arg(mCommandLineName);
-        break;
-    case ConsoleCommandLine:
-        identifier = qsl("command_history_extra_%1").arg(mCommandLineName);
-        break;
-    }
-
     auto pHost = mpHost;
     if (!pHost) {
-        qWarning().nospace().noquote() << "TCommandLine::restoreHistory() ERROR - got a Host pointer that was null - unable to restore command history for the command line called: "
-                                       << mCommandLineName << " of type: " << mType;
+        qWarning().nospace().noquote() << "TCommandLine::restoreHistory() ERROR - got a Host pointer that was null - unable to save command history for the command line called: " << mCommandLineName
+                                       << " of type: " << mType;
         return;
     }
-    QString pathFileName{mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), identifier)};
+
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
         if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
@@ -1480,28 +1466,12 @@ void TCommandLine::restoreHistory()
     // command line is created - so it might not be an error:
     qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: "
              << mCommandLineName << " of type: " << mType
-             << " because the file: " << pathFileName
-             << " does not exist, unless this is a new command line then this is an unexpected error.";
+             << " because the file: " << mBackingFileName
+             << " does not exist in the profile's home directory, unless this is a new command line then this is an unexpected error.";
 }
 
-void TCommandLine::slot_saveHistory() const
+void TCommandLine::slot_saveHistory()
 {
-    QString identifier;
-    switch (mType) {
-    case UnknownType:
-        identifier = qsl("command_history_unknown_%1").arg(mCommandLineName);
-        break;
-    case MainCommandLine:
-        identifier = qsl("command_history_main");
-        break;
-    case SubCommandLine:
-        identifier = qsl("command_history_sub_%1").arg(mCommandLineName);
-        break;
-    case ConsoleCommandLine:
-        identifier = qsl("command_history_extra_%1").arg(mCommandLineName);
-        break;
-    }
-
     auto pHost = mpHost;
     if (!pHost) {
         qWarning().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - got a Host pointer that was null - unable to save command history for the command line called: " << mCommandLineName
@@ -1509,8 +1479,8 @@ void TCommandLine::slot_saveHistory() const
         return;
     }
 
-    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), identifier)};
-    QSaveFile historyFile(pathFileName);
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&historyFile);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {

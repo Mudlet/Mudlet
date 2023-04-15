@@ -89,7 +89,7 @@ public slots:
     void slot_removeWord();
     void slot_clearSelection(bool yes);
     void slot_adjustAccessibleNames();
-    void slot_saveHistory() const;
+    void slot_saveHistory();
 
 
 private:
@@ -130,7 +130,7 @@ private:
     char** mpUserSuggestionsList = nullptr;
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
-
+    QString mBackingFileName;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
