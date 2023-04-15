@@ -1431,25 +1431,25 @@ void TCommandLine::restoreHistory()
     QFile historyFile(pathFileName, this);
     if (historyFile.exists()) {
         if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
-            QDataStream ifs(&historyFile);
-            if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
+            // In Qt6 the default encoding is UTF-8
+            QTextStream ifs(&historyFile);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            ifs.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+            QString buffer;
+            while (!ifs.atEnd() && ifs.status() == QTextStream::Ok) {
+                ifs.readLineInto(&buffer);
+                mHistoryList.append(buffer);
             }
-            QByteArray utf8History;
-            ifs >> utf8History;
+
             if (historyFile.error() != QFileDevice::NoError) {
                 qWarning() << "TCommandLine::restoreHistory() ERROR - unable to read command history from file for the command line called: " << mCommandLineName << " of type: " << mType
                            << " reason: " << historyFile.errorString();
                 historyFile.close();
                 return;
             }
-            historyFile.close();
 
-            const QByteArrayList utf8HistoryList(utf8History.split('\n'));
-            QListIterator<QByteArray> itHistory(utf8HistoryList);
-            while (itHistory.hasNext()) {
-                mHistoryList.append(QString::fromUtf8(itHistory.next()));
-            }
+            historyFile.close();
             // Success!
             return;
         }
@@ -1482,18 +1482,12 @@ void TCommandLine::slot_saveHistory()
     QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
     QSaveFile historyFile(pathFileName, this);
     if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&historyFile);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
-        // Save the lines as UTF-8 as that makes it possible/easier to edit the
-        // lines externally if wanted:
-        QByteArrayList utf8HistoryList;
-        QListIterator<QString> itHistory(mHistoryList);
-        while (itHistory.hasNext()) {
-            utf8HistoryList.append(itHistory.next().toUtf8());
-        }
-        ofs << utf8HistoryList.join('\n');
+        QTextStream ofs(&historyFile);
+        // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        ofs.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+        ofs << mHistoryList.join(QChar::LineFeed);
         if (!historyFile.commit()) {
             qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName
                                          << " of type: " << mType << " reason: " << historyFile.errorString();
