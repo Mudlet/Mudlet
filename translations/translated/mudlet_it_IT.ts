@@ -4189,10 +4189,10 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
 Connection cannot be established.
 The server name is not correct, not working properly,
 or your nameservers are not working properly.</source>
-      <translation>[ ERROR ] - Impossibile trovare il nome host!
+      <translation>[ ERROR ] - Impossibile trovare l'indirizzo server!
 La connessione non può essere effettuata.
-Il nome server non è corretto o non funziona correttamente
-o il tuo DNS non è raggiungibile.</translation>
+L'indirizzo inserito non è corretto, non funziona correttamente
+o il tuo server DNS non è raggiungibile.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="443"/>
