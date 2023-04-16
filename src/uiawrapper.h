@@ -33,6 +33,7 @@
 #include <uiautomationcore.h>
 #include <uiautomationcoreapi.h>
 
+#if defined(INCLUDE_MAIN_BUILD_SYSTEM)
 enum NotificationProcessing {
   NotificationProcessing_ImportantAll = 0,
   NotificationProcessing_ImportantMostRecent = 1,
@@ -48,6 +49,7 @@ enum NotificationKind {
   NotificationKind_ActionAborted = 3,
   NotificationKind_Other = 4
 };
+#endif // INCLUDE_MAIN_BUILD_SYSTEM
 
 class UiaWrapper {
   UiaWrapper();
