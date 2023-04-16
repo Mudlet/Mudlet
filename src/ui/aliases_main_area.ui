@@ -97,6 +97,9 @@
      <property name="toolTip">
       <string>enter a perl regex pattern for your alias; alias are triggers on your input</string>
      </property>
+     <property name="placeholderText">
+      <string>^mycommand$ (example)</string>
+     </property>
     </widget>
    </item>
    <item row="1" column="2" alignment="Qt::AlignRight">
