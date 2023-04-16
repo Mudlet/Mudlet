@@ -99,6 +99,8 @@ namespace coreMacOS {
 }
 #endif
 
+// PLACEMARKER: sample benchmarking code
+// #include <nanobench.h>
 #include "post_guard.h"
 
 using namespace std::chrono_literals;
@@ -611,6 +613,25 @@ mudlet::mudlet()
         mpAnnouncer = new Announcer(this);
         emit signal_adjustAccessibleNames();
     });
+
+    // PLACEMARKER: sample benchmarking code
+    // looking to benchmark old/new code? Use this example
+    // full docs at https://nanobench.ankerl.com
+//    ankerl::nanobench::Bench benchmark;
+//    benchmark.title("Example benchmark")
+//            .minEpochIterations(2000)
+//            .warmup(100)
+//            .relative(true);
+
+//    benchmark.run("old code", [this] {
+//        loadMaps();
+//    });
+
+//    benchmark.run("new code", [this] {
+//        for (int i = 0; i < 2; i++) {
+//            loadMaps();
+//        }
+//    });
 }
 
 QSettings* mudlet::getQSettings()
