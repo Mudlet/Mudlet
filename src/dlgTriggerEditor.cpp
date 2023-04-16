@@ -8055,8 +8055,6 @@ void dlgTriggerEditor::slot_copyXml()
 void dlgTriggerEditor::slot_pasteXml()
 {
     XMLimport reader(mpHost);
-    EditorViewType importedItemType = EditorViewType::cmUnknownView;
-    int importedItemID = 0;
 
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
@@ -8085,7 +8083,7 @@ void dlgTriggerEditor::slot_pasteXml()
         break;
     }
 
-    std::tie(importedItemType, importedItemID) = reader.importFromClipboard();
+    auto [importedItemType, importedItemID] = reader.importFromClipboard();
 
     // don't reset the view if what we pasted wasn't a Mudlet editor item
     if (importedItemType == EditorViewType::cmUnknownView && importedItemID == 0) {
