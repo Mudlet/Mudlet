@@ -58,16 +58,16 @@ public:
 
 public slots:
     void slot_toggleRoundRooms(const bool);
-    void slot_toggleShowRoomIDs(int s);
-    void slot_toggleShowRoomNames(int s);
-    void slot_toggleStrongHighlight(int v);
+    void slot_toggleShowRoomIDs(int toggle);
+    void slot_toggleShowRoomNames(int toggle);
+    void slot_toggleStrongHighlight(int toggle);
     void slot_toggle3DView(const bool);
     void slot_togglePanel();
     void slot_setMapperPanelVisible(bool panelVisible);
-    void slot_roomSize(int d);
-    void slot_exitSize(int d);
-    void slot_setRoomSize(int d);
-    void slot_setExitSize(int d);
+    void slot_roomSize(int size);
+    void slot_exitSize(int size);
+    void slot_setRoomSize(int size);
+    void slot_setExitSize(int size);
     void slot_setShowRoomIds(bool showRoomIds);
     void slot_updateInfoContributors();
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
