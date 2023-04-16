@@ -525,6 +525,8 @@ target_link_libraries(
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
+# PLACEMARKER: sample benchmarking code
+#       nanobench
         ${QT_LIBS})
 
 if(USE_UPDATER)
