@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2020-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2020-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -25,6 +25,7 @@
 
 
 #include "Host.h"
+#include "T2DMap.h"
 #include "TConsole.h"
 #include "TRoomDB.h"
 
@@ -50,6 +51,7 @@ static const int kPixmapDataLineSize = 64;
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : mpRoomDB(pRDB)
 , mpMap(pMap)
+, mLast2DMapZoom(T2DMap::csmDefaultXYZoom)
 {
 }
 
@@ -127,7 +129,7 @@ QList<int> TArea::getCollisionNodes()
         while (it2.hasNext()) {
             it2.next();
             QMultiMap<int, int> y_val = it2.value();
-            QMapIterator<int, int> it3(y_val);
+            QMultiMapIterator<int, int> it3(y_val);
             QList<int> z_coordinates;
             while (it3.hasNext()) {
                 it3.next();
@@ -518,7 +520,7 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
     QMultiMap<int, QPair<QString, int>> results;
     QSet<int> roomsWithOtherAreaSpecialExits;
 
-    QMapIterator<int, QPair<int, int>> itAreaExit = mAreaExits;
+    QMultiMapIterator<int, QPair<int, int>> itAreaExit = mAreaExits;
     // First parse the normal exits and also find the rooms where there is at
     // least one special area exit
     while (itAreaExit.hasNext()) {
@@ -709,10 +711,12 @@ void TArea::writeJsonLabels(QJsonObject& obj) const
     QMapIterator<int, TMapLabel> itMapLabel(mMapLabels);
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
-        writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value());
-        if (mpMap->incrementJsonProgressDialog(true, false, 1)) {
-            // Cancel has been hit - so give up straight away:
-            return;
+        if (!itMapLabel.value().temporary) {
+            writeJsonLabel(labelArray, itMapLabel.key(), &itMapLabel.value());
+            if (mpMap->incrementJsonProgressDialog(true, false, 1)) {
+                // Cancel has been hit - so give up straight away:
+                return;
+            }
         }
     }
     QJsonValue labelsValue{labelArray};
@@ -943,4 +947,36 @@ QPixmap TArea::convertBase64DataToImage(const QList<QByteArray>& pixmapArray) co
     pixmap.loadFromData(decodedImageArray);
 
     return pixmap;
+}
+
+QList<int> TArea::getPermanentLabelIds() const
+{
+    QMapIterator<int, TMapLabel> itLabel(mMapLabels);
+    QList<int> permanentLabels;
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        if (!itLabel.value().temporary) {
+            permanentLabels.append(itLabel.key());
+        }
+    }
+    return permanentLabels;
+}
+
+bool TArea::hasPermanentLabels() const
+{
+    QMapIterator<int, TMapLabel> itLabel(mMapLabels);
+    while (itLabel.hasNext()) {
+        itLabel.next();
+        if (!itLabel.value().temporary) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void TArea::set2DMapZoom(const qreal zoom)
+{
+    if (zoom >= T2DMap::csmMinXYZoom) {
+        mLast2DMapZoom = zoom;
+    }
 }

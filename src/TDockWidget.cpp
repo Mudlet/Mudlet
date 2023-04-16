@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2019-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2019-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -23,7 +23,7 @@
 
 TDockWidget::TDockWidget(Host* pH, const QString& consoleName)
 : QDockWidget()
-, widgetConsoleName(consoleName)
+, mWidgetConsoleName(consoleName)
 , mpHost(pH)
 {
 }
@@ -41,7 +41,7 @@ void TDockWidget::setTConsole(TConsole* pC)
 void TDockWidget::closeEvent(QCloseEvent* event)
 {
     if (!mpHost->isClosingDown()) {
-        mpHost->hideWindow(widgetConsoleName);
+        mpHost->hideWindow(mWidgetConsoleName);
         event->ignore();
         return;
     } else {
@@ -53,13 +53,13 @@ void TDockWidget::closeEvent(QCloseEvent* event)
 void TDockWidget::resizeEvent(QResizeEvent* event)
 {
     Q_UNUSED(event)
-    mpHost->setDockLayoutUpdated(widgetConsoleName);
+    mpHost->setDockLayoutUpdated(mWidgetConsoleName);
 }
 
 void TDockWidget::moveEvent(QMoveEvent* event)
 {
     Q_UNUSED(event)
-    mpHost->setDockLayoutUpdated(widgetConsoleName);
+    mpHost->setDockLayoutUpdated(mWidgetConsoleName);
 }
 
 void TDockWidget::setVisible(bool visible)
@@ -76,7 +76,7 @@ void TDockWidget::setVisible(bool visible)
         }
         return;
     }
-    auto pC = mpHost->mpConsole->mSubConsoleMap.value(widgetConsoleName);
+    auto pC = mpHost->mpConsole->mSubConsoleMap.value(mWidgetConsoleName);
     if (!pC) {
         return;
     }
@@ -84,7 +84,7 @@ void TDockWidget::setVisible(bool visible)
     if (visible) {
         pC->show();
         QWidget::setVisible(true);
-        mpHost->mpConsole->showWindow(widgetConsoleName);
+        mpHost->mpConsole->showWindow(mWidgetConsoleName);
     } else {
         QWidget::setVisible(false);
     }

@@ -218,7 +218,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
             QSharedPointer<pcre> re(pcre_compile(regexp.constData(), PCRE_UTF8 | PCRE_UCP, &error, &erroffset, nullptr), pcre_deleter);
 
             if (!re) {
-                if (mudlet::debugMode) {
+                if (mudlet::smDebugMode) {
                     TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
                     TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
                 }
@@ -227,7 +227,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
                          .arg(QString::number(i + 1), regexp.constData(), error)));
                 state = false;
             } else {
-                if (mudlet::debugMode) {
+                if (mudlet::smDebugMode) {
                     TDebug(Qt::white, Qt::darkGreen) << "[OK]: REGEX_COMPILE OK\n" >> mpHost;
                 }
             }
@@ -247,7 +247,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
                          .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)")
                          .arg(QString::number(i + 1), patterns.at(i), error)));
                 state = false;
-                if (mudlet::debugMode) {
+                if (mudlet::smDebugMode) {
                     TDebug(Qt::white, Qt::red) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
                     TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in lua condition function: ")" << patterns.at(i) << "\"\n" >> mpHost;
                 }
@@ -293,7 +293,7 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
     QSharedPointer<pcre> re = mRegexMap[patternNumber];
 
     if (!re) {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "ERROR:" >> mpHost;
             TDebug(Qt::darkRed, Qt::darkGray) << TDebug::csmContinue << " the regex of trigger " << mName
                                               << " does not compile. Please correct the expression. This trigger will never match until it is fixed.\n"
@@ -322,12 +322,15 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
 {
     if (rc == 0) {
         if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+            mpHost->mpEditorDialog->mpErrorConsole->print(
+                qsl("%1\n").arg(tr("[Trigger Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
+                QColor(255, 128, 0),
+                QColor(Qt::black));
         }
         qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     }
 
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::blue, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
 
@@ -351,7 +354,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
         match.append(substring_start, substring_length);
         captureList.push_back(match);
         posList.push_back(utf16_pos + posOffset);
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::darkCyan, Qt::black) << "capture group #" << (i + 1) << " = " >> mpHost;
             TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
         }
@@ -425,7 +428,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
             match.append(substring_start, substring_length);
             captureList.push_back(match);
             posList.push_back(utf16_pos + posOffset);
-            if (mudlet::debugMode) {
+            if (mudlet::smDebugMode) {
                 TDebug(Qt::darkCyan, Qt::black) << "<regex mode: match all> capture group #" << (i + 1) << " = " >> mpHost;
                 TDebug(Qt::darkMagenta, Qt::black) << "<" << match.c_str() << ">\n" >> mpHost;
             }
@@ -448,7 +451,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
             pC->deselect();
             auto its = captureList.begin();
             auto iti = posList.begin();
-            for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
+            for (int position = 1; iti != posList.end(); ++iti, ++its, position++) {
                 int begin = *iti;
                 std::string& s = *its;
                 int length = QString::fromStdString(s).size();
@@ -456,7 +459,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
                     // skip complete match in Perl /g option type of triggers
                     // to enable people to highlight capture groups if there are any
                     // otherwise highlight complete expression match
-                    if (i % numberOfCaptureGroups != 1) {
+                    if (position % numberOfCaptureGroups != 1) {
                         pC->selectSection(begin, length);
                         if (mBgColor != QColorConstants::Transparent) {
                             pC->setBgColor(r1, g1, b1, 255);
@@ -487,14 +490,14 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
                     int total = captureList.size();
                     auto its = captureList.begin();
                     auto iti = posList.begin();
-                    for (int i = 1; iti != posList.end(); ++iti, ++its, i++) {
+                    for (int filterPosition = 1; iti != posList.end(); ++iti, ++its, filterPosition++) {
                         int begin = *iti;
                         std::string& s = *its;
                         if (total > 1 && numberOfCaptureGroups > 0) {
                             // skip complete match in Perl /g option type of triggers
                             // to enable people to highlight capture groups if there are any
                             // otherwise highlight complete expression match
-                            if (i % numberOfCaptureGroups != 1) {
+                            if (filterPosition % numberOfCaptureGroups != 1) {
                                 filter(s, begin);
                             }
                         } else {
@@ -523,7 +526,7 @@ void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int 
     std::list<int> posList;
     captureList.emplace_back(needle.toUtf8().constData());
     posList.push_back(0 + posOffset);
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkCyan, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
     if (mIsColorizerTrigger) {
@@ -578,10 +581,12 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
         mConditionMap[pCondition] = pCondition;
         pCondition->multiCaptureList.push_back(captureList);
         pCondition->multiCapturePosList.push_back(posList);
-        if (nameMatches != nullptr) {
+        if (nameMatches) {
             pCondition->nameCaptures.push_back(*nameMatches);
+        } else {
+            pCondition->nameCaptures.push_back(QVector<QPair<QString, QString>>());
         }
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::darkYellow, Qt::black) << "match state " << mConditionMap.size() << "/" << mConditionMap.size() << " condition #" << regexNumber << "=true (" << regexNumber
                                               << "/" << mPatterns.size() << ") regex=" << mPatterns[regexNumber] << "\n"
                     >> mpHost;
@@ -591,7 +596,7 @@ inline void TTrigger::updateMultistates(int regexNumber, std::list<std::string>&
         for (auto& matchStatePair : mConditionMap) {
             k++;
             if (matchStatePair.second->nextCondition() == regexNumber) {
-                if (mudlet::debugMode) {
+                if (mudlet::smDebugMode) {
                     TDebug(Qt::darkYellow, Qt::black) << "match state " << k << "/" << mConditionMap.size() << " condition #" << regexNumber << "=true (" << regexNumber << "/"
                                                       << mPatterns.size() << ") regex=" << mPatterns[regexNumber] << "\n"
                             >> mpHost;
@@ -658,7 +663,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
             posList.push_back(where + posOffset);
         }
     }
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::cyan, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(regexNumber) << ") matched.\n" >> mpHost;
     }
     if (mIsColorizerTrigger) {
@@ -838,7 +843,7 @@ bool TTrigger::match_line_spacer(int patternNumber)
             k++;
             if (matchStatePair.second->nextCondition() == patternNumber) {
                 if (matchStatePair.second->lineSpacerMatch(mPatterns.value(patternNumber).toInt())) {
-                    if (mudlet::debugMode) {
+                    if (mudlet::smDebugMode) {
                         TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") condition #" << patternNumber << "=true " >> mpHost;
                         TDebug(Qt::darkYellow, Qt::black) << TDebug::csmContinue << "match state " << k << "/" << mConditionMap.size() << " condition #" << patternNumber << "=true (" << patternNumber + 1 << "/"
                                                           << mPatterns.size() << ") line spacer=" << mPatterns.value(patternNumber) << "lines\n"
@@ -864,7 +869,7 @@ bool TTrigger::match_lua_code(int patternNumber)
     }
 
     if (mpLua->callConditionFunction(mLuaConditionMap[patternNumber], mName)) {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
         }
         if (mIsMultiline) {
@@ -890,7 +895,7 @@ bool TTrigger::match_prompt(int patternNumber)
 
 void TTrigger::processPromptMatch(int patternNumber)
 {
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
     if (mIsMultiline) {
@@ -922,7 +927,7 @@ void TTrigger::processExactMatch(const QString& line, int patternNumber, int pos
     std::list<int> posList;
     captureList.emplace_back(line.toUtf8().constData());
     posList.push_back(0 + posOffset);
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
     if (mIsColorizerTrigger) {
@@ -988,7 +993,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             return false;
         }
 
-        if (haystack.size() < 1) {
+        if (haystack.isEmpty()) {
             return false;
         }
 
@@ -1069,7 +1074,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                 k++;
                 if (matchStatePair.second->isComplete()) {
                     mKeepFiring = mStayOpen;
-                    if (mudlet::debugMode) {
+                    if (mudlet::smDebugMode) {
                         TDebug(Qt::yellow, Qt::darkMagenta) << "multiline trigger name=" << mName << " *FIRES* all conditions are fulfilled. Executing script.\n" >> mpHost;
                     }
                     removeList.push_back(matchStatePair.first);
@@ -1108,7 +1113,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             for (auto& matchState : removeList) {
                 if (mConditionMap.find(matchState) != mConditionMap.end()) {
                     delete mConditionMap[matchState];
-                    if (mudlet::debugMode) {
+                    if (mudlet::smDebugMode) {
                         TDebug(Qt::darkBlue, Qt::black) << "removing condition from condition table.\n" >> mpHost;
                     }
                     mConditionMap.erase(matchState);
@@ -1154,14 +1159,14 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
             if (mExpiryCount == 0) {
                 mpHost->getTriggerUnit()->markCleanup(this);
 
-                if (mudlet::debugMode) {
+                if (mudlet::smDebugMode) {
                     // FIXME: This message is translated - but most other TDebug ones are not!
-                    TDebug(Qt::yellow, Qt::darkMagenta) << tr("Trigger name=%1 expired.\n").arg(mName) >> mpHost;
+                    TDebug(Qt::yellow, Qt::darkMagenta) << qsl("%1\n").arg(tr("Trigger name=%1 expired.").arg(mName)) >> mpHost;
                 }
 
-            } else if (mudlet::debugMode) {
+            } else if (mudlet::smDebugMode) {
                 // FIXME: This message is translated - but most other TDebug ones are not!
-                TDebug(Qt::yellow, Qt::darkMagenta) << tr("Trigger name=%1 will fire %n more time(s).\n", "", mExpiryCount).arg(mName) >> mpHost;
+                TDebug(Qt::yellow, Qt::darkMagenta) << qsl("%1\n").arg(tr("Trigger name=%1 will fire %n more time(s).", "", mExpiryCount).arg(mName)) >> mpHost;
             }
         }
 
@@ -1276,7 +1281,7 @@ void TTrigger::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of Trigger:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
@@ -1292,7 +1297,7 @@ void TTrigger::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::debugMode) {
+            if (mudlet::smDebugMode) {
                 TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of Trigger:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
@@ -1350,7 +1355,7 @@ void TTrigger::execute()
         mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
         mpHost->mpMedia->playMedia(mediaData);
     }
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {

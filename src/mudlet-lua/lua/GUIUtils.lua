@@ -2009,7 +2009,7 @@ function hecho2string(text)
   return x2string(text, "Hex")
 end
 
-local ansiPattern = rex.new("\\e\\[([0-9:;]+?)m")
+local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
@@ -2024,6 +2024,7 @@ end
 function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local lastColour = ansi_default_color
+  local coloursToUse = nil
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
@@ -2047,7 +2048,7 @@ function ansi2decho(text, ansi_default_color)
     for i = 0, 7 do
       lightColours[i] = convertindex(i+8)
     end
-    local coloursToUse = colours
+    coloursToUse = coloursToUse or colours
 
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
     -- the data first, then assemble it in the order we need at the end
@@ -2059,7 +2060,7 @@ function ansi2decho(text, ansi_default_color)
       local code = t[i]
       local formatCodeHandled = false
 
-      if code == '0' or code == '00' then
+      if code == '0' or code == '00' or code == '' then
         -- reset attributes
         output[#output + 1] = "<r>"
         fg, bg = nil, nil
@@ -2670,4 +2671,28 @@ function closestColor(r,g,b)
     end
   end
   return cname
+end
+
+--- Scrolls the given window up a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to scroll
+function scrollUp(window, lines)
+  if type(window) ~= "string" then window, lines = "main", window end
+  lines = tonumber(lines) or 1
+  local numLines = getLastLineNumber(window)
+  if not numLines then return nil, "window does not exist" end
+  local curScroll = getScroll(window)
+  scrollTo(window, math.max(curScroll - lines, 0))
+end
+
+--- Scrolls the given window down a specified number of lines
+--- @param windowName Optional name of the window to use the function on
+--- @param lines Number of lines to scroll
+function scrollDown(window, lines)
+  if type(window) ~= "string" then window, lines = "main", window end
+  lines = tonumber(lines) or 1
+  local numLines = getLastLineNumber(window)
+  if not numLines then return nil, "window does not exist" end
+  local curScroll = getScroll(window)
+  scrollTo(window, math.min(curScroll + lines, numLines))
 end

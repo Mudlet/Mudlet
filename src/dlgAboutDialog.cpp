@@ -34,19 +34,14 @@
 #include <QDebug>
 #include "post_guard.h"
 
-dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
+
+dlgAboutDialog::dlgAboutDialog(QWidget* parent)
+: QDialog(parent)
 {
     setupUi(this);
 
     // Copied from main():
-
-#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
-    QImage splashImage(mudlet::scmIsReleaseVersion ? qsl(":/Mudlet_splashscreen_main.png")
-                                                   : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
-                                                                                    : qsl(":/Mudlet_splashscreen_development.png"));
-#else
-    QImage splashImage(qsl(":/Mudlet_splashscreen_main.png"));
-#endif
+    QImage splashImage = mudlet::getSplashScreen();
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
@@ -56,7 +51,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont font(qsl("DejaVu Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font(qsl("Bitstream Vera Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -90,8 +85,8 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2022");
-        QFont font(qsl("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
+        QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -122,11 +117,11 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     // clang-format off
     QString htmlHead(qsl(R"(
         <head><style type="text/css">
-        h1 { font-family: "DejaVu Serif"; text-align: center; }
-        h2 { font-family: "DejaVu Serif"; text-align: center; }
-        h3 { font-family: "DejaVu Serif"; text-align: center; white-space: pre-wrap; }
-        h4 { font-family: "DejaVu Serif"; white-space: pre-wrap; }
-        p { font-family: "DejaVu Serif" }
+        h1 { font-family: "Bitstream Vera Serif"; text-align: center; }
+        h2 { font-family: "Bitstream Vera Serif"; text-align: center; }
+        h3 { font-family: "Bitstream Vera Serif"; text-align: center; white-space: pre-wrap; }
+        h4 { font-family: "Bitstream Vera Serif"; white-space: pre-wrap; }
+        p { font-family: "Bitstream Vera Serif" }
         tt { font-family: "Monospace"; white-space: pre-wrap; }
         .container { text-align: center; }
         </style></head>
@@ -1096,11 +1091,19 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     textBrowser_supporters->setOpenExternalLinks(true);
 }
 
-QString dlgAboutDialog::createBuildInfo() const {
-    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
-        .append(qsl("<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>").arg(tr("Technical information:")))
-        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version"), mudlet::self()->version))
-        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS"), QSysInfo::prettyProductName()))
-        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU"), QSysInfo::currentCpuArchitecture()))
-        .append(qsl("</table>"));
+QString dlgAboutDialog::createBuildInfo() const
+{
+    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
+               "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
+               "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
+               "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
+               "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
+               "</table>")
+            .arg(tr("Technical information:"), // %1
+                 tr("Version"), // %2
+                 mudlet::self()->scmVersion, // %3
+                 tr("OS"), // %4
+                 QSysInfo::prettyProductName(), // %5
+                 tr("CPU"), // %6
+                 QSysInfo::currentCpuArchitecture()); // %7
 }

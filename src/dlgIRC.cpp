@@ -38,7 +38,7 @@
 
 dlgIRC::dlgIRC(Host* pHost)
 : mpHost(pHost)
-, mRealName(mudlet::self()->version)
+, mRealName(mudlet::self()->scmVersion)
 {
     setupUi(this);
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));
@@ -296,7 +296,7 @@ void dlgIRC::setupBuffers()
 
 bool dlgIRC::processCustomCommand(IrcCommand* cmd)
 {
-    if (cmd->type() != IrcCommand::Custom || cmd->parameters().count() < 1) {
+    if (cmd->type() != IrcCommand::Custom || cmd->parameters().isEmpty()) {
         return false;
     }
 
@@ -507,7 +507,7 @@ void dlgIRC::slot_onHistoryCompletion()
         mInputHistoryIdxCurrent = 0;
     }
 
-    if (mInputHistory.count() == 0) {
+    if (mInputHistory.isEmpty()) {
         return;
     }
 

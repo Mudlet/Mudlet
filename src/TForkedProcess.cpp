@@ -60,9 +60,9 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, lua_State* L)
 
     // QProcess::finished is overloaded so we have to say which form we are
     // connecting here
-    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), mpInterpreter, &TLuaInterpreter::slotDeleteSender);
-    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slotFinish);
-    connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slotReceivedData);
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), mpInterpreter, &TLuaInterpreter::slot_deleteSender);
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slot_finished);
+    connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slot_receivedData);
 
     setProcessChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);
@@ -70,7 +70,7 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, lua_State* L)
     running = true;
 }
 
-void TForkedProcess::slotFinish(int exitCode, QProcess::ExitStatus exitStatus)
+void TForkedProcess::slot_finished(int exitCode, QProcess::ExitStatus exitStatus)
 {
     Q_UNUSED(exitCode);
     Q_UNUSED(exitStatus);
@@ -78,7 +78,7 @@ void TForkedProcess::slotFinish(int exitCode, QProcess::ExitStatus exitStatus)
     running = false;
 }
 
-void TForkedProcess::slotReceivedData()
+void TForkedProcess::slot_receivedData()
 {
     while (canReadLine()) {
         QByteArray line = readLine();

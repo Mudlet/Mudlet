@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2020, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -34,7 +35,8 @@
 class TAccessibleTextEdit : public QAccessibleWidget, public QAccessibleTextInterface
 {
 public:
-    explicit TAccessibleTextEdit(QWidget* w) : QAccessibleWidget(w, QAccessible::EditableText)
+    explicit TAccessibleTextEdit(QWidget* w)
+    : QAccessibleWidget(w, QAccessible::EditableText)
     {
         Q_ASSERT(isValid());
     }

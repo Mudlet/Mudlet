@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -212,11 +212,12 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         // We have to set a codec here to convert the QString based QTextStream
         // encoding (from UTF-16) to UTF-8 - by default a local 8-Bit one would
         // be used, which is problematic on Windows for non-ASCII (or Latin1?)
-        // characters:
-        QTextCodec* pLogCodec = QTextCodec::codecForName("UTF-8");
-        mLogStream.setCodec(pLogCodec);
+        // characters. The default in Qt6 is UTF-8:
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        out.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
         if (isMessageEnabled) {
-            QString message = tr("Logging has started. Log file is %1\n").arg(mLogFile.fileName());
+            QString message = qsl("%1\n").arg(tr("Logging has started. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
             // This puts text onto console that is IMMEDIATELY POSTED into log file so
             // must be done BEFORE logging starts - or actually mLogToLogFile gets set!
@@ -226,7 +227,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         file.remove();
         mLogToLogFile = false;
         if (isMessageEnabled) {
-            QString message = tr("Logging has been stopped. Log file is %1\n").arg(mLogFile.fileName());
+            QString message = qsl("%1\n").arg(tr("Logging has been stopped. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
             // This puts text onto console that is IMMEDIATELY POSTED into log file so
             // must be done AFTER logging ends - or actually mLogToLogFile gets reset!
@@ -477,7 +478,7 @@ void TMainConsole::resetMainConsole()
     }
 }
 
-// This is a sub-console overlaid on to the main console
+// This is a sub-console overlaid on to the main or other console
 TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     //if pW then add Console as Overlay to the Userwindow
@@ -498,7 +499,6 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         mSubConsoleMap[name] = pC;
         pC->setObjectName(name);
         pC->mConsoleName = name;
-        pC->setFocusPolicy(Qt::NoFocus);
         const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
         pC->setFocusProxy(hostCommandLine);
         pC->mUpperPane->setFocusProxy(hostCommandLine);
@@ -535,7 +535,6 @@ TScrollBox* TMainConsole::createScrollBox(const QString& windowname, const QStri
         }
         mScrollBoxMap[name] = pS;
         pS->setObjectName(name);
-        pS->setFocusPolicy(Qt::NoFocus);
         pS->resize(width, height);
         pS->setContentsMargins(0, 0, 0, 0);
         pS->move(x, y);
@@ -554,14 +553,13 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
     auto pS = mScrollBoxMap.value(windowname);
     if (!pL) {
         if (pW) {
-            pL = new TLabel(mpHost, pW->widget());
+            pL = new TLabel(mpHost, name, pW->widget());
         } else if (pS) {
-            pL = new TLabel(mpHost, pS->widget());
+            pL = new TLabel(mpHost, name, pS->widget());
         } else {
-            pL = new TLabel(mpHost, mpMainFrame);
+            pL = new TLabel(mpHost, name, mpMainFrame);
         }
         mLabelMap[name] = pL;
-        pL->setObjectName(name);
         pL->setAutoFillBackground(fillBackground);
         pL->setClickThrough(clickThrough);
         pL->resize(width, height);
@@ -570,9 +568,9 @@ TLabel* TMainConsole::createLabel(const QString& windowname, const QString& name
         pL->show();
         mpHost->setBackgroundColor(name, 32, 32, 32, 255);
         return pL;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
@@ -742,15 +740,13 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
 
     if (!pN) {
         if (pS) {
-            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pS->widget());
+            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pS->widget());
         } else if (pW) {
-            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, pW->widget());
+            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pW->widget());
         } else {
-            pN = new TCommandLine(mpHost, mpCommandLine->SubCommandLine, this, mpMainFrame);
+            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
         }
         mSubCommandLineMap[name] = pN;
-        pN->mCommandLineName = name;
-        pN->setObjectName(name);
         pN->resize(width, height);
         pN->move(x, y);
         pN->show();
@@ -1149,6 +1145,7 @@ bool TMainConsole::setTextFormat(const QString& name, const QColor& fgColor, con
 
 void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool isFromServer)
 {
+    Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::printOnDisplay(...)", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mProcessingTimer.restart();
     mTriggerEngineMode = true;
     buffer.translateToPlainText(incomingSocketData, isFromServer);
@@ -1195,7 +1192,7 @@ void TMainConsole::runTriggers(int line)
     mpHost->getLuaInterpreter()->set_lua_string(cmLuaLineVariable, mCurrentLine);
     mCurrentLine.append('\n');
 
-    if (mudlet::debugMode) {
+    if (mudlet::smDebugMode) {
         TDebug(Qt::darkGreen, Qt::black) << "new line arrived:" >> mpHost;
         TDebug(Qt::lightGray, Qt::black) << TDebug::csmContinue << mCurrentLine << "\n" >> mpHost;
     }
@@ -1235,10 +1232,12 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             out.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
-        mpHost->mpMap->serialize(out, saveVersion);
+        bool saved = mpHost->mpMap->serialize(out, saveVersion);
         file_map.close();
-        mpHost->mpMap->mUnsavedMap = false;
-        return true;
+        if (saved) {
+            mpHost->mpMap->resetUnsaved();
+        }
+        return saved;
     }
 
     return false;
@@ -1442,10 +1441,11 @@ void TMainConsole::showStatistics()
         return;
     }
 
-    QString header = tr("+--------------------------------------------------------------+\n"
-                        "|                      system statistics                       |\n"
-                        "+--------------------------------------------------------------+\n",
-                        "Header for the system's statistics information displayed in the console, it is 64 'narrow' characters wide");
+    QString header = qsl("%1\n").arg(tr(
+        "+--------------------------------------------------------------+\n"
+        "|                      system statistics                       |\n"
+        "+--------------------------------------------------------------+",
+        "Header for the system's statistics information displayed in the console, it is 64 'narrow' characters wide"));
     print(header, QColor(150, 120, 0), Qt::black);
 
     QStringList subjects;

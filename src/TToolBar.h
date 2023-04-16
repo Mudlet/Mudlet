@@ -24,11 +24,12 @@
 
 #include "pre_guard.h"
 #include <QDockWidget>
+#include <QPointer>
 #include "post_guard.h"
 
+class Host;
 class TAction;
 class TFlipButton;
-
 class QGridLayout;
 
 
@@ -38,10 +39,11 @@ class TToolBar : public QDockWidget
 
 public:
     Q_DISABLE_COPY(TToolBar)
-    TToolBar(TAction*, const QString&, QWidget* pW = nullptr);
+    TToolBar(Host*, TAction*, const QString&, QWidget* pW = nullptr);
     void addButton(TFlipButton* pW);
     void resizeEvent(QResizeEvent* e) override;
     void moveEvent(QMoveEvent* e) override;
+    void mousePressEvent(QMouseEvent*) override;
     void setVerticalOrientation() { mVerticalOrientation = true; }
     void setHorizontalOrientation() { mVerticalOrientation = false; }
     void clear();
@@ -55,6 +57,7 @@ public:
 private:
     bool mVerticalOrientation;
     QWidget* mpWidget;
+    QPointer<Host> mpHost;
     QString mName;
     bool mRecordMove;
     QGridLayout* mpLayout;

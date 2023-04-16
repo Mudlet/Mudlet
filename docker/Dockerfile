@@ -1,42 +1,47 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
     ccache \
+    clang \
     clang-format \
     clang-tidy \
-    clazy \
     cmake \
     gdb \
     git \
-    libboost-all-dev \
     libboost-dev \
+    libboost-all-dev \
     libglib2.0-dev \
     libglu1-mesa-dev \
     libgstreamer1.0-dev \
     libhunspell-dev \
-    liblua5.1-dev \
+    liblua5.1-0-dev \
     libpcre3-dev \
-    libpugixml-dev \
-    libpulse-dev \
-    libqt5opengl5-dev \
-    libsecret-1-dev \
-    libyajl-dev \
     libzip-dev \
+    libyajl-dev \
+    libpulse-dev \
+    libpugixml-dev \
+    libqt5opengl5-dev \
+    libqt5texttospeech5-dev \
+    libsecret-1-dev \
     lua-filesystem \
-    lua-rex-pcre \
     lua-sql-sqlite3 \
     lua-zip \
-    lua5.1 \
     luarocks \
+    lua5.1 \
     mesa-common-dev \
-    qt5-default \
+    qt5keychain-dev \
+    qt5-qmake \
+    qtbase5-dev-tools \
+    qtbase5-dev \
+    qtchooser \
+    qtcreator \
     qtmultimedia5-dev \
     qttools5-dev \
-    qt5keychain-dev \
-    qtcreator \
-    valgrind \
+    qtspeech5-flite-plugin \
+    qtspeech5-speechd-plugin \
+    ubuntu-restricted-extras \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 

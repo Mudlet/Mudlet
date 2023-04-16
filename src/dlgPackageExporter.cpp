@@ -93,14 +93,14 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     mPackagePathFileName.clear();
     mXmlPathFileName.clear();
     connect(ui->addFiles, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_addFiles);
-    connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_export_package);
+    connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_exportPackage);
     connect(ui->pushButton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
     connect(ui->addDependency, &QPushButton::clicked, this, &dlgPackageExporter::slot_addDependency);
-    connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_import_icon);
+    connect(ui->pushButton_addIcon, &QPushButton::clicked, this, &dlgPackageExporter::slot_importIcon);
     connect(mCancelButton, &QPushButton::clicked, this, &dlgPackageExporter::slot_cancelExport);
 
     ui->listWidget_addedFiles->installEventFilter(this);
@@ -124,6 +124,10 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     listScripts();
     listActions();
     listTimers();
+
+    setWindowTitle(tr("Package Exporter - %1",
+        "Title of the window. The %1 will be replaced by the current profile's name.")
+        .arg(mpHost->getName()));
 }
 
 dlgPackageExporter::~dlgPackageExporter()
@@ -340,7 +344,7 @@ void dlgPackageExporter::checkToEnableExportButton()
     }
 }
 
-void dlgPackageExporter::slot_import_icon()
+void dlgPackageExporter::slot_importIcon()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), QDir::currentPath(), tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
     if (fileName.isEmpty()) {
@@ -455,7 +459,7 @@ void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& t
     }
 }
 
-void dlgPackageExporter::slot_export_package()
+void dlgPackageExporter::slot_exportPackage()
 {
     // The native windows dialog does not support displaying files - and as this
     // code will clobber/overwrite an existing package with the same
@@ -558,7 +562,7 @@ void dlgPackageExporter::slot_export_package()
         } else {
             auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment);
             auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
-            QObject::connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, [=]() {
+            connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=]() {
                 mExportingPackage = false;
                 checkToEnableExportButton();
 
@@ -819,7 +823,10 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     QFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
+        // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         out.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
         out << mPackageConfig;
         out.flush();
         configFile.close();
@@ -916,12 +923,12 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
         QFileInfo stagingFileInfo(stagingFile.fileInfo());
         if (!stagingFileInfo.isReadable()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << stagingFile.fileName() << "it is NOT readable!";
+            qWarning() << "dlgPackageExporter::slot_exportPackage() skipping file: " << stagingFile.fileName() << "it is NOT readable!";
             continue;
         }
 
         if (stagingFileInfo.isSymLink()) {
-            qWarning() << "dlgPackageExporter::slot_export_package() skipping file: " << stagingFile.fileName() << "it is a Symlink - avoided to prevent file-system loops!";
+            qWarning() << "dlgPackageExporter::slot_exportPackage() skipping file: " << stagingFile.fileName() << "it is a Symlink - avoided to prevent file-system loops!";
             continue;
         }
 
@@ -1060,14 +1067,14 @@ void dlgPackageExporter::slot_addFiles()
     if (dialogListView) {
         dialogListView->setSelectionMode(QAbstractItemView::ExtendedSelection);
         //button would be disabled if no folder is selected
-        connect(dialogListView, &QListView::clicked, [=] { button->setEnabled(true); });
+        connect(dialogListView, &QListView::clicked, this, [=] { button->setEnabled(true); });
     }
     QTreeView* dialogTreeView = fDialog->findChild<QTreeView*>();
     if (dialogTreeView) {
         dialogTreeView->setSelectionMode(QAbstractItemView::ExtendedSelection);
-        connect(dialogTreeView, &QTreeView::clicked, [=] { button->setEnabled(true); });
+        connect(dialogTreeView, &QTreeView::clicked, this, [=] { button->setEnabled(true); });
     }
-    connect(button, &QPushButton::clicked, [=] { fDialog->QDialog::accept(); });
+    connect(button, &QPushButton::clicked, this, [=] { fDialog->QDialog::accept(); });
     if (fDialog->exec()) {
         selectedFiles = fDialog->selectedFiles();
     }

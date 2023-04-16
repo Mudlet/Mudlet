@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2020 by Matthias Urlichs matthias@urlichs.de            *
@@ -40,6 +40,7 @@
 #include <QLabel>
 #include <QPointer>
 #include <QWidget>
+#include <QIcon>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
@@ -88,6 +89,13 @@ public:
         Buffer = 0x20 // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
+
+    enum SearchOption {
+        // Unset:
+        SearchOptionNone = 0x0,
+        SearchOptionCaseSensitive = 0x1
+    };
+    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -145,6 +153,10 @@ public:
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
+    void setCommandBgColor(const QColor&);
+    void setCommandBgColor(int, int, int, int);
+    void setCommandFgColor(const QColor&);
+    void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
     void setCmdVisible(bool);
@@ -180,26 +192,25 @@ public:
     void luaWrapLine(int line);
     QString getCurrentLine();
     void selectCurrentLine();
-
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
-
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
-    // In the next pair of functions the first element in the return is an
+    // In the next function the first element in the return is an
     // error code:
     // 0 = Okay
     // 1 = Window not found
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
-
     void setCaretMode(bool enabled);
+    void setSearchOptions(const SearchOptions);
+    void setProxyForFocus(TCommandLine*);
+    void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
 
 
     QPointer<Host> mpHost;
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
-    // Only on a MainConsole type instance:
     QPointer<TCommandLine> mpCommandLine;
 
     TBuffer buffer;
@@ -222,20 +233,15 @@ public:
     //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
     int mButtonState = 1;
 
-    QString mConsoleName = qsl("main");
+    QString mConsoleName;
     QString mCurrentLine;
     QString mDisplayFontName = qsl("Bitstream Vera Sans Mono");
     int mDisplayFontSize = 14;
     QFont mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     int mEngineCursor = -1;
-    TChar mFormatBasic;
-    TChar mFormatSystemMessage;
 
     int mIndentCount = 0;
-    int mMainFrameBottomHeight = 0;
-    int mMainFrameLeftWidth = 0;
-    int mMainFrameRightWidth = 0;
-    int mMainFrameTopHeight = 0;
+    QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;
 
@@ -271,12 +277,19 @@ public:
     TSplitter* splitter = nullptr;
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
+    QToolButton* timeStampButton = nullptr;
     bool mUserAgreedToCloseConsole = false;
     QLineEdit* mpBufferSearchBox = nullptr;
+    QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
     QToolButton* mpBufferSearchDown = nullptr;
+    // The line on which the current search result has been found, or the next
+    // one is to start (currently only for the main console):
     int mCurrentSearchResult = 0;
-    QList<int> mSearchResults;
+    // Not used:
+    // QList<int> mSearchResults;
+    // The term that is currently being search for (currently only for the main
+    // console):
     QString mSearchQuery;
     QWidget* mpButtonMainLayer = nullptr;
     int mBgImageMode = 0;
@@ -289,9 +302,10 @@ public slots:
     void slot_searchBufferUp();
     void slot_searchBufferDown();
     void slot_toggleReplayRecording();
-    void slot_stop_all_triggers(bool);
+    void slot_stopAllItems(bool);
     void slot_toggleLogging();
     void slot_changeControlCharacterHandling(const ControlCharacterMode);
+    void slot_toggleSearchCaseSensitivity(bool);
 
 
 protected:
@@ -301,11 +315,18 @@ protected:
     void mousePressEvent(QMouseEvent*) override;
 
 
+private slots:
+    void slot_adjustAccessibleNames();
+    void slot_clearSearchResults();
+
 private:
-    void adjustAccessibleNames();
+    void createSearchOptionIcon();
 
     ConsoleType mType = UnknownType;
     QSize mOldSize;
+    SearchOptions mSearchOptions = SearchOptionNone;
+    QAction* mpAction_searchOptions = nullptr;
+    QIcon mIcon_searchOptions;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)

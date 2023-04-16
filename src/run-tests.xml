@@ -323,8 +323,8 @@ end -- bustedState.runTests</script>
 			<script>-- This is the set of mudlet scripts to allow running Busted tests from
 -- within the hosted lua environment of Mudlet.
 -- Busted is "a unit testing framework with a focus on being easy to use."
--- It is written by olivine Labs, and documentation can be found on
--- their website: https://olivinelabs.com/busted/
+-- It is written by olivine Labs (now lunarmodules), and documentation can be found on
+-- their website: https://lunarmodules.github.io/busted/
 --
 -- Using busted within Mudlet's hosted environment allows you to test
 -- lua functions defined within the environment, both user created functions

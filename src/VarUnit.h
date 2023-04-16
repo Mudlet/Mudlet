@@ -76,10 +76,12 @@ public:
 
 private:
     TVar* base;
-    QSet<QString> varList;
+    QSet<QString> variableSet;
+    // ?? variables
     QMap<QTreeWidgetItem*, TVar*> wVars;
+    // temporary variables
     QMap<QTreeWidgetItem*, TVar*> tVars;
-    QSet<const void*> pointers;
+    QSet<const void*> mPointers;
 };
 
 #endif // MUDLET_VARUNIT_H

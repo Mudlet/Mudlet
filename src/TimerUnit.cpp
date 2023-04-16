@@ -203,7 +203,7 @@ bool TimerUnit::registerTimer(TTimer* pT)
 
     // This has some side effects, including stopping the timer...
     pT->setTime(pT->getTime());
-    QTimer::connect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timer_fires, Qt::UniqueConnection);
+    QTimer::connect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timerFires, Qt::UniqueConnection);
     return true;
 }
 
@@ -215,7 +215,7 @@ void TimerUnit::unregisterTimer(TTimer* pT)
     // Stop the QTimer ASAP:
     pT->stop();
     pT->deactivate();
-    QTimer::disconnect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timer_fires);
+    QTimer::disconnect(pT->getQTimer(), &QTimer::timeout, mudlet::self(), &mudlet::slot_timerFires);
     if (pT->getParent()) {
         _removeTimer(pT);
         return;
@@ -260,7 +260,7 @@ void TimerUnit::_removeTimer(TTimer* pT)
 bool TimerUnit::enableTimer(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTimer*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TTimer* pT = it.value();
 
@@ -299,7 +299,7 @@ bool TimerUnit::enableTimer(const QString& name)
 bool TimerUnit::disableTimer(const QString& name)
 {
     bool found = false;
-    QMap<QString, TTimer*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TTimer* pT = it.value();
         if (pT->isOffsetTimer()) {

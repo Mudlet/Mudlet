@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2022 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *   Copyright (C) 2023 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,9 +24,12 @@
 #include <QDebug>
 
 Announcer::Announcer(QWidget *parent)
-    : QWidget{parent}
+: QWidget{parent}
 {
-
+    // Needed to prevent this (invisible) widget from being seen by itself in
+    // the top left corner of the main application window where it masks part of
+    // the main menu bar:
+    setVisible(false);
 }
 
 void Announcer::announce(const QString& text, const QString& processing)

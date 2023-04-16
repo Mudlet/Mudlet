@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -43,7 +43,9 @@
 #include <QFile>
 #include <QFont>
 #include <QList>
+#include <QMargins>
 #include <QPointer>
+#include <QStack>
 #include <QTextStream>
 #include "post_guard.h"
 
@@ -163,20 +165,20 @@ public:
 
     QString         getName()                        { return mHostName; }
     QString         getCommandSeparator()            { return mCommandSeparator; }
-    void            setName(const QString& s);
+    void            setName(const QString& name);
     QString         getUrl()                         { return mUrl; }
-    void            setUrl(const QString& s)         { mUrl = s; }
+    void            setUrl(const QString& url)       { mUrl = url; }
     QString         getDiscordGameName()             { return mDiscordGameName; }
-    void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
+    void            setDiscordGameName(const QString& name) { mDiscordGameName = name; }
     int             getPort()                        { return mPort; }
-    void            setPort(const int p)                 { mPort = p; }
-    void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
+    void            setPort(const int port)          { mPort = port; }
+    void            setAutoReconnect(const bool reconnect) { mTelnet.setAutoReconnect(reconnect); }
     QString &       getLogin()                       { return mLogin; }
-    void            setLogin(const QString& s)       { mLogin = s; }
+    void            setLogin(const QString& login)       { mLogin = login; }
     QString &       getPass()                        { return mPass; }
-    void            setPass(const QString& s)        { mPass = s; }
+    void            setPass(const QString& password) { mPass = password; }
     int             getRetries()                     { return mRetries;}
-    void            setRetries(const int c)          { mRetries = c; }
+    void            setRetries(const int retries)    { mRetries = retries; }
     int             getTimeout()                     { return mTimeout; }
     void            setTimeout(const int seconds)    { mTimeout = seconds; }
     bool            wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
@@ -196,7 +198,7 @@ public:
     void            setDiscordInviteURL(const QString& s);
     const QString&  getDiscordInviteURL() const { return mDiscordInviteURL; }
     void            setSpellDic(const QString&);
-    const QString&  getSpellDic() { return mSpellDic; }
+    QString         getSpellDic();
     void            setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void            getUserDictionaryOptions(bool& useDictionary, bool& useShared) {
                         useDictionary = mEnableUserDictionary;
@@ -219,7 +221,6 @@ public:
     KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
     ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
 
-    void connectToServer();
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
     int getHostID()
@@ -340,6 +341,7 @@ public:
     void setPlayerRoomStyleDetails(const quint8 styleCode, const quint8 outerDiameter = 120, const quint8 innerDiameter = 70, const QColor& outerColor = QColor(), const QColor& innerColor = QColor());
     void getPlayerRoomStyleDetails(quint8& styleCode, quint8& outerDiameter, quint8& innerDiameter, QColor& outerColor, QColor& innerColor);
     void setSearchOptions(const dlgTriggerEditor::SearchOptions);
+    void setBufferSearchOptions(const TConsole::SearchOptions);
     std::pair<bool, QString> setMapperTitle(const QString&);
     void setDebugShowAllProblemCodepoints(const bool);
     bool debugShowAllProblemCodepoints() const { return mDebugShowAllProblemCodepoints; }
@@ -380,6 +382,8 @@ public:
     bool setLabelOnLeave(const QString&, const int);
     std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
+    bool setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha);
     std::optional<QColor> getBackgroundColor(const QString& name) const;
     bool setBackgroundImage(const QString& name, QString& path, int mode);
     bool resetBackgroundImage(const QString& name);
@@ -397,6 +401,14 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
+    void setFocusOnHostActiveCommandLine();
+    void recordActiveCommandLine(TCommandLine*);
+    void forgetCommandLine(TCommandLine*);
+    QPointer<TConsole> parentTConsole(QObject*) const;
+    QMargins borders() const { return mBorders; }
+    void setBorders(const QMargins);
+    void loadMap();
+
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -416,10 +428,6 @@ public:
     bool mBlockScriptCompile;
     bool mBlockStopWatchCreation;
     bool mEchoLuaErrors;
-    int mBorderBottomHeight;
-    int mBorderLeftWidth;
-    int mBorderRightWidth;
-    int mBorderTopHeight;
     QFont mCommandLineFont;
     QString mCommandSeparator;
     bool mEnableGMCP;
@@ -427,6 +435,9 @@ public:
     bool mEnableMSP;
     bool mEnableMSDP;
     bool mServerMXPenabled;
+    bool mAskTlsAvailable;
+    int mMSSPTlsPort;
+    QString mMSSPHostName;
 
     TMxpMudlet mMxpClient;
     TMxpProcessor mMxpProcessor;
@@ -513,6 +524,10 @@ public:
 
     QString mUrl;
 
+    QString mBackupHostName;
+    int mBackupPort = 23;
+    QString mBackupUrl;
+
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
     bool mUSE_UNIX_EOL;
@@ -585,6 +600,7 @@ public:
     bool mMapStrongHighlight;
     QStringList mGMCP_merge_table_keys;
     bool mLogStatus = false;
+    bool mTimeStampStatus = false;
     bool mEnableSpellCheck;
     QStringList mInstalledPackages;
     // module name = location on disk, sync to other profiles?, priority
@@ -634,10 +650,11 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
+    TConsole::SearchOptions mBufferSearchOptions;
     QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
     QList<QString> mDockLayoutChanges;
-    QList<TToolBar*> mToolbarLayoutChanges;
+    QList<QPointer<TToolBar>> mToolbarLayoutChanges;
 
     // string list: 0 - event name, 1 - display label, 2 - tooltip text
     QMap<QString, QStringList> mConsoleActions;
@@ -703,6 +720,9 @@ private:
     void startMapAutosave();
     void timerEvent(QTimerEvent *event) override;
     void autoSaveMap();
+    QString sanitizePackageName(const QString packageName) const;
+    TCommandLine* activeCommandLine();
+
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
@@ -714,6 +734,8 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
+    // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
+    std::optional<bool> mSaveTimer;
 
     QFile mErrorLogFile;
 
@@ -748,9 +770,9 @@ private:
     bool mHaveMapperScript;
     // This option makes the control on the preferences tristated so the value
     // used depends - currently - on what the MUD Server encoding is (only set
-    // true for GBK and GB18030 ones) - however this is likely to be due for
-    // revision once locale/language support is brought in - when it can be
-    // made dependent on that instead.
+    // true for GBK, GB18030, Big5/Big-HKCS, EUC-KR ones) - however this was
+    // due for revision once locale/language support is brought in - when it
+    // could be made dependent on that instead.
     bool mAutoAmbigousWidthGlyphsSetting;
     // If above is true is the value deduced from the MUD server encoding, if
     // the above is false is the user's direct setting - this is so that changes
@@ -841,6 +863,17 @@ private:
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;
+
+    // Tracks which command line was last used for this profile so that we can
+    // return to it when switching between profiles:
+    QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+
+    // ensures that only one "zero-time" timer is created by the lambda in
+    // setFocusOnHostActiveCommandLine(), even when it is called multiple
+    // times:
+    bool mFocusTimerRunning = false;
+
+    QMargins mBorders;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

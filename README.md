@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <a href="https://github.com/Mudlet/Mudlet"><img src="https://bazaar.launchpad.net/~mudlet-makers/mudlet/artwork/download/head:/mudlet_main_256px.pn-20171109060211-hidv2woj9dffwyql-11/mudlet_main_256px.png" alt="Mudlet"></a>
+  <a href="https://github.com/Mudlet/Mudlet"><img src="https://github.com/Mudlet/artwork/blob/master/mudlet_main_256px.png?raw=true" alt="Mudlet"></a>
   <br>
   Mudlet
   <br>
@@ -20,11 +20,6 @@
   </a>
   <a href="https://www.codefactor.io/repository/github/mudlet/mudlet">
     <img src="https://www.codefactor.io/repository/github/mudlet/mudlet/badge" alt="CodeFactor" />
-  </a>
-  <br>
-  <sup><b>Windows:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://ci.appveyor.com/api/projects/status/31fqq844br6g6i40/branch/development?svg=true" alt="AppVeyor (Windows) CI Build status" style="max-width:100%;">
-  </a>
-  <sup><b>Linux &amp; MacOS:</b></sup>&nbsp;<a href="http://mudlet.org/download/" rel="nofollow"><img src="https://travis-ci.org/Mudlet/Mudlet.svg?branch=development" alt="Travis (Linux &amp; MacOs) CI Build status" style="max-width:100%;">
   </a>
 </p>
 
@@ -87,7 +82,7 @@ We believe in making Mudlet available to people on all major platforms, and we w
 
 ## Download
 
-Download for free from [mudlet.org](https://www.mudlet.org/download/)
+Download for free from [mudlet.org](https://www.mudlet.org/download/).
 
 ## How To Use
 
@@ -98,6 +93,10 @@ Download for free from [mudlet.org](https://www.mudlet.org/download/)
     1. Enter `Server address` and `Port` of your game (found on the game's website, e.g. `mygame.com` and `2003`)
     1. Pick a `Profile name`
     1. Hit `Connect`
+
+## Compiling
+
+If you'd like to compile Mudlet yourself instead of [downloading](https://www.mudlet.org/download/), you can find instructions to do so [here](https://wiki.mudlet.org/w/Compiling_Mudlet).
 
 ## Vision
 
@@ -120,7 +119,7 @@ This software wouldnt've been possible without these open source packages:
 - [DBLSQD](https://www.dblsqd.com/)
 - [argparse](https://github.com/luarocks/argparse)
 - [Boost Graph Library](https://www.boost.org/doc/libs/1_77_0/libs/graph/doc/)
-- [Busted](http://olivinelabs.com/busted/)
+- [Busted](https://lunarmodules.github.io/busted/)
 - [Ccache](https://ccache.dev/)
 - [Communi](https://communi.github.io/)
 - [Hunspell](https://hunspell.github.io/)

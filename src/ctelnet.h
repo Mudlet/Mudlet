@@ -158,6 +158,7 @@ public:
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
     void setMSPVariables(const QByteArray&);
+    bool isIPAddress(QString&);
     bool purgeMediaCache();
     void atcpComposerCancel();
     void atcpComposerSave(QString);
@@ -213,14 +214,17 @@ public:
 
 
 public slots:
-    void setDownloadProgress(qint64, qint64);
+    void slot_setDownloadProgress(qint64, qint64);
     void slot_replyFinished(QNetworkReply*);
     void slot_processReplayChunk();
-    void handle_socket_signal_hostFound(QHostInfo);
-    void handle_socket_signal_connected();
-    void handle_socket_signal_disconnected();
-    void handle_socket_signal_readyRead();
-    void handle_socket_signal_error();
+    void slot_socketHostFound(QHostInfo);
+    void slot_socketConnected();
+    void slot_socketDisconnected();
+    void slot_socketReadyToBeRead();
+// Not used    void slot_socketError();
+#if !defined(QT_NO_SSL)
+    void slot_socketSslError(const QList<QSslError>&);
+#endif
     void slot_timerPosting();
     void slot_send_login();
     void slot_send_pass();
@@ -240,7 +244,7 @@ private:
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
 
-    void processTelnetCommand(const std::string& command);
+    void processTelnetCommand(const std::string& telnetCommand);
     void sendTelnetOption(char type, char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
@@ -248,7 +252,10 @@ private:
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void setKeepAlive(int socketHandle);
     void processChunks();
-    void sendNAWS(int x, int y);
+#if !defined(QT_NO_SSL)
+    void promptTlsConnectionAvailable();
+#endif
+    void sendNAWS(int width, int height);
     static std::pair<bool, bool> testReadReplayFile();
 
 
@@ -348,12 +355,6 @@ private:
     // we can send NAWS data when it changes:
     int mNaws_x = 0;
     int mNaws_y = 0;
-
-private slots:
-#if !defined(QT_NO_SSL)
-    void handle_socket_signal_sslError(const QList<QSslError> &errors);
-#endif
-
 };
 
 #endif // MUDLET_CTELNET_H

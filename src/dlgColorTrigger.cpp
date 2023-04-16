@@ -31,8 +31,8 @@
 #include "mudlet.h"
 
 
-dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGround, const QString& title)
-: QDialog(pF)
+dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const bool isBackGround, const QString& title)
+: QDialog(pParentWidget)
 , mpTrigger(pT)
 , mIsBackground(isBackGround)
 {
