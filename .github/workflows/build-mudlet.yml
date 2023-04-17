@@ -50,6 +50,8 @@ jobs:
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
       # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
       CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
+      # let vcpkg know which os/compiler it should use
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.triplet }}
 
     steps:
     - name: Checkout Mudlet source code
@@ -120,12 +122,10 @@ jobs:
 
     - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v11.1
-      env:
-        vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
       with:
-        vcpkgArguments: '@${{env.vcpkgResponseFile}}'
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
-        appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
+        # run it now as we need libraries to be present when moving them around in the "non-vcpkg dependencies" step later on
+        runVcpkgInstall: true
 
     - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
