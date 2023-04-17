@@ -22,7 +22,7 @@
       "name": "pcre"
     },
     {
-      "name": "lua[core]"
+      "name": "lua"
     }
   ]
 }
