@@ -20,6 +20,9 @@
     },
     {
       "name": "pcre"
+    },
+    {
+      "name": "lua[core]"
     }
   ]
 }
