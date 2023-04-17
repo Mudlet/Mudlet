@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "vcpkg-configuration": {
+    "overlay-ports": [
+      "./3rdparty/our-vcpkg-dependencies"
+    ]
+  },
+  "dependencies": [
+    {
+      "name": "yajl"
+    },
+    {
+      "name": "hunspell"
+    },
+    {
+      "name": "pugixml"
+    },
+    {
+      "name": "sqlite3"
+    },
+    {
+      "name": "pcre"
+    }
+  ]
+}
