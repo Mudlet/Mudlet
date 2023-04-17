@@ -196,6 +196,7 @@ jobs:
         # Install lua-yajl early to generate translation statistics
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
         # workaround https://github.com/lloyd/yajl/issues/209
+        ls ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/
         mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/lib/libyajl.a
         mv ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/debug/lib/libyajl.a
         # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
