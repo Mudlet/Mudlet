@@ -72,7 +72,7 @@ class TTrigger : public Tree<TTrigger>
 public:
     virtual ~TTrigger();
     TTrigger(TTrigger* parent, Host* pHost);
-    TTrigger(const QString& name, const QStringList& regexList, const QList<int>& regexPropertyList, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
+    TTrigger(const QString& name, const QStringList& patterns, const QList<int>& patternKinds, bool isMultiline, Host* pHost); //throws exception ExObjNoCreate
 
     // Used as ANSI color code for either fore or back ground in color triggers
     // that is not considered when checking the color - both being set to this
@@ -92,8 +92,8 @@ public:
     void setCommand(const QString& b) { mCommand = b; }
     QString getName() { return mName; }
     void setName(const QString& name);
-    QStringList& getRegexCodeList() { return mRegexCodeList; }
-    QList<int> getRegexCodePropertyList() { return mRegexCodePropertyList; }
+    QStringList& getPatternsList() { return mPatterns; }
+    QList<int> getRegexCodePropertyList() { return mPatternKinds; }
     QColor getFgColor() const { return mFgColor; }
     QColor getBgColor() const { return mBgColor; }
     void setColorizerFgColor(const QColor& c) { mFgColor = c; }
@@ -103,7 +103,7 @@ public:
     void compile();
     void execute();
     bool isFilterChain();
-    bool setRegexCodeList(QStringList regex, QList<int> regexPropertyList);
+    bool setRegexCodeList(QStringList patterns, QList<int> patternKinds);
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
@@ -122,11 +122,10 @@ public:
     TTrigger* killTrigger(const QString&);
     bool match_substring(const QString&, const QString&, int, int posOffset = 0);
     bool match_perl(char*, const QString&, int, int posOffset = 0);
-    bool match_wildcard(const QString&, int);
     bool match_exact_match(const QString&, const QString&, int, int posOffset = 0);
-    bool match_begin_of_line_substring(const QString& toMatch, const QString& regex, int regexNumber, int posOffset = 0);
+    bool match_begin_of_line_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset = 0);
     bool match_lua_code(int);
-    bool match_line_spacer(int regexNumber);
+    bool match_line_spacer(int patternNumber);
     bool match_color_pattern(int, int);
     bool match_prompt(int patternNumber);
     void setConditionLineDelta(int delta) { mConditionLineDelta = delta; }
@@ -158,7 +157,7 @@ public:
     int mKeepFiring;
     QPointer<Host> mpHost;
     QString mName;
-    QStringList mRegexCodeList;
+    QStringList mPatterns;
     bool exportItem;
     bool mModuleMasterFolder;
     // specifies whenever the payload is Lua code as a string
@@ -174,9 +173,16 @@ private:
 
     void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
     void filter(std::string&, int&);
+    void processExactMatch(const QString& line, int patternNumber, int posOffset);
+    void processRegexMatch(const char* haystackC, const QString& haystack, int patternNumber, int posOffset,
+                           const QSharedPointer<pcre>& re, int haystackCLength, int rc, int* ovector);
+    void processBeginOfLine(const QString& needle, int patternNumber, int posOffset);
+    void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where);
+    void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList);
+    void processPromptMatch(int patternNumber);
 
 
-    QList<int> mRegexCodePropertyList;
+    QList<int> mPatternKinds;
     QMap<int, QSharedPointer<pcre>> mRegexMap;
 
     // Lua code as a string to run

@@ -32,7 +32,7 @@ public:
     bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override {
         Q_UNUSED(ctx)
         Q_UNUSED(client)
-        return tag->isNamed(QStringLiteral("!ENTITY")) || tag->isNamed(QStringLiteral("!EN"));
+        return tag->isNamed(qsl("!ENTITY")) || tag->isNamed(qsl("!EN"));
     }
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;

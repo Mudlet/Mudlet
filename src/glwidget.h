@@ -23,8 +23,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QOpenGLWidget>
+// (2 of 2) This must be included before any Qt library tries to include
+// windows.h which pulls in winsock.h to avoid (multiple):
+// "#warning Please include winsock2.h before windows.h [-Wcpp]" warnings
+#if defined(INCLUDE_WINSOCK2)
+#include <winsock2.h>
+#endif
+
 #include "pre_guard.h"
+#include <QOpenGLWidget>
 #include <QPointer>
 #include "post_guard.h"
 

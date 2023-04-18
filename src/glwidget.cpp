@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016, 2019-2021 by Stephen Lyons                  *
+ *   Copyright (C) 2014, 2016, 2019-2021, 2023 by Stephen Lyons            *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -223,11 +223,7 @@ void GLWidget::slot_setCameraPositionZ(int angle)
 
 void GLWidget::initializeGL()
 {
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QColor color(QColorConstants::Black);
-#else
-    QColor color(Qt::black);
-#endif
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;
     yRot = 5;
@@ -274,11 +270,7 @@ void GLWidget::paintGL()
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             QPainter painter(this);
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
             painter.setPen(QColorConstants::White);
-#else
-            painter.setPen(Qt::white);
-#endif
             painter.setFont(QFont("Bitstream Vera Sans Mono", 30));
             painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
 
@@ -2063,8 +2055,13 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         return;
     }
     if (event->buttons() & Qt::LeftButton) {
-        int x = event->x();
-        int y = height() - event->y(); // the opengl origin is at bottom left
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        auto eventPos = event->pos();
+#else
+        auto eventPos = event->position().toPoint();
+#endif
+        int x = eventPos.x();
+        int y = height() - eventPos.y(); // the opengl origin is at bottom left
         GLuint buff[16] = {0};
         GLint hits;
         GLint view[4];
@@ -2105,8 +2102,14 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         update();
         if (mpMap->mpRoomDB->getRoom(mTarget)) {
             mpMap->mTargetID = mTarget;
-            if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
+            if (mpMap->mpHost->checkForCustomSpeedwalk()) {
+                mpMap->mpHost->startSpeedWalk(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID);
+            } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                 mpMap->mpHost->startSpeedWalk();
+            } else {
+                mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
+                                                          .arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)),
+                                                               QString::number(mpMap->mTargetID))));
             }
             //            else
             //            {
@@ -2134,19 +2137,24 @@ void GLWidget::mouseMoveEvent(QMouseEvent* event)
         return;
     }
     if (mPanMode) {
-        int x = event->x();
-        int y = height() - event->y(); // the opengl origin is at bottom left
-        if ((mPanXStart - x) > 1) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        auto eventPos = event->localPos();
+#else
+        auto eventPos = event->position();
+#endif
+        auto x = static_cast<float>(eventPos.x());
+        auto y = static_cast<float>(height()) - static_cast<float>(eventPos.y()); // the opengl origin is at bottom left
+        if ((mPanXStart - x) > 1.0f) {
             slot_shiftRight();
             mPanXStart = x;
-        } else if ((mPanXStart - x) < -1) {
+        } else if ((mPanXStart - x) < -1.0f) {
             slot_shiftLeft();
             mPanXStart = x;
         }
-        if ((mPanYStart - y) > 1) {
+        if ((mPanYStart - y) > 1.0f) {
             slot_shiftUp();
             mPanYStart = y;
-        } else if ((mPanYStart - y) < -1) {
+        } else if ((mPanYStart - y) < -1.0f) {
             slot_shiftDown();
             mPanYStart = y;
         }

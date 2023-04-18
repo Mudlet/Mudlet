@@ -223,11 +223,7 @@ QString IrcMessageFormatter::formatNickMessage(IrcNickMessage* message, bool isF
 QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool isForLua)
 {
     if (message->isReply()) {
-#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 14, 0))
         const QStringList params = message->content().split(" ", Qt::SkipEmptyParts);
-#else
-        const QStringList params = message->content().split(" ", QString::SkipEmptyParts);
-#endif
         const QString cmd = params.value(0);
         if (cmd.toUpper() == "PING") {
             const QString secs = formatSeconds(params.value(1).toInt());
@@ -462,7 +458,7 @@ QString IrcMessageFormatter::formatWhoReplyMessage(IrcWhoReplyMessage* message, 
 
 QString IrcMessageFormatter::formatSeconds(int secs)
 {
-    const QDateTime time = QDateTime::fromTime_t(secs);
+    const QDateTime time = QDateTime::fromSecsSinceEpoch(secs);
     return QObject::tr("%1s").arg(time.secsTo(QDateTime::currentDateTime()));
 }
 

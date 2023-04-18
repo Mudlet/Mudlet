@@ -42,7 +42,7 @@ void FontManager::addFonts()
 
     // load all fonts in subfolders (of the 'font' folder)
     for (auto fontfolder : dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
-        loadFonts(QStringLiteral("%1/%2").arg(dir.absolutePath(), fontfolder));
+        loadFonts(qsl("%1/%2").arg(dir.absolutePath(), fontfolder));
     }
 }
 
@@ -51,12 +51,12 @@ void FontManager::loadFonts(const QString& folder)
 {
     // Check what happens with this: "Adding application fonts on Unix/X11 platforms without fontconfig is currently not supported."
     QStringList filters;
-    filters << QStringLiteral("*.ttf") << QStringLiteral("*.otf");
+    filters << qsl("*.ttf") << qsl("*.otf");
     QDir dir = folder;
     dir.setNameFilters(filters);
 
     for (auto fontFile : dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
-        QString fontFilePathName = QStringLiteral("%1/%2").arg(dir.absolutePath(), fontFile);
+        QString fontFilePathName = qsl("%1/%2").arg(dir.absolutePath(), fontFile);
         loadFont(fontFilePathName);
     }
 }

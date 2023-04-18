@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2018-2019, 2022-2023 by Stephen Lyons                   *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,8 @@
  ***************************************************************************/
 
 
+#include "TConsole.h"
+
 #include "pre_guard.h"
 #include <QPlainTextEdit>
 #include <QPointer>
@@ -32,10 +35,8 @@
 #include "post_guard.h"
 
 
-class TConsole;
 class KeyUnit;
 class Host;
-
 
 class TCommandLine : public QPlainTextEdit //QLineEdit
 {
@@ -50,14 +51,14 @@ public:
     enum CommandLineTypeFlag {
         UnknownType = 0x0,     // Should not be encountered but left as a trap value
         MainCommandLine = 0x1, // One per profile
-        SubCommandLine = 0x2,  // Overlaid on top of MainConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
-        ConsoleCommandLine = 0x4,  // Integrated in MiniConsoles
+        SubCommandLine = 0x2,  // Overlaid on top of TMainConsole or TConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
+        ConsoleCommandLine = 0x4,  // Integrated in TConsoles other than those derived into a TMainConsole
     };
 
     Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
 
     Q_DISABLE_COPY(TCommandLine)
-    explicit TCommandLine(Host*, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
+    explicit TCommandLine(Host*, const QString&, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void hideEvent(QHideEvent*) override;
@@ -70,21 +71,29 @@ public:
     void addSuggestion(const QString&);
     void removeSuggestion(const QString&);
     void clearSuggestions();
+    void addBlacklist(const QString&);
+    void removeBlacklist(const QString&);
+    void clearBlacklist();
     void adjustHeight();
+    TConsole* console() const { return mpConsole; }
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
     QString mCommandLineName;
+
+    QMap<QString, QString> contextMenuItems;
 
 public slots:
     void slot_popupMenu();
     void slot_addWord();
     void slot_removeWord();
     void slot_clearSelection(bool yes);
+    void slot_adjustAccessibleNames();
 
 private:
     bool event(QEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
+    void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion();
     void spellCheck();
     void handleTabCompletion(bool);
@@ -96,27 +105,29 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
 
     QPointer<Host> mpHost;
-    CommandLineType mType;
-    KeyUnit* mpKeyUnit;
-    TConsole* mpConsole;
+    CommandLineType mType = UnknownType;
+    KeyUnit* mpKeyUnit = nullptr;
+    QPointer<TConsole> mpConsole;
     QString mLastCompletion;
-    int mTabCompletionCount;
-    int mAutoCompletionCount;
+    int mTabCompletionCount = 0;
+    int mAutoCompletionCount = 0;
     QString mTabCompletionTyped;
-    bool mUserKeptOnTyping;
-    int mHistoryBuffer;
+    bool mUserKeptOnTyping = false;
+    int mHistoryBuffer = 0;
     QStringList mHistoryList;
     QString mSelectedText;
-    int mSelectionStart;
+    int mSelectionStart = 0;
     QString mTabCompletionOld;
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
     bool mSpellChecking = false;
-    int mSystemDictionarySuggestionsCount;
-    int mUserDictionarySuggestionsCount;
-    char** mpSystemSuggestionsList;
-    char** mpUserSuggestionsList;
+    int mSystemDictionarySuggestionsCount = 0;
+    int mUserDictionarySuggestionsCount = 0;
+    char** mpSystemSuggestionsList = nullptr;
+    char** mpUserSuggestionsList = nullptr;
     QSet<QString> commandLineSuggestions;
+    QSet<QString> tabCompleteBlacklist;
+
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)

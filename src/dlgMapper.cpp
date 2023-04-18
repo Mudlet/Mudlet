@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2016, 2019-2020 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2016, 2019-2020, 2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -39,15 +39,13 @@
 using namespace std::chrono_literals;
 
 dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
-: QWidget( parent )
-, mpMap( pM )
-, mpHost( pH )
-, mShowDefaultArea( true )
+: QWidget(parent)
+, mpMap(pM)
+, mpHost(pH)
 {
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)
-    glWidget = nullptr;
     QSurfaceFormat fmt;
     fmt.setSamples(10);
     QSurfaceFormat::setDefaultFormat(fmt);
@@ -118,22 +116,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     }
     setFont(mapperFont);
     mp2dMap->mFontHeight = QFontMetrics(mpHost->getDisplayFont()).height();
-    mpMap->mCustomEnvColors[257] = mpHost->mRed_2;
-    mpMap->mCustomEnvColors[258] = mpHost->mGreen_2;
-    mpMap->mCustomEnvColors[259] = mpHost->mYellow_2;
-    mpMap->mCustomEnvColors[260] = mpHost->mBlue_2;
-    mpMap->mCustomEnvColors[261] = mpHost->mMagenta_2;
-    mpMap->mCustomEnvColors[262] = mpHost->mCyan_2;
-    mpMap->mCustomEnvColors[263] = mpHost->mWhite_2;
-    mpMap->mCustomEnvColors[264] = mpHost->mBlack_2;
-    mpMap->mCustomEnvColors[265] = mpHost->mLightRed_2;
-    mpMap->mCustomEnvColors[266] = mpHost->mLightGreen_2;
-    mpMap->mCustomEnvColors[267] = mpHost->mLightYellow_2;
-    mpMap->mCustomEnvColors[268] = mpHost->mLightBlue_2;
-    mpMap->mCustomEnvColors[269] = mpHost->mLightMagenta_2;
-    mpMap->mCustomEnvColors[270] = mpHost->mLightCyan_2;
-    mpMap->mCustomEnvColors[271] = mpHost->mLightWhite_2;
-    mpMap->mCustomEnvColors[272] = mpHost->mLightBlack_2;
+    mpMap->restore16ColorSet();
     auto menu = new QMenu(this);
     pushButton_info->setMenu(menu);
 
@@ -153,10 +136,18 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
 void dlgMapper::updateAreaComboBox()
 {
+    if (!mpMap) {
+        // We do not have a valid TMap instance pointer so doing anything now
+        // is pointless - just leave the widget empty and disabled
+        comboBox_showArea->clear();
+        comboBox_showArea->setEnabled(false);
+        return;
+    }
+
     QString oldValue = comboBox_showArea->currentText(); // Remember where we were
     QMapIterator<int, QString> itAreaNamesA(mpMap->mpRoomDB->getAreaNamesMap());
     //insert sort them alphabetically (case INsensitive)
-    QMap<QString, QString> _areaNames;
+    QMap<QString, QString> areaNames;
     while (itAreaNamesA.hasNext()) {
         itAreaNamesA.next();
         if (itAreaNamesA.key() == -1 && !mShowDefaultArea) {
@@ -164,17 +155,41 @@ void dlgMapper::updateAreaComboBox()
         }
 
         uint deduplicate = 0;
-        QString _name;
+        QString name;
         do {
-            _name = QStringLiteral("%1+%2").arg(itAreaNamesA.value().toLower(), QString::number(++deduplicate));
+            name = qsl("%1+%2").arg(itAreaNamesA.value().toLower(), QString::number(++deduplicate));
             // Use a different suffix separator to one that area names
             // deduplication uses ('_') - makes debugging easier?
-        } while (_areaNames.contains(_name));
-        _areaNames.insert(_name, itAreaNamesA.value());
+        } while (areaNames.contains(name));
+        areaNames.insert(name, itAreaNamesA.value());
     }
 
     comboBox_showArea->clear();
-    QMapIterator<QString, QString> itAreaNamesB(_areaNames);
+
+    if (areaNames.isEmpty() || (mpMap && areaNames.count() == 1 && (*areaNames.constBegin() == mpMap->getDefaultAreaName()) && !mShowDefaultArea)) {
+        // IF there are no area names to show - should be impossible as there
+        // should always be the "Default Area" one
+        // OR there is only one sorted name
+        //    AND it is the "Default Area"
+        //    AND we are not supposed to show it
+        // THEN
+        //    We do not have ANYTHING to go in the QComboBox - so leave the
+        // control empty and disabled:
+        comboBox_showArea->setEnabled(false);
+        return;
+    }
+
+    if (areaNames.count() == ((areaNames.contains(mpMap->getDefaultAreaName()) && !mShowDefaultArea) ? 2 : 1)) {
+        // IF we have exactly 2 (if we are NOT showing the default area AND the names include it)
+        //         OR exactly 1 otherwise
+        // THEN
+        //    We only have one item to show - so show it but disable the control
+        comboBox_showArea->setEnabled(false);
+    } else {
+        comboBox_showArea->setEnabled(true);
+    }
+
+    QMapIterator<QString, QString> itAreaNamesB(areaNames);
     while (itAreaNamesB.hasNext()) {
         itAreaNamesB.next();
         comboBox_showArea->addItem(itAreaNamesB.value());
@@ -182,42 +197,43 @@ void dlgMapper::updateAreaComboBox()
     comboBox_showArea->setCurrentText(oldValue); // Try and reset to previous value
 }
 
-void dlgMapper::slot_toggleShowRoomIDs(int s)
+void dlgMapper::slot_toggleShowRoomIDs(int toggle)
 {
-    if (s == Qt::Checked) {
-        mp2dMap->mShowRoomID = true;
-    } else {
-        mp2dMap->mShowRoomID = false;
-    }
+    mp2dMap->mShowRoomID = (toggle == Qt::Checked);
     mp2dMap->mpHost->mShowRoomID = mp2dMap->mShowRoomID;
     mp2dMap->update();
 }
 
-void dlgMapper::slot_toggleShowRoomNames(int s)
+void dlgMapper::slot_toggleShowRoomNames(int toggle)
 {
-    mpMap->setRoomNamesShown(s == Qt::Checked);
+    mpMap->setRoomNamesShown(toggle == Qt::Checked);
     mp2dMap->update();
 }
 
-void dlgMapper::slot_toggleStrongHighlight(int v)
+void dlgMapper::slot_toggleStrongHighlight(int toggle)
 {
-    mpHost->mMapStrongHighlight = v == Qt::Checked ? true : false;
+    mpHost->mMapStrongHighlight = (toggle == Qt::Checked);
     mp2dMap->update();
 }
 
 void dlgMapper::slot_togglePanel()
 {
-    widget_panel->setVisible(!widget_panel->isVisible());
-    mpHost->mShowPanel = widget_panel->isVisible();
+    dlgMapper::slot_setMapperPanelVisible(!widget_panel->isVisible());
+}
+
+void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
+{
+    widget_panel->setVisible(panelVisible);
+    mpHost->mShowPanel = panelVisible;
 }
 
 void dlgMapper::slot_toggle3DView(const bool is3DMode)
 {
 #if defined(INCLUDE_3DMAPPER)
-    if (mpHost->mpMap->mpM && mpHost->mpMap->mpMapper) {
-        mpHost->mpMap->mpM->update();
-    }
-    if (!glWidget) {
+    pushButton_3D->setDown(is3DMode);
+    if (glWidget) {
+        glWidget->update();
+    } else {
         glWidget = new GLWidget(mpMap, mpHost, this);
         glWidget->setObjectName("glWidget");
 
@@ -227,7 +243,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         sizePolicy.setHeightForWidth(glWidget->sizePolicy().hasHeightForWidth());
         glWidget->setSizePolicy(sizePolicy);
         verticalLayout_mapper->insertWidget(0, glWidget);
-        mpMap->mpM = mpMap->mpMapper->glWidget;
+        mpMap->mpM = glWidget;
         connect(pushButton_ortho, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showAllLevels);
         connect(pushButton_singleLevel, &QAbstractButton::clicked, glWidget, &GLWidget::slot_singleLevelView);
         connect(pushButton_increaseTop, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showMoreUpperLevels);
@@ -257,30 +273,49 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         widget_2DControls->setVisible(false);
     } else {
         // workaround for buttons reloading oddly
-        QTimer::singleShot(100ms, [this]() {
+        QTimer::singleShot(100ms, this, [this]() {
             widget_3DControls->setVisible(false);
             widget_2DControls->setVisible(true);
         });
     }
 
 #else
+    Q_UNUSED(is3DMode)
     mp2dMap->setVisible(true);
     widget_3DControls->setVisible(false);
     widget_2DControls->setVisible(true);
 #endif
 }
 
-void dlgMapper::slot_roomSize(int d)
+void dlgMapper::slot_roomSize(int size)
 {
-    float s = static_cast<float>(d / 10.0);
-    mp2dMap->setRoomSize(s);
+    float floatSize = static_cast<float>(size / 10.0);
+    mp2dMap->setRoomSize(floatSize);
     mp2dMap->update();
 }
 
-void dlgMapper::slot_exitSize(int d)
+void dlgMapper::slot_exitSize(int size)
 {
-    mp2dMap->setExitSize(d);
+    mp2dMap->setExitSize(size);
     mp2dMap->update();
+}
+
+void dlgMapper::slot_setRoomSize(int size)
+{
+    dlgMapper::slot_roomSize(size);
+    spinBox_roomSize->setValue(size);
+}
+
+void dlgMapper::slot_setExitSize(int size)
+{
+    dlgMapper::slot_exitSize(size);
+    spinBox_exitSize->setValue(size);
+}
+
+void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
+{
+    checkBox_showRoomIds->setChecked(showRoomIds);
+    dlgMapper::slot_toggleShowRoomIDs(showRoomIds ? Qt::Checked : Qt::Unchecked);
 }
 
 void dlgMapper::slot_toggleRoundRooms(const bool state)
@@ -366,6 +401,7 @@ void dlgMapper::slot_updateInfoContributors()
         });
         pushButton_info->menu()->addAction(action);
     }
+    mp2dMap->update();
 }
 
 // Is the mapper contained inside a floating/dockable QDockWidget?

@@ -26,10 +26,10 @@ bool TMxpFormattingTagsHandler::supports(TMxpContext& ctx, TMxpClient& client, M
     Q_UNUSED(ctx)
     Q_UNUSED(client)
 
-    return tag->isNamed(QStringLiteral("B")) || tag->isNamed(QStringLiteral("BOLD")) || tag->isNamed(QStringLiteral("STRONG")) ||
-           tag->isNamed(QStringLiteral("I")) || tag->isNamed(QStringLiteral("ITALIC")) || tag->isNamed(QStringLiteral("EM")) ||
-           tag->isNamed(QStringLiteral("U")) || tag->isNamed(QStringLiteral("UNDERLINE")) ||
-           tag->isNamed(QStringLiteral("S")) || tag->isNamed(QStringLiteral("STRIKEOUT"));
+    return tag->isNamed(qsl("B")) || tag->isNamed(qsl("BOLD")) || tag->isNamed(qsl("STRONG")) ||
+           tag->isNamed(qsl("I")) || tag->isNamed(qsl("ITALIC")) || tag->isNamed(qsl("EM")) ||
+           tag->isNamed(qsl("U")) || tag->isNamed(qsl("UNDERLINE")) ||
+           tag->isNamed(qsl("S")) || tag->isNamed(qsl("STRIKEOUT"));
 }
 
 TMxpTagHandlerResult TMxpFormattingTagsHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)

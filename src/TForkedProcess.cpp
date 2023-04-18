@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2009 by Benjamin Lerman - mudlet@ambre.net              *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016 by Christer Oscarsson-christer.oscarsson@gmail.com *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2016 by Christer Oscarsson                              *
+ *                                          - christer.oscarsson@gmail.com *
+ *   Copyright (C) 2020, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,16 +28,16 @@
 TForkedProcess::~TForkedProcess()
 {
     if (callBackFunctionRef != -1) {
-        luaL_unref(interpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
+        luaL_unref(mpInterpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
     }
 }
 
 
-TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QProcess()
+TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, lua_State* L)
+: QProcess()
+, mpInterpreter(pInterpreter)
 {
-    this->interpreter = interpreter;
     int n = lua_gettop(L);
-    callBackFunctionRef = -1;
     if (n < 2) {
         lua_pushstring(L, "Need read function and process name as parameters.");
         lua_error(L);
@@ -59,9 +60,9 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
 
     // QProcess::finished is overloaded so we have to say which form we are
     // connecting here
-    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), interpreter, &TLuaInterpreter::slotDeleteSender);
-    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slotFinish);
-    connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slotReceivedData);
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), mpInterpreter, &TLuaInterpreter::slot_deleteSender);
+    connect(this, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, &TForkedProcess::slot_finished);
+    connect(this, &QProcess::readyReadStandardOutput, this, &TForkedProcess::slot_receivedData);
 
     setProcessChannelMode(QProcess::MergedChannels);
     start(prog, args, QIODevice::ReadWrite);
@@ -69,7 +70,7 @@ TForkedProcess::TForkedProcess(TLuaInterpreter* interpreter, lua_State* L) : QPr
     running = true;
 }
 
-void TForkedProcess::slotFinish(int exitCode, QProcess::ExitStatus exitStatus)
+void TForkedProcess::slot_finished(int exitCode, QProcess::ExitStatus exitStatus)
 {
     Q_UNUSED(exitCode);
     Q_UNUSED(exitStatus);
@@ -77,14 +78,14 @@ void TForkedProcess::slotFinish(int exitCode, QProcess::ExitStatus exitStatus)
     running = false;
 }
 
-void TForkedProcess::slotReceivedData()
+void TForkedProcess::slot_receivedData()
 {
     while (canReadLine()) {
         QByteArray line = readLine();
         // Call lua function by stored Reference
-        lua_rawgeti(interpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
-        lua_pushstring(interpreter->pGlobalLua, line.data());
-        lua_pcall(interpreter->pGlobalLua, 1, 0, 0);
+        lua_rawgeti(mpInterpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
+        lua_pushstring(mpInterpreter->pGlobalLua, line.data());
+        lua_pcall(mpInterpreter->pGlobalLua, 1, 0, 0);
     }
 }
 
@@ -145,9 +146,9 @@ static int qPointerGC(lua_State* L)
 }
 
 
-int TForkedProcess::startProcess(TLuaInterpreter* interpreter, lua_State* L)
+int TForkedProcess::startProcess(TLuaInterpreter* pInterpreter, lua_State* L)
 {
-    auto process = new TForkedProcess(interpreter, L);
+    auto process = new TForkedProcess(pInterpreter, L);
 
     // The userdata for the closures.
     auto ** luaMemory = (QPointer<TForkedProcess>**)lua_newuserdata(L, sizeof(QPointer<TForkedProcess>*));

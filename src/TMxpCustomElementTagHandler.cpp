@@ -87,7 +87,7 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleEndTag(TMxpContext& ctx,
 //              <send href='help 1024;' hint='Click for help on 1024;' expire=help>
 MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElement& element, MxpStartTag* definitionTag, MxpStartTag* customTag) const
 {
-    auto mapping = [this, customTag, element](const MxpTagAttribute& attr) {
+    auto mapping = [customTag, element](const MxpTagAttribute& attr) {
         if (!attr.hasValue()) {
             return MxpTagAttribute(mapAttributes(element, attr.getName(), customTag));
         }
@@ -99,8 +99,8 @@ MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElem
 
 QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, const QString& input, MxpStartTag* tag)
 {
-    auto mapEntityNameToTagAttributeValue = [element, tag](const QString& input) {
-        QString attrName = input.mid(1, input.size() - 2);
+    auto mapEntityNameToTagAttributeValue = [element, tag](const QString& text) {
+        QString attrName = text.mid(1, text.size() - 2);
         // get attribute value by NAME
         // <!EL help "<send href='help &desc;' hint='Click for help on &desc;' expire=help>" ATT='desc'>
         // <help desc="1024">1024</help>
@@ -121,7 +121,7 @@ QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, c
             return element.defaultValues.value(attrName.toLower());
         }
 
-        return input;
+        return text;
     };
 
     return TEntityResolver::interpolate(input, mapEntityNameToTagAttributeValue);

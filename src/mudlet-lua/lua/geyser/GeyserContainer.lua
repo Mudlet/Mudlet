@@ -342,7 +342,7 @@ function Geyser.Container:new(cons, container)
 
   -- If we're not not a class definition then add to a controlling
   -- container.
-  if not string.find(me.name, ".*Class") then
+  if not string.find(me.name, ".+Class$") then
     -- If passed in a container, add me to that container
     if container then
       if me.useAdd2 then
@@ -360,7 +360,7 @@ function Geyser.Container:new(cons, container)
       container=Geyser
     end
    --Create Root-Container for UserWindow and add Children
-   if (container == Geyser) and (me.windowname) and (me.windowname ~= "main") then
+   if (container == Geyser) and (me.windowname) and (me.windowname ~= "main") and me.type == "userwindow" then
         container = Geyser.Container:new({name=me.windowname.."Container", type = "userwindow", x=0, y=0, width="100%", height="100%"})
         if me.useAdd2 then
           container:add2(me)

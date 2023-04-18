@@ -1,5 +1,5 @@
 describe("Tests StringUtils.lua functions", function()
-  describe("string.cut(str, maxLen)", function()
+  describe("Tests the functionality of string.cut", function()
     it("should return the same string if it is <= maxLen", function()
       local testString = "test"
       assert.equals(testString, string.cut(testString, testString:len()))
@@ -22,7 +22,7 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("string.enclose(str, maxlevel)", function()
+  describe("Tests the functionality of string.enclose", function()
     it("should return [[]] is empty string is given", function()
       assert.equals("[[]]", string.enclose(""))
       local testString = ""
@@ -50,7 +50,7 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("string.ends(str, suffix)", function()
+  describe("Tests the functionality of string.ends", function()
     it("should return true if str ends in suffix", function()
       local s = "This is a test"
       local suffix = "a test"
@@ -67,7 +67,7 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("string.genNocasePattern(str)", function()
+  describe("Tests the functionality of string.genNocasePattern", function()
     it("should create a case insensitive lua pattern based on str", function()
       local str = "123abc"
       local expected = "123[aA][bB][cC]"
@@ -84,7 +84,7 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("string.findPattern(str,pattern)", function()
+  describe("Tests the functionality of string.findPattern", function()
     it("should return the first match of pattern in str", function()
       local str = "This is test 2"
       local pattern = "test %d"
@@ -102,7 +102,7 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("string.split(str,delimiter)", function()
+  describe("Tests the functionality of string.split", function()
     it("should return a table which contain the pieces of str, cut by delimiter", function()
       local str = "This is,a comma,separated string,with stuff in it"
       local delimiter = ","
@@ -140,7 +140,7 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("string.starts(str, prefix)", function()
+  describe("Tests the functionality of string.starts", function()
     it("should return true if str starts with prefix", function()
       local str = "This is a test"
       assert.is_true(str:starts("This"))
@@ -152,7 +152,7 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("string.title(str)", function()
+  describe("Tests the functionality of string.title", function()
     it("should return the string with the first letter capitalized", function()
       local str = "this"
       local expected = "This"
@@ -173,7 +173,7 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("string.trim(str)", function()
+  describe("Tests the functionality of string.trim", function()
     it("should return str with all spaces stripped from the beginning and end", function()
       local str = "    this is a test      "
       local expected = "this is a test"
@@ -197,7 +197,73 @@ describe("Tests StringUtils.lua functions", function()
     end)
   end)
 
-  describe("f(str)", function()
+  describe("Tests the functionality of string.patternEscape", function()
+    it("Should escape special characters in simple cases", function()
+      local replacements = {
+        ["%"] = "%%",
+        ["^"] = "%^",
+        ["$"] = "%$",
+        ["("] = "%(",
+        [")"] = "%)",
+        ["["] = "%[",
+        ["]"] = "%]",
+        ["."] = "%.",
+        ["*"] = "%*",
+        ["+"] = "%+",
+        ["-"] = "%-",
+        ["?"] = "%?",
+      }
+      for original, replacement in pairs(replacements) do
+        assert.equals(replacement, string.patternEscape(original))
+      end
+    end)
+
+    it("Should escape special characters in some more complicated cases too", function()
+      local replacements = {
+        ["https://fern-ahead-jelly.glitch.me/time/"] = "https://fern%-ahead%-jelly%.glitch%.me/time/",
+        ["75% of things to-be have been"] = "75%% of things to%-be have been",
+        ["^%d%a$"] = "%^%%d%%a%$",
+      }
+      for original, replacement in pairs(replacements) do
+        assert.equals(replacement, string.patternEscape(original))
+      end
+    end)
+  end)
+
+  describe("Tests the functionality of utf8.patternEscape", function()
+    it("Should escape special characters in simple cases", function()
+      local replacements = {
+        ["%"] = "%%",
+        ["^"] = "%^",
+        ["$"] = "%$",
+        ["("] = "%(",
+        [")"] = "%)",
+        ["["] = "%[",
+        ["]"] = "%]",
+        ["."] = "%.",
+        ["*"] = "%*",
+        ["+"] = "%+",
+        ["-"] = "%-",
+        ["?"] = "%?",
+      }
+      for original, replacement in pairs(replacements) do
+        assert.equals(replacement, utf8.patternEscape(original))
+      end
+    end)
+
+    it("Should escape special characters in some more complicated cases too", function()
+      local replacements = {
+        ["https://fern-ahead-jelly.glitch.me/time/"] = "https://fern%-ahead%-jelly%.glitch%.me/time/",
+        ["75% of things to-be have been 👊"] = "75%% of things to%-be have been 👊",
+        ["^%d%a$"] = "%^%%d%%a%$",
+      }
+      for original, replacement in pairs(replacements) do
+        assert.equals(replacement, utf8.patternEscape(original))
+      end
+    end)
+  end)
+
+  describe("Tests the functionality of f", function()
     it("should return a string with no interpolation as itself", function()
       local str = "This is a test"
       local expected = str

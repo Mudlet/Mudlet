@@ -4,10 +4,11 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2021 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2020 by Matthias Urlichs matthias@urlichs.de            *
+ *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,12 +40,23 @@
 #include <QLabel>
 #include <QPointer>
 #include <QWidget>
+#include <QIcon>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
 
 #include <list>
 #include <map>
+
+
+enum class ControlCharacterMode {
+    AsIs = 0x0,
+    Picture = 0x1,
+    OEM = 0x2
+};
+
+// Needed so it can be handled as a QVariant
+Q_DECLARE_METATYPE(ControlCharacterMode)
 
 class QCloseEvent;
 class QLineEdit;
@@ -57,6 +69,7 @@ class TTextEdit;
 class TCommandLine;
 class TDockWidget;
 class TLabel;
+class TScrollBox;
 class TSplitter;
 class dlgNotepad;
 
@@ -75,8 +88,14 @@ public:
         UserWindow = 0x10, // Floatable/Dockable console, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
         Buffer = 0x20 // Non-visible store for data that can be copied to/from other per profile TConsoles, should be uniquely named in pool of SubConsole/UserWindow/Buffers AND Labels
     };
-
     Q_DECLARE_FLAGS(ConsoleType, ConsoleTypeFlag)
+
+    enum SearchOption {
+        // Unset:
+        SearchOptionNone = 0x0,
+        SearchOptionCaseSensitive = 0x1
+    };
+    Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
     explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
@@ -134,6 +153,10 @@ public:
     void setFgColor(const QColor&);
     void setBgColor(int, int, int, int);
     void setBgColor(const QColor&);
+    void setCommandBgColor(const QColor&);
+    void setCommandBgColor(int, int, int, int);
+    void setCommandFgColor(const QColor&);
+    void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
     void setCmdVisible(bool);
@@ -158,34 +181,36 @@ public:
     void setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference = QVector<int>());
     // Cannot be called setAttributes as that would mask an inherited method
     void setDisplayAttributes(const TChar::AttributeFlags, const bool);
-    void showStatistics();
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     void setConsoleBgColor(int, int, int, int);
+    QColor getConsoleBgColor() const { return mBgColor; }
+
 // Not used:    void setConsoleFgColor(int, int, int);
     std::list<int> getFgColor();
     std::list<int> getBgColor();
     void luaWrapLine(int line);
     QString getCurrentLine();
     void selectCurrentLine();
-
     // Returns the size of the main buffer area (excluding the command line and toolbars).
     QSize getMainWindowSize() const;
-
     ConsoleType getType() const { return mType; }
     virtual void setProfileName(const QString&);
-    // In the next pair of functions the first element in the return is an
+    // In the next function the first element in the return is an
     // error code:
     // 0 = Okay
     // 1 = Window not found
     // 2 = Selection not valid
     QPair<quint8, TChar> getTextAttributes() const;
+    void setCaretMode(bool enabled);
+    void setSearchOptions(const SearchOptions);
+    void setProxyForFocus(TCommandLine*);
+    void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
 
 
     QPointer<Host> mpHost;
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
-    // Only on a MainConsole type instance:
     QPointer<TCommandLine> mpCommandLine;
 
     TBuffer buffer;
@@ -198,37 +223,25 @@ public:
     QWidget* layerCommandLine = nullptr;
     QHBoxLayout* layoutLayer2 = nullptr;
 
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 14, 0))
     QColor mBgColor = QColorConstants::Black;
     QColor mFgColor = QColorConstants::LightGray;
     QColor mSystemMessageFgColor = QColorConstants::Red;
     QColor mCommandBgColor = QColorConstants::Black;
-#else
-    QColor mBgColor = Qt::black;
-    QColor mFgColor = Qt::lightGray;
-    QColor mSystemMessageFgColor = Qt::red;
-    QColor mCommandBgColor = Qt::black;
-#endif
     QColor mSystemMessageBgColor = mBgColor;
     QColor mCommandFgColor = QColor(213, 195, 0);
 
     //1 = unclicked/up; 2 = clicked/down, 0 is NOT valid:
     int mButtonState = 1;
 
-    QString mConsoleName = QStringLiteral("main");
+    QString mConsoleName;
     QString mCurrentLine;
-    QString mDisplayFontName = QStringLiteral("Bitstream Vera Sans Mono");
+    QString mDisplayFontName = qsl("Bitstream Vera Sans Mono");
     int mDisplayFontSize = 14;
     QFont mDisplayFont = QFont(mDisplayFontName, mDisplayFontSize, QFont::Normal);
     int mEngineCursor = -1;
-    TChar mFormatBasic;
-    TChar mFormatSystemMessage;
 
     int mIndentCount = 0;
-    int mMainFrameBottomHeight = 0;
-    int mMainFrameLeftWidth = 0;
-    int mMainFrameRightWidth = 0;
-    int mMainFrameTopHeight = 0;
+    QMargins mBorders;
     int mOldX = 0;
     int mOldY = 0;
 
@@ -264,25 +277,35 @@ public:
     TSplitter* splitter = nullptr;
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
+    QToolButton* timeStampButton = nullptr;
     bool mUserAgreedToCloseConsole = false;
     QLineEdit* mpBufferSearchBox = nullptr;
+    QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
     QToolButton* mpBufferSearchDown = nullptr;
+    // The line on which the current search result has been found, or the next
+    // one is to start (currently only for the main console):
     int mCurrentSearchResult = 0;
-    QList<int> mSearchResults;
+    // Not used:
+    // QList<int> mSearchResults;
+    // The term that is currently being search for (currently only for the main
+    // console):
     QString mSearchQuery;
     QWidget* mpButtonMainLayer = nullptr;
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
+    ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
 
 public slots:
     void slot_searchBufferUp();
     void slot_searchBufferDown();
     void slot_toggleReplayRecording();
-    void slot_stop_all_triggers(bool);
+    void slot_stopAllItems(bool);
     void slot_toggleLogging();
+    void slot_changeControlCharacterHandling(const ControlCharacterMode);
+    void slot_toggleSearchCaseSensitivity(bool);
 
 
 protected:
@@ -292,9 +315,18 @@ protected:
     void mousePressEvent(QMouseEvent*) override;
 
 
+private slots:
+    void slot_adjustAccessibleNames();
+    void slot_clearSearchResults();
+
 private:
+    void createSearchOptionIcon();
+
     ConsoleType mType = UnknownType;
     QSize mOldSize;
+    SearchOptions mSearchOptions = SearchOptionNone;
+    QAction* mpAction_searchOptions = nullptr;
+    QIcon mIcon_searchOptions;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
@@ -305,15 +337,15 @@ inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
     QString text;
     QDebugStateSaver saver(debug);
     switch (type) {
-    case TConsole::UnknownType:           text = QStringLiteral("Unknown"); break;
-    case TConsole::CentralDebugConsole:   text = QStringLiteral("Central Debug Console"); break;
-    case TConsole::ErrorConsole:          text = QStringLiteral("Profile Error Console"); break;
-    case TConsole::MainConsole:           text = QStringLiteral("Profile Main Console"); break;
-    case TConsole::SubConsole:            text = QStringLiteral("Mini Console"); break;
-    case TConsole::UserWindow:            text = QStringLiteral("User Window"); break;
-    case TConsole::Buffer:                text = QStringLiteral("Buffer"); break;
+    case TConsole::UnknownType:           text = qsl("Unknown"); break;
+    case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;
+    case TConsole::ErrorConsole:          text = qsl("Profile Error Console"); break;
+    case TConsole::MainConsole:           text = qsl("Profile Main Console"); break;
+    case TConsole::SubConsole:            text = qsl("Mini Console"); break;
+    case TConsole::UserWindow:            text = qsl("User Window"); break;
+    case TConsole::Buffer:                text = qsl("Buffer"); break;
     default:
-        text = QStringLiteral("Non-coded Type");
+        text = qsl("Non-coded Type");
     }
     debug.nospace() << text;
     return debug;

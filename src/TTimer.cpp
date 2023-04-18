@@ -94,7 +94,7 @@ void TTimer::setName(const QString& name)
     }
     mName = name;
     // Merely for information if needed later:
-    mpQTimer->setObjectName(QStringLiteral("timer(Host:%1)(TTimerId:%2)").arg(mpHost->getName(), name));
+    mpQTimer->setObjectName(qsl("timer(Host:%1)(TTimerId:%2)").arg(mpHost->getName(), name));
     mpHost->getTimerUnit()->mLookupTable.insert(name, this);
 }
 
@@ -152,7 +152,7 @@ void TTimer::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::debugMode) {
+            if (mudlet::smDebugMode) {
                 TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
@@ -167,7 +167,7 @@ void TTimer::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;

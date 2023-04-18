@@ -44,14 +44,6 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 
         if (!volume.isEmpty()) {
             mediaData.setMediaVolume(volume.toInt());
-
-            if (mediaData.getMediaVolume() == TMediaData::MediaVolumePreload) {
-                // Support preloading
-            } else if (mediaData.getMediaVolume() > TMediaData::MediaVolumeMax) {
-                mediaData.setMediaVolume(TMediaData::MediaVolumeMax);
-            } else if (mediaData.getMediaVolume() < TMediaData::MediaVolumeMin) {
-                mediaData.setMediaVolume(TMediaData::MediaVolumeMin);
-            }
         } else {
             mediaData.setMediaVolume(TMediaData::MediaVolumeMax); // MSP the Max is the Default
         }
@@ -98,66 +90,31 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 
 QString TMxpSoundTagHandler::extractFileName(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(QStringLiteral("fname"))) {
-        return tag->getAttributeValue(QStringLiteral("fname"));
-    } else if (tag->getAttributesCount() > 0) {
-        return tag->getAttrName(0);
-    }
-
-    return QString();
+    return tag->getAttributeByNameOrIndex(qsl("fname"), 0);
 }
 
 QString TMxpSoundTagHandler::extractVolume(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(QStringLiteral("v"))) {
-        return tag->getAttributeValue(QStringLiteral("v"));
-    } else if (tag->getAttributesCount() > 1) {
-        return tag->getAttrName(1);
-    }
-
-    return QString();
+    return tag->getAttributeByNameOrIndex(qsl("v"), 1);
 }
 
 QString TMxpSoundTagHandler::extractLoops(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(QStringLiteral("l"))) {
-        return tag->getAttributeValue(QStringLiteral("l"));
-    } else if (tag->getAttributesCount() > 2) {
-        return tag->getAttrName(2);
-    }
-
-    return QString();
+    return tag->getAttributeByNameOrIndex(qsl("l"), 2);
 }
 
 QString TMxpSoundTagHandler::extractPriority(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(QStringLiteral("p"))) {
-        return tag->getAttributeValue(QStringLiteral("p"));
-    } else if (tag->getAttributesCount() > 3) {
-        return tag->getAttrName(3);
-    }
 
-    return QString();
+    return tag->getAttributeByNameOrIndex(qsl("p"), 3);
 }
 
 QString TMxpSoundTagHandler::extractType(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(QStringLiteral("t"))) {
-        return tag->getAttributeValue(QStringLiteral("t"));
-    } else if (tag->getAttributesCount() > 4) {
-        return tag->getAttrName(4);
-    }
-
-    return QString();
+    return tag->getAttributeByNameOrIndex(qsl("t"), 4);
 }
 
 QString TMxpSoundTagHandler::extractUrl(MxpStartTag* tag)
 {
-    if (tag->hasAttribute(QStringLiteral("u"))) {
-        return tag->getAttributeValue(QStringLiteral("u"));
-    } else if (tag->getAttributesCount() > 5) {
-        return tag->getAttrName(5);
-    }
-
-    return QString();
+    return tag->getAttributeByNameOrIndex(qsl("u"), 5);
 }

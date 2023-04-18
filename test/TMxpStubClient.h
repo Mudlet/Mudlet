@@ -1,6 +1,5 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2021 by Florian Scheel - keneanung@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,11 +20,10 @@
 // Text Formatting 'Counters', version, style by Michael Weller, michael.weller@t-online.de
 
 
-
 #ifndef MUDLET_TEST_TMXPSTUBCLIENT_H
 #define MUDLET_TEST_TMXPSTUBCLIENT_H
 
-#include <QDebug>
+#include <qdebug.h>
 #include "TMxpContext.h"
 #include "TMxpClient.h"
 #include "TMediaData.h"
@@ -82,6 +80,8 @@ public:
 
     QStringList mHrefs, mHints;
 
+    QString mPublishedEntityName, mPublishedEntityValue;
+
     QString getVersion() override
     {
         return version;
@@ -133,7 +133,7 @@ public:
 
     int setLink(const QStringList& hrefs, const QStringList& hints) override
     {
-        qDebug() << QString("setLink([%1], [%2])").arg(hrefs.join(", ")).arg(hints.join(", "));
+        qDebug().noquote() << qsl("setLink([%1], [%2])").arg(hrefs.join(", "), hints.join(", "));
         mHrefs = hrefs;
         mHints = hints;
 
@@ -157,7 +157,12 @@ public:
 
     }
 
-    void publishEntity(const QString& name, const QString& value) override {}
+    void publishEntity(const QString& name, const QString& value) override
+    {
+        qDebug().noquote() << qsl("publishEntity([%1], [%2])").arg(name, value);
+        mPublishedEntityName = name;
+        mPublishedEntityValue = value;
+    }
 
     void setVariable(const QString& name, const QString& value) override {}
 };

@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -43,7 +43,7 @@ class TMxpMudlet : public TMxpClient
     QString mxpStyle;
 
 public:
-    TMxpMudlet(Host* pHost)
+    explicit TMxpMudlet(Host* pHost)
     : boldCtr(0)
     , italicCtr(0)
     , underlineCtr(0)
@@ -131,7 +131,7 @@ public:
     QQueue<TMxpEvent> mMxpEvents;
 
 private:
-    inline static const QString scmVersion = QStringLiteral(APP_VERSION APP_BUILD);
+    inline static const QString scmVersion = qsl(APP_VERSION APP_BUILD);
 
     Host* mpHost;
     bool mLinkMode;

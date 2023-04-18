@@ -72,7 +72,7 @@
     "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
   },
   "Mudlet.packageInstallFail": {
-    "message": "Installazione pacchetto '%s' fallita.",
+    "message": "Installazione di '%s' fallita: %s",
     "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
   },
   "Mudlet.packageDownloading": {

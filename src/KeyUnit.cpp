@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2020 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2018, 2020, 2022 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -27,15 +28,7 @@
 #include "TKey.h"
 
 KeyUnit::KeyUnit(Host* pHost)
-: statsKeyTotal(0)
-, statsTempKeys(0)
-, statsActiveKeys(0)
-, statsActiveKeysMax(0)
-, statsActiveKeysMin(0)
-, statsActiveKeysAverage(0)
-, statsTempKeysCreated(0)
-, statsTempKeysKilled(0)
-, mRunAllKeyMatches(false)
+: mRunAllKeyMatches(false)
 , mpHost(pHost)
 , mMaxID(0)
 , mModuleMember(false)
@@ -43,6 +36,12 @@ KeyUnit::KeyUnit(Host* pHost)
     setupKeyNames();
 }
 
+void KeyUnit::resetStats()
+{
+    statsItemsTotal = 0;
+    statsTempItems = 0;
+    statsActiveItems = 0;
+}
 
 void KeyUnit::_uninstall(TKey* pChild, const QString& packageName)
 {
@@ -109,7 +108,7 @@ void KeyUnit::reenableAllTriggers()
 
 TKey* KeyUnit::findFirstKey(QString& name)
 {
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     if (it != mLookupTable.cend() && it.key() == name) {
         return it.value();
     }
@@ -119,7 +118,7 @@ TKey* KeyUnit::findFirstKey(QString& name)
 bool KeyUnit::enableKey(const QString& name)
 {
     bool found = false;
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TKey* pT = it.value();
         // Unlike the TTriggerUnit version of this code we directly set
@@ -136,7 +135,7 @@ bool KeyUnit::enableKey(const QString& name)
 bool KeyUnit::disableKey(const QString& name)
 {
     bool found = false;
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TKey* pT = it.value();
         // Unlike the TTriggerUnit version of this code we directly clear
@@ -338,63 +337,45 @@ QString KeyUnit::getKeyName(const Qt::Key keyCode, const Qt::KeyboardModifiers m
               "that some people have.").arg(name).arg(keyCode, 4, 16, QLatin1Char('0'));
 }
 
-void KeyUnit::initStats()
+void KeyUnit::assembleReport(TKey* pItem)
 {
-    statsKeyTotal = 0;
-    statsTempKeys = 0;
-    statsActiveKeys = 0;
-    statsActiveKeysMax = 0;
-    statsActiveKeysMin = 0;
-    statsActiveKeysAverage = 0;
-    statsTempKeysCreated = 0;
-    statsTempKeysKilled = 0;
-}
-
-void KeyUnit::_assembleReport(TKey* pChild)
-{
-    std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
-    for (auto pT : *childrenList) {
-        _assembleReport(pT);
-        if (pT->isActive()) {
-            statsActiveKeys++;
-        }
-        if (pT->isTemporary()) {
-            statsTempKeys++;
-        }
-        statsKeyTotal++;
-    }
-}
-
-QString KeyUnit::assembleReport()
-{
-    statsActiveKeys = 0;
-    statsKeyTotal = 0;
-    statsTempKeys = 0;
-    for (auto pChild : mKeyRootNodeList) {
+    std::list<TKey*>* childrenList = pItem->mpMyChildrenList;
+    for (auto pChild : *childrenList) {
+        ++statsItemsTotal;
         if (pChild->isActive()) {
-            statsActiveKeys++;
+            ++statsActiveItems;
         }
         if (pChild->isTemporary()) {
-            statsTempKeys++;
+            ++statsTempItems;
         }
-        statsKeyTotal++;
-        std::list<TKey*>* childrenList = pChild->mpMyChildrenList;
-        for (auto pT : *childrenList) {
-            _assembleReport(pT);
-            if (pT->isActive()) {
-                statsActiveKeys++;
-            }
-            if (pT->isTemporary()) {
-                statsTempKeys++;
-            }
-            statsKeyTotal++;
+        assembleReport(pChild);
+    }
+}
+
+std::tuple<QString, int, int, int> KeyUnit::assembleReport()
+{
+    resetStats();
+    for (auto pItem : mKeyRootNodeList) {
+        ++statsItemsTotal;
+        if (pItem->isActive()) {
+            ++statsActiveItems;
         }
+        if (pItem->isTemporary()) {
+            ++statsTempItems;
+        }
+        assembleReport(pItem);
     }
     QStringList msg;
-    msg << "Keys current total: " << QString::number(statsKeyTotal) << "\n"
-        << "tempKeys current total: " << QString::number(statsTempKeys) << "\n"
-        << "active Keys: " << QString::number(statsActiveKeys) << "\n";
-    return msg.join("");
+    msg << QLatin1String("Keys current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
+        << QLatin1String("tempKeys current total: ") << QString::number(statsTempItems) << QLatin1String("\n")
+        << QLatin1String("active Keys: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+
+    return {
+        msg.join(QString()),
+        statsItemsTotal,
+        statsTempItems,
+        statsActiveItems
+    };
 }
 
 void KeyUnit::markCleanup(TKey* pT)

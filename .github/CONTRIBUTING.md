@@ -6,71 +6,17 @@ the free [Github for Desktop](https://desktop.github.com) app to contribute code
 
 If you're a first-timer, you're excluded, we'll go easy on you :wink:
 
-## Use QLatin1String over QStringLiteral if the function takes it
+## Do not use ``qsl("")``
 
-Some methods in the Qt API have overloads for either taking a QString, or a QLatin1String object.
-This is because Latin1 is simpler to parse than UTF-16, and therefore the QLatin1String version can
-be faster, and use less memory. For example, QString::startsWith() has the following declarations:
-
-```
-bool	startsWith(const QString &s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
-bool	startsWith(const QStringRef &s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
-bool	startsWith(QLatin1String s, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
-bool	startsWith(QChar c, Qt::CaseSensitivity cs = Qt::CaseSensitive) const
-```
-
-Notice how the 3rd variant accepts a `QLatin1String`? That means you can use it. `==` and `+=` also
-accept it, so here are some examples:
-
-```cpp
-bool same = (str == QLatin1String("Hello"));
-str.startsWith(QLatin1String("Hello"));
-str += QLatin1String("World");
-```
-
-Examples above are more efficient than:
-
-```cpp
-bool same = (str == QStringLiteral("Hello"));
-str.startsWith(QStringLiteral("Hello"));
-str += QStringLiteral("World");
-```
-
-And even more than:
-
-```cpp
-bool same = (str == "Hello");
-str.startsWith("Hello");
-str += "World";
-```
-
-Not all functions are going to accept `QLatin1String` - `QIcon` constructors for example are the following:
-
-```
-QIcon()
-QIcon(const QPixmap &pixmap)
-QIcon(const QIcon &other)
-QIcon(QIcon &&other)
-QIcon(const QString &fileName)
-QIcon(QIconEngine *engine)
-```
-
-No `QLatin1String` - mentioned - so use `QStringLiteral` instead, which creates us a `QString()` at compile-time so at least creating the object is faster.
-
-([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/),
- [additional reading](https://woboq.com/blog/qstringliteral.html))
-
-## Do not use ``QStringLiteral("")``
-
-Prefer ``QString()`` over ``QStringLiteral("")`` for  for empty strings - the default constructor 
+Prefer ``QString()`` over ``qsl("")`` for  for empty strings - the default constructor
 for QString is cheaper in terms of both instructions and memory.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
 
-## Avoid duplicated QStringLiterals
+## Avoid duplicated qsls
 
-Avoid having multiple QStringLiterals with the same content. For plain literals and QLatin1String, compilers
-try to consolidate identical literals so that they are not duplicated. For QStringLiteral, identical strings
+Avoid having multiple qsls with the same content. For plain literals and QLatin1String, compilers
+try to consolidate identical literals so that they are not duplicated. For qsl, identical strings
 cannot be merged.
 
 ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
@@ -80,6 +26,10 @@ cannot be merged.
 If you just need to use a plain .arg() call, use multiple arguments within it and not as separate .arg() calls as that'll avoid creating temporary QString objects. If your 2nd and 3rd arguments happen to be numbers, be sure to wrap them in  `QString::number(yourNumber)`.
 
 ([source](https://meetingcpp.com/tl_files/mcpp/2015/talks/Marc-Mutz-MC++15-Effective-Qt.pdf))
+
+## Naming things? Check against antipatterns
+
+Check https://www.linguistic-antipatterns.com when naming anything to help ensure it can be understood intuitively.
 
 # Internationalization do's and don'ts
 
@@ -95,6 +45,36 @@ Don't:
 * assume English-centric plural forms, other languages do not necessarily have the simple add an "s"/"es" for more/less then the singular case.
 * assume universal quote and number punctuation formats. There are languages that use « and » instead of " for "quoting" words or phrases. Qt can provide Locale specific displays of numbers/dates/times.
 
+# Tooltip tips:
+* Tooltips are (ideally) short pieces of text that can give additional hints or help with a control or setting. As such they are sentences so should end with the appropriate punctuation, usually a period (a.k.a. full-stop).
+* To avoid long single line tooltips that sprawl across the screen it is necessary to signal to the Qt libraries that the text is "rich-text", and this is done by the inclusion of HTML-like tags in the text. At a bare minimum this can be done by surrounding the text with a pair of paragraph tags: `<p>`...`</p>`.
+* To help with the above there is a static helper functon defined in the `utils` class called `richText(`...`)` that can be put around the text that will insert those tags. As such text is user facing as part of the User Interface (UI) it must be put through the translation system - and thus will likely be inside the `QObject` class's `tr()` method.
+* So as to reduce the need for translators to have to deal with HTML-like tags in the texts they have to work on, the `richText` function will eliminate the need for them to remember a pair of `<p>`...`</p>` around a **single** paragraph of text; however when **more** than one paragraph is used it is clearer to NOT use the `utils::richText(`...`)` and include the paragraph tags around each of them. The on-line translation system we use (CrowdIn) can be set to handle/hide HTML tags but it needs to see matched pairs to be able to make sense of them, so:
+
+Do:
+  * Single paragraph:
+```cpp
+    widget->setToolTip(utils::richText(tr("A single sentence or paragraph that is a tool-tip.")));
+```
+
+* More than one paragraph:
+```cpp
+    widget->setToolTip(tr("<p>The first paragraph that is a tool-tip.</p>"
+                          "<p>Another paragraph, maybe in a different style, e.g. <i>italics</i> or <b>bold</b>.</p>")));
+```
+
+Don't:
+  * More than one paragraph:
+```cpp
+    widget->setToolTip(utils::richText(tr("The first paragraph that is a tool-tip.</p>"
+                                          "<p>Another paragraph, maybe in a different style, e.g. <i>italics</i> or <b>bold</b>.")));
+```
+
+# TODO's
+In Mudlet's decade of existence, TODO's get added to the codebase but almost never resolved. Having them in the codebase does not add any value if they are just sitting there and not acted upon. This raises the question, why have them around at all if they are not adding any value? To this effect, the project decided not to add future TODOs to the code and work on removing existing ones.
+
+In case the TODO is an improvement, a pull request implementing the idea or an issue suggesting it can be added - no TODO necessary. In case it's a legitimate problem, it's better to fix it right away instead of kicking the can down the road.
+
 # Git commit guidelines for core team
 
 ## Refactoring
@@ -108,17 +88,12 @@ Don't:
 * PR Title must start with `fix`, `improve`, `add`, or `infra`
   * This facilitates automatic changelog gathering and categorization
   * Cannot merge until it is fixed: core team can always adjust it before merging
-* Any new TODO in a source file must have a Mudlet github issue on the same line
-  * good:
-    * //TODO: https://github.com/Mudlet/Mudlet/issues/1234
-  * bad:
-    * //TODO: a thing we aren't actually tracking with an issue
 
 Danger will also give a heads up if the PR title is long, or if more than 10 source files are changed in a single PR. These are not blocked but the warnings should serve to draw attention to something which may require a double check. More info below.
 
 ## Mega PRs
 
-Pull Requests that overhaul large pieces of functionality at once will not be accepted: through experience, they bring more pain than they are worth. Being really difficult to discuss, test, and reason about, they are banned. 
+Pull Requests that overhaul large pieces of functionality at once will not be accepted: through experience, they bring more pain than they are worth. Being really difficult to discuss, test, and reason about, they are banned.
 
 That does not mean we don't welcome large overhauls: we do. Just make sure to send it in as separate, logically broken-down improvements that implement the functionality you'd like to have in a step process.
 
@@ -126,8 +101,8 @@ Of course, before embarking on such a journey, [discuss with the core team](http
 
 ## Merging Pull Requests (PRs)
 
-The preferred order of [merging PRs](https://help.github.com/articles/about-pull-request-merges/) is: 
-1. Prefer _squash and merge_ for a clean history and added PR numbers for details of discussion for future comparison. 
+The preferred order of [merging PRs](https://help.github.com/articles/about-pull-request-merges/) is:
+1. Prefer _squash and merge_ for a clean history and added PR numbers for details of discussion for future comparison.
 2. Else _rebase and merge_ if you'd like to keep the history, but know this will not link to the PR in public test builds' (PTB) changelogs, etc.
 3. Avoid creating a _merge commit_.
 

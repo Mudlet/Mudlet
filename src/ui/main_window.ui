@@ -119,6 +119,7 @@
     <addaction name="dactionHelp"/>
     <addaction name="dactionVideo"/>
     <addaction name="dactionDiscord"/>
+    <addaction name="dactionMudletDiscord"/>
     <addaction name="dactionIRC"/>
     <addaction name="dactionForum"/>
    </widget>
@@ -138,6 +139,8 @@
     <addaction name="separator"/>
     <addaction name="dactionDisconnect"/>
     <addaction name="dactionReconnect"/>
+    <addaction name="separator"/>
+    <addaction name="dactionCloseProfile"/>
    </widget>
    <addaction name="menuGames"/>
    <addaction name="menuEditor"/>
@@ -327,6 +330,17 @@
   </action>
   <action name="dactionDiscord">
    <property name="text">
+    <string>Discord</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</string>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+  </action>
+  <action name="dactionMudletDiscord">
+   <property name="text">
     <string>Discord help channel</string>
    </property>
    <property name="toolTip">
@@ -342,6 +356,11 @@
    </property>
    <property name="toolTip">
     <string>The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!</string>
+   </property>
+  </action>
+  <action name="dactionCloseProfile">
+   <property name="text">
+    <string>Close profile</string>
    </property>
   </action>
  </widget>

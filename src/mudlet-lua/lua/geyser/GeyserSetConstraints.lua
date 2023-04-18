@@ -4,16 +4,8 @@
 --                                  --
 --------------------------------------
 
---- This function sets the constraints of a window.
--- It doesn't mess with anything other than positioning data.  It
--- creates get_x(), get_y(), get_width(), and get_height() functions
--- for 'window'
--- @param window The window to create the constraints for.
--- @param cons A table that holds the constraints.
--- @param container A table that holds maximum position values and
--- represents the dimensions of the "window" that holds whatever
--- widget is being created.
-function Geyser.set_constraints (window, cons, container)
+
+function Geyser.calc_constraints (window, cons, container)
   oldlocale = os.setlocale(nil, "numeric")
   os.setlocale("C", "numeric")
   -- If container is nil then by default it is the dimensions of the main window
@@ -154,5 +146,18 @@ function Geyser.set_constraints (window, cons, container)
     --window[v] = window[getter]()
   end -- END for that generates POSITION FUNCTIONS
   os.setlocale(oldlocale, "numeric")
+end
+
+--- This function sets the constraints of a window.
+-- It doesn't mess with anything other than positioning data.  It
+-- creates get_x(), get_y(), get_width(), and get_height() functions
+-- for 'window'
+-- @param window The window to create the constraints for.
+-- @param cons A table that holds the constraints.
+-- @param container A table that holds maximum position values and
+-- represents the dimensions of the "window" that holds whatever
+-- widget is being created.
+function Geyser.set_constraints (window, cons, container)
+  Geyser.calc_constraints(window, cons, container)
   window:reposition()
 end

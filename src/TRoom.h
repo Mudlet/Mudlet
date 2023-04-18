@@ -35,21 +35,6 @@
 #include <QVector3D>
 #include "post_guard.h"
 
-
-#define DIR_NORTH 1
-#define DIR_NORTHEAST 2
-#define DIR_NORTHWEST 3
-#define DIR_EAST 4
-#define DIR_WEST 5
-#define DIR_SOUTH 6
-#define DIR_SOUTHEAST 7
-#define DIR_SOUTHWEST 8
-#define DIR_UP 9
-#define DIR_DOWN 10
-#define DIR_IN 11
-#define DIR_OUT 12
-#define DIR_OTHER 13
-
 class XMLimport;
 class XMLexport;
 class TRoomDB;
@@ -134,8 +119,8 @@ public:
                    QMap<QString, bool>&,
                    QHash<int, int>);
     QString dirCodeToDisplayName(int) const;
+    static QString dirCodeToShortString(const int);
     static QString dirCodeToString(const int);
-    inline QString dirCodeToShortString(const int) const;
     inline int stringToDirCode(const QString&) const;
     bool hasExitOrSpecialExit(const QString&) const;
     void writeJsonRoom(QJsonArray&) const;

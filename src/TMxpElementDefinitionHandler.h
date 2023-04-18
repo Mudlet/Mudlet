@@ -22,6 +22,7 @@
 #define MUDLET_TMXPELEMENTDEFINITIONHANDLER_H
 #include "TMxpElementRegistry.h"
 #include "TMxpTagHandler.h"
+#include "utils.h"
 
 // https://www.zuggsoft.com/zmud/mxp.htm#ELEMENT
 // <!ELEMENT element-name [definition] [ATT=attribute-list] [TAG=tag] [FLAG=flags] [OPEN] [DELETE] [EMPTY]>
@@ -31,7 +32,7 @@ public:
     bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override {
         Q_UNUSED(ctx)
         Q_UNUSED(client)
-        return tag->isNamed(QStringLiteral("!EL")) || tag->isNamed(QStringLiteral("!ELEMENT"));
+        return tag->isNamed(qsl("!EL")) || tag->isNamed(qsl("!ELEMENT"));
     }
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;

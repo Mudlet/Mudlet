@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2021-2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -30,24 +31,14 @@
 
 TAlias::TAlias(TAlias* parent, Host* pHost)
 : Tree<TAlias>( parent )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
-, exportItem(true)
-, mRegisteredAnonymousLuaFunction(false)
+, mpHost(pHost)
 {
 }
 
 TAlias::TAlias(const QString& name, Host* pHost)
 : Tree<TAlias>(nullptr)
-, mName( name )
-, mpHost( pHost )
-, mNeedsToBeCompiled( true )
-, mModuleMember(false)
-, mModuleMasterFolder(false)
-, exportItem(true)
-, mRegisteredAnonymousLuaFunction(false)
+, mName(name)
+, mpHost(pHost)
 {
 }
 
@@ -119,21 +110,25 @@ bool TAlias::match(const QString& toMatch)
     int ovector[MAX_CAPTURE_GROUPS * 3];
 
     //cout <<" LINE="<<subject<<endl;
-    if (mRegexCode.size() > 0) {
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
-    } else {
+    if (mRegexCode.isEmpty()) {
         goto MUD_ERROR;
     }
+    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
 
     if (rc < 0) {
         goto MUD_ERROR;
-    } else if (rc == 0) {
+    }
+
+    if (rc == 0) {
         if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+            mpHost->mpEditorDialog->mpErrorConsole->print(
+                qsl("%1\n").arg(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
+                QColor(255, 128, 0),
+                QColor(Qt::black));
         }
         qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
     } else {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::cyan, Qt::black) << "Alias name=" << mName << "(" << mRegexCode << ") matched.\n" >> mpHost;
         }
     }
@@ -153,7 +148,7 @@ bool TAlias::match(const QString& toMatch)
         match.append(substring_start, substring_length);
         captureList.push_back(match);
         posList.push_back(ovector[2 * i]);
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::darkCyan, Qt::black) << "Alias: capture group #" << (i + 1) << " = " >> mpHost;
             TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
         }
@@ -197,7 +192,10 @@ bool TAlias::match(const QString& toMatch)
             goto END;
         } else if (rc == 0) {
             if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->mpErrorConsole->print(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.\n").arg(MAX_CAPTURE_GROUPS), QColor(255, 128, 0), QColor(Qt::black));
+                mpHost->mpEditorDialog->mpErrorConsole->print(
+                    qsl("%1\n").arg(tr("[Alias Error:] %1 capture group limit exceeded, capture less groups.").arg(MAX_CAPTURE_GROUPS)),
+                    QColor(255, 128, 0),
+                    QColor(Qt::black));
             }
             qWarning() << "CRITICAL ERROR: SHOULD NOT HAPPEN pcre_info() got wrong number of capture groups ovector only has room for" << MAX_CAPTURE_GROUPS << "captured substrings";
         }
@@ -214,7 +212,7 @@ bool TAlias::match(const QString& toMatch)
             match.append(substring_start, substring_length);
             captureList.push_back(match);
             posList.push_back(ovector[2 * i]);
-            if (mudlet::debugMode) {
+            if (mudlet::smDebugMode) {
                 TDebug(Qt::darkCyan, Qt::black) << "capture group #" << (i + 1) << " = " >> mpHost;
                 TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
             }
@@ -262,11 +260,11 @@ void TAlias::compileRegex()
 
     if (re == nullptr) {
         mOK_init = false;
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
             TDebug(Qt::red, Qt::gray) << TDebug::csmContinue << R"(in: ")" << mRegexCode << "\"\n" >> mpHost;
         }
-        setError(QStringLiteral("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)", error)));
+        setError(qsl("<b><font color='blue'>%1</font></b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
         mOK_init = true;
     }
@@ -287,7 +285,7 @@ void TAlias::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
@@ -302,7 +300,7 @@ void TAlias::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::debugMode) {
+            if (mudlet::smDebugMode) {
                 TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of alias:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
@@ -323,9 +321,9 @@ bool TAlias::setScript(const QString& script)
 
 bool TAlias::compileScript()
 {
-    QString code = QStringLiteral("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
-    QString aliasName = QStringLiteral("Alias: %1").arg(getName());
-    mFuncName = QStringLiteral("Alias%1").arg(QString::number(mID));
+    QString code = qsl("function Alias%1() %2\nend").arg(QString::number(mID), mScript);
+    QString aliasName = qsl("Alias: %1").arg(getName());
+    mFuncName = qsl("Alias%1").arg(QString::number(mID));
     QString error;
 
     if (mpHost->mLuaInterpreter.compile(code, error, aliasName)) {
@@ -341,7 +339,7 @@ bool TAlias::compileScript()
 
 void TAlias::execute()
 {
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {

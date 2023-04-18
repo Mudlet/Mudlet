@@ -32,9 +32,9 @@
 using namespace std::chrono;
 
 // Used before we spotted a problem with not specifying an encoding:
-const QString local8BitEncodedNotesFileName{QStringLiteral("notes.txt")};
+const QString local8BitEncodedNotesFileName{qsl("notes.txt")};
 // Used afterwards:
-const QString utf8EncodedNotesFileName{QStringLiteral("notes_utf8.txt")};
+const QString utf8EncodedNotesFileName{qsl("notes_utf8.txt")};
 
 dlgNotepad::dlgNotepad(Host* pH)
 : mpHost(pH)
@@ -45,7 +45,7 @@ dlgNotepad::dlgNotepad(Host* pH)
         restore();
     }
 
-    connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_text_written);
+    connect(notesEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_textWritten);
 
     startTimer(2min);
 }
@@ -72,7 +72,10 @@ void dlgNotepad::save()
     file.open(QIODevice::WriteOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
+    // fileStream.setCodec is removed in Qt6 and UTF-8 is the default
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
     fileStream << notesEdit->toPlainText();
     file.close();
 
@@ -85,9 +88,16 @@ void dlgNotepad::restoreFile(const QString& fn, const bool useUtf8Encoding)
     file.open(QIODevice::ReadOnly);
     QTextStream fileStream;
     fileStream.setDevice(&file);
+    // In Qt6 the default encoding is UTF-8 instead of the system default
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (useUtf8Encoding) {
         fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
     }
+#else
+    if (!useUtf8Encoding) {
+        fileStream.setEncoding(QStringEncoder::Encoding::System);
+    }
+#endif
     const QString txt = fileStream.readAll();
     notesEdit->blockSignals(true);
     notesEdit->setPlainText(txt);
@@ -111,7 +121,7 @@ void dlgNotepad::restore()
     restoreFile(fileName, false);
 }
 
-void dlgNotepad::slot_text_written()
+void dlgNotepad::slot_textWritten()
 {
     mNeedToSave = true;
 }

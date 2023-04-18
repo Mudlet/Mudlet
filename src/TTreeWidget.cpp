@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -31,7 +32,9 @@
 #include <QHeaderView>
 #include "post_guard.h"
 
-TTreeWidget::TTreeWidget(QWidget* pW) : QTreeWidget(pW), mChildID()
+TTreeWidget::TTreeWidget(QWidget* pW)
+: QTreeWidget(pW)
+, mChildID()
 {
     setSelectionMode(QAbstractItemView::SingleSelection);
     setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -229,7 +232,13 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
     // determine position in parent list
 
     if (mIsDropAction) {
-        QModelIndex child = parent.model()->index(start, 0, parent);
+        // If parent.isValid() is false for the item being considered then that
+        // item is a top-level item. The obsolete parent.child(start, 0) that we
+        // used to use would return a null "QModelIndex" directly but now,
+        // since we must get the (const QAbstractModel*) from parent.model()
+        // and use that, we have to handle the case where that returns a
+        // nullptr - see: https://github.com/Mudlet/Mudlet/issues/6313
+        QModelIndex child = parent.isValid() ? parent.model()->index(start, 0, parent) : QModelIndex();
         int parentPosition = parent.row();
         int childPosition = child.row();
         if (!mChildID) {
@@ -258,15 +267,15 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                 QIcon icon;
                 if (pTChild->isOffsetTimer()) {
                     if (pTChild->shouldBeActive()) {
-                        icon.addPixmap(QPixmap(QStringLiteral(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        icon.addPixmap(QPixmap(QStringLiteral(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
                     }
                 } else {
                     if (pTChild->shouldBeActive()) {
-                        icon.addPixmap(QPixmap(QStringLiteral(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
-                        icon.addPixmap(QPixmap(QStringLiteral(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
+                        icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     }
                 }
                 QTreeWidgetItem* pParent = itemFromIndex(parent);
@@ -321,7 +330,11 @@ void TTreeWidget::dragEnterEvent(QDragEnterEvent* event)
 
 void TTreeWidget::dropEvent(QDropEvent* event)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QTreeWidgetItem* pItem = itemAt(event->pos());
+#else
+    QTreeWidgetItem* pItem = itemAt(event->position().toPoint());
+#endif
 
     if (!pItem) {
         event->setDropAction(Qt::IgnoreAction);

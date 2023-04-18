@@ -1,6 +1,6 @@
 ############################################################################
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
-#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#    Copyright (C) 2015-2018, 2020, 2022 by Stephen Lyons                  #
 #                                                - slysven@virginmedia.com #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -21,14 +21,14 @@
 
 ############################################################################
 #                                                                          #
-#    NOTICE: FreeBSD and GNU/Hurd are not officially supported platforms   #
-#    as such; the work on getting them working has been done by myself,    #
-#    and other developers, unless they have explicitly said so, are not    #
-#    able to address issues relating specifically to these Operating       #
-#    Systems. Nevertheless users of either are equally welcome to          #
-#    contribute to the development of Mudlet - bugfixes and enhancements   #
-#    are welcome from all!                                                 #
-#                         Stephen Lyons, February 2018, updated March 2021 #
+#    NOTICE: FreeBSD, OpenBSD and GNU/Hurd are not officially supported    #
+#    platforms as such; the work on getting them working has been done by  #
+#    myself, and other developers, unless they have explicitly said so,    #
+#    are not able to address issues relating specifically to these         #
+#    Operating Systems. Nevertheless users of these operating systems are  #
+#    equally welcome to contribute to the development of Mudlet - bugfixes #
+#    and enhancements are welcome from all!                                #
+#        Stephen Lyons, February 2018, updated March 2021 & October 2022   #
 #                                                                          #
 ############################################################################
 
@@ -40,6 +40,15 @@ if(APPLE)
   cmake_minimum_required(VERSION 3.18)
   # minimum supported version by Apple
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
+endif()
+
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake)
+  # In cases where VCPkg is NOT being used we need to skip this
+  set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake
+    CACHE STRING "Vcpkg toolchain file")
+  message(STATUS "Using Vcpkg toolchain file: ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake .")
+else()
+  message(STATUS "Vcpkg toolchain file ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake NOT found, proceeding without it.")
 endif()
 
 project(mudlet)
@@ -71,6 +80,10 @@ else()
   set(APP_TARGET mudlet)
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
@@ -83,7 +96,7 @@ endif()
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.13.1)
+set(APP_VERSION 4.17.2)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
@@ -112,12 +125,35 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
-                        OPTION_VARIABLE USE_OWN_QT5KEYCHAIN
-                        READABLE_NAME "own QKeychain (Qt5) library")
+                        OPTION_VARIABLE USE_OWN_QTKEYCHAIN
+                        READABLE_NAME "own QtKeychain library")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_MAIN_BUILD_SYSTEM
                         OPTION_VARIABLE USE_MAIN_BUILD_SYSTEM
                         READABLE_NAME "original CI (setup-windows-sdk.ps1) windows build system"
                         SUPPORTED_SYSTEMS "Windows")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
+                        OPTION_VARIABLE USE_QT6
+                        READABLE_NAME "build with Qt6 (if installed)")
+
+if(USE_QT6)
+  find_package(
+          Qt6 6.2.0
+          QUIET)
+  if(NOT Qt6_FOUND)
+    message(STATUS "Qt6 >= 6.2.0 was not found. Building with Qt5.")
+  endif()
+endif()
+
+# Set Qt version for src, test, translations and communi
+set(WITH_QT6 ${Qt6_FOUND} CACHE BOOL "Whether to build with Qt6 or Qt5.")
+# Set Qt version for edbee-lib and dblsqd
+if(WITH_QT6)
+  option(BUILD_WITH_QT5 "" OFF)
+else()
+  option(BUILD_WITH_QT5 "" ON)
+endif()
+# Set Qt version for qtkeychain
+option(BUILD_WITH_QT6 "" ${WITH_QT6})
 
 include(InitGitSubmodule)
 
@@ -125,7 +161,7 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-if(USE_OWN_QT5KEYCHAIN)
+if(USE_OWN_QTKEYCHAIN)
   git_submodule_init(
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"
@@ -137,9 +173,14 @@ git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
 
-git_submodule_init(
-  CHECK_FILE "3rdparty/qt-orordered-map/src/orderedmap.h" SUBMODULE_PATH "3rdparty/qt-ordered-map"
-  READABLE_NAME "Qt ordered map source code")
+# PLACEMARKER: sample benchmarking code
+# include(FetchContent)
+# FetchContent_Declare(
+#     nanobench
+#     GIT_REPOSITORY https://github.com/martinus/nanobench.git
+#     GIT_TAG v4.3.11
+#     GIT_SHALLOW TRUE)
+# FetchContent_MakeAvailable(nanobench)
 
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
