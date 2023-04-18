@@ -39,6 +39,18 @@ end
 local MAX_COMMITS_PER_CHANGELOG = 100
 
 
+function escape_for_html(text)
+  local escapes = {
+    ["&"] = "&amp;",
+    ["<"] = "&lt;",
+    [">"] = "&gt;",
+    ['"'] = "&quot;",
+    ["'"] = "&#39;"
+  }
+
+  return text:gsub(".", escapes)
+end
+
 local htmlBuilder = {
   headerStart = [[<h5 style='margin-top: 1em;margin-bottom: 1em;'>]],
   headerEnd = "</h5>",
@@ -64,7 +76,7 @@ local mdBuilder = {
     for s in string.gmatch(text, "(.-)\n") do
       s = escape_for_html(s)
       s = s:gsub("%(#(.-)%)", "[#%1](https://github.com/Mudlet/Mudlet/pull/%1)")
-      t[#t+1] = string.format("\\ %s", s)
+      t[#t+1] = string.format("\\%s\n", s)
     end
   
     return table.concat(t, "\n")
@@ -157,30 +169,6 @@ function get_changelog(commit1, commit2)
   return os.capture(string.format("git log --pretty=%%s %s..%s", commit1, commit2), true):trim()
 end
 
-function escape_for_html(text)
-  local escapes = {
-    ["&"] = "&amp;",
-    ["<"] = "&lt;",
-    [">"] = "&gt;",
-    ['"'] = "&quot;",
-    ["'"] = "&#39;"
-  }
-
-  return text:gsub(".", escapes)
-end
-
-function convert_to_html(text)
-  local t = {}
-  text = text.."\n"
-  for s in string.gmatch(text, "(.-)\n") do
-    s = escape_for_html(s)
-    s = s:gsub("%(#(.-)%)", [[<a href='https://github.com/Mudlet/Mudlet/pull/%1'>(#%1)</a>]])
-		t[#t+1] = string.format("<p>%s</p>", s)
-  end
-
-  return table.concat(t, "\n")
-end
-
 function create_category_pattern(category)
   if not category then return end
   local nocase = category:genNocasePattern()
@@ -220,21 +208,21 @@ function print_sorted_changelog(changelog)
   end
   local hopen = builder.headerStart
   local hclose = builder.headerEnd
-  local addLines = lines_to_html(table.concat(add, "\n"))
+  local addLines = lines_to_output(table.concat(add, "\n"))
   addLines = addLines and f"{hopen}Added:{hclose}\n{addLines}\n" or ""
-  local improveLines = lines_to_html(table.concat(improve, "\n"))
+  local improveLines = lines_to_output(table.concat(improve, "\n"))
   improveLines = improveLines and f"{hopen}Improved:{hclose}\n{improveLines}\n" or ""
-  local fixLines = lines_to_html(table.concat(fix, "\n"))
+  local fixLines = lines_to_output(table.concat(fix, "\n"))
   fixLines = fixLines and f"{hopen}Fixed:{hclose}\n{fixLines}\n" or ""
-  local infraLines = lines_to_html(table.concat(infra, "\n"))
+  local infraLines = lines_to_output(table.concat(infra, "\n"))
   infraLines = infraLines and f"{hopen}Infrastructure:{hclose}\n{infraLines}\n" or ""
-  local otherLines = lines_to_html(table.concat(other, "\n"))
+  local otherLines = lines_to_output(table.concat(other, "\n"))
   otherLines = otherLines and f"{hopen}Other:{hclose}\n{otherLines}\n" or ""
   local final_changelog = f"{addLines}{improveLines}{fixLines}{infraLines}{otherLines}"
   print(final_changelog)
 end
 
-function lines_to_html(lines)
+function lines_to_output(lines)
   if lines == "" then
     return nil
   end
