@@ -828,7 +828,6 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
         out.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
         out << mPackageConfig;
-        out.flush();
         if (!configFile.commit()) {
             qDebug() << "dlgPackageExporter::writeConfigFile: error saving package config data: " << configFile.errorString();
         }
