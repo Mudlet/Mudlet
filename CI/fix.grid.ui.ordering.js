@@ -34,7 +34,6 @@ function visitUiFile(file) {
     var uiDefinition = convert.xml2js(contents, { compact: true });
     visitNode(uiDefinition)
     var result = convert.js2xml(uiDefinition, { compact: true, spaces: 1})
-    console.log(JSON.stringify(result));
     fs.writeFile(filePath, result + "\n")
   })  
 }
