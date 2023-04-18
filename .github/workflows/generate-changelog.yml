@@ -17,7 +17,7 @@ on:
 jobs:
   generate-changelog:
     runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
+    #if: ${{ github.repository_owner == 'Mudlet' }}
 
     strategy:
       matrix:
