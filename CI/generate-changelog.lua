@@ -27,6 +27,7 @@ parser:option("-m --mode", 'mode to run in'):choices({"ptb", "release"}):count("
 parser:option("-r --releasefile", "downloaded DBLSQD release feed file")
 parser:option("-s --start-commit", "start commit to generate changelog from")
 parser:option("-e --end-commit", "end commit to generate changelog to")
+parser:option("-f --format", "output format", "html"):choices({"html", "md"}):count(1)
 local args = parser:parse()
 
 if (args.mode == "ptb" and not args.releasefile) then
@@ -36,6 +37,41 @@ elseif (args.mode == "release" and not (args.start_commit and args.end_commit)) 
 end
 
 local MAX_COMMITS_PER_CHANGELOG = 100
+
+
+local htmlBuilder = {
+  headerStart = [[<h5 style='margin-top: 1em;margin-bottom: 1em;'>]],
+  headerEnd = "</h5>",
+  converter = function(text)
+    local t = {}
+    text = text.."\n"
+    for s in string.gmatch(text, "(.-)\n") do
+      s = escape_for_html(s)
+      s = s:gsub("%(#(.-)%)", [[<a href='https://github.com/Mudlet/Mudlet/pull/%1'>(#%1)</a>]])
+      t[#t+1] = string.format("<p>%s</p>", s)
+    end
+  
+    return table.concat(t, "\n")
+  end
+}
+
+local mdBuilder = {
+  headerStart = "##### ",
+  headerEnd = "",
+  converter = function(text)
+    local t = {}
+    text = text.."\n"
+    for s in string.gmatch(text, "(.-)\n") do
+      s = escape_for_html(s)
+      s = s:gsub("%(#(.-)%)", "[#%1](https://github.com/Mudlet/Mudlet/pull/%1)")
+      t[#t+1] = string.format("\\ %s", s)
+    end
+  
+    return table.concat(t, "\n")
+  end
+}
+
+local builder = args.format == "md" and mdBuilder or htmlBuilder
 
 -- Basic algorithm for the PTB mode is as follows:
 --   retrieve last MAX_COMMITS_PER_CHANGELOG commit hashes from current branch
@@ -182,8 +218,8 @@ function print_sorted_changelog(changelog)
       other[#other+1] = prefix .. line
     end
   end
-  local hopen = [[<h5 style='margin-top: 1em;margin-bottom: 1em;'>]]
-  local hclose = "</h5>"
+  local hopen = builder.headerStart
+  local hclose = builder.headerEnd
   local addLines = lines_to_html(table.concat(add, "\n"))
   addLines = addLines and f"{hopen}Added:{hclose}\n{addLines}\n" or ""
   local improveLines = lines_to_html(table.concat(improve, "\n"))
@@ -202,7 +238,7 @@ function lines_to_html(lines)
   if lines == "" then
     return nil
   end
-  return convert_to_html(lines)
+  return builder.converter(lines)
 end
 
 local start_commit, end_commit
