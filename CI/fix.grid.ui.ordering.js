@@ -10,7 +10,7 @@ function getCellOrder(node, attrKey) {
   let attrs = node[attrKey];
   let row = parseInt(attrs.row);
   let col = parseInt(attrs.column);
-  return row * 1000 + col * 100;
+  return row * 1000 + col;
 }
 
 function vistiNode(node) {
