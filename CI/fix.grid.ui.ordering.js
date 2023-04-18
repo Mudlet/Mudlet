@@ -13,13 +13,13 @@ function getCellOrder(node, attrKey) {
   return row * 1000 + col;
 }
 
-function vistiNode(node) {
+function visitNode(node) {
   if (typeof node !== "object") {
     return;
   }
 
   const subject = Array.isArray(node) ? node : Object.values(node);
-  subject.forEach(item => vistiNode(item))
+  subject.forEach(item => visitNode(item))
 
   if (node[ATTRIBUTE_KEY]?.class === GRID_LAYOUT_CLASS && Array.isArray(node.item)) {
     node.item.sort(
@@ -32,7 +32,7 @@ function visitUiFile(file) {
   const filePath = `${uiDir}/${file}`
   fs.readFile(filePath).then(contents => {
     var uiDefinition = convert.xml2js(contents, { compact: true });
-    vistiNode(uiDefinition)
+    visitNode(uiDefinition)
     var result = convert.js2xml(uiDefinition, { compact: true, spaces: 1})
     console.log(JSON.stringify(result));
     fs.writeFile(filePath, result + "\n")
