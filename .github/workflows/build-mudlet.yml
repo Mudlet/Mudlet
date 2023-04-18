@@ -143,12 +143,12 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        export PATH="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/tools/lua:$PATH"
+        export PATH="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/tools/lua:$PATH"
         # workaround https://github.com/lloyd/yajl/issues/209
         # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-        export LIBRARY_PATH="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
+        export LIBRARY_PATH="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks --lua-dir "${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/include" install YAJL_INCDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/include" --local lua-yajl
+        luarocks --lua-dir "${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/include" install YAJL_INCDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/include" --local lua-yajl
         # for some reason it gets installed in a place where lua-yajl can't find it after, fix that
         mkdir -p /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_x64-osx/lib/
         cp  /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/installed/x64-osx/lib/libyajl.2.dylib /Users/runner/work/Mudlet/Mudlet/3rdparty/vcpkg/packages/yajl_x64-osx/lib/libyajl.2.dylib
@@ -201,15 +201,15 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        export PATH="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/tools/lua:$PATH"
+        export PATH="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/tools/lua:$PATH"
         # workaround https://github.com/lloyd/yajl/issues/209
-        tree ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/
-        mv ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/lib/libyajl_s.a ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/lib/libyajl.a
-        mv ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/debug/lib/libyajl.a
+        tree ${{runner.workspace}}/b/vcpkg_installed/
+        mv ${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/lib/libyajl_s.a ${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/lib/libyajl.a
+        mv ${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/debug/lib/libyajl_s.a ${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/debug/lib/libyajl.a
         # Rock locations search is hardcoded to -L/usr/local/lib and not adjustable
-        export LIBRARY_PATH="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
+        export LIBRARY_PATH="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/lib:$LIBRARY_PATH"
         # LUA_INCDIR needs to be passed as well due to https://github.com/luarocks/luarocks/issues/1239
-        luarocks install YAJL_INCDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/include" --local lua-yajl
+        luarocks install YAJL_INCDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/include" YAJL_LIBDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/lib" LUA_INCDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/include" --local lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -317,11 +317,11 @@ jobs:
     - name: (Linux/macOS) install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
-        export PATH="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/tools/lua:$PATH"
+        export PATH="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/tools/lua:$PATH"
 
         shopt -s expand_aliases
         if [ "${RUNNER_OS}" = "macOS" ]; then
-          alias run-luarocks="luarocks --lua-dir "${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/include""
+          alias run-luarocks="luarocks --lua-dir "${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/tools/lua" --lua-version "5.1" LUA_INCDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/include""
         else
           alias run-luarocks="luarocks"
         fi
@@ -329,8 +329,8 @@ jobs:
         run-luarocks install --local LuaFileSystem
         run-luarocks install --local luautf8
         run-luarocks install --local lua-zip
-        run-luarocks install SQLITE_INCDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
-        run-luarocks install PCRE_INCDIR="${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg_installed/${{matrix.triplet}}/include" --local lrexlib-pcre
+        run-luarocks install SQLITE_INCDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/include" --local LuaSQL-SQLite3
+        run-luarocks install PCRE_INCDIR="${{runner.workspace}}/b/vcpkg_installed/${{matrix.triplet}}/include" --local lrexlib-pcre
 
         # CI changelog generation dependencies
         run-luarocks install --local argparse
