@@ -2500,7 +2500,7 @@ QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QStr
         QDataStream ofs(&file);
         ofs << what;
         if (!file.commit()) {
-            qDebug() << "dmudlet::writeProfileData: error saving profile data: " << file.errorString();
+            qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
         }
     }
 
