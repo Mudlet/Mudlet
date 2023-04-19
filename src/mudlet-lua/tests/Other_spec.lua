@@ -377,10 +377,10 @@ describe("Tests Other.lua functions", function()
 
     it("Should delete all lines between the first match and the script executing", function()
       --local s = spy.on(_G, "deleteLine")
-      echo("This line should not be deleted\n")
-      echo("This is the first line\n")
-      echo("This line has some substring match\n")
-      echo("This is now the third and final line\n")
+      feedTriggers("This line should not be deleted\n")
+      feedTriggers("This is the first line\n")
+      feedTriggers("This line has some substring match\n")
+      feedTriggers("This is now the third and final line\n")
       multimatches = {
         { "This is the first line" },
         { "some substring" },
