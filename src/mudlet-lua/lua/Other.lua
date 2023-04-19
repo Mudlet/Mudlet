@@ -707,6 +707,7 @@ function deleteMultiline(maxLines)
     end
     moveCursorUp()
   end
+  return true
 end
 
 function shms(seconds, bool)
