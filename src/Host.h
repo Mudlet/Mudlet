@@ -166,20 +166,20 @@ public:
 
     QString         getName()                        { return mHostName; }
     QString         getCommandSeparator()            { return mCommandSeparator; }
-    void            setName(const QString& s);
+    void            setName(const QString& name);
     QString         getUrl()                         { return mUrl; }
-    void            setUrl(const QString& s)         { mUrl = s; }
+    void            setUrl(const QString& url)       { mUrl = url; }
     QString         getDiscordGameName()             { return mDiscordGameName; }
-    void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
+    void            setDiscordGameName(const QString& name) { mDiscordGameName = name; }
     int             getPort()                        { return mPort; }
-    void            setPort(const int p)             { mPort = p; }
-    void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
+    void            setPort(const int port)          { mPort = port; }
+    void            setAutoReconnect(const bool reconnect) { mTelnet.setAutoReconnect(reconnect); }
     QString &       getLogin()                       { return mLogin; }
-    void            setLogin(const QString& s)       { mLogin = s; }
+    void            setLogin(const QString& login)       { mLogin = login; }
     QString &       getPass()                        { return mPass; }
-    void            setPass(const QString& s)        { mPass = s; }
+    void            setPass(const QString& password) { mPass = password; }
     int             getRetries()                     { return mRetries;}
-    void            setRetries(const int c)          { mRetries = c; }
+    void            setRetries(const int retries)    { mRetries = retries; }
     int             getTimeout()                     { return mTimeout; }
     void            setTimeout(const int seconds)    { mTimeout = seconds; }
     bool            wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
