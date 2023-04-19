@@ -692,6 +692,23 @@ function deleteFull()
   tempLineTrigger(1, 1, [[if isPrompt() then deleteLine() end]])
 end
 
+function deleteMultiline(maxLines)
+  local multimatchesSize = table.size(multimatches)
+  if multimatchesSize == 0 then
+    return nil, "Does not appear to be run during a multiline trigger match, please try again."
+  end
+  maxLines = maxLines or multimatchesSize
+  local firstMatch = multimatches[1][1]:patternEscape()
+  for i = 1, maxLines do
+    local content = getCurrentLine()
+    deleteLine()
+    if content:find(firstMatch) then
+      return
+    end
+    moveCursorUp()
+  end
+end
+
 function shms(seconds, bool)
   local seconds = tonumber(seconds)
   assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")

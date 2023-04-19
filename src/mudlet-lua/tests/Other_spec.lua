@@ -368,6 +368,31 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests the functionality of deleteMultiline", function()
+    it("Should return nil + error if run in non-multiline context", function()
+      local ok, err = deleteMultiline()
+      assert.is_false(ok)
+      assert.equals("Does not appear to be run during a multiline trigger match, please try again.", err)
+    end)
+
+    it("Should delete all lines between the first match and the script executing", function()
+      multimatches = {
+        { "This is the first line" },
+        { "some substring" },
+        { "third line" }
+      }
+      local s = spy.on(_G, "deleteLine")
+      echo("This line should not be deleted\n")
+      echo("This is the first line\n")
+      echo("This line has some substring match\n")
+      echo("This is now the third and final line\n")
+      deleteMultiline(5)
+      assert.spy(s).was.called(3)
+      local lastLine = getCurrentLine()
+      assert.equal("This line should not be deleted", lastLine)
+    end)
+  end)
+
     --[[ 
     TODO:
       remember()
