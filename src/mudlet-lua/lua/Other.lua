@@ -703,7 +703,7 @@ function deleteMultiline(maxLines)
     local content = getCurrentLine()
     deleteLine()
     if content:find(firstMatch) then
-      return
+      return true
     end
     moveCursorUp()
   end
