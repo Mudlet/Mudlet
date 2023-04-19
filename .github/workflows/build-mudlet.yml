@@ -277,13 +277,11 @@ jobs:
     - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
-        cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
-        cmakeListsTxtPath: '${{github.workspace}}/CMakeLists.txt'
-        useVcpkgToolchainFile: true
-        buildDirectory: '${{runner.workspace}}/b/ninja'
+        # this seems to be gone
+        # buildDirectory: '${{runner.workspace}}/b/ninja'
         # enable for a debug build (1/2)
-        # buildWithCMakeArgs: --config RelWithDebInfo
-        cmakeAppendedArgs: >-
+        # buildPresetAdditionalArgs: --config RelWithDebInfo
+        configurePresetAdditionalArgs: >-
           -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
