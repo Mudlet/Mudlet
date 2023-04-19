@@ -3665,6 +3665,16 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_blankLinesBehaviour">
+            <property name="text">
+             <string>When the game sends blank lines:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_blankLinesBehaviour</cstring>
+            </property>
+           </widget>
+          </item>
           <item row="1" column="1">
            <widget class="QComboBox" name="comboBox_blankLinesBehaviour">
             <item>
@@ -3682,16 +3692,6 @@ you can use it but there could be issues with aligning columns of text</string>
               <string>replace with a space</string>
              </property>
             </item>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_blankLinesBehaviour">
-            <property name="text">
-             <string>When the game sends blank lines:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_blankLinesBehaviour</cstring>
-            </property>
            </widget>
           </item>
           <item row="2" column="0">
