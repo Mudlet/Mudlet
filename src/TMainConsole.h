@@ -110,7 +110,7 @@ public:
 
     QMap<QString, TConsole*> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
-    QMap<QString, TCommandLine*> mSubCommandLineMap;
+    QMap<QString, TCommandLineWidget*> mSubCommandLineMap;
     QMap<QString, TLabel*> mLabelMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
     TBuffer mClipboard;

@@ -175,7 +175,7 @@ const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a vali
     ({                                                                                         \
         const QString& name_ = (_name);                                                        \
         auto console_ = getHostFromLua(_L).mpConsole;                                          \
-        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine                              \
+        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLineWidget                              \
                                     : console_->mSubCommandLineMap.value(name_);               \
         if (!cmdLine_) {                                                                       \
             lua_pushnil(L);                                                                    \
@@ -11903,12 +11903,12 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
     QString text = getVerifiedString(L, __func__, n, "text to set on command line");
     auto pN = COMMANDLINE(L, name);
 
-    QString curText = pN->toPlainText();
-    pN->setPlainText(curText + text);
-    QTextCursor cur = pN->textCursor();
+    QString curText = pN->mCommandLine.toPlainText();
+    pN->mCommandLine.setPlainText(curText + text);
+    QTextCursor cur = pN->mCommandLine.textCursor();
     cur.clearSelection();
     cur.movePosition(QTextCursor::EndOfLine);
-    pN->setTextCursor(cur);
+    pN->mCommandLine.setTextCursor(cur);
     return 0;
 }
 
@@ -11922,7 +11922,7 @@ int TLuaInterpreter::selectCmdLineText(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     auto commandline = COMMANDLINE(L, name);
-    commandline->selectAll();
+    commandline->mCommandLine.selectAll();
     return 1;
 }
 
@@ -11935,7 +11935,7 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     auto commandline = COMMANDLINE(L, name);
-    QString text = commandline->toPlainText();
+    QString text = commandline->mCommandLine.toPlainText();
     lua_pushstring(L, text.toUtf8().constData());
     return 1;
 }
@@ -11950,7 +11950,7 @@ int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
     }
     QString text = getVerifiedString(L, __func__, n, "suggestion text");
     auto pN = COMMANDLINE(L, name);
-    pN->addSuggestion(text);
+    pN->mCommandLine.addSuggestion(text);
     return 0;
 }
 
@@ -11964,7 +11964,7 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
     }
     QString text = getVerifiedString(L, __func__, n, "suggestion text");
     auto pN = COMMANDLINE(L, name);
-    pN->removeSuggestion(text);
+    pN->mCommandLine.removeSuggestion(text);
     return 0;
 }
 
@@ -11977,7 +11977,7 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     auto pN = COMMANDLINE(L, name);
-    pN->clearSuggestions();
+    pN->mCommandLine.clearSuggestions();
     return 0;
 }
 
@@ -11990,7 +11990,7 @@ int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
     }
     QString text = getVerifiedString(L, __func__, n, "suggestion text");
     auto pN = COMMANDLINE(L, name);
-    pN->addBlacklist(text);
+    pN->mCommandLine.addBlacklist(text);
     return 0;
 }
 
@@ -12003,7 +12003,7 @@ int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
     }
     QString text = getVerifiedString(L, __func__, n, "suggestion text");
     auto pN = COMMANDLINE(L, name);
-    pN->removeBlacklist(text);
+    pN->mCommandLine.removeBlacklist(text);
     return 0;
 }
 
@@ -12015,7 +12015,7 @@ int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     auto pN = COMMANDLINE(L, name);
-    pN->clearBlacklist();
+    pN->mCommandLine.clearBlacklist();
     return 0;
 }
 
@@ -12325,11 +12325,11 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     QString text = getVerifiedString(L, __func__, n, "text to set on command line");
 
     auto pN = COMMANDLINE(L, name);
-    pN->setPlainText(text);
-    QTextCursor cur = pN->textCursor();
+    pN->mCommandLine.setPlainText(text);
+    QTextCursor cur = pN->mCommandLine.textCursor();
     cur.clearSelection();
     cur.movePosition(QTextCursor::EndOfLine);
-    pN->setTextCursor(cur);
+    pN->mCommandLine.setTextCursor(cur);
     return 0;
 }
 
@@ -12342,7 +12342,7 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     auto pN = COMMANDLINE(L, name);
-    pN->clear();
+    pN->mCommandLine.clear();
     return 0;
 }
 
@@ -17697,7 +17697,7 @@ int TLuaInterpreter::addCommandLineMenuEvent(lua_State * L)
     auto eventName = getVerifiedString(L, __func__, args++, "event name");
 
     const auto& commandline = COMMANDLINE(L, commandLineName);
-    commandline->contextMenuItems.insert(menuLabel, eventName);
+    commandline->mCommandLine.contextMenuItems.insert(menuLabel, eventName);
 
     lua_pushboolean(L, true);
     return 1;
@@ -17719,7 +17719,7 @@ int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
 
     const auto& commandline = COMMANDLINE(L, commandLineName);
 
-    if (commandline->contextMenuItems.remove(menuLabel) == 0) {
+    if (commandline->mCommandLine.contextMenuItems.remove(menuLabel) == 0) {
         lua_pushboolean(L, false);
         lua_pushfstring(L, "removeCommandLineMenuEvent: Cannot remove '%s', menu item does not exist.", menuLabel.toUtf8().constData());
         return 2;

@@ -405,13 +405,16 @@ public:
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
     void setFocusOnHostActiveCommandLine();
-    void recordActiveCommandLine(TCommandLine*);
-    void forgetCommandLine(TCommandLine*);
+    void recordActiveCommandLine(TCommandLineWidget*);
+    void forgetCommandLine(TCommandLineWidget*);
     QPointer<TConsole> parentTConsole(QObject*) const;
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
     void loadMap();
-    QString getCommandLineBackingFileName(const TCommandLine::CommandLineType, const QString&);
+    std::tuple<QString, bool, bool> getCommandLineHistorySettings(const TCommandLine::CommandLineType, const QString&);
+    void setCommandLineHistorySettings(const TCommandLine::CommandLineType, const bool saveCommands, const bool forgetNextCommand, const QString&);
+    int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
+    void setCommandLineHistorySaveSize(const int lines);
 
 
     cTelnet mTelnet;
@@ -686,16 +689,6 @@ public:
     Q_ENUM(CaretShortcut)
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
-    // The range - applied to ALL command lines - is 0 to 500, with the knob
-    // on the profile preferences having a step size of 10. Prior to the
-    // introduction of this feature the control would effectively have been
-    // zero - and whilst the knob shows the special value of "None" then
-    // to reproduce that behavior there is little reason (other than the
-    // corner case where a password has been entered and thus it could be
-    // saved in plain-text in the relevant file even when the user has
-    // otherwise specified "secure" storage for that detail) to not enable it
-    // by default:
-    int mCommandLineHistorySaveSize = 50;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
@@ -712,6 +705,13 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
+    // Tells all command lines that the number of lines to save has changed
+    // importantly it may signal that the number has gone to zero so as to
+    // disable the feature globally - which should then hide the individual
+    // per-commandline controls to save/not save the next one/not save any
+    // in the history for the next session:
+    void signal_changeCommandLineHistorySaveSize(const int);
+
 
 private slots:
     void slot_purgeTemps();
@@ -737,7 +737,7 @@ private:
     void timerEvent(QTimerEvent *event) override;
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
-    TCommandLine* activeCommandLine();
+    TCommandLineWidget* activeCommandLine();
 
 
     QFont mDisplayFont;
@@ -882,7 +882,7 @@ private:
 
     // Tracks which command line was last used for this profile so that we can
     // return to it when switching between profiles:
-    QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+    QStack<QPointer<TCommandLineWidget>> mpLastCommandLineUsed;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple
@@ -890,6 +890,17 @@ private:
     bool mFocusTimerRunning = false;
 
     QMargins mBorders;
+
+    // The range - applied to ALL command lines - is 0 to 500, with the knob
+    // on the profile preferences having a step size of 10. Prior to the
+    // introduction of this feature the control would effectively have been
+    // zero - and whilst the knob shows the special value of "None" then
+    // to reproduce that behavior there is little reason (other than the
+    // corner case where a password has been entered and thus it could be
+    // saved in plain-text in the relevant file even when the user has
+    // otherwise specified "secure" storage for that detail) to not enable it
+    // by default:
+    int mCommandLineHistorySaveSize = 50;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

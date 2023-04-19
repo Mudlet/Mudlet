@@ -1428,8 +1428,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpConsole->show();
     pH->mpConsole->repaint();
     pH->mpConsole->refresh();
-    pH->mpConsole->mpCommandLine->repaint();
-    pH->mpConsole->mpCommandLine->setFocus();
+    pH->mpConsole->mpCommandLineWidget->repaint();
+    pH->mpConsole->mpCommandLineWidget->setFocus();
     pH->mpConsole->show();
     // Setting mpCurrentActiveHost to pH is now done by the following
     slot_tabChanged(newTabID);
@@ -4514,7 +4514,7 @@ void mudlet::activateProfile(Host* pHost)
     mpCurrentActiveHost->mpConsole->show();
     mpCurrentActiveHost->mpConsole->repaint();
     mpCurrentActiveHost->mpConsole->refresh();
-    mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
+    mpCurrentActiveHost->mpConsole->mpCommandLineWidget->repaint();
 
     // Regenerate the multi-view mode if it is enabled:
     reshowRequiredMainConsoles();

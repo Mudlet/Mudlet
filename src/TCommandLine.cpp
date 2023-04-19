@@ -40,10 +40,70 @@
 #include <QSaveFile>
 #include "post_guard.h"
 
-TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
+TCommandLineWidget::TCommandLineWidget(Host* pHost, const QString& name, TCommandLine::CommandLineType type, TConsole* pConsole, QWidget* parent)
+: QFrame(parent), mCommandLine(pHost, this, name, type, pConsole, parent), mpHost(pHost)
+{
+    // This will apply the layout to this widget:
+    mpLayout = new QHBoxLayout(this);
+
+    setAutoFillBackground(true);
+
+    QSize buttonSize(32, 32);
+    QMargins buttonMargins(1, 1, 1, 1);
+    mToolButton_history_save.setMaximumSize(buttonSize);
+    mToolButton_history_save.setMinimumSize(buttonSize);
+    // mToolButton_history_save.setIconSize(buttonSize.shrunkBy(buttonMargins));
+    QIcon icon_save;
+    icon_save.addFile(qsl(":/icons/log-all-commands.png"), buttonSize.shrunkBy(buttonMargins), QIcon::Normal, QIcon::Off);
+    icon_save.addFile(qsl(":/icons/log-all-commands-on.png"), buttonSize.shrunkBy(buttonMargins), QIcon::Normal, QIcon::On);
+    mToolButton_history_save.setIcon(icon_save);
+    mToolButton_history_save.setCheckable(true);
+
+    mToolButton_history_noSaveOnce.setMaximumSize(buttonSize);
+    mToolButton_history_noSaveOnce.setMinimumSize(buttonSize);
+    // mToolButton_history_noSaveOnce.setIconSize(buttonSize.shrunkBy(buttonMargins));
+    QIcon icon_noSaveOnce;
+    icon_noSaveOnce.addFile(qsl(":/icons/do-not-log-this-command.png"), buttonSize.shrunkBy(buttonMargins), QIcon::Normal, QIcon::Off);
+    icon_noSaveOnce.addFile(qsl(":/icons/do-not-log-this-command-on.png"), buttonSize.shrunkBy(buttonMargins), QIcon::Normal, QIcon::On);
+    mToolButton_history_noSaveOnce.setIcon(icon_noSaveOnce);
+    mToolButton_history_noSaveOnce.setCheckable(true);
+
+    mToolButton_history_noSave.setMaximumSize(buttonSize);
+    mToolButton_history_noSave.setMinimumSize(buttonSize);
+    // mToolButton_history_noSave.setIconSize(buttonSize.shrunkBy(buttonMargins));
+    QIcon icon_noSave;
+    icon_noSave.addFile(qsl(":/icons/do-not-log-commands.png"), buttonSize.shrunkBy(buttonMargins), QIcon::Normal, QIcon::Off);
+    icon_noSave.addFile(qsl(":/icons/do-not-log-commands-on.png"), buttonSize.shrunkBy(buttonMargins), QIcon::Normal, QIcon::On);
+    mToolButton_history_noSave.setIcon(icon_noSave);
+    mToolButton_history_noSave.setCheckable(true);
+
+    mpButtonGroup = new QButtonGroup(this);
+    mpButtonGroup->addButton(&mToolButton_history_save);
+    mpButtonGroup->addButton(&mToolButton_history_noSaveOnce);
+    mpButtonGroup->addButton(&mToolButton_history_noSave);
+
+    connect(&mToolButton_history_save, &QToolButton::clicked, this, &TCommandLineWidget::slot_saveCommandHistory);
+    connect(&mToolButton_history_noSaveOnce, &QToolButton::clicked, this, &TCommandLineWidget::slot_doNotSaveNextCommand);
+    connect(&mToolButton_history_noSave, &QToolButton::clicked, this, &TCommandLineWidget::slot_doNotSaveCommandHistory);
+
+    connect(pHost, &Host::signal_changeCommandLineHistorySaveSize, this, &TCommandLineWidget::slot_toggleCommandLineHistoryOptions);
+
+    mpLayout->addWidget(&mToolButton_history_save, 0, Qt::AlignCenter);
+    mpLayout->addWidget(&mToolButton_history_noSaveOnce, 0, Qt::AlignCenter);
+    mpLayout->addWidget(&mToolButton_history_noSave, 0, Qt::AlignCenter);
+    mpLayout->addWidget(&mCommandLine, 1);
+    mpLayout->setMargin(1);
+    mpLayout->setSpacing(1);
+    mpLayout->update();
+
+    slot_toggleCommandLineHistoryOptions(pHost->getCommandLineHistorySaveSize());
+}
+
+TCommandLine::TCommandLine(Host* pHost, TCommandLineWidget* pContainer, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mCommandLineName(name)
 , mpHost(pHost)
+, mpContainer(pContainer)
 , mType(type)
 , mpKeyUnit(pHost->getKeyUnit())
 , mpConsole(pConsole)
@@ -73,6 +133,8 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     setCenterOnScroll(false);
     setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
     setContentsMargins(0, 0, 0, 0);
+
+
     // clear console selection if selection in command line changes
     connect(this, &QPlainTextEdit::copyAvailable, this, &TCommandLine::slot_clearSelection);
     // We do NOT want the standard context menu to happen as we generate it
@@ -81,8 +143,17 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TCommandLine::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
-    mBackingFileName = mpHost->getCommandLineBackingFileName(mType, name);
+    // Restore the settings:
+    std::tie(mBackingFileName, mSaveCommands, mForgetNextCommand) = mpHost->getCommandLineHistorySettings(mType, name);
+    // To tie up the UI to match the above
+    // TCommandLineWidget::slot_toggleCommandLineHistoryOptions() needs to be
+    // called and that happens in that class's constructor - we cannot call it
+    // from here as that has not completed execution at this point...
+
+    // Restore any previous historic commands even if we are not going to use
+    // them under current settings:
     restoreHistory();
+
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
 }
 
@@ -565,7 +636,7 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // switching away and back to the Mudlet application and it messes up
     // the record:
     if (event->reason() != Qt::ActiveWindowFocusReason) {
-        mpHost->recordActiveCommandLine(this);
+        mpHost->recordActiveCommandLine(container());
     }
 
     QPlainTextEdit::focusInEvent(event);
@@ -897,50 +968,61 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
 void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
 {
-    // Process any other possible mousePressEvent - which is default popup
+    // Process any other possible mouseReleaseEvent - which is default popup
     // handling - and which accepts the event:
-    QPlainTextEdit::mousePressEvent(event);
+    QPlainTextEdit::mouseReleaseEvent(event);
     mudlet::self()->activateProfile(mpHost);
 }
 
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
     Q_UNUSED(event)
-    QString _t = toPlainText();
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
     mLastCompletion.clear();
     mUserKeptOnTyping = false;
 
-    QStringList _l = _t.split(QChar::LineFeed);
+    QStringList commandList = toPlainText().split(QChar::LineFeed);
 
-    for (int i = 0; i < _l.size(); i++) {
+    for (int i = 0; i < commandList.size(); ++i) {
         if (mType != MainCommandLine && mActionFunction) {
-            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, _l[i]);
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, commandList.at(i));
         } else {
-            mpHost->send(_l[i]);
+            mpHost->send(commandList.at(i));
         }
         // send command to your MiniConsole
         if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
-            mpConsole->printCommand(_l[i]);
+            // This usage of commandList modifies the content!!!
+            mpConsole->printCommand(commandList[i]);
         }
     }
 
-    if (!toPlainText().isEmpty()) {
+    if (!toPlainText().isEmpty() && mSaveCommands && mpHost->getCommandLineHistorySaveSize()) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {
             mHistoryBuffer = 1;
         }
 
+        // Keeping this outside of the mForgetNextCommand test means that
+        // activating the "forget this one" option can be used to "forget" any
+        // prior instances of the same command (text) that may have gotten into
+        // the history - even in previous sesssions:
         mHistoryList.removeAll(toPlainText());
-        if (!mHistoryList.isEmpty()) {
-            mHistoryList[0] = toPlainText();
+
+        if (!mForgetNextCommand) {
+            if (!mHistoryList.isEmpty()) {
+                mHistoryList[0] = toPlainText();
+            } else {
+                mHistoryList.push_front(toPlainText());
+            }
+            mHistoryList.push_front(QString());
+
         } else {
-            mHistoryList.push_front(toPlainText());
+            // Resets the mForgetNextCommand flag - and updates the UI:
+            container()->slot_saveCommandHistory();
         }
-        mHistoryList.push_front(QString());
     }
     if (mpHost->mAutoClearCommandLineAfterSend) {
 #if defined (Q_OS_MACOS)
@@ -1083,9 +1165,8 @@ void TCommandLine::handleAutoCompletion()
             }
             moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
             return;
-        } else {
-            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
         }
+        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     }
     mAutoCompletionCount = -1;
 }
@@ -1478,9 +1559,11 @@ void TCommandLine::slot_saveHistory()
         return;
     }
 
-    auto saveSize = pHost->mCommandLineHistorySaveSize;
-    if (!saveSize) {
-        // Option has been disabled so nothing to do:
+    pHost->setCommandLineHistorySettings(mType, mSaveCommands, mForgetNextCommand, mCommandLineName);
+    auto saveSize = pHost->getCommandLineHistorySaveSize();
+    if (!saveSize || !mSaveCommands) {
+        // Option has been disabled so do nothing (won't delete the previous one
+        // though!):
         return;
     }
 
@@ -1498,4 +1581,106 @@ void TCommandLine::slot_saveHistory()
                                          << " of type: " << mType << " reason: " << historyFile.errorString();
         }
     }
+}
+
+void TCommandLineWidget::slot_toggleCommandLineHistoryOptions(const bool active)
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    // Done here because Host::mCommandLineBgColor may not be set soon enough
+    QColor c = mpHost->mCommandLineBgColor;
+    QString styleSheet{qsl("QFrame {background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
+    setStyleSheet(styleSheet);
+
+    mToolButton_history_save.setEnabled(active);
+    mToolButton_history_noSaveOnce.setEnabled(active);
+    mToolButton_history_noSave.setEnabled(active);
+    if (active) {
+        mToolButton_history_save.setToolTip(utils::richText(tr("Commands entered on this command line will be remembered between sessions.")));
+        mToolButton_history_save.setAccessibleName("Option (1 of 3): remember all commands entered.");
+        mToolButton_history_save.setAccessibleDescription(tr("Select this (first of three) options so that commands entered on this command line will be remember between sessions."));
+
+        mToolButton_history_noSaveOnce.setToolTip(tr("<p>This particular command will not be remembered, this is recommended when "
+                                                     "entering a password so that it is not saved in the relevant "
+                                                     "<tt>command_history_XXX</tt> file as that will otherwise compromised the "
+                                                     "'Secure password' storage system.</p>"
+                                                     "<p><i>Selecting this option will only last for one command and will switch "
+                                                     "back to 'Remember commands between sessions' after that command has been "
+                                                     "entered."));
+        mToolButton_history_noSaveOnce.setAccessibleName("Option (2 of 3): do not remember the next command entered.");
+        mToolButton_history_noSaveOnce.setAccessibleDescription(tr("Select this (second of three) options so that the next command entered on this "
+                                                                   "command line will not be remembered between sessions. This option will "
+                                                                   "automatically be deselected and the (first) option to remember commands be "
+                                                                   "reselected after the next command has been entered."));
+
+        mToolButton_history_noSave.setToolTip(utils::richText(tr("Commands entered via this command line will not be saved between sessions.")));
+        mToolButton_history_noSave.setAccessibleName("Option (3 of 3): do not remember any commands entered.");
+        mToolButton_history_noSave.setAccessibleDescription(tr("Select this (third of three) options so that commands entered on this command line will not be remember between sessions."));
+    } else {
+        mToolButton_history_save.setToolTip(tr("<p>If command remembering was enabled globally then commands entered on this "
+                                               "command line would be remembered between sessions if this option was selected.</p>"
+                                               "<p><i>Adjust <tt></tt> away from <tt>None</tt> in the preferences to reenable this control and feature.</p>"));
+        mToolButton_history_save.setAccessibleName("Disabled option (1 of 3): remember all commands entered.");
+        mToolButton_history_save.setAccessibleDescription(tr("If this was enabled globally selecting this (first of three) option would "
+                                                             "cause commands entered on this command line to be remember between sessions."));
+
+        mToolButton_history_noSaveOnce.setToolTip(tr("<p>If command remembering was enabled globally, this particular command would "
+                                                     "not be remembered, since that is not active this option is not needed and all "
+                                                     "the setting options here are disabled.</p>"
+                                                     "<p><i>Adjust <tt></tt> away from <tt>None</tt> in the preferences to reenable this control and feature.</p>"));
+        mToolButton_history_noSaveOnce.setAccessibleName("Disabled option (2 of 3): do not remember the next command entered.");
+        mToolButton_history_noSaveOnce.setAccessibleDescription(tr("If remembering commands was enabled globally selecting this (second of three) "
+                                                                   "option would mean the next command entered on this command line would not be "
+                                                                   "remembered between sessions. Since the feature is disabled this button is "
+                                                                   "not effective as no commands are so remembered."));
+
+        mToolButton_history_noSave.setToolTip(tr("<p>If command remembering was enabled globally then commands entered on this "
+                                                 "command line will not be saved between sessions; since it is disabled then "
+                                                 "that happens without needed to selected this option.</p>"
+                                                 "<p><i>Adjust <tt></tt> away from <tt>None</tt> in the preferences to reenable this control.</p>"));
+        mToolButton_history_noSave.setAccessibleName("Disabled option (3 of 3): do not remember any commands entered.");
+        mToolButton_history_noSave.setAccessibleDescription(tr("If remembering commands was enabled globally selecting this (third of three) "
+                                                               "option would make commands entered on this command line not be remember between sessions."));
+    }
+
+    if (mCommandLine.mForgetNextCommand) {
+        mToolButton_history_noSaveOnce.setChecked(true);
+    } else {
+        if (mCommandLine.mSaveCommands) {
+            mToolButton_history_save.setChecked(true);
+        } else {
+            mToolButton_history_noSave.setChecked(true);
+        }
+    }
+}
+
+void TCommandLineWidget::slot_saveCommandHistory()
+{
+    if (!mToolButton_history_save.isChecked()) {
+        mToolButton_history_save.setChecked(true);
+    }
+    mCommandLine.mForgetNextCommand = false;
+    mCommandLine.mSaveCommands = true;
+}
+
+void TCommandLineWidget::slot_doNotSaveCommandHistory()
+{
+    if (!mToolButton_history_noSave.isChecked()) {
+        mToolButton_history_noSave.setChecked(true);
+    }
+    mCommandLine.mForgetNextCommand = false;
+    mCommandLine.mSaveCommands = false;
+}
+
+void TCommandLineWidget::slot_doNotSaveNextCommand()
+{
+    if (!mToolButton_history_noSaveOnce.isChecked()) {
+        mToolButton_history_noSaveOnce.setChecked(true);
+    }
+    mCommandLine.mForgetNextCommand = true;
+    // We need to set this flag so it takes effect when the prior one gets reset
+    mCommandLine.mSaveCommands = true;
 }

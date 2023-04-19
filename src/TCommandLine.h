@@ -27,7 +27,10 @@
 #include "TConsole.h"
 
 #include "pre_guard.h"
+#include <QFrame>
+#include <QButtonGroup>
 #include <QPlainTextEdit>
+#include <QToolButton>
 #include <QPointer>
 #include <QString>
 #include <QStringList>
@@ -37,8 +40,10 @@
 
 class KeyUnit;
 class Host;
+class TCommandLineWidget;
 
-class TCommandLine : public QPlainTextEdit //QLineEdit
+
+class TCommandLine : public QPlainTextEdit
 {
     Q_OBJECT
 
@@ -46,6 +51,8 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
         MOVE_UP,
         MOVE_DOWN
     };
+
+    friend class TCommandLineWidget;
 
 public:
     enum CommandLineTypeFlag {
@@ -58,7 +65,7 @@ public:
     Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
 
     Q_DISABLE_COPY(TCommandLine)
-    explicit TCommandLine(Host*, const QString&, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
+    explicit TCommandLine(Host*, TCommandLineWidget*, const QString&, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void hideEvent(QHideEvent*) override;
@@ -76,6 +83,8 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const { return mpConsole; }
+    TCommandLineWidget* container() { return mpContainer; }
+
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -90,7 +99,6 @@ public slots:
     void slot_clearSelection(bool yes);
     void slot_adjustAccessibleNames();
     void slot_saveHistory();
-
 
 private:
     bool event(QEvent*) override;
@@ -107,7 +115,9 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
 
+
     QPointer<Host> mpHost;
+    TCommandLineWidget* mpContainer = nullptr;
     CommandLineType mType = UnknownType;
     KeyUnit* mpKeyUnit = nullptr;
     QPointer<TConsole> mpConsole;
@@ -131,9 +141,44 @@ private:
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
     QString mBackingFileName;
+    // Set to true when the command history option mToolButton_history_noSaveOnce
+    // is the one activated - it gets reset (and that option returned to the
+    // mToolButton_history_save state) after the enter key is used to enter
+    // a command:
+    bool mForgetNextCommand = false;
+    // Set to true (by default) to save the commands in the mHistoryList at the
+    // end of the session AND to add the commands to that mHistoryList; the
+    // first is so that past stored commands get cleared (at the end of the
+    // session) and the second so that no new ones get added if this is set to
+    // false otherwise past erroneous entries (like say a password) cannot be
+    // easily be nuked...
+    bool mSaveCommands = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
+
+class TCommandLineWidget : public QFrame
+{
+    Q_OBJECT
+
+public:
+    explicit TCommandLineWidget(Host*, const QString&, TCommandLine::CommandLineType, TConsole*, QWidget*);
+    TCommandLine mCommandLine;
+    QToolButton mToolButton_history_save;
+    QToolButton mToolButton_history_noSaveOnce;
+    QToolButton mToolButton_history_noSave;
+    QButtonGroup* mpButtonGroup = nullptr;
+
+public slots:
+    void slot_saveCommandHistory();
+    void slot_doNotSaveNextCommand();
+    void slot_doNotSaveCommandHistory();
+    void slot_toggleCommandLineHistoryOptions(const bool);
+
+private:
+    QHBoxLayout* mpLayout = nullptr;
+    QPointer<Host> mpHost;
+};
 
 #if !defined(QT_NO_DEBUG)
 inline QDebug& operator<<(QDebug& debug, const TCommandLine::CommandLineType& type)

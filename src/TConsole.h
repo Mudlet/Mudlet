@@ -66,6 +66,7 @@ class QToolButton;
 class dlgMapper;
 class Host;
 class TTextEdit;
+class TCommandLineWidget;
 class TCommandLine;
 class TDockWidget;
 class TLabel;
@@ -204,14 +205,14 @@ public:
     QPair<quint8, TChar> getTextAttributes() const;
     void setCaretMode(bool enabled);
     void setSearchOptions(const SearchOptions);
-    void setProxyForFocus(TCommandLine*);
+    void setProxyForFocus(TCommandLineWidget*);
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
 
 
     QPointer<Host> mpHost;
     // Only assigned a value for user windows:
     QPointer<TDockWidget> mpDockWidget;
-    QPointer<TCommandLine> mpCommandLine;
+    QPointer<TCommandLineWidget> mpCommandLineWidget;
 
     TBuffer buffer;
     static const QString cmLuaLineVariable;

@@ -141,7 +141,7 @@ std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& na
 std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
 {
     if (name.isEmpty() || !name.compare(qsl("main"))) {
-        mpHost->mpConsole->mpCommandLine->setStyleSheet(styleSheet);
+        mpHost->mpConsole->mpCommandLineWidget->setStyleSheet(styleSheet);
         return {true, QString()};
     }
 
@@ -448,7 +448,7 @@ void TMainConsole::resetMainConsole()
         itDockWidget.remove();
     }
 
-    QMutableMapIterator<QString, TCommandLine*> itCommandLine(mSubCommandLineMap);
+    QMutableMapIterator<QString, TCommandLineWidget*> itCommandLine(mSubCommandLineMap);
     while (itCommandLine.hasNext()) {
         itCommandLine.next();
         itCommandLine.value()->deleteLater();
@@ -499,7 +499,7 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         mSubConsoleMap[name] = pC;
         pC->setObjectName(name);
         pC->mConsoleName = name;
-        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
+        const auto& hostCommandLine = mpHost->mpConsole->mpCommandLineWidget;
         pC->setFocusProxy(hostCommandLine);
         pC->mUpperPane->setFocusProxy(hostCommandLine);
         pC->mLowerPane->setFocusProxy(hostCommandLine);
@@ -740,11 +740,11 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
 
     if (!pN) {
         if (pS) {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pS->widget());
+            pN = new TCommandLineWidget(mpHost, name, TCommandLine::SubCommandLine, this, pS->widget());
         } else if (pW) {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, pW->widget());
+            pN = new TCommandLineWidget(mpHost, name, TCommandLine::SubCommandLine, this, pW->widget());
         } else {
-            pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
+            pN = new TCommandLineWidget(mpHost, name, TCommandLine::SubCommandLine, this, mpMainFrame);
         }
         mSubCommandLineMap[name] = pN;
         pN->resize(width, height);

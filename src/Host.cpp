@@ -429,7 +429,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     if (mudlet::self()->smFirstLaunch) {
         QTimer::singleShot(0, this, [this]() {
-            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
+            mpConsole->mpCommandLineWidget->mCommandLine.setPlaceholderText(tr("Text to send to the game"));
         });
     }
 
@@ -2177,19 +2177,31 @@ QString Host::readProfileIniData(const QString& item)
 // Because '/' and '\\' are used by the QSettings class in key names for
 // special purposes we MUST filter them out in the name, we'll replace them
 // with '_'s:
-QString Host::getCommandLineBackingFileName(const TCommandLine::CommandLineType type, const QString& name)
+std::tuple<QString, bool, bool> Host::getCommandLineHistorySettings(const TCommandLine::CommandLineType type, const QString& name)
 {
     if (type == TCommandLine::MainCommandLine) {
-        // This one does not need the name to be kept in a QSettings
-        return qsl("command_history_main");
+        // This one does not need the name to be kept in a QSettings but we
+        // still need to retrieve the other pair of settings:
+        auto saveCommands = static_cast<bool>(readProfileIniData(qsl("CommandLines/SaveHistory/main")).compare(qsl("false"), Qt::CaseInsensitive));
+        auto forgetNextCommand = !static_cast<bool>(readProfileIniData(qsl("CommandLines/ForgetNextCommand/main")).compare(qsl("true"), Qt::CaseInsensitive));
+        return {qsl("command_history_main"), saveCommands, forgetNextCommand};
     }
     QString localName{name};
     localName.replace(QRegularExpression(qsl("[\\/]")), qsl("_"));
-    // We use a '/' in the name as that donotes a grouping (section) within the QSetting's
-    // (INI) format with the left-most side of the first '/' as a section header
+    // We use a '/' in the name as that donotes a grouping (section) within the
+    // QSetting's (INI) format with the left-most side of the first '/' as a
+    // section header. They actually get converted to `\\` (a single backslash)
+    // inside the actual file but are accessed correctly only if given as a
+    // forward slash in the code:
     auto fileName = readProfileIniData(qsl("CommandLines/NameMapping/%1").arg(localName));
+    // We want this to default to true if the setting doesn't exist, so we will
+    // compare it to the opposite (which will be zero for a match) and convert
+    // it to a boolean - so that a missing value will give a non-zero value
+    // which becomes a true:
+    auto saveCommands = static_cast<bool>(readProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName)).compare(qsl("false"), Qt::CaseInsensitive));
+    auto forgetNextCommand = !static_cast<bool>(readProfileIniData(qsl("CommandLines/ForgetNextCommand/%1").arg(localName)).compare(qsl("true"), Qt::CaseInsensitive));
     if (!fileName.isEmpty()) {
-        return fileName;
+        return {fileName, saveCommands, forgetNextCommand};
     }
 
     // Else the name is not in the settings so we will have to create one:
@@ -2197,19 +2209,36 @@ QString Host::getCommandLineBackingFileName(const TCommandLine::CommandLineType 
     bool isOk = false;
     auto usedIndex = readProfileIniData(qsl("CommandLines/UsedIndexes")).toInt(&isOk);
     if (!isOk || !usedIndex) {
-        // The value was not found / is null - so create one to start with
-        writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(1));
-        usedIndex = 1;
-    } else {
-        // Increment it and save the new value
-        writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(++usedIndex));
+        // The value was not found / is null - so force it to be the right one
+        // to start with, remembering that it will be incremented before use:
+        usedIndex = 0;
     }
+    // Increment it and save the new value
+    writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(++usedIndex));
     // Generate the name
     fileName = qsl("command_history_%1").arg(usedIndex, 2, 10, QLatin1Char('0'));
     // Save it:
-    writeProfileIniData(qsl("CommandLines/NameMapping/%1").arg(name), fileName);
-    // And return it:
-    return fileName;
+    writeProfileIniData(qsl("CommandLines/NameMapping/%1").arg(localName), fileName);
+    // And a default pair of other settings:
+    writeProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName), saveCommands ? qsl("true") : qsl("false"));
+    writeProfileIniData(qsl("CommandLines/ForgetNextCommand/%1").arg(localName), forgetNextCommand ? qsl("true") : qsl("false"));
+    // And return it - with the defaulted other pair of settings:
+    return {fileName, saveCommands, forgetNextCommand};
+}
+
+void Host::setCommandLineHistorySettings(const TCommandLine::CommandLineType type, const bool saveCommands, const bool forgetNextCommand, const QString& name)
+{
+    if (type == TCommandLine::MainCommandLine) {
+        writeProfileIniData(qsl("CommandLines/SaveHistory/main"), saveCommands ? qsl("true") : qsl("false"));
+        writeProfileIniData(qsl("CommandLines/ForgetNextCommand/main"), forgetNextCommand ? qsl("true") : qsl("false"));
+        return;
+    }
+    QString localName{name};
+    localName.replace(QRegularExpression(qsl("[\\/]")), qsl("_"));
+    // We use a '\' in the name as that donotes a grouping (section) within the QSetting's
+    // (INI) format with the left-most side of the first '\\' as a section header
+    writeProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName), saveCommands ? qsl("true") : qsl("false"));
+    writeProfileIniData(qsl("CommandLines/ForgetNextCommand/%1").arg(localName), forgetNextCommand ? qsl("true") : qsl("false"));
 }
 
 // Derived from the one in dlgConnectionProfile class - but it does not need a
@@ -2702,10 +2731,10 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
     if (isSpellCheckingEnabled) {
         // Now enabled - so recheck the whole command line with whichever
         // dictionaries are active:
-        mpConsole->mpCommandLine->recheckWholeLine();
+        mpConsole->mpCommandLineWidget->mCommandLine.recheckWholeLine();
     } else {
         // Or it is now disabled so clear any spelling marks:
-        mpConsole->mpCommandLine->clearMarksOnWholeLine();
+        mpConsole->mpCommandLineWidget->mCommandLine.clearMarksOnWholeLine();
     }
 }
 
@@ -3593,7 +3622,7 @@ bool Host::setCmdLineAction(const QString& name, const int func)
     }
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     if (pN) {
-        pN->setAction(func);
+        pN->mCommandLine.setAction(func);
         return true;
     }
     return false;
@@ -3606,7 +3635,7 @@ bool Host::resetCmdLineAction(const QString& name)
     }
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     if (pN) {
-        pN->resetAction();
+        pN->mCommandLine.resetAction();
         return true;
     }
     return false;
@@ -4169,38 +4198,38 @@ void Host::setFocusOnHostActiveCommandLine()
         auto pCommandLine = activeCommandLine();
         if (pCommandLine) {
             pCommandLine->activateWindow();
-            pCommandLine->console()->show();
-            pCommandLine->console()->raise();
-            pCommandLine->console()->repaint();
+            pCommandLine->mCommandLine.console()->show();
+            pCommandLine->mCommandLine.console()->raise();
+            pCommandLine->mCommandLine.console()->repaint();
             pCommandLine->setFocus(Qt::OtherFocusReason);
         } else {
-            mpConsole->mpCommandLine->activateWindow();
+            mpConsole->mpCommandLineWidget->activateWindow();
             mpConsole->show();
             mpConsole->raise();
             mpConsole->repaint();
-            mpConsole->mpCommandLine->setFocus(Qt::OtherFocusReason);
+            mpConsole->mpCommandLineWidget->setFocus(Qt::OtherFocusReason);
         }
         mFocusTimerRunning = false;
     });
 }
 
-void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
+void Host::recordActiveCommandLine(TCommandLineWidget* pCommandLine)
 {
-    mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
-    mpLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
+    mpLastCommandLineUsed.removeAll(QPointer<TCommandLineWidget>(pCommandLine));
+    mpLastCommandLineUsed.push(QPointer<TCommandLineWidget>(pCommandLine));
 }
 
-void Host::forgetCommandLine(TCommandLine* pCommandLine)
+void Host::forgetCommandLine(TCommandLineWidget* pCommandLine)
 {
     if (pCommandLine) {
-        mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+        mpLastCommandLineUsed.removeAll(QPointer<TCommandLineWidget>(pCommandLine));
     }
 }
 
 // Returns a pointer to the last used TCommandLine for this profile:
-TCommandLine* Host::activeCommandLine()
+TCommandLineWidget* Host::activeCommandLine()
 {
-    TCommandLine* pCommandLine = nullptr;
+    TCommandLineWidget* pCommandLine = nullptr;
     if (mpLastCommandLineUsed.isEmpty()) {
         return nullptr;
     }
@@ -4250,4 +4279,12 @@ void Host::setBorders(QMargins borders)
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpConsole, &event);
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);
+}
+
+void Host::setCommandLineHistorySaveSize(const int lines)
+{
+    if (mCommandLineHistorySaveSize != lines) {
+        mCommandLineHistorySaveSize = lines;
+        emit signal_changeCommandLineHistorySaveSize(lines);
+    }
 }

@@ -56,6 +56,10 @@
         <file>icons/discord-rich-presence-large-icon.png</file>
         <file>icons/discord-rich-presence-small-icon.png</file>
         <file>icons/discord-rich-presence.png</file>
+        <file>icons/do-not-log-commands.png</file>
+        <file>icons/do-not-log-commands-on.png</file>
+        <file>icons/do-not-log-this-command.png</file>
+        <file>icons/do-not-log-this-command-on.png</file>
         <file>icons/document-decrypt.png</file>
         <file>icons/document-encrypt.png</file>
         <file>icons/document-new.png</file>
@@ -121,6 +125,8 @@
         <file>icons/import.png</file>
         <file>icons/internet-telephony.png</file>
         <file>icons/legendsofthejedi_120x30.png</file>
+        <file>icons/log-all-commands.png</file>
+        <file>icons/log-all-commands-on.png</file>
         <file>icons/luminari_icon.png</file>
         <file>icons/lusternia_120_30.png</file>
         <file>icons/media-optical.png</file>
