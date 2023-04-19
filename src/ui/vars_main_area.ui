@@ -41,56 +41,6 @@
       <enum>QFrame::Plain</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_frame_vars_main_area" columnstretch="1,0,0">
-      <item row="1" column="2">
-       <widget class="QComboBox" name="comboBox_variable_value_type">
-        <property name="sizeAdjustPolicy">
-         <enum>QComboBox::AdjustToContents</enum>
-        </property>
-        <item>
-         <property name="text">
-          <string>Auto-Type</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>string</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>number</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>boolean</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>table</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>function</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item row="1" column="1" alignment="Qt::AlignRight">
-       <widget class="QLabel" name="label_variable_value">
-        <property name="text">
-         <string>⏷ Value type:</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-        <property name="buddy">
-         <cstring>comboBox_variable_value_type</cstring>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="0">
        <widget class="QWidget" name="widget_variable_name" native="true">
         <layout class="QHBoxLayout" name="horizontalLayout_widget_variable_name">
@@ -138,6 +88,19 @@
         </layout>
        </widget>
       </item>
+      <item row="0" column="1" alignment="Qt::AlignRight">
+       <widget class="QLabel" name="label_variable_key">
+        <property name="text">
+         <string>⏴ Key type:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="buddy">
+         <cstring>comboBox_variable_key_type</cstring>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="2">
        <widget class="QComboBox" name="comboBox_variable_key_type">
         <property name="toolTip">
@@ -175,19 +138,6 @@ from GUI)</string>
         </item>
        </widget>
       </item>
-      <item row="0" column="1" alignment="Qt::AlignRight">
-       <widget class="QLabel" name="label_variable_key">
-        <property name="text">
-         <string>⏴ Key type:</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-        <property name="buddy">
-         <cstring>comboBox_variable_key_type</cstring>
-        </property>
-       </widget>
-      </item>
       <item row="1" column="0">
        <widget class="QCheckBox" name="checkBox_variable_hidden">
         <property name="toolTip">
@@ -196,6 +146,56 @@ from GUI)</string>
         <property name="text">
          <string>hidden variable</string>
         </property>
+       </widget>
+      </item>
+      <item row="1" column="1" alignment="Qt::AlignRight">
+       <widget class="QLabel" name="label_variable_value">
+        <property name="text">
+         <string>⏷ Value type:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="buddy">
+         <cstring>comboBox_variable_value_type</cstring>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QComboBox" name="comboBox_variable_value_type">
+        <property name="sizeAdjustPolicy">
+         <enum>QComboBox::AdjustToContents</enum>
+        </property>
+        <item>
+         <property name="text">
+          <string>Auto-Type</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>string</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>number</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>boolean</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>table</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>function</string>
+         </property>
+        </item>
        </widget>
       </item>
      </layout>

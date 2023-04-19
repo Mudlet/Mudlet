@@ -485,7 +485,76 @@
             <attribute name="title">
              <string>Connect to</string>
             </attribute>
-            <layout class="QGridLayout" name="gridLayout">
+            <layout class="QGridLayout" name="gridLayout_tab_connection_info">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_profileName">
+               <property name="text">
+                <string>Profile name:</string>
+               </property>
+               <property name="buddy">
+                <cstring>profile_name_entry</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1" colspan="2">
+              <widget class="QLineEdit" name="profile_name_entry">
+               <property name="font">
+                <font>
+                 <pointsize>9</pointsize>
+                </font>
+               </property>
+               <property name="accessibleName">
+                <string>Profile name</string>
+               </property>
+               <property name="accessibleDescription">
+                <string comment="Using lower case letters for 'ASCII' may make speech synthesisers say 'askey' which is quicker than 'Aay Ess Cee Eye Eye'!">A unique name for the profile but which is limited to a subset of ascii characters only.</string>
+               </property>
+               <property name="readOnly">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_serverUrl">
+               <property name="text">
+                <string>Server address:</string>
+               </property>
+               <property name="buddy">
+                <cstring>host_name_entry</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1" colspan="2">
+              <widget class="QLineEdit" name="host_name_entry">
+               <property name="minimumSize">
+                <size>
+                 <width>100</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>9</pointsize>
+                </font>
+               </property>
+               <property name="accessibleName">
+                <string>Game server URL</string>
+               </property>
+               <property name="accessibleDescription">
+                <string>The Internet host name or IP address</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_port">
+               <property name="text">
+                <string>Port:</string>
+               </property>
+               <property name="buddy">
+                <cstring>port_entry</cstring>
+               </property>
+              </widget>
+             </item>
              <item row="2" column="1">
               <widget class="QLineEdit" name="port_entry">
                <property name="minimumSize">
@@ -541,75 +610,6 @@
                </property>
               </widget>
              </item>
-             <item row="1" column="1" colspan="2">
-              <widget class="QLineEdit" name="host_name_entry">
-               <property name="minimumSize">
-                <size>
-                 <width>100</width>
-                 <height>0</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>9</pointsize>
-                </font>
-               </property>
-               <property name="accessibleName">
-                <string>Game server URL</string>
-               </property>
-               <property name="accessibleDescription">
-                <string>The Internet host name or IP address</string>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1" colspan="2">
-              <widget class="QLineEdit" name="profile_name_entry">
-               <property name="font">
-                <font>
-                 <pointsize>9</pointsize>
-                </font>
-               </property>
-               <property name="accessibleName">
-                <string>Profile name</string>
-               </property>
-               <property name="accessibleDescription">
-                <string comment="Using lower case letters for 'ASCII' may make speech synthesisers say 'askey' which is quicker than 'Aay Ess Cee Eye Eye'!">A unique name for the profile but which is limited to a subset of ascii characters only.</string>
-               </property>
-               <property name="readOnly">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_port">
-               <property name="text">
-                <string>Port:</string>
-               </property>
-               <property name="buddy">
-                <cstring>port_entry</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="0">
-              <widget class="QLabel" name="label_profileName">
-               <property name="text">
-                <string>Profile name:</string>
-               </property>
-               <property name="buddy">
-                <cstring>profile_name_entry</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_serverUrl">
-               <property name="text">
-                <string>Server address:</string>
-               </property>
-               <property name="buddy">
-                <cstring>host_name_entry</cstring>
-               </property>
-              </widget>
-             </item>
              <item row="3" column="1">
               <spacer name="verticalSpacer">
                <property name="orientation">
@@ -629,7 +629,7 @@
             <attribute name="title">
              <string>Options</string>
             </attribute>
-            <layout class="QGridLayout" name="gridLayout_2">
+            <layout class="QGridLayout" name="gridLayout_tab_options">
              <item row="0" column="0">
               <widget class="QLabel" name="label_characterName">
                <property name="text">
