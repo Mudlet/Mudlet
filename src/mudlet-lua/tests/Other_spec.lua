@@ -376,21 +376,21 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("Should delete all lines between the first match and the script executing", function()
+      --local s = spy.on(_G, "deleteLine")
+      echo("This line should not be deleted\n")
+      echo("This is the first line\n")
+      echo("This line has some substring match\n")
+      echo("This is now the third and final line\n")
       multimatches = {
         { "This is the first line" },
         { "some substring" },
         { "third line" }
       }
-      local s = spy.on(_G, "deleteLine")
-      echo("This line should not be deleted\n")
-      echo("This is the first line\n")
-      echo("This line has some substring match\n")
-      echo("This is now the third and final line\n")
       local ok,err = deleteMultiline(5)
       assert.is_true(ok)
       assert.is_nil(err)
       -- assert.spy(s).was.called(3)
-      -- local lastLine = getCurrentLine()
+      local lastLine = getCurrentLine()
       assert.equal("This line should not be deleted", lastLine)
     end)
   end)
