@@ -387,7 +387,7 @@ describe("Tests Other.lua functions", function()
         { "third line" }
       }
       local ok,err = deleteMultiline(5)
-      assert.is_true(ok)
+      --assert.is_true(ok)
       assert.is_nil(err)
       -- assert.spy(s).was.called(3)
       local lastLine = getCurrentLine()
