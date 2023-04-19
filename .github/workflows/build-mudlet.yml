@@ -275,7 +275,7 @@ jobs:
       run: ccache --zero-stats --show-stats
 
     - name: Build Mudlet
-      uses: lukka/run-cmake@v3
+      uses: lukka/run-cmake@v10
       with:
         # this seems to be gone
         # buildDirectory: '${{runner.workspace}}/b/ninja'
