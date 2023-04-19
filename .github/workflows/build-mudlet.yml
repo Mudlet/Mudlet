@@ -175,11 +175,11 @@ jobs:
       uses: leafo/gh-actions-luarocks@v4
       if: runner.os == 'Linux'
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: runner.os == 'Linux'
-      with:
-        limit-access-to-actor: true
+#    - name: Setup tmate session
+#      uses: mxschmitt/action-tmate@v3
+#      if: runner.os == 'Linux'
+#      with:
+#        limit-access-to-actor: true
 
     - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
