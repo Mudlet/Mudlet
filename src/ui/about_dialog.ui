@@ -42,8 +42,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="../mudlet.qrc">
-    <normaloff>:/icons/mudlet_information.png</normaloff>:/icons/mudlet_information.png
-   </iconset>
+    <normaloff>:/icons/mudlet_information.png</normaloff>:/icons/mudlet_information.png</iconset>
   </property>
   <property name="autoFillBackground">
    <bool>true</bool>
@@ -157,8 +156,7 @@
      <widget class="QWidget" name="tab_supporters">
       <attribute name="icon">
        <iconset resource="../mudlet.qrc">
-        <normaloff>:/icons/Patreon_Mark_Primary.png</normaloff>:/icons/Patreon_Mark_Primary.png
-       </iconset>
+        <normaloff>:/icons/Patreon_Mark_Primary.png</normaloff>:/icons/Patreon_Mark_Primary.png</iconset>
       </attribute>
       <attribute name="title">
        <string>Supporters</string>

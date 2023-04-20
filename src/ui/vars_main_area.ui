@@ -41,6 +41,56 @@
       <enum>QFrame::Plain</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_frame_vars_main_area" columnstretch="1,0,0">
+      <item row="1" column="2">
+       <widget class="QComboBox" name="comboBox_variable_value_type">
+        <property name="sizeAdjustPolicy">
+         <enum>QComboBox::AdjustToContents</enum>
+        </property>
+        <item>
+         <property name="text">
+          <string>Auto-Type</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>string</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>number</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>boolean</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>table</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>function</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="1" alignment="Qt::AlignRight">
+       <widget class="QLabel" name="label_variable_value">
+        <property name="text">
+         <string>⏷ Value type:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="buddy">
+         <cstring>comboBox_variable_value_type</cstring>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="0">
        <widget class="QWidget" name="widget_variable_name" native="true">
         <layout class="QHBoxLayout" name="horizontalLayout_widget_variable_name">
@@ -88,23 +138,10 @@
         </layout>
        </widget>
       </item>
-      <item row="0" column="1" alignment="Qt::AlignRight">
-       <widget class="QLabel" name="label_variable_key">
-        <property name="text">
-         <string>⏴ Key type:</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-        <property name="buddy">
-         <cstring>comboBox_variable_key_type</cstring>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="2">
        <widget class="QComboBox" name="comboBox_variable_key_type">
         <property name="toolTip">
-         <string>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=" font-style:italic;"&gt;functions&lt;/span&gt;) which cannot be modified from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</string>
+         <string>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modified from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</string>
         </property>
         <property name="sizeAdjustPolicy">
          <enum>QComboBox::AdjustToContents</enum>
@@ -138,6 +175,19 @@ from GUI)</string>
         </item>
        </widget>
       </item>
+      <item row="0" column="1" alignment="Qt::AlignRight">
+       <widget class="QLabel" name="label_variable_key">
+        <property name="text">
+         <string>⏴ Key type:</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+        <property name="buddy">
+         <cstring>comboBox_variable_key_type</cstring>
+        </property>
+       </widget>
+      </item>
       <item row="1" column="0">
        <widget class="QCheckBox" name="checkBox_variable_hidden">
         <property name="toolTip">
@@ -146,56 +196,6 @@ from GUI)</string>
         <property name="text">
          <string>hidden variable</string>
         </property>
-       </widget>
-      </item>
-      <item row="1" column="1" alignment="Qt::AlignRight">
-       <widget class="QLabel" name="label_variable_value">
-        <property name="text">
-         <string>⏷ Value type:</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-        <property name="buddy">
-         <cstring>comboBox_variable_value_type</cstring>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="2">
-       <widget class="QComboBox" name="comboBox_variable_value_type">
-        <property name="sizeAdjustPolicy">
-         <enum>QComboBox::AdjustToContents</enum>
-        </property>
-        <item>
-         <property name="text">
-          <string>Auto-Type</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>string</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>number</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>boolean</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>table</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>function</string>
-         </property>
-        </item>
        </widget>
       </item>
      </layout>
