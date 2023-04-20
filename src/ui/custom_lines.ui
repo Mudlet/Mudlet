@@ -15,7 +15,8 @@
   </property>
   <property name="windowIcon">
    <iconset resource="../mudlet.qrc">
-    <normaloff>:/icons/mudlet_custom_exit.png</normaloff>:/icons/mudlet_custom_exit.png</iconset>
+    <normaloff>:/icons/mudlet_custom_exit.png</normaloff>:/icons/mudlet_custom_exit.png
+   </iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_main">
    <item row="0" column="0" colspan="2">

@@ -578,7 +578,7 @@
                 <string>Game server port</string>
                </property>
                <property name="accessibleDescription">
-                <string>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for &quot;Telnet&quot; connections is used. Secure connections may require a different port number.</string>
+                <string>The port that is used together with the server name to make the connection to the game server. If not specified a default of 23 for "Telnet" connections is used. Secure connections may require a different port number.</string>
                </property>
                <property name="text">
                 <string/>
@@ -730,14 +730,15 @@
                 <string>Discord integration</string>
                </property>
                <property name="accessibleDescription">
-                <string>Allow this profile to use Mudlet's Discord &quot;Rich Presence&quot;  features</string>
+                <string>Allow this profile to use Mudlet's Discord "Rich Presence"  features</string>
                </property>
                <property name="text">
                 <string/>
                </property>
                <property name="icon">
                 <iconset resource="../mudlet.qrc">
-                 <normaloff>:/icons/Discord-Logo+Wordmark-Color.png</normaloff>:/icons/Discord-Logo+Wordmark-Color.png</iconset>
+                 <normaloff>:/icons/Discord-Logo+Wordmark-Color.png</normaloff>:/icons/Discord-Logo+Wordmark-Color.png
+                </iconset>
                </property>
                <property name="iconSize">
                 <size>
