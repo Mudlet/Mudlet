@@ -13,8 +13,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="../mudlet.qrc">
-    <normaloff>:/icons/mudlet_room_exits.png</normaloff>:/icons/mudlet_room_exits.png
-   </iconset>
+    <normaloff>:/icons/mudlet_room_exits.png</normaloff>:/icons/mudlet_room_exits.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout_all" rowstretch="1,1,0">
    <property name="leftMargin">
@@ -2037,7 +2036,7 @@ Locked</string>
 or LUA script</string>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with "script:").&lt;/p&gt;</string>
+          <string>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</string>
          </property>
         </column>
        </widget>
