@@ -92,10 +92,7 @@
           <normaloff>:/icons/arrow-right_grey-16x.png</normaloff>
           <normalon>:/icons/arrow-down_grey-16x.png</normalon>
           <activeoff>:/icons/arrow-right-16x.png</activeoff>
-          <activeon>:/icons/arrow-down-16x.png</activeon>:/icons/arrow-right_grey-16x.png
-         
-         
-         </iconset>
+          <activeon>:/icons/arrow-down-16x.png</activeon>:/icons/arrow-right_grey-16x.png</iconset>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -576,10 +573,7 @@
            </property>
            <property name="icon">
             <iconset resource="../mudlet.qrc">
-             <normaloff>:/icons/edit-clear-locationbar-rtl-green.png</normaloff>:/icons/edit-clear-locationbar-rtl-green.png
-            
-            
-            </iconset>
+             <normaloff>:/icons/edit-clear-locationbar-rtl-green.png</normaloff>:/icons/edit-clear-locationbar-rtl-green.png</iconset>
            </property>
           </widget>
          </item>
