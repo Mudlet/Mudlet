@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>777</width>
+    <width>884</width>
     <height>666</height>
    </rect>
   </property>
@@ -23,8 +23,8 @@
    <iconset resource="../mudlet.qrc">
     <normaloff>:/icons/mudlet_configure.png</normaloff>:/icons/mudlet_configure.png</iconset>
   </property>
-  <layout class="QGridLayout" name="gridLayout_main">
-   <item row="0" column="0">
+  <layout class="QVBoxLayout" name="vBoxLayout_main">
+   <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="enabled">
       <bool>true</bool>
@@ -223,6 +223,13 @@
           <string>Miscellaneous</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_miscellaneous">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_appearance">
+            <property name="text">
+             <string>Appearance</string>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="1">
            <widget class="QComboBox" name="comboBox_appearance">
             <item>
@@ -242,48 +249,7 @@
             </item>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="mAlertOnNewData">
-            <property name="toolTip">
-             <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Notify on new data</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
-           <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
-            <property name="text">
-             <string>Auto save on exit</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_appearance">
-            <property name="text">
-             <string>Appearance</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QCheckBox" name="acceptServerMedia">
-            <property name="toolTip">
-             <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Allow server to download and play media</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QCheckBox" name="acceptServerGUI">
-            <property name="text">
-             <string>Allow server to install script packages</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0" colspan="2">
+          <item row="1" column="0" colspan="2">
            <widget class="QLabel" name="label_darkEditorPrompt">
             <property name="font">
              <font>
@@ -295,6 +261,40 @@
             </property>
             <property name="textFormat">
              <enum>Qt::RichText</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="mAlertOnNewData">
+            <property name="toolTip">
+             <string>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Notify on new data</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="acceptServerGUI">
+            <property name="text">
+             <string>Allow server to install script packages</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QCheckBox" name="mFORCE_SAVE_ON_EXIT">
+            <property name="text">
+             <string>Auto save on exit</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QCheckBox" name="acceptServerMedia">
+            <property name="toolTip">
+             <string>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Allow server to download and play media</string>
             </property>
            </widget>
           </item>
@@ -1138,12 +1138,9 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QCheckBox" name="checkBox_showSpacesAndTabs">
-            <property name="toolTip">
-             <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</string>
-            </property>
+           <widget class="QCheckBox" name="checkBox_enableTextAnalyzer">
             <property name="text">
-             <string>Show Spaces/Tabs</string>
+             <string>Enable text analyzer</string>
             </property>
            </widget>
           </item>
@@ -1158,12 +1155,12 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_showLineFeedsAndParagraphs">
-            <property name="toolTip">
-             <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</string>
-            </property>
+           <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
             <property name="text">
-             <string>Show Line/Paragraphs</string>
+             <string>Make 'Ambiguous' E. Asian width characters wide</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -1177,31 +1174,14 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
-           <widget class="QCheckBox" name="checkBox_useWideAmbiguousEastAsianGlyphs">
-            <property name="text">
-             <string>Make 'Ambiguous' E. Asian width characters wide</string>
-            </property>
-            <property name="tristate">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
           <item row="3" column="0">
-           <widget class="QCheckBox" name="checkBox_enableTextAnalyzer">
-            <property name="text">
-             <string>Enable text analyzer</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
            <widget class="QLabel" name="label_controlCharacterHandling">
             <property name="text">
              <string>Display control characters as:</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
+          <item row="3" column="1">
            <widget class="QComboBox" name="comboBox_controlCharacterHandling">
             <property name="currentIndex">
              <number>0</number>
@@ -1337,6 +1317,35 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QCheckBox" name="checkBox_autocompleteLuaCode">
             <property name="text">
              <string>Autocomplete Lua functions in code editor</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_editorDisplayOptions">
+         <property name="title">
+          <string>Display options</string>
+         </property>
+         <layout class="QHBoxLayout" name="hBoxLayout_groupBox_editorDisplayOptions">
+          <item>
+           <widget class="QCheckBox" name="checkBox_showSpacesAndTabs">
+            <property name="toolTip">
+             <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show Spaces/Tabs</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_showLineFeedsAndParagraphs">
+            <property name="toolTip">
+             <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show Line/Paragraphs</string>
             </property>
            </widget>
           </item>
@@ -1848,13 +1857,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="13" column="2" colspan="2">
-           <widget class="QPushButton" name="pushButton_resetColors">
-            <property name="text">
-             <string>Reset all colors to default</string>
-            </property>
-           </widget>
-          </item>
           <item row="13" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_allowServerToRedefineColors">
             <property name="toolTip">
@@ -1862,6 +1864,13 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="text">
              <string>Server allowed to redefine these colors</string>
+            </property>
+           </widget>
+          </item>
+          <item row="13" column="2" colspan="2">
+           <widget class="QPushButton" name="pushButton_resetColors">
+            <property name="text">
+             <string>Reset all colors to default</string>
             </property>
            </widget>
           </item>
@@ -1907,7 +1916,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="0" column="1">
            <widget class="QPushButton" name="pushButton_saveMap">
             <property name="text">
-             <string>Press to choose location and save</string>
+             <string>choose location...</string>
             </property>
            </widget>
           </item>
@@ -1917,7 +1926,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>&lt;p&gt;Mudlet now does some sanity checking and repairing to clean up issues that may have arisen in previous version due to faulty code or badly documented commands. However if significant problems are found the report can be quite extensive, in particular for larger maps.&lt;/p&gt;&lt;p&gt;Unless this option is set, Mudlet will reduce the amount of on-screen messages by hiding many texts and showing a suggestion to review the report file instead.&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Report map issues on screen</string>
+             <string>report map issues on screen</string>
             </property>
            </widget>
           </item>
@@ -1934,11 +1943,42 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="1" column="1">
            <widget class="QPushButton" name="pushButton_loadMap">
             <property name="text">
-             <string>Press to choose file and load</string>
+             <string>choose map...</string>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
+           <widget class="QLabel" name="label_loadHistoricMap">
+            <property name="text">
+             <string>Or load an older version:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="comboBox_mapHistory">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QPushButton" name="pushButton_loadHistoricMap">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>◀ load this map</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="3">
+           <widget class="Line" name="line">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
            <widget class="QLabel" name="label_deleteMap">
             <property name="text">
              <string>Delete map:</string>
@@ -1948,31 +1988,24 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="4" column="1">
            <widget class="QPushButton" name="pushButton_deleteMap">
             <property name="enabled">
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>Press to delete map</string>
+             <string comment="Text on the button to delete a map, ensure the text matches the word or words `quoted` for the adjacent checkbox">delete</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="2">
+          <item row="4" column="2">
            <widget class="QCheckBox" name="checkBox_enablMapDeleteButton">
             <property name="text">
-             <string>Enable 'Delete map' button</string>
+             <string comment="Text for a checkbox adjacent to the delete map button, ensure the text 'quoted' matches the word or words on the button">enable 'delete' button</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1" colspan="2">
-           <widget class="Line" name="line_aboveCopyMap">
-            <property name="orientation">
-             <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="label_copyMap">
             <property name="text">
              <string>Copy map to other profile(s):</string>
@@ -1982,7 +2015,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
+          <item row="5" column="1">
            <widget class="QPushButton" name="pushButton_chooseProfiles">
             <property name="enabled">
              <bool>false</bool>
@@ -1991,11 +2024,11 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>&lt;p&gt;Select profiles that you want to copy map to, then press the Copy button to the right&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Press to pick destination(s)</string>
+             <string comment="text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected">pick destinations...</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="2">
+          <item row="5" column="2">
            <widget class="QPushButton" name="pushButton_copyMap">
             <property name="enabled">
              <bool>false</bool>
@@ -2004,11 +2037,11 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>&lt;p&gt;Copy map into the selected profiles on the left&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Copy to destination(s)</string>
+             <string notr="true" comment="text will be placed on this button by the C++ code"/>
             </property>
            </widget>
           </item>
-          <item row="5" column="0">
+          <item row="6" column="0">
            <widget class="QLabel" name="label_mapFileSaveFormatVersion">
             <property name="text">
              <string>Map format version:</string>
@@ -2018,7 +2051,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="5" column="1" colspan="2">
+          <item row="6" column="1" colspan="2">
            <widget class="QComboBox" name="comboBox_mapFileSaveFormatVersion">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -2048,7 +2081,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="6" column="0" colspan="3">
+          <item row="7" column="0" colspan="3">
            <widget class="QLabel" name="label_mapFileActionResult">
             <property name="font">
              <font>
@@ -2068,8 +2101,8 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Map download</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_downloadMapOptions">
-          <item row="0" column="0">
+         <layout class="QHBoxLayout" name="hBoxLayout_groupBox_downloadMapOptions">
+          <item>
            <widget class="QLabel" name="label_11">
             <property name="toolTip">
              <string>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
@@ -2082,7 +2115,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item>
            <widget class="QPushButton" name="buttonDownloadMap">
             <property name="toolTip">
              <string>&lt;p&gt;On games that provide maps for download, you can press this button to get the latest map. Note that this will &lt;span style=&quot; font-weight:600;&quot;&gt;overwrite&lt;/span&gt; any changes you've done to your map, and will use the new map only&lt;/p&gt;</string>
@@ -2773,6 +2806,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Server address:</string>
             </property>
+            <property name="buddy">
+             <cstring>ircHostName</cstring>
+            </property>
            </widget>
           </item>
           <item row="0" column="1">
@@ -2789,6 +2825,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="lblIrcHostPort">
             <property name="text">
              <string>Port:</string>
+            </property>
+            <property name="buddy">
+             <cstring>ircHostPort</cstring>
             </property>
            </widget>
           </item>
@@ -2807,6 +2846,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Nickname:</string>
             </property>
+            <property name="buddy">
+             <cstring>ircNick</cstring>
+            </property>
            </widget>
           </item>
           <item row="1" column="1">
@@ -2821,6 +2863,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Auto-join channels: </string>
             </property>
+            <property name="buddy">
+             <cstring>ircChannels</cstring>
+            </property>
            </widget>
           </item>
           <item row="1" column="3">
@@ -2834,6 +2879,9 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QLabel" name="lblIrcPassword">
             <property name="text">
              <string>Server password: </string>
+            </property>
+            <property name="buddy">
+             <cstring>ircPassword</cstring>
             </property>
            </widget>
           </item>
@@ -2958,6 +3006,9 @@ you can use it but there could be issues with aligning columns of text</string>
               <widget class="QLabel" name="label_discordUserName">
                <property name="text">
                 <string>Restrict to:</string>
+               </property>
+               <property name="buddy">
+                <cstring>lineEdit_discordUserName</cstring>
                </property>
               </widget>
              </item>
@@ -3376,11 +3427,11 @@ you can use it but there could be issues with aligning columns of text</string>
        </item>
        <item>
         <widget class="QCheckBox" name="checkBox_askTlsAvailable">
+         <property name="toolTip">
+          <string>&lt;p&gt;To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).&lt;/p&gt;</string>
+         </property>
          <property name="text">
           <string>Allow secure connection reminder</string>
-         </property>
-         <property name="toolTip">
-           <string>&lt;p&gt;To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).&lt;/p&gt;</string>
          </property>
          <property name="checkable">
           <bool>true</bool>
@@ -3401,8 +3452,8 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="checked">
           <bool>false</bool>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_proxy">
-          <item row="0" column="0">
+         <layout class="QVBoxLayout" name="vBoxLayout_groupBox_proxy">
+          <item>
            <widget class="QLineEdit" name="lineEdit_proxyAddress">
             <property name="text">
              <string/>
@@ -3415,14 +3466,14 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item>
            <widget class="QLabel" name="label_5">
             <property name="text">
              <string notr="true">:</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="2">
+          <item>
            <widget class="QLineEdit" name="lineEdit_proxyPort">
             <property name="inputMask">
              <string notr="true">00009</string>
@@ -3435,7 +3486,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="3">
+          <item>
            <widget class="QLineEdit" name="lineEdit_proxyUsername">
             <property name="toolTip">
              <string>Username for logging into the proxy if required</string>
@@ -3451,7 +3502,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="4">
+          <item>
            <widget class="QLineEdit" name="lineEdit_proxyPassword">
             <property name="toolTip">
              <string>Password for logging into the proxy if required</string>
@@ -3555,6 +3606,111 @@ you can use it but there could be issues with aligning columns of text</string>
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab_accessibility">
+      <attribute name="title">
+       <string>Accessibility</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vBoxLayout_tab_accessibility">
+       <item>
+        <widget class="QGroupBox" name="groupBox_accessibility">
+         <property name="title">
+          <string>Accessibility</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="0" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_announceIncomingText">
+            <property name="toolTip">
+             <string>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</string>
+            </property>
+            <property name="text">
+             <string>Announce incoming text in screen reader</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QComboBox" name="comboBox_blankLinesBehaviour">
+            <item>
+             <property name="text">
+              <string>show them</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>hide them</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>replace with a space</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_blankLinesBehaviour">
+            <property name="text">
+             <string>When the game sends blank lines:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_blankLinesBehaviour</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_caretModeKey">
+            <property name="text">
+             <string>Switch between input line and main window using:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_caretModeKey</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QComboBox" name="comboBox_caretModeKey">
+            <item>
+             <property name="text">
+              <string>no key</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Tab</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Ctrl+Tab</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>F6</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_accessibility">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Expanding</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tab_specialOptions">
       <attribute name="title">
        <string>Special Options</string>
@@ -3637,8 +3793,8 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Clear stored media</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_purgeMediaCache">
-          <item row="0" column="0">
+         <layout class="QHBoxLayout" name="hBoxLayout_groupBox_purgeMediaCache">
+          <item>
            <widget class="QLabel" name="label_purgeMediaCache">
             <property name="toolTip">
              <string>&lt;p&gt;Media files used with Mudlet's Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</string>
@@ -3651,7 +3807,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item>
            <widget class="QPushButton" name="buttonPurgeMediaCache">
             <property name="toolTip">
              <string>&lt;p&gt;Media files used with Mudlet's Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</string>
@@ -3669,8 +3825,8 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Mudlet updates</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_updates">
-          <item row="0" column="0">
+         <layout class="QVBoxLayout" name="vBoxLayout_groupBox_updates">
+          <item>
            <widget class="QCheckBox" name="checkbox_noAutomaticUpdates">
             <property name="text">
              <string>Disable automatic updates</string>
@@ -3760,7 +3916,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="0" colspan="2">
+          <item row="3" column="0" colspan="2">
            <widget class="QWidget" name="widget_timerDebugOutputMinimumInterval" native="true">
             <layout class="QHBoxLayout" name="horizontalLayout_timerDebugOutputMinimumInterval" stretch="0,1">
              <property name="leftMargin">
@@ -3828,7 +3984,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </layout>
            </widget>
           </item>
-          <item row="5" column="0">
+          <item row="4" column="0">
            <widget class="QCheckBox" name="checkBox_debugShowAllCodepointProblems">
             <property name="toolTip">
              <string>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</string>
@@ -3838,7 +3994,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="0">
+          <item row="5" column="0">
            <widget class="QLabel" name="label_networkPacketTimeout">
             <property name="text">
              <string>Additional text wait time:</string>
@@ -3877,88 +4033,6 @@ you can use it but there could be issues with aligning columns of text</string>
         </widget>
        </item>
        <item>
-        <widget class="QGroupBox" name="groupBox">
-         <property name="title">
-          <string>Accessibility</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="0" colspan="2">
-           <widget class="QCheckBox" name="checkBox_announceIncomingText">
-            <property name="toolTip">
-             <string>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</string>
-            </property>
-            <property name="text">
-             <string>Announce incoming text in screen reader</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QComboBox" name="comboBox_blankLinesBehaviour">
-            <item>
-             <property name="text">
-              <string>show them</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>hide them</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>replace with a space</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_blankLinesBehaviour">
-            <property name="text">
-             <string>When the game sends blank lines:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_blankLinesBehaviour</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_caretModeKey">
-            <property name="text">
-             <string>Switch between input line and main window using:</string>
-            </property>
-            <property name="buddy">
-             <cstring>comboBox_caretModeKey</cstring>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QComboBox" name="comboBox_caretModeKey">
-            <item>
-             <property name="text">
-              <string>no key</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Tab</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Ctrl+Tab</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>F6</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
         <spacer name="verticalSpacer_specialOptions">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -3975,7 +4049,7 @@ you can use it but there could be issues with aligning columns of text</string>
      </widget>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item>
     <widget class="QWidget" name="widget_bottom" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -4053,10 +4127,10 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_whereToLog</tabstop>
   <tabstop>pushButton_resetLogDir</tabstop>
   <tabstop>USE_UNIX_EOL</tabstop>
-  <tabstop>auto_clear_input_line_checkbox</tabstop>
   <tabstop>show_sent_text_checkbox</tabstop>
-  <tabstop>checkBox_highlightHistory</tabstop>
   <tabstop>checkBox_runAllKeyBindings</tabstop>
+  <tabstop>auto_clear_input_line_checkbox</tabstop>
+  <tabstop>checkBox_highlightHistory</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>commandLineMinimumHeight</tabstop>
   <tabstop>checkBox_spellCheck</tabstop>
@@ -4077,17 +4151,20 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_USE_SMALL_SCREEN</tabstop>
   <tabstop>checkBox_echoLuaErrors</tabstop>
   <tabstop>checkBox_enableTextAnalyzer</tabstop>
-  <tabstop>checkBox_showSpacesAndTabs</tabstop>
-  <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_useWideAmbiguousEastAsianGlyphs</tabstop>
   <tabstop>comboBox_controlCharacterHandling</tabstop>
   <tabstop>code_editor_theme_selection_combobox</tabstop>
   <tabstop>script_preview_combobox</tabstop>
   <tabstop>checkBox_autocompleteLuaCode</tabstop>
+  <tabstop>checkBox_showSpacesAndTabs</tabstop>
+  <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_showBidi</tabstop>
   <tabstop>pushButton_foreground_color</tabstop>
   <tabstop>pushButton_command_line_foreground_color</tabstop>
   <tabstop>pushButton_command_foreground_color</tabstop>
+  <tabstop>pushButton_background_color</tabstop>
+  <tabstop>pushButton_command_line_background_color</tabstop>
+  <tabstop>pushButton_command_background_color</tabstop>
   <tabstop>pushButton_black</tabstop>
   <tabstop>pushButton_red</tabstop>
   <tabstop>pushButton_green</tabstop>
@@ -4097,9 +4174,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_cyan</tabstop>
   <tabstop>pushButton_white</tabstop>
   <tabstop>checkBox_allowServerToRedefineColors</tabstop>
-  <tabstop>pushButton_background_color</tabstop>
-  <tabstop>pushButton_command_line_background_color</tabstop>
-  <tabstop>pushButton_command_background_color</tabstop>
   <tabstop>pushButton_lBlack</tabstop>
   <tabstop>pushButton_lRed</tabstop>
   <tabstop>pushButton_lGreen</tabstop>
@@ -4111,12 +4185,14 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_resetColors</tabstop>
   <tabstop>pushButton_saveMap</tabstop>
   <tabstop>pushButton_loadMap</tabstop>
-  <tabstop>pushButton_deleteMap</tabstop>
-  <tabstop>pushButton_chooseProfiles</tabstop>
-  <tabstop>comboBox_mapFileSaveFormatVersion</tabstop>
+  <tabstop>comboBox_mapHistory</tabstop>
   <tabstop>checkBox_reportMapIssuesOnScreen</tabstop>
+  <tabstop>pushButton_loadHistoricMap</tabstop>
+  <tabstop>pushButton_deleteMap</tabstop>
   <tabstop>checkBox_enablMapDeleteButton</tabstop>
+  <tabstop>pushButton_chooseProfiles</tabstop>
   <tabstop>pushButton_copyMap</tabstop>
+  <tabstop>comboBox_mapFileSaveFormatVersion</tabstop>
   <tabstop>buttonDownloadMap</tabstop>
   <tabstop>mMapperUseAntiAlias</tabstop>
   <tabstop>checkbox_mMapperShowRoomBorders</tabstop>
@@ -4177,11 +4253,15 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyUsername</tabstop>
   <tabstop>lineEdit_proxyPassword</tabstop>
   <tabstop>toolButton_resetMainWindowShortcuts</tabstop>
+  <tabstop>checkBox_announceIncomingText</tabstop>
+  <tabstop>comboBox_blankLinesBehaviour</tabstop>
+  <tabstop>comboBox_caretModeKey</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
+  <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>
   <tabstop>checkBox_showIconsOnMenus</tabstop>

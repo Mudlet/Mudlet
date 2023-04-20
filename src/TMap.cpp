@@ -2579,20 +2579,21 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     XMLimport reader(pHost);
     bool result = reader.importPackage(&file);
 
-    // probably not needed for the download but might be
-    // needed for local file case:
-    mpMapper->mp2dMap->init();
-    // No need to call audit() as XMLimport::importPackage() does it!
-    // audit() produces the successful ending [ OK ] message...!
-    mpMapper->updateAreaComboBox();
-    if (result) {
-        mpMapper->resetAreaComboBoxToPlayerRoomArea();
-    } else {
-        // Failed...
-        if (errMsg) {
-            *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
-                         "in main console!");
+    if (!mpMapper.isNull() && mpMapper->mp2dMap) {
+        // probably not needed for the download but might be
+        // needed for local file case:
+        mpMapper->mp2dMap->init();
+        // No need to call audit() as XMLimport::importPackage() does it!
+        // audit() produces the successful ending [ OK ] message...!
+        mpMapper->updateAreaComboBox();
+        if (result) {
+            mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
+    }
+
+    if (!result && errMsg) {
+        *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
+                     "in main console!");
     }
 
     if (isLocalImport) {
@@ -2600,7 +2601,10 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         mpProgressDialog->deleteLater();
         mpProgressDialog = nullptr;
     }
-    mpMapper->show();
+
+    if (!mpMapper.isNull()) {
+         mpMapper->show();
+    }
 
     return result;
 }
