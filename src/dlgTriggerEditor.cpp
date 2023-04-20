@@ -4973,7 +4973,7 @@ void dlgTriggerEditor::saveKey()
 
         QIcon icon;
         QString itemDescription;
-        bool itemActive;
+        bool itemActive = pT->isActive();
         if (pT->isFolder()) {
             if (!pT->mPackageName.isEmpty()) {
                 if (itemActive) {
@@ -6120,7 +6120,7 @@ void dlgTriggerEditor::populateActions()
         }
         if (action->state()) {
             clearEditorNotification();
-            itemActive = action->isActive()
+            bool itemActive = action->isActive();
             if (action->isFolder()) {
                 if (!action->mPackageName.isEmpty()) {
                     if (itemActive) {
