@@ -429,7 +429,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     if (mudlet::self()->smFirstLaunch) {
         QTimer::singleShot(0, this, [this]() {
-            mpConsole->mpCommandLineWidget->mCommandLine.setPlaceholderText(tr("Text to send to the game"));
+            mpConsole->mpCommandLine->setPlaceholderText(tr("Text to send to the game"));
         });
     }
 
@@ -2731,10 +2731,10 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
     if (isSpellCheckingEnabled) {
         // Now enabled - so recheck the whole command line with whichever
         // dictionaries are active:
-        mpConsole->mpCommandLineWidget->mCommandLine.recheckWholeLine();
+        mpConsole->mpCommandLine->recheckWholeLine();
     } else {
         // Or it is now disabled so clear any spelling marks:
-        mpConsole->mpCommandLineWidget->mCommandLine.clearMarksOnWholeLine();
+        mpConsole->mpCommandLine->clearMarksOnWholeLine();
     }
 }
 
@@ -3622,7 +3622,7 @@ bool Host::setCmdLineAction(const QString& name, const int func)
     }
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     if (pN) {
-        pN->mCommandLine.setAction(func);
+        pN->setAction(func);
         return true;
     }
     return false;
@@ -3635,7 +3635,7 @@ bool Host::resetCmdLineAction(const QString& name)
     }
     auto pN = mpConsole->mSubCommandLineMap.value(name);
     if (pN) {
-        pN->mCommandLine.resetAction();
+        pN->resetAction();
         return true;
     }
     return false;
@@ -4198,38 +4198,38 @@ void Host::setFocusOnHostActiveCommandLine()
         auto pCommandLine = activeCommandLine();
         if (pCommandLine) {
             pCommandLine->activateWindow();
-            pCommandLine->mCommandLine.console()->show();
-            pCommandLine->mCommandLine.console()->raise();
-            pCommandLine->mCommandLine.console()->repaint();
+            pCommandLine->console()->show();
+            pCommandLine->console()->raise();
+            pCommandLine->console()->repaint();
             pCommandLine->setFocus(Qt::OtherFocusReason);
         } else {
-            mpConsole->mpCommandLineWidget->activateWindow();
+            mpConsole->mpCommandLine->activateWindow();
             mpConsole->show();
             mpConsole->raise();
             mpConsole->repaint();
-            mpConsole->mpCommandLineWidget->setFocus(Qt::OtherFocusReason);
+            mpConsole->mpCommandLine->setFocus(Qt::OtherFocusReason);
         }
         mFocusTimerRunning = false;
     });
 }
 
-void Host::recordActiveCommandLine(TCommandLineWidget* pCommandLine)
+void Host::recordActiveCommandLine(TCommandLine* pCommandLine)
 {
-    mpLastCommandLineUsed.removeAll(QPointer<TCommandLineWidget>(pCommandLine));
-    mpLastCommandLineUsed.push(QPointer<TCommandLineWidget>(pCommandLine));
+    mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
+    mpLastCommandLineUsed.push(QPointer<TCommandLine>(pCommandLine));
 }
 
-void Host::forgetCommandLine(TCommandLineWidget* pCommandLine)
+void Host::forgetCommandLine(TCommandLine* pCommandLine)
 {
     if (pCommandLine) {
-        mpLastCommandLineUsed.removeAll(QPointer<TCommandLineWidget>(pCommandLine));
+        mpLastCommandLineUsed.removeAll(QPointer<TCommandLine>(pCommandLine));
     }
 }
 
 // Returns a pointer to the last used TCommandLine for this profile:
-TCommandLineWidget* Host::activeCommandLine()
+TCommandLine* Host::activeCommandLine()
 {
-    TCommandLineWidget* pCommandLine = nullptr;
+    TCommandLine* pCommandLine = nullptr;
     if (mpLastCommandLineUsed.isEmpty()) {
         return nullptr;
     }

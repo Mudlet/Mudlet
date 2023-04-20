@@ -27,10 +27,8 @@
 #include "TConsole.h"
 
 #include "pre_guard.h"
-#include <QFrame>
-#include <QButtonGroup>
+#include <QActionGroup>
 #include <QPlainTextEdit>
-#include <QToolButton>
 #include <QPointer>
 #include <QString>
 #include <QStringList>
@@ -40,10 +38,9 @@
 
 class KeyUnit;
 class Host;
-class TCommandLineWidget;
 
 
-class TCommandLine : public QPlainTextEdit
+class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
 
@@ -52,7 +49,6 @@ class TCommandLine : public QPlainTextEdit
         MOVE_DOWN
     };
 
-    friend class TCommandLineWidget;
 
 public:
     enum CommandLineTypeFlag {
@@ -65,7 +61,7 @@ public:
     Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
 
     Q_DISABLE_COPY(TCommandLine)
-    explicit TCommandLine(Host*, TCommandLineWidget*, const QString&, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
+    explicit TCommandLine(Host*, const QString&, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void hideEvent(QHideEvent*) override;
@@ -83,7 +79,6 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const { return mpConsole; }
-    TCommandLineWidget* container() { return mpContainer; }
 
 
     int mActionFunction = 0;
@@ -92,6 +87,7 @@ public:
 
     QMap<QString, QString> contextMenuItems;
 
+
 public slots:
     void slot_popupMenu();
     void slot_addWord();
@@ -99,6 +95,10 @@ public slots:
     void slot_clearSelection(bool yes);
     void slot_adjustAccessibleNames();
     void slot_saveHistory();
+    void slot_saveCommandHistory();
+    void slot_doNotSaveCommandHistory();
+    void slot_doNotSaveNextCommand();
+
 
 private:
     bool event(QEvent*) override;
@@ -117,7 +117,6 @@ private:
 
 
     QPointer<Host> mpHost;
-    TCommandLineWidget* mpContainer = nullptr;
     CommandLineType mType = UnknownType;
     KeyUnit* mpKeyUnit = nullptr;
     QPointer<TConsole> mpConsole;
@@ -156,29 +155,6 @@ private:
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
-
-class TCommandLineWidget : public QFrame
-{
-    Q_OBJECT
-
-public:
-    explicit TCommandLineWidget(Host*, const QString&, TCommandLine::CommandLineType, TConsole*, QWidget*);
-    TCommandLine mCommandLine;
-    QToolButton mToolButton_history_save;
-    QToolButton mToolButton_history_noSaveOnce;
-    QToolButton mToolButton_history_noSave;
-    QButtonGroup* mpButtonGroup = nullptr;
-
-public slots:
-    void slot_saveCommandHistory();
-    void slot_doNotSaveNextCommand();
-    void slot_doNotSaveCommandHistory();
-    void slot_toggleCommandLineHistoryOptions(const bool);
-
-private:
-    QHBoxLayout* mpLayout = nullptr;
-    QPointer<Host> mpHost;
-};
 
 #if !defined(QT_NO_DEBUG)
 inline QDebug& operator<<(QDebug& debug, const TCommandLine::CommandLineType& type)

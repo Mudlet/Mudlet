@@ -193,9 +193,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     centralLayout->setContentsMargins(0, 0, 0, 0);
 
     if (mType == MainConsole) {
-        mpCommandLineWidget = new TCommandLineWidget(pH, qsl("main"), TCommandLine::MainCommandLine, this, mpMainDisplay);
-        mpCommandLineWidget->setContentsMargins(0, 0, 0, 0);
-        mpCommandLineWidget->setSizePolicy(sizePolicy);
+        mpCommandLine = new TCommandLine(pH, qsl("main"), TCommandLine::MainCommandLine, this, mpMainDisplay);
+        mpCommandLine->setContentsMargins(0, 0, 0, 0);
+        mpCommandLine->setSizePolicy(sizePolicy);
         // Setting the focusProxy cannot be done here because things have not
         // been completed enough at this point - it has been defered to a
         // zero-timer at the end of this constructor
@@ -236,15 +236,15 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     mLowerPane->setSizePolicy(sizePolicy3);
 
     if (mType == MainConsole) {
-        setFocusProxy(mpCommandLineWidget);
-        mUpperPane->setFocusProxy(mpCommandLineWidget);
-        mLowerPane->setFocusProxy(mpCommandLineWidget);
+        setFocusProxy(mpCommandLine);
+        mUpperPane->setFocusProxy(mpCommandLine);
+        mLowerPane->setFocusProxy(mpCommandLine);
     } else if (mType & (UserWindow|SubConsole)) {
         // These will need to be changed when the built in TCommandLine is
         // enabled or an additional one is added to them:
-        setFocusProxy(mpHost->mpConsole->mpCommandLineWidget);
-        mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLineWidget);
-        mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLineWidget);
+        setFocusProxy(mpHost->mpConsole->mpCommandLine);
+        mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+        mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
     }
 
     splitter->addWidget(mUpperPane);
@@ -441,8 +441,8 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     connect(mpBufferSearchDown, &QAbstractButton::clicked, this, &TConsole::slot_searchBufferDown);
 
 
-    if (mpCommandLineWidget) {
-        layoutLayer2->addWidget(mpCommandLineWidget);
+    if (mpCommandLine) {
+        layoutLayer2->addWidget(mpCommandLine);
     }
 
     layoutLayer2->addWidget(mpButtonMainLayer);
@@ -536,7 +536,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     }
 
     if (mType & MainConsole) {
-        mpCommandLineWidget->mCommandLine.adjustHeight();
+        mpCommandLine->adjustHeight();
     }
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TConsole::slot_adjustAccessibleNames);
@@ -544,9 +544,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     // Need to delay doing this because it uses elements that may not have
     // been constructed yet:
     if (mType == MainConsole) {
-        QTimer::singleShot(0, this, [this]() {
-            setProxyForFocus(mpCommandLineWidget);
-        });
+        QTimer::singleShot(0, this, [this]() { setProxyForFocus(mpCommandLine); });
     }
 }
 
@@ -579,7 +577,7 @@ void TConsole::raiseMudletSysWindowResizeEvent(const int overallWidth, const int
     TEvent mudletEvent {};
     mudletEvent.mArgumentList.append(QLatin1String("sysWindowResizeEvent"));
     mudletEvent.mArgumentList.append(QString::number(overallWidth - mBorders.left() - mBorders.right()));
-    mudletEvent.mArgumentList.append(QString::number(overallHeight - mBorders.top() - mBorders.bottom() - mpCommandLineWidget->height()));
+    mudletEvent.mArgumentList.append(QString::number(overallHeight - mBorders.top() - mBorders.bottom() - mpCommandLine->height()));
     mudletEvent.mArgumentList.append(mConsoleName);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -605,7 +603,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         return;
     }
 
-    if (mType & (MainConsole|SubConsole|UserWindow) && mpCommandLineWidget && !mpCommandLineWidget->isHidden()) {
+    if (mType & (MainConsole|SubConsole|UserWindow) && mpCommandLine && !mpCommandLine->isHidden()) {
         mpMainFrame->resize(x, y);
         mpBaseVFrame->resize(x, y);
         mpBaseHFrame->resize(x, y);
@@ -613,7 +611,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
         y -= mpTopToolBar->height();
         // The mBorders components will be all zeros for all but the MainConsole:
         mpMainDisplay->resize(x - mBorders.left() - mBorders.right(),
-                              y - mBorders.top() - mBorders.bottom() - mpCommandLineWidget->height());
+                              y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
     } else {
         mpMainFrame->resize(x, y);
         mpMainDisplay->resize(x, y);
@@ -690,10 +688,10 @@ void TConsole::refresh()
         y -= mpTopToolBar->height();
     }
 
-    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLineWidget->height());
+    mpMainDisplay->resize(x - mBorders.left() - mBorders.right(), y - mBorders.top() - mBorders.bottom() - mpCommandLine->height());
 
     if (mType & MainConsole) {
-        mpCommandLineWidget->mCommandLine.adjustHeight();
+        mpCommandLine->adjustHeight();
     }
 
     mpMainDisplay->move(mBorders.left(), mBorders.top());
@@ -942,9 +940,9 @@ void TConsole::changeColors()
             setConsoleBackgroundImage(mBgImagePath, mBgImageMode);
         }
     } else if (mType == MainConsole) {
-        if (mpCommandLineWidget) {
-            auto styleSheet = mpCommandLineWidget->styleSheet();
-            mpCommandLineWidget->setStyleSheet(QString());
+        if (mpCommandLine) {
+            auto styleSheet = mpCommandLine->styleSheet();
+            mpCommandLine->setStyleSheet(QString());
             // CHECK: This seems to be a, possibly iffy, attempt to combine a
             // QPalette with a style-sheet - though the Qt Documentation does
             // seem to say one should not mix QPalettes with styles/stylesheets!
@@ -954,10 +952,10 @@ void TConsole::changeColors()
             commandLinePalette.setColor(QPalette::HighlightedText, QColor(Qt::white));
             commandLinePalette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
             commandLinePalette.setColor(QPalette::Window, mpHost->mCommandLineBgColor);
-            mpCommandLineWidget->setPalette(commandLinePalette);
+            mpCommandLine->setPalette(commandLinePalette);
             mpButtonMainLayer->setPalette(commandLinePalette);
-            mpCommandLineWidget->mCommandLine.mRegularPalette = commandLinePalette;
-            mpCommandLineWidget->mCommandLine.setStyleSheet(styleSheet);
+            mpCommandLine->mRegularPalette = commandLinePalette;
+            mpCommandLine->setStyleSheet(styleSheet);
         }
         if (mpHost->mNoAntiAlias) {
             mpHost->setDisplayFontStyle(QFont::NoAntialias);
@@ -978,8 +976,8 @@ void TConsole::changeColors()
         mFgColor = mpHost->mFgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
         mCommandBgColor = mpHost->mCommandBgColor;
-        if (mpCommandLineWidget) {
-            mpCommandLineWidget->mCommandLine.setFont(mpHost->getDisplayFont());
+        if (mpCommandLine) {
+            mpCommandLine->setFont(mpHost->getDisplayFont());
         }
         mFormatCurrent.setColors(mpHost->mFgColor, mpHost->mBgColor);
     } else {
@@ -1444,20 +1442,20 @@ void TConsole::setCmdVisible(bool isVisible)
 {
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // create MiniConsole commandline if it's not existing
-    if (!mpCommandLineWidget) {
+    if (!mpCommandLine) {
         if (!isVisible) {
             // If we don't have one and we are being told to hide it then
             // really there is nothing to do - so lets do nothing:
             return;
         }
-        mpCommandLineWidget = new TCommandLineWidget(mpHost, mConsoleName, TCommandLine::ConsoleCommandLine, this, mpMainDisplay);
-        mpCommandLineWidget->setContentsMargins(0, 0, 0, 0);
-        mpCommandLineWidget->setSizePolicy(sizePolicy);
-        mpCommandLineWidget->mCommandLine.setFocusPolicy(Qt::StrongFocus);
+        mpCommandLine = new TCommandLine(mpHost, mConsoleName, TCommandLine::ConsoleCommandLine, this, mpMainDisplay);
+        mpCommandLine->setContentsMargins(0, 0, 0, 0);
+        mpCommandLine->setSizePolicy(sizePolicy);
+        mpCommandLine->setFocusPolicy(Qt::StrongFocus);
         // put this CommandLine in the mainConsoles SubCommandLineMap
         // name is the console name
-        mpHost->mpConsole->mSubCommandLineMap[mConsoleName] = mpCommandLineWidget;
-        layoutLayer2->addWidget(mpCommandLineWidget);
+        mpHost->mpConsole->mSubCommandLineMap[mConsoleName] = mpCommandLine;
+        layoutLayer2->addWidget(mpCommandLine);
     }
     if (mType == MainConsole) {
         if (mpHost) {
@@ -1472,14 +1470,14 @@ void TConsole::setCmdVisible(bool isVisible)
         mpButtonMainLayer->setVisible(false);
     }
     layerCommandLine->setVisible(isVisible);
-    mpCommandLineWidget->setVisible(isVisible);
+    mpCommandLine->setVisible(isVisible);
     //resizes miniconsole if command line gets enabled/disabled
     resizeConsole();
-    setProxyForFocus(isVisible ? mpCommandLineWidget : nullptr);
+    setProxyForFocus(isVisible ? mpCommandLine : nullptr);
     // Need to remove the TCommandLine from the last used stack
     // if it has been explicitly hidden:
     if (!isVisible && mpHost) {
-        mpHost->forgetCommandLine(mpCommandLineWidget);
+        mpHost->forgetCommandLine(mpCommandLine);
     }
 }
 
@@ -1934,7 +1932,7 @@ QSize TConsole::getMainWindowSize() const
     QSize consoleSize = size();
     int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     int toolbarHeight = mpTopToolBar->height();
-    int commandLineHeight = mpCommandLineWidget->height();
+    int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
     return mainWindowSize;
 }
@@ -2200,41 +2198,41 @@ void TConsole::slot_changeControlCharacterHandling(const ControlCharacterMode mo
     }
 }
 
-void TConsole::setProxyForFocus(TCommandLineWidget* pCommandLine)
+void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
 {
     if (mType == MainConsole) {
-        mUpperPane->setFocusProxy(&pCommandLine->mCommandLine);
-        QAccessibleEvent event(&pCommandLine->mCommandLine, QAccessible::Focus);
+        mUpperPane->setFocusProxy(pCommandLine);
+        QAccessibleEvent event(pCommandLine, QAccessible::Focus);
         QAccessible::updateAccessibility(&event);
     } else if (mType == UserWindow) {
         if (pCommandLine && pCommandLine->isVisible()) {
-            mUpperPane->setFocusProxy(&pCommandLine->mCommandLine);
-            QAccessibleEvent event(&pCommandLine->mCommandLine, QAccessible::Focus);
+            mUpperPane->setFocusProxy(pCommandLine);
+            QAccessibleEvent event(pCommandLine, QAccessible::Focus);
             QAccessible::updateAccessibility(&event);
         } else {
-            mUpperPane->setFocusProxy(&mpHost->mpConsole->mpCommandLineWidget->mCommandLine);
-            QAccessibleEvent event(&mpHost->mpConsole->mpCommandLineWidget->mCommandLine, QAccessible::Focus);
+            mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+            QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
             QAccessible::updateAccessibility(&event);
         }
     } else if (mType == SubConsole) {
         if (pCommandLine && pCommandLine->isVisible()) {
-            mUpperPane->setFocusProxy(&pCommandLine->mCommandLine);
-            QAccessibleEvent event(&pCommandLine->mCommandLine, QAccessible::Focus);
+            mUpperPane->setFocusProxy(pCommandLine);
+            QAccessibleEvent event(pCommandLine, QAccessible::Focus);
             QAccessible::updateAccessibility(&event);
         } else {
             // Need to search ancestors to find the TConsole that this one
             // is inserted into - and if it has a TCommandLine
             auto parentConsole = mpHost->parentTConsole(this);
-            if (!parentConsole.isNull() && parentConsole->mpCommandLineWidget && parentConsole->mpCommandLineWidget->isVisible()) {
+            if (!parentConsole.isNull() && parentConsole->mpCommandLine && parentConsole->mpCommandLine->isVisible()) {
                 // TBH We ought to also check for any added TCommandLine but
                 // that can wait for a future development...
-                mUpperPane->setFocusProxy(&parentConsole->mpCommandLineWidget->mCommandLine);
-                QAccessibleEvent event(&parentConsole->mpCommandLineWidget->mCommandLine, QAccessible::Focus);
+                mUpperPane->setFocusProxy(parentConsole->mpCommandLine);
+                QAccessibleEvent event(parentConsole->mpCommandLine, QAccessible::Focus);
                 QAccessible::updateAccessibility(&event);
             } else {
                 // Somehow that has failed so fall back to the main console
-                mUpperPane->setFocusProxy(&mpHost->mpConsole->mpCommandLineWidget->mCommandLine);
-                QAccessibleEvent event(&mpHost->mpConsole->mpCommandLineWidget->mCommandLine, QAccessible::Focus);
+                mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+                QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
                 QAccessible::updateAccessibility(&event);
             }
         }
@@ -2274,7 +2272,7 @@ void TConsole::setCaretMode(bool enabled)
 #endif
         Q_ASSERT_X(!mUpperPane->focusProxy(), "TConsole:setCaretMode(false) FAIL", "About to set a focusPolicy but there is a focusProxy in place that will get it instead!");
         mUpperPane->setFocusPolicy(Qt::ClickFocus);
-        setProxyForFocus(mpCommandLineWidget);
+        setProxyForFocus(mpCommandLine);
         // Carefull - if there is a FocusProxy for this element then IT gets the policy
     }
 }

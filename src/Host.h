@@ -405,8 +405,8 @@ public:
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
     void setFocusOnHostActiveCommandLine();
-    void recordActiveCommandLine(TCommandLineWidget*);
-    void forgetCommandLine(TCommandLineWidget*);
+    void recordActiveCommandLine(TCommandLine*);
+    void forgetCommandLine(TCommandLine*);
     QPointer<TConsole> parentTConsole(QObject*) const;
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
@@ -737,7 +737,7 @@ private:
     void timerEvent(QTimerEvent *event) override;
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
-    TCommandLineWidget* activeCommandLine();
+    TCommandLine* activeCommandLine();
 
 
     QFont mDisplayFont;
@@ -882,7 +882,7 @@ private:
 
     // Tracks which command line was last used for this profile so that we can
     // return to it when switching between profiles:
-    QStack<QPointer<TCommandLineWidget>> mpLastCommandLineUsed;
+    QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple
