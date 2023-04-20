@@ -734,9 +734,11 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
         }
     }
 
-    return (file.error() == QFileDevice::NoError)
-        ? {true, QString()}
-        : {false, file.errorString()};
+    if (file.error() == QFileDevice::NoError) {
+        return {true, QString()};
+    } else {
+        return {false, file.errorString()};
+    };
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const

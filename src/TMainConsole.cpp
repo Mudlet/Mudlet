@@ -1235,7 +1235,7 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
 
     bool saved = mpHost->mpMap->serialize(out, saveVersion);
     if (saved && !file_map.commit()) {
-        qDebug() << "Error saving map: " << file_map.error() == QFile::NoError ? "issue with serializing" : file_map.errorString();
+        qDebug() << "Error saving map: " << (file_map.error() == QFile::NoError ? "issue with serializing" : file_map.errorString());
         saved = false;
     }
 
