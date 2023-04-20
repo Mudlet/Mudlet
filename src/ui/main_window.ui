@@ -233,7 +233,7 @@
     <string>Video tutorials</string>
    </property>
    <property name="toolTip">
-    <string>&lt;p&gt;Opens an (on-line) collection of &quot;Educational Mudlet screencasts&quot; in your system web-browser.&lt;/p&gt;</string>
+    <string>&lt;p&gt;Opens an (on-line) collection of "Educational Mudlet screencasts" in your system web-browser.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionReplay">
