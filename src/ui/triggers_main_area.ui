@@ -95,6 +95,7 @@
           <activeon>:/icons/arrow-down-16x.png</activeon>:/icons/arrow-right_grey-16x.png
          
          
+         
          </iconset>
         </property>
         <property name="checkable">
@@ -577,6 +578,7 @@
            <property name="icon">
             <iconset resource="../mudlet.qrc">
              <normaloff>:/icons/edit-clear-locationbar-rtl-green.png</normaloff>:/icons/edit-clear-locationbar-rtl-green.png
+            
             
             
             </iconset>
