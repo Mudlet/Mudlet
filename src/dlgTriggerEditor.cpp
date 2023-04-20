@@ -2756,7 +2756,7 @@ void dlgTriggerEditor::activeToggle_trigger()
 
     if (pT->isFilterChain()) {
         if (pT->isActive()) {
-            itemDescription = tr("checked filter chain");
+            itemDescription = tr("activated filter chain");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -2764,7 +2764,7 @@ void dlgTriggerEditor::activeToggle_trigger()
                 itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
             }
         } else {
-            itemDescription = tr("unchecked filter chain");
+            itemDescription = tr("deactivated filter chain");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -2773,7 +2773,7 @@ void dlgTriggerEditor::activeToggle_trigger()
         }
     } else if (pT->isFolder()) {
         if (pT->isActive()) {
-            itemDescription = tr("folder");
+            itemDescription = tr("activated folder");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -2790,7 +2790,7 @@ void dlgTriggerEditor::activeToggle_trigger()
         }
     } else {
         if (pT->isActive()) {
-            itemDescription = tr("checked");
+            itemDescription = tr("activated");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -2798,7 +2798,7 @@ void dlgTriggerEditor::activeToggle_trigger()
                 itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
             }
         } else {
-            itemDescription = tr("unchecked");
+            itemDescription = tr("deactivated");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -2846,7 +2846,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
         if (pT->state()) {
             if (pT->isFilterChain()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -2854,7 +2854,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -2863,7 +2863,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                 }
             } else if (pT->isFolder()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -2881,7 +2881,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                 }
             } else {
                 if (pT->isActive()) {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -2890,7 +2890,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                     }
 
                 } else {
-                        itemDescription = tr("unchecked");
+                        itemDescription = tr("deactivated");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -2943,7 +2943,7 @@ void dlgTriggerEditor::activeToggle_timer()
 
         if (pT->shouldBeActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("folder");
+            itemDescription = tr("activated folder");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
             itemDescription = tr("deactivated folder");
@@ -2954,21 +2954,21 @@ void dlgTriggerEditor::activeToggle_timer()
             if (pT->shouldBeActive()) {
                 pT->enableTimer(pT->getID());
                 icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("checked offset timer");
+                itemDescription = tr("activated offset timer");
             } else {
                 pT->disableTimer(pT->getID());
                 icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("unchecked offset timer");
+                itemDescription = tr("deactivated offset timer");
             }
         } else {
             if (pT->shouldBeActive()) {
                 pT->enableTimer(pT->getID());
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("checked");
+                itemDescription = tr("activated");
             } else {
                 pT->disableTimer(pT->getID());
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("unchecked");
+                itemDescription = tr("deactivated");
             }
         }
     }
@@ -3009,7 +3009,7 @@ void dlgTriggerEditor::activeToggle_alias()
     if (pT->isFolder()) {
         if (pT->isActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("folder");
+            itemDescription = tr("activated folder");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
             itemDescription = tr("deactivated folder");
@@ -3017,10 +3017,10 @@ void dlgTriggerEditor::activeToggle_alias()
     } else {
         if (pT->isActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("checked");
+            itemDescription = tr("activated");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("unchecked");
+            itemDescription = tr("deactivated");
         }
     }
 
@@ -3063,7 +3063,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
         if (pT->state()) {
             if (pT->isFolder()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3080,7 +3080,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
                 }
             } else {
                 if (pT->isActive()) {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3089,7 +3089,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
                     }
 
                 } else {
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3129,7 +3129,7 @@ void dlgTriggerEditor::activeToggle_script()
     if (pT->isFolder()) {
         if (pT->isActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("folder");
+            itemDescription = tr("activated folder");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
             itemDescription = tr("deactivated folder");
@@ -3137,10 +3137,10 @@ void dlgTriggerEditor::activeToggle_script()
     } else {
         if (pT->isActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("checked");
+            itemDescription = tr("activated");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("unchecked");
+            itemDescription = tr("deactivated");
         }
     }
 
@@ -3192,7 +3192,7 @@ void dlgTriggerEditor::activeToggle_action()
             // Has a package name - is a module master folder
             if (pT->isActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("folder");
+                itemDescription = tr("activated folder");
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("deactivated folder");
@@ -3201,7 +3201,7 @@ void dlgTriggerEditor::activeToggle_action()
             // Does not have a parent or the parent has a package name - is a toolbar
             if (pT->isActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("folder");
+                itemDescription = tr("activated folder");
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("deactivated folder");
@@ -3210,7 +3210,7 @@ void dlgTriggerEditor::activeToggle_action()
             // Must be a menu
             if (pT->isActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("folder");
+                itemDescription = tr("activated folder");
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("deactivated folder");
@@ -3219,7 +3219,7 @@ void dlgTriggerEditor::activeToggle_action()
     } else {
         if (pT->isActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("folder");
+            itemDescription = tr("activated folder");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
             itemDescription = tr("deactivated folder");
@@ -3265,7 +3265,7 @@ void dlgTriggerEditor::activeToggle_key()
     if (pT->isFolder()) {
         if (pT->isActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("folder");
+            itemDescription = tr("activated folder");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
             itemDescription = tr("deactivated folder");
@@ -3273,10 +3273,10 @@ void dlgTriggerEditor::activeToggle_key()
     } else {
         if (pT->isActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("checked");
+            itemDescription = tr("activated");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("unchecked");
+            itemDescription = tr("deactivated");
         }
     }
 
@@ -3314,7 +3314,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
         if (pT->state()) {
             if (pT->isFolder()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3331,7 +3331,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
                 }
             } else {
                 if (pT->isActive()) {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3340,7 +3340,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
                     }
 
                 } else {
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4144,7 +4144,7 @@ void dlgTriggerEditor::saveTrigger()
         QString itemDescription;
         if (pT->isFilterChain()) {
             if (pT->isActive()) {
-                itemDescription = tr("checked filter chain");
+                itemDescription = tr("activated filter chain");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4152,7 +4152,7 @@ void dlgTriggerEditor::saveTrigger()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("unchecked filter chain");
+                itemDescription = tr("deactivated filter chain");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4163,13 +4163,13 @@ void dlgTriggerEditor::saveTrigger()
             if (!pT->mPackageName.isEmpty()) {
                 if (pT->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("deactivated folder");
                 }
             } else if (pT->isActive()) {
-                itemDescription = tr("folder");
+                itemDescription = tr("activated folder");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4186,7 +4186,7 @@ void dlgTriggerEditor::saveTrigger()
             }
         } else {
             if (pT->isActive()) {
-                itemDescription = tr("folder");
+                itemDescription = tr("activated");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4194,7 +4194,7 @@ void dlgTriggerEditor::saveTrigger()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("deactivated folder");
+                itemDescription = tr("deactivated");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4209,10 +4209,10 @@ void dlgTriggerEditor::saveTrigger()
                 QIcon _icon;
                 if (pT->isFolder()) {
                     _icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                 }
                 pItem->setIcon(0, _icon);
                 pItem->setText(0, name);
@@ -4267,7 +4267,7 @@ void dlgTriggerEditor::saveTimer()
             if (!pT->mPackageName.isEmpty()) {
                 if (pT->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("deactivated folder");
@@ -4275,7 +4275,7 @@ void dlgTriggerEditor::saveTimer()
             } else {
                 if (pT->shouldBeActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("deactivated folder");
@@ -4291,11 +4291,11 @@ void dlgTriggerEditor::saveTimer()
         } else {
             if (pT->shouldBeActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("checked");
+                itemDescription = tr("activated");
                 pT->setIsActive(true);
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("unchecked");
+                itemDescription = tr("deactivated");
             }
         }
 
@@ -4364,13 +4364,13 @@ void dlgTriggerEditor::saveAlias()
             if (!pT->mPackageName.isEmpty()) {
                 if (pT->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("deactivated folder");
                 }
             } else if (pT->isActive()) {
-                itemDescription = tr("folder");
+                itemDescription = tr("activated folder");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4387,7 +4387,7 @@ void dlgTriggerEditor::saveAlias()
             }
         } else {
             if (pT->isActive()) {
-                itemDescription = tr("checked");
+                itemDescription = tr("activated");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4395,7 +4395,7 @@ void dlgTriggerEditor::saveAlias()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("unchecked");
+                itemDescription = tr("deactivated");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4410,7 +4410,7 @@ void dlgTriggerEditor::saveAlias()
             if (old_name == tr("New alias")) {
                 QIcon _icon;
                 if (pT->isFolder()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (pT->ancestorsActive()) {
                         _icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4418,7 +4418,7 @@ void dlgTriggerEditor::saveAlias()
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (pT->ancestorsActive()) {
                         _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4527,15 +4527,15 @@ void dlgTriggerEditor::saveAction()
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
                 }
             }
-            itemDescription = (itemActive ? tr("folder") : tr("deactivated folder"));
+            itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
         } else {
             // Is a button
             if (itemActive) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("checked");
+                itemDescription = tr("activated");
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("unchecked");
+                itemDescription = tr("deactivated");
             }
         }
 
@@ -4651,7 +4651,7 @@ void dlgTriggerEditor::saveScript()
         if (!pT->mPackageName.isEmpty()) {
             if (itemActive) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("folder");
+                itemDescription = tr("activated folder");
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("deactivated folder");
@@ -4659,7 +4659,7 @@ void dlgTriggerEditor::saveScript()
         } else {
             if (itemActive) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("folder");
+                itemDescription = tr("activated folder");
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("deactivated folder");
@@ -4668,10 +4668,10 @@ void dlgTriggerEditor::saveScript()
     } else {
         if (itemActive) {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("checked");
+            itemDescription = tr("activated");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("unchecked");
+            itemDescription = tr("deactivated");
         }
     }
 
@@ -4682,10 +4682,10 @@ void dlgTriggerEditor::saveScript()
             QIcon _icon;
             if (pT->isFolder()) {
                 _icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("folder");
+                itemDescription = tr("activated folder");
             } else {
                 _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("checked");
+                itemDescription = tr("activated");
             }
             pItem->setIcon(0, _icon);
             pItem->setText(0, name);
@@ -4978,13 +4978,13 @@ void dlgTriggerEditor::saveKey()
             if (!pT->mPackageName.isEmpty()) {
                 if (itemActive) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("deactivated folder");
                 }
             } else if (itemActive) {
-                itemDescription = tr("folder");
+                itemDescription = tr("activated folder");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -5003,13 +5003,13 @@ void dlgTriggerEditor::saveKey()
             if (itemActive) {
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("unchecked");
+                itemDescription = tr("deactivated");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -6049,13 +6049,13 @@ void dlgTriggerEditor::populateKeys()
                 if (!key->mPackageName.isEmpty()) {
                     if (key->isActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("folder");
+                        itemDescription = tr("activated folder");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated folder");
                     }
                 } else if (key->isActive()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6072,7 +6072,7 @@ void dlgTriggerEditor::populateKeys()
                 }
             } else {
                 if (key->isActive()) {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6080,7 +6080,7 @@ void dlgTriggerEditor::populateKeys()
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6142,17 +6142,17 @@ void dlgTriggerEditor::populateActions()
                     }
                 }
                 if (itemActive) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     itemDescription = tr("deactivated folder");
                 }
             } else {
                 if (itemActive) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                 }
             }
             pItem->setIcon(0, icon);
@@ -6192,13 +6192,13 @@ void dlgTriggerEditor::populateAliases()
                 if (!alias->mPackageName.isEmpty()) {
                     if (alias->isActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("folder");
+                        itemDescription = tr("activated folder");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated folder");
                     }
                 } else if (alias->isActive()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6217,13 +6217,13 @@ void dlgTriggerEditor::populateAliases()
                 if (alias->isActive()) {
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("checked");
+                        itemDescription = tr("activated");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6265,7 +6265,7 @@ void dlgTriggerEditor::populateScripts()
                 if (!script->mPackageName.isEmpty()) {
                     if (script->isActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("folder");
+                        itemDescription = tr("activated folder");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated folder");
@@ -6273,7 +6273,7 @@ void dlgTriggerEditor::populateScripts()
                 } else {
                     if (script->isActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("folder");
+                        itemDescription = tr("activated folder");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated folder");
@@ -6282,10 +6282,10 @@ void dlgTriggerEditor::populateScripts()
             } else {
                 if (script->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                 }
             }
             pItem->setIcon(0, icon);
@@ -6324,7 +6324,7 @@ void dlgTriggerEditor::populateTimers()
                 if (!timer->mPackageName.isEmpty()) {
                     if (timer->isActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("folder");
+                        itemDescription = tr("activated folder");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated folder");
@@ -6332,7 +6332,7 @@ void dlgTriggerEditor::populateTimers()
                 } else {
                     if (timer->shouldBeActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("folder");
+                        itemDescription = tr("activated folder");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated folder");
@@ -6342,18 +6342,18 @@ void dlgTriggerEditor::populateTimers()
                 if (timer->isOffsetTimer()) {
                     if (timer->shouldBeActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("checked offset timer");
+                        itemDescription = tr("activated offset timer");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("unchecked offset timer");
+                        itemDescription = tr("deactivated offset timer");
                     }
                 } else {
                     if (timer->shouldBeActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("checked");
+                        itemDescription = tr("activated");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("unchecked");
+                        itemDescription = tr("deactivated");
                     }
                 }
             }
@@ -6391,7 +6391,7 @@ void dlgTriggerEditor::populateTriggers()
 
             if (trigger->isFilterChain()) {
                 if (trigger->isActive()) {
-                    itemDescription = tr("checked filter chain");
+                    itemDescription = tr("activated filter chain");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6399,7 +6399,7 @@ void dlgTriggerEditor::populateTriggers()
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                        itemDescription = tr("unchecked");
+                        itemDescription = tr("deactivated");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6410,13 +6410,13 @@ void dlgTriggerEditor::populateTriggers()
                 if (!trigger->mPackageName.isEmpty()) {
                     if (trigger->isActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("folder");
+                        itemDescription = tr("activated folder");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated folder");
                     }
                 } else if (trigger->isActive()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6433,7 +6433,7 @@ void dlgTriggerEditor::populateTriggers()
                 }
             } else {
                 if (trigger->isActive()) {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6441,7 +6441,7 @@ void dlgTriggerEditor::populateTriggers()
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6500,7 +6500,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
 
             if (trigger->isFilterChain()) {
                 if (trigger->isActive()) {
-                    itemDescription = tr("checked filter chain");
+                    itemDescription = tr("activated filter chain");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/filter.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6508,17 +6508,16 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("unchecked filter chain");
+                    itemDescription = tr("deactivated filter chain");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/filter-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/filter-grey-locked.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 }
             } else if (trigger->isFolder()) {
                 if (trigger->isActive()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6535,7 +6534,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                 }
             } else {
                 if (trigger->isActive()) {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6543,7 +6542,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6585,7 +6584,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
 
             if (key->isFolder()) {
                 if (key->isActive()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6602,7 +6601,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
                 }
             } else {
                 if (key->isActive()) {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6610,7 +6609,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6654,7 +6653,7 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
             if (script->isFolder()) {
                 if (script->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("deactivated folder");
@@ -6662,10 +6661,10 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
             } else {
                 if (script->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                 }
             }
             pItem->setIcon(0, icon);
@@ -6701,7 +6700,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
 
             if (alias->isFolder()) {
                 if (alias->isActive()) {
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6718,7 +6717,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
                 }
             } else {
                 if (alias->isActive()) {
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6726,7 +6725,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6770,7 +6769,7 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
                 // parent has a package name - this is a toolbar
                 if (action->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("deactivated folder");
@@ -6779,7 +6778,7 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
                 // Is a folder and is not a toolbar - this is a menu
                 if (action->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("deactivated folder");
@@ -6788,10 +6787,10 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
                 // Is a button
                 if (action->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("checked");
+                    itemDescription = tr("activated");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("unchecked");
+                    itemDescription = tr("deactivated");
                 }
             }
             pItem->setIcon(0, icon);
@@ -6829,7 +6828,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
             if (timer->isFolder()) {
                 if (timer->shouldBeActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("folder");
+                    itemDescription = tr("activated folder");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("deactivated folder");
@@ -6838,18 +6837,18 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                 if (timer->isOffsetTimer()) {
                     if (timer->shouldBeActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("checked offset timer");
+                        itemDescription = tr("activated offset timer");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("unchecked offset timer");
+                        itemDescription = tr("deactivated offset timer");
                     }
                 } else {
                     if (timer->shouldBeActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("checked");
+                        itemDescription = tr("activated");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("unchecked");
+                        itemDescription = tr("deactivated");
                     }
                 }
             }
