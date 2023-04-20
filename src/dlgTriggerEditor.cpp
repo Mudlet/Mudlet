@@ -4288,7 +4288,6 @@ void dlgTriggerEditor::saveTimer()
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
             }
-            // TIM
         } else {
             if (pT->shouldBeActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -6847,7 +6846,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                 } else {
                     if (timer->shouldBeActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("checked"); //TIM
+                        itemDescription = tr("checked");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("unchecked");
