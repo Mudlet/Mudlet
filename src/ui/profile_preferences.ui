@@ -26,6 +26,7 @@
    
    
    
+   
    </iconset>
   </property>
   <layout class="QVBoxLayout" name="vBoxLayout_main">
@@ -4090,6 +4091,7 @@ you can use it but there could be issues with aligning columns of text</string>
         <property name="icon">
          <iconset>
           <normaloff>:/icons/icons/dialog-close.png</normaloff>:/icons/icons/dialog-close.png
+         
          
          
          
