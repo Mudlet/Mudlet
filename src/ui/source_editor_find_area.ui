@@ -55,14 +55,7 @@
      </property>
      <property name="icon">
       <iconset resource="../mudlet.qrc">
-       <normaloff>:/icons/export.png</normaloff>:/icons/export.png
-      
-      
-      
-      
-      
-      
-      </iconset>
+       <normaloff>:/icons/export.png</normaloff>:/icons/export.png</iconset>
      </property>
      <property name="flat">
       <bool>true</bool>
@@ -79,14 +72,7 @@
      </property>
      <property name="icon">
       <iconset resource="../mudlet.qrc">
-       <normaloff>:/icons/import.png</normaloff>:/icons/import.png
-      
-      
-      
-      
-      
-      
-      </iconset>
+       <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
      </property>
      <property name="flat">
       <bool>true</bool>
@@ -113,14 +99,7 @@
      </property>
      <property name="icon">
       <iconset theme="edit-paste">
-       <normaloff>.</normaloff>.
-      
-      
-      
-      
-      
-      
-      </iconset>
+       <normaloff>.</normaloff>.</iconset>
      </property>
      <property name="flat">
       <bool>true</bool>
@@ -149,14 +128,7 @@
      </property>
      <property name="icon">
       <iconset resource="../mudlet.qrc">
-       <normaloff>:/icons/dialog-close.png</normaloff>:/icons/dialog-close.png
-      
-      
-      
-      
-      
-      
-      </iconset>
+       <normaloff>:/icons/dialog-close.png</normaloff>:/icons/dialog-close.png</iconset>
      </property>
      <property name="flat">
       <bool>true</bool>
