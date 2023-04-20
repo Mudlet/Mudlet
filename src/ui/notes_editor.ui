@@ -1,7 +1,7 @@
-<ui version="4.0" >
+<ui version="4.0">
  <class>notes_editor</class>
- <widget class="QMainWindow" name="notes_editor" >
-  <property name="geometry" >
+ <widget class="QMainWindow" name="notes_editor">
+  <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
@@ -9,8 +9,8 @@
     <height>600</height>
    </rect>
   </property>
-  <widget class="QWidget" name="centralwidget" >
-   <property name="geometry" >
+  <widget class="QWidget" name="centralwidget">
+   <property name="geometry">
     <rect>
      <x>0</x>
      <y>21</y>
@@ -18,20 +18,20 @@
      <height>558</height>
     </rect>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout" >
-    <property name="spacing" >
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
      <number>0</number>
     </property>
-    <property name="margin" >
+    <property name="margin">
      <number>0</number>
     </property>
     <item>
-     <widget class="QPlainTextEdit" name="notesEdit" />
+     <widget class="QPlainTextEdit" name="notesEdit"/>
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar" >
-   <property name="geometry" >
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
@@ -40,8 +40,8 @@
     </rect>
    </property>
   </widget>
-  <widget class="QStatusBar" name="statusbar" >
-   <property name="geometry" >
+  <widget class="QStatusBar" name="statusbar">
+   <property name="geometry">
     <rect>
      <x>0</x>
      <y>579</y>
