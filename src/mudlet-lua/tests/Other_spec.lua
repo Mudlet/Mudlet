@@ -381,7 +381,7 @@ describe("Tests Other.lua functions", function()
       feedTriggers("This is the first line\n")
       feedTriggers("This line has some substring match\n")
       feedTriggers("This is now the third and final line\n")
-      multimatches = {
+      _G.multimatches = {
         { "This is the first line" },
         { "some substring" },
         { "third line" }
@@ -392,6 +392,7 @@ describe("Tests Other.lua functions", function()
       -- assert.spy(s).was.called(3)
       local lastLine = getCurrentLine()
       assert.equal("This line should not be deleted", lastLine)
+      _G.multimatches = {}
     end)
   end)
 
