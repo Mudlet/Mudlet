@@ -32,7 +32,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>&lt;p&gt;It seems that you don't have any &lt;a href=&quot;http://wiki.mudlet.org/w/Mapping_script&quot;&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</string>
+      <string>&lt;p&gt;It seems that you don't have any &lt;a href="http://wiki.mudlet.org/w/Mapping_script"&gt;mapping scripts&lt;/a&gt; installed yet - the mapper needs you to have one for your game, so it can track where you are and autowalk you. You can either make one yourself, or import an existing one that someone else made.&lt;/p&gt;&lt;p&gt;Would you like to see if any are available?&lt;/p&gt;</string>
      </property>
      <property name="scaledContents">
       <bool>false</bool>

@@ -96,7 +96,7 @@
           </sizepolicy>
          </property>
          <property name="toolTip">
-          <string>&lt;p&gt;Save (&lt;span style=&quot; color:#565656;&quot;&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</string>
+          <string>&lt;p&gt;Save (&lt;span style=" color:#565656;"&gt;Shift+Tab&lt;/span&gt;)&lt;/p&gt;</string>
          </property>
          <property name="text">
           <string>Save</string>
