@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1191,6 +1191,12 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->pos;
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
+        if (mSaveVersion >= 21) {
+            // Revised in version 21 to store the value directly:
+            ofs << pA->mLast2DMapZoom;
+        } else {
+            pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
+        }
         ofs << pA->mUserData;
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
@@ -1743,8 +1749,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 ifs >> pA->pos;
                 ifs >> pA->isZone;
                 ifs >> pA->zoneAreaRef;
-                if (mVersion >= 17) {
+                if (mVersion >= 21) {
+                    ifs >> pA->mLast2DMapZoom;
                     ifs >> pA->mUserData;
+                } else if (mVersion >= 17) {
+                    ifs >> pA->mUserData;
+                    qreal fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
+                    pA->mLast2DMapZoom = (fallback_map2DZoom >= T2DMap::csmMinXYZoom) ? fallback_map2DZoom : T2DMap::csmDefaultXYZoom;
                 }
                 if (mVersion >= 21) {
                     int mapLabelsCount = -1;
@@ -2026,6 +2037,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             ifs >> pA.pos;
             ifs >> pA.isZone;
             ifs >> pA.zoneAreaRef;
+            if (otherProfileVersion >= 21) {
+                ifs >> pA.mLast2DMapZoom;
+            }
             if (otherProfileVersion >= 17) {
                 ifs >> pA.mUserData;
             }
@@ -2565,20 +2579,21 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     XMLimport reader(pHost);
     bool result = reader.importPackage(&file);
 
-    // probably not needed for the download but might be
-    // needed for local file case:
-    mpMapper->mp2dMap->init();
-    // No need to call audit() as XMLimport::importPackage() does it!
-    // audit() produces the successful ending [ OK ] message...!
-    mpMapper->updateAreaComboBox();
-    if (result) {
-        mpMapper->resetAreaComboBoxToPlayerRoomArea();
-    } else {
-        // Failed...
-        if (errMsg) {
-            *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
-                         "in main console!");
+    if (!mpMapper.isNull() && mpMapper->mp2dMap) {
+        // probably not needed for the download but might be
+        // needed for local file case:
+        mpMapper->mp2dMap->init();
+        // No need to call audit() as XMLimport::importPackage() does it!
+        // audit() produces the successful ending [ OK ] message...!
+        mpMapper->updateAreaComboBox();
+        if (result) {
+            mpMapper->resetAreaComboBoxToPlayerRoomArea();
         }
+    }
+
+    if (!result && errMsg) {
+        *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
+                     "in main console!");
     }
 
     if (isLocalImport) {
@@ -2586,7 +2601,10 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         mpProgressDialog->deleteLater();
         mpProgressDialog = nullptr;
     }
-    mpMapper->show();
+
+    if (!mpMapper.isNull()) {
+         mpMapper->show();
+    }
 
     return result;
 }

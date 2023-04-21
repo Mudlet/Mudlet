@@ -66,8 +66,10 @@
 					<string>You start plodding carefully across the constructed trenches.</string>
 					<string>You struggle to climb over the snow drift in your way.</string>
 					<string>You struggle to climb over the sand dune in your way.</string>
+					<string>You slowly clamber over the rubble in your path.</string>
 				</regexCodeList>
 				<regexCodePropertyList>
+					<integer>3</integer>
 					<integer>3</integer>
 					<integer>3</integer>
 					<integer>3</integer>
@@ -1766,6 +1768,236 @@ mmp.game = "aetolia"</script>
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
 						<string>Password correct. Welcome to Aetolia.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Aetolia Survey</name>
+					<script></script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>10</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>You discern that you are standing in </string>
+						<string>You stand, brilliantly illuminated, within</string>
+						<string>You are standing </string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>2</integer>
+						<integer>2</integer>
+						<integer>2</integer>
+					</regexCodePropertyList>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Grab continent</name>
+						<script>mmp.aetoliaContinent = matches[2]</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>^You stand upon (.+?)(\.|,)</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>1</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Grab Plane</name>
+						<script>mmp.aetoliaPlane = matches[2]</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>^You are in (.+)\.$</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>1</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Aetolia Gag Survey</name>
+						<script>deleteLine()</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>return true</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>4</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Close Aetolia Survey</name>
+						<script>setTriggerStayOpen("Aetolia Survey",0)
+disableTrigger("Aetolia Gag Survey")</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string></string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>7</integer>
+						</regexCodePropertyList>
+					</Trigger>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>mmp Aetolia Scent</name>
+					<script>mmp.tempscent = {}
+mmp.pdb_lastupdate = {}</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>100</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>You tilt your head back and deeply inhale any scents from the air.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>3</integer>
+					</regexCodePropertyList>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Got line</name>
+						<script>selectString(line, 1) replace""
+
+-- get the name
+cecho("&lt;green&gt;"..matches[2].."&lt;reset&gt;: ")
+
+-- ids
+mmp.echonums(matches[3])
+
+-- pad spaces so we have aligned roomname
+echo(string.rep(" ", 25 - #getCurrentLine()))
+
+-- and finally, the roomname
+echo(matches[3])
+
+
+if mmp.tempscent[matches[3]] then
+	mmp.tempscent[matches[3]][#mmp.tempscent[matches[3]]+1] = matches[2]
+else
+	mmp.tempscent[matches[3]] = {matches[2]}
+end
+
+-- save in our person tracking db
+mmp.pdb[matches[2]] = matches[3]
+mmp.pdb_lastupdate[matches[2]] = true</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>^You pick up the faint scent of (\w+) at (.+)\.$</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>1</integer>
+						</regexCodePropertyList>
+					</Trigger>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>stop capturing</name>
+						<script>setTriggerStayOpen("mmp Aetolia Scent", 0)
+raiseEvent("mmapper updated pdb")</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string></string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>7</integer>
+						</regexCodePropertyList>
+					</Trigger>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Arrow wounds</name>
+					<script>mmp.customwalkdelay(2)</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>You clutch your wounds and slowly make your way to the </string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>2</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Backstabbed</name>
+					<script>mmp.customwalkdelay(2)</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>Your injured back delays your movement.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>3</integer>
@@ -3842,6 +4074,7 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<string>The door beeps quietly. It appears to be locked.</string>
 						<string>This (?:walnut|pine|oak|iron|reinforced) door has been magically locked shut\.</string>
 						<string>You are not carrying a key for this (?:walnut|pine|oak|iron|reinforced) door\.</string>
+						<string>The door has been magically locked shut.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>3</integer>
@@ -3852,6 +4085,7 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<integer>3</integer>
 						<integer>1</integer>
 						<integer>1</integer>
+						<integer>3</integer>
 					</regexCodePropertyList>
 				</Trigger>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
@@ -3870,10 +4104,12 @@ mmp.echo("We're connected to StickMUD.")</script>
 					<regexCodeList>
 						<string>The door is locked.</string>
 						<string>The (?:walnut|pine|oak|iron|reinforced) door is locked\.</string>
+						<string>The door is locked shut.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>3</integer>
 						<integer>1</integer>
+						<integer>3</integer>
 					</regexCodePropertyList>
 				</Trigger>
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
@@ -3895,6 +4131,7 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<string>A closed door is in the way. You need to OPEN DOOR</string>
 						<string>There is an? (?:walnut|pine|oak|iron|reinforced) door in the way.</string>
 						<string>The door to the (\w+) is closed.</string>
+						<string>There is a closed door in the way.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>2</integer>
@@ -3902,6 +4139,7 @@ mmp.echo("We're connected to StickMUD.")</script>
 						<integer>2</integer>
 						<integer>1</integer>
 						<integer>1</integer>
+						<integer>3</integer>
 					</regexCodePropertyList>
 				</Trigger>
 			</TriggerGroup>
@@ -5521,6 +5759,208 @@ mmp.echo("All astral nodes have been "..(matches[2]:lower()=="on" and "" or "un"
 			<script>mudlet = mudlet or {}; mudlet.mapper_script = true</script>
 			<eventHandlerList />
 			<Script isActive="yes" isFolder="no">
+				<name>Load settings</name>
+				<packageName></packageName>
+				<script>-- mmp = mudlet mapper namespace
+mmp =
+  mmp or
+  {
+    paused = false,
+    autowalking = false,
+    currentroom = 0,
+    currentroomname = "(unknown)",
+    firstRun = true,
+    specials = {},
+    ferry_rooms = {},
+  }
+mmp.speedWalkWatch = createStopWatch()
+-- speedWalkPath and speedWalkDir populated by Mudlet from getPath() and gotoRoom()
+speedWalkPath = speedWalkPath or {}
+speedWalkDir = speedWalkDir or {}
+
+-- actually used by the mapper for walking
+mmp.speedWalkCounter = 0
+mmp.speedWalk = mmp.speedWalk or {}
+mmp.speedWalkPath = mmp.speedWalkPath or {}
+mmp.speedWalkDir = mmp.speedWalkDir or {}
+mmp.lagtable =
+  {
+    [1] = {description = "Normal, default level.", time = 0.5},
+    [2] = {description = "Decent, but slightly laggy.", time = 1},
+    [3] = {description = "Noticeably laggy with occasional spikes.", time = 2},
+    [4] = {description = "Bad. Terrible. Terribad.", time = 5},
+    [5] = {description = "Carrier Pigeon", time = 10},
+  }
+local newversion = "23.1.1"
+if mmp.version and mmp.version ~= newversion then
+  if not mmp.game then
+    mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
+  else
+    mmp.echo("Mapper script updated - thanks! You don't need to restart.")
+  end
+end
+mmp.version = newversion
+
+function mmp.startup()
+  if not mmp.firstRun then
+    return
+  end
+  local private_settings = {}
+
+  --General settings
+
+  private_settings["echocolour"] = mmp.createOption("cyan", mmp.changeEchoColour, {"string"}, "Set the color for room number echos?", function(newSetting) return color_table[newSetting] ~= nil end)
+  private_settings["crowdmap"] = mmp.createOption(false, mmp.changeMapSource, {"boolean"}, "Use a crowd-sourced map instead of IREs default?", nil, {achaea = true, starmourn = true, lusternia = true, stickmud = true, asteria = true, imperian = true, aetolia = true})
+  private_settings["showcmds"] = mmp.createOption(true, mmp.changeBoolFunc, {"boolean"}, "Show walking commands?")
+  private_settings["laglevel"] = mmp.createOption(1, mmp.changeLaglevel, {"number"}, "How laggy is your connection, (fast 1&lt;-&gt;5 slow)?", mmp.verifyLaglevel)
+  private_settings["slowwalk"] = mmp.createOption(false, mmp.setSlowWalk, {"boolean"}, "Walk slowly instead of as quick as possible?")
+  private_settings["updatemap"] = mmp.createOption(true, mmp.changeUpdateMap, {"boolean"}, "Check for new maps from your MUD?")
+  private_settings["waterwalk"] = mmp.createOption(true, mmp.setWaterWalk, {"boolean"}, "Have waterwalk (don't avoid water)?", nil, {achaea = true})
+
+  --Settings that lock things
+
+  private_settings["lockpathways"] = mmp.createOption(true, mmp.lockPathways, {"boolean"}, "Lock pathway exits?", nil, {lusternia = true})
+  private_settings["locksewers"] = mmp.createOption(false, mmp.lockSewers, {"boolean"}, "Lock all sewers?", nil, {achaea = true})
+  private_settings["lockspecials"] = mmp.createOption(false, mmp.lockSpecials, {"boolean"}, "Lock all special exits?")
+  private_settings["lockwormholes"] = mmp.createOption(true, mmp.lockWormholes, {"boolean"}, "Lock all wormholes?", nil, {achaea = true, imperian = true, aetolia = true})
+
+  --Sprint movement
+
+  private_settings["dash"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Dash?", nil, {achaea = true, imperian = true, aetolia = true})
+  private_settings["sprint"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Sprint?")
+  private_settings["gallop"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Gallop?")
+  private_settings["runaway"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Jester Runaway?", nil, {achaea = true})
+
+  --Achaea wings and things
+
+  private_settings["winglanguage"] = mmp.createOption("", mmp.setWingsLanguage, {"string"}, "Speak non-default language for wings:", nil, {achaea = true})
+  private_settings["pebble"] = mmp.createOption(false, mmp.lockPebble, {"boolean"}, "Make use of your enchanted pebble?", nil, {achaea = true})
+  private_settings["removewings"] = mmp.createOption(true, mmp.setWingsRemoval, {"boolean"}, "Remove Wings after using them?", nil, {achaea = true, imperian = true})
+  private_settings["harness"] = mmp.createOption(false, mmp.setHarness, {"boolean"}, "Use Stratospheric Harness?", nil, {achaea = true})
+  private_settings["duantahar"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Chenubian Wings?", nil, {achaea = true})
+  private_settings["duanatharan"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Atavian Wings?", nil, {achaea = true, aetolia = true})
+  private_settings["duanathar"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Eagle Wings?", nil, {achaea = true, aetolia = true})
+  private_settings["duanatharic"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Island Wings?", nil, {achaea = true})
+  private_settings["soar"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Aero Soar?", nil, {achaea = true})
+  private_settings["shackle"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Take off shackle?", nil, {achaea = true})
+  private_settings["universe"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Universe Tarot?", nil, {achaea = true})
+  private_settings["gare"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Gare?", nil, {achaea = true})
+
+  --aet wings and things
+  private_settings["voltda"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use dark amulet?", nil, {aetolia = true})
+  private_settings["voltdaran"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use midnight amulet?", nil, {aetolia = true})
+  
+  --Wings pathfinding improvements
+
+  private_settings["betterwings"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Better Wings pathfinding?", nil, {achaea = true})
+
+  --Achaea Orb of Confinement
+
+  private_settings["orbashtan"] = mmp.createOption(false, function() mmp.setOrb("ashtan") end, {"boolean"}, "Orb of Confinement active in Ashtan?", nil, {achaea = true})
+  private_settings["orbcyrene"] = mmp.createOption(false, function() mmp.setOrb("cyrene") end, {"boolean"}, "Orb of Confinement active in Cyrene?", nil, {achaea = true})
+  private_settings["orbeleusis"] = mmp.createOption(false, function() mmp.setOrb("eleusis") end, {"boolean"}, "Orb of Confinement active in Eleusis?", nil, {achaea = true})
+  private_settings["orbhashan"] = mmp.createOption(false, function() mmp.setOrb("hashan") end, {"boolean"}, "Orb of Confinement active in Hashan?", nil, {achaea = true})
+  private_settings["orbmhaldor"] = mmp.createOption(false, function() mmp.setOrb("mhaldor") end, {"boolean"}, "Orb of Confinement active in Mhaldor?", nil, {achaea = true})
+  private_settings["orbtargossas"] = mmp.createOption(false, function() mmp.setOrb("targossas") end, {"boolean"}, "Orb of Confinement active in Targossas?", nil, {achaea = true})
+
+  --Imperian wings
+
+  private_settings["shekinah"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Seraphim Wings?", nil, {imperian = true})
+  private_settings["suriel"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Orphanim Wings?", nil, {imperian = true})
+
+  --Lusternia bixes
+
+  private_settings["torus"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Torus?", nil, {lusternia = true})
+  private_settings["prism"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your transplanar prism?", nil, {lusternia = true})
+  private_settings["cubix"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Cubix?", nil, {lusternia = true})
+  private_settings["medallion"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Medallion?", nil, {lusternia = true})
+
+  --Lusternia Bubblixes
+  private_settings["twist"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mt. Dio Bix?", nil, {lusternia = true})
+  private_settings["figurine"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Icewynd Bix?", nil, {lusternia = true})
+  private_settings["periscope"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Aquagoria Bix?", nil, {lusternia = true})
+  private_settings["pebble"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Lyraa Bix?", nil, {lusternia = true})
+  private_settings["shard"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Xion Bix?", nil, {lusternia = true})
+  private_settings["tibia"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Cankermore Bix?", nil, {lusternia = true})
+  private_settings["mud"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mucklemarsh Bix?", nil, {lusternia = true})
+  private_settings["cookie"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Crumkindivia Bix?", nil, {lusternia = true})
+  private_settings["icicle"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Frosticia Bix?", nil, {lusternia = true})
+  private_settings["screwdriver"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Facility Bix?", nil, {lusternia = true})
+  private_settings["snowglobe"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tree of Trees Bix?", nil, {lusternia = true})
+  private_settings["head"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Bottledowns Bix?", nil, {lusternia = true})
+  private_settings["wheel"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Dramube Bix?", nil, {lusternia = true})
+
+  --lusternia athergoop setButtons
+
+  private_settings["buttons"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of Aethergoop Buttons?", nil, {lusternia = true})
+
+  --Lusternia Curio collections
+
+  private_settings["bonecurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Bone curios?", nil, {lusternia = true})
+  private_settings["facecurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Face curios?", nil, {lusternia = true})
+  private_settings["feathercurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Feather curios?", nil, {lusternia = true})
+  private_settings["figurecurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Figure curios?", nil, {lusternia = true})
+  private_settings["flowercurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flower curios?", nil, {lusternia = true})
+  private_settings["fluttercurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flutter curios?", nil, {lusternia = true})
+  private_settings["toolcurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tool curios?", nil, {lusternia = true})
+  private_settings["vernalcurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Vernal curios?", nil, {lusternia = true})
+  private_settings["utensilcurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Utensil curios?", nil, {lusternia = true})
+  private_settings["toycurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Toy curios?", nil, {lusternia = true})
+  private_settings["soullesscurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Soulless curios?", nil, {lusternia = true})
+
+  --Lusternia epic quest bixes
+
+  private_settings["fingerblade"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Fingerblade?", nil, {lusternia = true})
+  private_settings["blossom"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flame of dae'Seren?", nil, {lusternia = true})
+  private_settings["belt"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Belt?", nil, {lusternia = true})
+  private_settings["mandala"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mandala?", nil, {lusternia = true})
+  private_settings["mantle"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mantle?", nil, {lusternia = true})
+  private_settings["key"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Key?", nil, {lusternia = true})
+
+  --Lusternia other travel things
+  private_settings["compass"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use the Compass of the Basin?", nil, {lusternia = true})
+  private_settings["astrojump"] = mmp.createOption(false, mmp.astroboots, {"boolean"}, "Use Astral Jumping boots?", nil, {lusternia = true})
+
+
+  --I have no idea what this does tbh
+
+  private_settings["caravan"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Walk caravans?", nil, {imperian = true})
+
+
+
+  mmp.settings = mmp.createOptionsTable(private_settings)
+  mmp.settings.disp = mmp.echo
+  mmp.game = false
+  mmp.settings.dispOption =
+    function(opt, val)
+      cecho(
+        "&lt;green&gt;" ..
+        val.use ..
+        "&lt;white&gt; (" ..
+        opt ..
+        ") " ..
+        string.rep(" ", 50 - val.use:len() - opt:len()) ..
+        tostring(val.value) ..
+        "\n"
+      )
+    end
+  mmp.settings.dispDefaultWriteError =
+    function()
+      mmp.echo("Please use the mconfig alias to set options!")
+    end
+  raiseEvent("mmp areas changed")
+  mmp.firstRun = false
+  mmp.echon("Mudlet Mapper script for IREs (" .. tostring(mmp.version) .. ") loaded! (")
+  echoLink(
+    "homepage",
+    "(openUrl or openURL)'http://wiki.mudlet.org/w/IRE_mapping_script'",
+    "Clicky clicky to read up on what's this about"
+  )
+  echo(")\n")
+end</script>
+				<eventHandlerList />
+			</Script>
+			<Script isActive="yes" isFolder="no">
 				<name>Create Option Table</name>
 				<packageName></packageName>
 				<script>-------------------------------------------------
@@ -5669,204 +6109,6 @@ function mmp.createOptionsTable(defaultTable)
 
 	return proxyTable
 
-end</script>
-				<eventHandlerList />
-			</Script>
-			<Script isActive="yes" isFolder="no">
-				<name>Load settings</name>
-				<packageName></packageName>
-				<script>-- mmp = mudlet mapper namespace
-mmp =
-  mmp or
-  {
-    paused = false,
-    autowalking = false,
-    currentroom = 0,
-    currentroomname = "(unknown)",
-    firstRun = true,
-    specials = {},
-    ferry_rooms = {},
-  }
-mmp.speedWalkWatch = createStopWatch()
--- speedWalkPath and speedWalkDir populated by Mudlet from getPath() and gotoRoom()
-speedWalkPath = speedWalkPath or {}
-speedWalkDir = speedWalkDir or {}
-
--- actually used by the mapper for walking
-mmp.speedWalkCounter = 0
-mmp.speedWalk = mmp.speedWalk or {}
-mmp.speedWalkPath = mmp.speedWalkPath or {}
-mmp.speedWalkDir = mmp.speedWalkDir or {}
-mmp.lagtable =
-  {
-    [1] = {description = "Normal, default level.", time = 0.5},
-    [2] = {description = "Decent, but slightly laggy.", time = 1},
-    [3] = {description = "Noticeably laggy with occasional spikes.", time = 2},
-    [4] = {description = "Bad. Terrible. Terribad.", time = 5},
-    [5] = {description = "Carrier Pigeon", time = 10},
-  }
-local newversion = "22.9.1"
-if mmp.version and mmp.version ~= newversion then
-  if not mmp.game then
-    mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
-  else
-    mmp.echo("Mapper script updated - thanks! You don't need to restart.")
-  end
-end
-mmp.version = newversion
-
-function mmp.startup()
-  if not mmp.firstRun then
-    return
-  end
-  local private_settings = {}
-
-  --General settings
-
-  private_settings["echocolour"] = mmp.createOption("cyan", mmp.changeEchoColour, {"string"}, "Set the color for room number echos?", function(newSetting) return color_table[newSetting] ~= nil end)
-  private_settings["crowdmap"] = mmp.createOption(false, mmp.changeMapSource, {"boolean"}, "Use a crowd-sourced map instead of IREs default?", nil, {achaea = true, starmourn = true, lusternia = true, stickmud = true, asteria = true, imperian = true, aetolia = true})
-  private_settings["showcmds"] = mmp.createOption(true, mmp.changeBoolFunc, {"boolean"}, "Show walking commands?")
-  private_settings["laglevel"] = mmp.createOption(1, mmp.changeLaglevel, {"number"}, "How laggy is your connection, (fast 1&lt;-&gt;5 slow)?", mmp.verifyLaglevel)
-  private_settings["slowwalk"] = mmp.createOption(false, mmp.setSlowWalk, {"boolean"}, "Walk slowly instead of as quick as possible?")
-  private_settings["updatemap"] = mmp.createOption(true, mmp.changeUpdateMap, {"boolean"}, "Check for new maps from your MUD?")
-  private_settings["waterwalk"] = mmp.createOption(true, mmp.setWaterWalk, {"boolean"}, "Have waterwalk (don't avoid water)?", nil, {achaea = true})
-
-  --Settings that lock things
-
-  private_settings["lockpathways"] = mmp.createOption(true, mmp.lockPathways, {"boolean"}, "Lock pathway exits?", nil, {lusternia = true})
-  private_settings["locksewers"] = mmp.createOption(false, mmp.lockSewers, {"boolean"}, "Lock all sewers?", nil, {achaea = true})
-  private_settings["lockspecials"] = mmp.createOption(false, mmp.lockSpecials, {"boolean"}, "Lock all special exits?")
-  private_settings["lockwormholes"] = mmp.createOption(true, mmp.lockWormholes, {"boolean"}, "Lock all wormholes?", nil, {achaea = true, imperian = true, aetolia = true})
-
-  --Sprint movement
-
-  private_settings["dash"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Dash?", nil, {achaea = true, imperian = true, aetolia = true})
-  private_settings["sprint"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Sprint?")
-  private_settings["gallop"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Gallop?")
-  private_settings["runaway"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Jester Runaway?", nil, {achaea = true})
-
-  --Achaea wings and things
-
-  private_settings["winglanguage"] = mmp.createOption("", mmp.setWingsLanguage, {"string"}, "Speak non-default language for wings:", nil, {achaea = true})
-  private_settings["pebble"] = mmp.createOption(false, mmp.lockPebble, {"boolean"}, "Make use of your enchanted pebble?", nil, {achaea = true})
-  private_settings["removewings"] = mmp.createOption(true, mmp.setWingsRemoval, {"boolean"}, "Remove Wings after using them?", nil, {achaea = true, imperian = true})
-  private_settings["harness"] = mmp.createOption(false, mmp.setHarness, {"boolean"}, "Use Stratospheric Harness?", nil, {achaea = true})
-  private_settings["duantahar"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Chenubian Wings?", nil, {achaea = true})
-  private_settings["duanatharan"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Atavian Wings?", nil, {achaea = true})
-  private_settings["duanathar"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Eagle Wings?", nil, {achaea = true})
-  private_settings["duanatharic"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Island Wings?", nil, {achaea = true})
-  private_settings["soar"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Aero Soar?", nil, {achaea = true})
-  private_settings["shackle"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Take off shackle?", nil, {achaea = true})
-  private_settings["universe"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Universe Tarot?", nil, {achaea = true})
-  private_settings["gare"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Gare?", nil, {achaea = true})
-
-  --Wings pathfinding improvements
-
-  private_settings["betterwings"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Better Wings pathfinding?", nil, {achaea = true})
-
-  --Achaea Orb of Confinement
-
-  private_settings["orbashtan"] = mmp.createOption(false, function() mmp.setOrb("ashtan") end, {"boolean"}, "Orb of Confinement active in Ashtan?", nil, {achaea = true})
-  private_settings["orbcyrene"] = mmp.createOption(false, function() mmp.setOrb("cyrene") end, {"boolean"}, "Orb of Confinement active in Cyrene?", nil, {achaea = true})
-  private_settings["orbeleusis"] = mmp.createOption(false, function() mmp.setOrb("eleusis") end, {"boolean"}, "Orb of Confinement active in Eleusis?", nil, {achaea = true})
-  private_settings["orbhashan"] = mmp.createOption(false, function() mmp.setOrb("hashan") end, {"boolean"}, "Orb of Confinement active in Hashan?", nil, {achaea = true})
-  private_settings["orbmhaldor"] = mmp.createOption(false, function() mmp.setOrb("mhaldor") end, {"boolean"}, "Orb of Confinement active in Mhaldor?", nil, {achaea = true})
-  private_settings["orbtargossas"] = mmp.createOption(false, function() mmp.setOrb("targossas") end, {"boolean"}, "Orb of Confinement active in Targossas?", nil, {achaea = true})
-
-  --Imperian wings
-
-  private_settings["shekinah"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Seraphim Wings?", nil, {imperian = true})
-  private_settings["suriel"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use Orphanim Wings?", nil, {imperian = true})
-
-  --Lusternia bixes
-
-  private_settings["torus"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Torus?", nil, {lusternia = true})
-  private_settings["prism"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your transplanar prism?", nil, {lusternia = true})
-  private_settings["cubix"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Cubix?", nil, {lusternia = true})
-  private_settings["medallion"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Medallion?", nil, {lusternia = true})
-
-  --Lusternia Bubblixes
-  private_settings["twist"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mt. Dio Bix?", nil, {lusternia = true})
-  private_settings["figurine"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Icewynd Bix?", nil, {lusternia = true})
-  private_settings["periscope"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Aquagoria Bix?", nil, {lusternia = true})
-  private_settings["pebble"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Lyraa Bix?", nil, {lusternia = true})
-  private_settings["shard"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Xion Bix?", nil, {lusternia = true})
-  private_settings["tibia"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Cankermore Bix?", nil, {lusternia = true})
-  private_settings["mud"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mucklemarsh Bix?", nil, {lusternia = true})
-  private_settings["cookie"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Crumkindivia Bix?", nil, {lusternia = true})
-  private_settings["icicle"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Frosticia Bix?", nil, {lusternia = true})
-  private_settings["screwdriver"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Facility Bix?", nil, {lusternia = true})
-  private_settings["snowglobe"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tree of Trees Bix?", nil, {lusternia = true})
-  private_settings["head"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Bottledowns Bix?", nil, {lusternia = true})
-  private_settings["wheel"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Dramube Bix?", nil, {lusternia = true})
-
-  --lusternia athergoop setButtons
-
-  private_settings["buttons"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of Aethergoop Buttons?", nil, {lusternia = true})
-
-  --Lusternia Curio collections
-
-  private_settings["bonecurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Bone curios?", nil, {lusternia = true})
-  private_settings["facecurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Face curios?", nil, {lusternia = true})
-  private_settings["feathercurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Feather curios?", nil, {lusternia = true})
-  private_settings["figurecurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Figure curios?", nil, {lusternia = true})
-  private_settings["flowercurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flower curios?", nil, {lusternia = true})
-  private_settings["fluttercurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flutter curios?", nil, {lusternia = true})
-  private_settings["toolcurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Tool curios?", nil, {lusternia = true})
-  private_settings["vernalcurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Vernal curios?", nil, {lusternia = true})
-  private_settings["utensilcurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Utensil curios?", nil, {lusternia = true})
-  private_settings["toycurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Toy curios?", nil, {lusternia = true})
-  private_settings["soullesscurio"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Soulless curios?", nil, {lusternia = true})
-
-  --Lusternia epic quest bixes
-
-  private_settings["fingerblade"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Fingerblade?", nil, {lusternia = true})
-  private_settings["blossom"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Flame of dae'Seren?", nil, {lusternia = true})
-  private_settings["belt"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Belt?", nil, {lusternia = true})
-  private_settings["mandala"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mandala?", nil, {lusternia = true})
-  private_settings["mantle"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Mantle?", nil, {lusternia = true})
-  private_settings["key"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Make use of your Key?", nil, {lusternia = true})
-
-  --Lusternia other travel things
-  private_settings["compass"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Use the Compass of the Basin?", nil, {lusternia = true})
-  private_settings["astrojump"] = mmp.createOption(false, mmp.astroboots, {"boolean"}, "Use Astral Jumping boots?", nil, {lusternia = true})
-
-
-  --I have no idea what this does tbh
-
-  private_settings["caravan"] = mmp.createOption(false, mmp.changeBoolFunc, {"boolean"}, "Walk caravans?", nil, {imperian = true})
-
-
-
-  mmp.settings = mmp.createOptionsTable(private_settings)
-  mmp.settings.disp = mmp.echo
-  mmp.game = false
-  mmp.settings.dispOption =
-    function(opt, val)
-      cecho(
-        "&lt;green&gt;" ..
-        val.use ..
-        "&lt;white&gt; (" ..
-        opt ..
-        ") " ..
-        string.rep(" ", 50 - val.use:len() - opt:len()) ..
-        tostring(val.value) ..
-        "\n"
-      )
-    end
-  mmp.settings.dispDefaultWriteError =
-    function()
-      mmp.echo("Please use the mconfig alias to set options!")
-    end
-  raiseEvent("mmp areas changed")
-  mmp.firstRun = false
-  mmp.echon("Mudlet Mapper script for IREs (" .. tostring(mmp.version) .. ") loaded! (")
-  echoLink(
-    "homepage",
-    "(openUrl or openURL)'http://wiki.mudlet.org/w/IRE_mapping_script'",
-    "Clicky clicky to read up on what's this about"
-  )
-  echo(")\n")
 end</script>
 				<eventHandlerList />
 			</Script>
@@ -7686,6 +7928,46 @@ mmp.imperian.wingAbleAreas =
     309,
     126,
   }</script>
+					<eventHandlerList />
+				</Script>
+				<Script isActive="yes" isFolder="no">
+					<name>Aetolia</name>
+					<packageName></packageName>
+					<script>registerAnonymousEventHandler("mmp link externals", "mmp.addWingsAetolia")
+
+
+
+function mmp.addWingsAetolia()
+  if mmp.game ~= "aetolia" then return end
+  
+  --Check plane / continent
+  if mmp.aetoliaPlane == "the Prime Material Plane" and mmp.aetoliaContinent == "the Continent of Sapience" and
+  --health check
+  tonumber(gmcp.Char.Vitals.hp)/tonumber(gmcp.Char.Vitals.maxhp)&gt;.95 and 
+  --mana check
+  tonumber(gmcp.Char.Vitals.mp)/tonumber(gmcp.Char.Vitals.maxmp)&gt;.95 then
+  
+      --eagle wings
+      if mmp.settings.duanathar or mmp.settings.duanatharan then
+        mmp.tempSpecialExit(3885, "say duanathar")
+      end
+      --atavian wings
+      if mmp.settings.duanatharan then
+        mmp.tempSpecialExit(4882, "say duanatharan")
+      end
+      
+      if mmp.settings.voltda or mmp.settings.voltdaran then
+        mmp.tempSpecialExit(19911,"say voltda")
+      end
+      
+      if mmp.settings.voltdaran then
+        mmp.tempSpecialExit(19912,"say voltdaran")
+      end
+      
+      
+  
+  end
+end</script>
 					<eventHandlerList />
 				</Script>
 			</ScriptGroup>
@@ -10597,6 +10879,24 @@ end</script>
 							<string>mmp logged in</string>
 						</eventHandlerList>
 					</Script>
+					<Script isActive="yes" isFolder="no">
+						<name>mmp.aetContinentCheck</name>
+						<packageName></packageName>
+						<script>local oldArea = oldArea or ""
+function mmp.aetContinentCheck()
+  if mmp.game ~= "aetolia" then return end
+  
+  if oldArea ~= gmcp.Room.Info.area then
+    oldArea = gmcp.Room.Info.area
+    enableTrigger("Aetolia Gag Survey")
+    send("survey",false)
+    tempTimer(5,function() disableTrigger("Aetolia Gag Survey") end)
+  end
+end</script>
+						<eventHandlerList>
+							<string>gmcp.Room.Info</string>
+						</eventHandlerList>
+					</Script>
 				</Script>
 				<Script isActive="yes" isFolder="no">
 					<name>Asteria</name>
@@ -12268,7 +12568,7 @@ end</script>
 		</ScriptGroup>
 	</ScriptPackage>
 	<KeyPackage />
-	<VariablePackage>
-		<HiddenVariables />
-	</VariablePackage>
+	<HelpPackage>
+		<helpURL></helpURL>
+	</HelpPackage>
 </MudletPackage>

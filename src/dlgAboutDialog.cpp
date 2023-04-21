@@ -34,20 +34,14 @@
 #include <QDebug>
 #include "post_guard.h"
 
+
 dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 : QDialog(parent)
 {
     setupUi(this);
 
     // Copied from main():
-
-#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
-    QImage splashImage(mudlet::scmIsReleaseVersion ? qsl(":/Mudlet_splashscreen_main.png")
-                                                   : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
-                                                                                    : qsl(":/Mudlet_splashscreen_development.png"));
-#else
-    QImage splashImage(qsl(":/Mudlet_splashscreen_main.png"));
-#endif
+    QImage splashImage = mudlet::getSplashScreen();
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
@@ -57,7 +51,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont font(qsl("DejaVu Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font(qsl("Bitstream Vera Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -92,7 +86,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
         QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
-        QFont font(qsl("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -123,11 +117,11 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
     // clang-format off
     QString htmlHead(qsl(R"(
         <head><style type="text/css">
-        h1 { font-family: "DejaVu Serif"; text-align: center; }
-        h2 { font-family: "DejaVu Serif"; text-align: center; }
-        h3 { font-family: "DejaVu Serif"; text-align: center; white-space: pre-wrap; }
-        h4 { font-family: "DejaVu Serif"; white-space: pre-wrap; }
-        p { font-family: "DejaVu Serif" }
+        h1 { font-family: "Bitstream Vera Serif"; text-align: center; }
+        h2 { font-family: "Bitstream Vera Serif"; text-align: center; }
+        h3 { font-family: "Bitstream Vera Serif"; text-align: center; white-space: pre-wrap; }
+        h4 { font-family: "Bitstream Vera Serif"; white-space: pre-wrap; }
+        p { font-family: "Bitstream Vera Serif" }
         tt { font-family: "Monospace"; white-space: pre-wrap; }
         .container { text-align: center; }
         </style></head>

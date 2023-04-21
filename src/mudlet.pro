@@ -93,13 +93,16 @@ qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
 }
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QT += core5compat
+}
 
 TEMPLATE = app
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.16.0
+VERSION = 4.17.2
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
@@ -248,7 +251,10 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # the map file gets requested and when such a request gets actioned (or
 # rejected because the profile is being loaded):
 # DEFINES+=DEBUG_MAPAUTOSAVE
-
+#
+# * Produce all the time the surprise that normally will only occur on the first
+# day of the fourth month of the Gregorian calendar year:
+# DEFINES+=DEBUG_EASTER_EGGS
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -828,6 +834,11 @@ FORMS += \
 RESOURCES += \
     mudlet.qrc \
     ../translations/translated/qm.qrc
+
+contains(DEFINES, "INCLUDE_VARIABLE_SPLASH_SCREEN") {
+    RESOURCES += \
+        additional_splash_screens.qrc
+}
 
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += \
@@ -1567,7 +1578,9 @@ OTHER_FILES += \
     ../.github/workflows/codespell-analysis.yml \
     ../.github/workflows/dangerjs.yml \
     ../.github/workflows/generate-changelog.yml \
+    ../.github/workflows/generate-coder-attribution.yml \
     ../.github/workflows/link-ptbs-to-dblsqd.yml \
+    ../.github/workflows/performance-analysis.yml \
     ../.github/workflows/tag-pull-requests.yml \
     ../.github/workflows/update-3rdparty.yml \
     ../.github/workflows/update-autocompletion.yml \
@@ -1715,6 +1728,7 @@ DISTFILES += \
     .clang-format \
     CF-loader.xml \
     CMakeLists.txt \
+    mg-loader.xml \
     mudlet-lua/lua/generic-mapper/generic_mapper.xml \
     mudlet-lua/lua/generic-mapper/versions.lua \
     mudlet-lua/tests/DB.lua \

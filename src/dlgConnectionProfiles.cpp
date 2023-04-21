@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2016-2018, 2020-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -130,12 +130,35 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     copy_profile_toolbutton->addAction(mpCopyProfile);
     copy_profile_toolbutton->addAction(copyProfileSettings);
     copy_profile_toolbutton->setDefaultAction(mpCopyProfile);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     auto widgetList = mpCopyProfile->associatedWidgets();
+#else
+    // QAction::associatedWidgets() has been deprecated in Qt 6
+    auto objectList = mpCopyProfile->associatedObjects();
+    QList<QWidget*> widgetList;
+    for (auto pObjectItem : objectList) {
+        auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
+        if (pWidgetItem) {
+            widgetList << pWidgetItem;
+        }
+    }
+#endif
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfile QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile"));
     widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     widgetList = copyProfileSettings->associatedWidgets();
+#else
+    objectList = copyProfileSettings->associatedObjects();
+    widgetList.clear();
+    for (auto pObjectItem : objectList) {
+        auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
+        if (pWidgetItem) {
+            widgetList << pWidgetItem;
+        }
+    }
+#endif
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfileSettings QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile settings"));
     widgetList.first()->setAccessibleDescription(tr("copy the settings and some other parts of the profile to a new one that will require a different new name."));
@@ -1140,19 +1163,19 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
 
     job->setKey(profile);
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
-        if (job->error()) {
-            const auto error = job->errorString();
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+        if (task->error()) {
+            const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
                 qDebug().nospace().noquote() << "dlgConnectionProfiles::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << profile << "\", error is: " << error << ".";
             }
 
         }
 
-        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
         callback(readJob->textData());
 
-        job->deleteLater();
+        task->deleteLater();
     });
 
     job->start();
@@ -1304,7 +1327,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
         mProfileList << profile_name;
         slot_itemClicked(pItem);
         // Clear the Discord optin on the copied profile - just because the source
@@ -1581,6 +1604,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     mudlet::self()->updateMultiViewControls();
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
+    emit mudlet::self()->signal_adjustAccessibleNames();
     emit signal_load_profile(profile_name, alsoConnect);
 }
 
@@ -1844,13 +1868,13 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
 
     profiles_tree_widget->addItem(pItem);
     if (!hasCustomIcon(mudServer)) {
-        QPixmap p(iconFileName);
-        if (p.isNull()) {
+        QPixmap pixmap(iconFileName);
+        if (pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";
             return;
         }
-        if (p.width() != 120) {
-            pItem->setIcon(p.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        if (pixmap.width() != 120) {
+            pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         } else {
             pItem->setIcon(QIcon(iconFileName));
         }
@@ -1878,22 +1902,22 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional
     // Really long names will be drawn very small (font size 6) with the ends clipped off:
     do {
         font.setPointSize(--fontSize);
-        QFontMetrics fm(font);
-        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter | Qt::TextWordWrap, text);
+        QFontMetrics metrics(font);
+        testRect = metrics.boundingRect(textRectangle, Qt::AlignCenter | Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
-        QPainter pt(&background);
-        pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        QPixmap pg(qsl(":/icons/mudlet_main_32px.png"));
-        pt.drawPixmap(QRect(5, 5, 20, 20), pg);
+        QPainter painter(&background);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        QPixmap pixmap(qsl(":/icons/mudlet_main_32px.png"));
+        painter.drawPixmap(QRect(5, 5, 20, 20), pixmap);
         if (color.lightness() > 127) {
-            pt.setPen(Qt::black);
+            painter.setPen(Qt::black);
         } else {
-            pt.setPen(Qt::white);
+            painter.setPen(Qt::white);
         }
-        pt.setFont(font);
-        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter | Qt::TextWordWrap, text);
+        painter.setFont(font);
+        painter.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter | Qt::TextWordWrap, text);
     }
     return QIcon(background);
 }
