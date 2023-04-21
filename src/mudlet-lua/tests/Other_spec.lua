@@ -390,6 +390,7 @@ describe("Tests Other.lua functions", function()
       --assert.is_true(ok)
       assert.is_nil(err)
       -- assert.spy(s).was.called(3)
+      moveCursorUp()
       local lastLine = getCurrentLine()
       assert.equal("This line should not be deleted", lastLine)
       _G.multimatches = {}
