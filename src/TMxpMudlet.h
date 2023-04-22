@@ -36,6 +36,8 @@ class TMediaData;
 
 class TMxpMudlet : public TMxpClient
 {
+    QString mxpStyle; // Name/Version of the MXP style sheet uploaded by the mud
+
 public:
     explicit TMxpMudlet(Host* pHost)
     : isBold(false)
@@ -85,6 +87,8 @@ public:
     void setBold(bool bold) override { isBold = bold; }
     void setItalic(bool italic) override { isItalic = italic; }
     void setUnderline(bool underline) override { isUnderline = underline; }
+    void setStyle(const QString& val) override {mxpStyle = val; }
+    const QString &getStyle() override {return mxpStyle;}
 
     void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override {
         Q_UNUSED(elementName)

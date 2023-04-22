@@ -62,6 +62,9 @@ public:
     virtual void setItalic(bool val) = 0;
     virtual void setUnderline(bool val) = 0;
 
+    virtual void setStyle(const QString& val) = 0;
+    virtual const QString &getStyle() = 0;
+
     virtual int setLink(const QStringList& hrefs, const QStringList& hints) = 0;
     virtual bool getLink(int id, QStringList** hrefs, QStringList** hints) = 0;
 
