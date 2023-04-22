@@ -1582,7 +1582,11 @@ void TCommandLine::slot_saveHistory()
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         ofs.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
-        ofs << mHistoryList.mid(0, saveSize).join(QChar::LineFeed);
+        // We need to add one here because usually the first line in
+        // mHistoryList is an empty one - maybe it might represent the current
+        // line and will get captured/saved if the profile is closed with some
+        // unsent text in the command line?
+        ofs << mHistoryList.mid(0, saveSize + 1).join(QChar::LineFeed);
         if (!historyFile.commit()) {
             qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName
                                          << " of type: " << mType << " reason: " << historyFile.errorString();

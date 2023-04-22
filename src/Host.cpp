@@ -2199,8 +2199,10 @@ std::tuple<QString, bool, bool> Host::getCommandLineHistorySettings(const TComma
     // it to a boolean - so that a missing value will give a non-zero value
     // which becomes a true:
     auto saveCommands = static_cast<bool>(readProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName)).compare(qsl("false"), Qt::CaseInsensitive));
+    // And we want this one to default to false if not found:
     auto forgetNextCommand = !static_cast<bool>(readProfileIniData(qsl("CommandLines/ForgetNextCommand/%1").arg(localName)).compare(qsl("true"), Qt::CaseInsensitive));
     if (!fileName.isEmpty()) {
+        // Ah, we've used this name before, so return the details:
         return {fileName, saveCommands, forgetNextCommand};
     }
 
@@ -2235,8 +2237,11 @@ void Host::setCommandLineHistorySettings(const TCommandLine::CommandLineType typ
     }
     QString localName{name};
     localName.replace(QRegularExpression(qsl("[\\/]")), qsl("_"));
-    // We use a '\' in the name as that donotes a grouping (section) within the QSetting's
-    // (INI) format with the left-most side of the first '\\' as a section header
+    // We use a '/' in the name as that donotes a grouping (section) within the
+    // QSetting's (INI) format with the left-most side of the first '/' as a
+    // section header. They actually get converted to `\\` (a single backslash)
+    // inside the actual file but are accessed correctly only if given as a
+    // forward slash in the code:
     writeProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName), saveCommands ? qsl("true") : qsl("false"));
     writeProfileIniData(qsl("CommandLines/ForgetNextCommand/%1").arg(localName), forgetNextCommand ? qsl("true") : qsl("false"));
 }
