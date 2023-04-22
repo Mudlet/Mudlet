@@ -27,6 +27,7 @@ parser:option("-m --mode", 'mode to run in'):choices({"ptb", "release"}):count("
 parser:option("-r --releasefile", "downloaded DBLSQD release feed file")
 parser:option("-s --start-commit", "start commit to generate changelog from")
 parser:option("-e --end-commit", "end commit to generate changelog to")
+parser:option("-f --format", "output format", "html"):choices({"html", "md"}):count(1)
 local args = parser:parse()
 
 if (args.mode == "ptb" and not args.releasefile) then
@@ -36,6 +37,53 @@ elseif (args.mode == "release" and not (args.start_commit and args.end_commit)) 
 end
 
 local MAX_COMMITS_PER_CHANGELOG = 100
+
+
+function escape_for_html(text)
+  local escapes = {
+    ["&"] = "&amp;",
+    ["<"] = "&lt;",
+    [">"] = "&gt;",
+    ['"'] = "&quot;",
+    ["'"] = "&#39;"
+  }
+
+  return text:gsub(".", escapes)
+end
+
+local htmlBuilder = {
+  headerStart = [[<h5 style='margin-top: 1em;margin-bottom: 1em;'>]],
+  headerEnd = "</h5>",
+  converter = function(text)
+    local t = {}
+    text = text.."\n"
+    for s in string.gmatch(text, "(.-)\n") do
+      s = escape_for_html(s)
+      s = s:gsub("%(#(.-)%)", [[<a href='https://github.com/Mudlet/Mudlet/pull/%1'>(#%1)</a>]])
+      t[#t+1] = string.format("<p>%s</p>", s)
+    end
+  
+    return table.concat(t, "\n")
+  end
+}
+
+local mdBuilder = {
+  headerStart = "##### ",
+  headerEnd = "",
+  converter = function(text)
+    local t = {}
+    text = text.."\n"
+    for s in string.gmatch(text, "(.-)\n") do
+      s = escape_for_html(s)
+      s = s:gsub("%(#(.-)%)", "[#%1](https://github.com/Mudlet/Mudlet/pull/%1)")
+      t[#t+1] = string.format("\\%s\n", s)
+    end
+  
+    return table.concat(t, "\n")
+  end
+}
+
+local builder = args.format == "md" and mdBuilder or htmlBuilder
 
 -- Basic algorithm for the PTB mode is as follows:
 --   retrieve last MAX_COMMITS_PER_CHANGELOG commit hashes from current branch
@@ -121,30 +169,6 @@ function get_changelog(commit1, commit2)
   return os.capture(string.format("git log --pretty=%%s %s..%s", commit1, commit2), true):trim()
 end
 
-function escape_for_html(text)
-  local escapes = {
-    ["&"] = "&amp;",
-    ["<"] = "&lt;",
-    [">"] = "&gt;",
-    ['"'] = "&quot;",
-    ["'"] = "&#39;"
-  }
-
-  return text:gsub(".", escapes)
-end
-
-function convert_to_html(text)
-  local t = {}
-  text = text.."\n"
-  for s in string.gmatch(text, "(.-)\n") do
-    s = escape_for_html(s)
-    s = s:gsub("%(#(.-)%)", [[<a href='https://github.com/Mudlet/Mudlet/pull/%1'>(#%1)</a>]])
-		t[#t+1] = string.format("<p>%s</p>", s)
-  end
-
-  return table.concat(t, "\n")
-end
-
 function create_category_pattern(category)
   if not category then return end
   local nocase = category:genNocasePattern()
@@ -182,27 +206,27 @@ function print_sorted_changelog(changelog)
       other[#other+1] = prefix .. line
     end
   end
-  local hopen = [[<h5 style='margin-top: 1em;margin-bottom: 1em;'>]]
-  local hclose = "</h5>"
-  local addLines = lines_to_html(table.concat(add, "\n"))
+  local hopen = builder.headerStart
+  local hclose = builder.headerEnd
+  local addLines = lines_to_output(table.concat(add, "\n"))
   addLines = addLines and f"{hopen}Added:{hclose}\n{addLines}\n" or ""
-  local improveLines = lines_to_html(table.concat(improve, "\n"))
+  local improveLines = lines_to_output(table.concat(improve, "\n"))
   improveLines = improveLines and f"{hopen}Improved:{hclose}\n{improveLines}\n" or ""
-  local fixLines = lines_to_html(table.concat(fix, "\n"))
+  local fixLines = lines_to_output(table.concat(fix, "\n"))
   fixLines = fixLines and f"{hopen}Fixed:{hclose}\n{fixLines}\n" or ""
-  local infraLines = lines_to_html(table.concat(infra, "\n"))
+  local infraLines = lines_to_output(table.concat(infra, "\n"))
   infraLines = infraLines and f"{hopen}Infrastructure:{hclose}\n{infraLines}\n" or ""
-  local otherLines = lines_to_html(table.concat(other, "\n"))
+  local otherLines = lines_to_output(table.concat(other, "\n"))
   otherLines = otherLines and f"{hopen}Other:{hclose}\n{otherLines}\n" or ""
   local final_changelog = f"{addLines}{improveLines}{fixLines}{infraLines}{otherLines}"
   print(final_changelog)
 end
 
-function lines_to_html(lines)
+function lines_to_output(lines)
   if lines == "" then
     return nil
   end
-  return convert_to_html(lines)
+  return builder.converter(lines)
 end
 
 local start_commit, end_commit
