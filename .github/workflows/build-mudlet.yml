@@ -127,7 +127,6 @@ jobs:
         # run it now as we need libraries to be present when moving them around in the "non-vcpkg dependencies" step later on
         runVcpkgInstall: true
         vcpkgJsonGlob: "**/vcpkg.json"
-        configurePreset: 'Release'
 
     - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
@@ -278,12 +277,10 @@ jobs:
     - name: Build Mudlet
       uses: lukka/run-cmake@v10
       with:
-        # this seems to be gone
-        # buildDirectory: '${{runner.workspace}}/b/ninja'
         # enable for a debug build (1/2)
         # buildPresetAdditionalArgs: --config RelWithDebInfo
+        configurePreset: 'Release'
         configurePresetAdditionalArgs: >-
-          -G Ninja
           -DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}
           -DVCPKG_APPLOCAL_DEPS=OFF
       env:
