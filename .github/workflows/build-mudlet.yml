@@ -99,10 +99,6 @@ jobs:
         rm -rf boost_*/* download.tar.bz2 download.tar
       shell: bash
 
-    # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
-    - name: Use CMake 3.20.1
-      uses: lukka/get-cmake@v3.20.1
-
     - name: (macOS) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'macOS'
       env:
