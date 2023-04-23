@@ -1,0 +1,37 @@
+{
+    "version": 4,
+    "cmakeMinimumRequired": {
+      "major": 3,
+      "minor": 3
+    },
+    "configurePresets": [
+      {
+        "name": "Release",
+        "description": "Builds a release version of Mudlet",
+        "binaryDir": "${sourceDir}/cmake-build-release",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release",
+          "CMAKE_INSTALL_PREFIX": "/usr/local"
+        }
+      },
+      {
+        "name": "Debug",
+        "description": "Builds a debug version of Mudlet",
+        "binaryDir": "${sourceDir}/cmake-build-debug",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug",
+          "CMAKE_INSTALL_PREFIX": "/usr/local"
+        }
+      },
+      {
+        "name": "RelWithDebInfo",
+        "description": "Builds a release version of Mudlet with debug information",
+        "binaryDir": "${sourceDir}/cmake-build-relwithdebinfo",
+        "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+          "CMAKE_INSTALL_PREFIX": "/usr/local"
+        }
+      }
+    ]
+  }
+  
