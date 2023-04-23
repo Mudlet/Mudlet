@@ -87,8 +87,8 @@ public:
     void setBold(bool bold) override { isBold = bold; }
     void setItalic(bool italic) override { isItalic = italic; }
     void setUnderline(bool underline) override { isUnderline = underline; }
-    void setStyle(const QString& val) override {mxpStyle = val; }
-    const QString &getStyle() override {return mxpStyle;}
+    void setStyle(const QString& val) override { mxpStyle = val; }
+    const QString &getStyle() override { return mxpStyle;}
 
     void setFlag(const QString& elementName, const QMap<QString, QString>& values, const QString& content) override {
         Q_UNUSED(elementName)

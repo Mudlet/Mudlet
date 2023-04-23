@@ -25,7 +25,6 @@
 TMxpTagHandlerResult TMxpVersionTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     Q_UNUSED(ctx)
-    Q_UNUSED(tag)
     const QString& version = client.getVersion();
 
     if (tag->getAttributesCount() > 0) {

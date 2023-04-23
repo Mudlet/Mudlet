@@ -40,6 +40,10 @@ public:
 
     virtual void initialize(TMxpContext* context) { mpContext = context; }
 
+    // Declaring the next functions as virtual = 0 makes this an abstract class:
+    // That is, a derived class can only be instantiated when it actually
+    // defines these functions.
+
     virtual QString getVersion() = 0;
 
     virtual void sendToServer(QString& str) = 0;
