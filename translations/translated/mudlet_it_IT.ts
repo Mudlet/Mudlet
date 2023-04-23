@@ -2990,7 +2990,14 @@ nel file di mappa, ora cerco di capire quale ID utilizzare.</translation>
 Look for further messages related to the rooms that is/are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ALERT ] - Area mancante nel file di mappa. Aggiunta in corso.
+Maggiori informazioni sono presenti nei prossimi messaggi che
+riguardano le stanze che dovrebbero appartenere a questa area...</numerusform>
+        <numerusform>[ ALERT ] - %n Aree mancanti nel file di mappa. Aggiunta in corso.
+Maggiori informazioni sono presenti nei prossimi messaggi che
+riguardano le stanze che dovrebbero appartenere a queste aree...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="852"/>
@@ -4146,7 +4153,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="101"/>
       <source>^mycommand$ (example)</source>
-      <translation type="unfinished"/>
+      <translation>^comando$ (esempio)</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="108"/>
@@ -6747,7 +6754,10 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgProfilePreferences.cpp" line="3102"/>
       <source>copy to %n destination(s)</source>
       <comment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>copia nella destinazione</numerusform>
+        <numerusform>copia nelle %n destinazioni</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="197"/>
@@ -6805,7 +6815,8 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgProfilePreferences.cpp" line="2312"/>
       <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Impossibile caricare il file di mappa JSON: %1
+motivazione: %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2353"/>
@@ -6843,13 +6854,16 @@ reason: %2.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3112"/>
       <source>%n selected - change destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n selezionato - cambio destinazione...</numerusform>
+        <numerusform>%n selezionati - cambio destinazione...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3119"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
-      <translation type="unfinished"/>
+      <translation>scegli destinazioni...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3657"/>
@@ -12645,40 +12659,40 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1929"/>
       <source>report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>mostra sullo schermo i problemi del file di mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1946"/>
       <source>choose map...</source>
-      <translation type="unfinished"/>
+      <translation>scegli la mappa...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1953"/>
       <source>Or load an older version:</source>
-      <translation type="unfinished"/>
+      <translation>Oppure carica una versione precedente:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1970"/>
       <source>◀ load this map</source>
-      <translation type="unfinished"/>
+      <translation>◀ carica questo file di mappa</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1997"/>
       <source>delete</source>
       <comment>Text on the button to delete a map, ensure the text matches the word or words `quoted` for the adjacent checkbox</comment>
-      <translation type="unfinished"/>
+      <translation>elimina</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2004"/>
       <source>enable &apos;delete&apos; button</source>
       <comment>Text for a checkbox adjacent to the delete map button, ensure the text &apos;quoted&apos; matches the word or words on the button</comment>
-      <translation type="unfinished"/>
+      <translation>abilita il pulsante &apos;Elimina&apos;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2027"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
-      <translation type="unfinished"/>
+      <translation>scegli destinazioni...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2069"/>
@@ -12930,7 +12944,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1919"/>
       <source>choose location...</source>
-      <translation type="unfinished"/>
+      <translation>scegli posizione...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2024"/>
