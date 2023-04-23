@@ -4148,7 +4148,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="101"/>
       <source>^mycommand$ (example)</source>
-      <translation type="unfinished"/>
+      <translation>^mycommand$ (пример)</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="108"/>
@@ -6739,7 +6739,12 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3102"/>
       <source>copy to %n destination(s)</source>
       <comment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>копировать в %n профайл</numerusform>
+        <numerusform>копировать в %n профайлов</numerusform>
+        <numerusform>копировать в %n профайлов</numerusform>
+        <numerusform>копировать в %n профайлов</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="197"/>
@@ -6797,7 +6802,8 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2312"/>
       <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Невозможно загрузить файл карты JSON: %1
+причина: %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2353"/>
@@ -6835,13 +6841,18 @@ reason: %2.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3112"/>
       <source>%n selected - change destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n выбран - изменить места назначения...</numerusform>
+        <numerusform>%n выбрано - изменить места назначения...</numerusform>
+        <numerusform>%n выбрано - изменить места назначения...</numerusform>
+        <numerusform>%n выбрано - изменить места назначения...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3119"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
-      <translation type="unfinished"/>
+      <translation>выберите места назначения...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3657"/>
@@ -12629,40 +12640,40 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1929"/>
       <source>report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>сообщить об проблем с картой на екране</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1946"/>
       <source>choose map...</source>
-      <translation type="unfinished"/>
+      <translation>выберите карту...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1953"/>
       <source>Or load an older version:</source>
-      <translation type="unfinished"/>
+      <translation>Или загрузите более старую версию:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1970"/>
       <source>◀ load this map</source>
-      <translation type="unfinished"/>
+      <translation>◀️ загрузить эту карту</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1997"/>
       <source>delete</source>
       <comment>Text on the button to delete a map, ensure the text matches the word or words `quoted` for the adjacent checkbox</comment>
-      <translation type="unfinished"/>
+      <translation>удалить</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2004"/>
       <source>enable &apos;delete&apos; button</source>
       <comment>Text for a checkbox adjacent to the delete map button, ensure the text &apos;quoted&apos; matches the word or words on the button</comment>
-      <translation type="unfinished"/>
+      <translation>разрешить &apos;удалить&apos; кнопку</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2027"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
-      <translation type="unfinished"/>
+      <translation>выберите места назначения...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2069"/>
@@ -12914,7 +12925,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1919"/>
       <source>choose location...</source>
-      <translation type="unfinished"/>
+      <translation>выбрать место...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2024"/>
