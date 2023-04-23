@@ -589,13 +589,6 @@ mudlet::mudlet()
         setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
     }
 
-#if defined(QT_GAMEPAD_LIB)
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonPressEvent, this, &mudlet::slot_gamepadButtonPress);
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadButtonReleaseEvent, this, &mudlet::slot_gamepadButtonRelease);
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadConnected, this, &mudlet::slot_gamepadConnected);
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadDisconnected, this, &mudlet::slot_gamepadDisconnected);
-    connect(QGamepadManager::instance(), &QGamepadManager::gamepadAxisEvent, this, &mudlet::slot_gamepadAxisEvent);
-#endif // if defined(QT_GAMEPAD_LIB)
     // Edbee has a singleton that needs some initialisation
     initEdbee();
 
@@ -3253,89 +3246,6 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
 
     return true;
 }
-
-#ifdef QT_GAMEPAD_LIB
-void mudlet::slot_gamepadButtonPress(int deviceId, QGamepadManager::GamepadButton button, double value)
-{
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    TEvent event {};
-    event.mArgumentList.append(QLatin1String("sysGamepadButtonPress"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(deviceId));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(button));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(value));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    pH->raiseEvent(event);
-}
-
-void mudlet::slot_gamepadButtonRelease(int deviceId, QGamepadManager::GamepadButton button)
-{
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    TEvent event {};
-    event.mArgumentList.append(QLatin1String("sysGamepadButtonRelease"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(deviceId));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(button));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    pH->raiseEvent(event);
-}
-
-void mudlet::slot_gamepadConnected(int deviceId)
-{
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    TEvent event {};
-    event.mArgumentList.append(QLatin1String("sysGamepadConnected"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(deviceId));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    pH->raiseEvent(event);
-}
-
-void mudlet::slot_gamepadDisconnected(int deviceId)
-{
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    TEvent event {};
-    event.mArgumentList.append(QLatin1String("sysGamepadDisconnected"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(deviceId));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    pH->raiseEvent(event);
-}
-
-void mudlet::slot_gamepadAxisEvent(int deviceId, QGamepadManager::GamepadAxis axis, double value)
-{
-    Host* pH = getActiveHost();
-    if (!pH) {
-        return;
-    }
-    TEvent event {};
-    event.mArgumentList.append(QLatin1String("sysGamepadAxisMove"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(deviceId));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(axis));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(value));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    pH->raiseEvent(event);
-}
-
-#endif // #ifdef QT_GAMEPAD_LIB
 
 // Convenience helper - may aide things if we want to put files in a different
 // place...!
