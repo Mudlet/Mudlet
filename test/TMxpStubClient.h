@@ -73,6 +73,8 @@ public:
     QStringList mHrefs, mHints;
 
     QString mPublishedEntityName, mPublishedEntityValue;
+	
+	QString style;
 
     QString getVersion() override
     {
@@ -124,6 +126,14 @@ public:
     {
         isUnderline = underline;
     }
+	void setStyle(const QString& val) override
+	{
+	    style = val;
+	}
+    const QString &getStyle() override
+	{
+		return style;
+	}
 
     int setLink(const QStringList& hrefs, const QStringList& hints) override
     {
