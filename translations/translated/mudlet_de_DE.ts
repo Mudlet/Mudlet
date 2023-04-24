@@ -4108,7 +4108,7 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="101"/>
       <source>^mycommand$ (example)</source>
-      <translation type="unfinished"/>
+      <translation>^meinBefehl$ (Beispiel)</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="108"/>
@@ -6699,7 +6699,10 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgProfilePreferences.cpp" line="3102"/>
       <source>copy to %n destination(s)</source>
       <comment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>Kopiere an 1 Ziel</numerusform>
+        <numerusform>Kopiere an %n Ziele</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="197"/>
