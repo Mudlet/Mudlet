@@ -49,8 +49,6 @@ public:
     GLWidget* glWidget = nullptr;
 #endif
     void updateAreaComboBox();
-    void setDefaultAreaShown(bool);
-    bool getDefaultAreaShown() { return mShowDefaultArea; }
     void resetAreaComboBoxToPlayerRoomArea();
     // The button is the goto source for this bit of information:
     bool isIn3DMode() const { return pushButton_3D->isDown(); }
@@ -78,7 +76,6 @@ public slots:
 private:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
-    bool mShowDefaultArea = true;
 };
 
 #endif // MUDLET_DLGMAPPER_H

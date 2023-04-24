@@ -12258,11 +12258,11 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
         // AND the mapper was showing the default area
         // the area widget will NOT be showing the correct area name afterwards
         bool isAreaWidgetInNeedOfResetting = false;
-        if ((!host.mpMap->mpMapper->getDefaultAreaShown()) && (isToShowDefaultArea) && (host.mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
+        if ((!host.mpMap->getDefaultAreaShown()) && (isToShowDefaultArea) && (host.mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
             isAreaWidgetInNeedOfResetting = true;
         }
 
-        host.mpMap->mpMapper->setDefaultAreaShown(isToShowDefaultArea);
+        host.mpMap->setDefaultAreaShown(isToShowDefaultArea);
         if (isAreaWidgetInNeedOfResetting) {
             // Corner case fixup:
             host.mpMap->mpMapper->comboBox_showArea->setCurrentText(host.mpMap->getDefaultAreaName());

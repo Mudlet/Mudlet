@@ -196,6 +196,8 @@ public:
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
     bool isUnsaved() const { return mUnsavedMap; }
+    void setDefaultAreaShown(bool);
+    bool getDefaultAreaShown() { return mShowDefaultArea; }
 
 
     TRoomDB* mpRoomDB = nullptr;
@@ -381,6 +383,9 @@ private:
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    // Used to hide the default area from casual viewing for those MUDs that
+    // want to script a "fog-of-war" system by hiding rooms in the -1 area:
+    bool mShowDefaultArea = true;
 };
 
 #endif // MUDLET_TMAP_H

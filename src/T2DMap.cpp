@@ -1555,8 +1555,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
     static bool isAreaWidgetValid = true; // Remember between uses
     QFont _f = mpMap->mpMapper->comboBox_showArea->font();
     if (isAreaWidgetValid) {
-        if (mAreaID == -1                                 // the map being shown is the "default" area
-            && !mpMap->mpMapper->getDefaultAreaShown()) { // the area widget is not showing the "default" area
+        if (mAreaID == -1                       // the map being shown is the "default" area
+            && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
 
             isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
             // Set the area widget to indicate the area widget is NOT
@@ -1567,7 +1567,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             _f.setOverline(true);
         }
     } else {
-        if (!(mAreaID == -1 && !mpMap->mpMapper->getDefaultAreaShown())) {
+        if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
             isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
             // Reset to normal
             _f.setItalic(false);
