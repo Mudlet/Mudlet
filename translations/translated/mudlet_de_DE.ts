@@ -6798,13 +6798,16 @@ reason: %2.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3112"/>
       <source>%n selected - change destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n ausgewählt - Ziel ändern...</numerusform>
+        <numerusform>%n ausgewählt - Ziel ändern...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3119"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
-      <translation type="unfinished"/>
+      <translation>Ziel wählen...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3657"/>
@@ -12606,40 +12609,40 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1929"/>
       <source>report map issues on screen</source>
-      <translation type="unfinished"/>
+      <translation>Kartenprobleme auf dem Bildschirm berichten</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1946"/>
       <source>choose map...</source>
-      <translation type="unfinished"/>
+      <translation>Karte wählen...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1953"/>
       <source>Or load an older version:</source>
-      <translation type="unfinished"/>
+      <translation>Oder eine ältere Version laden:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1970"/>
       <source>◀ load this map</source>
-      <translation type="unfinished"/>
+      <translation>◀️ Diese Karte laden</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1997"/>
       <source>delete</source>
       <comment>Text on the button to delete a map, ensure the text matches the word or words `quoted` for the adjacent checkbox</comment>
-      <translation type="unfinished"/>
+      <translation>Löschen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2004"/>
       <source>enable &apos;delete&apos; button</source>
       <comment>Text for a checkbox adjacent to the delete map button, ensure the text &apos;quoted&apos; matches the word or words on the button</comment>
-      <translation type="unfinished"/>
+      <translation>&apos;Löschen&apos; aktivieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2027"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
-      <translation type="unfinished"/>
+      <translation>Ziel wählen...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2069"/>
@@ -12891,7 +12894,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1919"/>
       <source>choose location...</source>
-      <translation type="unfinished"/>
+      <translation>Position auswählen...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2024"/>
