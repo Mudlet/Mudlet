@@ -63,7 +63,7 @@ public:
 
 class TMxpStubClient : public TMxpClient {
 public:
-    QString version;
+    QString version = "Stub-1.0";
     bool linkMode;
 
     QString sentToServer;
