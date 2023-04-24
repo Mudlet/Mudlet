@@ -3484,3 +3484,13 @@ void TMap::setUnsaved(const char* fromWhere)
 #endif
     mUnsavedMap = true;
 }
+
+void TMap::setDefaultAreaShown(bool state)
+{
+    if (mShowDefaultArea != state) {
+        mShowDefaultArea = state;
+        if (!mpMapper.isNull()) {
+            mpMapper->updateAreaComboBox();
+        }
+    }
+}
