@@ -2942,7 +2942,11 @@ void dlgTriggerEditor::activeToggle_timer()
         if (pT->shouldBeActive()) {
             itemDescription = tr("activated folder");
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                if (!pT->mPackageName.isEmpty()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
+                }
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
@@ -2950,7 +2954,11 @@ void dlgTriggerEditor::activeToggle_timer()
         } else {
             itemDescription = tr("deactivated folder");
             if (pT->ancestorsActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                if (!pT->mPackageName.isEmpty()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
+                }
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
             }
@@ -2960,15 +2968,21 @@ void dlgTriggerEditor::activeToggle_timer()
             // state of offset timers is managed by the trigger engine
             if (pT->shouldBeActive()) {
                 pT->enableTimer(pT->getID());
-                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("activated offset timer");
-                if (!pT->ancestorsActive()) {
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
                 pT->disableTimer(pT->getID());
-                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("deactivated offset timer");
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                }
             }
         } else {
             if (pT->shouldBeActive()) {
@@ -3038,7 +3052,6 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3048,14 +3061,21 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
             } else {
                 if (pT->isOffsetTimer()) {
                     if (pT->isActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("activated offset timer");
-                        if (!pT->ancestorsActive()) {
+                        if (pT->ancestorsActive()) {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                        } else {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
                             itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                         }
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated offset timer");
+                        if (pT->ancestorsActive()) {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                        } else {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                            itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
+                        }
                     }
                 } else {
                     if (itemActive) {
@@ -4588,14 +4608,21 @@ void dlgTriggerEditor::saveTimer()
             }
         } else if (pT->isOffsetTimer()) {
             if (pT->shouldBeActive()) {
-                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("activated offset timer");
-                if (!pT->ancestorsActive()) {
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("deactivated offset timer");
+                if (pT->ancestorsActive()) {
+                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                } else {
+                    icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                    itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
+                }
             }
         } else {
             if (pT->shouldBeActive()) {
@@ -6734,11 +6761,21 @@ void dlgTriggerEditor::populateTimers()
             } else {
                 if (timer->isOffsetTimer()) {
                     if (timer->shouldBeActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("activated offset timer");
+                        if (timer->ancestorsActive()) {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                        } else {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                            itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
+                        }
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated offset timer");
+                        if (timer->ancestorsActive()) {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                        } else {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                            itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
+                        }
                     }
                 } else {
                     if (timer->shouldBeActive()) {
@@ -7246,11 +7283,21 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
             } else {
                 if (timer->isOffsetTimer()) {
                     if (timer->shouldBeActive()) {
-                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("activated offset timer");
+                        if (timer->ancestorsActive()) {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
+                        } else {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on-grey.png")), QIcon::Normal, QIcon::Off);
+                            itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
+                        }
                     } else {
-                        icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("deactivated offset timer");
+                        if (timer->ancestorsActive()) {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off.png")), QIcon::Normal, QIcon::Off);
+                        } else {
+                            icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-off-grey.png")), QIcon::Normal, QIcon::Off);
+                            itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
+                        }
                     }
                 } else {
                     if (timer->shouldBeActive()) {
