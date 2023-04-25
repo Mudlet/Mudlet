@@ -183,6 +183,7 @@ jobs:
         # If not available, use other methods
         # imagemagick is for the desktop screenshot
         sudo apt-get install ccache pkg-config pcregrep expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} \
+          libqt5gamepad5 libqt5gamepad5-dev \
           libxkbcommon-x11-0 imagemagick -y
 
         # switch to GCC that supports C++17 while retaining support for older OS's
