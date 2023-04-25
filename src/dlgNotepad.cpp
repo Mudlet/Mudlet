@@ -67,7 +67,7 @@ void dlgNotepad::save()
     if (!dirFile.exists(directoryFile)) {
         dirFile.mkpath(directoryFile);
     }
-    QFile file;
+    QSaveFile file;
     file.setFileName(fileName);
     file.open(QIODevice::WriteOnly);
     QTextStream fileStream;
@@ -77,7 +77,9 @@ void dlgNotepad::save()
     fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
     fileStream << notesEdit->toPlainText();
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "dlgNotepad::save: error saving notepad contents: " << file.errorString();
+    }
 
     mNeedToSave = false;
 }

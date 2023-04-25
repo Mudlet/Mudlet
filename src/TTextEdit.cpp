@@ -180,13 +180,16 @@ void TTextEdit::slot_toggleTimeStamps(const bool state)
     if (mShowTimeStamps != state) {
         mShowTimeStamps = state;
         if (mpConsole->getType() == TConsole::MainConsole) {
-            QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp")));
+            const auto filePath = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autotimestamp"));
+            QSaveFile file(filePath);
             if (state) {
                 file.open(QIODevice::WriteOnly | QIODevice::Text);
                 QTextStream out(&file);
-                file.close();
+                if (!file.commit()) {
+                    qDebug() << "TTextEdit::slot_toggleTimeStamps: error saving timestamp state: " << file.errorString();
+                }
             } else {
-                file.remove();
+                QFile::remove(filePath);
             }
         }
         forceUpdate();

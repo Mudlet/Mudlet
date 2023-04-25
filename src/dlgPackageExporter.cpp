@@ -820,7 +820,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     mPackageComment.append(qsl("    created: %1\n").arg(iso8601timestamp.toString(Qt::ISODate)));
 
     QString luaConfig = qsl("%1/config.lua").arg(stagingDirName);
-    QFile configFile(luaConfig);
+    QSaveFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
         // In Qt6 the default encoding is UTF-8
@@ -828,8 +828,9 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
         out.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
         out << mPackageConfig;
-        out.flush();
-        configFile.close();
+        if (!configFile.commit()) {
+            qDebug() << "dlgPackageExporter::writeConfigFile: error saving package config data: " << configFile.errorString();
+        }
     }
 }
 

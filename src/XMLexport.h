@@ -27,8 +27,9 @@
 
 #include "pre_guard.h"
 #include <QClipboard>
-#include <QPointer>
 #include <QFuture>
+#include <QPointer>
+#include <QSaveFile>
 #include <pugixml.hpp>
 #include "post_guard.h"
 
@@ -108,7 +109,7 @@ private:
     void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackage);
     void inline replaceAll(std::string& source, const std::string& from, const std::string& to);
-    bool saveXmlFile(QFile&);
+    bool saveXmlFile(QSaveFile& file);
     bool saveXml(const QString&);
     pugi::xml_node writeXmlHeader();
     void sanitizeForQxml(std::string& output);

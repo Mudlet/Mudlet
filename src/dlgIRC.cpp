@@ -782,7 +782,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("irc_nick")));
+    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("irc_nick")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ofs(&file);
@@ -790,7 +790,9 @@ void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
             ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << nick;
-        file.close();
+        if (!file.commit()) {
+            qDebug() << "dlgIRC::writeAppDefaultIrcNick: error saving default nickname: " << file.errorString();
+        }
     }
 }
 
