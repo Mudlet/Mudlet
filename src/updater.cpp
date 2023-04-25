@@ -370,7 +370,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 // updated, then you do want to see the changelog.
 void Updater::recordUpdateTime() const
 {
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
+    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update timestamp file for writing.";
@@ -382,14 +382,16 @@ void Updater::recordUpdateTime() const
         ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs << QDateTime::currentDateTime().toMSecsSinceEpoch();
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "Updater::recordUpdateTime: error recording update time: " << file.errorString();
+    }
 }
 
 // records the previous version of Mudlet that we updated from, so we can show
 // the changelog on next startup for the latest version only
 void Updater::recordUpdatedVersion() const
 {
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
+    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update version file for writing.";
@@ -401,7 +403,9 @@ void Updater::recordUpdatedVersion() const
         ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs << APP_VERSION;
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "Updater::recordUpdatedVersion: error saving old mudlet version: " << file.errorString();
+    }
 }
 
 // returns true if Mudlet was updated automatically and a changelog should be shown

@@ -584,16 +584,16 @@ private:
     void assignKeySequences();
     QString autodetectPreferredLanguage();
     void closeHost(const QString&);
-    int getDictionaryWordCount(QFile&);
+    int getDictionaryWordCount(const QString &dictionaryPath);
     void goingDown() { mIsGoingDown = true; }
     void initEdbee();
     void installModulesList(Host*, QStringList);
     void loadMaps();
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
-    bool overwriteAffixFile(QFile&, const QHash<QString, unsigned int>&);
-    bool overwriteDictionaryFile(QFile&, const QStringList&);
-    bool scanDictionaryFile(QFile&, int&, QHash<QString, unsigned int>&, QStringList&);
+    bool overwriteAffixFile(const QString& affixPath, const QHash<QString, unsigned int>&);
+    bool overwriteDictionaryFile(const QString& dictionaryPath, const QStringList&);
+    bool scanDictionaryFile(const QString& dictionaryPath, int&, QHash<QString, unsigned int>&, QStringList&);
     int scanWordList(QStringList&, QHash<QString, unsigned int>&);
     void setupTrayIcon();
     void reshowRequiredMainConsoles();

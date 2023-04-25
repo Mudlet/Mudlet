@@ -1595,7 +1595,7 @@ bool mudlet::saveWindowLayout()
 
     QString layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
 
-    QFile layoutFile(layoutFilePath);
+    QSaveFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
         // revert update markers to ready objects for saving.
         commitLayoutUpdates();
@@ -1606,7 +1606,9 @@ bool mudlet::saveWindowLayout()
             ofs.setVersion(scmQDataStreamFormat_5_12);
         }
         ofs << layoutData;
-        layoutFile.close();
+        if (!layoutFile.commit()) {
+            qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
+        }
         mHasSavedLayout = true;
         return true;
     } else {
@@ -2514,19 +2516,20 @@ QString mudlet::readProfileData(const QString& profile, const QString& item)
 
 QPair<bool, QString> mudlet::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    auto f = getMudletPath(mudlet::profileDataItemPath, profile, item);
-    QFile file(f);
+    QSaveFile file(getMudletPath(mudlet::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         ofs << what;
-        file.close();
+        if (!file.commit()) {
+            qDebug().noquote().nospace() << "mudlet::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
+        }
     }
 
     if (file.error() == QFile::NoError) {
         return qMakePair(true, QString());
-    } else {
-        return qMakePair(false, file.errorString());
     }
+
+    return qMakePair(false, file.errorString());
 }
 
 void mudlet::deleteProfileData(const QString& profile, const QString& item)
@@ -3741,14 +3744,17 @@ void mudlet::setEnableFullScreenMode(const bool state)
     // PLACEMARKER: Full-screen mode controlled by File (2 of 2) At some point we might consider removal of all but the first line of the "if" branch of code and drop maintaining the sentinel file presence/absence:
     if (state != mEnableFullScreenMode) {
         mEnableFullScreenMode = state;
-        QFile file_use_smallscreen(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
+        auto filePath = mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_option_use_smallscreen"));
+        QSaveFile file(filePath);
         if (state) {
-            file_use_smallscreen.open(QIODevice::WriteOnly | QIODevice::Text);
-            QTextStream out(&file_use_smallscreen);
+            file.open(QIODevice::WriteOnly | QIODevice::Text);
+            QTextStream out(&file);
             Q_UNUSED(out);
-            file_use_smallscreen.close();
+            if (!file.commit()) {
+                qDebug() << "mudlet::setEnableFullScreenMode: error saving fullscreen state: " << file.errorString();
+            }
         } else {
-            file_use_smallscreen.remove();
+            QFile::remove(filePath);
         }
     }
 
@@ -3981,8 +3987,9 @@ QString mudlet::autodetectPreferredLanguage()
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
-bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned int>&gc, QStringList& wl)
+bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash<QString, unsigned int>&gc, QStringList& wl)
 {
+    QFile dict(dictionaryPath);
     if (!dict.exists()) {
         return true;
     }
@@ -4054,11 +4061,12 @@ bool mudlet::scanDictionaryFile(QFile& dict, int& oldWC, QHash<QString, unsigned
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
-bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
+bool mudlet::overwriteDictionaryFile(const QString& dictionaryPath, const QStringList& wl)
 {
     // (Re)Open the file to write out the cleaned/new contents
     // QFile::WriteOnly automatically implies QFile::Truncate in the absence of
     // certain other flags:
+    QSaveFile dict(dictionaryPath);
     if (!dict.open(QFile::WriteOnly|QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::overwriteDictionaryFile(...) ERROR - failed to open dictionary file (for writing): \"" << dict.fileName() << "\" reason: " << dict.errorString();
         return false;
@@ -4075,6 +4083,7 @@ bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
       ds << wl.join(QChar::LineFeed).toUtf8();
     }
     ds.flush();
+    dict.commit();
     if (dict.error() != QFile::NoError) {
         qWarning().nospace().noquote() << "mudlet::overwriteDictionaryFile(...) ERROR - failed to completely write dictionary file: \"" << dict.fileName() << "\" status: " << dict.errorString();
         return false;
@@ -4084,8 +4093,9 @@ bool mudlet::overwriteDictionaryFile(QFile& dict, const QStringList& wl)
 }
 
 // Returns -1 on significant failure (where the caller will have to bail out)
-int mudlet::getDictionaryWordCount(QFile &dict)
+int mudlet::getDictionaryWordCount(const QString &dictionaryPath)
 {
+    QFile dict(dictionaryPath);
     if (!dict.open(QFile::ReadOnly|QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::saveDictionary(...) ERROR - failed to open dictionary file (for reading): \"" << dict.fileName() << "\" reason: " << dict.errorString();
         return -1;
@@ -4110,7 +4120,7 @@ int mudlet::getDictionaryWordCount(QFile &dict)
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
-bool mudlet::overwriteAffixFile(QFile& aff, const QHash<QString, unsigned int>& gc)
+bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, unsigned int>& gc)
 {
     QMultiMap<unsigned int, QString> sortedGraphemeCounts;
     // Sort the graphemes into a descending order list:
@@ -4135,6 +4145,7 @@ bool mudlet::overwriteAffixFile(QFile& aff, const QHash<QString, unsigned int>& 
     affixLines << qsl("SET UTF-8");
     affixLines << tryLine;
 
+    QSaveFile aff(affixPath);
     // Finally, having got the needed content, write it out:
     if (!aff.open(QFile::WriteOnly|QFile::Text)) {
         qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to open affix file (for writing): \"" << aff.fileName() << "\" reason: " << aff.errorString();
@@ -4149,12 +4160,12 @@ bool mudlet::overwriteAffixFile(QFile& aff, const QHash<QString, unsigned int>& 
     as << affixLines.join(QChar::LineFeed).toUtf8();
     as << QChar(QChar::LineFeed);
     as.flush();
+    aff.commit();
     if (aff.error() != QFile::NoError) {
         qWarning().nospace().noquote() << "mudlet::overwriteAffixFile(...) ERROR - failed to completely write affix file: \"" << aff.fileName() << "\" status: " << aff.errorString();
         return false;
     }
 
-    aff.close();
     return true;
 }
 
@@ -4201,19 +4212,20 @@ int mudlet::scanWordList(QStringList& wl, QHash<QString, unsigned int>& gc)
 Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QString>& wordSet)
 {
     // Need to check that the files exist first:
-    QString dictionaryPathFileName(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.dic")));
-    QString affixPathFileName(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.aff")));
-    QFile dictionary(dictionaryPathFileName);
-    QFile affix(affixPathFileName);
+    // full dictionary path+filename
+    QString dictionaryPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.dic")));
+    // full affix path+filename
+    QString affixPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.aff")));
+
     int oldWordCount = 0;
     QStringList wordList;
     QHash<QString, unsigned int> graphemeCounts;
 
-    if (!scanDictionaryFile(dictionary, oldWordCount, graphemeCounts, wordList)) {
+    if (!scanDictionaryFile(dictionaryPath, oldWordCount, graphemeCounts, wordList)) {
         return nullptr;
     }
 
-    if (!overwriteDictionaryFile(dictionary, wordList)) {
+    if (!overwriteDictionaryFile(dictionaryPath, wordList)) {
         return nullptr;
     }
 
@@ -4227,7 +4239,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
         qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
     }
 
-    if (!overwriteAffixFile(affix, graphemeCounts)) {
+    if (!overwriteAffixFile(affixPath, graphemeCounts)) {
         return nullptr;
     }
 
@@ -4246,10 +4258,10 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
 
 #if defined(Q_OS_WIN32)
-    mudlet::self()->sanitizeUtf8Path(affixPathFileName, qsl("profile.dic"));
-    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, qsl("profile.aff"));
+    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
 #endif
-    return Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
+    return Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
 }
 
 // This will load up the shared spelling dictionary for profiles that want it
@@ -4264,19 +4276,17 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     // Need to check that the files exist first:
-    QString dictionaryPathFileName(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.dic")));
-    QString affixPathFileName(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.aff")));
-    QFile dictionary(dictionaryPathFileName);
-    QFile affix(affixPathFileName);
+    QString dictionaryPath(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.dic")));
+    QString affixPath(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.aff")));
     int oldWordCount = 0;
     QStringList wordList;
     QHash<QString, unsigned int> graphemeCounts;
 
-    if (!scanDictionaryFile(dictionary, oldWordCount, graphemeCounts, wordList)) {
+    if (!scanDictionaryFile(dictionaryPath, oldWordCount, graphemeCounts, wordList)) {
         return nullptr;
     }
 
-    if (!overwriteDictionaryFile(dictionary, wordList)) {
+    if (!overwriteDictionaryFile(dictionaryPath, wordList)) {
         return nullptr;
     }
 
@@ -4290,17 +4300,17 @@ Hunhandle* mudlet::prepareSharedDictionary()
         qDebug().nospace().noquote() << "  No change in the number of words in dictionary.";
     }
 
-    if (!overwriteAffixFile(affix, graphemeCounts)) {
+    if (!overwriteAffixFile(affixPath, graphemeCounts)) {
         return nullptr;
     }
 
     mWordSet_shared = QSet<QString>(wordList.begin(), wordList.end());
 
 #if defined(Q_OS_WIN32)
-    mudlet::self()->sanitizeUtf8Path(affixPathFileName, qsl("profile.dic"));
-    mudlet::self()->sanitizeUtf8Path(dictionaryPathFileName, qsl("profile.aff"));
+    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
 #endif
-    mpHunspell_sharedDictionary = Hunspell_create(affixPathFileName.toUtf8().constData(), dictionaryPathFileName.toUtf8().constData());
+    mpHunspell_sharedDictionary = Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
     return mpHunspell_sharedDictionary;
 }
 
@@ -4309,15 +4319,13 @@ Hunhandle* mudlet::prepareSharedDictionary()
 bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& wordSet)
 {
     // First update the line count in the list of words
-    QString dictionaryPathFileName(qsl("%1.dic").arg(pathFileBaseName));
-    QString affixPathFileName(qsl("%1.aff").arg(pathFileBaseName));
-    QFile dictionary(dictionaryPathFileName);
-    QFile affix(affixPathFileName);
+    QString dictionaryPath(qsl("%1.dic").arg(pathFileBaseName));
+    QString affixPath(qsl("%1.aff").arg(pathFileBaseName));
     QHash<QString, unsigned int> graphemeCounts;
 
     // The file will have previously been created - for it to be missing now is
     // not expected - thought it shouldn't really be fatal...
-    int oldWordCount = getDictionaryWordCount(dictionary);
+    int oldWordCount = getDictionaryWordCount(dictionaryPath);
     if (oldWordCount == -1) {
         return false;
     }
@@ -4335,11 +4343,11 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
         qDebug().nospace().noquote() << "  No change in the number of words saved in dictionary.";
     }
 
-    if (!overwriteDictionaryFile(dictionary, wordList)) {
+    if (!overwriteDictionaryFile(dictionaryPath, wordList)) {
         return false;
     }
 
-    if (!overwriteAffixFile(affix, graphemeCounts)) {
+    if (!overwriteAffixFile(affixPath, graphemeCounts)) {
         return false;
     }
 
