@@ -126,11 +126,12 @@ public:
     {
         isUnderline = underline;
     }
+
     void setStyle(const QString& val) override
     {
         style = val;
     }
-    const QString &getStyle() override
+    QString getStyle() override
     {
         return style;
     }
