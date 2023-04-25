@@ -3035,7 +3035,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
 
         QIcon icon;
         QString itemDescription;
-        bool itemActive = pT->isActive();
+        bool itemActive = (pT->isActive() || pT->shouldBeActive());
 
         if (pItem->childCount() > 0) {
             children_icon_timer(pItem);
