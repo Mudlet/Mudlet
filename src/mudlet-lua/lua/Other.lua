@@ -695,7 +695,7 @@ end
 function deleteMultiline(maxLines)
   local multimatchesSize = table.size(multimatches)
   if multimatchesSize == 0 then
-    return nil, "Does not appear to be run during a multiline trigger match, please try again."
+    return nil, "does not appear to be run during a multiline trigger match, please try again."
   end
   maxLines = maxLines or multimatchesSize
   local firstMatch = multimatches[1][1]:patternEscape()

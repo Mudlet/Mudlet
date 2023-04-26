@@ -372,7 +372,7 @@ describe("Tests Other.lua functions", function()
     it("Should return nil + error if run in non-multiline context", function()
       local ok, err = deleteMultiline()
       assert.is_nil(ok)
-      assert.equals("Does not appear to be run during a multiline trigger match, please try again.", err)
+      assert.equals("does not appear to be run during a multiline trigger match, please try again.", err)
     end)
 
     it("Should delete all lines between the first match and the script executing", function()
