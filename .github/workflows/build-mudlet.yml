@@ -277,7 +277,7 @@ jobs:
         # buildPresetAdditionalArgs: --config RelWithDebInfo
         buildPreset: 'Release'
         configurePreset: 'Release'
-        configurePresetAdditionalArgs: "['-DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}', '-DVCPKG_APPLOCAL_DEPS=OFF']"
+        configurePresetAdditionalArgs: "['-DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}', '-DVCPKG_APPLOCAL_DEPS=OFF', '--debug-find']"
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
