@@ -43,9 +43,6 @@
 #include <QAction>
 #include <QDir>
 #include <QFlags>
-#ifdef QT_GAMEPAD_LIB
-#include <QGamepad>
-#endif
 #include <QKeySequence>
 #include <QMainWindow>
 #include <QMap>
@@ -545,13 +542,6 @@ signals:
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
     void slot_compactInputLine(const bool);
-#ifdef QT_GAMEPAD_LIB
-    void slot_gamepadButtonPress(int, QGamepadManager::GamepadButton, double);
-    void slot_gamepadButtonRelease(int, QGamepadManager::GamepadButton);
-    void slot_gamepadConnected(int);
-    void slot_gamepadDisconnected(int);
-    void slot_gamepadAxisEvent(int, QGamepadManager::GamepadAxis, double);
-#endif
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
 #if defined(INCLUDE_UPDATER)
