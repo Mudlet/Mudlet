@@ -85,10 +85,6 @@ win32 {
 }
 
 QT += network uitools multimedia gui concurrent
-qtHaveModule(gamepad) {
-    QT += gamepad
-    !build_pass : message("Using Gamepad module")
-}
 qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
