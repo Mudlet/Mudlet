@@ -8730,13 +8730,13 @@ void dlgTriggerEditor::slot_export()
     }
 
 
-    QFile file(fileName);
-    if (!file.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("export package:"), tr("Cannot write file %1:\n%2.").arg(fileName, file.errorString()));
+    QFile checkWriteability(fileName);
+    if (!checkWriteability.open(QFile::WriteOnly | QFile::Text)) {
+        QMessageBox::warning(this, tr("export package:"), tr("Cannot write checkWriteability %1:\n%2.").arg(fileName, checkWriteability.errorString()));
         return;
     }
-    // Should close the file that we have confirmed can be opened:
-    file.close();
+    // Should close the checkWriteability that we have confirmed can be opened:
+    checkWriteability.close();
 
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
