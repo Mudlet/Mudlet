@@ -2597,7 +2597,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         }
     }
 
-    if (!result && errMsg) {
+    if (!success && errMsg) {
         *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
                      "in main console!");
     }
