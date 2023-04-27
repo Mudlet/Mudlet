@@ -434,12 +434,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QAction* toggleActiveAction = new QAction(QIcon(qsl(":/icons/document-encrypt.png")), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
     connect(toggleActiveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_triggers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_aliases, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_timers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_scripts, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_actions, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_keys, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_triggers, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_aliases, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_timers, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_scripts, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_actions, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_keys, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
 
 
     mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), QString(), this);
@@ -2773,7 +2773,7 @@ void dlgTriggerEditor::activeToggle_trigger()
         }
     } else if (pT->isFolder()) {
         if (pT->isActive()) {
-            itemDescription = tr("activated folder");
+            itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -2781,7 +2781,7 @@ void dlgTriggerEditor::activeToggle_trigger()
                 itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
             }
         } else {
-            itemDescription = tr("deactivated folder");
+            itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -2790,7 +2790,7 @@ void dlgTriggerEditor::activeToggle_trigger()
         }
     } else {
         if (pT->isActive()) {
-            itemDescription = tr("activated");
+            itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -2798,7 +2798,7 @@ void dlgTriggerEditor::activeToggle_trigger()
                 itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
             }
         } else {
-            itemDescription = tr("deactivated");
+            itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -2818,7 +2818,7 @@ void dlgTriggerEditor::activeToggle_trigger()
         showError(tr(R"(<b>Unable to activate a filter or trigger or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = tr("deactivated due to error");
+        itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
     }
     pItem->setIcon(0, icon);
     pItem->setText(0, pT->getName());
@@ -2863,7 +2863,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                 }
             } else if (pT->isFolder()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -2871,7 +2871,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -2880,7 +2880,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                 }
             } else {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -2889,7 +2889,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
                     }
 
                 } else {
-                        itemDescription = tr("deactivated");
+                        itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -2901,7 +2901,7 @@ void dlgTriggerEditor::children_icon_triggers(QTreeWidgetItem* pWidgetItemParent
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(pT->getError());
         }
@@ -2940,7 +2940,7 @@ void dlgTriggerEditor::activeToggle_timer()
         }
 
         if (pT->shouldBeActive()) {
-            itemDescription = tr("activated folder");
+            itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 if (!pT->mPackageName.isEmpty()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
@@ -2952,7 +2952,7 @@ void dlgTriggerEditor::activeToggle_timer()
                 itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
             }
         } else {
-            itemDescription = tr("deactivated folder");
+            itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 if (!pT->mPackageName.isEmpty()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
@@ -2987,7 +2987,7 @@ void dlgTriggerEditor::activeToggle_timer()
         } else {
             if (pT->shouldBeActive()) {
                 pT->enableTimer(pT->getID());
-                itemDescription = tr("activated");
+                itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -2997,7 +2997,7 @@ void dlgTriggerEditor::activeToggle_timer()
             } else {
                 pT->disableTimer(pT->getID());
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("deactivated");
+                itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
             }
         }
     }
@@ -3013,7 +3013,7 @@ void dlgTriggerEditor::activeToggle_timer()
         showError(tr(R"(<p><b>Unable to activate an offset timer or timer or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = tr("deactivated due to error");
+        itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
     }
     pItem->setIcon(0, icon);
     pItem->setText(0, pT->getName());
@@ -3042,7 +3042,8 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
         }
         if (pT->state()) {
             if (pT->isFolder()) {
-                itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+                itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                              : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
 
                 if (itemActive) {
                     if (pT->ancestorsActive()) {
@@ -3079,7 +3080,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
                     }
                 } else {
                     if (itemActive) {
-                        itemDescription = tr("activated");
+                        itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                         if (pT->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                         } else {
@@ -3087,7 +3088,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
                             itemDescription = tr("%1 in a disabled group").arg(itemDescription);
                         }
                     } else {
-                        itemDescription = tr("deactivated");
+                        itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                         if (pT->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                         } else {
@@ -3100,7 +3101,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(pT->getError());
         }
@@ -3126,14 +3127,14 @@ void dlgTriggerEditor::activeToggle_alias()
     if (pT->isFolder()) {
         if (pT->isActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("activated folder");
+            itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated folder");
+            itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
         }
     } else {
         if (pT->isActive()) {
-            itemDescription = tr("activated");
+            itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -3142,7 +3143,7 @@ void dlgTriggerEditor::activeToggle_alias()
             }
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated");
+            itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
         }
     }
 
@@ -3157,7 +3158,7 @@ void dlgTriggerEditor::activeToggle_alias()
         showError(tr(R"(<p><b>Unable to activate an alias or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = tr("deactivated due to error");
+        itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
     }
     pItem->setIcon(0, icon);
     pItem->setText(0, pT->getName());
@@ -3185,7 +3186,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
         if (pT->state()) {
             if (pT->isFolder()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3193,7 +3194,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3202,7 +3203,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
                 }
             } else {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3211,7 +3212,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
                     }
 
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3223,7 +3224,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(pT->getError());
         }
@@ -3251,14 +3252,14 @@ void dlgTriggerEditor::activeToggle_script()
     if (pT->isFolder()) {
         if (pT->isActive()) {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("activated folder");
+            itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated folder");
+            itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
         }
     } else {
         if (pT->isActive()) {
-            itemDescription = tr("activated");
+            itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -3267,7 +3268,7 @@ void dlgTriggerEditor::activeToggle_script()
             }
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated");
+            itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
         }
     }
 
@@ -3282,7 +3283,7 @@ void dlgTriggerEditor::activeToggle_script()
         showError(tr(R"(<p><b>Unable to activate a script group or script or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = tr("deactivated due to error");
+        itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
     }
     pItem->setIcon(0, icon);
     pItem->setText(0, pT->getName());
@@ -3309,7 +3310,7 @@ void dlgTriggerEditor::children_icon_script(QTreeWidgetItem* pWidgetItemParent)
         if (pT->state()) {
             if (pT->isFolder()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3317,7 +3318,7 @@ void dlgTriggerEditor::children_icon_script(QTreeWidgetItem* pWidgetItemParent)
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3326,7 +3327,7 @@ void dlgTriggerEditor::children_icon_script(QTreeWidgetItem* pWidgetItemParent)
                 }
             } else {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3334,7 +3335,7 @@ void dlgTriggerEditor::children_icon_script(QTreeWidgetItem* pWidgetItemParent)
                         itemDescription = tr("%1 in a disabled group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3346,7 +3347,7 @@ void dlgTriggerEditor::children_icon_script(QTreeWidgetItem* pWidgetItemParent)
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(pT->getError());
         }
@@ -3383,8 +3384,9 @@ void dlgTriggerEditor::activeToggle_action()
 
     bool itemActive = pT->isActive();
     if (pT->isFolder()) {
-        itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
-        if (!pT->ancestorsActive()){
+        itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                      : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
+        if (!pT->ancestorsActive()) {
             if (itemActive) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
@@ -3415,7 +3417,7 @@ void dlgTriggerEditor::activeToggle_action()
         }
     } else {
         if (itemActive) {
-            itemDescription = tr("activated");
+            itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -3424,7 +3426,7 @@ void dlgTriggerEditor::activeToggle_action()
             }
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated");
+            itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
         }
     }
 
@@ -3439,7 +3441,7 @@ void dlgTriggerEditor::activeToggle_action()
         showError(tr(R"(<p><b>Unable to activate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
                      <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = tr("deactivated due to error");
+        itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
     }
     pItem->setIcon(0, icon);
     pItem->setText(0, pT->getName());
@@ -3468,7 +3470,8 @@ void dlgTriggerEditor::children_icon_action(QTreeWidgetItem* pWidgetItemParent)
         }
         if (pT->state()) {
             if (pT->isFolder()) {
-                itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+                itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                              : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
                 if (!pT->getPackageName().isEmpty()) {
                     // Has a package name - is a module master folder
                     if (pT->isActive()) {
@@ -3500,7 +3503,7 @@ void dlgTriggerEditor::children_icon_action(QTreeWidgetItem* pWidgetItemParent)
                 }
             } else {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3509,7 +3512,7 @@ void dlgTriggerEditor::children_icon_action(QTreeWidgetItem* pWidgetItemParent)
                     }
 
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3521,7 +3524,7 @@ void dlgTriggerEditor::children_icon_action(QTreeWidgetItem* pWidgetItemParent)
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(pT->getError());
         }
@@ -3548,7 +3551,7 @@ void dlgTriggerEditor::activeToggle_key()
 
     if (pT->isFolder()) {
         if (pT->isActive()) {
-            itemDescription = tr("activated folder");
+            itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -3556,7 +3559,7 @@ void dlgTriggerEditor::activeToggle_key()
                 itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
             }
         } else {
-            itemDescription = tr("deactivated folder");
+            itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -3565,7 +3568,7 @@ void dlgTriggerEditor::activeToggle_key()
         }
     } else {
         if (pT->isActive()) {
-            itemDescription = tr("activated");
+            itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -3573,7 +3576,7 @@ void dlgTriggerEditor::activeToggle_key()
                 itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
             }
         } else {
-            itemDescription = tr("deactivated");
+            itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -3588,7 +3591,7 @@ void dlgTriggerEditor::activeToggle_key()
     } else {
         QIcon iconError;
         iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = tr("deactivated due to error");
+        itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
         pItem->setIcon(0, iconError);
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
@@ -3616,7 +3619,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
         if (pT->state()) {
             if (pT->isFolder()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3624,7 +3627,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3633,7 +3636,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
                 }
             } else {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3642,7 +3645,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
                     }
 
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3654,7 +3657,7 @@ void dlgTriggerEditor::children_icon_key(QTreeWidgetItem* pWidgetItemParent)
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(pT->getError());
         }
@@ -4489,7 +4492,7 @@ void dlgTriggerEditor::saveTrigger()
         } else if (pT->isFolder()) {
             if (!pT->mPackageName.isEmpty()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4498,10 +4501,10 @@ void dlgTriggerEditor::saveTrigger()
                     }
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             } else if (pT->isActive()) {
-                itemDescription = tr("activated folder");
+                itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4509,7 +4512,7 @@ void dlgTriggerEditor::saveTrigger()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("deactivated folder");
+                itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4518,7 +4521,7 @@ void dlgTriggerEditor::saveTrigger()
             }
         } else {
             if (pT->isActive()) {
-                itemDescription = tr("activated");
+                itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4526,7 +4529,7 @@ void dlgTriggerEditor::saveTrigger()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("deactivated");
+                itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4541,10 +4544,10 @@ void dlgTriggerEditor::saveTrigger()
                 QIcon _icon;
                 if (pT->isFolder()) {
                     _icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 } else {
                     _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
                 pItem->setIcon(0, _icon);
                 pItem->setText(0, name);
@@ -4557,7 +4560,7 @@ void dlgTriggerEditor::saveTrigger()
             QIcon iconError;
             pItem->setText(0, name);
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             pT->setIsActive(false);
             showError(pT->getError());
@@ -4598,7 +4601,7 @@ void dlgTriggerEditor::saveTimer()
         if (pT->isFolder()) {
             if (!pT->mPackageName.isEmpty()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4607,11 +4610,11 @@ void dlgTriggerEditor::saveTimer()
                     }
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             } else {
                 if (pT->shouldBeActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4619,7 +4622,7 @@ void dlgTriggerEditor::saveTimer()
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4646,7 +4649,7 @@ void dlgTriggerEditor::saveTimer()
             }
         } else {
             if (pT->shouldBeActive()) {
-                itemDescription = tr("activated");
+                itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4655,7 +4658,7 @@ void dlgTriggerEditor::saveTimer()
                 }
                 pT->setIsActive(true);
             } else {
-                itemDescription = tr("deactivated");
+                itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4672,7 +4675,7 @@ void dlgTriggerEditor::saveTimer()
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
             showError(pT->getError());
@@ -4704,7 +4707,7 @@ void dlgTriggerEditor::saveAlias()
         //we have a loop
         QIcon iconError;
         iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = tr("deactivated due to error");
+        itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
         pItem->setIcon(0, iconError);
         pItem->setText(0, name);
         showError(tr("Alias <em>%1</em> has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn't good as it'll call itself forever.").arg(name));
@@ -4728,7 +4731,7 @@ void dlgTriggerEditor::saveAlias()
         if (pT->isFolder()) {
             if (!pT->mPackageName.isEmpty()) {
                 if (pT->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4737,10 +4740,10 @@ void dlgTriggerEditor::saveAlias()
                     }
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             } else if (pT->isActive()) {
-                itemDescription = tr("activated folder");
+                itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4748,7 +4751,7 @@ void dlgTriggerEditor::saveAlias()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("deactivated folder");
+                itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4757,7 +4760,7 @@ void dlgTriggerEditor::saveAlias()
             }
         } else {
             if (pT->isActive()) {
-                itemDescription = tr("activated");
+                itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4765,7 +4768,7 @@ void dlgTriggerEditor::saveAlias()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("deactivated");
+                itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4780,7 +4783,7 @@ void dlgTriggerEditor::saveAlias()
             if (old_name == tr("New alias")) {
                 QIcon _icon;
                 if (pT->isFolder()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         _icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4788,7 +4791,7 @@ void dlgTriggerEditor::saveAlias()
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (pT->ancestorsActive()) {
                         _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -4806,7 +4809,7 @@ void dlgTriggerEditor::saveAlias()
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
             showError(pT->getError());
@@ -4875,7 +4878,8 @@ void dlgTriggerEditor::saveAction()
         QString itemDescription;
         bool itemActive = pA->isActive();
         if (pA->isFolder()) {
-            itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+            itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                          : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
             if (!pA->mPackageName.isEmpty()) {
                 // Has a package name so is a module master folder
                 if (itemActive) {
@@ -4911,7 +4915,7 @@ void dlgTriggerEditor::saveAction()
         } else {
             // Is a button
             if (itemActive) {
-                itemDescription = tr("activated");
+                itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pA->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -4920,7 +4924,7 @@ void dlgTriggerEditor::saveAction()
                 }
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                itemDescription = tr("deactivated");
+                itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
             }
         }
 
@@ -4932,7 +4936,7 @@ void dlgTriggerEditor::saveAction()
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
             showError(pA->getError());
@@ -5033,7 +5037,8 @@ void dlgTriggerEditor::saveScript()
     QString itemDescription;
     bool itemActive = pT->isActive();
     if (pT->isFolder()) {
-        itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+        itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                      : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
         if (!pT->mPackageName.isEmpty()) {
             if (itemActive) {
                 if (pT->ancestorsActive()) {
@@ -5059,7 +5064,7 @@ void dlgTriggerEditor::saveScript()
         }
     } else {
         if (itemActive) {
-            itemDescription = tr("activated");
+            itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
             if (pT->ancestorsActive()) {
                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
             } else {
@@ -5068,7 +5073,7 @@ void dlgTriggerEditor::saveScript()
             }
         } else {
             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated");
+            itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
         }
     }
 
@@ -5078,7 +5083,7 @@ void dlgTriggerEditor::saveScript()
         if (old_name == tr("New script") || old_name == tr("New script group")) {
             QIcon _icon;
             if (pT->isFolder()) {
-                itemDescription = tr("activated folder");
+                itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     _icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -5086,7 +5091,7 @@ void dlgTriggerEditor::saveScript()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("activated");
+                itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 if (pT->ancestorsActive()) {
                     _icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
@@ -5106,7 +5111,7 @@ void dlgTriggerEditor::saveScript()
     } else {
         QIcon iconError;
         iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-        itemDescription = tr("deactivated due to error");
+        itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
         pItem->setIcon(0, iconError);
         pItem->setText(0, name);
         showError(pT->getError());
@@ -5383,7 +5388,8 @@ void dlgTriggerEditor::saveKey()
         QString itemDescription;
         bool itemActive = pT->isActive();
         if (pT->isFolder()) {
-            itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+            itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                          : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
             if (!pT->mPackageName.isEmpty()) {
                 if (itemActive) {
                     if (pT->ancestorsActive()) {
@@ -5403,7 +5409,7 @@ void dlgTriggerEditor::saveKey()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("deactivated folder");
+                itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -5412,7 +5418,7 @@ void dlgTriggerEditor::saveKey()
             }
         } else {
             if (itemActive) {
-                itemDescription = tr("activated");
+                itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -5420,7 +5426,7 @@ void dlgTriggerEditor::saveKey()
                     itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                 }
             } else {
-                itemDescription = tr("deactivated");
+                itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                 if (pT->ancestorsActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                 } else {
@@ -5436,7 +5442,7 @@ void dlgTriggerEditor::saveKey()
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             pItem->setText(0, name);
             showError(pT->getError());
@@ -6458,7 +6464,8 @@ void dlgTriggerEditor::populateKeys()
             clearEditorNotification();
 
             if (key->isFolder()) {
-                itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+                itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                              : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
                 if (!key->mPackageName.isEmpty()) {
                     if (key->isActive()) {
                         if (key->ancestorsActive()) {
@@ -6486,7 +6493,7 @@ void dlgTriggerEditor::populateKeys()
                 }
             } else {
                 if (key->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6494,7 +6501,7 @@ void dlgTriggerEditor::populateKeys()
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6506,7 +6513,7 @@ void dlgTriggerEditor::populateKeys()
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(key->getError());
         }
@@ -6536,7 +6543,8 @@ void dlgTriggerEditor::populateActions()
             clearEditorNotification();
             bool itemActive = action->isActive();
             if (action->isFolder()) {
-                itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+                itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                              : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
                 if (!action->mPackageName.isEmpty()) {
                     if (itemActive) {
                         if (action->ancestorsActive()) {
@@ -6573,7 +6581,7 @@ void dlgTriggerEditor::populateActions()
                 }
             } else {
                 if (itemActive) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (action->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6582,14 +6590,14 @@ void dlgTriggerEditor::populateActions()
                     }
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(action->getError());
         }
@@ -6620,7 +6628,8 @@ void dlgTriggerEditor::populateAliases()
             clearEditorNotification();
 
             if (alias->isFolder()) {
-                itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+                itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                              : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
                 if (!alias->mPackageName.isEmpty()) {
                     if (itemActive) {
                         if (alias->ancestorsActive()) {
@@ -6648,7 +6657,7 @@ void dlgTriggerEditor::populateAliases()
                 }
             } else {
                 if (alias->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6656,7 +6665,7 @@ void dlgTriggerEditor::populateAliases()
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6668,7 +6677,7 @@ void dlgTriggerEditor::populateAliases()
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(alias->getError());
         }
@@ -6696,7 +6705,8 @@ void dlgTriggerEditor::populateScripts()
             clearEditorNotification();
 
             if (script->isFolder()) {
-                itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+                itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                              : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
                 if (!script->mPackageName.isEmpty()) {
                     if (itemActive) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
@@ -6713,17 +6723,17 @@ void dlgTriggerEditor::populateScripts()
             } else {
                 if (script->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(script->getError());
         }
@@ -6753,7 +6763,8 @@ void dlgTriggerEditor::populateTimers()
             clearEditorNotification();
 
             if (timer->isFolder()) {
-                itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+                itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                              : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
                 if (!timer->mPackageName.isEmpty()) {
                     if (itemActive) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
@@ -6796,7 +6807,7 @@ void dlgTriggerEditor::populateTimers()
                     }
                 } else {
                     if (timer->shouldBeActive()) {
-                        itemDescription = tr("activated");
+                        itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                         if (timer->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                         } else {
@@ -6805,7 +6816,7 @@ void dlgTriggerEditor::populateTimers()
                         }
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("deactivated");
+                        itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     }
                 }
             }
@@ -6813,7 +6824,7 @@ void dlgTriggerEditor::populateTimers()
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(timer->getError());
         }
@@ -6860,7 +6871,8 @@ void dlgTriggerEditor::populateTriggers()
                     }
                 }
             } else if (trigger->isFolder()) {
-                itemDescription = (itemActive ? tr("activated folder") : tr("deactivated folder"));
+                itemDescription = (itemActive ? tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users")
+                                              : tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users"));
                 if (!trigger->mPackageName.isEmpty()) {
                     if (itemActive) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
@@ -6883,7 +6895,7 @@ void dlgTriggerEditor::populateTriggers()
                 }
             } else {
                 if (itemActive) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6891,7 +6903,7 @@ void dlgTriggerEditor::populateTriggers()
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6903,7 +6915,7 @@ void dlgTriggerEditor::populateTriggers()
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(trigger->getError());
         }
@@ -6967,7 +6979,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                 }
             } else if (trigger->isFolder()) {
                 if (trigger->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-blue.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6975,7 +6987,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-blue-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6984,7 +6996,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                 }
             } else {
                 if (trigger->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6992,7 +7004,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (trigger->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7005,7 +7017,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(trigger->getError());
         }
@@ -7034,7 +7046,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
 
             if (key->isFolder()) {
                 if (key->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-pink.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7042,7 +7054,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-pink-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7051,7 +7063,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
                 }
             } else {
                 if (key->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7059,7 +7071,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (key->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7071,7 +7083,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(key->getError());
         }
@@ -7101,7 +7113,7 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
 
             if (script->isFolder()) {
                 if (script->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (script->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-orange.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7110,11 +7122,11 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
                     }
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-orange-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             } else {
                 if (script->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (script->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7123,14 +7135,14 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
                     }
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(script->getError());
         }
@@ -7159,7 +7171,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
 
             if (alias->isFolder()) {
                 if (alias->isActive()) {
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-violet.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7167,7 +7179,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-violet-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7176,7 +7188,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
                 }
             } else {
                 if (alias->isActive()) {
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7184,7 +7196,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (alias->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7196,7 +7208,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(alias->getError());
         }
@@ -7228,35 +7240,35 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
                 // parent has a package name - this is a toolbar
                 if (action->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             } else if (action->isFolder()) {
                 // Is a folder and is not a toolbar - this is a menu
                 if (action->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("activated folder");
+                    itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/folder-cyan-locked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             } else {
                 // Is a button
                 if (action->isActive()) {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("activated");
+                    itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                 } else {
                     icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
-                    itemDescription = tr("deactivated");
+                    itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                 }
             }
             pItem->setIcon(0, icon);
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(action->getError());
         }
@@ -7288,13 +7300,13 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                 if (timer->shouldBeActive()) {
                     if (timer->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-green.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = tr("activated folder");
+                        itemDescription = tr("activated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                         itemDescription = tr("%1 in a deactivated group").arg(itemDescription);
                     }
                 } else {
-                    itemDescription = tr("deactivated folder");
+                    itemDescription = tr("deactivated folder", "Short description of current status, to be spoken aloud to visually impaired users");
                     if (timer->ancestorsActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-green-locked.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -7321,7 +7333,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                     }
                 } else {
                     if (timer->shouldBeActive()) {
-                        itemDescription = tr("activated");
+                        itemDescription = tr("activated", "Short description of current status, to be spoken aloud to visually impaired users");
                         if (timer->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                         } else {
@@ -7329,7 +7341,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                             itemDescription = tr("%1 in a disabled group").arg(itemDescription);
                         }
                     } else {
-                        itemDescription = tr("deactivated");
+                        itemDescription = tr("deactivated", "Short description of current status, to be spoken aloud to visually impaired users");
                         if (timer->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                         } else {
@@ -7342,7 +7354,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
         } else {
             QIcon iconError;
             iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
-            itemDescription = tr("deactivated due to error");
+            itemDescription = tr("deactivated due to error", "Short description of current status, to be spoken aloud to visually impaired users");
             pItem->setIcon(0, iconError);
             showError(timer->getError());
         }
@@ -7816,6 +7828,9 @@ void dlgTriggerEditor::showInfo(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
+    QString plainText = error;
+    plainText.remove(QRegExp("<[^>]*>"));
+    mudlet::self()->announce(plainText);
 }
 
 void dlgTriggerEditor::showWarning(const QString& error)
