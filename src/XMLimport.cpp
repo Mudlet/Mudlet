@@ -60,7 +60,7 @@ XMLimport::XMLimport(Host* pH)
 {
 }
 
-bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
+std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
 {
     mPackageName = packName;
     setDevice(pfile);
@@ -169,7 +169,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
                                          "and this one cannot read it, you need a newer Mudlet!")
                                               .arg(pfile->fileName(), versionString);
                     mpHost->postMessage(moanMsg);
-                    return false;
+                    return {false, moanMsg};
                 }
 
                 readPackage();
@@ -227,7 +227,7 @@ bool XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QS
         }
     }
 
-    return !error();
+    return {!hasError(), errorString()};
 }
 
 // returns the type of item and ID of the first (root) element
