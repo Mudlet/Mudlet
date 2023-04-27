@@ -7276,7 +7276,6 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
     }
 }
 
-
 void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem* pWidgetItemParent)
 {
     std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
@@ -7817,6 +7816,9 @@ void dlgTriggerEditor::showError(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
+    QString plainText = error;
+    plainText.remove(QRegExp("<[^>]*>"));
+    mudlet::self()->announce(plainText);
 }
 
 void dlgTriggerEditor::showInfo(const QString& error)
@@ -7838,6 +7840,9 @@ void dlgTriggerEditor::showWarning(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
+    QString plainText = error;
+    plainText.remove(QRegExp("<[^>]*>"));
+    mudlet::self()->announce(plainText);
 }
 
 void dlgTriggerEditor::slot_showActions()
