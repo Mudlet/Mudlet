@@ -576,6 +576,18 @@ private:
     QString msgInfoAddButton;
     QString msgInfoAddVar;
     QString msgInfoAddKey;
+    QString descActive;
+    QString descInactive;
+    QString descActiveFolder;
+    QString descInactiveFolder;
+    QString descError;
+    QString descInactiveParent;
+    QString descActiveFilterChain;
+    QString descInactiveFilterChain;
+    QString descActiveOffsetTimer;
+    QString descInactiveOffsetTimer;
+    QString descNewFolder;
+    QString descNewItem;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
