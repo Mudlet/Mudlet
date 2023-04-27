@@ -3073,7 +3073,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
                 }
             } else {
                 if (pT->isOffsetTimer()) {
-                    if (pT->isActive()) {
+                    if (pT->shouldBeActive()) {
                         itemDescription = descActiveOffsetTimer;
                         if (pT->ancestorsActive()) {
                             icon.addPixmap(QPixmap(qsl(":/icons/offsettimer-on.png")), QIcon::Normal, QIcon::Off);
