@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -1191,6 +1191,12 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->pos;
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
+        if (mSaveVersion >= 21) {
+            // Revised in version 21 to store the value directly:
+            ofs << pA->mLast2DMapZoom;
+        } else {
+            pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
+        }
         ofs << pA->mUserData;
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
@@ -1743,8 +1749,13 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 ifs >> pA->pos;
                 ifs >> pA->isZone;
                 ifs >> pA->zoneAreaRef;
-                if (mVersion >= 17) {
+                if (mVersion >= 21) {
+                    ifs >> pA->mLast2DMapZoom;
                     ifs >> pA->mUserData;
+                } else if (mVersion >= 17) {
+                    ifs >> pA->mUserData;
+                    qreal fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
+                    pA->mLast2DMapZoom = (fallback_map2DZoom >= T2DMap::csmMinXYZoom) ? fallback_map2DZoom : T2DMap::csmDefaultXYZoom;
                 }
                 if (mVersion >= 21) {
                     int mapLabelsCount = -1;
@@ -2026,6 +2037,9 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             ifs >> pA.pos;
             ifs >> pA.isZone;
             ifs >> pA.zoneAreaRef;
+            if (otherProfileVersion >= 21) {
+                ifs >> pA.mLast2DMapZoom;
+            }
             if (otherProfileVersion >= 17) {
                 ifs >> pA.mUserData;
             }
@@ -2565,20 +2579,27 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     XMLimport reader(pHost);
     auto [success, message] = reader.importPackage(&file);
 
-    // probably not needed for the download but might be
-    // needed for local file case:
-    mpMapper->mp2dMap->init();
-    // No need to call audit() as XMLimport::importPackage() does it!
-    // audit() produces the successful ending [ OK ] message...!
-    mpMapper->updateAreaComboBox();
-    if (success) {
-        mpMapper->resetAreaComboBoxToPlayerRoomArea();
-    } else {
-        // Failed...
-        if (errMsg) {
-            *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
-                         "in main console!");
-        }
+	if (!mpMapper.isNull() && mpMapper->mp2dMap) {
+	    // probably not needed for the download but might be
+	    // needed for local file case:
+	    mpMapper->mp2dMap->init();
+	    // No need to call audit() as XMLimport::importPackage() does it!
+	    // audit() produces the successful ending [ OK ] message...!
+	    mpMapper->updateAreaComboBox();
+	    if (success) {
+	        mpMapper->resetAreaComboBoxToPlayerRoomArea();
+	    } else {
+	        // Failed...
+	        if (errMsg) {
+	            *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
+	                         "in main console!");
+	        }
+	    }
+	}
+
+	if (!success && errMsg) {
+        *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
+                     "in main console!");
     }
 
     if (isLocalImport) {
@@ -2586,7 +2607,10 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         mpProgressDialog->deleteLater();
         mpProgressDialog = nullptr;
     }
-    mpMapper->show();
+
+    if (!mpMapper.isNull()) {
+         mpMapper->show();
+    }
 
     return success;
 }
@@ -2669,22 +2693,25 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // else was QNetworkReply::OperationCanceledError and we already handle
         // THAT in slot_downloadCancel()
     }
-    QFile file(mLocalMapFileName);
-    if (!file.open(QFile::WriteOnly)) {
+    // Separate the two kinds of files to gain QSaveFile's atomic write behavior
+    QSaveFile writeFile(mLocalMapFileName);
+    QFile readFile(mLocalMapFileName);
+    if (!writeFile.open(QFile::WriteOnly)) {
         QString alertMsg = tr("[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
         return;
     }
     // The QNetworkReply is Ok here:
-    if (file.write(reply->readAll()) == -1) {
+    if (writeFile.write(reply->readAll()) == -1) {
         QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
         return;
     }
-    file.flush();
-    file.close();
+    if (!writeFile.commit()) {
+        qDebug() << "TMap::slot_replyFinished: error saving downloaded map: " << writeFile.errorString();
+    }
 
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2703,12 +2730,12 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 
     bool parsingWasSuccessful;
     QString parsingFileName;
-    if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
-        parsingFileName = file.fileName();
+    if (!readFile.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
+        parsingFileName = readFile.fileName();
         parsingWasSuccessful = pHost->mpConsole->loadMap(parsingFileName);
     } else {
         parsingFileName = mLocalMapFileName;
-        if (!file.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
+        if (!readFile.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
             QString alertMsg = tr("[ ERROR ] - Map download problem, unable to read destination file:\n%1.").arg(parsingFileName);
             postMessage(alertMsg);
             cleanup();
@@ -2718,8 +2745,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // The action to parse the XML file has been refactored to
         // a separate method so that it can be shared with the
         // direct importation of a local copy of a map file.
-        parsingWasSuccessful = readXmlMapFile(file);
-        file.close();
+        parsingWasSuccessful = readXmlMapFile(readFile);
+        readFile.close();
     }
 
     if (parsingWasSuccessful) {
@@ -2871,7 +2898,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mpProgressDialog->setAutoReset(false);
     mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
     qApp->processEvents();
-    QFile file(destination);
+    QSaveFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text|QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -2911,7 +2938,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         }
     }
     if (abort) {
-        file.close();
+        file.cancelWriting();
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
         mpProgressDialog->close();
         mpProgressDialog = nullptr;
@@ -2999,7 +3026,9 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     // Hide the cancel button as we can't stop now:
     mpProgressDialog->setCancelButton(nullptr);
     file.write(QJsonDocument(mapObj).toJson(QJsonDocument::Indented));
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "TMap::writeJsonMapFile: error saving JSON map: " << file.errorString();
+    }
 
     mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     mpProgressDialog->close();
@@ -3465,4 +3494,14 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
+}
+
+void TMap::setDefaultAreaShown(bool state)
+{
+    if (mShowDefaultArea != state) {
+        mShowDefaultArea = state;
+        if (!mpMapper.isNull()) {
+            mpMapper->updateAreaComboBox();
+        }
+    }
 }

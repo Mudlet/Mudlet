@@ -51,9 +51,9 @@ int LuaInterface::onPanic(lua_State* L)
     QString error = "Lua Panic, No error information";
     if (lua_isstring(L, -1)) {
         error = lua_tostring(L, -1);
-        //there's never anything but the error on the stack, nothing to report
+        qDebug() << "Lua panic:" << error;
     }
-    //FIXME: report error to user qDebug()<<"PANIC ERROR:"<<error;
+
     longjmp(buf, 1);
     return 1;
 }
@@ -66,13 +66,13 @@ VarUnit* LuaInterface::getVarUnit()
 QStringList LuaInterface::varName(TVar* var)
 {
     QStringList names;
-    if (var->getName() == "_G") {
+    if (var->getName() == qsl("_G")) {
         names << "";
         return names;
     }
     names << var->getName();
     TVar* p = var->getParent();
-    while (p && p->getName() != "_G") {
+    while (p && p->getName() != qsl("_G")) {
         names.insert(0, p->getName());
         p = p->getParent();
     }
@@ -107,21 +107,22 @@ void LuaInterface::getAllChildren(TVar* var, QList<TVar*>* list)
 bool LuaInterface::loadKey(lua_State* L, TVar* var)
 {
     if (setjmp(buf) == 0) {
-        int kType = var->getKeyType();
+        int keyType = var->getKeyType();
         if (var->isReference()) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
-            if (kType == LUA_TNUMBER) {
+            if (keyType == LUA_TNUMBER) {
                 lua_pushnumber(L, var->getName().toInt());
-            } else if (kType == LUA_TTABLE) {
-            } else if (kType == LUA_TBOOLEAN) {
+            } else if (keyType == LUA_TTABLE) {
+            } else if (keyType == LUA_TBOOLEAN) {
                 lua_pushboolean(L, var->getName().toLower() == "true" ? 1 : 0);
             } else {
                 lua_pushstring(L, var->getName().toUtf8().constData());
             }
         }
-        return lua_type(L, -1) == kType;
+        return lua_type(L, -1) == keyType;
     }
+
     return false;
 }
 
@@ -294,12 +295,12 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem* newP, QTreeWidgetItem* cIte
 QList<TVar*> LuaInterface::varOrder(TVar* var)
 {
     QList<TVar*> vars;
-    if (var->getName() == "_G") {
+    if (var->getName() == qsl("_G")) {
         return vars;
     }
     vars << var;
     TVar* p = var->getParent();
-    while (p && p->getName() != "_G") {
+    while (p && p->getName() != qsl("_G")) {
         vars.insert(0, p);
         p = p->getParent();
     }
@@ -673,33 +674,44 @@ void LuaInterface::renameVar(TVar* var)
     var->clearNewName();
 }
 
+// returns the value for a string/number/boolean datatype, or an empty string otherwise
 QString LuaInterface::getValue(TVar* var)
 {
     if (setjmp(buf) == 0) {
-
         QList<TVar*> vars = varOrder(var);
         if (vars.empty()) {
-            return QString();
+            return {};
         }
-        int pCount = vars.size(); //how many things we need to pop at the end
+        int pCount = vars.size(); //how many things we need to pop from the stack at the end
         //load from _G first
-        lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
+        auto firstVariable = vars.constFirst();
+        if (firstVariable->getKeyType() == LUA_TSTRING) {
+            lua_getglobal(mL, (firstVariable->getName()).toUtf8().constData());
+        } else if (firstVariable->getKeyType() == LUA_TNUMBER) {
+            lua_rawgeti(mL, LUA_GLOBALSINDEX, firstVariable->getName().toInt());
+        }
+        if (lua_isnoneornil(mL, lua_gettop(mL))) {
+            qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName() 
+                << "onto the Lua stack in order to get value of" << var->getName() 
+                << ", perhaps the key type isn't supported?";
+            return {};
+        }
         for (int i = 1; i < vars.size(); i++) {
-            if (!loadValue(mL, vars[i], -2)) {
-                return QString();
+            if (!loadValue(mL, vars.at(i), -2)) {
+                return {};
             }
         }
-        int vType = lua_type(mL, -1);
+        int valueType = lua_type(mL, -1);
         QString value;
-        if (vType == LUA_TBOOLEAN) {
+        if (valueType == LUA_TBOOLEAN) {
             value = lua_toboolean(mL, -1) == 0 ? QLatin1String("false") : QLatin1String("true");
-        } else if (vType == LUA_TNUMBER || vType == LUA_TSTRING) {
+        } else if (valueType == LUA_TNUMBER || valueType == LUA_TSTRING) {
             value = lua_tostring(mL, -1);
         }
         lua_pop(mL, pCount);
         return value;
     }
-    return QString();
+    return {};
 }
 
 void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
@@ -739,10 +751,10 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         var->hidden = hide;
         tVar->addChild(var);
         const void* kp = lua_topointer(L, -1);
-        var->kpointer = kp;
+        var->pKey = kp;
         const void* vp = lua_topointer(L, -2);
-        var->vpointer = vp;
-        if (varUnit->varExists(var) || keyName == "_G") {
+        var->pValue = vp;
+        if (varUnit->varExists(var) || keyName == qsl("_G")) {
             lua_pop(L, 1);
             tVar->removeChild(var);
             delete var;

@@ -18,7 +18,7 @@ jobs:
       matrix:
         include:
           # oldest OS supported for maximum compatibility of built AppImage
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             buildname: 'ubuntu / gcc / lua tests'
             triplet: x64-linux
             compiler: gcc_64
@@ -246,11 +246,21 @@ jobs:
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
       if: matrix.os != 'windows-latest'
 
-    - name: (Linux/macOS) Set build info
-      if: runner.os == 'Linux' || runner.os == 'macOS'
+    - name: (Linux) Set build info
+      if: runner.os == 'Linux'
       run: |
+        sudo apt-get -y install pcregrep
         ${{github.workspace}}/CI/travis.validate_deployment.sh
         ${{github.workspace}}/CI/travis.set-build-info.sh
+
+    - name: (macOS) Set build info
+      if: runner.os == 'macOS'
+      run: |
+        brew install pcre
+        ${{github.workspace}}/CI/travis.validate_deployment.sh
+        ${{github.workspace}}/CI/travis.set-build-info.sh
+        # remove it as it breaks packaging down the line: https://github.com/Mudlet/Mudlet/issues/6668
+        brew uninstall pcre
 
     - name: (Linux/macOS) check ccache stats prior to build
       if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -331,8 +341,8 @@ jobs:
         DEPLOY: ${{matrix.deploy}}
 
     - name: (Linux/macOS) add ssh-agent for tag deployment
-      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && github.event == 'tag'
-      uses: webfactory/ssh-agent@v0.7.0
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
+      uses: webfactory/ssh-agent@v0.8.0
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
