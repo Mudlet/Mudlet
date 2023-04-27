@@ -58,8 +58,8 @@ public:
 
 public:
     bool hidden;
-    const void* kpointer;
-    const void* vpointer;
+    const void* pKey;
+    const void* pValue;
     bool saved;
 
 private:
@@ -67,10 +67,10 @@ private:
     QList<TVar*> children;
     TVar* parent;
     QString name;
-    int kType;
+    int keyType;
     QString value;
-    int vType;
-    int nkType;
+    int valueType;
+    int newKeyType;
     QString nName;
 };
 

@@ -392,7 +392,8 @@ void IrcBuffer::setPrefix(const QString& prefix)
  */
 bool IrcBuffer::isChannel() const
 {
-    return qobject_cast<const IrcChannel*>(this);
+    Q_D(const IrcBuffer);
+    return (d->type == IrcBuffer::Channel);
 }
 
 /*!
@@ -579,6 +580,16 @@ bool IrcBuffer::sendCommand(IrcCommand* command)
     if (IrcConnection* c = connection())
         return c->sendCommand(command);
     return false;
+}
+
+/*!
+    \since 3.7
+
+    Clones the buffer with an optional \a parent.
+ */
+IrcBuffer *IrcBuffer::clone(QObject *parent)
+{
+    return new IrcBuffer(parent);
 }
 
 /*!

@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2019 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2019, 2023 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -23,6 +24,7 @@
 
 #include "Host.h"
 #include "TArea.h"
+#include "T2DMap.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -713,15 +715,15 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
     if (!missingAreasNeeded.isEmpty()) {
         if (mudlet::self()->showMapAuditErrors()) {
             QString alertMsg = tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                  " Look for further messages related to the rooms that are supposed\n"
-                                  " to be in this/these area(s)...",
+                                  "Look for further messages related to the rooms that are supposed\n"
+                                  "to be in this/these area(s)...",
                                   "Making use of %n to allow quantity dependent message form 8-) !",
                                   missingAreasNeeded.count());
             mpMap->postMessage(alertMsg);
         }
         mpMap->appendErrorMsgWithNoLf(tr("[ ALERT ] - %n area(s) detected as missing in map: adding it/them in.\n"
-                                         " Look for further messages related to the rooms that is/are supposed to\n"
-                                         " be in this/these area(s)...",
+                                         "Look for further messages related to the rooms that is/are supposed to\n"
+                                         "be in this/these area(s)...",
                                          "Making use of %n to allow quantity dependent message form 8-) !",
                                          missingAreasNeeded.count()),
                                       true);
@@ -1176,7 +1178,7 @@ void TRoomDB::restoreAreaMap(QDataStream& ifs)
         if (!renamedMap.empty()) {
             detailText = qsl("%1\n").arg(tr("[  OK  ]  - The changes made are:\n"
                                             "(ID) \"old name\" ==> \"new name\""));
-            QMapIterator<QString, QString> itRemappedNames = renamedMap;
+            QMultiMapIterator<QString, QString> itRemappedNames = renamedMap;
             itRemappedNames.toBack();
             // Seems to look better if we iterate through backwards!
             while (itRemappedNames.hasPrevious()) {
@@ -1303,3 +1305,24 @@ bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key,
     }
 }
 
+bool TRoomDB::set2DMapZoom(const int areaId, const qreal zoom) const
+{
+    auto pA = areas.value(areaId);
+    if (!pA) {
+        return false;
+    }
+    if (zoom < T2DMap::csmMinXYZoom) {
+        return false;
+    }
+    pA->set2DMapZoom(zoom);
+    return true;
+}
+
+qreal TRoomDB::get2DMapZoom(const int areaId) const
+{
+    auto pA = areas.value(areaId);
+    if (!pA) {
+        return T2DMap::csmDefaultXYZoom;
+    }
+    return pA->get2DMapZoom();
+}

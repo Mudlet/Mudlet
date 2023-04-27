@@ -5,7 +5,7 @@
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017-2020 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2015-2018, 2020, 2022 by Stephen Lyons                  *
+ *   Copyright (C) 2015-2018, 2020, 2022-2023 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -176,7 +176,7 @@ public:
     void closeEvent(QCloseEvent* event) override;
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
-    void enterEvent(QEvent* pE) override;
+    void enterEvent(TEnterEvent* event) override;
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;
@@ -368,7 +368,7 @@ private:
     void exportScriptToClipboard();
     void exportKeyToClipboard();
 
-    void clearDocument(edbee::TextEditorWidget* ew, const QString& initialText = QString());
+    void clearDocument(edbee::TextEditorWidget* pEditorWidget, const QString& initialText = QString());
 
     void setAllSearchData(QTreeWidgetItem* pItem, const EditorViewType& type, const QString& name, const int& id, const SearchDataResultType& what, const int& pos = 0, const int& instance = 0, const int& subInstance = 0) {
         // Which is it? A Trigger, an alias etc:
@@ -413,19 +413,19 @@ private:
         pItem->setData(0, IndexRole, subInstance);
     }
 
-    void searchTriggers(const QString& s);
-    void searchAliases(const QString& s);
-    void searchScripts(const QString& s);
-    void searchActions(const QString& s);
-    void searchTimers(const QString& s);
-    void searchKeys(const QString& s);
-    void searchVariables(const QString& s);
+    void searchTriggers(const QString& text);
+    void searchAliases(const QString& text);
+    void searchScripts(const QString& text);
+    void searchActions(const QString& text);
+    void searchTimers(const QString& text);
+    void searchKeys(const QString& text);
+    void searchVariables(const QString& text);
     void recursiveSearchTriggers(TTrigger*, const QString&);
-    void recursiveSearchAlias(TAlias*, const QString& s);
-    void recursiveSearchScripts(TScript*, const QString& s);
-    void recursiveSearchActions(TAction*, const QString& s);
-    void recursiveSearchTimers(TTimer*, const QString& s);
-    void recursiveSearchKeys(TKey*, const QString& s);
+    void recursiveSearchAlias(TAlias*, const QString& text);
+    void recursiveSearchScripts(TScript*, const QString& text);
+    void recursiveSearchActions(TAction*, const QString& text);
+    void recursiveSearchTimers(TTimer*, const QString& text);
+    void recursiveSearchKeys(TKey*, const QString& text);
     void recursiveSearchVariables(TVar*, QList<TVar*>&, bool);
 
     void createSearchOptionIcon();
