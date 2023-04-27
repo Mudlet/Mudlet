@@ -63,7 +63,7 @@ public:
 
 class TMxpStubClient : public TMxpClient {
 public:
-    QString version;
+    QString version = "Stub-1.0";
     bool linkMode;
 
     QString sentToServer;
@@ -73,6 +73,8 @@ public:
     QStringList mHrefs, mHints;
 
     QString mPublishedEntityName, mPublishedEntityValue;
+
+    QString style;
 
     QString getVersion() override
     {
@@ -123,6 +125,15 @@ public:
     void setUnderline(bool underline) override
     {
         isUnderline = underline;
+    }
+
+    void setStyle(const QString& val) override
+    {
+        style = val;
+    }
+    QString getStyle() override
+    {
+        return style;
     }
 
     int setLink(const QStringList& hrefs, const QStringList& hints) override

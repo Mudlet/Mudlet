@@ -25,10 +25,21 @@
 TMxpTagHandlerResult TMxpVersionTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
     Q_UNUSED(ctx)
-    Q_UNUSED(tag)
     const QString& version = client.getVersion();
 
+    if (tag->getAttributesCount() > 0) {
+        // Get the first arg (spaces or = in StyleId must be quoted)
+        client.setStyle(tag->getAttrName(0));
+        // Don't return a version string if there was an argument!
+        return MXP_TAG_HANDLED;
+    }
+
     QString payload = scmVersionString.arg(version);
+    if (!client.getStyle().isNull()) {
+        payload.replace(qsl(">"), qsl(" STYLE=%1>").arg(client.getStyle()));
+    }
+
+
     client.sendToServer(payload);
 
     return MXP_TAG_HANDLED;
