@@ -7816,7 +7816,7 @@ void dlgTriggerEditor::showError(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    mudlet::self()->announce(qsl("Now from showError: %1").arg(error));
+    mudlet::self()->announce(error);
 }
 
 void dlgTriggerEditor::showInfo(const QString& error)
