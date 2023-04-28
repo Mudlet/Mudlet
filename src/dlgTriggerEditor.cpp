@@ -7816,9 +7816,7 @@ void dlgTriggerEditor::showError(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->hide();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    QString plainText = error;
-    plainText.remove(QRegExp("<[^>]*>"));
-    mudlet::self()->announce(plainText);
+    mudlet::self()->announce(qsl("Now from showError: %1").arg(error));
 }
 
 void dlgTriggerEditor::showInfo(const QString& error)
@@ -7828,9 +7826,7 @@ void dlgTriggerEditor::showInfo(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelInformation->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    QString plainText = error;
-    plainText.remove(QRegExp("<[^>]*>"));
-    mudlet::self()->announce(plainText);
+    mudlet::self()->announce(error);
 }
 
 void dlgTriggerEditor::showWarning(const QString& error)
@@ -7840,9 +7836,7 @@ void dlgTriggerEditor::showWarning(const QString& error)
     mpSystemMessageArea->notificationAreaIconLabelWarning->show();
     mpSystemMessageArea->notificationAreaMessageBox->setText(error);
     mpSystemMessageArea->show();
-    QString plainText = error;
-    plainText.remove(QRegExp("<[^>]*>"));
-    mudlet::self()->announce(plainText);
+    mudlet::self()->announce(error);
 }
 
 void dlgTriggerEditor::slot_showActions()
