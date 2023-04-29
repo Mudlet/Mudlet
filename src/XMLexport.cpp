@@ -305,34 +305,30 @@ void XMLexport::sanitizeForQxml(std::string& output)
 
 bool XMLexport::saveXml(const QString& fileName)
 {
-    QFile file(fileName);
+    QSaveFile file(fileName);
 
-    if (!file.open(QFile::WriteOnly)) {
-        qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to open file, reason: " << file.errorString() << ".";
+    auto printErrorMessage = [&](const QString& errorString) {
+        qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << errorString << ".";
+    };
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        printErrorMessage(file.errorString().prepend("failed to open file, "));
         return false;
     }
 
-    bool result = saveXmlFile(file);
-    if (!result) {
-        if (file.error() != QFile::NoError) {
-            // Error reason was related to QFile:
-            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << file.errorString() << ".";
-        } else {
-            // Error was due to failure in document preparation
-            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: XML document preparation failure.";
-        }
+    bool success = saveXmlFile(file);
+    if (!success) {
+        printErrorMessage((file.error() != QFileDevice::NoError) ? file.errorString() : "XML document preparation failure");
+    } else if (!file.commit()) {
+        printErrorMessage(file.errorString());
+        success = false;
     }
 
-    file.close();
-    return result;
+    return success;
 }
 
-// This has been factored out to a separate method from saveXml(const QString&)
-// because there are situations where we have a QFile instance already and
-// just passing a filename and then creating another QFile instance on the
-// same file in the filesystem is less than optimum.
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
-bool XMLexport::saveXmlFile(QFile& file)
+bool XMLexport::saveXmlFile(QSaveFile& file)
 {
     std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
@@ -350,7 +346,7 @@ bool XMLexport::saveXmlFile(QFile& file)
     // Now we can use Qt's file handling which does handle non-Latin1 named
     // files - which MinGW's STL file handling (on Windows platform) does not:
     file.write(output.data());
-    return file.error() == QFile::NoError;
+    return file.error() == QFileDevice::NoError;
 }
 
 QString XMLexport::saveXml()

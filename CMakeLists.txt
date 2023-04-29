@@ -96,7 +96,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.16.0)
+set(APP_VERSION 4.17.2)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
@@ -172,6 +172,15 @@ endif()
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
+
+# PLACEMARKER: sample benchmarking code
+# include(FetchContent)
+# FetchContent_Declare(
+#     nanobench
+#     GIT_REPOSITORY https://github.com/martinus/nanobench.git
+#     GIT_TAG v4.3.11
+#     GIT_SHALLOW TRUE)
+# FetchContent_MakeAvailable(nanobench)
 
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH

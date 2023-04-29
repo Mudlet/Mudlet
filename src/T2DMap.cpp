@@ -1555,8 +1555,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
     static bool isAreaWidgetValid = true; // Remember between uses
     QFont _f = mpMap->mpMapper->comboBox_showArea->font();
     if (isAreaWidgetValid) {
-        if (mAreaID == -1                                 // the map being shown is the "default" area
-            && !mpMap->mpMapper->getDefaultAreaShown()) { // the area widget is not showing the "default" area
+        if (mAreaID == -1                       // the map being shown is the "default" area
+            && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
 
             isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
             // Set the area widget to indicate the area widget is NOT
@@ -1567,7 +1567,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             _f.setOverline(true);
         }
     } else {
-        if (!(mAreaID == -1 && !mpMap->mpMapper->getDefaultAreaShown())) {
+        if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
             isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
             // Reset to normal
             _f.setItalic(false);
@@ -2349,14 +2349,13 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
         return;
     }
     int yOffset = 20;
+    int initialYOffset = yOffset;
     // Left margin for info widget:
     int xOffset = 10;
     if (mMultiSelectionListWidget.isVisible()) {
         // Room Selection Widget showing, so increase margin to avoid:
         xOffset += mMultiSelectionListWidget.x() + mMultiSelectionListWidget.rect().width();
     }
-
-    painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
 
     for (const auto& key : mpMap->mMapInfoContributorManager->getContributorKeys()) {
         if (mpHost->mMapInfoContributors.contains(key)) {
@@ -2369,7 +2368,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
     }
 
 #ifdef QT_DEBUG
-    paintMapInfoContributor(painter,
+    yOffset += paintMapInfoContributor(painter,
                          xOffset,
                          yOffset,
                          {false,
@@ -2385,6 +2384,10 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
                                   .arg(QString::number(mOx), QString::number(mOy), QString::number(mOz))),
                           infoColor});
 #endif
+
+    if (yOffset > initialYOffset) {
+        painter.fillRect(xOffset, 10, width() - 10 - xOffset, 10, mpHost->mMapInfoBg);
+    }
 }
 
 int T2DMap::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties)
@@ -2697,21 +2700,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                     popup->addAction(customExitLine);
                 }
 
-                // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
-                if (selectionSize > 0) {
-                    auto recolorRoom = new QAction(tr("Set color... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(recolorRoom);
-                }
-
-                // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
-                if (selectionSize > 0) {
-                    auto roomSymbol = new QAction(tr("Set symbol... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    roomSymbol->setToolTip(utils::richText(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip")));
-                    connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(roomSymbol);
-                }
-
 
                 if (selectionSize > 1) {
                     auto spreadRooms = new QAction(tr("Spread...", "2D Mapper context menu (room) item"), this);
@@ -2725,26 +2713,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                     shrinkRooms->setToolTip(utils::richText(tr("Decrease map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip")));
                     connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
                     popup->addAction(shrinkRooms);
-                }
-
-                // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
-                if (selectionSize > 0) {
-                    auto lockRoom = new QAction(tr("Lock... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    lockRoom->setToolTip(utils::richText(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip")));
-                    connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(lockRoom);
-
-                    auto unlockRoom = new QAction(tr("Unlock... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    unlockRoom->setToolTip(utils::richText(tr("Unlock room for speed walks", "2D Mapper context menu (room) item tooltip")));
-                    connect(unlockRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(unlockRoom);
-                }
-
-                // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
-                if (selectionSize > 0) {
-                    auto weightRoom = new QAction(tr("Set weight... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(weightRoom);
                 }
 
                 if (selectionSize > 0) {
@@ -3358,17 +3326,19 @@ void T2DMap::slot_customLineProperties()
             connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
             dialog->adjustSize();
 
-            if (dialog->exec() == QDialog::Accepted) {
-                // Make the changes
+            connect(dialog, &QDialog::accepted, this, [this, room, exit]() {
                 mCurrentLineStyle = static_cast<Qt::PenStyle>(mpCurrentLineStyle->currentData().toInt());
                 room->customLinesStyle[exit] = mCurrentLineStyle;
                 room->customLinesColor[exit] = mCurrentLineColor;
                 room->customLinesArrow[exit] = mpCurrentLineArrow->checkState();
                 mCurrentLineArrow = mpCurrentLineArrow->checkState();
-            }
+
+                repaint();
+                mpMap->setUnsaved(__func__);
+            });
+            dialog->show();
+            dialog->raise();
         }
-        repaint();
-        mpMap->setUnsaved(__func__);
     } else {
         qDebug("T2DMap::slot_customLineProperties() called but no line is selected...");
     }
@@ -4097,9 +4067,16 @@ void T2DMap::slot_setArea()
     }
     set_room_area_dialog->setAttribute(Qt::WA_DeleteOnClose);
     arealist_combobox = set_room_area_dialog->findChild<QComboBox*>("arealist_combobox");
+
     if (!arealist_combobox) {
         return;
     }
+
+    auto label_info = set_room_area_dialog->findChild<QLabel*>("label_info");
+    auto font = QFont();
+    font.setPointSize(font.pointSize() - 1);
+    label_info->setFont(font);
+    arealist_combobox->setInsertPolicy(QComboBox::NoInsert);
 
     QStringList sortedAreaList;
     sortedAreaList = mpMap->mpRoomDB->getAreaNamesMap().values();
@@ -4110,15 +4087,46 @@ void T2DMap::slot_setArea()
 
     std::sort( sortedAreaList.begin(), sortedAreaList.end(), sorter);
 
-
     const QMap<int, QString>& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
     for (int i = 0, total = sortedAreaList.count(); i < total; ++i) {
         int areaId = areaNamesMap.key(sortedAreaList.at(i));
         arealist_combobox->addItem(qsl("%1 (%2)").arg(sortedAreaList.at(i), QString::number(areaId)), QString::number(areaId));
     }
 
-    connect(set_room_area_dialog, &QDialog::accepted, this, [=]() {
-        int newAreaId = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
+    connect(arealist_combobox, &QComboBox::currentTextChanged, this, [=](const QString newText) {
+        auto buttonBox = set_room_area_dialog->findChild<QDialogButtonBox*>("buttonBox");
+        buttonBox->button(QDialogButtonBox::Ok)->setEnabled(!newText.trimmed().isEmpty());
+        if (!newText.trimmed().isEmpty() && arealist_combobox->findText(newText.trimmed(), Qt::MatchExactly) == -1
+            && !sortedAreaList.contains(newText.trimmed())) {
+            label_info->setText(tr("This will create new area: %1").arg(arealist_combobox->currentText()));
+        } else {
+            label_info->clear();
+        }
+    });
+
+    connect(set_room_area_dialog, &QDialog::accepted, [=]() {
+        int newAreaId;
+        if (arealist_combobox->findText(arealist_combobox->currentText(), Qt::MatchExactly) != -1) {
+            newAreaId = arealist_combobox->itemData(arealist_combobox->currentIndex()).toInt();
+        } else if (sortedAreaList.contains(arealist_combobox->currentText().trimmed())) {
+            newAreaId = mpMap->mpRoomDB->getAreaNamesMap().key(arealist_combobox->currentText());
+        } else {
+            auto newAreaName = arealist_combobox->currentText().trimmed();
+            newAreaId = mpMap->mpRoomDB->addArea(newAreaName);
+            if (!newAreaId) {
+                mpMap->postMessage(tr("[ ERROR ] - Unable to add \"%1\" as an area to the map.\n"
+                                      "See the \"[MAP ERROR:]\" message for the reason.",
+                        // Intentional separator between argument
+                                      "The '[MAP ERROR:]' text should be the same as that used for the translation of \"[MAP ERROR:]%1\n\" in the 'TMAP::logerror(...)' function.").arg(
+                        newAreaName));
+                return;
+            }
+            mpMap->postMessage(
+                    tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
+            mpMap->setUnsaved(__func__);
+
+            mpMap->mpMapper->updateAreaComboBox();
+        }
         mMultiRect = QRect(0, 0, 0, 0);
         QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
         while (itSelectedRoom.hasNext()) {
@@ -4144,9 +4152,16 @@ void T2DMap::slot_setArea()
                         }
                     }
                 }
+                auto &targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
+                mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+#if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
+                switchArea(targetAreaName);
+#else
+                slot_switchArea(targetAreaName);
+#endif
             }
         }
-        repaint();
+        update();
     });
 
     set_room_area_dialog->show();
