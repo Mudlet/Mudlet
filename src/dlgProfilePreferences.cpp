@@ -940,25 +940,26 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
-    if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
-        for (int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
-            if (i == pHost->mpMap->mDefaultVersion) {
-                continue;
+    if (pHost->mpMap) {
+        if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
+            for (int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
+                if (i == pHost->mpMap->mDefaultVersion) {
+                    continue;
+                }
+                comboBox_mapFileSaveFormatVersion->setEnabled(true);
+                label_mapFileSaveFormatVersion->setEnabled(true);
+                if (i > pHost->mpMap->mDefaultVersion) {
+                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Upgraded, experimental/testing, NOT recommended}").arg(i), QVariant(i));
+                } else {
+                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
+                }
             }
-            comboBox_mapFileSaveFormatVersion->setEnabled(true);
-            label_mapFileSaveFormatVersion->setEnabled(true);
-            if (i > pHost->mpMap->mDefaultVersion) {
-                comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Upgraded, experimental/testing, NOT recommended}").arg(i), QVariant(i));
-            } else {
-                comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
+            int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
+            if (_indexForCurrentSaveFormat >= 0) {
+                comboBox_mapFileSaveFormatVersion->setCurrentIndex(_indexForCurrentSaveFormat);
             }
         }
-        int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
-        if (_indexForCurrentSaveFormat >= 0) {
-            comboBox_mapFileSaveFormatVersion->setCurrentIndex(_indexForCurrentSaveFormat);
-        }
-    }
-    if (pHost->mpMap->mpMapper) {
+
         QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_mapViewOptions);
         mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_mapViewOptions);
         mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
@@ -980,7 +981,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         checkBox_showDefaultArea->show();
         checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->getDefaultAreaName()));
-        checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
+        checkBox_showDefaultArea->setChecked(pHost->mpMap->getDefaultAreaShown());
 
         pushButton_showGlyphUsage->setEnabled(true);
         fontComboBox_mapSymbols->setCurrentFont(pHost->mpMap->mMapSymbolFont);
@@ -2796,26 +2797,29 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
-        if (pHost->mpMap && pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
-            bool isAreaWidgetInNeedOfResetting = false;
-            if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
-                isAreaWidgetInNeedOfResetting = true;
+        if (pHost->mpMap) {
+            // Need to save the original value in case we change it in the line
+            // following this one:
+            bool defaultAreaWasNotShown = pHost->mpMap->getDefaultAreaShown();
+            pHost->mpMap->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
+            if (pHost->mpMap->mpMapper) {
+                pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+
+                if (!defaultAreaWasNotShown && checkBox_showDefaultArea->isChecked() && pHost->mpMap->mpMapper->mp2dMap->mAreaID == -1) {
+                    // Corner case fixup, user has asked for the default area
+                    // to be shown and it wasn't - so it can now be:
+                    pHost->mpMap->mpMapper->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
+                }
             }
 
-            pHost->mpMap->mpMapper->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
-            if (isAreaWidgetInNeedOfResetting) {
-                // Corner case fixup:
-                pHost->mpMap->mpMapper->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
-            }
-
-            // If a map was loaded
             if (mpDoubleSpinBox_mapSymbolFontFudge) {
                 pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
             }
 
-            pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
-            pHost->mpMap->mpMapper->update();
+            if (pHost->mpMap->mpMapper) {
+                pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
+                pHost->mpMap->mpMapper->update();
+            }
         }
         QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
         pHost->setBorders(newBorders);
