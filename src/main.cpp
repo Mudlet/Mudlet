@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
     if (mudlet::self()->scmIsReleaseVersion) {
         app->setApplicationVersion(APP_VERSION);
     } else {
-        app->setApplicationVersion(APP_VERSION APP_BUILD);
+        app->setApplicationVersion(qsl(APP_VERSION) + mudlet::self()->mAppBuild);
     }
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
@@ -347,9 +347,9 @@ int main(int argc, char* argv[])
 #if defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)",
                                                           "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD)));
+                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), mudlet::self()->mAppBuild));
 #else // ! defined(QT_DEBUG)
-        texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
+        texts << QLatin1String(APP_TARGET " " APP_VERSION mudlet::self()->mAppBuild " \n");
 #endif // ! defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
@@ -380,7 +380,7 @@ int main(int argc, char* argv[])
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
+        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION, mudlet::self()->mAppBuild));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {

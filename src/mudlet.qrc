@@ -2,6 +2,7 @@
     <qresource prefix="/">
         <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
         <file alias="translation-stats.json">../translations/translated/translation-stats.json</file>
+        <file>app-build.txt</file>
         <file>CF-loader.xml</file>
         <file>deleteOldProfiles.xml</file>
         <file>echo.xml</file>

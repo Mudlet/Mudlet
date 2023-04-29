@@ -241,6 +241,7 @@ public:
     static QImage getSplashScreen();
 
 
+    QString mAppBuild;
     // final, official release
     bool scmIsReleaseVersion;
     // unofficial "nightly" build - still a type of a release

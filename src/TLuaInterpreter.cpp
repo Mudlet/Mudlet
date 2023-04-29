@@ -11257,7 +11257,7 @@ int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
 int TLuaInterpreter::getMudletVersion(lua_State* L)
 {
     QByteArray version = QByteArray(APP_VERSION).trimmed();
-    QByteArray build = QByteArray(APP_BUILD).trimmed();
+    QByteArray build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
 
     QList<QByteArray> versionData = version.split('.');
     if (versionData.size() != 3) {
@@ -11337,7 +11337,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
         lua_pushinteger(L, revision);
         lua_settable(L, -3);
         lua_pushstring(L, "build");
-        lua_pushstring(L, QByteArray(APP_BUILD).trimmed().data());
+        lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
         lua_settable(L, -3);
     } else {
         lua_pushstring(L,

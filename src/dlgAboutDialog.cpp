@@ -47,7 +47,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
         QPainter painter(&splashImage);
 
         unsigned fontSize = 16;
-        QString sourceVersionText = QString("Version: " APP_VERSION APP_BUILD);
+        QString sourceVersionText = QString("Version: " + qsl(APP_VERSION) + mudlet::self()->mAppBuild);
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {

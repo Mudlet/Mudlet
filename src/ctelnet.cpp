@@ -81,8 +81,8 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // to set up the initial encoder
     encodingChanged("UTF-8");
     termType = qsl("Mudlet " APP_VERSION);
-    if (QByteArray(APP_BUILD).trimmed().length()) {
-        termType.append(qsl(APP_BUILD));
+    if (mudlet::self()->mAppBuild.trimmed().length()) {
+        termType.append(mudlet::self()->mAppBuild);
     }
 
     command = "";
@@ -1067,8 +1067,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
-            // APP_BUILD could, conceivably contain a non ASCII character:
-            output += encodeAndCookBytes("hello Mudlet " APP_VERSION APP_BUILD  "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n");
+            // mudlet::self()->mAppBuild could, conceivably contain a non ASCII character:
+            std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData() + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
+            output += encodeAndCookBytes(atcpOptions);
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -1090,8 +1091,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            // APP_BUILD could, conceivably contain a non-ASCII character:
-            output += encodeAndCookBytes(R"(Core.Hello { "client": "Mudlet", "version": ")" APP_VERSION APP_BUILD R"("})");
+            // mudlet::self()->mAppBuild could, conceivably contain a non-ASCII character:
+            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + mudlet::self()->mAppBuild.toUtf8().constData() + std::string(R"("})"));
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -1621,8 +1622,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += TN_IAC;
                 output += TN_SB;
                 output += OPT_ATCP;
-                // APP_BUILD *could* be a non-ASCII UTF-8 string:
-                output += encodeAndCookBytes("hello Mudlet " APP_VERSION APP_BUILD "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\n");
+                // mudlet::self()->mAppBuild *could* be a non-ASCII UTF-8 string:
+                std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData() + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
+                output += encodeAndCookBytes(atcpOptions);
                 output += TN_IAC;
                 output += TN_SE;
                 socketOutRaw(output);

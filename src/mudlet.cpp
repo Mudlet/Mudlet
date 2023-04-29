@@ -132,8 +132,15 @@ mudlet::mudlet()
 {
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
-    scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
-    scmIsPublicTestVersion = QByteArray(APP_BUILD).startsWith("-ptb");
+    QFile gitShaFile(":/app-build.txt");
+    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    QString gitSha = QString::fromUtf8(gitShaFile.readAll());
+
+    qDebug() << "Git SHA:" << gitSha;
+
+    mAppBuild = gitSha;
+    scmIsReleaseVersion = mAppBuild.isEmpty();
+    scmIsPublicTestVersion = mAppBuild.startsWith("-ptb");
     scmIsDevelopmentVersion = !scmIsReleaseVersion && !scmIsPublicTestVersion;
 
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
@@ -4383,7 +4390,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 {
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
 #if !defined(QT_NO_SSL)
     if (url.scheme() == qsl("https")) {
         QSslConfiguration config(QSslConfiguration::defaultConfiguration());
