@@ -719,7 +719,7 @@ private:
     void saveModules(bool backup = true);
     void updateModuleZips(const QString &zipName, const QString &moduleName);
     void reloadModules();
-    void startMapAutosave();
+    void startMapAutosave(int interval);
     void timerEvent(QTimerEvent *event) override;
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;

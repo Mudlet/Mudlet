@@ -1971,6 +1971,8 @@ void mudlet::writeSettings()
     // value only used during PTBs, remove it to reduce confusion in the future
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
+
+    settings.setValue("minLengthForSpellCheck", getActiveHost()->mMinLengthForSpellCheck);
 }
 
 void mudlet::slot_showConnectionDialog()
