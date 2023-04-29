@@ -114,3 +114,55 @@ TLinkStore& TMxpMudlet::getLinkStore()
 {
     return mpHost->mpConsole->getLinkStore();
 }
+
+// Handle 'stacks' of attribute settings:
+void TMxpMudlet::setBold(bool bold)
+{
+    if (bold) {
+        boldCtr++;
+    } else if (boldCtr > 0) {
+        boldCtr--;
+    }
+}
+
+void TMxpMudlet::setItalic(bool italic)
+{
+    if (italic) {
+        italicCtr++;
+    } else if (italicCtr > 0) {
+        italicCtr--;
+    }
+}
+
+void TMxpMudlet::setUnderline(bool underline)
+{
+    if (underline) {
+        underlineCtr++;
+    } else if (underlineCtr > 0) {
+        underlineCtr--;
+    }
+}
+
+void TMxpMudlet::setStrikeOut(bool strikeOut)
+{
+    if (strikeOut) {
+        strikeOutCtr++;
+    } else if (strikeOutCtr > 0) {
+        strikeOutCtr--;
+    }
+}
+
+// reset text Properties (from open tags) at end of line
+void TMxpMudlet::resetTextProperties()
+{
+    boldCtr = 0;
+    italicCtr = 0;
+    underlineCtr = 0;
+    strikeOutCtr = 0;
+
+    while (!fgColors.isEmpty())
+        fgColors.pop_back();
+
+    while (!bgColors.isEmpty())
+        bgColors.pop_back();
+}

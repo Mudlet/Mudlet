@@ -76,6 +76,12 @@ public:
 
     QString style;
 
+    // Count how many of this format have been stacked/applied on top of each other
+    unsigned int boldCtr = 0;
+    unsigned int italicCtr = 0;
+    unsigned int underlineCtr = 0;
+    unsigned int strikeOutCtr = 0;
+
     QString getVersion() override
     {
         return version;
@@ -112,19 +118,61 @@ public:
 
     }
 
-    bool isBold, isItalic, isUnderline;
-
     void setBold(bool bold) override
     {
-        isBold = bold;
+        if (bold) {
+            boldCtr++;
+        } else if (boldCtr > 0) {
+            boldCtr--;
+        }
     }
+
     void setItalic(bool italic) override
     {
-        isItalic = italic;
+        if (italic) {
+            italicCtr++;
+        } else if (italicCtr > 0) {
+            italicCtr--;
+        }
     }
+
     void setUnderline(bool underline) override
     {
-        isUnderline = underline;
+        if (underline) {
+            underlineCtr++;
+        } else if (underlineCtr > 0) {
+            underlineCtr--;
+        }
+    }
+
+    void setStrikeOut(bool strikeOut) override
+    {
+        if (strikeOut) {
+            strikeOutCtr++;
+        } else if (strikeOutCtr > 0) {
+            strikeOutCtr--;
+        }
+    }
+
+    bool isBold() override
+    {
+        return boldCtr > 0;
+    }
+    bool isItalic() override
+    {
+        return italicCtr > 0;
+    }
+    bool isUnderline() override
+    {
+        return underlineCtr > 0;
+    }
+    bool isStrikeOut() override
+    {
+        return strikeOutCtr > 0;
+    }
+
+    void resetTextProperties() override
+    {
     }
 
     void setStyle(const QString& val) override

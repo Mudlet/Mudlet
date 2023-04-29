@@ -65,6 +65,14 @@ public:
     virtual void setBold(bool val) = 0;
     virtual void setItalic(bool val) = 0;
     virtual void setUnderline(bool val) = 0;
+    virtual void setStrikeOut(bool val) = 0;
+
+    virtual bool isBold() = 0;
+    virtual bool isItalic() = 0;
+    virtual bool isUnderline() = 0;
+    virtual bool isStrikeOut() = 0;
+
+    virtual void resetTextProperties() = 0;
 
     virtual void setStyle(const QString& val) = 0;
     virtual QString getStyle() = 0;
