@@ -1336,7 +1336,7 @@ Controlla il messaggio &quot;[MAP ERROR:]&quot; per maggiori informazioni.</tran
     <message>
       <location filename="../src/TConsole.cpp" line="919"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved.</source>
-      <translation type="unfinished"/>
+      <translation>Il Replay è stato fermato, ma non può essere salvato.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="921"/>
@@ -5778,7 +5778,8 @@ Utilizzi</translation>
       <source>[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.
 Try loading an older version in &apos;Connect - Options - Profile history&apos; or double-check that %1 looks correct.</source>
       <comment>%1 is the filename</comment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Qualcosa è andato storto caricando il profilo Mudlet, non è possibile completare l'operazione.
+Prova a caricare una versione più vecchia in &apos;Connetti - Opzioni - Cronologia profilo&apos; o verifica manualmente che %1 sia corretto.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1680"/>
@@ -8284,7 +8285,8 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="7990"/>
       <source>Cannot write checkWriteability %1:
 %2.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile scrivere checkWriteability %1:
+%2.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8257"/>
