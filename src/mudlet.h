@@ -242,11 +242,11 @@ public:
 
 
     // final, official release
-    inline static const bool scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
+    bool scmIsReleaseVersion;
     // unofficial "nightly" build - still a type of a release
-    inline static const bool scmIsPublicTestVersion = QByteArray(APP_BUILD).startsWith("-ptb");
+    bool scmIsPublicTestVersion;
     // used by developers in everyday coding:
-    inline static const bool scmIsDevelopmentVersion = !mudlet::scmIsReleaseVersion && !mudlet::scmIsPublicTestVersion;
+    bool scmIsDevelopmentVersion;
     // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
     // (1000ths, range 0 to 999) that is used as a "version" attribute number when
     // writing the <MudletPackage ...> element of all (but maps if I ever get around

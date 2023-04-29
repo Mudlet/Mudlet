@@ -132,9 +132,10 @@ mudlet::mudlet()
 {
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
-    mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
-    mpSettings = getQSettings();
-    readEarlySettings(*mpSettings);
+    scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
+    scmIsPublicTestVersion = QByteArray(APP_BUILD).startsWith("-ptb");
+    scmIsDevelopmentVersion = !scmIsReleaseVersion && !scmIsPublicTestVersion;
+
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
         // If the setting is not the "tri-state" one then force the setting,
         // have to invert the sense because the attribute is a negative one:
@@ -4666,16 +4667,16 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
             return QImage(eggFileName);
         } else {
             // For the zeroth case just rotate the picture 180 degrees:
-            QImage original(mudlet::scmIsReleaseVersion
+            QImage original(mudlet::self()->scmIsReleaseVersion
                                     ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                                    : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                    : mudlet::self()->scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                      : qsl(":/splash/Mudlet_splashscreen_development.png"));
             return original.mirrored(true, true);
         }
     } else {
-        return QImage(mudlet::scmIsReleaseVersion
+        return QImage(mudlet::self()->scmIsReleaseVersion
                               ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                              : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                              : mudlet::self()->scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                : qsl(":/splash/Mudlet_splashscreen_development.png"));
     }
 #else

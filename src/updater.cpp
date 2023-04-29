@@ -50,7 +50,7 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
     this->settings = settings;
 
     feed = new dblsqd::Feed(qsl("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
-                            mudlet::scmIsPublicTestVersion ? qsl("public-test-build") : qsl("release"));
+                            mudlet::self()->scmIsPublicTestVersion ? qsl("public-test-build") : qsl("release"));
 
     if (!mDailyCheck) {
         mDailyCheck = std::make_unique<QTimer>();
@@ -160,7 +160,7 @@ void Updater::setupOnWindows()
 {
     // Setup to automatically download the new release when an update is available
     connect(feed, &dblsqd::Feed::ready, feed, [=]() {
-        if (mudlet::scmIsDevelopmentVersion) {
+        if (mudlet::self()->scmIsDevelopmentVersion) {
             return;
         }
 
@@ -225,7 +225,7 @@ void Updater::setupOnLinux()
     connect(feed, &dblsqd::Feed::ready, this, [=]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (mudlet::scmIsDevelopmentVersion) {
+        if (mudlet::self()->scmIsDevelopmentVersion) {
             return;
         }
 
@@ -418,7 +418,7 @@ bool Updater::shouldShowChangelog()
     return false;
 #endif
 
-    if (mudlet::scmIsDevelopmentVersion || !updateAutomatically()) {
+    if (mudlet::self()->scmIsDevelopmentVersion || !updateAutomatically()) {
         return false;
     }
 

@@ -224,12 +224,12 @@ int main(int argc, char* argv[])
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName(qsl("Mudlet"));
 
-    if (mudlet::scmIsPublicTestVersion) {
+    if (mudlet::self()->scmIsPublicTestVersion) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));
     } else {
         app->setApplicationName(qsl("Mudlet"));
     }
-    if (mudlet::scmIsReleaseVersion) {
+    if (mudlet::self()->scmIsReleaseVersion) {
         app->setApplicationVersion(APP_VERSION);
     } else {
         app->setApplicationVersion(APP_VERSION APP_BUILD);
