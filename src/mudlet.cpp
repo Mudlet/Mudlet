@@ -4629,14 +4629,7 @@ bool mudlet::desktopInDarkMode()
 
 void mudlet::announce(const QString& text, const QString& processing)
 {
-    QString spokenText = text;
-    // Merely stripping HTML with spokenText.remove(QRegExp("<[^>]*>"));
-    // leaves something like "word.Word" between lines, spoken as "word dot word".
-    // So I will insert line breaks at tags like <p> and strip the rest
-    // Certainly not an exhaustive list of possible tags, just ones we use
-    spokenText.replace(QRegExp("\\<p\\>|\\<li\\>|\\<br\\>"), qsl("\n"));
-    spokenText.remove(QRegExp("<[^>]*>"));
-    mpAnnouncer->announce(spokenText, processing);
+    mpAnnouncer->announce(text, processing);
 }
 
 void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
