@@ -1337,7 +1337,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/TConsole.cpp" line="919"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved.</source>
-      <translation type="unfinished"/>
+      <translation>Запись преобразования остановлена, но не удалось сохранить.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="921"/>
@@ -5759,7 +5759,8 @@ Count</source>
       <source>[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.
 Try loading an older version in &apos;Connect - Options - Profile history&apos; or double-check that %1 looks correct.</source>
       <comment>%1 is the filename</comment>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Что-то пошло не так при загрузке вашего профиля Mudlet и не может быть загружен.
+Попробуйте загрузить более старую версию в "Подключить - Настройки - История профилей" или дважды проверьте, что %1 выглядит правильно.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1680"/>
