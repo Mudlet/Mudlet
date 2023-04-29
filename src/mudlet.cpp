@@ -1836,6 +1836,8 @@ void mudlet::readLateSettings(const QSettings& settings)
         showMaximized();
     }
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
+
+    mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -1972,7 +1974,7 @@ void mudlet::writeSettings()
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
 
-    settings.setValue("minLengthForSpellCheck", getActiveHost()->mMinLengthForSpellCheck);
+    settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
 }
 
 void mudlet::slot_showConnectionDialog()

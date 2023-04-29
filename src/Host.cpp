@@ -461,8 +461,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     auto settings = mudlet::self()->getQSettings();
     auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
     startMapAutosave(interval);
-
-    mMinLengthForSpellCheck = settings->value("minLengthForSpellCheck", 3).toInt();
 }
 
 Host::~Host()

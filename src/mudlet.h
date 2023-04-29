@@ -471,6 +471,8 @@ public:
     QSystemTrayIcon mTrayIcon;
     bool mUsingMudletDictionaries = false;
     bool mWindowMinimized = false;
+    // How many graphemes do we need before we run the spell checker on a "word" in the command line:
+    int mMinLengthForSpellCheck = 3;
 
 #if defined(INCLUDE_UPDATER)
     Updater* pUpdater = nullptr;
