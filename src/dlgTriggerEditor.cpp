@@ -2799,9 +2799,9 @@ void dlgTriggerEditor::activeToggle_trigger()
 
     if (pT->state()) {
         if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a trigger group, filter or trigger or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to activate a trigger group, filter or trigger or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
         } else {
-            showInfo(tr(R"(Trying to deactivate a trigger group, filter or trigger or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to deactivate a trigger group, filter or trigger or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
         }
     } else {
         pT->setIsActive(false);
@@ -2986,9 +2986,9 @@ void dlgTriggerEditor::activeToggle_alias()
 
     if (pT->state()) {
         if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate an alias group, alias or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to activate an alias group, alias or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
         } else {
-            showInfo(tr(R"(Trying to deactivate an alias group, alias or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to deactivate an alias group, alias or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
         }
     } else {
         pT->setIsActive(false);
@@ -3090,9 +3090,9 @@ void dlgTriggerEditor::activeToggle_script()
 
     if (pT->state()) {
         if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a script group, script or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to activate a script group, script or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
         } else {
-            showInfo(tr(R"(Trying to deactivate a script group, script or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to deactivate a script group, script or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
         }
     } else {
         pT->setIsActive(false);
@@ -3161,9 +3161,9 @@ void dlgTriggerEditor::activeToggle_action()
 
     if (pT->state()) {
         if (pT->shouldBeActive()) {
-            showInfo(tr(R"(Trying to activate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to activate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
         } else {
-            showInfo(tr(R"(Trying to deactivate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName()));
+            showInfo(tr(R"(Trying to deactivate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them <em>succeeded</em>.)").arg(pT->getName().toHtmlEscaped()));
         }
     } else {
         pT->setIsActive(false);
@@ -4230,7 +4230,7 @@ void dlgTriggerEditor::saveAlias()
         iconError.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         pItem->setIcon(0, iconError);
         pItem->setText(0, name);
-        showError(tr("Alias <em>%1</em> has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn't good as it'll call itself forever.").arg(name));
+        showError(tr("Alias <em>%1</em> has an infinite loop - substitution matches its own pattern. Please fix it - this alias isn't good as it'll call itself forever.").arg(name).toHtmlEscaped());
         return;
     }
 
@@ -7702,7 +7702,7 @@ void dlgTriggerEditor::exportTrigger(const QString& fileName)
     }
     XMLexport writer(pT);
     if (writer.exportTrigger(fileName)) {
-        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
+        statusBar()->showMessage(tr("Package %1 saved").arg(name).toHtmlEscaped(), 2000);
     }
 }
 
@@ -7726,7 +7726,7 @@ void dlgTriggerEditor::exportTimer(const QString& fileName)
     }
     XMLexport writer(pT);
     if (writer.exportTimer(fileName)) {
-        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
+        statusBar()->showMessage(tr("Package %1 saved").arg(name).toHtmlEscaped(), 2000);
     }
 }
 
@@ -7750,7 +7750,7 @@ void dlgTriggerEditor::exportAlias(const QString& fileName)
     }
     XMLexport writer(pT);
     if (writer.exportAlias(fileName)) {
-        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
+        statusBar()->showMessage(tr("Package %1 saved").arg(name).toHtmlEscaped(), 2000);
     }
 }
 
@@ -7774,7 +7774,7 @@ void dlgTriggerEditor::exportAction(const QString& fileName)
     }
     XMLexport writer(pT);
     if (writer.exportAction(fileName)) {
-        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
+        statusBar()->showMessage(tr("Package %1 saved").arg(name).toHtmlEscaped(), 2000);
     }
 }
 
@@ -7798,7 +7798,7 @@ void dlgTriggerEditor::exportScript(const QString& fileName)
     }
     XMLexport writer(pT);
     if (writer.exportScript(fileName)) {
-        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
+        statusBar()->showMessage(tr("Package %1 saved").arg(name).toHtmlEscaped(), 2000);
     }
 }
 
@@ -7823,7 +7823,7 @@ void dlgTriggerEditor::exportKey(const QString& fileName)
     }
     XMLexport writer(pT);
     if (writer.exportKey(fileName)) {
-        statusBar()->showMessage(tr("Package %1 saved").arg(name), 2000);
+        statusBar()->showMessage(tr("Package %1 saved").arg(name).toHtmlEscaped(), 2000);
     }
 }
 
@@ -7847,7 +7847,7 @@ void dlgTriggerEditor::exportTriggerToClipboard()
     }
     XMLexport writer(pT);
     writer.exportToClipboard(pT);
-    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name).toHtmlEscaped(), 2000);
 }
 
 void dlgTriggerEditor::exportTimerToClipboard()
@@ -7870,7 +7870,7 @@ void dlgTriggerEditor::exportTimerToClipboard()
     }
     XMLexport writer(pT);
     writer.exportToClipboard(pT);
-    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name).toHtmlEscaped(), 2000);
 }
 
 void dlgTriggerEditor::exportAliasToClipboard()
@@ -7893,7 +7893,7 @@ void dlgTriggerEditor::exportAliasToClipboard()
     }
     XMLexport writer(pT);
     writer.exportToClipboard(pT);
-    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name).toHtmlEscaped(), 2000);
 }
 
 void dlgTriggerEditor::exportActionToClipboard()
@@ -7916,7 +7916,7 @@ void dlgTriggerEditor::exportActionToClipboard()
     }
     XMLexport writer(pT);
     writer.exportToClipboard(pT);
-    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name).toHtmlEscaped(), 2000);
 }
 
 void dlgTriggerEditor::exportScriptToClipboard()
@@ -7939,7 +7939,7 @@ void dlgTriggerEditor::exportScriptToClipboard()
     }
     XMLexport writer(pT);
     writer.exportToClipboard(pT);
-    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name).toHtmlEscaped(), 2000);
 }
 
 void dlgTriggerEditor::exportKeyToClipboard()
@@ -7963,7 +7963,7 @@ void dlgTriggerEditor::exportKeyToClipboard()
     }
     XMLexport writer(pT);
     writer.exportToClipboard(pT);
-    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name), 2000);
+    statusBar()->showMessage(tr("Copied %1 to clipboard").arg(name).toHtmlEscaped(), 2000);
 }
 
 
