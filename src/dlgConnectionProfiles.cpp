@@ -1557,7 +1557,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
                 "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
         
-            qDebug() << "dlgConnectionProfiles::loadProfile: ERROR loading" << file.fileName() << "due to:" << message;
+            qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << alsoConnect << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
         } else {
             pHost->mLoadedOk = true;
         }
