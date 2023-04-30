@@ -37,11 +37,11 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  # Neither BUILD nor APP_BUILD does not seem to be available?
+  # Neither BUILD nor BUILD_VERSION does not seem to be available?
 
-  # if(APP_BUILD matches "-ptb.+")
+  # if(BUILD_VERSION matches "-ptb.+")
   #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+  # elseif((BUILD_VERSION matches "-dev.+") or (BUILD_VERSION matches "-test.+"))
   #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
   # else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
@@ -489,7 +489,6 @@ endif(UNIX)
 target_compile_definitions(mudlet
   PRIVATE
     APP_VERSION="${APP_VERSION}"
-    APP_BUILD="${APP_BUILD}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
@@ -556,21 +555,21 @@ if(APPLE)
   set_target_properties(mudlet PROPERTIES
     MACOSX_BUNDLE ON
     MACOSX_BUNDLE_BUNDLE_NAME Mudlet
-    MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}${APP_BUILD}
+    MACOSX_BUNDLE_BUNDLE_VERSION ${APP_VERSION}${BUILD_VERSION}
     MACOSX_BUNDLE_GUI_IDENTIFIER org.mudlet.mudlet
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${APP_VERSION}
   )
 
-  if(${APP_BUILD} MATCHES "-ptb.+")
+  if(${BUILD_VERSION} MATCHES "-ptb.+")
     set_target_properties(mudlet PROPERTIES
       MACOSX_BUNDLE_ICON_FILE mudlet_ptb.icns
-      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${APP_BUILD}
+      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${BUILD_VERSION}
     )
     file(GLOB ICON_FILE "icons/mudlet_ptb.icns")
-  elseif((${APP_BUILD} MATCHES "-dev.+") OR (${APP_BUILD} MATCHES "-test.+"))
+  elseif((${BUILD_VERSION} MATCHES "-dev.+") OR (${BUILD_VERSION} MATCHES "-test.+"))
     set_target_properties(mudlet PROPERTIES
       MACOSX_BUNDLE_ICON_FILE mudlet_dev.icns
-      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${APP_BUILD}
+      MACOSX_BUNDLE_LONG_VERSION_STRING ${APP_VERSION}${BUILD_VERSION}
     )
     file(GLOB ICON_FILE "icons/mudlet_dev.icns")
   else()
