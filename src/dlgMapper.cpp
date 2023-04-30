@@ -150,7 +150,7 @@ void dlgMapper::updateAreaComboBox()
     QMap<QString, QString> areaNames;
     while (itAreaNamesA.hasNext()) {
         itAreaNamesA.next();
-        if (itAreaNamesA.key() == -1 && !mShowDefaultArea) {
+        if (itAreaNamesA.key() == -1 && !mpMap->getDefaultAreaShown()) {
             continue; // Skip the default area from the listing if so directed
         }
 
@@ -166,7 +166,7 @@ void dlgMapper::updateAreaComboBox()
 
     comboBox_showArea->clear();
 
-    if (areaNames.isEmpty() || (mpMap && areaNames.count() == 1 && (*areaNames.constBegin() == mpMap->getDefaultAreaName()) && !mShowDefaultArea)) {
+    if (areaNames.isEmpty() || (mpMap && areaNames.count() == 1 && (*areaNames.constBegin() == mpMap->getDefaultAreaName()) && !mpMap->getDefaultAreaShown())) {
         // IF there are no area names to show - should be impossible as there
         // should always be the "Default Area" one
         // OR there is only one sorted name
@@ -179,7 +179,7 @@ void dlgMapper::updateAreaComboBox()
         return;
     }
 
-    if (areaNames.count() == ((areaNames.contains(mpMap->getDefaultAreaName()) && !mShowDefaultArea) ? 2 : 1)) {
+    if (areaNames.count() == ((areaNames.contains(mpMap->getDefaultAreaName()) && !mpMap->getDefaultAreaShown()) ? 2 : 1)) {
         // IF we have exactly 2 (if we are NOT showing the default area AND the names include it)
         //         OR exactly 1 otherwise
         // THEN
@@ -329,14 +329,6 @@ void dlgMapper::slot_toggleRoundRooms(const bool state)
     if (mp2dMap->mBubbleMode != state) {
         mp2dMap->mBubbleMode = state;
         mp2dMap->update();
-    }
-}
-
-void dlgMapper::setDefaultAreaShown(bool state)
-{
-    if (mShowDefaultArea != state) {
-        mShowDefaultArea = state;
-        updateAreaComboBox();
     }
 }
 
