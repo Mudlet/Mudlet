@@ -1555,8 +1555,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
     static bool isAreaWidgetValid = true; // Remember between uses
     QFont _f = mpMap->mpMapper->comboBox_showArea->font();
     if (isAreaWidgetValid) {
-        if (mAreaID == -1                                 // the map being shown is the "default" area
-            && !mpMap->mpMapper->getDefaultAreaShown()) { // the area widget is not showing the "default" area
+        if (mAreaID == -1                       // the map being shown is the "default" area
+            && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
 
             isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
             // Set the area widget to indicate the area widget is NOT
@@ -1567,7 +1567,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             _f.setOverline(true);
         }
     } else {
-        if (!(mAreaID == -1 && !mpMap->mpMapper->getDefaultAreaShown())) {
+        if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
             isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
             // Reset to normal
             _f.setItalic(false);
@@ -2700,21 +2700,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                     popup->addAction(customExitLine);
                 }
 
-                // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
-                if (selectionSize > 0) {
-                    auto recolorRoom = new QAction(tr("Set color... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    connect(recolorRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(recolorRoom);
-                }
-
-                // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
-                if (selectionSize > 0) {
-                    auto roomSymbol = new QAction(tr("Set symbol... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    roomSymbol->setToolTip(utils::richText(tr("Set one or more symbols or letters to mark special rooms", "2D Mapper context menu (room) item tooltip")));
-                    connect(roomSymbol, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(roomSymbol);
-                }
-
 
                 if (selectionSize > 1) {
                     auto spreadRooms = new QAction(tr("Spread...", "2D Mapper context menu (room) item"), this);
@@ -2728,26 +2713,6 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                     shrinkRooms->setToolTip(utils::richText(tr("Decrease map X-Y spacing for the selected group of rooms", "2D Mapper context menu (room) item tooltip")));
                     connect(shrinkRooms, &QAction::triggered, this, &T2DMap::slot_shrink);
                     popup->addAction(shrinkRooms);
-                }
-
-                // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
-                if (selectionSize > 0) {
-                    auto lockRoom = new QAction(tr("Lock... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    lockRoom->setToolTip(utils::richText(tr("Lock room for speed walks", "2D Mapper context menu (room) item tooltip")));
-                    connect(lockRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(lockRoom);
-
-                    auto unlockRoom = new QAction(tr("Unlock... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    unlockRoom->setToolTip(utils::richText(tr("Unlock room for speed walks", "2D Mapper context menu (room) item tooltip")));
-                    connect(unlockRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(unlockRoom);
-                }
-
-                // TODO: Obsolete actions rerouted to new UI! Will be removed soon. See https://github.com/Mudlet/Mudlet/issues/6385
-                if (selectionSize > 0) {
-                    auto weightRoom = new QAction(tr("Set weight... (Configure room)", "2D Mapper context menu (room) item"), this);
-                    connect(weightRoom, &QAction::triggered, this, &T2DMap::slot_showPropertiesDialog);
-                    popup->addAction(weightRoom);
                 }
 
                 if (selectionSize > 0) {

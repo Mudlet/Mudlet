@@ -2577,7 +2577,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
     mapClear();
 
     XMLimport reader(pHost);
-    bool result = reader.importPackage(&file);
+    auto [success, message] = reader.importPackage(&file);
 
     if (!mpMapper.isNull() && mpMapper->mp2dMap) {
         // probably not needed for the download but might be
@@ -2586,12 +2586,18 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         // No need to call audit() as XMLimport::importPackage() does it!
         // audit() produces the successful ending [ OK ] message...!
         mpMapper->updateAreaComboBox();
-        if (result) {
+        if (success) {
             mpMapper->resetAreaComboBoxToPlayerRoomArea();
+        } else {
+            // Failed...
+            if (errMsg) {
+                *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
+                             "in main console!");
+            }
         }
     }
 
-    if (!result && errMsg) {
+    if (!success && errMsg) {
         *errMsg = tr("loadMap: failure to import XML map file, further information may be available\n"
                      "in main console!");
     }
@@ -2606,7 +2612,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
          mpMapper->show();
     }
 
-    return result;
+    return success;
 }
 
 void TMap::slot_setDownloadProgress(qint64 got, qint64 total)
@@ -2687,22 +2693,25 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // else was QNetworkReply::OperationCanceledError and we already handle
         // THAT in slot_downloadCancel()
     }
-    QFile file(mLocalMapFileName);
-    if (!file.open(QFile::WriteOnly)) {
+    // Separate the two kinds of files to gain QSaveFile's atomic write behavior
+    QSaveFile writeFile(mLocalMapFileName);
+    QFile readFile(mLocalMapFileName);
+    if (!writeFile.open(QFile::WriteOnly)) {
         QString alertMsg = tr("[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
         return;
     }
     // The QNetworkReply is Ok here:
-    if (file.write(reply->readAll()) == -1) {
+    if (writeFile.write(reply->readAll()) == -1) {
         QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
         return;
     }
-    file.flush();
-    file.close();
+    if (!writeFile.commit()) {
+        qDebug() << "TMap::slot_replyFinished: error saving downloaded map: " << writeFile.errorString();
+    }
 
     Host* pHost = mpHost;
     if (!pHost) {
@@ -2721,12 +2730,12 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
 
     bool parsingWasSuccessful;
     QString parsingFileName;
-    if (!file.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
-        parsingFileName = file.fileName();
+    if (!readFile.fileName().endsWith(qsl("xml"), Qt::CaseInsensitive)) {
+        parsingFileName = readFile.fileName();
         parsingWasSuccessful = pHost->mpConsole->loadMap(parsingFileName);
     } else {
         parsingFileName = mLocalMapFileName;
-        if (!file.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
+        if (!readFile.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
             QString alertMsg = tr("[ ERROR ] - Map download problem, unable to read destination file:\n%1.").arg(parsingFileName);
             postMessage(alertMsg);
             cleanup();
@@ -2736,8 +2745,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         // The action to parse the XML file has been refactored to
         // a separate method so that it can be shared with the
         // direct importation of a local copy of a map file.
-        parsingWasSuccessful = readXmlMapFile(file);
-        file.close();
+        parsingWasSuccessful = readXmlMapFile(readFile);
+        readFile.close();
     }
 
     if (parsingWasSuccessful) {
@@ -2889,7 +2898,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     mpProgressDialog->setAutoReset(false);
     mpProgressDialog->setMinimumDuration(1); // Normally waits for 4 seconds before showing
     qApp->processEvents();
-    QFile file(destination);
+    QSaveFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text|QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
@@ -2929,7 +2938,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         }
     }
     if (abort) {
-        file.close();
+        file.cancelWriting();
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
         mpProgressDialog->close();
         mpProgressDialog = nullptr;
@@ -3017,7 +3026,9 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     // Hide the cancel button as we can't stop now:
     mpProgressDialog->setCancelButton(nullptr);
     file.write(QJsonDocument(mapObj).toJson(QJsonDocument::Indented));
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "TMap::writeJsonMapFile: error saving JSON map: " << file.errorString();
+    }
 
     mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
     mpProgressDialog->close();
@@ -3483,4 +3494,14 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
+}
+
+void TMap::setDefaultAreaShown(bool state)
+{
+    if (mShowDefaultArea != state) {
+        mShowDefaultArea = state;
+        if (!mpMapper.isNull()) {
+            mpMapper->updateAreaComboBox();
+        }
+    }
 }
