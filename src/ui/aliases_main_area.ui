@@ -166,7 +166,7 @@
       </size>
      </property>
      <property name="toolTip">
-      <string>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below &lt;i&gt;instead&lt;/i&gt;. It's possible to use both this field &lt;i&gt;and&lt;/i&gt; a Lua script - the contents of this field will be used &lt;b&gt;before&lt;/b&gt; running the script.&lt;/p&gt;</string>
+      <string>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It's possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</string>
      </property>
      <property name="placeholderText">
       <string>Replacement text (optional)</string>
