@@ -520,6 +520,10 @@ public:
     int mScreenHeight;
     int mScreenWidth;
 
+    // has the profile save data been loaded without issues?
+    // if there were issues during loading, we should not save anything on close
+    bool mLoadedOk = false;
+
     int mTimeout;
 
     QString mUrl;
@@ -744,7 +748,6 @@ private:
     int mHostID;
     QString mHostName;
     QString mDiscordGameName; // Discord self-reported game name
-
     bool mIsClosingDown;
 
     QString mLine;
