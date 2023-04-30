@@ -329,6 +329,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpDlgIRC(nullptr)
 , mpDlgProfilePreferences(nullptr)
 , mTutorialForCompactLineAlreadyShown(false)
+, mTutorialForSplitscreenScrollbackAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
 , mTriggerUnit(this)

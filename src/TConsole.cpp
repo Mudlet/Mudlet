@@ -1096,6 +1096,11 @@ void TConsole::scrollUp(int lines)
 
     if (lowerAppears) {
         QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
+        if (!mpHost->mTutorialForSplitscreenScrollbackAlreadyShown) {
+            QString infoMsg = tr("[INFO] Split-screen scrollback activated. Press CTRL-ENTER to cancel.");
+            mpHost->postMessage(infoMsg);
+            mpHost->mTutorialForSplitscreenScrollbackAlreadyShown = true;
+        }
     }
     mUpperPane->scrollUp(lines);
     slot_adjustAccessibleNames();
