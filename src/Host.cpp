@@ -802,7 +802,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         filename_xml = qsl("%1/%2.xml").arg(directory_xml, saveName);
     }
 
-    if (!loadedOk) {
+    if (!mLoadedOk) {
         return {false, filename_xml, qsl("profile was not loaded correctly to begin with")};
     }
 

@@ -1553,12 +1553,13 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         if (auto [success, message] = importer.importPackage(&file, nullptr); !success) {
+            //: %1 is the path and file name (i.e. the location) of the problem fil
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
                 "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
         
             qDebug() << "dlgConnectionProfiles::loadProfile: ERROR loading" << file.fileName() << "due to:" << message;
         } else {
-            pHost->loadedOk = true;
+            pHost->mLoadedOk = true;
         }
 
         pHost->refreshPackageFonts();

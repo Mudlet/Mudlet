@@ -516,14 +516,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                       "also cause them to be saved and reloaded into other profiles if they too are "
                                       "active.</p>"));
     mProfileSaveAction->setStatusTip(tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
-    connect(mProfileSaveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAction);
 
     mProfileSaveAsAction = new QAction(QIcon(qsl(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
-    connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
 
-    if (mpHost->loadedOk) {
-        mProfileSaveAction->setEnabled(true);
-        mProfileSaveAsAction->setEnabled(true);
+    if (mpHost->mLoadedOk) {
+        connect(mProfileSaveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAction);
+        connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
     } else {
         mProfileSaveAction->setDisabled(true);
         mProfileSaveAsAction->setDisabled(true);

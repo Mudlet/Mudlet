@@ -2709,7 +2709,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         
             qDebug() << "mudlet::doAutoLogin: ERROR loading" << file.fileName() << "due to:" << message;
         } else {
-            pHost->loadedOk = true;
+            pHost->mLoadedOk = true;
         }
 
         pHost->refreshPackageFonts();
