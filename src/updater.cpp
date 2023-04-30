@@ -41,7 +41,7 @@ using namespace std::chrono_literals;
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
+Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObject(parent)
 , updateDialog(nullptr)
 , mpInstallOrRestart(new QPushButton(tr("Update")))
 , mUpdateInstalled(false)
@@ -50,7 +50,7 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
     this->settings = settings;
 
     feed = new dblsqd::Feed(qsl("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
-                            mudlet::self()->scmIsPublicTestVersion ? qsl("public-test-build") : qsl("release"));
+                            testVersion ? qsl("public-test-build") : qsl("release"));
 
     if (!mDailyCheck) {
         mDailyCheck = std::make_unique<QTimer>();

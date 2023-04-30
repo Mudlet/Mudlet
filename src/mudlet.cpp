@@ -143,6 +143,17 @@ mudlet::mudlet()
     scmIsPublicTestVersion = mAppBuild.startsWith("-ptb");
     scmIsDevelopmentVersion = !scmIsReleaseVersion && !scmIsPublicTestVersion;
 
+    if (scmIsPublicTestVersion) {
+        qApp->setApplicationName(qsl("Mudlet Public Test Build"));
+    } else {
+        qApp->setApplicationName(qsl("Mudlet"));
+    }
+    if (scmIsReleaseVersion) {
+        qApp->setApplicationVersion(APP_VERSION);
+    } else {
+        qApp->setApplicationVersion(qsl(APP_VERSION) + mAppBuild);
+    }
+
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
         // If the setting is not the "tri-state" one then force the setting,
         // have to invert the sense because the attribute is a negative one:
@@ -582,7 +593,7 @@ mudlet::mudlet()
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings);
+    pUpdater = new Updater(this, mpSettings, scmIsPublicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
 #if defined(Q_OS_MACOS)
@@ -4654,7 +4665,10 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
     }
 }
 
-/*static*/ QImage mudlet::getSplashScreen()
+// gets the splash screen image to display
+// flags releaseVersion and testVersion are passed as parameters since
+// mudlet::self() might not be initialised yet at all times this function will be called
+/*static*/ QImage mudlet::getSplashScreen(bool releaseVersion, bool testVersion)
 {
 #if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
     auto now = QDateTime::currentDateTime();
@@ -4674,16 +4688,16 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
             return QImage(eggFileName);
         } else {
             // For the zeroth case just rotate the picture 180 degrees:
-            QImage original(mudlet::self()->scmIsReleaseVersion
+            QImage original(releaseVersion
                                     ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                                    : mudlet::self()->scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                    : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                      : qsl(":/splash/Mudlet_splashscreen_development.png"));
             return original.mirrored(true, true);
         }
     } else {
-        return QImage(mudlet::self()->scmIsReleaseVersion
+        return QImage(releaseVersion
                               ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                              : mudlet::self()->scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                              : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                : qsl(":/splash/Mudlet_splashscreen_development.png"));
     }
 #else

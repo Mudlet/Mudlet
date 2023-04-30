@@ -224,16 +224,14 @@ int main(int argc, char* argv[])
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName(qsl("Mudlet"));
 
-    if (mudlet::self()->scmIsPublicTestVersion) {
-        app->setApplicationName(qsl("Mudlet Public Test Build"));
-    } else {
-        app->setApplicationName(qsl("Mudlet"));
-    }
-    if (mudlet::self()->scmIsReleaseVersion) {
-        app->setApplicationVersion(APP_VERSION);
-    } else {
-        app->setApplicationVersion(qsl(APP_VERSION) + mudlet::self()->mAppBuild);
-    }
+    QFile gitShaFile(":/app-build.txt");
+    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    QString appBuild = QString::fromUtf8(gitShaFile.readAll());
+
+    qDebug() << "Git SHA 1:" << appBuild;
+    bool releaseVersion = appBuild.isEmpty();
+    bool publicTestVersion = appBuild.startsWith("-ptb");
+    bool developmentVersion = !releaseVersion && !publicTestVersion;
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
@@ -347,9 +345,9 @@ int main(int argc, char* argv[])
 #if defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)",
                                                           "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), mudlet::self()->mAppBuild));
+                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), appBuild));
 #else // ! defined(QT_DEBUG)
-        texts << QLatin1String(APP_TARGET " " APP_VERSION mudlet::self()->mAppBuild " \n");
+        texts << QLatin1String(APP_TARGET " " APP_VERSION appBuild " \n");
 #endif // ! defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
@@ -375,12 +373,13 @@ int main(int argc, char* argv[])
     QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
     bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
-    QImage splashImage = mudlet::getSplashScreen();
+    // might be too early and values are not initialised
+    QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION, mudlet::self()->mAppBuild));
+        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION + appBuild));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
