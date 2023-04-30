@@ -143,6 +143,8 @@ mudlet::mudlet()
     scmIsPublicTestVersion = mAppBuild.startsWith("-ptb");
     scmIsDevelopmentVersion = !scmIsReleaseVersion && !scmIsPublicTestVersion;
 
+    scmVersion = qsl("Mudlet " APP_VERSION + gitSha);
+
     if (scmIsPublicTestVersion) {
         qApp->setApplicationName(qsl("Mudlet Public Test Build"));
     } else {
