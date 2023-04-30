@@ -748,7 +748,6 @@ private:
     int mHostID;
     QString mHostName;
     QString mDiscordGameName; // Discord self-reported game name
-    
     bool mIsClosingDown;
 
     QString mLine;
