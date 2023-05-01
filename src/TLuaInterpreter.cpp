@@ -8037,6 +8037,10 @@ int TLuaInterpreter::isActive(lua_State* L)
         // show what was entered:
         return warnArgumentValue(L, __func__, csmInvalidItemID.arg(lua_tostring(L, 1)));
     }
+    bool checkAncestors = false;
+    if (lua_gettop(L) > 2) {
+        checkAncestors = getVerifiedBool(L, __func__, 3, "also check ancestors", true);
+    }
 
     Host& host = getHostFromLua(L);
     int cnt = 0;
@@ -8044,14 +8048,20 @@ int TLuaInterpreter::isActive(lua_State* L)
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getTimerUnit()->getTimer(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (static_cast<bool>(pT)
+                   && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive())
+                   && (!checkAncestors || pT->shouldAncestorsBeActive())) ? 1 : 0;
         } else {
-            auto it1 = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getTimerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                // Offset timer have their active state recorded differently
+                if ((pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive())
+                    && (!checkAncestors || pT->shouldAncestorsBeActive())) {
+
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8060,12 +8070,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getTriggerUnit()->getTrigger(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto it1 = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getTriggerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8074,12 +8085,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getAliasUnit()->getAlias(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto it1 = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getAliasUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8088,12 +8100,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getKeyUnit()->getKey(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto it1 = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getKeyUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8104,7 +8117,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         } else {
             QMap<int, TAction*> actions = host.getActionUnit()->getActionList();
             for (auto action : actions) {
-                if (action->getName() == nameOrId && action->isActive()) {
+                if (action->getName() == nameOrId && action->isActive() && (!checkAncestors || action->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -8117,7 +8130,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         } else {
             QMap<int, TScript*> scripts = host.getScriptUnit()->getScriptList();
             for (auto script : scripts) {
-                if (script->getName() == nameOrId && script->isActive()) {
+                if (script->getName() == nameOrId && script->isActive() && (!checkAncestors || script->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -8151,7 +8164,9 @@ int TLuaInterpreter::isAncestorsActive(lua_State* L)
         if (!pT) {
             return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
         }
-        lua_pushboolean(L, pT->ancestorsActive());
+
+        // Offset timer have their active state recorded differently
+        lua_pushboolean(L, pT->isOffsetTimer() ? pT->shouldAncestorsBeActive() : pT->ancestorsActive());
         return 1;
     }
 
@@ -8264,12 +8279,14 @@ int TLuaInterpreter::ancestors(lua_State* L)
                         lua_pushstring(L, "group");
                     }
                 } else {
+                    // offset timers have a parent node that is NOT a group!
                     lua_pushstring(L, "item");
                 }
                 lua_settable(L, -3);
 
                 lua_pushstring(L, "isActive");
-                lua_pushboolean(L, pAncestor->isActive());
+                // Offset timer have their active state recorded differently
+                lua_pushboolean(L, pAncestor->isOffsetTimer() ? pAncestor->shouldBeActive() : pAncestor->isActive());
                 lua_settable(L, -3);
             }
             lua_settable(L, -3);

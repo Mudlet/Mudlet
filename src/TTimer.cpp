@@ -106,18 +106,6 @@ void TTimer::setTime(QTime time)
     mpQTimer->setInterval(time.msecsSinceStartOfDay());
 }
 
-// children of folder = regular timers
-// children of timers = offset timers
-//     offset timers: -> their time interval is interpreted as an offset to their parent timer
-bool TTimer::isOffsetTimer()
-{
-    if (mpParent) {
-        return !mpParent->isFolder();
-    } else {
-        return false;
-    }
-}
-
 bool TTimer::setIsActive(bool b)
 {
     bool condition1 = Tree<TTimer>::setIsActive(b);
