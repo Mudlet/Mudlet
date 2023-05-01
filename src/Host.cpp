@@ -788,6 +788,10 @@ void Host::resetProfile_phase2()
 // returns true+filepath if successful or false+error message otherwise
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, const QString& saveName, bool syncModules)
 {
+    if (!mLoadedOk) {
+        return {false, filename_xml, qsl("profile was not loaded correctly to begin with")};
+    }
+
     QString directory_xml = (saveFolder.isEmpty()) ? mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName()) : saveFolder;
     QString filename_xml = qsl("%1/%2.xml").arg(directory_xml, (saveName.isEmpty()) ? QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")) : saveName);
 
