@@ -124,10 +124,10 @@ describe("Tests functionality of Geyser.Button", function()
 
     it('should call setStyleSheet instead of setColor if the stylesheet is set', function()
       gb.downStyle = [[background-color: blue;]]
-      gb.upStyle = [[background-color: black;]]
+      gb.style = [[background-color: black;]]
       gb:setState("up")
       assert.spy(styleSheetSpy).was.called()
-      assert.spy(styleSheetSpy).was.called_with(match.is_ref(gb), gb.upStyle)
+      assert.spy(styleSheetSpy).was.called_with(match.is_ref(gb), gb.style)
       gb:setState("down")
       assert.spy(styleSheetSpy).was.called()
       assert.spy(styleSheetSpy).was.called_with(match.is_ref(gb), gb.downStyle)
