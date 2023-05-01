@@ -89,7 +89,7 @@ describe("Tests functionality of Geyser.Button", function()
     local echoSpy, styleSheetSpy, colorSpy, toolTipSpy
     before_each(function()
       echoSpy = spy.on(Geyser.Label, "echo")
-      styleSheetSpy = spy.on(Geyser.Labal, "setStyleSheet")
+      styleSheetSpy = spy.on(Geyser.Label, "setStyleSheet")
       colorSpy = spy.on(Geyser.Label, "setColor")
       toolTipSpy = spy.on(Geyser.Label, "setToolTip")
       gb = Geyser.Button:new({
