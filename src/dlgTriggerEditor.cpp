@@ -6876,6 +6876,7 @@ void dlgTriggerEditor::slot_showTimers()
         splitter_right->setSizes(sizes);
         mTimerEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_timers->setFocus();
 }
 
 void dlgTriggerEditor::showCurrentTriggerItem()
@@ -6921,6 +6922,7 @@ void dlgTriggerEditor::slot_showTriggers()
         splitter_right->setSizes(sizes);
         mTriggerEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_triggers->setFocus();
 }
 
 void dlgTriggerEditor::slot_showScripts()
@@ -6943,6 +6945,7 @@ void dlgTriggerEditor::slot_showScripts()
         splitter_right->setSizes(sizes);
         mScriptEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_scripts->setFocus();
 }
 
 void dlgTriggerEditor::slot_showKeys()
@@ -6967,6 +6970,7 @@ void dlgTriggerEditor::slot_showKeys()
         splitter_right->setSizes(sizes);
         mKeyEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_keys->setFocus();
 }
 
 void dlgTriggerEditor::slot_showVariables()
@@ -6995,6 +6999,7 @@ void dlgTriggerEditor::slot_showVariables()
         splitter_right->setSizes(sizes);
         mVarEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_variables->setFocus();
 }
 
 void dlgTriggerEditor::show_vars()
@@ -7041,6 +7046,7 @@ void dlgTriggerEditor::slot_showAliases()
         splitter_right->setSizes(sizes);
         mAliasEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_aliases->setFocus();
 }
 
 void dlgTriggerEditor::showError(const QString& error)
@@ -7090,6 +7096,7 @@ void dlgTriggerEditor::slot_showActions()
         splitter_right->setSizes(sizes);
         mActionEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_actions->setFocus();
 }
 
 void dlgTriggerEditor::slot_saveEdits()
