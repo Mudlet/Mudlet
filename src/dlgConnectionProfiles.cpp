@@ -499,7 +499,7 @@ void dlgConnectionProfiles::slot_saveName()
     QString newProfileName = profile_name_entry->text().trimmed();
     QString newProfileHost = host_name_entry->text().trimmed();
     QString newProfilePort = port_entry->text().trimmed();
-    int newProfileSslTsl = int(port_ssl_tsl->isChecked()) * 2;
+    int newProfileSslTsl = port_ssl_tsl->isChecked() * 2;
 
     validateProfile();
     if (!validName || newProfileName.isEmpty() || !pItem) {
