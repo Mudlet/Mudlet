@@ -497,6 +497,9 @@ void dlgConnectionProfiles::slot_saveName()
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
     QString newProfileName = profile_name_entry->text().trimmed();
+    QString newProfileHost = host_name_entry->text().trimmed();
+    QString newProfilePort = port_entry->text().trimmed();
+    int newProfileSslTsl = int(port_ssl_tsl->isChecked()) * 2;
 
     validateProfile();
     if (!validName || newProfileName.isEmpty() || !pItem) {
@@ -544,6 +547,16 @@ void dlgConnectionProfiles::slot_saveName()
         notificationAreaMessageBox->show();
         notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
     }
+
+    if (!newProfileHost.isEmpty()) {
+        slot_updateUrl(newProfileHost);
+    }
+
+    if (!newProfilePort.isEmpty()) {
+        slot_updatePort(newProfilePort);
+    }
+
+    slot_updateSslTslPort(newProfileSslTsl);
 
     // if this was a previously deleted profile, restore it
     auto& settings = *mudlet::self()->mpSettings;
