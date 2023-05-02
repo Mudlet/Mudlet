@@ -528,7 +528,7 @@ void dlgPackageExporter::slot_exportPackage()
     QFile checkWriteability(mXmlPathFileName);
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
         displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing. Do you have the necessary permissions and free disk-space to write to that folder?")
-                             .arg(mXmlPathFileName), false);
+                             .arg(mXmlPathFileName.toHtmlEscaped()), false);
         assetsFuture.cancel();
         mExportingPackage = false;
         checkToEnableExportButton();
@@ -570,7 +570,7 @@ void dlgPackageExporter::slot_exportPackage()
                     displayResultMessage(errorMsg, false);
                 } else {
                     displayResultMessage(tr("Package \"%1\" exported to: %2")
-                                                 .arg(mPackageName, qsl("<a href=\"file:///%1\">%1</a>")
+                                                 .arg(mPackageName.toHtmlEscaped(), qsl("<a href=\"file:///%1\">%1</a>")
                                                                             .arg(getActualPath().toHtmlEscaped())),
                                          true);
                 }
@@ -785,7 +785,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".",
                                 // Intentional comment to separate arguments
                                 "This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.")
-                             .arg(mXmlPathFileName), false);
+                             .arg(mXmlPathFileName.toHtmlEscaped()), false);
         // Although we have failed, we must not just abort here. We need to reset
         // the selected "for export or not"-flags first. So note that we have failed:
         isOk = false;
