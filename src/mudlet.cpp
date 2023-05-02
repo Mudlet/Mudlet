@@ -2698,11 +2698,20 @@ void mudlet::doAutoLogin(const QString& profile_name)
             pHost->mSslTsl = (*it).tlsEnabled;
         }
     } else {
-        QFile file(qsl("%1/%2").arg(folder, entries.at(0)));
+        QFile file(qsl("%1%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        importer.importPackage(&file); // TODO: Missing false return value handler
+        importer.importPackage(&file);
+        if (auto [success, message] = importer.importPackage(&file); !success) {
+            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
+                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
+        
+            qDebug().nospace().noquote() << "mudlet::doAutoLogin(\"" << profile_name << "\") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
+        } else {
+            pHost->mLoadedOk = true;
+        }
+
         pHost->refreshPackageFonts();
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
