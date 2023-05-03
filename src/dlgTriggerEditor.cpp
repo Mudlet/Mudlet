@@ -519,7 +519,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpExportAction, &QAction::triggered, this, &dlgTriggerEditor::slot_export);
 
     mProfileSaveAction = new QAction(QIcon(qsl(":/icons/document-save-all.png")), tr("Save Profile"), this);
-    mProfileSaveAction->setEnabled(true);
     mProfileSaveAction->setToolTip(tr("<p>Saves your profile. (Ctrl+Shift+S)</p>"
                                       "<p>Saves your entire profile (triggers, aliases, scripts, timers, buttons and "
                                       "keys, but not the map or script-specific settings) to your computer disk, so "
@@ -531,14 +530,23 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                                       "also cause them to be saved and reloaded into other profiles if they too are "
                                       "active.</p>"));
     mProfileSaveAction->setStatusTip(tr(R"(Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings); also "synchronizes" modules that are so marked.)"));
-    connect(mProfileSaveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAction);
 
     mProfileSaveAsAction = new QAction(QIcon(qsl(":/icons/utilities-file-archiver.png")), tr("Save Profile As"), this);
-    mProfileSaveAsAction->setEnabled(true);
-    connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
 
-    auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab), this);
-    connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_nextSection);
+    if (mpHost->mLoadedOk) {
+        connect(mProfileSaveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAction);
+        connect(mProfileSaveAsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_profileSaveAsAction);
+    } else {
+        mProfileSaveAction->setDisabled(true);
+        mProfileSaveAsAction->setDisabled(true);
+        auto disabledSaving = tr("Something went wrong loading your Mudlet profile and it could not be loaded. "
+            "Try loading an older version in 'Connect - Options - Profile history'");
+        mProfileSaveAction->setToolTip(disabledSaving);
+        mProfileSaveAsAction->setToolTip(disabledSaving);
+    }
+
+    auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
+    QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_nextSection);
 
     QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab), this);
     connect(previousSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_previousSection);
@@ -7642,6 +7650,7 @@ void dlgTriggerEditor::slot_showTimers()
         splitter_right->setSizes(sizes);
         mTimerEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_timers->setFocus();
 }
 
 void dlgTriggerEditor::showCurrentTriggerItem()
@@ -7687,6 +7696,7 @@ void dlgTriggerEditor::slot_showTriggers()
         splitter_right->setSizes(sizes);
         mTriggerEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_triggers->setFocus();
 }
 
 void dlgTriggerEditor::slot_showScripts()
@@ -7709,6 +7719,7 @@ void dlgTriggerEditor::slot_showScripts()
         splitter_right->setSizes(sizes);
         mScriptEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_scripts->setFocus();
 }
 
 void dlgTriggerEditor::slot_showKeys()
@@ -7733,6 +7744,7 @@ void dlgTriggerEditor::slot_showKeys()
         splitter_right->setSizes(sizes);
         mKeyEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_keys->setFocus();
 }
 
 void dlgTriggerEditor::slot_showVariables()
@@ -7761,6 +7773,7 @@ void dlgTriggerEditor::slot_showVariables()
         splitter_right->setSizes(sizes);
         mVarEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_variables->setFocus();
 }
 
 void dlgTriggerEditor::show_vars()
@@ -7807,6 +7820,7 @@ void dlgTriggerEditor::slot_showAliases()
         splitter_right->setSizes(sizes);
         mAliasEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_aliases->setFocus();
 }
 
 void dlgTriggerEditor::showError(const QString& error)
@@ -7859,6 +7873,7 @@ void dlgTriggerEditor::slot_showActions()
         splitter_right->setSizes(sizes);
         mActionEditorSplitterState = splitter_right->saveState();
     }
+    treeWidget_actions->setFocus();
 }
 
 void dlgTriggerEditor::slot_saveEdits()
