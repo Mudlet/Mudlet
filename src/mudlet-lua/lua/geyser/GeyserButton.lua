@@ -18,20 +18,20 @@
 -- @field msg The text to put on the button. If a two state button, will be used for the 'up' state.
 -- @field downMsg The text to put on the button in the 'down' state.
 Geyser.Button = {
-  name = "GeyserButtonClass",
-  height = 50,
-  width = 50,
-  downColor = "dark_green",
-  downMsg = "<center>Quicklook</center>",
-  downTooltip = "Click to quicklook",
-  downCommand = "quicklook",
-  color = "blue",
-  msg = "<center>Look</center>",
-  clickCommand = "look",
-  twoState = false,
-  state = "up",
+  name            = "GeyserButtonClass",
+  height          = 50,
+  width           = 50,
+  color           = "blue",
+  downColor       = "blue",
+  msg             = "<center>Look</center>",
+  downMsg         = "<center>Look</center>",
+  tooltip         = "Click to look",
+  downTooltip     = "Click to look",
+  downCommand     = "look",
+  clickCommand    = "look",
+  twoState        = false,
+  state           = "up",
   toolTipDuration = 5,
-  tooltip = "Click to look",
 }
 Geyser.Button.parent = Geyser.Label
 setmetatable(Geyser.Button, Geyser.Label)
