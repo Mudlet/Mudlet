@@ -1547,17 +1547,19 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     if (entries.isEmpty()) {
         firstTimeLoad = true;
     } else {
-        QString fileName{qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString())};
-        QFile file(fileName);
+        QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
 
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         if (auto [success, message] = importer.importPackage(&file, nullptr); !success) {
+            //: %1 is the path and file name (i.e. the location) of the problem fil
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
-                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.", "%1 is the filename").arg(fileName));
+                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
         
-            qDebug() << "dlgConnectionProfiles::loadProfile: ERROR loading" << fileName << "due to:" << message;
+            qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << alsoConnect << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
+        } else {
+            pHost->mLoadedOk = true;
         }
 
         pHost->refreshPackageFonts();
