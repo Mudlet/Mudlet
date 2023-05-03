@@ -666,6 +666,7 @@ public:
     QMap<QString, QKeySequence*> profileShortcuts;
 
     bool mTutorialForCompactLineAlreadyShown;
+    bool mTutorialForSplitscreenScrollbackAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
     enum class BlankLineBehaviour {
