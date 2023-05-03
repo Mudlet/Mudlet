@@ -143,7 +143,7 @@ function Geyser.Button:setDownFunction(downFunction)
       if ok then
         downFunction = ok
       else
-        printError(err, true, true)
+        printError(f"Error while compiling codestring for downFunction: {err}", true, true)
       end
     else
       printError(f"bad argument #1 type (downFunction as function or valid Lua codestring expected, got {funcType})")
@@ -172,7 +172,7 @@ function Geyser.Button:setClickFunction(clickFunction)
       if ok then
         clickFunction = ok
       else
-        printError(err, true, true)
+        printError(f"Error while compiling codestring for clickFunction: {err}", true, true)
       end
     else
       printError(f"bad argument #1 type (clickFunction as function or valid Lua string expected, got {funcType})")
