@@ -134,7 +134,7 @@ function Geyser.Button:setDownCommand(command)
 end
 
 --- Stores the function to run when clicking the button in its 'down' state. Supercedes downCommand
--- @param downFunction The function to run when the button is clicked in its 'down' state. Should be a lua function or valid lua codestring. 
+-- @param downFunction The function to run when the button is clicked in its 'down' state. Should be a lua function or valid lua code as a string. 
 function Geyser.Button:setDownFunction(downFunction)
   local funcType = type(downFunction)
   if funcType ~= "function" then
@@ -143,10 +143,10 @@ function Geyser.Button:setDownFunction(downFunction)
       if ok then
         downFunction = ok
       else
-        printError(f"Error while compiling codestring for downFunction: {err}", true, true)
+        printError(f"Error while compiling Lua code from string for downFunction: {err}", true, true)
       end
     else
-      printError(f"bad argument #1 type (downFunction as function or valid Lua codestring expected, got {funcType})")
+      printError(f"bad argument #1 type (downFunction as a string or a function expected, got {funcType})")
     end
   end
   self.downFunction = downFunction
