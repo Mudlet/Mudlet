@@ -65,22 +65,22 @@ public:
 class InvisibleAccessibleNotification : public QAccessibleWidget
 {
 public:
-    explicit InvisibleAccessibleNotification(QWidget* w)
-    : QAccessibleWidget(w, QAccessible::Role::Notification)
+    explicit InvisibleAccessibleNotification(QWidget* pWidget)
+    : QAccessibleWidget(pWidget, QAccessible::Role::Notification)
     {}
 
 private:
     InvisibleNotification* notification() const;
 
 protected:
-    QString text(QAccessible::Text t) const override;
+    QString text(QAccessible::Text text) const override;
 };
 
 class FakeAccessibleStatusbar : public QAccessibleWidget
 {
 public:
-    explicit FakeAccessibleStatusbar(QWidget* w)
-    : QAccessibleWidget(w, QAccessible::Role::StatusBar)
+    explicit FakeAccessibleStatusbar(QWidget* pWidget)
+    : QAccessibleWidget(pWidget, QAccessible::Role::StatusBar)
     {}
 };
 #endif

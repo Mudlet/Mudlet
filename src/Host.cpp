@@ -802,6 +802,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         filename_xml = qsl("%1/%2.xml").arg(directory_xml, saveName);
     }
 
+    if (!mLoadedOk) {
+        return {false, filename_xml, qsl("profile was not loaded correctly to begin with")};
+    }
 
     if (mIsProfileLoadingSequence) {
         //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
@@ -2145,14 +2148,16 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
 // host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
+    QSaveFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << what;
-        file.close();
+        if (!file.commit()) {
+            qDebug() << "Host::writeProfileData: writing host data: " << file.errorString();
+        }
     }
 
     if (file.error() == QFile::NoError) {
@@ -2641,34 +2646,34 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 // This does not take care of any QMaps or other containers that the mudlet
 // and HostManager classes have that use the name of this profile as a key,
 // however it should ensure that other classes get updated:
-void Host::setName(const QString& newName)
+void Host::setName(const QString& name)
 {
-    if (mHostName == newName) {
+    if (mHostName == name) {
         return;
     }
 
-    TDebug::changeHostName(this, newName);
+    TDebug::changeHostName(this, name);
     int currentPlayerRoom = 0;
     if (mpMap) {
         currentPlayerRoom = mpMap->mRoomIdHash.take(mHostName);
     }
 
-    mHostName = newName;
+    mHostName = name;
 
-    mTelnet.mProfileName = newName;
+    mTelnet.mProfileName = name;
     if (mpMap) {
-        mpMap->mProfileName = newName;
+        mpMap->mProfileName = name;
         if (currentPlayerRoom) {
-            mpMap->mRoomIdHash.insert(newName, currentPlayerRoom);
+            mpMap->mRoomIdHash.insert(name, currentPlayerRoom);
         }
     }
 
     if (mpConsole) {
         // If skipped they will be taken care of in the TMainConsole constructor:
-        mpConsole->setProperty("HostName", newName);
-        mpConsole->setProfileName(newName);
+        mpConsole->setProperty("HostName", name);
+        mpConsole->setProfileName(name);
     }
-    mTimerUnit.changeHostName(newName);
+    mTimerUnit.changeHostName(name);
 }
 
 void Host::removeAllNonPersistentStopWatches()

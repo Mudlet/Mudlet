@@ -151,6 +151,14 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     label_logFileNameExtension->setVisible(false);
     label_logFileName->setVisible(false);
     lineEdit_logFileName->setVisible(false);
+    pushButton_copyMap->setText(tr("copy to %n destination(s)",
+                                   // Intentional comment to separate arguments
+                                   "text on button to put the map from this profile into the other profiles to "
+                                   "receive the map from this profile, %n is the number of other profiles that "
+                                   "have already been selected to receive it and will be zero or more. The button "
+                                   "will also be disabled (greyed out) in the zero case but the text will still be "
+                                   "visible.",
+                                   0));
 
     if (pHost) {
         initWithHost(pHost);
@@ -910,6 +918,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     pushButton_chooseProfiles->setMenu(mpMenu);
 
+    fillOutMapHistory();
 
     // label to show on successful map file action
     label_mapFileActionResult->hide();
@@ -930,25 +939,26 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Default, recommended}").arg(pHost->mpMap->mDefaultVersion), QVariant(pHost->mpMap->mDefaultVersion));
     comboBox_mapFileSaveFormatVersion->setEnabled(false);
     label_mapFileSaveFormatVersion->setEnabled(false);
-    if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
-        for (int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
-            if (i == pHost->mpMap->mDefaultVersion) {
-                continue;
+    if (pHost->mpMap) {
+        if (pHost->mpMap->mMaxVersion > pHost->mpMap->mDefaultVersion || pHost->mpMap->mMinVersion < pHost->mpMap->mDefaultVersion) {
+            for (int i = pHost->mpMap->mMinVersion; i <= pHost->mpMap->mMaxVersion; ++i) {
+                if (i == pHost->mpMap->mDefaultVersion) {
+                    continue;
+                }
+                comboBox_mapFileSaveFormatVersion->setEnabled(true);
+                label_mapFileSaveFormatVersion->setEnabled(true);
+                if (i > pHost->mpMap->mDefaultVersion) {
+                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Upgraded, experimental/testing, NOT recommended}").arg(i), QVariant(i));
+                } else {
+                    comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
+                }
             }
-            comboBox_mapFileSaveFormatVersion->setEnabled(true);
-            label_mapFileSaveFormatVersion->setEnabled(true);
-            if (i > pHost->mpMap->mDefaultVersion) {
-                comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Upgraded, experimental/testing, NOT recommended}").arg(i), QVariant(i));
-            } else {
-                comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
+            int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
+            if (_indexForCurrentSaveFormat >= 0) {
+                comboBox_mapFileSaveFormatVersion->setCurrentIndex(_indexForCurrentSaveFormat);
             }
         }
-        int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
-        if (_indexForCurrentSaveFormat >= 0) {
-            comboBox_mapFileSaveFormatVersion->setCurrentIndex(_indexForCurrentSaveFormat);
-        }
-    }
-    if (pHost->mpMap->mpMapper) {
+
         QLabel* pLabel_mapSymbolFontFudge = new QLabel(tr("2D Map Room Symbol scaling factor:"), groupBox_mapViewOptions);
         mpDoubleSpinBox_mapSymbolFontFudge = new QDoubleSpinBox(groupBox_mapViewOptions);
         mpDoubleSpinBox_mapSymbolFontFudge->setValue(pHost->mpMap->mMapSymbolFontFudgeFactor);
@@ -970,7 +980,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         checkBox_showDefaultArea->show();
         checkBox_showDefaultArea->setText(tr(R"(Show "%1" in the map area selection)").arg(pHost->mpMap->getDefaultAreaName()));
-        checkBox_showDefaultArea->setChecked(pHost->mpMap->mpMapper->getDefaultAreaShown());
+        checkBox_showDefaultArea->setChecked(pHost->mpMap->getDefaultAreaShown());
 
         pushButton_showGlyphUsage->setEnabled(true);
         fontComboBox_mapSymbols->setCurrentFont(pHost->mpMap->mMapSymbolFont);
@@ -2185,6 +2195,154 @@ void dlgProfilePreferences::slot_downloadMap()
     pHost->mpMap->downloadMap();
 }
 
+void dlgProfilePreferences::fillOutMapHistory()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+
+    QString profile_name = pHost->getName();
+    auto const locale = mudlet::self()->getUserLocale();
+    int longestMapHistoryLength = 0;
+    QIcon icon_autoSave{QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png")))};
+    QIcon icon_xmlFile{QIcon::fromTheme(qsl("application-xml"), QIcon(qsl(":/icons/application-xml.png")))};
+    QIcon icon_jsonFile{QIcon::fromTheme(qsl("application-json"), QIcon(qsl(":/icons/application-json.png")))};
+    QString dateTimeFormat = mudlet::self()->getUserLocale().dateTimeFormat();
+    if (dateTimeFormat.contains(QLatin1Char('t'))) {
+        // There is a timezone identifier in there - which (apart from perhaps
+        // the period around DST changes) we don't really need and which takes
+        // up space:
+        if (dateTimeFormat.contains(QLatin1String(" t"))) {
+            // Deal with the space if the time zone is appended to the end of
+            // the string:
+            dateTimeFormat.remove(QLatin1String(" t"), Qt::CaseSensitive);
+        } else {
+            dateTimeFormat.remove(QLatin1Char('t'), Qt::CaseSensitive);
+        }
+    }
+    const QRegularExpression mapSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)(?:map)?\\.(dat|xml|json)"), QRegularExpression::CaseInsensitiveOption};
+    QDir mapSaveDir(mudlet::getMudletPath(mudlet::profileMapsPath, profile_name).append(QLatin1Char('/')));
+    mapSaveDir.setSorting(QDir::Time);
+    QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    for (const auto& entry : mapSaveEntries) {
+        QRegularExpressionMatch match = mapSaveRegularExpression.match(entry);
+        const QString mapPathFileName = mapSaveDir.absoluteFilePath(entry);
+        if (match.capturedStart() != -1) {
+            // A recognised date-time stamp file name of any Mudlet map file type:
+            QString day;
+            QString month = match.captured(2);
+            QString year;
+            QString hour = match.captured(4);
+            QString minute = match.captured(5);
+            QString second = match.captured(6);
+            if (match.captured(1).toInt() > 31 && match.captured(3).toInt() >= 1 && match.captured(3).toInt() <= 31) {
+                year = match.captured(1);
+                day = match.captured(3);
+            } else {
+                day = match.captured(1);
+                year = match.captured(3);
+            }
+            QString extension = match.captured(7);
+            QDateTime datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
+            QString itemText = locale.toString(datetime, dateTimeFormat);
+            longestMapHistoryLength = qMax(longestMapHistoryLength, itemText.size());
+            if (!extension.compare(QLatin1String("xml"), Qt::CaseInsensitive)) {
+                comboBox_mapHistory->addItem(icon_xmlFile, itemText, QVariant(mapPathFileName));
+            } else {
+                if (!extension.compare(QLatin1String("json"), Qt::CaseInsensitive)) {
+                    comboBox_mapHistory->addItem(icon_jsonFile, itemText, QVariant(mapPathFileName));
+                } else {
+                    // Must be a .dat
+                    comboBox_mapHistory->addItem(itemText, QVariant(mapPathFileName));
+                }
+            }
+        } else if (!entry.compare(QLatin1String("autosave.dat"), Qt::CaseInsensitive)) {
+            // The auto-saved file:
+            QFileInfo fileInfo(mapSaveDir, entry);
+            auto lastModified = fileInfo.lastModified();
+            QString itemText = locale.toString(lastModified, dateTimeFormat);
+            longestMapHistoryLength = qMax(longestMapHistoryLength, itemText.size());
+            comboBox_mapHistory->addItem(icon_autoSave, itemText, QVariant(mapPathFileName));
+        } else {
+            // Some other file name with a recognised extension:
+            longestMapHistoryLength = qMax(longestMapHistoryLength, entry.size());
+            if (entry.endsWith(QLatin1String("xml"), Qt::CaseInsensitive)) {
+                comboBox_mapHistory->addItem(icon_xmlFile, entry, QVariant(mapPathFileName));
+            } else {
+                if (entry.endsWith(QLatin1String("json"), Qt::CaseInsensitive)) {
+                    comboBox_mapHistory->addItem(icon_jsonFile, entry, QVariant(mapPathFileName));
+                } else {
+                    comboBox_mapHistory->addItem(entry, QVariant(mapPathFileName)); // if it has a custom name, use it as it is
+                }
+            }
+        }
+    }
+    if (comboBox_mapHistory->count()) {
+        comboBox_mapHistory->setEnabled(true);
+        pushButton_loadHistoricMap->setEnabled(true);
+        connect(pushButton_loadHistoricMap, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_loadHistoryMap);
+    }
+}
+
+void dlgProfilePreferences::loadMap(const QString& fileName)
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    label_mapFileActionResult->show();
+
+    // Ensure the setting is already made as the TConsole::loadMap(...) uses
+    // the set value:
+    bool showAuditErrors = mudlet::self()->showMapAuditErrors();
+    mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
+
+    bool success = false;
+    label_mapFileActionResult->setText(tr("Loading map - please wait..."));
+    qApp->processEvents(); // Needed to make the above message show up when loading big maps
+    if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
+        qApp->processEvents(); // Needed to make the above message show up when loading big maps
+        success = pHost->mpConsole->importMap(fileName);
+
+    } else {
+        if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
+            auto [localSuccess, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+            success = localSuccess;
+            if (!localSuccess) {
+                pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
+                                      "reason: %2.")
+                                           .arg(fileName, errorMessage));
+            }
+
+        } else {
+            success = pHost->mpConsole->loadMap(fileName);
+        }
+    }
+
+    if (success) {
+        // TMap::audit() is what paints up the "[  OK  ]" message for the map load.
+        pHost->mpMap->audit();
+        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
+    } else {
+        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
+    }
+
+    QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
+
+    // Restore setting immediately before we used it
+    mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+}
+
+void dlgProfilePreferences::slot_loadHistoryMap()
+{
+    auto mapPathFileData = comboBox_mapHistory->currentData();
+    if (!mapPathFileData.isValid() || mapPathFileData.toString().isEmpty()) {
+        return;
+    }
+    loadMap(mapPathFileData.toString());
+}
+
 void dlgProfilePreferences::slot_loadMap()
 {
     Host* pHost = mpHost;
@@ -2209,36 +2367,9 @@ void dlgProfilePreferences::slot_loadMap()
             return;
         }
 
-        auto fileName = dialog->selectedFiles().first();
+        auto fileName = dialog->selectedFiles().constFirst();
 
-        label_mapFileActionResult->show();
-
-        // Ensure the setting is already made as the loadMap(...) uses the set value
-        bool showAuditErrors = mudlet::self()->showMapAuditErrors();
-        mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
-
-        bool success = false;
-        label_mapFileActionResult->setText(tr("Loading map - please wait..."));
-        qApp->processEvents(); // Needed to make the above message show up when loading big maps
-        if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
-            qApp->processEvents(); // Needed to make the above message show up when loading big maps
-            success = pHost->mpConsole->importMap(fileName);
-        } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-            success = pHost->mpMap->readJsonMapFile(fileName).first;
-        } else {
-            success = pHost->mpConsole->loadMap(fileName);
-        }
-
-        if (success) {
-            label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
-        } else {
-            label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
-        }
-
-        QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
-
-        // Restore setting immediately before we used it
-        mudlet::self()->setShowMapAuditErrors(showAuditErrors);
+        loadMap(fileName);
     });
     dialog->open();
 }
@@ -2305,7 +2436,8 @@ void dlgProfilePreferences::slot_saveMap()
     dialog->open();
 }
 
-QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost) {
+QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost)
+{
     QString mapsPath = mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName());
     QDir mapsDir = QDir(mapsPath);
     return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName());
@@ -2663,26 +2795,29 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
-        if (pHost->mpMap && pHost->mpMap->mpMapper) {
-            pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
-            bool isAreaWidgetInNeedOfResetting = false;
-            if ((!pHost->mpMap->mpMapper->getDefaultAreaShown()) && (checkBox_showDefaultArea->isChecked()) && (pHost->mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
-                isAreaWidgetInNeedOfResetting = true;
+        if (pHost->mpMap) {
+            // Need to save the original value in case we change it in the line
+            // following this one:
+            bool defaultAreaWasNotShown = pHost->mpMap->getDefaultAreaShown();
+            pHost->mpMap->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
+            if (pHost->mpMap->mpMapper) {
+                pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+
+                if (!defaultAreaWasNotShown && checkBox_showDefaultArea->isChecked() && pHost->mpMap->mpMapper->mp2dMap->mAreaID == -1) {
+                    // Corner case fixup, user has asked for the default area
+                    // to be shown and it wasn't - so it can now be:
+                    pHost->mpMap->mpMapper->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
+                }
             }
 
-            pHost->mpMap->mpMapper->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
-            if (isAreaWidgetInNeedOfResetting) {
-                // Corner case fixup:
-                pHost->mpMap->mpMapper->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
-            }
-
-            // If a map was loaded
             if (mpDoubleSpinBox_mapSymbolFontFudge) {
                 pHost->mpMap->mMapSymbolFontFudgeFactor = mpDoubleSpinBox_mapSymbolFontFudge->value();
             }
 
-            pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
-            pHost->mpMap->mpMapper->update();
+            if (pHost->mpMap->mpMapper) {
+                pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
+                pHost->mpMap->mpMapper->update();
+            }
         }
         QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
         pHost->setBorders(newBorders);
@@ -2968,12 +3103,27 @@ void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
             ++selectionCount;
         }
     }
+    pushButton_copyMap->setText(tr("copy to %n destination(s)",
+                                   // Intentional comment to separate arguments
+                                   "text on button to put the map from this profile into the other profiles to "
+                                   "receive the map from this profile, %n is the number of other profiles that "
+                                   "have already been selected to receive it and will be zero or more. The button "
+                                   "will also be disabled (greyed out) in the zero case but the text will still be "
+                                   "visible.",
+                                   selectionCount));
     if (selectionCount) {
         pushButton_copyMap->setEnabled(true);
-        pushButton_chooseProfiles->setText(tr("%1 selected - press to change").arg(selectionCount));
+        pushButton_chooseProfiles->setText(tr("%n selected - change destinations...",
+                                              // Intentional comment to separate arguments
+                                              "text on button to select other profiles to receive the map from this profile, "
+                                              "%n is the number of other profiles that have already been selected to receive it and will always be 1 or more",
+                                              selectionCount));
     } else {
         pushButton_copyMap->setEnabled(false);
-        pushButton_chooseProfiles->setText(tr("Press to pick destination(s)"));
+        pushButton_chooseProfiles->setText(tr("pick destinations...",
+                                              // Intentional comment to separate arguments
+                                              "text on button to select other profiles to receive the map from this profile, "
+                                              "this is used when no profiles have been selected"));
     }
 }
 

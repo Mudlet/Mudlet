@@ -722,21 +722,22 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    auto f = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item);
-    QFile file(f);
+    QSaveFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << what;
-        file.close();
+        if (!file.commit()) {
+            qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
+        }
     }
 
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
+    if (file.error() == QFileDevice::NoError) {
+        return {true, QString()};
     } else {
-        return qMakePair(false, file.errorString());
+        return {false, file.errorString()};
     }
 }
 
@@ -1254,11 +1255,13 @@ void dlgConnectionProfiles::slot_setCustomColor()
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
         auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profilecolor"));
-        QFile file(profileColorPath);
+        QSaveFile file(profileColorPath);
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         auto colorName = color.name();
         file.write(colorName.toUtf8(), colorName.length());
-        file.close();
+        if (!file.commit()) {
+            qDebug() << "dlgConnectionProfiles::slot_setCustomColor: error saving custom icon color: " << file.errorString();
+        }
         profiles_tree_widget->currentItem()->setIcon(customIcon(profileName, {color}));
     }
 }
@@ -1482,7 +1485,7 @@ bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newPr
 // save profile using Qt's API's which handle non-ASCII characters in Windows paths fine
 void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const
 {
-    QFile file(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")));
+    QSaveFile file(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")));
     if (!file.open(QFile::WriteOnly)) {
         qDebug() << "dlgConnectionProfiles::copyProfileSettingsOnly ERROR - couldn't create new profile file:" << file.fileName() << "-" << file.errorString();
         return;
@@ -1492,7 +1495,9 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
     newProfileXml.save(saveStringStream);
     std::string output(saveStringStream.str());
     file.write(output.data());
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "dlgConnectionProfiles::saveProfileCopy: error copying profile: " << file.errorString();
+    }
 }
 
 void dlgConnectionProfiles::slot_load()
@@ -1545,8 +1550,18 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
+
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
+        if (auto [success, message] = importer.importPackage(&file, nullptr); !success) {
+            //: %1 is the path and file name (i.e. the location) of the problem fil
+            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
+                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
+        
+            qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << alsoConnect << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
+        } else {
+            pHost->mLoadedOk = true;
+        }
+
         pHost->refreshPackageFonts();
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
@@ -1868,13 +1883,13 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
 
     profiles_tree_widget->addItem(pItem);
     if (!hasCustomIcon(mudServer)) {
-        QPixmap p(iconFileName);
-        if (p.isNull()) {
+        QPixmap pixmap(iconFileName);
+        if (pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";
             return;
         }
-        if (p.width() != 120) {
-            pItem->setIcon(p.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        if (pixmap.width() != 120) {
+            pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         } else {
             pItem->setIcon(QIcon(iconFileName));
         }
@@ -1902,22 +1917,22 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional
     // Really long names will be drawn very small (font size 6) with the ends clipped off:
     do {
         font.setPointSize(--fontSize);
-        QFontMetrics fm(font);
-        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter | Qt::TextWordWrap, text);
+        QFontMetrics metrics(font);
+        testRect = metrics.boundingRect(textRectangle, Qt::AlignCenter | Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
-        QPainter pt(&background);
-        pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        QPixmap pg(qsl(":/icons/mudlet_main_32px.png"));
-        pt.drawPixmap(QRect(5, 5, 20, 20), pg);
+        QPainter painter(&background);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        QPixmap pixmap(qsl(":/icons/mudlet_main_32px.png"));
+        painter.drawPixmap(QRect(5, 5, 20, 20), pixmap);
         if (color.lightness() > 127) {
-            pt.setPen(Qt::black);
+            painter.setPen(Qt::black);
         } else {
-            pt.setPen(Qt::white);
+            painter.setPen(Qt::white);
         }
-        pt.setFont(font);
-        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter | Qt::TextWordWrap, text);
+        painter.setFont(font);
+        painter.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter | Qt::TextWordWrap, text);
     }
     return QIcon(background);
 }

@@ -493,7 +493,7 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
         reply->deleteLater();
         mpHost->raiseEvent(event);
     } else {
-        QFile localFile(mediaData.getMediaAbsolutePathFileName());
+        QSaveFile localFile(mediaData.getMediaAbsolutePathFileName());
 
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
@@ -534,7 +534,9 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 event.mArgumentList << QString::number(bytesWritten);
                 event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
 
-                localFile.close();
+                if (!localFile.commit()) {
+                    qDebug() << "TMedia::slot_writeFile: error saving downloaded media: " << localFile.errorString();
+                }
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);

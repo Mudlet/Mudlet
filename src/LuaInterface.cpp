@@ -66,13 +66,13 @@ VarUnit* LuaInterface::getVarUnit()
 QStringList LuaInterface::varName(TVar* var)
 {
     QStringList names;
-    if (var->getName() == "_G") {
+    if (var->getName() == qsl("_G")) {
         names << "";
         return names;
     }
     names << var->getName();
     TVar* pParent = var->getParent();
-    while (pParent && pParent->getName() != "_G") {
+    while (pParent && pParent->getName() != qsl("_G")) {
         names.insert(0, pParent->getName());
         pParent = pParent->getParent();
     }
@@ -295,12 +295,12 @@ bool LuaInterface::reparentVariable(QTreeWidgetItem* newP, QTreeWidgetItem* cIte
 QList<TVar*> LuaInterface::varOrder(TVar* var)
 {
     QList<TVar*> vars;
-    if (var->getName() == "_G") {
+    if (var->getName() == qsl("_G")) {
         return vars;
     }
     vars << var;
     TVar* pParent = var->getParent();
-    while (pParent && pParent->getName() != "_G") {
+    while (pParent && pParent->getName() != qsl("_G")) {
         vars.insert(0, pParent);
         pParent = pParent->getParent();
     }
@@ -754,7 +754,7 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         var->pKey = pKey;
         const void* pValue = lua_topointer(L, -2);
         var->pValue = pValue;
-        if (varUnit->varExists(var) || keyName == "_G") {
+        if (varUnit->varExists(var) || keyName == qsl("_G")) {
             lua_pop(L, 1);
             tVar->removeChild(var);
             delete var;

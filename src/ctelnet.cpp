@@ -759,7 +759,6 @@ void cTelnet::sendNAWS(int width, int height)
     socketOutRaw(message);
 }
 
-
 void cTelnet::sendTelnetOption(char type, char option)
 {
 #ifdef DEBUG_TELNET
@@ -807,11 +806,12 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
-        QFile file(mServerPackage);
+        QSaveFile file(mServerPackage);
         file.open(QFile::WriteOnly);
         file.write(reply->readAll());
-        file.flush();
-        file.close();
+        if (!file.commit()) {
+            qDebug() << "cTelnet::slot_replyFinished: error downloading package: " << file.errorString();
+        }
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
         mpHost->installPackage(mServerPackage, 0);

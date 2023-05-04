@@ -542,7 +542,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             break;
         }
 
-        QFile localFile(localFileName);
+        QSaveFile localFile(localFileName);
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
@@ -568,7 +568,9 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             break;
         }
 
-        localFile.flush();
+        if (!localFile.commit()) {
+            qDebug() << "TTLuaInterpreter::handleHttpOK: error saving downloaded file: " << localFile.errorString();
+        }
 
         if (localFile.error() == QFile::NoError) {
             event.mArgumentList << QLatin1String("sysDownloadDone");
@@ -587,8 +589,6 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
             event.mArgumentList << localFile.errorString();
             event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
         }
-
-        localFile.close();
         break;
 
     }
@@ -1461,7 +1461,7 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    auto[success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
+    auto [success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -2404,16 +2404,13 @@ int TLuaInterpreter::selectSection(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSelection
 int TLuaInterpreter::getSelection(lua_State* L)
 {
-    bool valid;
-    QString text;
-    int start, length;
-
     QString windowName;
     if (lua_gettop(L) > 0) {
         windowName = WINDOW_NAME(L, 1);
     }
     auto console = CONSOLE(L, windowName);
-    std::tie(valid, text, start, length) = console->getSelection();
+
+    auto [valid, text, start, length] = console->getSelection();
 
     if (!valid) {
         return warnArgumentValue(L, __func__, text);
@@ -12261,11 +12258,11 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
         // AND the mapper was showing the default area
         // the area widget will NOT be showing the correct area name afterwards
         bool isAreaWidgetInNeedOfResetting = false;
-        if ((!host.mpMap->mpMapper->getDefaultAreaShown()) && (isToShowDefaultArea) && (host.mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
+        if ((!host.mpMap->getDefaultAreaShown()) && (isToShowDefaultArea) && (host.mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
             isAreaWidgetInNeedOfResetting = true;
         }
 
-        host.mpMap->mpMapper->setDefaultAreaShown(isToShowDefaultArea);
+        host.mpMap->setDefaultAreaShown(isToShowDefaultArea);
         if (isAreaWidgetInNeedOfResetting) {
             // Corner case fixup:
             host.mpMap->mpMapper->comboBox_showArea->setCurrentText(host.mpMap->getDefaultAreaName());

@@ -1,8 +1,6 @@
 name: Generate a changelog
 
 on:
-  schedule:
-    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       from:
@@ -18,6 +16,10 @@ jobs:
   generate-changelog:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
+
+    strategy:
+      matrix:
+        format: ["html", "md"]
 
     steps:
     - name: Checkout Mudlet repository
@@ -59,15 +61,15 @@ jobs:
 
     - name: Generate changelog
       run: |
-        changelog=$(lua CI/generate-changelog.lua -m release --start-commit $FROM_RELEASE --end-commit $TO_RELEASE)
-        echo "$changelog" >> changelog.html
+        changelog=$(lua CI/generate-changelog.lua -f ${{matrix.format}} -m release --start-commit $FROM_RELEASE --end-commit $TO_RELEASE)
+        echo "$changelog" >> changelog.${{matrix.format}}
 
         echo "[INFO] Changelog generated (from $FROM_RELEASE to $TO_RELEASE). If it's too big, Github won't show it, so it's available as an artifact as well at: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}#artifacts"
         echo "[INFO] Changelog is:"
         echo $changelog
 
-    - name: Upload changelog as html
+    - name: Upload changelog as ${{matrix.format}}
       uses: actions/upload-artifact@v3
       with:
-        name: changelog.html
-        path: changelog.html
+        name: changelog.${{matrix.format}}
+        path: changelog.${{matrix.format}}

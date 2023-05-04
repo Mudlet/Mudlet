@@ -399,7 +399,6 @@ else()
           UiTools
           Widgets
           Concurrent)
-  find_package(Qt5 COMPONENTS Gamepad QUIET)
   find_package(Qt5 COMPONENTS TextToSpeech QUIET)
 
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
@@ -417,11 +416,6 @@ else()
   if(Qt5TextToSpeech_FOUND)
     list(APPEND QT_LIBS Qt5::TextToSpeech)
     message(STATUS "Using TextToSpeech module")
-  endif()
-
-  if(Qt5Gamepad_FOUND)
-    list(APPEND QT_LIBS Qt5::Gamepad)
-    message(STATUS "Using Gamepad module")
   endif()
 endif()
 
@@ -525,6 +519,8 @@ target_link_libraries(
         PUGIXML::PUGIXML
         ZIP::ZIP
         ZLIB::ZLIB
+# PLACEMARKER: sample benchmarking code
+#       nanobench
         ${QT_LIBS})
 
 if(USE_UPDATER)
