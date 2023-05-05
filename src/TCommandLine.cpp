@@ -34,12 +34,12 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QActionGroup>
 #include <QKeyEvent>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSaveFile>
 #include "post_guard.h"
-
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
@@ -85,7 +85,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     // Restore the settings:
     std::tie(mBackingFileName, mSaveCommands, mForgetNextCommand) = mpHost->getCommandLineHistorySettings(mType, name);
 
-    // Restore any previous historic commands even if we are not going to use
+    // Restore any previous historic commands even if we are not going to save
     // them under current settings:
     restoreHistory();
 

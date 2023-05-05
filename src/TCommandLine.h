@@ -27,7 +27,6 @@
 #include "TConsole.h"
 
 #include "pre_guard.h"
-#include <QActionGroup>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QString>
@@ -39,7 +38,6 @@
 class KeyUnit;
 class Host;
 
-
 class TCommandLine : public QPlainTextEdit //QLineEdit
 {
     Q_OBJECT
@@ -48,7 +46,6 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
         MOVE_UP,
         MOVE_DOWN
     };
-
 
 public:
     enum CommandLineTypeFlag {
@@ -80,13 +77,11 @@ public:
     void adjustHeight();
     TConsole* console() const { return mpConsole; }
 
-
     int mActionFunction = 0;
     QPalette mRegularPalette;
     QString mCommandLineName;
 
     QMap<QString, QString> contextMenuItems;
-
 
 public slots:
     void slot_popupMenu();
@@ -98,7 +93,6 @@ public slots:
     void slot_saveCommandHistory();
     void slot_doNotSaveCommandHistory();
     void slot_doNotSaveNextCommand();
-
 
 private:
     bool event(QEvent*) override;
@@ -114,7 +108,6 @@ private:
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
-
 
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
@@ -140,17 +133,13 @@ private:
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
     QString mBackingFileName;
-    // Set to true when the command history option mToolButton_history_noSaveOnce
-    // is the one activated - it gets reset (and that option returned to the
-    // mToolButton_history_save state) after the enter key is used to enter
-    // a command:
+    // Set to true when the command history context menu option
+    // action_doNotSaveNextCommand is the one activated - it gets reset
+    // and the option goes back to the action_saveCommandHistory state after
+    // the enter key is used to enter a command:
     bool mForgetNextCommand = false;
     // Set to true (by default) to save the commands in the mHistoryList at the
-    // end of the session AND to add the commands to that mHistoryList; the
-    // first is so that past stored commands get cleared (at the end of the
-    // session) and the second so that no new ones get added if this is set to
-    // false otherwise past erroneous entries (like say a password) cannot be
-    // easily be nuked...
+    // end of the session:
     bool mSaveCommands = true;
 };
 

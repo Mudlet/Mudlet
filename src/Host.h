@@ -709,11 +709,12 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
-    // Tells all command lines that the number of lines to save has changed
+    // Tells all command lines that the number of lines to save has changed;
     // importantly it may signal that the number has gone to zero so as to
-    // disable the feature globally - which should then hide the individual
+    // disable the feature globally - which should then disable the individual
     // per-commandline controls to save/not save the next one/not save any
-    // in the history for the next session:
+    // in the history for the next session (and modifies the texts as
+    // appropriate):
     void signal_changeCommandLineHistorySaveSize(const int);
 
 

@@ -788,12 +788,23 @@ void Host::resetProfile_phase2()
 // returns true+filepath if successful or false+error message otherwise
 std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, const QString& saveName, bool syncModules)
 {
+    QString directory_xml;
+    if (saveFolder.isEmpty()) {
+        directory_xml = mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName());
+    } else {
+        directory_xml = saveFolder;
+    }
+
+    QString filename_xml;
+    if (saveName.isEmpty()) {
+        filename_xml = qsl("%1/%2.xml").arg(directory_xml, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+    } else {
+        filename_xml = qsl("%1/%2.xml").arg(directory_xml, saveName);
+    }
+
     if (!mLoadedOk) {
         return {false, filename_xml, qsl("profile was not loaded correctly to begin with")};
     }
-
-    QString directory_xml = (saveFolder.isEmpty()) ? mudlet::getMudletPath(mudlet::profileXmlFilesPath, getName()) : saveFolder;
-    QString filename_xml = qsl("%1/%2.xml").arg(directory_xml, (saveName.isEmpty()) ? QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")) : saveName);
 
     if (mIsProfileLoadingSequence) {
         //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
