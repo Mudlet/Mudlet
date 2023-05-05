@@ -1346,7 +1346,7 @@ Die &quot;[KARTENFEHLER:]&quot; Nachricht enthält den Grund.</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1100"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Split-Screen-Scrollback aktiviert. Drücke STRG + EINGABETASTE zum Beenden.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1897"/>
@@ -4096,12 +4096,12 @@ diese Version kann diese Datei nicht lesen. Du benötigst ein aktuelleres Mudlet
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="169"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Gib einen oder mehrere Befehle ein, die verwendet werden sollen, wenn der eingegebene Befehl mit dem Muster übereinstimmt. (Optional)&lt;/p&gt;&lt;p&gt;Dies könnte ein weiterer Alias oder ein Befehl sein, der direkt an das Spiel gesendet werden kann. Für komplexe Befehle, die eine Änderung von Variablen innerhalb dieses Profils erfordern, besser stattdessen ein Lua-Skript im Editorbereich unten verwenden. Es ist möglich, sowohl dieses Feld als auch ein Lua-Skript zu verwenden - Der Inhalt dieses Feldes wird vor dem Ausführen des Skripts verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="172"/>
       <source>Replacement text (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Ersatztext (optional)</translation>
     </message>
   </context>
   <context>
@@ -5576,7 +5576,8 @@ Nutzungen</translation>
       <source>[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.
 Try loading an older version in &apos;Connect - Options - Profile history&apos; or double-check that %1 looks correct.</source>
       <extracomment>%1 is the path and file name (i.e. the location) of the problem fil</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Beim Laden des Mudlet-Profils ist etwas schief gelaufen und es konnte nicht geladen werden.
+Versuche, eine ältere Version via &apos;Connect - Optionen - Profilverlauf&apos; zu laden oder überprüfe, ob %1 korrekt aussieht.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1649"/>
@@ -7493,7 +7494,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="528"/>
       <source>Something went wrong loading your Mudlet profile and it could not be loaded. Try loading an older version in &apos;Connect - Options - Profile history&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Beim Laden des Mudlet-Profils ist etwas schief gelaufen und es konnte nicht geladen werden.Versuche, eine ältere Version via &apos;Connect - Optionen - Profilverlauf&apos; zu laden</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="603"/>
@@ -8852,12 +8853,12 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Gib einen oder mehrere Befehle ein, die verwendet werden sollen, wenn der eingegebene Befehl mit dem Muster übereinstimmt. (Optional)&lt;/p&gt;&lt;p&gt;Dies könnte ein weiterer Alias oder ein Befehl sein, der direkt an das Spiel gesendet werden kann. Für komplexe Befehle, die eine Änderung von Variablen innerhalb dieses Profils erfordern, besser stattdessen ein Lua-Skript im Editorbereich unten verwenden. Es ist möglich, sowohl dieses Feld als auch ein Lua-Skript zu verwenden - Der Inhalt dieses Feldes wird vor dem Ausführen des Skripts verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text, der ans Spiel gesendet werden soll (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="60"/>
@@ -10957,7 +10958,8 @@ Es gibt KEINE GARANTIE soweit gesetzlich zulässig.</translation>
       <location filename="../src/mudlet.cpp" line="2707"/>
       <source>[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.
 Try loading an older version in &apos;Connect - Options - Profile history&apos; or double-check that %1 looks correct.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Beim Laden des Mudlet-Profils ist etwas schief gelaufen und es konnte nicht geladen werden.
+Versuche, eine ältere Version via &apos;Connect - Optionen - Profilverlauf&apos; zu laden oder überprüfe, ob %1 korrekt aussieht.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2976"/>
@@ -13920,12 +13922,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="74"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Gib einen oder mehrere Befehle ein, die verwendet werden sollen, wenn der eingegebene Befehl mit dem Muster übereinstimmt. (Optional)&lt;/p&gt;&lt;p&gt;Dies könnte ein weiterer Alias oder ein Befehl sein, der direkt an das Spiel gesendet werden kann. Für komplexe Befehle, die eine Änderung von Variablen innerhalb dieses Profils erfordern, besser stattdessen ein Lua-Skript im Editorbereich unten verwenden. Es ist möglich, sowohl dieses Feld als auch ein Lua-Skript zu verwenden - Der Inhalt dieses Feldes wird vor dem Ausführen des Skripts verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text, der ans Spiel gesendet werden soll (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="326"/>
@@ -14081,12 +14083,12 @@ LUA Skript</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="124"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Gib einen oder mehrere Befehle ein, die verwendet werden sollen, wenn der eingegebene Befehl mit dem Muster übereinstimmt. (Optional)&lt;/p&gt;&lt;p&gt;Dies könnte ein weiterer Alias oder ein Befehl sein, der direkt an das Spiel gesendet werden kann. Für komplexe Befehle, die eine Änderung von Variablen innerhalb dieses Profils erfordern, besser stattdessen ein Lua-Skript im Editorbereich unten verwenden. Es ist möglich, sowohl dieses Feld als auch ein Lua-Skript zu verwenden - Der Inhalt dieses Feldes wird vor dem Ausführen des Skripts verwendet.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text, der ans Spiel gesendet werden soll (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="247"/>
