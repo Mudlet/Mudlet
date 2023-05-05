@@ -244,6 +244,18 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     if (room->getNorthwest() != -1) {
         debug.nospace() << ", northwest=" << room->getNorthwest();
     }
+    if (room->hasUp()) {
+        debug.nospace() << ", up=" << room->getUp();
+    }
+    if (room->hasDown()) {
+        debug.nospace() << ", down=" << room->getDown();
+    }
+    if (room->hasIn()) {
+        debug.nospace() << ", in=" << room->getIn();
+    }
+    if (room->hasOut()) {
+        debug.nospace() << ", out=" << room->getOut();
+    }
     QMap<QString, int> specialExits = room->getSpecialExits();
     if (!specialExits.isEmpty()) {
         debug.nospace() << ", specialExits=(";
