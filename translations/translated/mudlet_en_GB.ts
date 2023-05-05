@@ -1348,7 +1348,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</translation>
     <message>
       <location filename="../src/TConsole.cpp" line="1100"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Split-screen scrollback activated. Press CTRL+ENTER to cancel.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1897"/>
@@ -4064,12 +4064,12 @@ and this one cannot read it, you need a newer Mudlet!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="169"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="172"/>
       <source>Replacement text (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Replacement text (optional)</translation>
     </message>
   </context>
   <context>
@@ -7464,7 +7464,7 @@ reason: %2.</translation>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="528"/>
       <source>Something went wrong loading your Mudlet profile and it could not be loaded. Try loading an older version in &apos;Connect - Options - Profile history&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Something went wrong loading your Mudlet profile and it could not be loaded. Try loading an older version in &apos;Connect - Options - Profile history&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="603"/>
@@ -8817,12 +8817,12 @@ reason: %2.</translation>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text to send to the game (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="60"/>
@@ -13851,12 +13851,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="74"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text to send to the game (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="326"/>
@@ -14010,12 +14010,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="124"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Text to send to the game (optional)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="247"/>
