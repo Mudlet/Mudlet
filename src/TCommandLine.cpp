@@ -1005,7 +1005,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
     }
 
-    if (!toPlainText().isEmpty() && mSaveCommands && mpHost->getCommandLineHistorySaveSize()) {
+    if (!toPlainText().isEmpty()) {
         if (mpHost->mAutoClearCommandLineAfterSend) {
             mHistoryBuffer = 0;
         } else {
