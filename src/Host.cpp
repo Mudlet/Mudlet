@@ -2186,9 +2186,14 @@ QString Host::readProfileIniData(const QString& item)
     return settings.value(item).toString();
 }
 
-// Returns the name for the file - either "command_history_main" for the main
-// command line or "command_history_##" (where ## is a leading zero number,
-// though in pathalogical cases there is nothing stopping it being more).
+// This function retrieves command line history settings based on the given
+// command line type and name. It reads the saveCommands and forgetNextCommand
+// settings from the profile.ini file, which is intended to replace all other
+// single data item files in the profile's home directory. For the main command
+// line, a predefined file name is used, while for any other command line, the
+// function first looks for a mapping from a number-suffixed file to a command
+// line name. If the mapping is not found, a new file name and default settings
+// for saveCommands and forgetNextCommand are created, stored, and returned.
 // Because '/' and '\\' are used by the QSettings class in key names for
 // special purposes we MUST filter them out in the name, we'll replace them
 // with '_'s:
