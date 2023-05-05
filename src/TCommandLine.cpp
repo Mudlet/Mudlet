@@ -83,7 +83,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TCommandLine::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
     // Restore the settings:
-    std::tie(mBackingFileName, mSaveCommands, mForgetNextCommand) = mpHost->getCommandLineHistorySettings(mType, name);
+    std::tie(mBackingFileName, mSaveCommands, mForgetNextCommand) = mpHost->getCmdLineSettings(mType, name);
 
     // Restore any previous historic commands even if we are not going to save
     // them under current settings:

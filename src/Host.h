@@ -411,7 +411,7 @@ public:
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
     void loadMap();
-    std::tuple<QString, bool, bool> getCommandLineHistorySettings(const TCommandLine::CommandLineType, const QString&);
+    std::tuple<QString, bool, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
     void setCommandLineHistorySettings(const TCommandLine::CommandLineType, const bool saveCommands, const bool forgetNextCommand, const QString&);
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
     void setCommandLineHistorySaveSize(const int lines);

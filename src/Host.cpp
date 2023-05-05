@@ -2151,9 +2151,9 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     return QString();
 }
 
-// This pair might eventually replace the ones without the "Ini" but for now
-// are just used to store some information about one or more TCommandLine's
-// mHistoryData:
+// writeProfileIniData(...) and readProfileIniData(...) might eventually
+// replace writeProfileData(...) and readProfileData(...) but for now are just
+// used to store some information about one or more TCommandLine's mHistoryData:
 bool Host::writeProfileIniData(const QString& item, const QString& what)
 {
     QSettings settings(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
@@ -2192,7 +2192,7 @@ QString Host::readProfileIniData(const QString& item)
 // Because '/' and '\\' are used by the QSettings class in key names for
 // special purposes we MUST filter them out in the name, we'll replace them
 // with '_'s:
-std::tuple<QString, bool, bool> Host::getCommandLineHistorySettings(const TCommandLine::CommandLineType type, const QString& name)
+std::tuple<QString, bool, bool> Host::getCmdLineSettings(const TCommandLine::CommandLineType type, const QString& name)
 {
     if (type == TCommandLine::MainCommandLine) {
         // This one does not need the name to be kept in a QSettings but we
@@ -2203,7 +2203,7 @@ std::tuple<QString, bool, bool> Host::getCommandLineHistorySettings(const TComma
     }
     QString localName{name};
     localName.replace(QRegularExpression(qsl("[\\/]")), qsl("_"));
-    // We use a '/' in the name as that donotes a grouping (section) within the
+    // We use a '/' in the name as that denotes a grouping (section) within the
     // QSetting's (INI) format with the left-most side of the first '/' as a
     // section header. They actually get converted to `\\` (a single backslash)
     // inside the actual file but are accessed correctly only if given as a
