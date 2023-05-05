@@ -1346,7 +1346,7 @@ Controlla il messaggio &quot;[MAP ERROR:]&quot; per maggiori informazioni.</tran
     <message>
       <location filename="../src/TConsole.cpp" line="1100"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Scorrimento a schermo diviso attivato. Premi CTRL-ENTER per annullare.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1897"/>
@@ -4146,7 +4146,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="172"/>
       <source>Replacement text (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Testo da sostituire (facoltativo)</translation>
     </message>
   </context>
   <context>
@@ -7549,7 +7549,7 @@ motivazione: %2.</translation>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="528"/>
       <source>Something went wrong loading your Mudlet profile and it could not be loaded. Try loading an older version in &apos;Connect - Options - Profile history&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Qualcosa è andato storto caricando il profilo Mudlet, non è possibile completare l'operazione. Prova a caricare una versione più vecchia in &apos;Connetti - Opzioni - Cronologia profilo&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="603"/>
@@ -8917,7 +8917,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Testo da inviare al gioco (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="60"/>
@@ -13978,7 +13978,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Testo da inviare al gioco (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="326"/>
@@ -14139,7 +14139,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Testo da inviare al gioco (opzionale)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="247"/>
