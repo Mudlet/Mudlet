@@ -28,6 +28,7 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QColor>
+#include <QDebug>
 #include <QMap>
 #include <QPointer>
 #include <QSharedPointer>
@@ -87,13 +88,13 @@ public:
     // need not be black on white / white on black.
     static const int scmDefault;
 
-    QString getCommand() { return mCommand; }
+    QString getCommand() const { return mCommand; }
     void compileAll();
     void setCommand(const QString& b) { mCommand = b; }
-    QString getName() { return mName; }
+    QString getName() const { return mName; }
     void setName(const QString& name);
-    QStringList& getPatternsList() { return mPatterns; }
-    QList<int> getRegexCodePropertyList() { return mPatternKinds; }
+    const QStringList& getPatternsList() const { return mPatterns; }
+    QList<int> getRegexCodePropertyList() const { return mPatternKinds; }
     QColor getFgColor() const { return mFgColor; }
     QColor getBgColor() const { return mBgColor; }
     void setColorizerFgColor(const QColor& c) { mFgColor = c; }
@@ -104,14 +105,14 @@ public:
     void execute();
     bool isFilterChain();
     bool setRegexCodeList(QStringList patterns, QList<int> patternKinds);
-    QString getScript() { return mScript; }
+    QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool compileScript();
     bool match(char*, const QString&, int line, int posOffset = 0);
 
-    bool isMultiline() { return mIsMultiline; }
-    int getTriggerType() { return mTriggerType; }
-    bool isLineTrigger() { return mIsLineTrigger; }
+    bool isMultiline() const { return mIsMultiline; }
+    int getTriggerType() const { return mTriggerType; }
+    bool isLineTrigger() const { return mIsLineTrigger; }
     void setIsLineTrigger(bool b) { mIsLineTrigger = b; }
     void setStartOfLineDelta(int b) { mStartOfLineDelta = b; }
     void setLineDelta(int b) { mLineDelta = b; }
@@ -129,7 +130,7 @@ public:
     bool match_color_pattern(int, int);
     bool match_prompt(int patternNumber);
     void setConditionLineDelta(int delta) { mConditionLineDelta = delta; }
-    int getConditionLineDelta() { return mConditionLineDelta; }
+    int getConditionLineDelta() const { return mConditionLineDelta; }
     bool registerTrigger();
     void setSound(const QString& file) { mSoundFile = file; }
     bool setupColorTrigger(int, int);
@@ -227,13 +228,9 @@ inline QDebug& operator<<(QDebug& debug, const TTrigger* trigger)
     debug.nospace() << ", isActive=" << trigger->isActive();
     debug.nospace() << ", isTemporary=" << trigger->isTemporary();
     debug.nospace() << ", isMultiline=" << trigger->isMultiline();
-    debug.nospace() << ", giant=" << trigger->isGiant();
-    debug.nospace() << ", regexCode=" << trigger->getRegexCode();
+    debug.nospace() << ", patterns=" << trigger->getPatternsList();
+    debug.nospace() << ", regexCodes=" << trigger->getRegexCodePropertyList();
     debug.nospace() << ", script=" << trigger->getScript();
-    debug.nospace() << ", needsCompiling=" << trigger->mNeedsToBeCompiled;
-    debug.nospace() << ", moduleMember=" << trigger->mModuleMember;
-    debug.nospace() << ", moduleMasterFolder=" << trigger->mModuleMasterFolder;
-    debug.nospace() << ", exportItem=" << trigger->exportItem;
     debug.nospace() << ')';
     return debug;
 }
