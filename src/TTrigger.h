@@ -212,4 +212,31 @@ private:
     int mExpiryCount;
 };
 
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const TTrigger* trigger)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+
+    if (!trigger) {
+        return debug << "TTrigger(0x0) ";
+    }
+    debug.nospace() << "TTrigger(" << trigger->getName() << ")";
+    debug.nospace() << ", id=" << trigger->getID();
+    debug.nospace() << ", isFolder=" << trigger->isFolder();
+    debug.nospace() << ", isActive=" << trigger->isActive();
+    debug.nospace() << ", isTemporary=" << trigger->isTemporary();
+    debug.nospace() << ", isMultiline=" << trigger->isMultiline();
+    debug.nospace() << ", giant=" << trigger->isGiant();
+    debug.nospace() << ", regexCode=" << trigger->getRegexCode();
+    debug.nospace() << ", script=" << trigger->getScript();
+    debug.nospace() << ", needsCompiling=" << trigger->mNeedsToBeCompiled;
+    debug.nospace() << ", moduleMember=" << trigger->mModuleMember;
+    debug.nospace() << ", moduleMasterFolder=" << trigger->mModuleMasterFolder;
+    debug.nospace() << ", exportItem=" << trigger->exportItem;
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
+
 #endif // MUDLET_TTRIGGER_H
