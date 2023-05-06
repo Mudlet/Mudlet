@@ -24,6 +24,7 @@
 
 
 #include "pre_guard.h"
+#include <QDebug>
 #include <QList>
 #include <QString>
 #include "post_guard.h"
@@ -47,13 +48,13 @@ public:
     void setReference(bool);
     QList<TVar*> getChildren(bool isToSort = true);
     TVar* getParent();
-    QString getValue();
-    QString getName();
-    QString getNewName();
+    QString getValue() const;
+    QString getName() const;
+    QString getNewName() const;
     void clearNewName();
-    int getKeyType();
-    int getNewKeyType();
-    int getValueType();
+    int getKeyType() const;
+    int getNewKeyType() const;
+    int getValueType() const;
     bool isReference();
 
 public:
@@ -73,5 +74,19 @@ private:
     int newKeyType;
     QString nName;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const TVar* var)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+    debug.nospace() << "TVar(" << var->getName() << ")";
+    debug.nospace() << ", keyType=" << var->getKeyType();
+    debug.nospace() << ", value=" << var->getValue();
+    debug.nospace() << ", valueType=" << var->getValueType();
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TVAR_H

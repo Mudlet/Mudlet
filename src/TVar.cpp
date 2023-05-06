@@ -95,7 +95,7 @@ void TVar::addChild(TVar* c)
     children.append(c);
 }
 
-QString TVar::getName()
+QString TVar::getName() const
 {
     return name;
 }
@@ -141,17 +141,17 @@ void TVar::removeChild(TVar* t)
     children.removeAll(t);
 }
 
-int TVar::getKeyType()
+int TVar::getKeyType() const
 {
     return keyType;
 }
 
-QString TVar::getValue()
+QString TVar::getValue() const
 {
     return value;
 }
 
-int TVar::getValueType()
+int TVar::getValueType() const
 {
     return valueType;
 }
@@ -162,12 +162,12 @@ void TVar::setNewName(const QString& n, const int t)
     newKeyType = t;
 }
 
-int TVar::getNewKeyType()
+int TVar::getNewKeyType() const
 {
     return newKeyType;
 }
 
-QString TVar::getNewName()
+QString TVar::getNewName() const
 {
     return nName;
 }
