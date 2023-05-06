@@ -21,6 +21,7 @@
 
 
 #include "TVar.h"
+#include <lua.h>
 
 /*
  * LUA type values from lua.h for lua 5.1:
