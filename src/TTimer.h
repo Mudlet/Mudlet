@@ -114,7 +114,7 @@ inline QDebug& operator<<(QDebug& debug, const TTimer* timer)
                     << "name: " << timer->getName()
                     << " time: " << timer->getTime()
                     << " command: " << timer->getCommand()
-                    << " code as string: " << timer->mRegisteredAnonymousLuaFunction
+                    << " script is in: " << (timer->mRegisteredAnonymousLuaFunction ? "string": "Lua function")
                     << " script: " << timer->getScript()
                     << " repeating: " << timer->mRepeating
                     << ")";

@@ -230,6 +230,7 @@ inline QDebug& operator<<(QDebug& debug, const TTrigger* trigger)
     debug.nospace() << ", isMultiline=" << trigger->isMultiline();
     debug.nospace() << ", patterns=" << trigger->getPatternsList();
     debug.nospace() << ", regexCodes=" << trigger->getRegexCodePropertyList();
+    debug.nospace() << ", script is in: " << (trigger->mRegisteredAnonymousLuaFunction ? "string": "Lua function");
     debug.nospace() << ", script=" << trigger->getScript();
     debug.nospace() << ')';
     return debug;

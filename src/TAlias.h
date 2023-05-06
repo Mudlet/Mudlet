@@ -94,6 +94,7 @@ inline QDebug& operator<<(QDebug& debug, const TAlias* alias)
     debug.nospace() << ", command=" << alias->getCommand();
     debug.nospace() << ", regexCode=" << alias->getRegexCode();
     debug.nospace() << ", funcName=" << alias->mFuncName;
+    debug.nospace() << ", script is in: " << (alias->mRegisteredAnonymousLuaFunction ? "string": "Lua function");
     debug.nospace() << ", script=" << alias->getScript();
     debug.nospace() << ", registeredAnonymousLuaFunction=" << alias->mRegisteredAnonymousLuaFunction;
     debug.nospace() << ')';
