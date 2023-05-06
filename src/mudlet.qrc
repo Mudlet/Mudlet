@@ -63,6 +63,10 @@
         <file>icons/document-save-all.png</file>
         <file>icons/document-save-as.png</file>
         <file>icons/document-save.png</file>
+        <file>icons/do-not-log-commands.png</file>
+        <file>icons/do-not-log-commands-on.png</file>
+        <file>icons/do-not-log-this-command.png</file>
+        <file>icons/do-not-log-this-command-on.png</file>
         <file>icons/dot-line.png</file>
         <file>icons/edit-bomb.png</file>
         <file>icons/edit-clear-locationbar-rtl-green.png</file>
@@ -121,6 +125,8 @@
         <file>icons/import.png</file>
         <file>icons/internet-telephony.png</file>
         <file>icons/legendsofthejedi_120x30.png</file>
+        <file>icons/log-all-commands.png</file>
+        <file>icons/log-all-commands-on.png</file>
         <file>icons/luminari_icon.png</file>
         <file>icons/lusternia_120_30.png</file>
         <file>icons/media-optical.png</file>

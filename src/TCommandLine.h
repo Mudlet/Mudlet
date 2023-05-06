@@ -27,6 +27,7 @@
 #include "TConsole.h"
 
 #include "pre_guard.h"
+#include <QActionGroup>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QString>
@@ -93,6 +94,7 @@ public slots:
     void slot_saveCommandHistory();
     void slot_doNotSaveCommandHistory();
     void slot_doNotSaveNextCommand();
+    void slot_changeCommandLineHistoryOptions(const int);
 
 private:
     bool event(QEvent*) override;
@@ -109,6 +111,11 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
 
+    QPointer<QMenu> mpCmdHistorySubMenu;
+    QPointer<QActionGroup> mpActionGroup_cmdHistory;
+    QPointer<QAction> mpAction_saveCommandHistory;
+    QPointer<QAction> mpAction_doNotSaveNextCommand;
+    QPointer<QAction> mpAction_doNotSaveCommandHistory;
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
     KeyUnit* mpKeyUnit = nullptr;
@@ -134,8 +141,8 @@ private:
     QSet<QString> tabCompleteBlacklist;
     QString mBackingFileName;
     // Set to true when the command history context menu option
-    // action_doNotSaveNextCommand is the one activated - it gets reset
-    // and the option goes back to the action_saveCommandHistory state after
+    // mpAction_doNotSaveNextCommand is the one activated - it gets reset
+    // and the option goes back to the mpAction_saveCommandHistory state after
     // the enter key is used to enter a command:
     bool mForgetNextCommand = false;
     // Set to true (by default) to save the commands in the mHistoryList at the
