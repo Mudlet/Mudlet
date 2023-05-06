@@ -55,32 +55,32 @@ public:
     TAction(TAction* parent, Host* pHost);
     TAction(const QString& name, Host* pHost);
     void compileAll();
-    QString getName() { return mName; }
+    QString getName() const { return mName; }
     void setName(const QString& name);
     void setButtonRotation(int r) { if(r != mButtonRotation) { setDataChanged(); mButtonRotation = r; } }
-    int getButtonRotation() { return mButtonRotation; }
+    int getButtonRotation() const { return mButtonRotation; }
     void setButtonColumns(int c) { if(c != mButtonColumns) { setDataChanged(); mButtonColumns = c; } }
-    int getButtonColumns() { return mButtonColumns; }
-    bool getButtonFlat() { return mButtonFlat; }
+    int getButtonColumns() const { return mButtonColumns; }
+    bool getButtonFlat() const { return mButtonFlat; }
     void setButtonFlat(bool flat) { if(flat != mButtonFlat) { setDataChanged(); mButtonFlat = flat; } }
 
     void setSizeX(int s) { if(s != mSizeX) { setDataChanged(); mSizeX = s; } }
-    int getSizeX() { return mSizeX; }
+    int getSizeX() const { return mSizeX; }
     void setSizeY(int s) { if(s != mSizeY) { setDataChanged(); mSizeY = s; } }
-    int getSizeY() { return mSizeY; }
+    int getSizeY() const { return mSizeY; }
 
     void fillMenu(TEasyButtonBar* pT, QMenu* menu);
     void compile();
     bool compileScript();
     void execute();
-    QString getIcon() { return mIcon; }
+    QString getIcon() const { return mIcon; }
     void setIcon(const QString& icon) { if(icon != mIcon) { mIcon = icon; } }
-    QString getScript() { return mScript; }
+    QString getScript() const { return mScript; }
     bool setScript(const QString& script);
-    QString getCommandButtonUp() { return mCommandButtonUp; }
+    QString getCommandButtonUp() const { return mCommandButtonUp; }
     void setCommandButtonUp(const QString& cmd) { if(cmd != mCommandButtonUp) { setDataChanged(); mCommandButtonUp = cmd; } }
     void setCommandButtonDown(const QString& cmd) { if(cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
-    QString getCommandButtonDown() { return mCommandButtonDown; }
+    QString getCommandButtonDown() const { return mCommandButtonDown; }
     bool isPushDownButton() { return mIsPushDownButton; }
     void setIsPushDownButton(bool b) { if(b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
 
@@ -158,24 +158,14 @@ private:
 };
 
 #ifndef QT_NO_DEBUG_STREAM
-inline QDebug& operator<<(QDebug& debug, const TAction& action)
+inline QDebug& operator<<(QDebug& debug, const TAction* action)
 {
     QDebugStateSaver saver(debug);
     Q_UNUSED(saver);
-    debug.nospace() << "TAction(" << action.getName() << ")";
-    debug.nospace() << ", commandButtonUp=" << action.getCommandButtonUp();
-    debug.nospace() << ", commandButtonDown=" << action.getCommandButtonDown();
-    debug.nospace() << ", script is in: " << (action.mRegisteredAnonymousLuaFunction ? "string": "Lua function");
-    debug.nospace() << ", script=" << action.getScript();
-    debug.nospace() << ", funcName=" << action.getFuncName();
-    debug.nospace() << ", moduleMember=" << action.getModuleMember();
-    debug.nospace() << ", dataChanged=" << action.getDataChanged();
-    debug.nospace() << ", useCustomLayout=" << action.getUseCustomLayout();
-    debug.nospace() << ", css=" << action.getCss();
-    debug.nospace() << ", exportItem=" << action.getExportItem();
-    debug.nospace() << ", moduleMasterFolder=" << action.getModuleMasterFolder();
-    debug.nospace() << ", toolbarLastDockArea=" << action.getToolbarLastDockArea();
-    debug.nospace() << ", toolbarLastFloatingState=" << action.getToolbarLastFloatingState();
+    debug.nospace() << "TAction(" << action->getName() << ")";
+    debug.nospace() << ", commandButtonUp=" << action->getCommandButtonUp();
+    debug.nospace() << ", commandButtonDown=" << action->getCommandButtonDown();
+    debug.nospace() << ", script=" << action->getScript();
     debug.nospace() << ')';
     return debug;
 }
