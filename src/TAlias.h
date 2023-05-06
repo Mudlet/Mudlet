@@ -95,10 +95,6 @@ inline QDebug& operator<<(QDebug& debug, const TAlias* alias)
     debug.nospace() << ", regexCode=" << alias->getRegexCode();
     debug.nospace() << ", funcName=" << alias->mFuncName;
     debug.nospace() << ", script=" << alias->getScript();
-    debug.nospace() << ", needsCompiling=" << alias->mNeedsToBeCompiled;
-    debug.nospace() << ", moduleMember=" << alias->mModuleMember;
-    debug.nospace() << ", moduleMasterFolder=" << alias->mModuleMasterFolder;
-    debug.nospace() << ", exportItem=" << alias->exportItem;
     debug.nospace() << ", registeredAnonymousLuaFunction=" << alias->mRegisteredAnonymousLuaFunction;
     debug.nospace() << ')';
     return debug;
