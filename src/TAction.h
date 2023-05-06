@@ -28,6 +28,7 @@
 
 #include "pre_guard.h"
 #include <QColor>
+#include <QDebug>
 #include <QIcon>
 #include <QObject>
 #include <QPointer>
@@ -155,5 +156,29 @@ private:
     bool mModuleMember = false;
     bool mDataChanged = true;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const TAction& action)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+    debug.nospace() << "TAction(" << action.getName() << ")";
+    debug.nospace() << ", commandButtonUp=" << action.getCommandButtonUp();
+    debug.nospace() << ", commandButtonDown=" << action.getCommandButtonDown();
+    debug.nospace() << ", script is in: " << (action.mRegisteredAnonymousLuaFunction ? "string": "Lua function");
+    debug.nospace() << ", script=" << action.getScript();
+    debug.nospace() << ", funcName=" << action.getFuncName();
+    debug.nospace() << ", moduleMember=" << action.getModuleMember();
+    debug.nospace() << ", dataChanged=" << action.getDataChanged();
+    debug.nospace() << ", useCustomLayout=" << action.getUseCustomLayout();
+    debug.nospace() << ", css=" << action.getCss();
+    debug.nospace() << ", exportItem=" << action.getExportItem();
+    debug.nospace() << ", moduleMasterFolder=" << action.getModuleMasterFolder();
+    debug.nospace() << ", toolbarLastDockArea=" << action.getToolbarLastDockArea();
+    debug.nospace() << ", toolbarLastFloatingState=" << action.getToolbarLastFloatingState();
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TACTION_H
