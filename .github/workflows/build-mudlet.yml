@@ -39,6 +39,7 @@ jobs:
             compiler: clang_64
             qt: '5.14.2'
             deploy: 'deploy'
+            run_tests: 'true'
 #           - os: windows-2019
 #             buildname: 'windows'
 #             triplet: x64-mingw-dynamic
