@@ -55,8 +55,8 @@ include(../3rdparty/communi/communi.pri)
     QMAKE_CXXFLAGS_RELEASE ~= s/-O[0123s]//g
     QMAKE_CFLAGS_RELEASE ~= s/-O[0123s]//g
 # NOW we can put ours in:
-    QMAKE_CXXFLAGS_RELEASE += -O3
-    QMAKE_CFLAGS_RELEASE += -O3
+    QMAKE_CXXFLAGS_RELEASE += -O3 -flto
+    QMAKE_CFLAGS_RELEASE += -O3 -flto
 # There is NO need to put in the -g option as it is done already for debug bugs
 # For gdb type debugging it helps if there is NO optimisations so use -O0.
     QMAKE_CXXFLAGS_DEBUG += -O0
