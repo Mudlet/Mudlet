@@ -69,14 +69,14 @@ public:
     void setExitWeight(const QString& cmd, int w);
     bool hasExitWeight(const QString& cmd);
     bool setDoor(const QString& cmd, int doorStatus); //0=no door, 1=open door, 2=closed, 3=locked
-    int getDoor(const QString& cmd);
+    int getDoor(const QString& cmd) const;
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);
     void calcRoomDimensions();
     bool setArea(int, bool isToDeferAreaRelatedRecalculations = false);
     int getExitWeight(const QString& cmd);
 
-    int getWeight() { return weight; }
+    int getWeight() const { return weight; }
     int getNorth() const { return north; }
     void setNorth(int id) { north = id; }
     int getNorthwest() const { return northwest; }
@@ -220,6 +220,9 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     debug.nospace() << "TRoom(" << room->getId() << ")";
     debug.nospace() << ", name=" << room->name;
     debug.nospace() << ", area=" << room->getArea();
+    debug.nospace() << ", pos=" << room->x << "," << room->y << "," << room->z;
+    
+    debug.nospace() << ", exits:";
     if (room->getNorth() != -1) {
         debug.nospace() << ", north=" << room->getNorth();
     }
@@ -265,7 +268,37 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
         }
         debug.nospace() << ")";
     }
-    debug.nospace() << ')';
+
+    QMap<QString, QList<QPointF>> customLines = room->customLines;
+    if (!customLines.isEmpty()) {
+        debug.nospace() << ", customLines=(";
+        for (QMap<QString, QList<QPointF>>::const_iterator it = customLines.begin(); it != customLines.end(); ++it) {
+            debug.nospace() << it.key() << ": " << it.value() << ", ";
+        }
+        debug.nospace() << ")";
+    }
+    
+    
+    int weight = room->getWeight();
+    if (weight != -1) {
+        debug.nospace() << ", weight=" << weight; 
+    }
+    
+    QString symbol = room->mSymbol;
+    if (!symbol.isEmpty()) {
+        debug.nospace() << ", symbol=" << symbol;
+    }
+    
+    auto exitWeights = room->getExitWeights();
+    if (!exitWeights.isEmpty()) {
+        debug.nospace() << ", exitWeights=(";
+        for (auto it = exitWeights.begin(); it != exitWeights.end(); ++it) {
+            auto exit = it.key();
+            auto weight = it.value();
+            debug.nospace() << exit << "." << weight << ", ";
+        }
+        debug.nospace() << ")";
+    }
     return debug;
 }
 #endif // QT_NO_DEBUG_STREAM
