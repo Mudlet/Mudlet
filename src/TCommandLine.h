@@ -77,6 +77,10 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const { return mpConsole; }
+    // First value is true to forget the NEXT line only, the second is
+    // otherwise true to remember all other; if the first is true the state
+    // of the second is to be disregarded:
+    std::pair<bool, bool> commandLineHistoryOptions() const { return {mForgetNextCommand, mSaveCommands}; }
 
     int mActionFunction = 0;
     QPalette mRegularPalette;

@@ -15647,6 +15647,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
     lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
     lua_register(pGlobalLua, "getConfig", TLuaInterpreter::getConfig);
+    lua_register(pGlobalLua, "setCommandHistoryOptions", TLuaInterpreter::setCommandHistoryOptions);
+    lua_register(pGlobalLua, "getCommandHistoryOptions", TLuaInterpreter::getCommandHistoryOptions);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -18036,4 +18038,99 @@ int TLuaInterpreter::getConfig(lua_State *L)
     }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCommandHistoryOptions
+int TLuaInterpreter::getCommandHistoryOptions(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    auto numberOfLines = host.getCommandLineHistorySaveSize();
+    if (!numberOfLines) {
+        // We do not use warnArgumentValue(...) because it is valid to have
+        // this disabled and we do not want a message to be painted on the
+        // Central Debug Console:
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "disabled by profile global preference");
+        return 2;
+    }
+    QString name = QLatin1String("main");
+    if (lua_gettop(L)) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto pCommandline = COMMANDLINE(L, name);
+    auto [forgetNextCommand, saveCommands] = pCommandline->commandLineHistoryOptions();
+    if (forgetNextCommand) {
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "disabled for next command only");
+        return 2;
+    }
+
+    lua_pushboolean(L, saveCommands);
+    lua_pushstring(L, (saveCommands ? qsl("enabled (%1 lines will be saved)").arg(QString::number(numberOfLines)) : qsl("disabled for all commands")).toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setCommandHistoryOptions
+int TLuaInterpreter::setCommandHistoryOptions(lua_State* L)
+{
+    auto n = lua_gettop(L);
+    auto& host = getHostFromLua(L);
+    auto numberOfLines = host.getCommandLineHistorySaveSize();
+    if (!numberOfLines) {
+        // Unlike for the getter we do want to alert on trying to set the
+        // per-commandLine option when things are disabled globally for the
+        // profile:
+        return warnArgumentValue(L, __func__, "disabled by profile global preference");
+    }
+    if (!n) {
+        // if there is no arguments the code without this would reset a prior
+        // "forget next command" usage on the main command line but that does
+        // not seem to be much needed so instead error out and moan about not
+        // having any arguments:
+        errorArgumentType(L, __func__, 1, "forget next command", "boolean");
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    QString name = QLatin1String("main");
+    bool forgetNextCommand = false;
+    bool saveCommands = true;
+
+    if (n == 1) {
+        forgetNextCommand = getVerifiedBool(L, __func__, 1, "forget next command");
+    } else {
+        if (lua_type(L, 1) == LUA_TSTRING) {
+            // First argument is a string so is presumably a command line name
+            name = CMDLINE_NAME(L, 1);
+            forgetNextCommand = getVerifiedBool(L, __func__, 2, "forget next command");
+            if (n > 2) {
+                saveCommands = !getVerifiedBool(L, __func__, 3, "forget all commands", true);
+            }
+        } else {
+            forgetNextCommand = getVerifiedBool(L, __func__, 1, "forget next command");
+            if (n > 1) {
+                saveCommands = !getVerifiedBool(L, __func__, 2, "forget all commands", true);
+            }
+        }
+    }
+
+    auto pCommandline = COMMANDLINE(L, name);
+    if (forgetNextCommand) {
+        if (!saveCommands) {
+            return warnArgumentValue(L, __func__, "illegal combination of options, it does not make sense to set both 'forget next command' and 'forget all commands' simultaneously");
+        }
+        // If we are already set to NOT save all commands then after the NEXT
+        // command, which is not saved, we will revert to SAVING again - this
+        // needs to be explained in the documentation!
+        pCommandline->slot_doNotSaveNextCommand();
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    if (saveCommands) {
+        pCommandline->slot_saveCommandHistory();
+    } else {
+        pCommandline->slot_doNotSaveCommandHistory();
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
