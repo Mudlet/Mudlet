@@ -3000,23 +3000,55 @@ you can use it but there could be issues with aligning columns of text</string>
              <bool>true</bool>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Mudlet will only show Rich Presence information while your Discord application reports that you are logged in with these Discord user identification details (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
             </property>
-            <layout class="QHBoxLayout" name="horizontalLayout_widget_discordUser">
-             <item>
-              <widget class="QLabel" name="label_discordUserName">
+            <layout class="QGridLayout" name="gridLayout_widget_discordUser">
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_discordUserId">
+               <property name="toolTip">
+                <string>&lt;p&gt;&lt;b&gt;&lt;i&gt;(Preferred as of May 2023)&lt;/i&gt;&lt;/b&gt; Mudlet will only send Rich Presence information to your local Discord application while you use this Discord user id (useful if you have multiple Discord accounts). Leave empty to allow this profile to send information to any Discord account you log in with.&lt;/p&gt;</string>
+               </property>
                <property name="text">
-                <string>Restrict to:</string>
+                <string comment="Text used for the label to introduce the Discord User Id (&quot;snowflake&quot;) number when there is an obsolete User Name or User Discriminator stored.">(Preferred) Restrict to user id:</string>
+               </property>
+               <property name="buddy">
+                <cstring>lineEdit_discordUserId</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1" colspan="3">
+              <widget class="QLineEdit" name="lineEdit_discordUserId">
+               <property name="toolTip">
+                <string>&lt;p&gt;&lt;b&gt;&lt;i&gt;(Preferred as of May 2023)&lt;/i&gt;&lt;/b&gt; Mudlet will only send Rich Presence information to your local Discord application while you use this Discord user id (useful if you have multiple Discord accounts). Leave empty to allow this profile to send information to any Discord account you log in with.&lt;/p&gt;</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </property>
+               <property name="placeholderText">
+                <string>specific Discord user id</string>
+               </property>
+               <property name="clearButtonEnabled">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_discordUserName">
+               <property name="toolTip">
+                <string>&lt;p&gt;&lt;b&gt;&lt;i&gt;(Depreciated as of May 2023)&lt;/i&gt;&lt;/b&gt; Mudlet will only send Rich Presence information to your local Discord application while you use this Discord user name (useful if you have multiple Discord accounts). Leave empty to allow this profile to send information to any Discord account you log in with.&lt;/p&gt;</string>
+               </property>
+               <property name="text">
+                <string>(Depreciated) Restrict to:</string>
                </property>
                <property name="buddy">
                 <cstring>lineEdit_discordUserName</cstring>
                </property>
               </widget>
              </item>
-             <item>
+             <item row="1" column="1">
               <widget class="QLineEdit" name="lineEdit_discordUserName">
                <property name="toolTip">
-                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+                <string>&lt;p&gt;&lt;b&gt;&lt;i&gt;(Depreciated as of May 2023)&lt;/i&gt;&lt;/b&gt; Mudlet will only send Rich Presence information to your local Discord application while you use this Discord user name (useful if you have multiple Discord accounts). Leave empty to allow this profile to send information to any Discord account you log in with.&lt;/p&gt;</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -3029,17 +3061,17 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
               </widget>
              </item>
-             <item>
+             <item row="1" column="2">
               <widget class="QLabel" name="label_discordUserDiscriminator">
                <property name="toolTip">
-                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+                <string>&lt;p&gt;&lt;p&gt;&lt;b&gt;&lt;i&gt;(Depreciated as of May 2023)&lt;/i&gt;&lt;/b&gt; Mudlet will only send Rich Presence information to your local Discord application while you use this Discord username discriminator (useful if you have multiple Discord accounts). Leave empty to allow this profile to send information to any Discord account you log in with.&lt;/p&gt;</string>
                </property>
                <property name="text">
                 <string notr="true"> # </string>
                </property>
               </widget>
              </item>
-             <item>
+             <item row="1" column="3">
               <widget class="QLineEdit" name="lineEdit_discordUserDiscriminator">
                <property name="maximumSize">
                 <size>
@@ -3048,7 +3080,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 </size>
                </property>
                <property name="toolTip">
-                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
+                <string>&lt;p&gt;&lt;p&gt;&lt;b&gt;&lt;i&gt;(Depreciated as of May 2023)&lt;/i&gt;&lt;/b&gt; Mudlet will only send Rich Presence information to your local Discord application while you use this Discord username discriminator (useful if you have multiple Discord accounts). Leave empty to allow this profile to send information to any Discord account you log in with.&lt;/p&gt;</string>
                </property>
                <property name="inputMethodHints">
                 <set>Qt::ImhDigitsOnly</set>

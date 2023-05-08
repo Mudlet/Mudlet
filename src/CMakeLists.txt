@@ -467,6 +467,9 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # * Produce all the time the surprise that normally will only occur on the
 #   first day of the fourth month of the Gregorian calendar year:
 # target_compile_definitions(mudlet PRIVATE DEBUG_EASTER_EGGS)
+#
+# * Produce additional details as the Discord-RPC library is used
+# target_compile_definitions(mudlet PRIVATE DEBUG_DISCORD)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 

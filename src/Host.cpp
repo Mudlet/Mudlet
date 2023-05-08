@@ -236,7 +236,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mUseProxy(false)
 , mProxyPort(0)
 , mIsGoingDown(false)
-, mIsProfileLoadingSequence(false)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
@@ -807,7 +806,8 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     if (mIsProfileLoadingSequence) {
-        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
+        // If we're inside of profile loading sequence modules might not be
+        // loaded yet, and we could accidentally clear their contents
         return std::make_tuple(false, filename_xml, qsl("profile loading is in progress"));
     }
 
@@ -4184,4 +4184,76 @@ void Host::setBorders(QMargins borders)
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpConsole, &event);
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);
+}
+
+void Host::slot_discordReadyReceived(const QString& userId, const QString& userName, const QString& userDiscriminator)
+{
+    if (!mRequiredDiscordUserName.isEmpty() || !mRequiredDiscordUserDiscriminator.isEmpty()) {
+        if (((!mRequiredDiscordUserName.isEmpty()) && !mRequiredDiscordUserName.compare(userName, Qt::CaseSensitive)) // User name is stored and it matches
+            && ((!mRequiredDiscordUserDiscriminator.isEmpty()) && !mRequiredDiscordUserDiscriminator.compare(userDiscriminator, Qt::CaseSensitive))) { // User discriminator is stored and it matches
+
+            postMessage(tr("[ ALERT ] - You are using a user-name and/or a user-discriminator to limit\n"
+                           "access to the Discord-RPC and this profile matches the stored details. However\n"
+                           "Discord are progressively changing the form of the former and removing the\n"
+                           "latter from May 2023 onward and Mudlet is changing to use the unique user ID\n"
+                           "for each Discord user account instead for this purpose. Please copy the value:\n"
+                           "%1\n"
+                           "into the appropriate field in the 'Chat' tab in the preferences and remove\n"
+                           "the user-name and/or user-discriminator enteries there to adapt for this change.\n"
+                           "You can find out more about this at: https://discord.com/blog/usernames")
+                                .arg(userId));
+            return;
+        }
+        postMessage(tr("[ ALERT ]  - You are using a user-name and/or a user-discriminator to limit\n"
+                       "access to the Discord-RPC but this profile does not matches the stored details.\n"
+                       "However Discord are progressively changing the form of the former and removing the\n"
+                       "latter from May 2023 onward and Mudlet is changing to use the unique user ID\n"
+                       "for each Discord user account instead for this purpose. When you are logged into\n"
+                       "the Discord application with an identy that matches the details stored for this\n"
+                       "profile a different message will be shown that gives that user ID which you can\n"
+                       "then copy to the appropriate field in the 'Chat' tab in the preferences and remove\n"
+                       "the user-name and/or user-discriminator enteries there to adapt for this change.\n"
+                       "You can find out more about this at: https://discord.com/blog/usernames"));
+        return;
+    }
+
+    if (mRequiredDiscordUserId.isEmpty()) {
+        // Success, because no match is needed
+        postMessage(tr("[ INFO ]  - Connecting to your running Discord application, via the Discord-RPC,\n"
+                       "your unique Discord account user-id for this is: \"%1\".")
+                            .arg(userId));
+        return;
+    }
+
+    if (mRequiredDiscordUserId.compare(userId, Qt::CaseSensitive)) {
+        // Failure, because match is needed and it doesn't
+        postMessage(tr("[ ALERT ] - Not connecting this profile to your running Discord application via\n"
+                       "the Discord-RPC as the Discord user-id is:\n"
+                       "\"%1\"\n"
+                       "but this profile is set to only connect when you are logged in to Discord as:\n"
+                       "\"%2\".")
+                            .arg(userId, mRequiredDiscordUserId));
+        return;
+    }
+
+    // Success, match is needed and it does:
+    postMessage("[ INFO ]  - Connecting to your running Discord application, via the Discord-RPC.");
+}
+
+void Host::completedProfileLoadingSequence()
+{
+    mIsProfileLoadingSequence = false;
+    auto [userId, userName, userDiscriminator] = mudlet::self()->mDiscord.discordUserDetails();
+    if (!userId.isEmpty()) {
+        // We are already connected so display details directly:
+        slot_discordReadyReceived(userId, userName, userDiscriminator);
+    } else {
+        // We will wait for a connection to be established and then show them:
+        connect(&mudlet::self()->mDiscord, &Discord::signal_discordReadyReceived, this, &Host::slot_discordReadyReceived, Qt::UniqueConnection);
+    }
+
+    TEvent event {};
+    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(event);
 }

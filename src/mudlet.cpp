@@ -2765,7 +2765,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     if (!pHost) {
         return;
     }
-    pHost->mIsProfileLoadingSequence = true;
+    pHost->startingProfileLoadingSequence();
     // The Host instance gets its TMainConsole here:
     addConsoleForNewHost(pHost);
     pHost->mBlockScriptCompile = false;
@@ -2815,12 +2815,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     // This marks the end of the profile loading process, so all the aliases
     // triggers and other items are present in the Lua sub-system:
-    pHost->mIsProfileLoadingSequence = false;
-
-    TEvent event {};
-    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    pHost->raiseEvent(event);
+    pHost->completedProfileLoadingSequence();
 
     // Now load the default (latest stored) map file:
     pHost->loadMap();

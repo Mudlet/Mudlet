@@ -207,8 +207,11 @@ public:
     bool discordUserIdMatch(Host* pHost) const;
 
 
+    static std::tuple<QString, QString, QString> discordUserDetails() { return {smUserId, smUserName, smDiscriminator}; }
     const static QString mMudletApplicationId;
 
+signals:
+    void signal_discordReadyReceived(const QString& userId, const QString& userName, const QString& userDiscriminator);
 
 private:
     static void handleDiscordReady(const DiscordUser* request);

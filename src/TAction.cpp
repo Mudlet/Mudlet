@@ -200,7 +200,7 @@ void TAction::expandToolbar(TToolBar* pT)
         /*
          * CHECK: The other expandToolbar(...) has the following in this position:
          *       //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
-         *       if( action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence )
+         *       if( action->mIsPushDownButton && mpHost->inProfileLoadingSequence() )
          *       {
          *          qDebug()<<"expandToolBar() name="<<action->mName<<" executing script";
          *          action->execute();
@@ -290,7 +290,7 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
         button->setStyleSheet(css);
 
         //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
-        if (action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence) {
+        if (action->mIsPushDownButton && mpHost->inProfileLoadingSequence()) {
             qDebug() << "expandToolBar() name=" << action->mName << " executing script";
             action->execute();
         }
@@ -351,7 +351,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
         action->mpEButton = newAction;
 
         //FIXME: Heiko April 2012 -> expandToolBar()
-        if (action->mIsPushDownButton && mpHost->mIsProfileLoadingSequence) {
+        if (action->mIsPushDownButton && mpHost->inProfileLoadingSequence()) {
             action->execute();
         }
 

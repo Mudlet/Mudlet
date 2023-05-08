@@ -28,8 +28,6 @@
 #include <string.h>
 #include "post_guard.h"
 
-// Uncomment this to provide some additional qDebug() output:
-// #define DEBUG_DISCORD 1
 
 QString Discord::smUserName;
 QString Discord::smUserId;
@@ -259,7 +257,7 @@ void Discord::setParty(Host* pHost, int partySize, int partyMax)
 
 void Discord::timerEvent(QTimerEvent* event)
 {
-    Q_UNUSED(event);
+    Q_UNUSED(event)
 
     if (mLoaded) {
         Discord_RunCallbacks();
@@ -268,16 +266,17 @@ void Discord::timerEvent(QTimerEvent* event)
 
 void Discord::handleDiscordReady(const DiscordUser* request)
 {
-    Discord::smUserName = request->username;
-    Discord::smUserId = request->userId;
-    Discord::smDiscriminator = request->discriminator;
-    Discord::smAvatar = request->avatar;
+    Discord::smUserName = QString::fromUtf8(request->username);
+    Discord::smUserId = QString::fromUtf8(request->userId);
+    Discord::smDiscriminator = QString::fromUtf8(request->discriminator);
+    Discord::smAvatar = QString::fromUtf8(request->avatar);
 
 #if defined(DEBUG_DISCORD)
     qDebug().noquote().nospace() << "Discord Ready callback received - for UserName: \"" << smUserName << "\", ID: \"" << smUserId << "#" << smDiscriminator << "\".";
 #endif
     // don't call UpdatePresence from here - freezes Mudlet deep in the Discord API
     // when profile autostart is enabled
+    emit mudlet::self()->mDiscord.signal_discordReadyReceived(smUserId, smUserName, smDiscriminator);
 }
 
 QStringList Discord::getDiscordUserDetails() const

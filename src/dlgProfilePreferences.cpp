@@ -828,6 +828,24 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToState->setChecked(!(discordFlags & Host::DiscordSetState));
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
+        lineEdit_discordUserId->setText(pHost->mRequiredDiscordUserId);
+        if (pHost->mRequiredDiscordUserName.isEmpty() && pHost->mRequiredDiscordUserDiscriminator.isEmpty()) {
+            label_discordUserName->hide();
+            lineEdit_discordUserName->hide();
+            label_discordUserDiscriminator->hide();
+            lineEdit_discordUserDiscriminator->hide();
+            //: Text used for the label to introduce the Discord User Id ("snowflake") number when there is no obsolete User Name or User Discriminator stored.
+            label_discordUserId->setText(tr("Restrict to user id:"));
+            // Also tweak the tooltips on the shown elements:
+            label_discordUserId->setToolTip(utils::richText(tr("Mudlet will only send Rich Presence information to your local Discord "
+                                                               "application while you use this Discord user id (useful if you have multiple "
+                                                               "Discord accounts). Leave empty to allow this profile to send information to "
+                                                               "any Discord account you log in with.")));
+            lineEdit_discordUserId->setToolTip(utils::richText(tr("Mudlet will only send Rich Presence information to your local Discord "
+                                                                  "application while you use this Discord user id (useful if you have multiple "
+                                                                  "Discord accounts). Leave empty to allow this profile to send information to "
+                                                                  "any Discord account you log in with.")));
+        }
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
         lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
     }
@@ -3008,6 +3026,7 @@ void dlgProfilePreferences::slot_saveAndClose()
                                          | (checkBox_discordServerAccessToTimerInfo->isChecked() ? Host::DiscordNoOption : Host::DiscordSetTimeInfo)
                                          | (checkBox_discordLuaAPI->isChecked() ? Host::DiscordLuaAccessEnabled : Host::DiscordNoOption));
 
+        pHost->mRequiredDiscordUserId = lineEdit_discordUserId->text().trimmed();
         pHost->mRequiredDiscordUserName = lineEdit_discordUserName->text().trimmed();
         if (lineEdit_discordUserDiscriminator->hasAcceptableInput()) {
             // The input mask specifies 4 digits [0-9]
