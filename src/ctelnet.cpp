@@ -2604,7 +2604,12 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
         initStreamDecompressor();
         qDebug() << "Listening for new compression sequences";
-        return -1;
+
+        // We shouldn't return -1 or an error here, as that prevents any text
+        // or any telnet negotiation strings from being properly interpreted
+        // by Mudlet, and shown to the user.
+        // Returning outSize ensures anything sent before the Z_STREAM_END is
+        // shown to the user.
     }
     return outSize;
 }
