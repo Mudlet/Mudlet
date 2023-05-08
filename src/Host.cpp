@@ -3743,7 +3743,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
     } else if (pL) {
         QString styleSheet = pL->styleSheet();
         QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
-        if (stylesheet.contains(qsl("background-color"))) {
+        if (styleSheet.contains(qsl("background-color"))) {
             QRegularExpression re("background-color: .*;");
             styleSheet.replace(re, newColor);
         } else {
