@@ -3741,9 +3741,16 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
         pC->setConsoleBgColor(r, g, b, alpha);
         return true;
     } else if (pL) {
-        QPalette mainPalette;
-        mainPalette.setColor(QPalette::Window, QColor(r, g, b, alpha));
-        pL->setPalette(mainPalette);
+        QString styleSheet = pL->styleSheet();
+        QString newColor = QString("background-color: rgba(%1, %2, %3, %4);").arg(r).arg(g).arg(b).arg(alpha);
+        if (stylesheet.contains(qsl("background-color"))) {
+            QRegularExpression re("background-color: .*;");
+            styleSheet.replace(re, newColor);
+        } else {
+            styleSheet.append(newColor);
+        }
+        
+        pL->setStyleSheet(styleSheet);
         return true;
     }
 
