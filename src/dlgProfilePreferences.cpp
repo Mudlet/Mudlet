@@ -808,7 +808,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_commandLineHistorySaveSize->insertItem(8, tr("2,000", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 2000);
     comboBox_commandLineHistorySaveSize->insertItem(9, tr("5,000", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 5000);
     comboBox_commandLineHistorySaveSize->insertItem(10, tr("10,000", "Value for number of command line history size to save, can be formatted for a locale's number grouping conventions"), 10000);
-    int commandLineHistorySaveSize_index = comboBox_commandLineHistorySaveSize->findData(QVariant(pHost->getCommandLineHistorySaveSize()), Qt::MatchExactly);
+    int commandLineHistorySaveSize_index = comboBox_commandLineHistorySaveSize->findData(QVariant(pHost->getCommandLineHistorySaveSize()).toInt(), Qt::UserRole, Qt::MatchExactly);
     if (commandLineHistorySaveSize_index >= 0) {
         comboBox_commandLineHistorySaveSize->setCurrentIndex(commandLineHistorySaveSize_index);
     } else {
