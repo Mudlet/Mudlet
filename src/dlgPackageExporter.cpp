@@ -174,7 +174,7 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
                 tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".",
                    // Intentional comment to separate arguments
                    "This error message will appear when a file is to be placed into the package but the code cannot open it.")
-                        .arg(fileSystemFileName, zip_strerror(archive))};
+                        .arg(fileSystemFileName.toHtmlEscaped(), zip_strerror(archive))};
     }
 
     if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE) == -1) {
@@ -184,7 +184,7 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
                 tr("Failed to add file \"%1\" to package. Error message was: \"%3\".",
                    // Intentional comment to separate arguments
                    "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
-                        .arg(archiveFileName, zip_strerror(archive))};
+                        .arg(archiveFileName.toHtmlEscaped(), zip_strerror(archive))};
     }
 
     return {true, QString()};
