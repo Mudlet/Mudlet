@@ -860,9 +860,7 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
         }
         if (asset.isFile()) {
             QFile::remove(filePath);
-            if (!QFile::copy(asset.absoluteFilePath(), filePath)) {
-                return {false, tr("cannot copy %1 to the temporary location %2 - can you double-check it?").arg(asset.absoluteFilePath().toHtmlEscaped(), tempPath.toHtmlEscaped())};
-            }
+            QFile::copy(asset.absoluteFilePath(), filePath);
         } else if (asset.isDir()) {
             copy_directory(asset.absoluteFilePath(), filePath, false);
         }
