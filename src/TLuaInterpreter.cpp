@@ -17676,6 +17676,30 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
+    if (key == qsl("commandLineHistorySaveSize")) {
+        // This set of values needs to be the same as those put in the
+        // (QComboBox) dlgProfilePreferences::comboBox_commandLineHistorySaveSize
+        // widget:
+        static const QList<int> values{0, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000};
+        const auto value = getVerifiedInt(L, __func__, 2, "value");
+        if (!values.contains(value)) {
+            static QStringList valuesAsStrings;
+            if (valuesAsStrings.isEmpty()) {
+                for (const auto& potentialValue : values) {
+                    valuesAsStrings << QString::number(potentialValue);
+                }
+            }
+            lua_pushnil(L);
+            // Use the original argument as a string, not what the
+            // getVerifiedInt(...) returns in case it is not a pure integer to
+            // start with:
+            lua_pushfstring(L, "invalid commandLineHistorySaveSize value '%s', it should be one of %s",
+                            lua_tostring(L, 2), valuesAsStrings.join(qsl(", ")).toUtf8().constData());
+            return 2;
+        }
+        host.setCommandLineHistorySaveSize(value);
+        return success();
+    }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
@@ -18029,6 +18053,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
                 lua_pushstring(L, "f6");
             }
         } },
+        { qsl("commandLineHistorySaveSize"), [&](){ lua_pushnumber(L, host.getCommandLineHistorySaveSize()); } },
     };
 
     auto it = configMap.find(key);
