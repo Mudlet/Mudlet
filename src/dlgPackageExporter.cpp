@@ -856,11 +856,13 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
         QString filePath = tempPath;
         filePath.append(asset.fileName());
         if (!asset.exists()) {
-            return {false, tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath())};
+            return {false, tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath().toHtmlEscaped())};
         }
         if (asset.isFile()) {
             QFile::remove(filePath);
-            QFile::copy(asset.absoluteFilePath(), filePath);
+            if (!QFile::copy(asset.absoluteFilePath(), filePath)) {
+                return {false, tr("cannot copy %1 to the temporary location %2 - can you double-check it?").arg(asset.absoluteFilePath().toHtmlEscaped(), tempPath.toHtmlEscaped())};
+            }
         } else if (asset.isDir()) {
             copy_directory(asset.absoluteFilePath(), filePath, false);
         }
