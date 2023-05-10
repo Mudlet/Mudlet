@@ -4,32 +4,21 @@ the free [Github for Desktop](https://desktop.github.com) app to contribute code
 
 # Coding guidelines
 
-If you're a first-timer, you're excluded, we'll go easy on you :wink:
+If you're a first-timer, don't worry about conforming to all of these! We'll show you the ropes.
 
-## Do not use ``qsl("")``
-
-Prefer ``QString()`` over ``qsl("")`` for  for empty strings - the default constructor
-for QString is cheaper in terms of both instructions and memory.
-
-([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
-
-## Avoid duplicated qsls
-
-Avoid having multiple qsls with the same content. For plain literals and QLatin1String, compilers
-try to consolidate identical literals so that they are not duplicated. For qsl, identical strings
-cannot be merged.
-
-([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
-
-## Use .arg(arg1, arg2) instead of .arg(arg1).arg(arg2)
-
-If you just need to use a plain .arg() call, use multiple arguments within it and not as separate .arg() calls as that'll avoid creating temporary QString objects. If your 2nd and 3rd arguments happen to be numbers, be sure to wrap them in  `QString::number(yourNumber)`.
-
-([source](https://meetingcpp.com/tl_files/mcpp/2015/talks/Marc-Mutz-MC++15-Effective-Qt.pdf))
-
+## Code style
 ## Naming things? Check against antipatterns
 
 Check https://www.linguistic-antipatterns.com when naming anything to help ensure it can be understood intuitively.
+
+### C++
+* use clang-format for formatting your code with [src/.clang-format](https://github.com/Mudlet/Mudlet/blob/development/src/.clang-format) settings. To get started, check out Clang Format in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section.
+* use clang-tidy linting with [.clang-tidy](https://github.com/Mudlet/Mudlet/blob/development/.clang-tidy) settings. To get started, check out Clang Tidy in the [Setting up IDE's](https://wiki.mudlet.org/w/Compiling_Mudlet) section
+* additionally, use [clazy]([url](https://github.com/KDE/clazy)) for linting as well
+* use braces {} around all statements (ie, `if`'s and so on), even if they are one line
+* use `qsl()` to wrap Qt strings, this ensures they're created at compile time
+* at the same time, don't use a blank `qsl("")` - use `QString()` in that case ([source](http://blog.qt.io/blog/2014/06/13/qt-weekly-13-qstringliteral/))
+
 
 # Internationalization do's and don'ts
 
@@ -71,11 +60,7 @@ Don't:
 ```
 
 # TODO's
-In Mudlet's decade of existence, TODO's get added to the codebase but almost never resolved. Having them in the codebase does not add any value if they are just sitting there and not acted upon. This raises the question, why have them around at all if they are not adding any value? To this effect, the project decided not to add future TODOs to the code and work on removing existing ones.
-
-In case the TODO is an improvement, a pull request implementing the idea or an issue suggesting it can be added - no TODO necessary. In case it's a legitimate problem, it's better to fix it right away instead of kicking the can down the road.
-
-# Git commit guidelines for core team
+Avoid adding TODO's to code - [file an issue]([url](https://github.com/Mudlet/Mudlet/issues/new/choose)) or fix it with a separate pull request instead. Practice has shown that TODO's get added to the codebase but seldomly get resolved.
 
 ## Refactoring
 
@@ -95,11 +80,11 @@ Danger will also give a heads up if the PR title is long, or if more than 10 sou
 
 Pull Requests that overhaul large pieces of functionality at once will not be accepted: through experience, they bring more pain than they are worth. Being really difficult to discuss, test, and reason about, they are banned.
 
-That does not mean we don't welcome large overhauls: we do. Just make sure to send it in as separate, logically broken-down improvements that implement the functionality you'd like to have in a step process.
+That does not mean we don't welcome large overhauls: we do! Just make sure to send it in as separate, logically broken-down improvements that implement the functionality you'd like to have in a step process.
 
 Of course, before embarking on such a journey, [discuss with the core team](https://discord.gg/kuYvMQ9) your ideas first so we can guide you on the best design!
 
-## Merging Pull Requests (PRs)
+# Git commit guidelines for core team
 
 The preferred order of [merging PRs](https://help.github.com/articles/about-pull-request-merges/) is:
 1. Prefer _squash and merge_ for a clean history and added PR numbers for details of discussion for future comparison.
