@@ -59,6 +59,7 @@ jobs:
         WITH_UPDATER=NO WITH_3DMAPPER=NO cmake -DCMAKE_BUILD_TYPE=Release -S${{github.workspace}} -B${{github.workspace}}/build -G Ninja
         cd ${{github.workspace}}/build
         ninja -j $(expr `nproc` - 1)
+        tree
 
     - name: Check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
