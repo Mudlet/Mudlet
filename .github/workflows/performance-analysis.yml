@@ -56,7 +56,7 @@ jobs:
 
     - name: Build Mudlet
       run : |
-        WITH_UPDATER=NO WITH_3DMAPPER=NO cmake --build ${{github.workspace}}/build -G Ninja
+        WITH_UPDATER=NO WITH_3DMAPPER=NO cmake -G Ninja --build ${{github.workspace}}/build
         ninja
 
     - name: Check ccache stats post build
