@@ -8779,7 +8779,7 @@ void dlgTriggerEditor::slot_export()
 
     QFile checkWriteability(fileName);
     if (!checkWriteability.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("export package:"), tr("Cannot write checkWriteability %1:\n%2.").arg(fileName, checkWriteability.errorString()));
+        QMessageBox::warning(this, tr("export package:"), tr("Cannot write file %1:\n%2.").arg(fileName, checkWriteability.errorString()));
         return;
     }
     // Should close the checkWriteability that we have confirmed can be opened:
