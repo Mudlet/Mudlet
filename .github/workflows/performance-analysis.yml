@@ -60,6 +60,9 @@ jobs:
         cd ${{github.workspace}}/build
         ninja -j $(expr `nproc` - 1)
         tree
+        
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
 
     - name: Check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
