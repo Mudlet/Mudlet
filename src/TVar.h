@@ -56,7 +56,7 @@ public:
     int getValueType();
     bool isReference();
 
-private:
+public:
     bool hidden;
     const void* pKey;
     const void* pValue;
