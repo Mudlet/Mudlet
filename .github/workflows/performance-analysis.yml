@@ -56,12 +56,16 @@ jobs:
 
     - name: Build Mudlet
       run : |
-        WITH_UPDATER=NO WITH_3DMAPPER=NO cmake -G Ninja --build ${{github.workspace}} --config Release
+        WITH_UPDATER=NO WITH_3DMAPPER=NO cmake -DCMAKE_BUILD_TYPE=Release -S${{github.workspace}} -B${{github.workspace}}/build -G Ninja
         ninja -j $(expr `nproc` - 1)
 
     - name: Check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
+
+    - name: Copy mudlet executable in place for executing display benchmark
+      run: cp ${{github.workspace}}/build/mudlet ${{github.workspace}}/src
+      shell: bash
 
     - name: Remove Mudlet config directory
       run: rm -rf $HOME/.config/mudlet
