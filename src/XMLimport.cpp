@@ -910,9 +910,9 @@ void XMLimport::readHost(Host* pHost)
     if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
         pHost->setCommandLineHistorySaveSize(attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt());
     } else {
-        // This is the default valuem though prior to the introduction of this
+        // This is the default value, though prior to the introduction of this
         // it would have effectively been zero:
-        pHost->setCommandLineHistorySaveSize(50);
+        pHost->setCommandLineHistorySaveSize(500);
     }
 
     if (attributes().hasAttribute(QLatin1String("NetworkPacketTimeout"))) {
