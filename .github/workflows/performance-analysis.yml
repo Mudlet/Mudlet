@@ -58,8 +58,6 @@ jobs:
       run : |
         WITH_UPDATER=NO WITH_3DMAPPER=NO cmake -G Ninja --build ${{github.workspace}}
         ninja -j $(expr `nproc` - 1)
-        sudo apt-get install tree -y
-        tree
 
     - name: Check ccache stats post build
       if: runner.os == 'Linux' || runner.os == 'macOS'
