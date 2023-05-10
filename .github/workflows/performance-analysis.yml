@@ -65,10 +65,6 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --show-stats
 
-    - name: Copy mudlet executable in place for executing display benchmark
-      run: cp ${{github.workspace}}/build/mudlet ${{github.workspace}}/src
-      shell: bash
-
     - name: Remove Mudlet config directory
       run: rm -rf $HOME/.config/mudlet
       shell: bash
