@@ -56,8 +56,8 @@ jobs:
 
     - name: Build Mudlet
       run : |
-        WITH_UPDATER=NO WITH_3DMAPPER=NO cmake -G Ninja
-        ninja
+        WITH_UPDATER=NO WITH_3DMAPPER=NO cmake -G Ninja --build ${{github.workspace}}
+        ninja -j $(expr `nproc` - 1)
         sudo apt-get install tree -y
         tree
 
