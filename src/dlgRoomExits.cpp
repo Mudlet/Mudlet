@@ -1046,13 +1046,13 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
         if (exitRoomLocked) {
             if (outOfAreaExit) {
                 return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".")
-                                               .arg(exitRoomName, exitAreaName),
+                                               .arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
                                            tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
                                               // Intentional comment to separate arguments
                                               "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
             }
             return doubleParagraph.arg(tr("Exit to \"%1\".")
-                                           .arg(exitRoomName),
+                                           .arg(exitRoomName.toHtmlEscaped()),
                                        tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
                                           // Intentional comment to separate arguments
                                           "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
@@ -1060,14 +1060,14 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
         }
         if (outOfAreaExit) {
             return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".")
-                                           .arg(exitRoomName, exitAreaName),
+                                           .arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
                                        tr("<b>Room</b> Weight of destination: %1.",
                                           // Intentional comment to separate arguments
                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                            .arg(exitRoomWeight));
         }
         return doubleParagraph.arg(tr("Exit to \"%1\".")
-                                       .arg(exitRoomName),
+                                       .arg(exitRoomName.toHtmlEscaped()),
                                    tr("<b>Room</b> Weight of destination: %1.",
                                       // Intentional comment to separate arguments
                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
@@ -1077,7 +1077,7 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
     if (exitRoomLocked) {
         if (outOfAreaExit) {
             return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
-                                           .arg(exitAreaName),
+                                           .arg(exitAreaName.toHtmlEscaped()),
                                        tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
                                           // Intentional comment to separate arguments
                                           "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
@@ -1091,7 +1091,7 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
 
     if (outOfAreaExit) {
         return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
-                                       .arg(exitAreaName),
+                                       .arg(exitAreaName.toHtmlEscaped()),
                                    tr("<b>Room</b> Weight of destination: %1.",
                                       // Intentional comment to separate arguments
                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")

@@ -174,7 +174,7 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
                 tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".",
                    // Intentional comment to separate arguments
                    "This error message will appear when a file is to be placed into the package but the code cannot open it.")
-                        .arg(fileSystemFileName, zip_strerror(archive))};
+                        .arg(fileSystemFileName.toHtmlEscaped(), zip_strerror(archive))};
     }
 
     if (zip_file_add(archive, archiveFileName.toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE) == -1) {
@@ -184,7 +184,7 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
                 tr("Failed to add file \"%1\" to package. Error message was: \"%3\".",
                    // Intentional comment to separate arguments
                    "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
-                        .arg(archiveFileName, zip_strerror(archive))};
+                        .arg(archiveFileName.toHtmlEscaped(), zip_strerror(archive))};
     }
 
     return {true, QString()};
@@ -528,7 +528,7 @@ void dlgPackageExporter::slot_exportPackage()
     QFile checkWriteability(mXmlPathFileName);
     if (!checkWriteability.open(QIODevice::WriteOnly)) {
         displayResultMessage(tr("Failed to export. Could not open the folder \"%1\" for writing. Do you have the necessary permissions and free disk-space to write to that folder?")
-                             .arg(mXmlPathFileName), false);
+                             .arg(mXmlPathFileName.toHtmlEscaped()), false);
         assetsFuture.cancel();
         mExportingPackage = false;
         checkToEnableExportButton();
@@ -570,7 +570,7 @@ void dlgPackageExporter::slot_exportPackage()
                     displayResultMessage(errorMsg, false);
                 } else {
                     displayResultMessage(tr("Package \"%1\" exported to: %2")
-                                                 .arg(mPackageName, qsl("<a href=\"file:///%1\">%1</a>")
+                                                 .arg(mPackageName.toHtmlEscaped(), qsl("<a href=\"file:///%1\">%1</a>")
                                                                             .arg(getActualPath().toHtmlEscaped())),
                                          true);
                 }
@@ -785,7 +785,7 @@ void dlgPackageExporter::exportXml(bool& isOk,
         displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".",
                                 // Intentional comment to separate arguments
                                 "This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.")
-                             .arg(mXmlPathFileName), false);
+                             .arg(mXmlPathFileName.toHtmlEscaped()), false);
         // Although we have failed, we must not just abort here. We need to reset
         // the selected "for export or not"-flags first. So note that we have failed:
         isOk = false;
@@ -856,7 +856,7 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
         QString filePath = tempPath;
         filePath.append(asset.fileName());
         if (!asset.exists()) {
-            return {false, tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath())};
+            return {false, tr("%1 doesn't seem to exist anymore - can you double-check it?").arg(asset.absoluteFilePath().toHtmlEscaped())};
         }
         if (asset.isFile()) {
             QFile::remove(filePath);

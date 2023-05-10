@@ -2323,9 +2323,9 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     if (success) {
         // TMap::audit() is what paints up the "[  OK  ]" message for the map load.
         pHost->mpMap->audit();
-        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName));
+        label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName.toHtmlEscaped()));
     } else {
-        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName));
+        label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName.toHtmlEscaped()));
     }
 
     QTimer::singleShot(10s, this, &dlgProfilePreferences::slot_hideActionLabel);
@@ -2425,9 +2425,9 @@ void dlgProfilePreferences::slot_saveMap()
         }
 
         if (success) {
-            label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName));
+            label_mapFileActionResult->setText(tr("Saved map to %1.").arg(fileName.toHtmlEscaped()));
         } else {
-            label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName));
+            label_mapFileActionResult->setText(tr("Could not save map to %1.").arg(fileName.toHtmlEscaped()));
         }
         mudlet::self()->setShowMapAuditErrors(showAuditErrors);
 
