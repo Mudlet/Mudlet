@@ -448,12 +448,12 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QAction* toggleActiveAction = new QAction(QIcon(qsl(":/icons/document-encrypt.png")), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
     connect(toggleActiveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_triggers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_aliases, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_timers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_scripts, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_actions, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_keys, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_triggers, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_aliases, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_timers, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_scripts, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_actions, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_keys, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
 
 
     mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), QString(), this);
