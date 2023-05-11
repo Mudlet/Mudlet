@@ -2974,7 +2974,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                             float oldX, oldY, newX, newY;
                             for (int pointIndex = 0; pointIndex < linePoints.size(); pointIndex++) {
                                 if (pointIndex == 0) {
-                                    // First point of a custom line
+                                    // First segment of a custom line
                                     // start it at the centre of the room
                                     oldX = room->x;
                                     oldY = room->y;
@@ -2982,7 +2982,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                                     newX = linePoints[0].x();
                                     newY = linePoints[0].y();
                                 } else {
-                                    // Not the first point of a custom line
+                                    // Not the first segment of a custom line
                                     // so start it at the end of the previous one
                                     oldX = newX;
                                     oldY = newY;
@@ -3025,11 +3025,10 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                             }
                         }
                     }
-
-                    mCustomLineSelectedRoom = 0;
-                    mCustomLineSelectedExit = "";
                 }
             }
+            mCustomLineSelectedRoom = 0;
+            mCustomLineSelectedExit = "";
         }
 
         if (mRoomBeingMoved) {
