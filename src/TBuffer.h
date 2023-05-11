@@ -91,7 +91,7 @@ public:
     // this:
     explicit TChar(TConsole* pC = nullptr);
     // Another non-default constructor:
-    TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
+    TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags = TChar::None, const int linkIndex = 0);
     // User defined copy-constructor:
     TChar(const TChar&);
     // Under the rule of three, because we have a user defined copy-constructor,
@@ -165,7 +165,7 @@ public:
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0,  int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     bool isEmpty() const { return buffer.size() == 0; }
-    QString& line(int n);
+    QString& line(int lineNumber);
     int find(int line, const QString& what, int pos);
     int wrap(int);
     QStringList split(int line, const QString& splitter);
@@ -183,7 +183,7 @@ public:
     QStringList getEndLines(int);
     void clear();
     QPoint getEndPos();
-    void translateToPlainText(std::string& s, bool isFromServer = false);
+    void translateToPlainText(std::string& incoming, bool isFromServer = false);
     void append(const QString& chunk, int sub_start, int sub_end, const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags = TChar::None, const int linkID = 0);
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar format, const int linkID = 0);

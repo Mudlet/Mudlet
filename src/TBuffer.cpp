@@ -55,9 +55,9 @@
 //#define DEBUG_MXP_PROCESSING
 
 
-TChar::TChar(const QColor& fg, const QColor& bg, const TChar::AttributeFlags flags, const int linkIndex)
-: mFgColor(fg)
-, mBgColor(bg)
+TChar::TChar(const QColor& foreground, const QColor& background, const TChar::AttributeFlags flags, const int linkIndex)
+: mFgColor(foreground)
+, mBgColor(background)
 , mFlags(flags)
 , mLinkIndex(linkIndex)
 {
@@ -1915,8 +1915,8 @@ void TBuffer::decodeOSC(const QString& sequence)
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
 #endif
-    unsigned short ch = sequence.at(0).unicode();
-    switch (ch) {
+    unsigned short character = sequence.at(0).unicode();
+    switch (character) {
     case static_cast<quint8>('P'):
         if (serverMayRedefineDefaultColors) {
             if (sequence.size() == 8) {
@@ -2122,12 +2122,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
+                    int restOfLine = lineRest.size();
+                    if (restOfLine > 0) {
+                        while (restOfLine > 0) {
                             newLine.push_front(buffer.back().back());
                             buffer.back().pop_back();
-                            k--;
+                            restOfLine--;
                         }
                     }
 
@@ -2215,12 +2215,12 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
-                    int k = lineRest.size();
-                    if (k > 0) {
-                        while (k > 0) {
+                    int restOfLine = lineRest.size();
+                    if (restOfLine > 0) {
+                        while (restOfLine > 0) {
                             newLine.push_front(buffer.back().back());
                             buffer.back().pop_back();
-                            k--;
+                            restOfLine--;
                         }
                     }
 
@@ -2754,12 +2754,12 @@ bool TBuffer::moveCursor(QPoint& where)
 // requested by lua function getLines(...):
 QString badLineError = qsl("ERROR: invalid line number");
 
-QString& TBuffer::line(int n)
+QString& TBuffer::line(int lineNumber)
 {
-    if ((n >= lineBuffer.size()) || (n < 0)) {
+    if ((lineNumber < 0) || (lineNumber >= lineBuffer.size())) {
         return badLineError;
     }
-    return lineBuffer[n];
+    return lineBuffer[lineNumber];
 }
 
 int TBuffer::find(int line, const QString& what, int pos = 0)
