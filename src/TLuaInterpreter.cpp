@@ -15114,6 +15114,10 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
 
     // clear out the queue in case any previous attempts to load the module of the same name failed
     QQueue<QString> newMessageQueue;
+    // uncomment to show Lua module messages for debugging
+    // newMessageQueue.enqueue(tr("[  OK  ]  - Lua module %1 loaded.",
+    //                         "%1 is the name (may specify which variant) of the module.")
+    //                     .arg(description.isEmpty() ? requirement : description));
     resultMsgsQueue.swap(newMessageQueue);
     return true;
 }
