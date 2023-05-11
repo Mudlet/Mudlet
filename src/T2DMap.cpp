@@ -2963,71 +2963,73 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     if (!room) {
                         continue;
                     }
-                    QMapIterator<QString, QList<QPointF>> it(room->customLines);
-                    while (it.hasNext()) {
-                        it.next();
-                        const QList<QPointF>& _pL = it.value();
-                        if (!_pL.empty()) {
+                    QMapIterator<QString, QList<QPointF>> lineIterator(room->customLines);
+                    while (lineIterator.hasNext()) {
+                        lineIterator.next();
+                        const QList<QPointF>& linePoints = lineIterator.value();
+                        if (!linePoints.empty()) {
                             // The way this code is structured means that EARLIER
                             // points are selected in preference to later ones!
                             // This might not be intuitive to the users...
-                            float olx, oly, lx, ly;
-                            for (int j = 0; j < _pL.size(); j++) {
-                                if (j == 0) {
-                                    // First segment of a custom line
+                            float oldX, oldY, newX, newY;
+                            for (int pointIndex = 0; pointIndex < linePoints.size(); pointIndex++) {
+                                if (pointIndex == 0) {
+                                    // First point of a custom line
                                     // start it at the centre of the room
-                                    olx = room->x;
-                                    oly = room->y;
+                                    oldX = room->x;
+                                    oldY = room->y;
                                     //FIXME: use exit direction to calculate start of line
-                                    lx = _pL[0].x();
-                                    ly = _pL[0].y();
+                                    newX = linePoints[0].x();
+                                    newY = linePoints[0].y();
                                 } else {
-                                    // Not the first segment of a custom line
+                                    // Not the first point of a custom line
                                     // so start it at the end of the previous one
-                                    olx = lx;
-                                    oly = ly;
-                                    lx = _pL[j].x();
-                                    ly = _pL[j].y();
+                                    oldX = newX;
+                                    oldY = newY;
+                                    newX = linePoints[pointIndex].x();
+                                    newY = linePoints[pointIndex].y();
                                 }
                                 // End of each custom line segment is given
 
                                 // click auf einen edit - punkt
                                 if (mCustomLineSelectedRoom != 0) {
                                     // We have already chosen a line to edit
-                                    if (fabs(mx - lx) <= 0.25 && fabs(my - ly) <= 0.25) {
+                                    if (fabs(mx - newX) <= 0.25 && fabs(my - newY) <= 0.25) {
                                         // And this looks close enough to a point that we should edit it
-                                        mCustomLineSelectedPoint = j;
+                                        mCustomLineSelectedPoint = pointIndex;
                                         return;
                                     }
                                 }
 
                                 // We have not previously chosen a line to edit
-                                QLineF line = QLineF(olx, oly, lx, ly);
-                                QLineF normal = line.normalVector();
-                                QLineF tl;
-                                tl.setP1(pc);
-                                tl.setAngle(normal.angle());
-                                tl.setLength(0.1);
-                                QLineF tl2;
-                                tl2.setP1(pc);
-                                tl2.setAngle(normal.angle());
-                                tl2.setLength(-0.1);
-                                QPointF pi;
-                                if ((line.intersects(tl, &pi) == QLineF::BoundedIntersection) || (line.intersects(tl2, &pi) == QLineF::BoundedIntersection)) {
+                                QLineF lineSegment = QLineF(oldX, oldY, newX, newY);
+                                QLineF normalVector = lineSegment.normalVector();
+                                QLineF testLine1;
+                                testLine1.setP1(clickPoint);
+                                testLine1.setAngle(normalVector.angle());
+                                testLine1.setLength(0.1);
+                                QLineF testLine2;
+                                testLine2.setP1(clickPoint);
+                                testLine2.setAngle(normalVector.angle());
+                                testLine2.setLength(-0.1);
+                                QPointF intersectionPoint;
+                                if ((lineSegment.intersects(testLine1, &intersectionPoint) == QLineF::BoundedIntersection)
+                                    || (lineSegment.intersects(testLine2, &intersectionPoint) == QLineF::BoundedIntersection)) {
                                     // Choose THIS line to edit as we have
                                     // clicked close enough to it...
                                     mCustomLineSelectedRoom = room->getId();
-                                    mCustomLineSelectedExit = it.key();
+                                    mCustomLineSelectedExit = lineIterator.key();
                                     repaint();
                                     return;
                                 }
                             }
                         }
                     }
+
+                    mCustomLineSelectedRoom = 0;
+                    mCustomLineSelectedExit = "";
                 }
             }
-            mCustomLineSelectedRoom = 0;
-            mCustomLineSelectedExit = "";
         }
 
         if (mRoomBeingMoved) {
