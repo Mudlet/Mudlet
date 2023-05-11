@@ -4209,7 +4209,7 @@ void Host::slot_discordReadyReceived(const QString& userId, const QString& userN
                        "However Discord are progressively changing the form of the former and removing the\n"
                        "latter from May 2023 onward and Mudlet is changing to use the unique user ID\n"
                        "for each Discord user account instead for this purpose. When you are logged into\n"
-                       "the Discord application with an identy that matches the details stored for this\n"
+                       "the Discord application with an identity that matches the details stored for this\n"
                        "profile a different message will be shown that gives that user ID which you can\n"
                        "then copy to the appropriate field in the 'Chat' tab in the preferences and remove\n"
                        "the user-name and/or user-discriminator enteries there to adapt for this change.\n"
