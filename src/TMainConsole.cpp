@@ -89,10 +89,10 @@ TMainConsole::~TMainConsole()
     }
 }
 
-void TMainConsole::setLabelStyleSheet(std::string& buf, std::string& sh)
+void TMainConsole::setLabelStyleSheet(std::string& buf, std::string& stylesheet)
 {
     QString key{buf.c_str()};
-    QString sheet{sh.c_str()};
+    QString sheet{stylesheet.c_str()};
     if (mLabelMap.find(key) != mLabelMap.end()) {
         QLabel* pC = mLabelMap[key];
         if (!pC) {
