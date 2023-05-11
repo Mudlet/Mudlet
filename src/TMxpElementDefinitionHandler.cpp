@@ -29,11 +29,11 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
         return MXP_TAG_NOT_HANDLED;
     }
 
-    TMxpElement el;
-    el.name = tag->getAttrName(0); // element-name
+    TMxpElement element;
+    element.name = tag->getAttrName(0); // element-name
 
     if (tag->hasAttribute("DELETE")) {
-        ctx.getElementRegistry().unregisterElement(el.name);
+        ctx.getElementRegistry().unregisterElement(element.name);
         return MXP_TAG_HANDLED;
     }
 
@@ -41,30 +41,30 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
     if (!tag->getAttribute(1).hasValue()) {
         const QString& secondAttr = tag->getAttrName(1);
         if (!boolAttrs.contains(secondAttr, Qt::CaseInsensitive)) { // it is a definition and not  {OPEN, DELETE, EMPTY}
-            el.definition = secondAttr;
+            element.definition = secondAttr;
         }
     }
 
     if (tag->hasAttribute("ATT")) {
-        el.attrs = tag->getAttributeValue("ATT").toLower().split(' ', Qt::SkipEmptyParts);
+        element.attrs = tag->getAttributeValue("ATT").toLower().split(' ', Qt::SkipEmptyParts);
     }
 
     if (tag->hasAttribute("TAG")) {
-        el.tag = tag->getAttributeValue("TAG");
+        element.tag = tag->getAttributeValue("TAG");
     }
 
     if (tag->hasAttribute("FLAG")) {
-        el.flags = tag->getAttributeValue("FLAG");
+        element.flags = tag->getAttributeValue("FLAG");
     }
 
-    el.open = tag->hasAttribute("OPEN");
-    el.empty = tag->hasAttribute("EMPTY");
+    element.open = tag->hasAttribute("OPEN");
+    element.empty = tag->hasAttribute("EMPTY");
 
-    if (!el.definition.isEmpty()) {
-        el.parsedDefinition = TMxpTagParser::parseToMxpNodeList(el.definition);
+    if (!element.definition.isEmpty()) {
+        element.parsedDefinition = TMxpTagParser::parseToMxpNodeList(element.definition);
     }
 
-    ctx.getElementRegistry().registerElement(el);
+    ctx.getElementRegistry().registerElement(element);
 
     return MXP_TAG_HANDLED;
 }

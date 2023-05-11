@@ -235,10 +235,10 @@ void TAccessibleTextEdit::setCursorPosition(int position)
 }
 
 // performance note - this is called extremely frequently on the same line, should be cached
-QString TAccessibleTextEdit::text(QAccessible::Text t) const
+QString TAccessibleTextEdit::text(QAccessible::Text text) const
 {
-    if (t != QAccessible::Value) {
-        return QAccessibleWidget::text(t);
+    if (text != QAccessible::Value) {
+        return QAccessibleWidget::text(text);
     }
 
     return textEdit()->mpBuffer->lineBuffer.join('\n');
@@ -428,7 +428,7 @@ QString TAccessibleTextEdit::attributes(int offset, int *startOffset, int *endOf
 /*
  * Auxiliary function for textAtOffset() and textAfterOffset().
  */
-QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, int offset,
+QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp operation, int offset,
                                               QAccessible::TextBoundaryType boundaryType,
                                               int* startOffset, int* endOffset) const
 {
@@ -461,10 +461,10 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
 
         finder.setPosition(offset);
 
-        if (op == TAccessibleTextEdit::TextOp::BeforeOffset) {
+        if (operation == TAccessibleTextEdit::TextOp::BeforeOffset) {
             end = finder.toPreviousBoundary();
             start = finder.toPreviousBoundary();
-        } else if (op == TAccessibleTextEdit::TextOp::AtOffset) {
+        } else if (operation == TAccessibleTextEdit::TextOp::AtOffset) {
             start = finder.toPreviousBoundary();
             end = finder.toNextBoundary();
         } else {
@@ -489,9 +489,9 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
     TBuffer *buffer = textEdit()->mpBuffer;
 
     if (boundaryType == QAccessible::TextBoundaryType::CharBoundary) {
-        if (op == TAccessibleTextEdit::TextOp::BeforeOffset) {
+        if (operation == TAccessibleTextEdit::TextOp::BeforeOffset) {
             offset -= 1;
-        } else if (op == TAccessibleTextEdit::TextOp::AfterOffset) {
+        } else if (operation == TAccessibleTextEdit::TextOp::AfterOffset) {
             offset += 1;
         }
 
@@ -513,9 +513,9 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp op, in
 
         int lineNum = lineForOffset(offset);
 
-        if (op == TAccessibleTextEdit::TextOp::BeforeOffset) {
+        if (operation == TAccessibleTextEdit::TextOp::BeforeOffset) {
             lineNum -= 1;
-        } else if (op == TAccessibleTextEdit::TextOp::AfterOffset) {
+        } else if (operation == TAccessibleTextEdit::TextOp::AfterOffset) {
             lineNum += 1;
         }
 
