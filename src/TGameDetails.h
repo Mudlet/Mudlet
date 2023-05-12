@@ -69,7 +69,7 @@ public:
             9000,
             false,
 qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
-                "<a href='https://abandonedrealms.com/forum '>Forum</a>"),
+                "<a href='https://abandonedrealms.com/forum'>Forum</a>"),
             qsl(":/icons/abandonedrealms_icon.jpg"),
             qsl("The Abandoned Realms is a completely free RP-enforced, PK-encouraged, MUD in a fantasy setting "
                  "(swords/magic/lore/intrigue) that has been up and running constantly since 1997.\n\nWith 20 races and "
