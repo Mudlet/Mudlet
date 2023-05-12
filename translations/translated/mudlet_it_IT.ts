@@ -6223,7 +6223,7 @@ Prova a caricare una versione più vecchia in &apos;Connetti - Opzioni - Cronolo
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="864"/>
       <source>cannot copy %1 to the temporary location %2 - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>non posso copiare %1 nella posizione temporanea %2 - puoi verificare i percorsi?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1037"/>
@@ -7518,71 +7518,71 @@ motivazione: %2.</translation>
       <location filename="../src/dlgTriggerEditor.cpp" line="142"/>
       <source>activated</source>
       <comment>Item is currently on, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>attivato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="143"/>
       <source>deactivated</source>
       <comment>Item is currently off, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>disattivato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
       <source>activated folder</source>
       <comment>Folder is currently turned on</comment>
-      <translation type="unfinished"/>
+      <translation>cartella attivata</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="145"/>
       <source>deactivated folder</source>
       <comment>Folder is currently turned off</comment>
-      <translation type="unfinished"/>
+      <translation>cartella disattivata</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="146"/>
       <source>deactivated due to error</source>
       <comment>Item is currently inactive because of errors, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>disattivato a causa di un errore</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="147"/>
       <source>%1 in a deactivated group</source>
       <comment>Item is currently turned on individually, but is member of an inactive group</comment>
-      <translation type="unfinished"/>
+      <translation>%1 in un gruppo disattivato</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="148"/>
       <source>activated filter chain</source>
       <comment>A trigger that unlocks other triggers is currently turned on, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>attiva catena filtri</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="149"/>
       <source>deactivated filter chain</source>
       <comment>A trigger that unlocks other triggers is currently turned off, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>disattiva catena filtri</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="150"/>
       <source>activated offset timer</source>
       <comment>A timer that starts after another timer is currently turned on</comment>
-      <translation type="unfinished"/>
+      <translation>attiva timer offset</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="151"/>
       <source>deactivated offset timer</source>
       <comment>A timer that starts after another timer is currently turned off</comment>
-      <translation type="unfinished"/>
+      <translation>disattiva timer offset</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="152"/>
       <source>new folder</source>
-      <translation type="unfinished"/>
+      <translation>nuova cartella</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="153"/>
       <source>new item</source>
-      <translation type="unfinished"/>
+      <translation>nuovo elemento</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="157"/>
