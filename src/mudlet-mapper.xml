@@ -5791,7 +5791,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "23.1.1"
+local newversion = "23.5.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -6259,7 +6259,7 @@ function mmp.showpathcache()
   return getpathcache
 end
 
-function mmp.setmovetimer(time)
+function mmp.setmovetimer(time, ignoreLatency)
   if mmp.movetimer then
     killTimer(mmp.movetimer)
   end
@@ -6268,10 +6268,17 @@ function mmp.setmovetimer(time)
   end
   local laglevel = mmp.settings.laglevel or 1
   time = time or mmp.lagtable[laglevel].time
+  local latency = ignoreLatency and 0 or getNetworkLatency()
+  if mmp.debug then
+    mmp.echo(f'setting move timer according to time {time} and latency {latency}')
+  end
   mmp.movetimer =
     tempTimer(
-      getNetworkLatency() + time,
+      latency + time,
       function()
+        if mmp.debug then
+          mmp.echo('move timer fired')
+        end
         mmp.movetimer = false
         mmp.move()
       end
@@ -6698,7 +6705,7 @@ function doSpeedWalk(dashtype)
     mmp.speedWalkCounter = 1
     if mmp.canmove() then
       mmp.hasty = true
-      mmp.setmovetimer(0.1)
+      mmp.setmovetimer(0.1, true)
     else
       echo("(when we get balance back / aren't hindered)")
     end
