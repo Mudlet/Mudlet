@@ -127,72 +127,73 @@ const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
 
-#define WINDOW_NAME(_L, _pos)                                                                  \
-    ({                                                                                         \
-        int pos_ = (_pos);                                                                     \
-        const char *res_;                                                                      \
-        if ((lua_gettop(_L) < pos_) || lua_isnil(_L, pos_)) {                                  \
-            res_ = "";                                                                         \
-        } else if (!lua_isstring(_L, pos_)) {                                                  \
-            lua_pushfstring(_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(_L, pos_)); \
-            return lua_error(_L);                                                              \
-        } else {                                                                               \
-            res_ = lua_tostring(_L, pos_);                                                     \
-        }                                                                                      \
-        res_;                                                                                  \
+#define WINDOW_NAME(ARG_L, ARG_pos)                                                                      \
+    ({                                                                                                   \
+        int pos_ = (ARG_pos);                                                                            \
+        const char *res_;                                                                                \
+        if ((lua_gettop(ARG_L) < pos_) || lua_isnil(ARG_L, pos_)) {                                      \
+            res_ = "";                                                                                   \
+        } else {                                                                                         \
+            if (!lua_isstring(ARG_L, pos_)) {                                                            \
+                lua_pushfstring(ARG_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_)); \
+                return lua_error(ARG_L);                                                                 \
+            }                                                                                            \
+            res_ = lua_tostring(ARG_L, pos_);                                                            \
+        }                                                                                                \
+        res_;                                                                                            \
     })
 
-#define CMDLINE_NAME(_L, _pos)                                                                 \
-    ({                                                                                         \
-        int pos_ = (_pos);                                                                     \
-        if (!lua_isstring(_L, pos_)) {                                                         \
-            lua_pushfstring(_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(_L, pos_));\
-            return lua_error(_L);                                                              \
-        }                                                                                      \
-        lua_tostring(_L, pos_);                                                                \
+#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                 \
+    ({                                                                                               \
+        int pos_ = (ARG_pos);                                                                        \
+        if (!lua_isstring(ARG_L, pos_)) {                                                            \
+            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));\
+            return lua_error(ARG_L);                                                                 \
+        }                                                                                            \
+        lua_tostring(ARG_L, pos_);                                                                   \
     })
 
-#define CONSOLE_NIL(_L, _name)                                                                 \
+#define CONSOLE_NIL(ARG_L, ARG_name)                                                           \
     ({                                                                                         \
-        auto name_ = (_name);                                                                  \
-        auto console_ = getHostFromLua(_L).findConsole(name_);                                 \
+        auto name_ = (ARG_name);                                                               \
+        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
         console_;                                                                              \
     })
 
-#define CONSOLE(_L, _name)                                                                     \
+#define CONSOLE(ARG_L, ARG_name)                                                               \
     ({                                                                                         \
-        auto name_ = (_name);                                                                  \
-        auto console_ = getHostFromLua(_L).findConsole(name_);                                 \
+        auto name_ = (ARG_name);                                                               \
+        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
         if (!console_) {                                                                       \
-            lua_pushnil(L);                                                                    \
-            lua_pushfstring(L, bad_window_value, name_.toUtf8().constData());                  \
+            lua_pushnil(ARG_L);                                                                \
+            lua_pushfstring(ARG_L, bad_window_value, name_.toUtf8().constData());              \
             return 2;                                                                          \
         }                                                                                      \
         console_;                                                                              \
     })
 
-#define COMMANDLINE(_L, _name)                                                                 \
+#define COMMANDLINE(ARG_L, ARG_name)                                                           \
     ({                                                                                         \
-        const QString& name_ = (_name);                                                        \
-        auto console_ = getHostFromLua(_L).mpConsole;                                          \
+        const QString& name_ = (ARG_name);                                                     \
+        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
         auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine                              \
                                     : console_->mSubCommandLineMap.value(name_);               \
         if (!cmdLine_) {                                                                       \
-            lua_pushnil(L);                                                                    \
-            lua_pushfstring(L, bad_cmdline_value, name_.toUtf8().constData());                 \
+            lua_pushnil(ARG_L);                                                                \
+            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());             \
             return 2;                                                                          \
         }                                                                                      \
         cmdLine_;                                                                              \
     })
 
-#define LABEL(_L, _name)                                                                       \
+#define LABEL(ARG_L, ARG_name)                                                                 \
     ({                                                                                         \
-        const QString& name_ = (_name);                                                        \
-        auto console_ = getHostFromLua(_L).mpConsole;                                          \
+        const QString& name_ = (ARG_name);                                                     \
+        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
         auto label_ = console_->mLabelMap.value(name_);                                        \
         if (!label_) {                                                                         \
-            lua_pushnil(L);                                                                    \
-            lua_pushfstring(L, bad_label_value, name_.toUtf8().constData());                   \
+            lua_pushnil(ARG_L);                                                                \
+            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());               \
             return 2;                                                                          \
         }                                                                                      \
         label_;                                                                                \
@@ -15113,6 +15114,10 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
 
     // clear out the queue in case any previous attempts to load the module of the same name failed
     QQueue<QString> newMessageQueue;
+    // uncomment to show Lua module messages for debugging
+    // newMessageQueue.enqueue(tr("[  OK  ]  - Lua module %1 loaded.",
+    //                         "%1 is the name (may specify which variant) of the module.")
+    //                     .arg(description.isEmpty() ? requirement : description));
     resultMsgsQueue.swap(newMessageQueue);
     return true;
 }

@@ -71,18 +71,18 @@ QStringList LuaInterface::varName(TVar* var)
         return names;
     }
     names << var->getName();
-    TVar* p = var->getParent();
-    while (p && p->getName() != qsl("_G")) {
-        names.insert(0, p->getName());
-        p = p->getParent();
+    TVar* pParent = var->getParent();
+    while (pParent && pParent->getName() != qsl("_G")) {
+        names.insert(0, pParent->getName());
+        pParent = pParent->getParent();
     }
     return names;
 }
 
-bool LuaInterface::validMove(QTreeWidgetItem* p)
+bool LuaInterface::validMove(QTreeWidgetItem* pWidget)
 {
-    TVar* newParent = varUnit->getWVar(p);
-    if (newParent && newParent->getValueType() != LUA_TTABLE) {
+    TVar* pNewParent = varUnit->getWVar(pWidget);
+    if (pNewParent && pNewParent->getValueType() != LUA_TTABLE) {
         return false;
     }
     return true;
@@ -299,10 +299,10 @@ QList<TVar*> LuaInterface::varOrder(TVar* var)
         return vars;
     }
     vars << var;
-    TVar* p = var->getParent();
-    while (p && p->getName() != qsl("_G")) {
-        vars.insert(0, p);
-        p = p->getParent();
+    TVar* pParent = var->getParent();
+    while (pParent && pParent->getName() != qsl("_G")) {
+        vars.insert(0, pParent);
+        pParent = pParent->getParent();
     }
     return vars;
 }
@@ -750,10 +750,10 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         var->setParent(tVar);
         var->hidden = hide;
         tVar->addChild(var);
-        const void* kp = lua_topointer(L, -1);
-        var->pKey = kp;
-        const void* vp = lua_topointer(L, -2);
-        var->pValue = vp;
+        const void* pKey = lua_topointer(L, -1);
+        var->pKey = pKey;
+        const void* pValue = lua_topointer(L, -2);
+        var->pValue = pValue;
         if (varUnit->varExists(var) || keyName == qsl("_G")) {
             lua_pop(L, 1);
             tVar->removeChild(var);
@@ -762,9 +762,9 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         }
         varUnit->addVariable(var);
 
-        varUnit->addPointer(kp);
+        varUnit->addPointer(pKey);
 
-        varUnit->addPointer(vp);
+        varUnit->addPointer(pValue);
         if (vType == LUA_TTABLE) {
             if (depth <= 99 && lua_checkstack(L, 3)) { //depth is historical now
                 //put the table on top
@@ -802,17 +802,17 @@ void LuaInterface::getVars(bool hide)
     // t.start();
     lua_pushnil(mL);
     depth = 0;
-    auto g = new TVar();
-    g->setName("_G", LUA_TSTRING);
-    g->setValue("{}", LUA_TTABLE);
+    auto global = new TVar();
+    global->setName("_G", LUA_TSTRING);
+    global->setValue("{}", LUA_TTABLE);
     QListIterator<int> it(lrefs);
     while (it.hasNext()) {
         int ref = it.next();
         luaL_unref(mL, LUA_REGISTRYINDEX, ref);
     }
     varUnit->clear();
-    varUnit->setBase(g);
-    varUnit->addVariable(g);
-    iterateTable(mL, LUA_GLOBALSINDEX, g, hide);
+    varUnit->setBase(global);
+    varUnit->addVariable(global);
+    iterateTable(mL, LUA_GLOBALSINDEX, global, hide);
     // FIXME: possible to keep and report? qDebug()<<"took"<<t.elapsed()<<"to get variables in";
 }
