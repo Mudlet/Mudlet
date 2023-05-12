@@ -957,7 +957,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // zip_dir_add(...) returns the index of the
         // added directory item in the archive or -1 on error:
         if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
-            QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".").arg(directoryName, zip_strerror(archive));
+            QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".").arg(directoryName.toHtmlEscaped(), zip_strerror(archive));
             zip_discard(archive);
             return {false, errorMsg};
         }
