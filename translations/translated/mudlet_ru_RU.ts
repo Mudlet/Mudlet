@@ -6204,7 +6204,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="864"/>
       <source>cannot copy %1 to the temporary location %2 - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>невозможно скопировать %1 на временное расположение %2 - можете ли вы проверить это?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1037"/>
@@ -7487,71 +7487,71 @@ reason: %2.</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="142"/>
       <source>activated</source>
       <comment>Item is currently on, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>активирована</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="143"/>
       <source>deactivated</source>
       <comment>Item is currently off, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>деактивировано</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
       <source>activated folder</source>
       <comment>Folder is currently turned on</comment>
-      <translation type="unfinished"/>
+      <translation>активная папка</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="145"/>
       <source>deactivated folder</source>
       <comment>Folder is currently turned off</comment>
-      <translation type="unfinished"/>
+      <translation>деактивирована папка</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="146"/>
       <source>deactivated due to error</source>
       <comment>Item is currently inactive because of errors, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>деактивировано из-за ошибки</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="147"/>
       <source>%1 in a deactivated group</source>
       <comment>Item is currently turned on individually, but is member of an inactive group</comment>
-      <translation type="unfinished"/>
+      <translation>%1 в отключенной группе</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="148"/>
       <source>activated filter chain</source>
       <comment>A trigger that unlocks other triggers is currently turned on, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>активная цепочка фильтров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="149"/>
       <source>deactivated filter chain</source>
       <comment>A trigger that unlocks other triggers is currently turned off, short enough to be spoken</comment>
-      <translation type="unfinished"/>
+      <translation>отключенная цепочка фильтров</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="150"/>
       <source>activated offset timer</source>
       <comment>A timer that starts after another timer is currently turned on</comment>
-      <translation type="unfinished"/>
+      <translation>активный таймер смещения</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="151"/>
       <source>deactivated offset timer</source>
       <comment>A timer that starts after another timer is currently turned off</comment>
-      <translation type="unfinished"/>
+      <translation>таймер смещения отключён</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="152"/>
       <source>new folder</source>
-      <translation type="unfinished"/>
+      <translation>новая папка</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="153"/>
       <source>new item</source>
-      <translation type="unfinished"/>
+      <translation>новый объект</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="157"/>
