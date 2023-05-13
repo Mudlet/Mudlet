@@ -218,7 +218,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the status bar on changes
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
-    simplifyEdbeeStatusBarRegex = new QRegularExpression(qsl(R"(^(?:\[\*\] )?(.+?) \|)"));
+    simplifyEdbeeStatusBarRegex = std::make_unique<QRegularExpression>(qsl(R"(^(?:\[\*\] )?(.+?) \|)"));
     mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
 
     // Update the editor preferences
