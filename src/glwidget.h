@@ -97,9 +97,9 @@ private:
 
     int mRID = 0;
     int mAID = 0;
-    int mOx = 0;
-    int mOy = 0;
-    int mOz = 0;
+    int mMapCenterX = 0;
+    int mMapCenterY = 0;
+    int mMapZLevel = 0;
     bool mShiftMode = false;
 
     float xRot = 1.0;
@@ -113,7 +113,7 @@ private:
     int mShowBottomLevels = 999999;
 
     float mScale = 1.0;
-    int mTarget = 0;
+    int mTargetRoomId = 0;
 };
 
 #endif // MUDLET_GLWIDGET_H

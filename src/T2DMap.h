@@ -82,7 +82,7 @@ public:
     void setExitSize(double);
     void createLabel(QRectF labelRectangle);
     // Clears cache so new symbols are built at next paintEvent():
-    void flushSymbolPixmapCache() {mSymbolPixmapCache.clear();}
+    void flushSymbolPixmapCache() { mSymbolPixmapCache.clear(); }
     void addSymbolToPixmapCache(const QString, const QString, const QColor, const bool);
     void setPlayerRoomStyle(const int style);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
@@ -100,11 +100,11 @@ public:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom = csmDefaultXYZoom;
-    int mRX = 0;
-    int mRY = 0;
+    int mRoomCenterX = 0;
+    int mRoomCentery = 0;
     QPoint mPHighlight;
     bool mPick = false;
-    int mTarget = 0;
+    int mTargetRoomId = 0;
     bool mStartSpeedWalk = false;
 
 
@@ -137,8 +137,10 @@ public:
     int mFontHeight = 20;
     bool mShowRoomID = false;
     QMap<int, QPixmap> mPixMap;
-    double rSize = 0.5;
-    double eSize = 3.0;
+    // size the room should be drawn on the 2D map
+    double mRoomSize = 0.5;
+    // size of exits on the 2D map
+    double mExitSize = 3.0;
     // When a Lua centerview(...) is called this assigns the room ID value to
     // this member and (switching areas if necessary) pans the map to be
     // centered on this room:
@@ -146,14 +148,11 @@ public:
     // This is the area of the map that is being shown, it need not be that
     // which contains the player room:
     int mAreaID = 0;
-    // These next three represent the room coordinates at the middle of the map
-    // the first pair needs to not be integer types as a more flexible zoom
-    // in/out mechanism was adopted that meant non-integral coordinates were
-    // needed, OTOH a "snap to a fractional (power of 2?) value" might help to
-    // keep the decimal numbers reasonable:
-    qreal mOx = 0.0;
-    qreal mOy = 0.0;
-    int mOz = 0;
+    // These represent the map center coordinates.
+    // The first two are non-integer to enable flexible zooming:
+    qreal mMapCenterX = 0.0;
+    qreal mMapCenterY = 0.0;
+    int mMapZLevel = 0;
     // Gets set when pan controls are used to move the map away from being
     // centered on mRoomID - it seems to be needed if the room concerned
     // is being moved by the mouse as part of a selection:
@@ -269,19 +268,10 @@ private:
         int y;
     } mContextMenuClickPosition;
 
-    // When more than zero rooms are selected this
-    // is either the first (only) room in the set
-    // or if getCenterSelectionId() is used the
-    // room that is selected - this is so that it
-    // can be painted in yellow rather than orange
-    // when more than one room is selected to
-    // indicate the particular room that will be
-    // modified or be the center of those
-    // modifications. {for slot_spread(),
-    // slot_shrink(), slot_setUserData() - if ever
-    // implemented, slot_setExits(),
-    // slot_movePosition(), etc.} - previously have
-    // used -1 but is now reset to 0 if it is not valid.
+    // This holds the ID of the room highlighted in yellow when multiple
+    // rooms are selected. It is either the first selected room, or the
+    // room at the center of the selection. This indicates the room that
+    // will be modified by actions like spread, shrink, set exits, move position, etc.
     int mMultiSelectionHighlightRoomId = 0;
 
     bool mIsSelectionSorting = true;
