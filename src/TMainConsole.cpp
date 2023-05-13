@@ -1016,8 +1016,8 @@ void TMainConsole::setSystemSpellDictionary(const QString& newDict)
     mSpellDic = newDict;
 
     QString const path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, mpHost->getSpellDic());
-    QString const spell_aff = qsl("%1%2.aff").arg(path, newDict);
-    QString const spell_dic = qsl("%1%2.dic").arg(path, newDict);
+    QString spell_aff = qsl("%1%2.aff").arg(path, newDict);
+    QString spell_dic = qsl("%1%2.dic").arg(path, newDict);
 
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
