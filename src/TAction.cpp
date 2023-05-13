@@ -121,7 +121,7 @@ bool TAction::setScript(const QString& script)
 bool TAction::compileScript()
 {
     mFuncName = QString("Action") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    QString const code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
     if (mpHost->mLuaInterpreter.compile(code, error, QString("Button: ") + getName())) {
         mNeedsToBeCompiled = false;
@@ -178,8 +178,8 @@ void TAction::expandToolbar(TToolBar* pT)
             // buttons show in a "greyed-out" state... - Slysven
             continue;
         }
-        QIcon icon(action->mIcon);
-        QString name = action->getName();
+        QIcon const icon(action->mIcon);
+        QString const name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);
         button->setText(name);
@@ -270,8 +270,8 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
         if (!action->isActive()) {
             continue;
         }
-        QIcon icon(action->mIcon);
-        QString name = action->getName();
+        QIcon const icon(action->mIcon);
+        QString const name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);
         button->setText(name);

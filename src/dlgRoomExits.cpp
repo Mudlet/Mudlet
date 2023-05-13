@@ -123,9 +123,9 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
             TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
             if (exitToRoom) {
                 // Valid exit roomID in place:
-                int exitAreaID = exitToRoom->getArea();
-                bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-                bool exitRoomLocked = exitToRoom->isLocked;
+                int const exitAreaID = exitToRoom->getArea();
+                bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+                bool const exitRoomLocked = exitToRoom->isLocked;
                 mpDlgRoomExits->setActionOnExit(mpEditor, exitRoomLocked
                                                 ? mpDlgRoomExits->mpAction_exitRoomLocked
                                                 : outOfAreaExit
@@ -202,9 +202,9 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     QString roomIdToolTipText;
     if (pExitToRoom) {
         // A valid exit roomID number:
-        int exitAreaID = pExitToRoom->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = pExitToRoom->isLocked;
+        int const exitAreaID = pExitToRoom->getArea();
+        bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        bool const exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -481,8 +481,8 @@ void dlgRoomExits::save()
 
     for (int i = 0; i < specialExits->topLevelItemCount(); ++i) {
         QTreeWidgetItem* pI = specialExits->topLevelItem(i);
-        int value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
-        int weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
+        int const value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
+        int const weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
         int door = 0;
         bool locked = false;
         if (pI->checkState(ExitsTreeWidget::colIndex_doorLocked) == Qt::Checked) {
@@ -494,7 +494,7 @@ void dlgRoomExits::save()
         } else if (pI->checkState(ExitsTreeWidget::colIndex_doorNone) == Qt::Checked) {
             door = 0;
         }
-        QString key = pI->text(ExitsTreeWidget::colIndex_command);
+        QString const key = pI->text(ExitsTreeWidget::colIndex_command);
         if (key != mSpecialExitCommandPlaceholder
             && value != 0 && mpHost->mpMap->mpRoomDB->getRoom(value) != nullptr) {
             originalExitCmds.remove(key);
@@ -953,9 +953,9 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).toInt());
     if (pExitToRoom) {
         // A valid exit roomID number:
-        int exitAreaID = pExitToRoom->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = pExitToRoom->isLocked;
+        int const exitAreaID = pExitToRoom->getArea();
+        bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        bool const exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1109,9 +1109,9 @@ void dlgRoomExits::normalExitEdited(const QString& roomExitIdText, QLineEdit* pE
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(roomExitIdText.toInt());
     if (exitToRoom) {
-        int exitAreaID = exitToRoom->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = exitToRoom->isLocked;
+        int const exitAreaID = exitToRoom->getArea();
+        bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        bool const exitRoomLocked = exitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1457,9 +1457,9 @@ void dlgRoomExits::initExit(int direction,
     if (exitId > 0 && pExitR) {                         //Does this exit point anywhere
         exitLineEdit->setText(QString::number(exitId)); //Put in the value
         exitLineEdit->setEnabled(true);                 //Enable it for editing
-        int exitAreaID = pExitR->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = pExitR->isLocked;
+        int const exitAreaID = pExitR->getArea();
+        bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        bool const exitRoomLocked = pExitR->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1568,8 +1568,8 @@ void dlgRoomExits::init()
     QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
         it.next();
-        int id_to = it.value();
-        QString dir = it.key();
+        int const id_to = it.value();
+        QString const dir = it.key();
         auto pSpecialExit = new TExit();
         // It should be impossible for this not to be valid:
         Q_ASSERT_X(pSpecialExit, "dlgRoomExits::init(...)", "failed to generate a new TExit");
@@ -1617,7 +1617,7 @@ void dlgRoomExits::init()
         pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         {
-            int specialDoor = pR->getDoor(dir);
+            int const specialDoor = pR->getDoor(dir);
             switch (specialDoor) {
             case 0:
                 pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Checked);
@@ -1962,7 +1962,7 @@ void dlgRoomExits::slot_checkModified()
     // At the same time existing special exits which now have a empty/zero
     // value in the ExitsTreeWidget::colIndex_exitRoomId field will be deleted if "save"ed...
     if (!isModified) {
-        int originalCount = originalSpecialExits.count();
+        int const originalCount = originalSpecialExits.count();
         int currentCount = 0;
         for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
             QTreeWidgetItem* pI = specialExits->topLevelItem(i);
@@ -1997,7 +1997,7 @@ void dlgRoomExits::slot_checkModified()
                         || pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt() <= 0) {
                         continue; // Ignore new or to be deleted entries
                     }
-                    QString currentCmd = pI->text(ExitsTreeWidget::colIndex_command);
+                    QString const currentCmd = pI->text(ExitsTreeWidget::colIndex_command);
                     TExit currentExit;
                     currentExit.destination = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
                     currentExit.hasNoRoute = pI->checkState(ExitsTreeWidget::colIndex_lockExit) == Qt::Checked;

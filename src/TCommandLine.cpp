@@ -63,8 +63,8 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     setPalette(mRegularPalette);
     //style subCommandLines by stylesheet
     if (mType != MainCommandLine) {
-        QColor c = mpHost->mCommandLineBgColor;
-        QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
+        QColor const c = mpHost->mCommandLineBgColor;
+        QString const styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
         setStyleSheet(styleSheet);
     }
 
@@ -183,7 +183,7 @@ bool TCommandLine::event(QEvent* event)
                 // implicit <SHIFT>):
                 const int currentIndex = mudlet::self()->mpTabBar->currentIndex();
                 const int count = mudlet::self()->mpTabBar->count();
-                int newIndex = (currentIndex - 1 < 0) ? (count - 1) : (currentIndex - 1);
+                int const newIndex = (currentIndex - 1 < 0) ? (count - 1) : (currentIndex - 1);
                 mudlet::self()->slot_tabChanged(newIndex);
                 ke->accept();
                 return true;
@@ -216,7 +216,7 @@ bool TCommandLine::event(QEvent* event)
                 // Switch to NEXT profile tab
                 const int currentIndex = mudlet::self()->mpTabBar->currentIndex();
                 const int count = mudlet::self()->mpTabBar->count();
-                int newIndex = (currentIndex + 1 < count) ? (currentIndex + 1) : 0;
+                int const newIndex = (currentIndex + 1 < count) ? (currentIndex + 1) : 0;
                 mudlet::self()->slot_tabChanged(newIndex);
                 ke->accept();
                 return true;
@@ -606,7 +606,7 @@ void TCommandLine::adjustHeight()
     if (lines > 10) {
         lines = 10;
     }
-    int fontH = QFontMetrics(font()).height();
+    int const fontH = QFontMetrics(font()).height();
     // Adjust height margin based on font size and if it is more than one row
     int marginH = lines > 1 ? 2+fontH/3 : 5;
     if (lines > 1 && marginH < 8) {
@@ -619,9 +619,9 @@ void TCommandLine::adjustHeight()
     if (_height > height() || _height < height()) {
         mpConsole->layerCommandLine->setMinimumHeight(_height);
         mpConsole->layerCommandLine->setMaximumHeight(_height);
-        int x = mpConsole->width();
-        int y = mpConsole->height();
-        QSize s = QSize(x, y);
+        int const x = mpConsole->width();
+        int const y = mpConsole->height();
+        QSize const s = QSize(x, y);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpConsole, &event);
     }
@@ -651,7 +651,7 @@ void TCommandLine::slot_popupMenu()
 #if defined(Q_OS_FREEBSD)
     QString t = pA->data().toString();
 #else
-    QString t = pA->text();
+    QString const t = pA->text();
 #endif
     QTextCursor c = cursorForPosition(mPopupPosition);
     c.select(QTextCursor::WordUnderCursor);
@@ -731,7 +731,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             QList<QAction*> spellings_system;
             QList<QAction*> spellings_profile;
             if (handle_system && codec) {
-                QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+                QByteArray const encodedText = codec->fromUnicode(mSpellCheckedWord);
 
                 if (!Hunspell_spell(handle_system, encodedText.constData())) {
                     // The word is NOT in the main system dictionary:
@@ -902,7 +902,7 @@ void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
     Q_UNUSED(event)
-    QString _t = toPlainText();
+    QString const _t = toPlainText();
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
@@ -977,7 +977,7 @@ void TCommandLine::handleTabCompletion(bool direction)
         amount = 500;
     }
 
-    QStringList bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
+    QStringList const bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
     QString buffer = bufferList.join(QChar::Space);
 
     buffer.replace(QChar(0x21af), QChar::LineFeed);
@@ -985,7 +985,7 @@ void TCommandLine::handleTabCompletion(bool direction)
 
     QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
     wordList.append(commandLineSuggestions.values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead. 
-    QStringList blacklist = tabCompleteBlacklist.values(); 
+    QStringList const blacklist = tabCompleteBlacklist.values();
     QStringList toDelete;
 
     for (const QString& wstr : qAsConst(wordList)) {
@@ -1007,9 +1007,9 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         QString lastWord;
-        QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
-        QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
-        int typePosition = match.capturedStart();
+        QRegularExpression const reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
+        QRegularExpressionMatch const match = reg.match(mTabCompletionTyped);
+        int const typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
             lastWord = match.captured(1);
         } else {
@@ -1023,7 +1023,7 @@ void TCommandLine::handleTabCompletion(bool direction)
         }
         int offset = 0;
         forever {
-            QString tmp = filterList.back();
+            QString const tmp = filterList.back();
             filterList.removeAll(tmp);
             filterList.insert(offset, tmp);
             ++offset;
@@ -1039,8 +1039,8 @@ void TCommandLine::handleTabCompletion(bool direction)
             if (mTabCompletionCount < 0) {
                 mTabCompletionCount = 0;
             }
-            QString proposal = filterList[mTabCompletionCount];
-            QString userWords = mTabCompletionTyped.left(typePosition);
+            QString const proposal = filterList[mTabCompletionCount];
+            QString const userWords = mTabCompletionTyped.left(typePosition);
             setPlainText(QString(userWords + proposal));
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
@@ -1060,7 +1060,7 @@ void TCommandLine::handleAutoCompletion()
     neu.chop(textCursor().selectedText().size());
     setPlainText(neu);
     mTabCompletionOld = neu;
-    int oldLength = toPlainText().size();
+    int const oldLength = toPlainText().size();
     if (mAutoCompletionCount >= mHistoryList.size()) {
         mAutoCompletionCount = mHistoryList.size() - 1;
     }
@@ -1068,7 +1068,7 @@ void TCommandLine::handleAutoCompletion()
         mAutoCompletionCount = 0;
     }
     for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
-        QString h = mHistoryList[i].mid(0, neu.size());
+        QString const h = mHistoryList[i].mid(0, neu.size());
         if (neu == h) {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
@@ -1095,7 +1095,7 @@ void TCommandLine::historyMove(MoveDirection direction)
     if (mHistoryList.empty()) {
         return;
     }
-    int shift = (direction == MOVE_UP ? 1 : -1);
+    int const shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().isEmpty()) || !mpHost->mHighlightHistory) {
         mHistoryBuffer += shift;
         if (mHistoryBuffer >= mHistoryList.size()) {
@@ -1160,7 +1160,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     QTextCharFormat f;
     mSpellChecking = true;
     c.select(QTextCursor::WordUnderCursor);
-    QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(c.selectedText());
+    QByteArray const encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(c.selectedText());
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
@@ -1225,9 +1225,9 @@ void TCommandLine::recheckWholeLine()
     }
 
     // Save the current position
-    QTextCursor oldCursor = textCursor();
+    QTextCursor const oldCursor = textCursor();
 
-    QTextCharFormat f;
+    QTextCharFormat const f;
     QTextCursor c = textCursor();
     // Move Cursor AND selection anchor to start:
     c.movePosition(QTextCursor::Start);
@@ -1316,7 +1316,7 @@ void TCommandLine::clearBlacklist()
 
 void TCommandLine::slot_adjustAccessibleNames()
 {
-    bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    bool const multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
     const QString hostName{mpHost ? mpHost->getName() : QString()};
     switch (mType) {
     case MainCommandLine:

@@ -49,7 +49,7 @@ TEasyButtonBar::TEasyButtonBar(TAction* pA, QString name, QWidget* pW)
         setContentsMargins(0, 0, 0, 0);
         mpLayout->setContentsMargins(0, 0, 0, 0);
         mpLayout->setSpacing(0);
-        QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
         mpWidget->setSizePolicy(sizePolicy);
     } else {
         mpWidget->setMinimumHeight(mpTAction->mSizeY);
@@ -76,7 +76,7 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
         }
     } else {
         qDebug() << "setting up custom sizes";
-        QSize size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        QSize const size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
         pB->setParent(mpWidget);
@@ -85,7 +85,7 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
 
     pB->setStyleSheet(pB->mpTAction->css);
     pB->setFlat(pB->mpTAction->getButtonFlat());
-    int rotation = pB->mpTAction->getButtonRotation();
+    int const rotation = pB->mpTAction->getButtonRotation();
     switch (rotation) {
     case 0:
         pB->setOrientation(Qt::Horizontal);
@@ -108,8 +108,8 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
         }
         if (columns > 0) {
             mItemCount++;
-            int row = mItemCount / columns;
-            int col = mItemCount % columns;
+            int const row = mItemCount / columns;
+            int const col = mItemCount % columns;
             if (mVerticalOrientation) {
                 mpLayout->addWidget(pB, row, col);
             } else {
@@ -136,14 +136,14 @@ void TEasyButtonBar::finalize()
     }
     auto fillerWidget = new QWidget;
 
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     fillerWidget->setSizePolicy(sizePolicy);
     int columns = mpTAction->getButtonColumns();
     if (columns <= 0) {
         columns = 1;
     }
-    int row = (++mItemCount) / columns;
-    int column = mItemCount % columns;
+    int const row = (++mItemCount) / columns;
+    int const column = mItemCount % columns;
     if (mpLayout) {
         mpLayout->addWidget(fillerWidget, row, column);
     }
@@ -200,7 +200,7 @@ void TEasyButtonBar::clear()
         mpWidget->setLayout(mpLayout);
         mpLayout->setContentsMargins(0, 0, 0, 0);
         mpLayout->setSpacing(0);
-        QSizePolicy sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        QSizePolicy const sizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
         mpWidget->setSizePolicy(sizePolicy);
 
         mpWidget->setContentsMargins(0, 0, 0, 0);

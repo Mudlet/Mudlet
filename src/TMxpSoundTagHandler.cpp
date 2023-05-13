@@ -26,14 +26,14 @@ TMxpTagHandlerResult TMxpSoundTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 {
     Q_UNUSED(ctx)
 
-    QString fileName = extractFileName(tag);
+    QString const fileName = extractFileName(tag);
 
     if (!fileName.isEmpty()) {
-        QString volume = extractVolume(tag);
-        QString loops = extractLoops(tag);
-        QString priority = extractPriority(tag);
-        QString type = extractType(tag);
-        QString url = extractUrl(tag);
+        QString const volume = extractVolume(tag);
+        QString const loops = extractLoops(tag);
+        QString const priority = extractPriority(tag);
+        QString const type = extractType(tag);
+        QString const url = extractUrl(tag);
 
         TMediaData mediaData {};
 

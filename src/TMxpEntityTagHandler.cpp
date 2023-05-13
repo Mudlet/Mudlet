@@ -36,12 +36,12 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
     } else if (!boolOptions.contains(tag->getAttrName(1), Qt::CaseInsensitive)) { // 2nd attribute is actually the value
         const QString& value = tag->getAttrName(1);
         if (tag->hasAttribute("ADD")) {
-            QString prevDefinition = resolver.getResolution(entity);
+            QString const prevDefinition = resolver.getResolution(entity);
             QStringList definitionList = prevDefinition.split('|');
             definitionList.push_back(value);
             resolver.registerEntity(entity, definitionList.join('|'));
         } else if (tag->hasAttribute("REMOVE")) {
-            QString prevDefinition = resolver.getResolution(entity);
+            QString const prevDefinition = resolver.getResolution(entity);
             QStringList definitionList = prevDefinition.split('|');
             definitionList.removeOne(value);
             resolver.registerEntity(entity, definitionList.join('|'));

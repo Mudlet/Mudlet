@@ -68,7 +68,7 @@ void TToolBar::resizeEvent(QResizeEvent* e)
 void TToolBar::setName(const QString& name)
 {
     mName = name;
-    QString hostName(mpHost->getName());
+    QString const hostName(mpHost->getName());
     setObjectName(qsl("dockToolBar_%1_%2").arg(hostName, name));
     // Actually put something in as the title so that the main window context
     // menu no longer has empty entries which are disabled:
@@ -114,7 +114,7 @@ void TToolBar::addButton(TFlipButton* pB)
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
     } else {
-        QSize size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
+        QSize const size = QSize(pB->mpTAction->mSizeX, pB->mpTAction->mSizeY);
         pB->setMaximumSize(size);
         pB->setMinimumSize(size);
         pB->setParent(mpWidget);
@@ -123,7 +123,7 @@ void TToolBar::addButton(TFlipButton* pB)
 
     pB->setStyleSheet(pB->mpTAction->css);
     pB->setFlat(pB->mpTAction->getButtonFlat());
-    int rotation = pB->mpTAction->getButtonRotation();
+    int const rotation = pB->mpTAction->getButtonRotation();
     switch (rotation) {
     case 0:
         pB->setOrientation(Qt::Horizontal);
@@ -146,8 +146,8 @@ void TToolBar::addButton(TFlipButton* pB)
         }
         if (columns > 0) {
             mItemCount++;
-            int row = mItemCount / columns;
-            int col = mItemCount % columns;
+            int const row = mItemCount / columns;
+            int const col = mItemCount % columns;
             if (mVerticalOrientation) {
                 mpLayout->addWidget(pB, row, col);
             } else {
@@ -169,14 +169,14 @@ void TToolBar::finalize()
         return;
     }
     auto fillerWidget = new QWidget;
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     fillerWidget->setSizePolicy(sizePolicy);
     int columns = mpTAction->getButtonColumns();
     if (columns <= 0) {
         columns = 1;
     }
-    int row = (++mItemCount) / columns;
-    int column = (mItemCount - 1) % columns;
+    int const row = (++mItemCount) / columns;
+    int const column = (mItemCount - 1) % columns;
     mpLayout->addWidget(fillerWidget, row, column);
     // 3 lines above are to avoid order of operations problem of original line
     // (-Wsequence-point warning on mItemCount) NEEDS TO BE CHECKED:
@@ -224,7 +224,7 @@ void TToolBar::clear()
         mpLayout = new QGridLayout(mpWidget);
         mpLayout->setContentsMargins(0, 0, 0, 0);
         mpLayout->setSpacing(0);
-        QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
         mpWidget->setSizePolicy(sizePolicy);
     } else {
         mpLayout = nullptr;

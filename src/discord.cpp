@@ -216,7 +216,7 @@ void Discord::setEndTimeStamp(Host* pHost, int64_t epochTimeStamp)
 
 void Discord::setParty(Host* pHost, int partySize)
 {
-    int validPartySize = qMax(0, partySize);
+    int const validPartySize = qMax(0, partySize);
     if (validPartySize) {
         // Is more than zero:
         if (mPartyMax.value(pHost) < validPartySize) {
@@ -238,8 +238,8 @@ void Discord::setParty(Host* pHost, int partySize)
 
 void Discord::setParty(Host* pHost, int partySize, int partyMax)
 {
-    int validPartySize = qMax(0, partySize);
-    int validPartyMax = qMax(0, partyMax);
+    int const validPartySize = qMax(0, partySize);
+    int const validPartyMax = qMax(0, partyMax);
 
     if (validPartyMax) {
         // We have a party max size that is a positive number - so use the
@@ -328,7 +328,7 @@ void Discord::UpdatePresence()
 #if defined(DEBUG_DISCORD)
         qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - no current active Host instance, sending update using built-in Mudlet ApplicationID:\n" << tempPresence;
 #endif
-        DiscordRichPresence convertedPresence(tempPresence.convert());
+        DiscordRichPresence const convertedPresence(tempPresence.convert());
         Discord_UpdatePresence(&convertedPresence);
 
         return;
@@ -457,7 +457,7 @@ void Discord::UpdatePresence()
     qDebug().nospace().noquote() << "Discord::UpdatePresence() INFO - sending update:\n" << *pDiscordPresence;
 #endif
     // Convert our stored presence into the format that the RPC library wants:
-    DiscordRichPresence convertedPresence(pDiscordPresence->convert());
+    DiscordRichPresence const convertedPresence(pDiscordPresence->convert());
     Discord_UpdatePresence(&convertedPresence);
 }
 
@@ -539,7 +539,7 @@ QString Discord::deduceGameName(const QString& address)
 // first is true.
 QPair<bool, QString> Discord::gameIntegrationSupported(const QString& address)
 {
-    QString deducedName = deduceGameName(address);
+    QString const deducedName = deduceGameName(address);
 
     // Handle using localhost as an off-line testing case
     if (deducedName == QLatin1String("localhost")) {
@@ -558,7 +558,7 @@ bool Discord::libraryLoaded()
 // quint64, or qulonglong)
 bool Discord::setApplicationID(Host* pHost, const QString& text)
 {
-    QString oldID = mHostApplicationIDs.value(pHost);
+    QString const oldID = mHostApplicationIDs.value(pHost);
     if (oldID == text) {
         // No change so do nothing
         return true;

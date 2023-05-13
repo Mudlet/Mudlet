@@ -34,7 +34,7 @@ TMxpTagHandlerResult TMxpLinkTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         return MXP_TAG_NOT_HANDLED;
     }
 
-    QString hint = tag->hasAttribute("hint") ? tag->getAttributeValue("hint") : href;
+    QString const hint = tag->hasAttribute("hint") ? tag->getAttributeValue("hint") : href;
 
     href = qsl("openUrl([[%1]])").arg(href);
 

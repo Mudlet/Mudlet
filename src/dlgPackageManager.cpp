@@ -97,7 +97,7 @@ void dlgPackageManager::resetPackageTable()
 
 void dlgPackageManager::slot_installPackage()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
+    QString const fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
     if (fileName.isEmpty()) {
         return;
     }
@@ -113,10 +113,10 @@ void dlgPackageManager::slot_installPackage()
 
 void dlgPackageManager::slot_removePackages()
 {
-    QModelIndexList selection = packageTable->selectionModel()->selectedRows();
+    QModelIndexList const selection = packageTable->selectionModel()->selectedRows();
     QStringList removePackages;
     for (int i = 0; i < selection.count(); i++) {
-        QModelIndex index = selection.at(i);
+        QModelIndex const index = selection.at(i);
         auto package = packageTable->item(index.row(), 0);
         removePackages << package->text();
     }
@@ -140,7 +140,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
     for (int i = additionalDetails->rowCount() - 1; i >= 0; --i) {
         additionalDetails->removeRow(i);
     }
-    QString packageName = packageTable->item(pItem->row(), 0)->text();
+    QString const packageName = packageTable->item(pItem->row(), 0)->text();
     auto packageInfo{mpHost->mPackageInfo.value(packageName)};
     if (packageInfo.isEmpty()) {
         packageDescription->clear();
@@ -158,7 +158,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
         packageDescription->hide();
     } else {
         packageDescription->show();
-        QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
+        QString const packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
         description.replace(QLatin1String("$packagePath"), packageDir);
         packageDescription->setMarkdown(description);
     }
@@ -168,7 +168,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
     details << qsl("author") << qsl("version") << qsl("created") << qsl("dependencies");
     int counter = 0;
     for (int i = 0; i < details.size(); i++) {
-        QString valueText{packageInfo.take(details.at(i))};
+        QString const valueText{packageInfo.take(details.at(i))};
         if (valueText.isEmpty()) {
             continue;
         }
@@ -198,7 +198,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
         additionalDetails->show();
         detailsLabel->show();
     }
-    int maxHeight = additionalDetails->rowCount() * additionalDetails->rowHeight(0);
+    int const maxHeight = additionalDetails->rowCount() * additionalDetails->rowHeight(0);
     additionalDetails->setMaximumHeight(maxHeight);
     additionalDetails->verticalScrollBar()->hide();
     packageTable->scrollToItem(pItem);
@@ -228,8 +228,8 @@ void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& pack
 
 void dlgPackageManager::slot_toggleRemoveButton()
 {
-    QModelIndexList selection = packageTable->selectionModel()->selectedRows();
-    int selectionCount = selection.count();
+    QModelIndexList const selection = packageTable->selectionModel()->selectedRows();
+    int const selectionCount = selection.count();
     removeButton->setEnabled(selectionCount);
     if (selectionCount) {
         removeButton->setText(tr("Remove %n package(s)",

@@ -148,7 +148,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     versionString = attributes().value(qsl("version")).toString();
                     if (!versionString.isEmpty()) {
                         bool isOk = false;
-                        float versionNumber = versionString.toFloat(&isOk);
+                        float const versionNumber = versionString.toFloat(&isOk);
                         if (isOk) {
                             mVersionMajor = qFloor(versionNumber);
                             mVersionMinor = qRound(1000.0 * versionNumber) - (1000 * mVersionMajor);
@@ -163,7 +163,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     /*||(mVersionMajor==1&&mVersionMinor)*/) {
                     // Minor check is not currently relevant, just abort on 2.000f or more
 
-                    QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
+                    QString const moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
                                          "\"%1\"\n"
                                          "reports it has a version (%2) it must have come from a later Mudlet version,\n"
                                          "and this one cannot read it, you need a newer Mudlet!")
@@ -270,7 +270,7 @@ void XMLimport::readVariable(TVar* pParent)
     int keyType = 0;
     int valueType;
 
-    QString what = name().toString();
+    QString const what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -318,7 +318,7 @@ void XMLimport::readHiddenVariables()
 
         if (isStartElement()) {
             if (name() == qsl("name")) {
-                QString var = readElementText();
+                QString const var = readElementText();
                 vu->addHidden(var);
                 continue;
             }
@@ -373,14 +373,14 @@ void XMLimport::readMap()
     }
 
     mpHost->mpMap->reportStringToProgressDialog(tr("Assigning rooms to their areas..."));
-    int roomTotal = tempAreaRoomsHash.count();
+    int const roomTotal = tempAreaRoomsHash.count();
     int currentRoomCount = 0;
 
     QListIterator<int> itAreaWithRooms(tempAreaRoomsHash.uniqueKeys());
     while (itAreaWithRooms.hasNext()) {
-        int areaId = itAreaWithRooms.next();
+        int const areaId = itAreaWithRooms.next();
         auto values = tempAreaRoomsHash.values(areaId);
-        QSet<int> areaRoomsSet{values.begin(), values.end()};
+        QSet<int> const areaRoomsSet{values.begin(), values.end()};
 
         if (!mpHost->mpMap->mpRoomDB->areas.contains(areaId)) {
             // It is known for map files to have rooms with area Ids that are
@@ -407,8 +407,8 @@ void XMLimport::readEnvColors()
 
 void XMLimport::readEnvColor()
 {
-    int id = attributes().value(qsl("id")).toString().toInt();
-    int color = attributes().value(qsl("color")).toString().toInt();
+    int const id = attributes().value(qsl("id")).toString().toInt();
+    int const color = attributes().value(qsl("color")).toString().toInt();
 
     mpHost->mpMap->mEnvColors[id] = color;
 }
@@ -429,8 +429,8 @@ void XMLimport::readAreas()
 void XMLimport::readArea()
 {
     if (attributes().hasAttribute(qsl("id"))) {
-        int id = attributes().value(qsl("id")).toString().toInt();
-        QString name = attributes().value(qsl("name")).toString();
+        int const id = attributes().value(qsl("id")).toString().toInt();
+        QString const name = attributes().value(qsl("name")).toString();
 
         mpHost->mpMap->mpRoomDB->addArea(id, name);
     }
@@ -499,13 +499,13 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
                       // entranceMultiHash
         } else if (Q_LIKELY(name() == qsl("exit"))) {
             QString dir = attributes().value(qsl("direction")).toString();
-            int e = attributes().value(qsl("target")).toString().toInt();
+            int const e = attributes().value(qsl("target")).toString().toInt();
             // If there is a "hidden" exit mark it as a locked door, otherwise
             // if there is a "door" mark it as an open/closed/locked door
             // depending on the value (I.R.E. MUD maps always uses "1" for "door"
             // and/or "hidden" - though the latter does not always appear with
             // former):
-            int door = (attributes().hasAttribute(qsl("hidden")) && attributes().value(qsl("hidden")).toString().toInt() == 1)
+            int const door = (attributes().hasAttribute(qsl("hidden")) && attributes().value(qsl("hidden")).toString().toInt() == 1)
                     ? 3
                     : (attributes().hasAttribute(qsl("door")) && attributes().value(qsl("door")).toString().toInt() >= 0 && attributes().value(qsl("door")).toString().toInt() <= 3)
                       ? attributes().value(qsl("door")).toString().toInt()
@@ -659,7 +659,7 @@ void XMLimport::readHelpPackage()
             break;
         } else if (isStartElement()) {
             if (name() == qsl("helpURL")) {
-                QString contents = readElementText();
+                QString const contents = readElementText();
                 mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
             }
         }
@@ -761,8 +761,8 @@ void XMLimport::readHost(Host* pHost)
     pHost->mEnableMSP = attributes().value(qsl("mEnableMSP")) == YES;
     pHost->mMapStrongHighlight = attributes().value(qsl("mMapStrongHighlight")) == YES;
     pHost->mEnableSpellCheck = attributes().value(qsl("mEnableSpellCheck")) == YES;
-    bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
-    bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
+    bool const enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
+    bool const useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mAcceptServerGUI = attributes().value(qsl("mAcceptServerGUI")) == YES;
     pHost->mAcceptServerMedia = attributes().value(qsl("mAcceptServerMedia")) == YES;
@@ -879,7 +879,7 @@ void XMLimport::readHost(Host* pHost)
     pHost->mShowRoomID = attributes().value(qsl("mShowRoomIDs")) == YES;
     pHost->mShowPanel = attributes().value(qsl("mShowPanel")) == YES;
     pHost->mHaveMapperScript = attributes().value(qsl("mHaveMapperScript")) == YES;
-    QStringView ignore(attributes().value(qsl("mDoubleClickIgnore")));
+    QStringView const ignore(attributes().value(qsl("mDoubleClickIgnore")));
     for (auto character : ignore) {
         pHost->mDoubleClickIgnore.insert(character);
     }
@@ -902,7 +902,7 @@ void XMLimport::readHost(Host* pHost)
     pHost->mSslIgnoreSelfSigned = attributes().value(qsl("mSslIgnoreSelfSigned")) == YES;
     pHost->mSslIgnoreAll = attributes().value(qsl("mSslIgnoreAll")) == YES;
     pHost->mAskTlsAvailable = attributes().value(qsl("mAskTlsAvailable")) == YES;
-    bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
+    bool const compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
@@ -971,7 +971,7 @@ void XMLimport::readHost(Host* pHost)
                 while (it.hasNext()) {
                     it.next();
                     QStringList moduleList;
-                    QStringList entryList = it.value();
+                    QStringList const entryList = it.value();
                     moduleList << entryList.at(0);
                     moduleList << entryList.at(1);
                     pHost->mInstalledModules[it.key()] = moduleList;
@@ -1196,7 +1196,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
     pT->mColorTrigger = attributes().value(qsl("isColorTrigger")) == YES;
 
     // Is this a "TriggerGroup" or a "Trigger"
-    QString what = name().toString();
+    QString const what = name().toString();
     while (!atEnd()) {
         readNext();
 
@@ -1206,7 +1206,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("script")) {
-                QString tempScript = readScriptElement();
+                QString const tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
                 }
@@ -1307,7 +1307,7 @@ int XMLimport::readTimer(TTimer* pParent)
         pT->mModuleMember = true;
     }
 
-    QString what = name().toString();
+    QString const what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1318,7 +1318,7 @@ int XMLimport::readTimer(TTimer* pParent)
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString tempScript = readScriptElement();
+                QString const tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTimer(...): ERROR: can not compile timer's lua code for: " << pT->getName();
                 }
@@ -1374,7 +1374,7 @@ int XMLimport::readAlias(TAlias* pParent)
         pT->mModuleMember = true;
     }
 
-    QString what = name().toString();
+    QString const what = name().toString();
     while (!atEnd()) {
         readNext();
 
@@ -1386,7 +1386,7 @@ int XMLimport::readAlias(TAlias* pParent)
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString tempScript = readScriptElement();
+                QString const tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAlias(...): ERROR: can not compile alias's lua code for: " << pT->getName();
                 }
@@ -1441,7 +1441,7 @@ int XMLimport::readAction(TAction* pParent)
         pT->mModuleMember = true;
     }
 
-    QString what = name().toString();
+    QString const what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1452,7 +1452,7 @@ int XMLimport::readAction(TAction* pParent)
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString tempScript = readScriptElement();
+                QString const tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAction(...): ERROR: can not compile action's lua code for: " << pT->getName();
                 }
@@ -1531,7 +1531,7 @@ int XMLimport::readScript(TScript* pParent)
         script->mModuleMember = true;
     }
 
-    QString what = name().toString();
+    QString const what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1542,7 +1542,7 @@ int XMLimport::readScript(TScript* pParent)
             } else if (name() == qsl("packageName")) {
                 script->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString tempScript = readScriptElement();
+                QString const tempScript = readScriptElement();
                 if (!script->setScript(tempScript)) {
                     qDebug().nospace().noquote() << "XMLimport::readScript(...) ERROR - can not compile script's lua code for \"" << script->getName() << "\"; reason: " << script->getError() << ".";
                 }
@@ -1592,7 +1592,7 @@ int XMLimport::readKey(TKey* pParent)
         pT->mModuleMember = true;
     }
 
-    QString what = name().toString();
+    QString const what = name().toString();
     while (!atEnd()) {
         readNext();
 
@@ -1604,7 +1604,7 @@ int XMLimport::readKey(TKey* pParent)
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString tempScript = readScriptElement();
+                QString const tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readKey(...): ERROR: can not compile key's lua code for: " << pT->getName();
                 }
@@ -1687,9 +1687,9 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName, con
             break;
         } else if (isStartElement()) {
             if (name() == qsl("integer")) {
-                QString numberText = readElementText();
+                QString const numberText = readElementText();
                 bool ok = false;
-                int num = numberText.toInt(&ok, 10);
+                int const num = numberText.toInt(&ok, 10);
                 if (Q_LIKELY(!numberText.isEmpty() && ok)) {
                     switch (num) {
                     case REGEX_SUBSTRING:
@@ -1786,12 +1786,12 @@ void XMLimport::remapColorsToAnsiNumber(QStringList & patternList, const QList<i
     // it to capture a '-' sign as part of the color numbers as we use -2 for
     // ignored which was/is/will not handled by code before Mudlet 3.17.x (and
     // we might have more  negative numbers in the future!)
-    QRegularExpression regex = QRegularExpression(qsl("FG(-?\\d+)BG(-?\\d+)"));
+    QRegularExpression const regex = QRegularExpression(qsl("FG(-?\\d+)BG(-?\\d+)"));
     QMutableStringListIterator itPattern(patternList);
     QListIterator<int> itType(typeList);
     while (itPattern.hasNext() && itType.hasNext()) {
         if (itType.next() == REGEX_COLOR_PATTERN) {
-            QRegularExpressionMatch match = regex.match(itPattern.next());
+            QRegularExpressionMatch const match = regex.match(itPattern.next());
             // Although we define two '('...')' capture groups the count/size is
             // 3 (0 is the whole string)!
             if (match.capturedTexts().size() == 3) {
@@ -1883,7 +1883,7 @@ void XMLimport::readStopWatchMap()
             break;
         } else if (isStartElement()) {
             if (name() == qsl("stopwatch")) {
-                int watchId = attributes().value(qsl("id")).toInt();
+                int const watchId = attributes().value(qsl("id")).toInt();
                 auto pStopWatch = new stopWatch();
                 pStopWatch->setName(attributes().value(qsl("name")).toString());
                 pStopWatch->mIsPersistent = true;
