@@ -1113,6 +1113,8 @@ function getLabelFormat(win)
   return reset
 end
 
+local processedEchoToHTML
+
 if rex then
   _Echos = {
     Patterns = {
@@ -1255,7 +1257,7 @@ if rex then
 -- internal function which takes a processed echo table and a table of 'default'
 -- formatting options and returns it as an html string. used by xEcho for Label
 -- outputs and the html output for c/d/hecho2html functions.
-local function processedEchoToHTML(t, reset)
+processedEchoToHTML = function(t, reset)
   reset = reset or {
     background = { 0, 0, 0 },
     bold = false,
