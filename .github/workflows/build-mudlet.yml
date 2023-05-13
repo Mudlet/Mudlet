@@ -122,7 +122,6 @@ jobs:
         vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
         # run it now as we need libraries to be present when moving them around in the "non-vcpkg dependencies" step later on
         runVcpkgInstall: true
-        vcpkgJsonGlob: "**/vcpkg.json"
 
     - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
