@@ -78,9 +78,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
-    auto ps = new QShortcut(this);
-    ps->setKey(Qt::CTRL | Qt::Key_W);
-    ps->setContext(Qt::WidgetShortcut);
+    auto quitShortcut = new QShortcut(this);
+    quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
+    quitShortcut->setContext(Qt::WidgetShortcut);
 
     if (mType == CentralDebugConsole) {
         // Probably will not show up as this is used inside a QMainWindow widget
@@ -563,8 +563,8 @@ Host* TConsole::getHost()
 
 void TConsole::resizeConsole()
 {
-    QSize s = QSize(width(), height());
-    QResizeEvent event(s, s);
+    QSize size = QSize(width(), height());
+    QResizeEvent event(size, size);
     QApplication::sendEvent(this, &event);
 }
 
