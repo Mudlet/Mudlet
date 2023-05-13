@@ -4195,8 +4195,8 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     // Need to check that the files exist first:
-    QString const dictionaryPath(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.dic")));
-    QString const affixPath(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.aff")));
+    QString dictionaryPath(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.dic")));
+    QString affixPath(getMudletPath(mudlet::mainDataItemPath, qsl("mudlet.aff")));
     int oldWordCount = 0;
     QStringList wordList;
     QHash<QString, unsigned int> graphemeCounts;
