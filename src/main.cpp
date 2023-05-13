@@ -252,8 +252,8 @@ int main(int argc, char* argv[])
     QCommandLineOption showVersion(QStringList() << qsl("v") << qsl("version"), qsl("Display version and exit"));
     parser.addOption(showVersion);
 
-    QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Don't show the splash screen when starting"));
-    parser.addOption(beQuiet);
+    QCommandLineOption showSplashscreen(QStringList() << qsl("splashscreen"), qsl("Show the splash screen when starting"));
+    parser.addOption(showSplashscreen);
 
     QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), qsl("Mirror output of all consoles to STDOUT"));
     parser.addOption(mirrorToStdout);
@@ -289,7 +289,7 @@ int main(int argc, char* argv[])
                                          .arg(QLatin1String(APP_TARGET)));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -h, --help                   displays this message."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -v, --version                displays version information."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       -q, --quiet                  no splash screen on startup."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       --splashscreen               show splashscreen on startup."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open, may be\n"
                                                                   "                                    repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific\n"
@@ -374,10 +374,10 @@ int main(int argc, char* argv[])
     QStringList cliProfiles = parser.values(profileToOpen);
     QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
-    bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
+    bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen();
 
-    if (show_splash) {
+    if (showSplash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
         QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
@@ -441,7 +441,7 @@ int main(int argc, char* argv[])
 #else
     QSplashScreen splash(pixmap);
 #endif
-    if (show_splash) {
+    if (showSplash) {
         splash.show();
     }
     app->processEvents();
@@ -580,7 +580,7 @@ int main(int argc, char* argv[])
         mudlet::self()->move(geometry.left() + (availableSize.width() / 8), geometry.top() + availableSize.height() / 8);
     }
 
-    if (show_splash) {
+    if (showSplash) {
         splash.finish(mudlet::self());
     }
 
