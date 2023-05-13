@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QTest>
+#include "QtTest/qtestcase.h"
 #include "TMxpEntityTagHandler.h"
 #include "TMxpStubClient.h"
 #include <TMxpTagParser.h>
@@ -154,6 +155,40 @@ private slots:
 
         processor.handleNode(processor, stub, parseNode("<!EN entity delete>").get());
         QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "&entity;");
+    }
+
+    void testEmpty() {
+        TMxpStubClient stub;
+        TMxpProcessor mxpProcessor(&stub);
+        TMxpTagProcessor processor;
+
+        processor.getEntityResolver().registerEntity("&entity;", "v1");
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "v1");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity ''>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity V2>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "V2");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity V3>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "V3");
+
+        processor.handleNode(processor, stub, parseNode("<!EN entity \"\">").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "");
+
+        // check if entity is really removed without trace in interpolation:
+        std::string input = "<!en entity ''><send href=\"examine ob&entity;\" hint=\"examine&entity;\">examine</send>";
+        processInput(mxpProcessor, input);
+
+        QCOMPARE(stub.mHrefs.size(), 1);
+        QCOMPARE(stub.mHrefs[0], "send([[examine ob]])");
+
+        QCOMPARE(stub.mHints.size(), 1);
+        QCOMPARE(stub.mHints[0], "examine");
     }
 };
 
