@@ -754,13 +754,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2678"/>
       <source>Configure room...</source>
       <comment>2D Mapper context menu (room) item</comment>
-      <translation type="unfinished"/>
+      <translation>配置房间...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2679"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <comment>2D Mapper context menu (room) item tooltip</comment>
-      <translation type="unfinished"/>
+      <translation>设置房间的名称和图标的颜色，快速行走的权重和锁定，以及标记特殊房间的符号</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2719"/>
@@ -1031,7 +1031,7 @@ factor of:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4101"/>
       <source>This will create new area: %1</source>
-      <translation type="unfinished"/>
+      <translation>这将创建新区域: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4117"/>
@@ -1039,12 +1039,13 @@ factor of:</source>
 See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <comment>The &apos;[MAP ERROR:]&apos; text should be the same as that used for the translation of &quot;[MAP ERROR:]%1
 &quot; in the &apos;TMAP::logerror(...)&apos; function.</comment>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 无法将 &quot;&quot;%1&quot; 作为区域添加到地图。
+请参阅 &quot;[MAP ERROR:]&quot; 消息以了解原因。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4125"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - 添加 &quot;%1&quot; (%2) 区域到地图。</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4972"/>
@@ -1134,13 +1135,13 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="1324"/>
       <source>Input line for &quot;%1&quot; profile.</source>
       <comment>Accessibility-friendly name to describe the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>为配置文件 &quot;%1&quot; 输入.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1330"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when more than one profile is loaded, %1 is the profile name. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>输入要发送到游戏服务器的配置，或输入别名(alias)以在本地运行命令。</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1338"/>
@@ -1152,25 +1153,25 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="1343"/>
       <source>Type in text to send to the game server, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for the main command line for a Mudlet profile when only one profile is loaded. Because this is likely to be used often it should be kept as short as possible.</comment>
-      <translation type="unfinished"/>
+      <translation>输入文本以发送到游戏服务器，或输入别名(alias)以在本地运行命令。</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1353"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window of &quot;%3&quot;profile.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when more than one profile is loaded, %1 is the command line name, %2 is the name of the window/console that it is on and %3 is the name of the profile.</comment>
-      <translation type="unfinished"/>
+      <translation>附加输入行 &quot;%1&quot; 在 &quot;%3&quot;配置的窗口&quot;%2&quot; 上.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1360"/>
       <source>Type in text to send to the game server for the &quot;%1&quot; profile, or enter an alias to run commands locally.</source>
       <comment>Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.</comment>
-      <translation type="unfinished"/>
+      <translation>输入要发送到游戏服务器的配置，或输入别名(alias)以在本地运行命令。</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1367"/>
       <source>Additional input line &quot;%1&quot; on &quot;%2&quot; window.</source>
       <comment>Accessibility-friendly name to describe an extra command line on top of console/window when only one profile is loaded, %1 is the command line name and %2 is the name of the window/console that it is on.</comment>
-      <translation type="unfinished"/>
+      <translation>附加输入行 &quot;%1&quot; 在窗口&quot;%2&quot; 上.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1374"/>
@@ -1194,7 +1195,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="1397"/>
       <source>Input line of &quot;%1&quot; window.</source>
       <comment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when only one profile is loaded, %1 is the name of the window/console.</comment>
-      <translation type="unfinished"/>
+      <translation>&quot;%1&quot; 窗口的输入行.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1403"/>
@@ -1353,24 +1354,24 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TConsole.cpp" line="2086"/>
       <source>Central debug console past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>中央调试控制台历史内容</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2087"/>
       <source>Central debug console live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>中央调试控制台实时内容.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2089"/>
       <source>Central debug console.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up</comment>
-      <translation type="unfinished"/>
+      <translation>中央调试控制台.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2094"/>
       <source>Error Console in editor.</source>
-      <translation type="unfinished"/>
+      <translation>编辑器中的错误控制台.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2097"/>
@@ -1388,13 +1389,13 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TConsole.cpp" line="2100"/>
       <source>Editor&apos;s error window past content.</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>编辑器的错误窗口历史内容.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2101"/>
       <source>Editor&apos;s error window live content.</source>
       <comment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>编辑器的错误窗口实时内容.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2103"/>
@@ -1411,7 +1412,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TConsole.cpp" line="2108"/>
       <source>Editor&apos;s error window</source>
       <comment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>编辑器的错误窗口</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2111"/>
@@ -1456,13 +1457,13 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TConsole.cpp" line="2131"/>
       <source>Profile &quot;%1&quot; main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>配置文件 &quot;%1&quot; 的主窗口.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2133"/>
       <source>Profile main window.</source>
       <comment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up and only one profile is loaded.</comment>
-      <translation type="unfinished"/>
+      <translation>配置文件主窗口.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2140"/>
@@ -1472,7 +1473,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/TConsole.cpp" line="2142"/>
       <source>Embedded window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>嵌入式窗口 &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2144"/>
