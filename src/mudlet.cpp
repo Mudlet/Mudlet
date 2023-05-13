@@ -4132,9 +4132,9 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
 {
     // Need to check that the files exist first:
     // full dictionary path+filename
-    QString const dictionaryPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.dic")));
+    QString dictionaryPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.dic")));
     // full affix path+filename
-    QString const affixPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.aff")));
+    QString affixPath(getMudletPath(mudlet::profileDataItemPath, hostName, qsl("profile.aff")));
 
     int oldWordCount = 0;
     QStringList wordList;
