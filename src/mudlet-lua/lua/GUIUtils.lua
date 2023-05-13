@@ -2842,6 +2842,7 @@ local function echoConverter(str, from, to, resetFormat)
   from = from:title()
   if not echoPatterns[from] then
     local msg = "argument #4 (from) must be a valid echo type. Valid types are: " .. table.concat(table.keys(echoPatterns), ",")
+    printError(msg, true, true)
   end
   local processed = echoProcess(str, from)
   if to:lower() == "html" then
