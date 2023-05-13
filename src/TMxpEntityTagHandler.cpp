@@ -58,7 +58,7 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
         // Adding or removing an empty string to the value has no effect, that's why we skipped those.
         // Note that the TagParser will parse a '' argument as a non existent argument, so
         // so both <!EN name> and <!EN name ''> will come here.
-        const QString& value = "";
+        const QString value;
         resolver.registerEntity(entity, value);
 
         if (tag->hasAttribute("PUBLISH")) {
