@@ -2516,6 +2516,36 @@ int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrolling
+int TLuaInterpreter::enableScrolling(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    console->setScrolling(true);
+    return 0;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrolling
+int TLuaInterpreter::disableScrolling(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    console->setScrolling(false);
+    return 0;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
 int TLuaInterpreter::enableCommandLine(lua_State* L)
 {
@@ -15650,6 +15680,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
     lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
     lua_register(pGlobalLua, "getConfig", TLuaInterpreter::getConfig);
+    lua_register(pGlobalLua, "enableScrolling", TLuaInterpreter::enableScrolling);
+    lua_register(pGlobalLua, "disableScrolling", TLuaInterpreter::disableScrolling);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -17968,7 +18000,7 @@ int TLuaInterpreter::getScroll(lua_State* L)
 // Please use same options with same names in setConfig and getConfig and keep them in sync
 // The no args case that returns a table is handled by getConfig in Other.lua
 // that runs a loop with a list of these properties, please update that list.
-int TLuaInterpreter::getConfig(lua_State *L) 
+int TLuaInterpreter::getConfig(lua_State *L)
 {
     auto &host = getHostFromLua(L);
     QString key = getVerifiedString(L, __func__, 1, "key");

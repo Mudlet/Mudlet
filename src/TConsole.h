@@ -160,6 +160,7 @@ public:
     void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
+    void setScrolling(bool enabled);
     void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
@@ -296,6 +297,7 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
+    bool mScrollingEnabled = true;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
 

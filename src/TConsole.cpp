@@ -1069,6 +1069,10 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
 
 void TConsole::scrollDown(int lines)
 {
+    if (!mScrollingEnabled) {
+        return;
+    }
+
     mUpperPane->scrollDown(lines);
     if (!mUpperPane->mIsTailMode &&
         (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
@@ -1088,6 +1092,10 @@ void TConsole::scrollDown(int lines)
 
 void TConsole::scrollUp(int lines)
 {
+    if (!mScrollingEnabled) {
+        return;
+    }
+
     bool lowerAppears = mLowerPane->isHidden();
     mLowerPane->mCursorY = buffer.size();
     mLowerPane->show();
@@ -1707,6 +1715,10 @@ void TConsole::setHorizontalScrollBar(bool isEnabled)
         mHScrollBarEnabled = isEnabled;
         mpHScrollBar->setVisible(isEnabled);
     }
+}
+
+void TConsole::setScrolling(bool enabled) {
+    mScrollingEnabled = enabled;
 }
 
 void TConsole::printCommand(QString& msg)
