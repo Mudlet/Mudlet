@@ -2955,7 +2955,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             if (pA) {
                 float mx = (event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0);
                 float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
-                QPointF pc = QPointF(mx, my);
+                QPointF clickPoint = QPointF(mx, my);
                 QSetIterator<int> itRoom = pA->rooms;
                 while (itRoom.hasNext()) {
                     int currentRoomId = itRoom.next();
