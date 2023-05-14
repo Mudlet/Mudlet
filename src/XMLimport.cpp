@@ -761,8 +761,8 @@ void XMLimport::readHost(Host* pHost)
     pHost->mEnableMSP = attributes().value(qsl("mEnableMSP")) == YES;
     pHost->mMapStrongHighlight = attributes().value(qsl("mMapStrongHighlight")) == YES;
     pHost->mEnableSpellCheck = attributes().value(qsl("mEnableSpellCheck")) == YES;
-    bool const enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
-    bool const useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
+    const bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
+    const bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
     pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
     pHost->mAcceptServerGUI = attributes().value(qsl("mAcceptServerGUI")) == YES;
     pHost->mAcceptServerMedia = attributes().value(qsl("mAcceptServerMedia")) == YES;
@@ -902,7 +902,7 @@ void XMLimport::readHost(Host* pHost)
     pHost->mSslIgnoreSelfSigned = attributes().value(qsl("mSslIgnoreSelfSigned")) == YES;
     pHost->mSslIgnoreAll = attributes().value(qsl("mSslIgnoreAll")) == YES;
     pHost->mAskTlsAvailable = attributes().value(qsl("mAskTlsAvailable")) == YES;
-    bool const compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
+    const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);

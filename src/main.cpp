@@ -141,7 +141,7 @@ QTranslator* loadTranslationsForCommandLine()
     // If we allow the translations to be outside of the resource file inside
     // the application executable then this will have to be revised to handle
     // it:
-    bool const isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
+    const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
     if (!isOk) {
         return nullptr;
     }
@@ -263,7 +263,7 @@ int main(int argc, char* argv[])
                                                    qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
-    bool const parsedCommandLineOk = parser.parse(app->arguments());
+    const bool parsedCommandLineOk = parser.parse(app->arguments());
 
     const QString appendLF{qsl("%1\n")};
     const QString append2LF{qsl("%1\n\n")};
@@ -374,7 +374,7 @@ int main(int argc, char* argv[])
     QStringList const cliProfiles = parser.values(profileToOpen);
     QStringList const onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
-    bool const show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
+    const bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
     QImage splashImage = mudlet::getSplashScreen();
 
     if (show_splash) {

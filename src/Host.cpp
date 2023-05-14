@@ -1032,7 +1032,7 @@ bool Host::checkForMappingScript()
     // the mapper script reminder is only shown once
     // because it is too difficult and error prone (->proper script sequence)
     // to disable this message
-    bool const ret = (mLuaInterpreter.check_for_mappingscript() || mHaveMapperScript);
+    const bool ret = (mLuaInterpreter.check_for_mappingscript() || mHaveMapperScript);
     mHaveMapperScript = true;
     return ret;
 }
@@ -1062,7 +1062,7 @@ void Host::check_for_mappingscript()
 
 bool Host::checkForCustomSpeedwalk()
 {
-    bool const ret = mLuaInterpreter.check_for_custom_speedwalk();
+    const bool ret = mLuaInterpreter.check_for_custom_speedwalk();
     return ret;
 }
 
@@ -1704,7 +1704,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         // home directory for the PROFILE
         QDir const _tmpDir(_home);
         // directory to store the expanded archive file contents
-        bool const mkpathSuccessful = _tmpDir.mkpath(_dest);
+        const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
             return {false, qsl("could not create destination folder")};
         }
@@ -2171,7 +2171,7 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
 QString Host::readProfileData(const QString& item)
 {
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), item));
-    bool const success = file.open(QIODevice::ReadOnly);
+    const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
         QDataStream ifs(&file);
@@ -2603,10 +2603,10 @@ void Host::setSpellDic(const QString& newDict)
 void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useShared)
 {
     Q_UNUSED(_useDictionary);
-    bool const useDictionary = true;
+    const bool useDictionary = true;
     bool dictionaryChanged {};
     // Copy the value while we have the lock:
-    bool const isSpellCheckingEnabled = mEnableSpellCheck;
+    const bool isSpellCheckingEnabled = mEnableSpellCheck;
     if (mEnableUserDictionary != useDictionary) {
         mEnableUserDictionary = useDictionary;
         dictionaryChanged = true;
@@ -3873,7 +3873,7 @@ void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 void Host::toggleMapperVisibility()
 {
     auto pMap = mpMap.data();
-    bool const visStatus = mpMap->mpMapper->isVisible();
+    const bool visStatus = mpMap->mpMapper->isVisible();
     if (pMap->mpMapper->isFloatAndDockable()) {
         // If we are using a floating/dockable widget we must show/hide that
         // only and not the mapper widget (otherwise it messes up {shrinks

@@ -124,8 +124,8 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
             if (exitToRoom) {
                 // Valid exit roomID in place:
                 const int exitAreaID = exitToRoom->getArea();
-                bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-                bool const exitRoomLocked = exitToRoom->isLocked;
+                const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+                const bool exitRoomLocked = exitToRoom->isLocked;
                 mpDlgRoomExits->setActionOnExit(mpEditor, exitRoomLocked
                                                 ? mpDlgRoomExits->mpAction_exitRoomLocked
                                                 : outOfAreaExit
@@ -203,8 +203,8 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     if (pExitToRoom) {
         // A valid exit roomID number:
         const int exitAreaID = pExitToRoom->getArea();
-        bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool const exitRoomLocked = pExitToRoom->isLocked;
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -954,8 +954,8 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     if (pExitToRoom) {
         // A valid exit roomID number:
         const int exitAreaID = pExitToRoom->getArea();
-        bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool const exitRoomLocked = pExitToRoom->isLocked;
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1110,8 +1110,8 @@ void dlgRoomExits::normalExitEdited(const QString& roomExitIdText, QLineEdit* pE
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(roomExitIdText.toInt());
     if (exitToRoom) {
         const int exitAreaID = exitToRoom->getArea();
-        bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool const exitRoomLocked = exitToRoom->isLocked;
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = exitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1458,8 +1458,8 @@ void dlgRoomExits::initExit(int direction,
         exitLineEdit->setText(QString::number(exitId)); //Put in the value
         exitLineEdit->setEnabled(true);                 //Enable it for editing
         const int exitAreaID = pExitR->getArea();
-        bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool const exitRoomLocked = pExitR->isLocked;
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = pExitR->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);

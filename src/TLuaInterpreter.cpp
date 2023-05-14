@@ -2192,7 +2192,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
     }
 
     double const adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
-    bool const result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
+    const bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
         return warnArgumentValue(L, __func__, csmInvalidStopWatchID.arg(watchId));
@@ -2216,7 +2216,7 @@ int TLuaInterpreter::deleteStopWatch(lua_State* L)
         return 2;
     }
 
-    bool const result = host.destroyStopWatch(watchId);
+    const bool result = host.destroyStopWatch(watchId);
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
         return warnArgumentValue(L, __func__, csmInvalidStopWatchID.arg(watchId));
@@ -2240,7 +2240,7 @@ int TLuaInterpreter::setStopWatchPersistence(lua_State* L)
         return 2;
     }
 
-    bool const isPersistent = getVerifiedBool(L, __func__, 2, "persistence");
+    const bool isPersistent = getVerifiedBool(L, __func__, 2, "persistence");
 
     // This is only likely to fail when a numeric first argument was given:
     if (!host.makeStopWatchPersistent(watchId, isPersistent)) {
@@ -2574,7 +2574,7 @@ int TLuaInterpreter::saveMap(lua_State* L)
     }
 
     Host const& host = getHostFromLua(L);
-    bool const error = host.mpConsole->saveMap(location, saveVersion);
+    const bool error = host.mpConsole->saveMap(location, saveVersion);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2590,7 +2590,7 @@ int TLuaInterpreter::setExitStub(lua_State* L)
         return lua_error(L);
     }
 
-    bool const status = getVerifiedBool(L, __func__, 3, "set/unset");
+    const bool status = getVerifiedBool(L, __func__, 3, "set/unset");
 
     Host const& host = getHostFromLua(L);
     if (!host.mpMap) {
@@ -2641,9 +2641,9 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
             if (value >= DIR_OUT || value <= DIR_NORTH) {
                 // Ambiguous - look in more detail and check whether there is a
                 // a room with the given number and/or an exit stub:
-                bool const hasRoomWithNumberAsId = static_cast<bool>(host.mpMap->mpRoomDB->getRoom(value));
+                const bool hasRoomWithNumberAsId = static_cast<bool>(host.mpMap->mpRoomDB->getRoom(value));
                 auto pR = host.mpMap->mpRoomDB->getRoom(fromRoom);
-                bool const hasExitStubWithNumberAsDirection = (pR && pR->exitStubs.contains(value));
+                const bool hasExitStubWithNumberAsDirection = (pR && pR->exitStubs.contains(value));
                 if (hasRoomWithNumberAsId) {
                     if (hasExitStubWithNumberAsDirection) {
                         return warnArgumentValue(
@@ -2845,7 +2845,7 @@ int TLuaInterpreter::enableTimer(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
-    bool const error = host.getTimerUnit()->enableTimer(text);
+    const bool error = host.getTimerUnit()->enableTimer(text);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2855,7 +2855,7 @@ int TLuaInterpreter::disableTimer(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
-    bool const error = host.getTimerUnit()->disableTimer(text);
+    const bool error = host.getTimerUnit()->disableTimer(text);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2865,7 +2865,7 @@ int TLuaInterpreter::enableKey(lua_State* L)
 {
     const QString keyName = getVerifiedString(L, __func__, 1, "key name");
     Host& host = getHostFromLua(L);
-    bool const error = host.getKeyUnit()->enableKey(keyName);
+    const bool error = host.getKeyUnit()->enableKey(keyName);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2875,7 +2875,7 @@ int TLuaInterpreter::disableKey(lua_State* L)
 {
     const QString keyName = getVerifiedString(L, __func__, 1, "key name");
     Host& host = getHostFromLua(L);
-    bool const error = host.getKeyUnit()->disableKey(keyName);
+    const bool error = host.getKeyUnit()->disableKey(keyName);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2885,7 +2885,7 @@ int TLuaInterpreter::killKey(lua_State* L)
 {
     QString keyName = getVerifiedString(L, __func__, 1, "key name");
     Host& host = getHostFromLua(L);
-    bool const error = host.getKeyUnit()->killKey(keyName);
+    const bool error = host.getKeyUnit()->killKey(keyName);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2895,7 +2895,7 @@ int TLuaInterpreter::enableAlias(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
-    bool const error = host.getAliasUnit()->enableAlias(text);
+    const bool error = host.getAliasUnit()->enableAlias(text);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2905,7 +2905,7 @@ int TLuaInterpreter::disableAlias(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
-    bool const error = host.getAliasUnit()->disableAlias(text);
+    const bool error = host.getAliasUnit()->disableAlias(text);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2924,7 +2924,7 @@ int TLuaInterpreter::enableTrigger(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
-    bool const error = host.getTriggerUnit()->enableTrigger(text);
+    const bool error = host.getTriggerUnit()->enableTrigger(text);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -2934,7 +2934,7 @@ int TLuaInterpreter::disableTrigger(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
-    bool const error = host.getTriggerUnit()->disableTrigger(text);
+    const bool error = host.getTriggerUnit()->disableTrigger(text);
     lua_pushboolean(L, error);
     return 1;
 }
@@ -4154,7 +4154,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 int TLuaInterpreter::startLogging(lua_State* L)
 {
     Host const& host = getHostFromLua(L);
-    bool const logOn = getVerifiedBool(L, __func__, 1, "turn logging on/off");
+    const bool logOn = getVerifiedBool(L, __func__, 1, "turn logging on/off");
 
     QString savedLogFileName;
     if (host.mpConsole->mLogToLogFile) {
@@ -4824,7 +4824,7 @@ int TLuaInterpreter::roomLocked(lua_State* L)
     Host const& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
-        bool const r = pR->isLocked;
+        const bool r = pR->isLocked;
         lua_pushboolean(L, r);
     } else {
         lua_pushboolean(L, false);
@@ -4836,7 +4836,7 @@ int TLuaInterpreter::roomLocked(lua_State* L)
 int TLuaInterpreter::lockRoom(lua_State* L)
 {
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
-    bool const b = getVerifiedBool(L, __func__, 2, "lockIfTrue");
+    const bool b = getVerifiedBool(L, __func__, 2, "lockIfTrue");
     Host const& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
@@ -4861,7 +4861,7 @@ int TLuaInterpreter::lockExit(lua_State* L)
         return lua_error(L);
     }
 
-    bool const b = getVerifiedBool(L, __func__, 3, "lockIfTrue");
+    const bool b = getVerifiedBool(L, __func__, 3, "lockIfTrue");
 
     Host const& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
@@ -4882,7 +4882,7 @@ int TLuaInterpreter::lockSpecialExit(lua_State* L)
     if (dir.isEmpty()) {
         return warnArgumentValue(L, __func__, "the special exit name/command cannot be empty");
     }
-    bool const b = getVerifiedBool(L, __func__, 4, "special exit lock state");
+    const bool b = getVerifiedBool(L, __func__, 4, "special exit lock state");
 
     Host const& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(fromRoomID);
@@ -5513,7 +5513,7 @@ int TLuaInterpreter::getPath(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid target roomID").arg(targetRoomId));
     }
 
-    bool const ret = host.mpMap->gotoRoom(originRoomId, targetRoomId);
+    const bool ret = host.mpMap->gotoRoom(originRoomId, targetRoomId);
     const int totalWeight = host.assemblePath(); // Needed even if unsuccessful, to clear lua tables then
     if (ret) {
         lua_pushboolean(L, true);
@@ -5946,7 +5946,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                 mediaData.setMediaLoops(value);
             }
         } else if (key == QLatin1String("continue")) {
-            bool const value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
+            const bool value = getVerifiedBool(L, __func__, -1, "value for continue must be boolean");
             mediaData.setMediaContinue(value);
         }
 
@@ -6654,7 +6654,7 @@ int TLuaInterpreter::setBold(lua_State* L)
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         windowName = WINDOW_NAME(L, s++);
     }
-    bool const isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable bold attribute");
+    const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable bold attribute");
     auto console = CONSOLE(L, windowName);
     console->setDisplayAttributes(TChar::Bold, isAttributeEnabled);
     lua_pushboolean(L, true);
@@ -6669,7 +6669,7 @@ int TLuaInterpreter::setItalics(lua_State* L)
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         windowName = WINDOW_NAME(L, s++);
     }
-    bool const isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable italic attribute");
+    const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable italic attribute");
     auto console = CONSOLE(L, windowName);
     console->setDisplayAttributes(TChar::Italic, isAttributeEnabled);
     lua_pushboolean(L, true);
@@ -6684,7 +6684,7 @@ int TLuaInterpreter::setOverline(lua_State* L)
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         windowName = WINDOW_NAME(L, s++);
     }
-    bool const isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable overline attribute");
+    const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable overline attribute");
     auto console = CONSOLE(L, windowName);
     console->setDisplayAttributes(TChar::Overline, isAttributeEnabled);
     lua_pushboolean(L, true);
@@ -6699,7 +6699,7 @@ int TLuaInterpreter::setReverse(lua_State* L)
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         windowName = WINDOW_NAME(L, s++);
     }
-    bool const isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable reverse attribute");
+    const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable reverse attribute");
     auto console = CONSOLE(L, windowName);
     console->setDisplayAttributes(TChar::Reverse, isAttributeEnabled);
     lua_pushboolean(L, true);
@@ -6714,7 +6714,7 @@ int TLuaInterpreter::setStrikeOut(lua_State* L)
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         windowName = WINDOW_NAME(L, s++);
     }
-    bool const isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable strikeout attribute");
+    const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable strikeout attribute");
     auto console = CONSOLE(L, windowName);
     console->setDisplayAttributes(TChar::StrikeOut, isAttributeEnabled);
     lua_pushboolean(L, true);
@@ -6729,7 +6729,7 @@ int TLuaInterpreter::setUnderline(lua_State* L)
     if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
         windowName = WINDOW_NAME(L, s++);
     }
-    bool const isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable underline attribute");
+    const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable underline attribute");
     auto console = CONSOLE(L, windowName);
     console->setDisplayAttributes(TChar::Underline, isAttributeEnabled);
     lua_pushboolean(L, true);
@@ -7619,19 +7619,19 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #4 type (multiline flag as number expected, got %s!)", luaL_typename(L, 4));
         return lua_error(L);
     }
-    bool const multiLine = lua_tonumber(L, 4);
+    const bool multiLine = lua_tonumber(L, 4);
 
     if (!lua_isnumber(L, 7)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #7 type (filter flag as number expected, got %s!)", luaL_typename(L, 7));
         return lua_error(L);
     }
-    bool const filter = lua_tonumber(L, 7);
+    const bool filter = lua_tonumber(L, 7);
 
     if (!lua_isnumber(L, 8)) {
         lua_pushfstring(L, "tempComplexRegexTrigger: bad argument #8 type (match all flag as number expected, got %s!)", luaL_typename(L, 8));
         return lua_error(L);
     }
-    bool const matchAll = lua_tonumber(L, 8);
+    const bool matchAll = lua_tonumber(L, 8);
 
     const int fireLength = getVerifiedInt(L, __func__, 12, "fire length");
     const int lineDelta = getVerifiedInt(L, __func__, 13, "line delta");
@@ -8470,7 +8470,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#invokeFileDialog
 int TLuaInterpreter::invokeFileDialog(lua_State* L)
 {
-    bool const luaDir = getVerifiedBool(L, __func__, 1, "fileOrFolder");
+    const bool luaDir = getVerifiedBool(L, __func__, 1, "fileOrFolder");
     const QString title = getVerifiedString(L, __func__, 2, "dialogTitle");
 
     if (!luaDir) {
@@ -8638,7 +8638,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         }
     }
 
-    bool const result = host.mpMap->mpRoomDB->setAreaName(id, newName);
+    const bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
         host.mpMap->setUnsaved(__func__);
         if (host.mpMap->mpMapper) {
@@ -8863,7 +8863,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
 {
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     Host const& host = getHostFromLua(L);
-    bool const added = host.mpMap->addRoom(id);
+    const bool added = host.mpMap->addRoom(id);
     lua_pushboolean(L, added);
     if (added) {
         host.mpMap->setRoomArea(id, -1, false);
@@ -9062,7 +9062,7 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     float const width = getVerifiedFloat(L, __func__, 6, "width");
     float const height = getVerifiedFloat(L, __func__, 7, "height");
     float const zoom = getVerifiedFloat(L, __func__, 8, "zoom");
-    bool const showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
+    const bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
     bool temporary = false;
     if (args > 9) {
         temporary = getVerifiedBool(L, __func__, 10, "showOnTop", true);
@@ -9135,7 +9135,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
             "door type %1 is not one of 0='none', 1='open', 2='closed' or 3='locked'").arg(doorStatus));
     }
 
-    bool const result = pR->setDoor(exitCmd, doorStatus);
+    const bool result = pR->setDoor(exitCmd, doorStatus);
     if (result) {
         host.mpMap->setUnsaved(__func__);
         if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
@@ -9383,7 +9383,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         }
     }
 
-    bool const arrow = getVerifiedBool(L, __func__, 6, "end with arrow");
+    const bool arrow = getVerifiedBool(L, __func__, 6, "end with arrow");
     const int lz = z.at(0);
     QList<QPointF> points;
     // TODO: make provision for 3D custom lines (and store the z coordinates and allow them to vary)
@@ -10443,7 +10443,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
 
     // Can set the room to an area which does not have a TArea instance but does
     // appear in the TRoomDB::areaNamesMap...
-    bool const result = host.mpMap->setRoomArea(id, areaId, false);
+    const bool result = host.mpMap->setRoomArea(id, areaId, false);
     if (result) {
         // As a successful result WILL change the area a room is in then the map
         // should be updated.  The GUI code that modifies room(s) areas already
@@ -10473,7 +10473,7 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     } else if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
     }
-    bool const result = host.mpMap->setRoomArea(id, -1, false);
+    const bool result = host.mpMap->setRoomArea(id, -1, false);
     if (result) {
         // As a successful result WILL change the area a room is in then the map
         // should be updated.  The GUI code that modifies room(s) areas already
@@ -10650,7 +10650,7 @@ int TLuaInterpreter::getGridMode(lua_State* L)
 int TLuaInterpreter::setGridMode(lua_State* L)
 {
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
-    bool const gridMode = getVerifiedBool(L, __func__, 2, "true/false");
+    const bool gridMode = getVerifiedBool(L, __func__, 2, "true/false");
     Host const& host = getHostFromLua(L);
     TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
@@ -11407,7 +11407,7 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     // in order to respect privacy.
     mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
-    bool const isActiveHost = (pMudlet->mpCurrentActiveHost == &host);
+    const bool isActiveHost = (pMudlet->mpCurrentActiveHost == &host);
     const int args = lua_gettop(L);
 
     if (!args) { // no args, blank the invite URL and game name
@@ -12253,7 +12253,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    bool const isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
+    const bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
     if (host.mpMap->mpMapper) {
         // If we are re-enabling the display of the default area
         // AND the mapper was showing the default area
@@ -17350,8 +17350,8 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
         auto nResult = lua_gettop(L);
         auto index = -nResult;
         const QString text = lua_tostring(L, index);
-        bool const isBold = lua_toboolean(L, ++index);
-        bool const isItalic = lua_toboolean(L, ++index);
+        const bool isBold = lua_toboolean(L, ++index);
+        const bool isItalic = lua_toboolean(L, ++index);
         int r = -1;
         int g = -1;
         int b = -1;

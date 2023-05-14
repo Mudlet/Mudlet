@@ -129,7 +129,7 @@ void TRoomDB::updateEntranceMap(int id)
 
 void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
 {
-    static bool const showDebug = false; // Enable this at runtime (set a breakpoint on it) for debugging!
+    static const bool showDebug = false; // Enable this at runtime (set a breakpoint on it) for debugging!
 
     // entranceMap maps the room to rooms it has a viable exit to. So if room b and c both have
     // an exit to room a, upon deleting room a we want a map that allows us to find

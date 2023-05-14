@@ -423,7 +423,7 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
         for (int i = 0; i < codePoints.size(); ++i) {
             isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
         }
-        bool const needToFallback = isUsable.contains(false);
+        const bool needToFallback = isUsable.contains(false);
         if (needToFallback) {
             symbolString = QString(QChar::ReplacementCharacter);
             font.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));

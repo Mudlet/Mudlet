@@ -1168,7 +1168,7 @@ void mudlet::loadTranslators(const QString& languageCode)
         // mangles the former to find the actual best one to use, but we
         // shouldn't include the path in the first element as it seems to mess
         // up the process of locating the file:
-        bool const isOk = pQtTranslator->load(qtTranslatorFileName, mPathNameQtTranslations);
+        const bool isOk = pQtTranslator->load(qtTranslatorFileName, mPathNameQtTranslations);
         if (isOk && !pQtTranslator->isEmpty()) {
             // qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Qt libraries' translation from a path and file name specified as: \"" << mPathNameQtTranslations << "/"<< qtTranslatorFileName << "\"...";
             qApp->installTranslator(pQtTranslator);
@@ -1179,7 +1179,7 @@ void mudlet::loadTranslators(const QString& languageCode)
     QPointer<QTranslator> const pMudletTranslator = new QTranslator;
     const QString mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
     if (!mudletTranslatorFileName.isEmpty()) {
-        bool const isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
+        const bool isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
         if (isOk && !pMudletTranslator->isEmpty()) {
 //            qDebug().nospace().noquote() << "mudlet::loadTranslators(\"" << languageCode << "\") INFO - installing Mudlet translation from: \"" << mPathNameMudletTranslations << "/"
 //                                         << mudletTranslatorFileName << "\"...";
@@ -1632,7 +1632,7 @@ bool mudlet::loadWindowLayout()
             ifs >> layoutData;
             layoutFile.close();
 
-            bool const rv = restoreState(layoutData);
+            const bool rv = restoreState(layoutData);
 
             commitLayoutUpdates(true);
             mIsLoadingLayout = false;
@@ -2439,7 +2439,7 @@ void mudlet::updateDiscordNamedIcon()
 
     const QString gameName = pHost->getDiscordGameName();
 
-    bool const hasCustom = !pHost->getDiscordInviteURL().isEmpty();
+    const bool hasCustom = !pHost->getDiscordInviteURL().isEmpty();
 
     mpActionDiscord->setIconText(gameName.isEmpty() ? qsl("Discord") : QFontMetrics(mpActionDiscord->font()).elidedText(gameName, Qt::ElideRight, 90));
 
@@ -4664,7 +4664,7 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
     if (bool layEasterEgg = (now.time().second() < 30); layEasterEgg) {
         // Only do it in the first half of any minute:
 #else
-    if (bool const layEasterEgg = (now.date().month() == 4
+    if (const bool layEasterEgg = (now.date().month() == 4
                         && now.date().day() == 1); layEasterEgg) {
 #endif // ! DEBUG_EASTER_EGGS
         // clang-format on

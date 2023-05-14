@@ -719,7 +719,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
-    bool const success = file.open(QIODevice::ReadOnly);
+    const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
         QDataStream ifs(&file);
@@ -1254,7 +1254,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
         return;
     }
 
-    bool const success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
+    const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
     if (!success) {
         return;
     }
@@ -1282,7 +1282,7 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
-    bool const success = mudlet::self()->resetProfileIcon(profileName).first;
+    const bool success = mudlet::self()->resetProfileIcon(profileName).first;
     if (!success) {
         return;
     }

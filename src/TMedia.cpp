@@ -62,7 +62,7 @@ void TMedia::playMedia(TMediaData& mediaData)
         return;
     }
 
-    bool const fileRelative = TMedia::isFileRelative(mediaData);
+    const bool fileRelative = TMedia::isFileRelative(mediaData);
 
     if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
         return; // MSP and MCMP files will not have absolute paths. Something is wrong.
@@ -165,7 +165,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
     }
 
     if (!mediaData.getMediaFileName().isEmpty()) {
-        bool const fileRelative = TMedia::isFileRelative(mediaData);
+        const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
             return; // MSP and MCMP files will not have absolute paths. Something is wrong.
@@ -431,7 +431,7 @@ QUrl TMedia::getFileUrl(TMediaData& mediaData)
     }
 
     if (!mediaLocation.isEmpty()) {
-        bool const endsWithSlash = mediaLocation.endsWith('/');
+        const bool endsWithSlash = mediaLocation.endsWith('/');
 
         if (!endsWithSlash) {
             fileUrl = QUrl::fromUserInput(qsl("%1/%2").arg(mediaLocation, mediaData.getMediaFileName()));
@@ -791,8 +791,8 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         const int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
         const int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
         const int startPosition = pPlayer.getMediaData().getMediaStart();
-        bool const fadeInUsed = fadeInPosition != TMediaData::MediaFadeNotSet;
-        bool const fadeOutUsed = fadeOutPosition != TMediaData::MediaFadeNotSet;
+        const bool fadeInUsed = fadeInPosition != TMediaData::MediaFadeNotSet;
+        const bool fadeOutUsed = fadeOutPosition != TMediaData::MediaFadeNotSet;
         bool actionTaken = false;
 
         if (fadeInUsed) {

@@ -155,7 +155,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
         // to retain the API for the lua subsystem...
     }
 
-    bool const result = pR->setArea(area, isToDeferAreaRelatedRecalculations);
+    const bool result = pR->setArea(area, isToDeferAreaRelatedRecalculations);
     if (result) {
         mMapGraphNeedsUpdate = true;
         setUnsaved(__func__);
@@ -2544,7 +2544,7 @@ bool TMap::importMap(QFile& file, QString* errMsg)
     mImportRunning = true;
     // MUST clear this flag when done under ALL circumstances
 
-    bool const result = readXmlMapFile(file, errMsg);
+    const bool result = readXmlMapFile(file, errMsg);
     mImportRunning = false;
 
     return result;
@@ -3142,7 +3142,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     float const mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
-    bool const isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
+    const bool isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
     const int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
     quint8 const playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
     quint8 const playerRoomInnerDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")].toDouble());

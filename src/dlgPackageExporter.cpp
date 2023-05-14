@@ -1430,7 +1430,7 @@ void dlgPackageExporter::listTimers()
     }
 }
 
-void dlgPackageExporter::displayResultMessage(const QString& html, bool const isSuccessMessage)
+void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
         // Big RED error message

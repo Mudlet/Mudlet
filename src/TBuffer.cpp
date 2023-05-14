@@ -1194,7 +1194,7 @@ void TBuffer::decodeSGR(const QString& sequence)
         return;
     }
 
-    bool const haveColorSpaceId = pHost->getHaveColorSpaceId();
+    const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
 
     QStringList const parameterStrings = sequence.split(QChar(';'));
     for (int paraIndex = 0, total = parameterStrings.count(); paraIndex < total; ++paraIndex) {
@@ -1911,7 +1911,7 @@ void TBuffer::decodeOSC(const QString& sequence)
         return;
     }
 
-    bool const serverMayRedefineDefaultColors = pHost->getMayRedefineColors();
+    const bool serverMayRedefineDefaultColors = pHost->getMayRedefineColors();
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug().nospace().noquote() << "    Consider the OSC sequence: \"" << sequence << "\"";
 #endif
@@ -2370,7 +2370,7 @@ TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
 // This only copies the first line of chunk's contents:
 void TBuffer::paste(QPoint& P, const TBuffer& chunk)
 {
-    bool const needAppend = false;
+    const bool needAppend = false;
     bool hasAppended = false;
     int y = P.y();
     const int x = P.x();
@@ -2483,7 +2483,7 @@ inline int TBuffer::wrap(int startLine)
     int lineCount = 0;
     TChar const pSpace(mpConsole);
     for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
-        bool const isPrompt = promptBuffer[i];
+        const bool isPrompt = promptBuffer[i];
         std::deque<TChar> newLine;
         QString lineText = "";
         const QString time = timeBuffer[i];
@@ -2711,7 +2711,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
     lineBuffer.removeAt(startLine);
     const QString time = timeBuffer.at(startLine);
     timeBuffer.removeAt(startLine);
-    bool const isPrompt = promptBuffer.at(startLine);
+    const bool isPrompt = promptBuffer.at(startLine);
     promptBuffer.removeAt(startLine);
 
     const int insertedLines = queue.size() - 1;

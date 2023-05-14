@@ -162,7 +162,7 @@ bool LuaInterface::reparentCVariable(TVar* from, TVar* to, TVar* curVar)
             return true;
         }
         const int stackSize = lua_gettop(mL);
-        bool const isSaved = varUnit->isSaved(curVar);
+        const bool isSaved = varUnit->isSaved(curVar);
         if (isSaved) {
             QList<TVar*> list;
             getAllChildren(curVar, &list);

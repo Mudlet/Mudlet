@@ -3057,7 +3057,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
 
         QIcon icon;
         QString itemDescription;
-        bool const itemActive = (pT->isActive() || pT->shouldBeActive());
+        const bool itemActive = (pT->isActive() || pT->shouldBeActive());
 
         if (pItem->childCount() > 0) {
             children_icon_timer(pItem);
@@ -3401,7 +3401,7 @@ void dlgTriggerEditor::activeToggle_action()
         }
     }
 
-    bool const itemActive = pT->isActive();
+    const bool itemActive = pT->isActive();
     if (pT->isFolder()) {
         itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
         if (!pT->ancestorsActive()) {
@@ -3482,7 +3482,7 @@ void dlgTriggerEditor::children_icon_action(QTreeWidgetItem* pWidgetItemParent)
 
         QIcon icon;
         QString itemDescription;
-        bool const itemActive = pT->isActive();
+        const bool itemActive = pT->isActive();
         if (pItem->childCount() > 0) {
             children_icon_action(pItem);
         }
@@ -4417,7 +4417,7 @@ void dlgTriggerEditor::saveTrigger()
     mpTriggersMainArea->trimName();
     const QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
     const QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
-    bool const isMultiline = mpTriggersMainArea->groupBox_multiLineTrigger->isChecked();
+    const bool isMultiline = mpTriggersMainArea->groupBox_multiLineTrigger->isChecked();
     QStringList patterns;
     QList<int> patternKinds;
     for (int i = 0; i < 50; i++) {
@@ -4851,7 +4851,7 @@ void dlgTriggerEditor::saveAction()
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
     const int rotation = qMax(0, mpActionsMainArea->comboBox_action_button_rotation->currentIndex());
     const int columns = mpActionsMainArea->spinBox_action_bar_columns->text().toInt();
-    bool const isChecked = mpActionsMainArea->checkBox_action_button_isPushDown->isChecked();
+    const bool isChecked = mpActionsMainArea->checkBox_action_button_isPushDown->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
     int location = qMax(0, mpActionsMainArea->comboBox_action_bar_location->currentIndex());
@@ -4893,7 +4893,7 @@ void dlgTriggerEditor::saveAction()
 
         QIcon icon;
         QString itemDescription;
-        bool const itemActive = pA->isActive();
+        const bool itemActive = pA->isActive();
         if (pA->isFolder()) {
             itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
             if (!pA->mPackageName.isEmpty()) {
@@ -5051,7 +5051,7 @@ void dlgTriggerEditor::saveScript()
     mpHost->getTriggerUnit()->doCleanup();
     QIcon icon;
     QString itemDescription;
-    bool const itemActive = pT->isActive();
+    const bool itemActive = pT->isActive();
     if (pT->isFolder()) {
         itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
         if (!pT->mPackageName.isEmpty()) {
@@ -5401,7 +5401,7 @@ void dlgTriggerEditor::saveKey()
 
         QIcon icon;
         QString itemDescription;
-        bool const itemActive = pT->isActive();
+        const bool itemActive = pT->isActive();
         if (pT->isFolder()) {
             itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
             if (!pT->mPackageName.isEmpty()) {
@@ -5743,8 +5743,8 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
 
         QColor const fgColor(pT->getFgColor());
         QColor const bgColor(pT->getBgColor());
-        bool const transparentFg = fgColor == QColorConstants::Transparent;
-        bool const transparentBg = bgColor == QColorConstants::Transparent;
+        const bool transparentFg = fgColor == QColorConstants::Transparent;
+        const bool transparentBg = bgColor == QColorConstants::Transparent;
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, pT->isColorizerTrigger()));
         mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, transparentFg ? qsl("transparent") : fgColor.name());
         mpTriggersMainArea->pushButtonFgColor->setText(transparentFg ? tr("keep",
@@ -6470,7 +6470,7 @@ void dlgTriggerEditor::populateKeys()
         mpKeyBaseItem->addChild(pItem);
         QIcon icon;
         QString itemDescription;
-        bool const itemActive = key->isActive();
+        const bool itemActive = key->isActive();
         if (key->hasChildren()) {
             expand_child_key(key, pItem);
         }
@@ -6554,7 +6554,7 @@ void dlgTriggerEditor::populateActions()
         }
         if (action->state()) {
             clearEditorNotification();
-            bool const itemActive = action->isActive();
+            const bool itemActive = action->isActive();
             if (action->isFolder()) {
                 itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
                 if (!action->mPackageName.isEmpty()) {
@@ -6632,7 +6632,7 @@ void dlgTriggerEditor::populateAliases()
         mpAliasBaseItem->addChild(pItem);
         QIcon icon;
         QString itemDescription;
-        bool const itemActive = alias->isActive();
+        const bool itemActive = alias->isActive();
         if (alias->hasChildren()) {
             expand_child_alias(alias, pItem);
         }
@@ -6708,7 +6708,7 @@ void dlgTriggerEditor::populateScripts()
         mpScriptsBaseItem->addChild(pItem);
         QIcon icon;
         QString itemDescription;
-        bool const itemActive = script->isActive();
+        const bool itemActive = script->isActive();
         if (script->hasChildren()) {
             expand_child_scripts(script, pItem);
         }
@@ -6765,7 +6765,7 @@ void dlgTriggerEditor::populateTimers()
         mpTimerBaseItem->addChild(pItem);
         QIcon icon;
         QString itemDescription;
-        bool const itemActive = timer->isActive();
+        const bool itemActive = timer->isActive();
         if (timer->hasChildren()) {
             expand_child_timers(timer, pItem);
         }
@@ -6855,7 +6855,7 @@ void dlgTriggerEditor::populateTriggers()
         mpTriggerBaseItem->addChild(pItem);
         QIcon icon;
         QString itemDescription;
-        bool const itemActive = trigger->isActive();
+        const bool itemActive = trigger->isActive();
         if (trigger->hasChildren()) {
             expand_child_triggers(trigger, pItem);
         }
@@ -9313,7 +9313,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
                                         this,
                                         tr("Select foreground color to apply to matches"));
     color = color.isValid() ? color : QColorConstants::Transparent;
-    bool const keepColor = color == QColorConstants::Transparent;
+    const bool keepColor = color == QColorConstants::Transparent;
     mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
     mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
     mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
@@ -9334,7 +9334,7 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
                                         this,
                                         tr("Select background color to apply to matches"));
     color = color.isValid() ? color : QColorConstants::Transparent;
-    bool const keepColor = color == QColorConstants::Transparent;
+    const bool keepColor = color == QColorConstants::Transparent;
     mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
     mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
     mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());

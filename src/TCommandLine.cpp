@@ -1316,7 +1316,7 @@ void TCommandLine::clearBlacklist()
 
 void TCommandLine::slot_adjustAccessibleNames()
 {
-    bool const multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    const bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
     const QString hostName{mpHost ? mpHost->getName() : QString()};
     switch (mType) {
     case MainCommandLine:

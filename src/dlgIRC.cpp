@@ -160,7 +160,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         return QPair<bool, QString>(false, qsl("message could not be parsed"));
     }
 
-    bool const isCustomCommand = processCustomCommand(command);
+    const bool isCustomCommand = processCustomCommand(command);
     if (isCustomCommand) {
         return QPair<bool, QString>(true, qsl("command processed by client"));
     }
@@ -449,7 +449,7 @@ void dlgIRC::slot_onTextEntered()
     IrcCommand* command = commandParser->parse(input);
     if (command) {
         // handle custom commands
-        bool const isCustomCommand = processCustomCommand(command);
+        const bool isCustomCommand = processCustomCommand(command);
         if (isCustomCommand) {
             lineEdit->clear();
             return;
@@ -767,7 +767,7 @@ QString dlgIRC::readIrcPassword(Host* pH)
 QString dlgIRC::readAppDefaultIrcNick()
 {
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("irc_nick")));
-    bool const opened = file.open(QIODevice::ReadOnly);
+    const bool opened = file.open(QIODevice::ReadOnly);
     QString rstr;
     if (opened) {
         QDataStream ifs(&file);
@@ -783,7 +783,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
     QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("irc_nick")));
-    bool const opened = file.open(QIODevice::WriteOnly);
+    const bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {

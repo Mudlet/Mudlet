@@ -844,7 +844,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mIsLoggingTimestamps->setChecked(pHost->mIsLoggingTimestamps);
     mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
 
-    bool const isLogFileNameEntryShown = pHost->mLogFileNameFormat.isEmpty();
+    const bool isLogFileNameEntryShown = pHost->mLogFileNameFormat.isEmpty();
     const QString logExtension = pHost->mIsNextLogFileInHtmlFormat ? ".html" : ".txt";
     label_logFileNameExtension->setVisible(isLogFileNameEntryShown);
     lineEdit_logFileName->setVisible(isLogFileNameEntryShown);
@@ -2295,7 +2295,7 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
 
     // Ensure the setting is already made as the TConsole::loadMap(...) uses
     // the set value:
-    bool const showAuditErrors = mudlet::self()->showMapAuditErrors();
+    const bool showAuditErrors = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     bool success = false;
@@ -2414,7 +2414,7 @@ void dlgProfilePreferences::slot_saveMap()
         // show up when saving big maps
 
         // Ensure the setting is already made as the saveMap(...) uses the set value
-        bool const showAuditErrors = mudlet::self()->showMapAuditErrors();
+        const bool showAuditErrors = mudlet::self()->showMapAuditErrors();
         mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
         bool success = false;
@@ -2527,7 +2527,7 @@ void dlgProfilePreferences::slot_copyMap()
 
     // Ensure the setting is already made as the value could be used in the
     // code following after
-    bool const savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->showMapAuditErrors();
+    const bool savedOldAuditErrorsToConsoleEnabledSetting = mudlet::self()->showMapAuditErrors();
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     // We now KNOW there are places where the destination profiles will/have
@@ -2745,7 +2745,7 @@ void dlgProfilePreferences::slot_logFileNameFormatChange(const int index)
         return;
     }
 
-    bool const isShown = comboBox_logFileNameFormat->currentData().toString().isEmpty();
+    const bool isShown = comboBox_logFileNameFormat->currentData().toString().isEmpty();
     lineEdit_logFileName->setVisible(isShown);
     label_logFileName->setVisible(isShown);
     label_logFileNameExtension->setVisible(isShown);
@@ -2798,7 +2798,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         if (pHost->mpMap) {
             // Need to save the original value in case we change it in the line
             // following this one:
-            bool const defaultAreaWasNotShown = pHost->mpMap->getDefaultAreaShown();
+            const bool defaultAreaWasNotShown = pHost->mpMap->getDefaultAreaShown();
             pHost->mpMap->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
             if (pHost->mpMap->mpMapper) {
                 pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
@@ -2861,14 +2861,14 @@ void dlgProfilePreferences::slot_saveAndClose()
         const QString oldIrcPass = dlgIRC::readIrcPassword(pHost);
         const QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
         const QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
-        bool const oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
+        const bool oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
         const QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
 
         QString newIrcNick = ircNick->text();
         const QString newIrcPass = ircPassword->text();
         QString newIrcHost = ircHostName->text();
         QString newIrcPort = ircHostPort->text();
-        bool const newIrcSecure = ircHostSecure->isChecked();
+        const bool newIrcSecure = ircHostSecure->isChecked();
         QString newIrcChannels = ircChannels->text();
         QStringList newChanList;
         int nIrcPort = dlgIRC::DefaultHostPort;

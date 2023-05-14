@@ -629,7 +629,7 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     if (mType & MainConsole) {
         // don't call event in lua if size didn't change
-        bool const preventLuaEvent = (getMainWindowSize() == mOldSize);
+        const bool preventLuaEvent = (getMainWindowSize() == mOldSize);
         mOldSize = getMainWindowSize();
         if (preventLuaEvent) {
             return;
@@ -1088,7 +1088,7 @@ void TConsole::scrollDown(int lines)
 
 void TConsole::scrollUp(int lines)
 {
-    bool const lowerAppears = mLowerPane->isHidden();
+    const bool lowerAppears = mLowerPane->isHidden();
     mLowerPane->mCursorY = buffer.size();
     mLowerPane->show();
     mLowerPane->updateScreenView();
@@ -2077,7 +2077,7 @@ void TConsole::mousePressEvent(QMouseEvent* event)
 
 void TConsole::slot_adjustAccessibleNames()
 {
-    bool const multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    const bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
     switch (mType) {
     case CentralDebugConsole:
         setAccessibleName(tr("Debug Console."));

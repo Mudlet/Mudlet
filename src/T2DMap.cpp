@@ -459,7 +459,7 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
     }
 
     QFont fontForThisSymbol = mpMap->mMapSymbolFont;
-    bool const needToFallback = isUsable.contains(false);
+    const bool needToFallback = isUsable.contains(false);
     // Oh dear at least one grapheme is not represented in either the selected
     // or any font as set elsewhere
     if (needToFallback) {
@@ -604,7 +604,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
     QRectF roomNameRectangle;
     double realHeight;
     const int borderWidth = 1 / eSize * mRoomWidth * rSize;
-    bool const shouldDrawBorder = mpHost->mMapperShowRoomBorders && !isGridMode;
+    const bool shouldDrawBorder = mpHost->mMapperShowRoomBorders && !isGridMode;
     bool showThisRoomName = showRoomName;
     if (isGridMode) {
         realHeight = mRoomHeight;
@@ -683,7 +683,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
         }
     }
 
-    bool const isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
+    const bool isRoomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
     QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
     selectionBg.setColorAt(0.25, roomColor);
     selectionBg.setColorAt(1, Qt::blue);
@@ -1619,8 +1619,8 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     const double endAngleFactor = 150.0;
     const double endFiddleFactor = 0.50;
     const float doorWidthFactor = 1.5;
-    bool const isShortLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) < innerThresholdFactor);
-    bool const isLongLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) > outerThresholdFactor);
+    const bool isShortLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) < innerThresholdFactor);
+    const bool isLongLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) > outerThresholdFactor);
     QLineF line{exitLine};
     if (isShortLine) {
         line.setLength(shortPositionFactor * (mRoomWidth + mRoomHeight));
@@ -3756,7 +3756,7 @@ void T2DMap::slot_showPropertiesDialog()
         }
 
         // Scan and count all the different lock status used
-        bool const thisLockStatus = room->isLocked;
+        const bool thisLockStatus = room->isLocked;
         if (usedLockStatus.contains(thisLockStatus)) {
             (usedLockStatus[thisLockStatus])++;
         } else {
@@ -5089,7 +5089,7 @@ void T2DMap::setPlayerRoomStyle(const int type)
     mPlayerRoomColorGradentStops.reserve(5);
 
     double const factor = mpMap->mPlayerRoomInnerDiameterPercentage / 100.0;
-    bool const solid = (mpMap->mPlayerRoomInnerDiameterPercentage == 0);
+    const bool solid = (mpMap->mPlayerRoomInnerDiameterPercentage == 0);
     switch (type) {
     case 1: // Simple(?) shaded red ring:
         if (solid) {

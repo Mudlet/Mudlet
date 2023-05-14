@@ -1978,7 +1978,7 @@ bool TRoom::readJsonNormalExit(const QJsonObject& exitObj, const int dir)
 void TRoom::writeJsonSpecialExit(QJsonArray& array, const QString& dir, const int exitId) const
 {
     QJsonObject exitObj;
-    bool const exitLocked = mSpecialExitLocks.contains(dir);
+    const bool exitLocked = mSpecialExitLocks.contains(dir);
 
     // Safety step to avoid insertion of any unreal exits:
     if (exitId < 1 || dir.isEmpty()) {
@@ -2290,7 +2290,7 @@ void TRoom::readJsonExitStubs(const QJsonObject& obj)
 // does get used then no change to the format is needed:
 void TRoom::writeJsonHighlight(QJsonObject& obj) const
 {
-    bool const noColor = (highlightColor == scDefaultHighlightForeground) && (highlightColor2 == scDefaultHighlightBackground);
+    const bool noColor = (highlightColor == scDefaultHighlightForeground) && (highlightColor2 == scDefaultHighlightBackground);
     if (!highlight && qFuzzyCompare(1.0f + highlightRadius, 1.0f) && noColor) {
         // The default case so no need to include it:
         return;

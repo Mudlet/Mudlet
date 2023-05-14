@@ -120,8 +120,8 @@ bool TTimer::isOffsetTimer()
 
 bool TTimer::setIsActive(bool b)
 {
-    bool const condition1 = Tree<TTimer>::setIsActive(b);
-    bool const condition2 = canBeUnlocked();
+    const bool condition1 = Tree<TTimer>::setIsActive(b);
+    const bool condition2 = canBeUnlocked();
     if (condition1 && condition2) {
         start();
     } else {
