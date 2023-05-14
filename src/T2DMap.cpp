@@ -843,7 +843,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
     if (showRoomName) {
         painter.save();
 
-        QString const namePosData = pRoom->userData.value(ROOM_UI_NAMEPOS);
+        const QString namePosData = pRoom->userData.value(ROOM_UI_NAMEPOS);
         if (!namePosData.isEmpty()) {
             QPointF nameOffset {0, 0};
             QStringList posXY = namePosData.split(" ");
@@ -1186,7 +1186,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     // the room name's font defaults to the symbol's
     // but may be overridden
     auto mapNameFont = mpMap->mMapSymbolFont;
-    QString const fontName = mpMap->mUserData.value(ROOM_UI_NAMEFONT);
+    const QString fontName = mpMap->mUserData.value(ROOM_UI_NAMEFONT);
     if (!fontName.isEmpty()) {
         QFont font;
         if (font.fromString(fontName)) {
@@ -2749,7 +2749,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
 
             popup->addSeparator();
 
-            QString const viewModeItem = mMapViewOnly ? tr("Switch to editing mode", "2D Mapper context menu (room) item") : tr("Switch to viewing mode", "2D Mapper context menu (room) item");
+            const QString viewModeItem = mMapViewOnly ? tr("Switch to editing mode", "2D Mapper context menu (room) item") : tr("Switch to viewing mode", "2D Mapper context menu (room) item");
             auto setMapViewOnly = new QAction(viewModeItem, this);
             connect(setMapViewOnly, &QAction::triggered, this, &T2DMap::slot_toggleMapViewOnly);
             popup->addAction(setMapViewOnly);
@@ -2838,7 +2838,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         while (it.hasNext()) {
             it.next();
             QStringList menuInfo = it.value();
-            QString const displayName = menuInfo[1];
+            const QString displayName = menuInfo[1];
             // Need to give the top-level context menu as the parent so the
             // sub-menus get destroyed at the right time:
             auto userMenu = new QMenu(displayName, popup);
@@ -2849,7 +2849,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
             //take care of nested menus now since they're all made
             it.next();
             QStringList menuInfo = it.value();
-            QString const menuParent = menuInfo[0];
+            const QString menuParent = menuInfo[0];
             if (menuParent == "") { //parentless
                 popup->addMenu(userMenus[it.key()]);
             } else { //has a parent
@@ -3171,7 +3171,7 @@ void T2DMap::updateSelectionWidget()
             _item->setTextAlignment(0, Qt::AlignRight);
             TRoom *pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
             if (pR_multiSelection) {
-                QString const multiSelectionRoomName = pR_multiSelection->name;
+                const QString multiSelectionRoomName = pR_multiSelection->name;
                 if (!multiSelectionRoomName.isEmpty()) {
                     _item->setText(1, multiSelectionRoomName);
                     _item->setTextAlignment(1, Qt::AlignLeft);
@@ -3719,7 +3719,7 @@ void T2DMap::slot_showPropertiesDialog()
 
         // Scan and count all the different names used
         if (!room->name.isEmpty()) {
-            QString const thisName = QString(room->name);
+            const QString thisName = QString(room->name);
             if (!thisName.isEmpty()) {
                 if (usedNames.contains(thisName)) {
                     (usedNames[thisName])++;
@@ -3738,7 +3738,7 @@ void T2DMap::slot_showPropertiesDialog()
         }
 
         // Scan and count all the different symbols used
-        QString const thisSymbol = QString(room->mSymbol);
+        const QString thisSymbol = QString(room->mSymbol);
         if (usedSymbols.contains(thisSymbol)) {
             (usedSymbols[thisSymbol])++;
         } else {
@@ -4003,7 +4003,7 @@ void T2DMap::slot_loadMap() {
         return;
     }
 
-    QString const fileName = QFileDialog::getOpenFileName(
+    const QString fileName = QFileDialog::getOpenFileName(
                            this,
                            tr("Load Mudlet map"),
                            mudlet::getMudletPath(mudlet::profileMapsPath, mpMap->mProfileName),
@@ -4332,7 +4332,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                     item->setTextAlignment(0, Qt::AlignRight);
                     TRoom* pR_multiSelection = mpMap->mpRoomDB->getRoom(multiSelectionRoomId);
                     if (pR_multiSelection) {
-                        QString const multiSelectionRoomName = pR_multiSelection->name;
+                        const QString multiSelectionRoomName = pR_multiSelection->name;
                         if (!multiSelectionRoomName.isEmpty()) {
                             item->setText(1, multiSelectionRoomName);
                             item->setTextAlignment(1, Qt::AlignLeft);
@@ -4799,7 +4799,7 @@ void T2DMap::slot_setCustomLine()
     while (it.hasNext()) {
         it.next();
         int const id_to = it.value();
-        QString const dir = it.key();
+        const QString dir = it.key();
         auto pI = new QTreeWidgetItem(specialExits);
         if (room->customLines.contains(dir)) {
             pI->setCheckState(0, Qt::Checked);
@@ -4979,7 +4979,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     if (!special_exit) {
         return;
     }
-    QString const exit = special_exit->text(2);
+    const QString exit = special_exit->text(2);
     mpCustomLinesDialog->hide(); // Hide but don't delete until done the custom line
     mCustomLinesRoomExit = exit;
     mCustomLinesRoomTo = special_exit->text(1).toInt(); // Wasn't being set !

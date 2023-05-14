@@ -26,14 +26,14 @@ TMxpTagHandlerResult TMxpMusicTagHandler::handleStartTag(TMxpContext& ctx, TMxpC
 {
     Q_UNUSED(ctx)
 
-    QString const fileName = extractFileName(tag);
+    const QString fileName = extractFileName(tag);
 
     if (!fileName.isEmpty()) {
-        QString const volume = extractVolume(tag);
-        QString const loops = extractLoops(tag);
-        QString const musicContinue = extractMusicContinue(tag);
-        QString const type = extractType(tag);
-        QString const url = extractUrl(tag);
+        const QString volume = extractVolume(tag);
+        const QString loops = extractLoops(tag);
+        const QString musicContinue = extractMusicContinue(tag);
+        const QString type = extractType(tag);
+        const QString url = extractUrl(tag);
 
         TMediaData mediaData {};
 

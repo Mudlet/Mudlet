@@ -84,7 +84,7 @@ void TMedia::playMedia(TMediaData& mediaData)
             TMedia::transitionNonRelativeFile(mediaData);
         }
 
-        QString const absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
+        const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
         QFile const mediaFile(absolutePathFileName);
 
         if (!mediaFile.exists()) {
@@ -221,7 +221,7 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
     // This is JSON
     auto json = document.object();
 
-    QString const package = packageMessage.toLower(); // Don't change original variable
+    const QString package = packageMessage.toLower(); // Don't change original variable
 
     if (package == "client.media.stop") {
         TMedia::parseJSONForMediaStop(json);
@@ -243,7 +243,7 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
 
 bool TMedia::purgeMediaCache()
 {
-    QString const mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
@@ -271,13 +271,13 @@ void TMedia::stopAllMediaPlayers()
 
 void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 {
-    QString const mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
     QDir const mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
         qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
     } else {
-        QString const mediaFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', -1));
+        const QString mediaFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', -1));
         QFile const mediaFile(mediaFilePath);
 
         if (!mediaFile.exists() && !QFile::copy(mediaData.getMediaFileName(), mediaFilePath)) {
@@ -381,7 +381,7 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
 {
     QStringList fileNameList;
 
-    QString const mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
@@ -390,7 +390,7 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
     }
 
     if (!mediaData.getMediaFileName().isEmpty() && mediaData.getMediaFileName().contains('/')) {
-        QString const mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
+        const QString mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
         QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
@@ -561,7 +561,7 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
 void TMedia::downloadFile(TMediaData& mediaData)
 {
-    QString const mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
     QDir const mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
@@ -570,7 +570,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
     }
 
     if (!mediaData.getMediaFileName().isEmpty() && mediaData.getMediaFileName().contains('/')) {
-        QString const mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
+        const QString mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
         QDir const mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
@@ -581,7 +581,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
     }
 
     QDir const dir;
-    QString const cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    const QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 
     if (!dir.mkpath(cacheDir)) {
         qWarning() << "TMedia::downloadFile() WARNING - couldn't create cache directory for sound file(s): " << cacheDir;
@@ -1326,7 +1326,7 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
         return;
     }
 
-    QString const absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
+    const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
 
     QFile const mediaFile(absolutePathFileName);
 

@@ -365,7 +365,7 @@ void TArea::addRoom(int id)
             qDebug() << "TArea::addRoom(" << id << ") No creation! room already exists";
         }
     } else {
-        QString const error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
+        const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
         mpMap->mpHost->mpConsole->printSystemMessage(error);
     }
 }

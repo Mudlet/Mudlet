@@ -64,7 +64,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     //style subCommandLines by stylesheet
     if (mType != MainCommandLine) {
         QColor const c = mpHost->mCommandLineBgColor;
-        QString const styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
+        const QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
         setStyleSheet(styleSheet);
     }
 
@@ -651,7 +651,7 @@ void TCommandLine::slot_popupMenu()
 #if defined(Q_OS_FREEBSD)
     QString t = pA->data().toString();
 #else
-    QString const t = pA->text();
+    const QString t = pA->text();
 #endif
     QTextCursor c = cursorForPosition(mPopupPosition);
     c.select(QTextCursor::WordUnderCursor);
@@ -902,7 +902,7 @@ void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
     Q_UNUSED(event)
-    QString const _t = toPlainText();
+    const QString _t = toPlainText();
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
@@ -984,7 +984,7 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar::LineFeed, QChar::Space);
 
     QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
-    wordList.append(commandLineSuggestions.values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead. 
+    wordList.append(commandLineSuggestions.values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead.
     QStringList const blacklist = tabCompleteBlacklist.values();
     QStringList toDelete;
 
@@ -1023,7 +1023,7 @@ void TCommandLine::handleTabCompletion(bool direction)
         }
         int offset = 0;
         forever {
-            QString const tmp = filterList.back();
+            const QString tmp = filterList.back();
             filterList.removeAll(tmp);
             filterList.insert(offset, tmp);
             ++offset;
@@ -1039,8 +1039,8 @@ void TCommandLine::handleTabCompletion(bool direction)
             if (mTabCompletionCount < 0) {
                 mTabCompletionCount = 0;
             }
-            QString const proposal = filterList[mTabCompletionCount];
-            QString const userWords = mTabCompletionTyped.left(typePosition);
+            const QString proposal = filterList[mTabCompletionCount];
+            const QString userWords = mTabCompletionTyped.left(typePosition);
             setPlainText(QString(userWords + proposal));
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
@@ -1068,7 +1068,7 @@ void TCommandLine::handleAutoCompletion()
         mAutoCompletionCount = 0;
     }
     for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
-        QString const h = mHistoryList[i].mid(0, neu.size());
+        const QString h = mHistoryList[i].mid(0, neu.size());
         if (neu == h) {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];

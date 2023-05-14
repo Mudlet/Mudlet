@@ -97,7 +97,7 @@ void dlgPackageManager::resetPackageTable()
 
 void dlgPackageManager::slot_installPackage()
 {
-    QString const fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
     if (fileName.isEmpty()) {
         return;
     }
@@ -140,7 +140,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
     for (int i = additionalDetails->rowCount() - 1; i >= 0; --i) {
         additionalDetails->removeRow(i);
     }
-    QString const packageName = packageTable->item(pItem->row(), 0)->text();
+    const QString packageName = packageTable->item(pItem->row(), 0)->text();
     auto packageInfo{mpHost->mPackageInfo.value(packageName)};
     if (packageInfo.isEmpty()) {
         packageDescription->clear();
@@ -158,7 +158,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
         packageDescription->hide();
     } else {
         packageDescription->show();
-        QString const packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
+        const QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
         description.replace(QLatin1String("$packagePath"), packageDir);
         packageDescription->setMarkdown(description);
     }
@@ -168,7 +168,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
     details << qsl("author") << qsl("version") << qsl("created") << qsl("dependencies");
     int counter = 0;
     for (int i = 0; i < details.size(); i++) {
-        QString const valueText{packageInfo.take(details.at(i))};
+        const QString valueText{packageInfo.take(details.at(i))};
         if (valueText.isEmpty()) {
             continue;
         }

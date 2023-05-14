@@ -240,7 +240,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
             std::stringstream func;
             func << "trigger" << mID << "condition" << i;
             funcName = func.str();
-            QString const code = qsl("function %1()\n%2\nend\n").arg(funcName.c_str(), patterns[i]);
+            const QString code = qsl("function %1()\n%2\nend\n").arg(funcName.c_str(), patterns[i]);
             QString error;
             if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                 setError(qsl("<b><font color='blue'>%1</font></b>")
@@ -623,7 +623,7 @@ inline void TTrigger::filter(std::string& capture, int& posOffset)
     } else {
         return;
     }
-    QString const text = capture.c_str();
+    const QString text = capture.c_str();
     for (auto& trigger : *mpMyChildrenList) {
         trigger->match(filterSubject, text, -1, posOffset);
     }
@@ -726,7 +726,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber)
         return false;
     }
     std::deque<TChar>& bufferLine = mpHost->mpConsole->buffer.buffer[line];
-    QString const& lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
+    const QString& lineBuffer = mpHost->mpConsole->buffer.lineBuffer[line];
     int pos = 0;
     int matchBegin = -1;
     bool matching = false;
@@ -1324,7 +1324,7 @@ bool TTrigger::setScript(const QString& script)
 bool TTrigger::compileScript()
 {
     mFuncName = qsl("Trigger%1").arg(QString::number(mID));
-    QString const code = qsl("function %1()\n%2\nend\n").arg(mFuncName, mScript);
+    const QString code = qsl("function %1()\n%2\nend\n").arg(mFuncName, mScript);
     QString error;
     if (mpLua->compile(code, error, qsl("Trigger: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;

@@ -68,7 +68,7 @@ void TToolBar::resizeEvent(QResizeEvent* e)
 void TToolBar::setName(const QString& name)
 {
     mName = name;
-    QString const hostName(mpHost->getName());
+    const QString hostName(mpHost->getName());
     setObjectName(qsl("dockToolBar_%1_%2").arg(hostName, name));
     // Actually put something in as the title so that the main window context
     // menu no longer has empty entries which are disabled:

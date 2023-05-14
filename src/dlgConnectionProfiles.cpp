@@ -319,7 +319,7 @@ void dlgConnectionProfiles::slot_updateDescription()
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
     if (pItem) {
-        QString const description = mud_description_textedit->toPlainText();
+        const QString description = mud_description_textedit->toPlainText();
         writeProfileData(pItem->data(csmNameRole).toString(), qsl("description"), description);
 
         // don't display custom profile descriptions as a tooltip, as passwords could be stored in there
@@ -452,7 +452,7 @@ void dlgConnectionProfiles::slot_updateDiscordOptIn(int state)
 
 void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
 {
-    QString const port = port_entry->text().trimmed();
+    const QString port = port_entry->text().trimmed();
 
     if (ignoreBlank.isEmpty()) {
         validPort = false;
@@ -496,9 +496,9 @@ void dlgConnectionProfiles::slot_updateName(const QString& newName)
 void dlgConnectionProfiles::slot_saveName()
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    QString const newProfileName = profile_name_entry->text().trimmed();
-    QString const newProfileHost = host_name_entry->text().trimmed();
-    QString const newProfilePort = port_entry->text().trimmed();
+    const QString newProfileName = profile_name_entry->text().trimmed();
+    const QString newProfileHost = host_name_entry->text().trimmed();
+    const QString newProfilePort = port_entry->text().trimmed();
     int const newProfileSslTsl = port_ssl_tsl->isChecked() * 2;
 
     validateProfile();
@@ -506,7 +506,7 @@ void dlgConnectionProfiles::slot_saveName()
         return;
     }
 
-    QString const currentProfileEditName = pItem->data(csmNameRole).toString();
+    const QString currentProfileEditName = pItem->data(csmNameRole).toString();
     int const row = mProfileList.indexOf(currentProfileEditName);
     if ((row >= 0) && (row < mProfileList.size())) {
         mProfileList[row] = newProfileName;
@@ -591,7 +591,7 @@ void dlgConnectionProfiles::slot_addProfile()
     informationalArea->show();
     tabWidget_connectionInfo->show();
 
-    QString const newname = tr("new profile name");
+    const QString newname = tr("new profile name");
 
     auto pItem = new QListWidgetItem();
     if (!pItem) {
@@ -628,7 +628,7 @@ void dlgConnectionProfiles::slot_addProfile()
 // enables the deletion button once the correct text (profile name) is entered
 void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 {
-    QString const profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     if (profile != text) {
         delete_button->setEnabled(false);
     } else {
@@ -640,7 +640,7 @@ void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 // actually performs the deletion once the correct text has been entered
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
-    QString const profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     reallyDeleteProfile(profile);
 }
 
@@ -669,7 +669,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    QString const profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     if (!onlyShownPredefinedProfiles.isEmpty() && onlyShownPredefinedProfiles.contains(profile)) {
         // Do NOT allow deletion of the prioritised predefined MUD:
@@ -886,11 +886,11 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
         if (match.capturedStart() != -1) {
             QString day;
-            QString const month = match.captured(2);
+            const QString month = match.captured(2);
             QString year;
-            QString const hour = match.captured(4);
-            QString const minute = match.captured(5);
-            QString const second = match.captured(6);
+            const QString hour = match.captured(4);
+            const QString minute = match.captured(5);
+            const QString second = match.captured(6);
             if (match.captured(1).toInt() > 31 && match.captured(3).toInt() >= 1 && match.captured(3).toInt() <= 31) {
                 // I have been experimenting with code that puts the year first
                 // which is actually quite useful - this accommodates such cases
@@ -1028,7 +1028,7 @@ void dlgConnectionProfiles::fillout_form()
         }
 
 #if defined(QT_DEBUG)
-        QString const mudServer = qsl("Mudlet self-test");
+        const QString mudServer = qsl("Mudlet self-test");
         if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
             mProfileList.append(mudServer);
             pItem = new QListWidgetItem();
@@ -1205,7 +1205,7 @@ std::optional<QColor> getCustomColor(const QString& profileName)
         }
 
         QTextStream in(&file);
-        QString const colorString = in.readLine();
+        const QString colorString = in.readLine();
         QColor color(colorString);
         if (color.isValid()) {
             return {color};
@@ -1248,7 +1248,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
-    QString const imageLocation = QFileDialog::getOpenFileName(
+    const QString imageLocation = QFileDialog::getOpenFileName(
             this, tr("Select custom image for profile (should be 120x30)"), QStandardPaths::writableLocation(QStandardPaths::HomeLocation), tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
     if (imageLocation.isEmpty()) {
         return;
@@ -1381,7 +1381,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     }
 
     // copy relevant profile files
-    for (QString const file : {"url", "port", "password", "login", "description"}) {
+    for (const QString file : {"url", "port", "password", "login", "description"}) {
         auto filePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, oldname), file);
         auto newFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
@@ -1524,7 +1524,7 @@ void dlgConnectionProfiles::slot_load()
 
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
-    QString const profile_name = profile_name_entry->text().trimmed();
+    const QString profile_name = profile_name_entry->text().trimmed();
 
     if (profile_name.isEmpty()) {
         return;
@@ -1550,7 +1550,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
 
-    QString const folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
+    const QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
@@ -1569,7 +1569,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
             //: %1 is the path and file name (i.e. the location) of the problem fil
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
                 "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
-        
+
             qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << alsoConnect << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
         } else {
             pHost->mLoadedOk = true;
@@ -1676,7 +1676,7 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        QString const port = port_entry->text().trimmed();
+        const QString port = port_entry->text().trimmed();
         if (!port.isEmpty() && (port.indexOf(QRegularExpression(qsl("^\\d+$")), 0) == -1)) {
             QString val = port;
             val.chop(1);
@@ -1723,7 +1723,7 @@ bool dlgConnectionProfiles::validateProfile()
 #endif
 
         QUrl check;
-        QString const url = host_name_entry->text().trimmed();
+        const QString url = host_name_entry->text().trimmed();
         check.setHost(url);
 
         if (url.isEmpty()) {
@@ -1816,15 +1816,15 @@ bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
     }
     QStringList files = sourceDir.entryList(QDir::Files);
     for (int i = 0; i < files.count(); i++) {
-        QString const srcName = sourceFolder + QDir::separator() + files[i];
-        QString const destName = destFolder + QDir::separator() + files[i];
+        const QString srcName = sourceFolder + QDir::separator() + files[i];
+        const QString destName = destFolder + QDir::separator() + files[i];
         QFile::copy(srcName, destName);
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
     for (int i = 0; i < files.count(); i++) {
-        QString const srcName = sourceFolder + QDir::separator() + files[i];
-        QString const destName = destFolder + QDir::separator() + files[i];
+        const QString srcName = sourceFolder + QDir::separator() + files[i];
+        const QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
     }
     return true;

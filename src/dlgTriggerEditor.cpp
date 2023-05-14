@@ -271,7 +271,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
     // Add lua functions and reserved lua terms to an AutoComplete provider
-    for (QString const key : mudlet::smLuaFunctionNames.keys()) {
+    for (const QString key : mudlet::smLuaFunctionNames.keys()) {
         provider->add(key, 3, mudlet::smLuaFunctionNames.value(key).toString());
     }
 
@@ -1433,8 +1433,8 @@ void dlgTriggerEditor::searchVariables(const QString& text)
 
             QTreeWidgetItem* pItem;
             QTreeWidgetItem* parent = nullptr;
-            QString const name = varDecendent->getName();
-            QString const value = varDecendent->getValue();
+            const QString name = varDecendent->getName();
+            const QString value = varDecendent->getValue();
             QStringList const idStringList = vu->shortVarName(varDecendent);
             QString idString;
             // Take the first element - to comply with lua requirement it
@@ -1446,7 +1446,7 @@ void dlgTriggerEditor::searchVariables(const QString& text)
                 idString = midStrings.takeFirst();
                 QStringListIterator itSubString(midStrings);
                 while (itSubString.hasNext()) {
-                    QString const intermediate = itSubString.next();
+                    const QString intermediate = itSubString.next();
                     bool isOk = false;
                     int const numberValue = intermediate.toInt(&isOk);
                     if (isOk && QString::number(numberValue) == intermediate) {
@@ -1501,7 +1501,7 @@ void dlgTriggerEditor::searchKeys(const QString& text)
     for (auto key : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = key->getName();
+        const QString name = key->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -1573,7 +1573,7 @@ void dlgTriggerEditor::searchTimers(const QString& text)
     for (auto timer : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = timer->getName();
+        const QString name = timer->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -1645,7 +1645,7 @@ void dlgTriggerEditor::searchActions(const QString& text)
     for (auto action : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = action->getName();
+        const QString name = action->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -1767,7 +1767,7 @@ void dlgTriggerEditor::searchScripts(const QString& text)
     for (auto script : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = script->getName();
+        const QString name = script->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -1851,7 +1851,7 @@ void dlgTriggerEditor::searchAliases(const QString& text)
     for (auto alias : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = alias->getName();
+        const QString name = alias->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -1938,7 +1938,7 @@ void dlgTriggerEditor::searchTriggers(const QString& text)
     for (auto trigger : nodes) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = trigger->getName();
+        const QString name = trigger->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -2040,7 +2040,7 @@ void dlgTriggerEditor::recursiveSearchTriggers(TTrigger* pTriggerParent, const Q
     for (auto trigger : *childrenList) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = trigger->getName();
+        const QString name = trigger->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -2146,7 +2146,7 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
     for (auto alias : *childrenList) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = alias->getName();
+        const QString name = alias->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -2235,7 +2235,7 @@ void dlgTriggerEditor::recursiveSearchScripts(TScript* pTriggerParent, const QSt
     for (auto script : *childrenList) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = script->getName();
+        const QString name = script->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -2321,7 +2321,7 @@ void dlgTriggerEditor::recursiveSearchActions(TAction* pTriggerParent, const QSt
     for (auto action : *childrenList) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = action->getName();
+        const QString name = action->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -2445,7 +2445,7 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
     for (auto timer : *childrenList) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = timer->getName();
+        const QString name = timer->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -2519,7 +2519,7 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
     for (auto key : *childrenList) {
         QTreeWidgetItem* pItem;
         QTreeWidgetItem* parent = nullptr;
-        QString const name = key->getName();
+        const QString name = key->getName();
         int startPos = 0;
 
         if ((startPos = name.indexOf(text, 0, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) != -1) {
@@ -3694,7 +3694,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     }
     QStringList const patterns;
     QList<int> const patternKinds;
-    QString const script = "";
+    const QString script = "";
     QStringList nameL;
     nameL << name;
 
@@ -3797,9 +3797,9 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     } else {
         name = tr("New timer");
     }
-    QString const command = "";
+    const QString command = "";
     QTime const time;
-    QString const script = "";
+    const QString script = "";
     QStringList nameL;
     nameL << name;
 
@@ -3958,7 +3958,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
     } else {
         name = tr("New key");
     }
-    QString const script = "";
+    const QString script = "";
     QStringList nameL;
     nameL << name;
 
@@ -4046,9 +4046,9 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     } else {
         name = tr("New alias");
     }
-    QString const regex = "";
-    QString const command = "";
-    QString const script = "";
+    const QString regex = "";
+    const QString command = "";
+    const QString script = "";
     QStringList nameL;
     nameL << name;
 
@@ -4141,9 +4141,9 @@ void dlgTriggerEditor::addAction(bool isFolder)
     } else {
         name = tr("New button");
     }
-    QString const cmdButtonUp = "";
-    QString const cmdButtonDown = "";
-    QString const script = "";
+    const QString cmdButtonUp = "";
+    const QString cmdButtonDown = "";
+    const QString script = "";
     QStringList nameL;
     nameL << name;
 
@@ -4231,7 +4231,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     } else {
         name = tr("New script");
     }
-    QString const script;
+    const QString script;
     QStringList nameL;
     nameL << name;
 
@@ -4415,8 +4415,8 @@ void dlgTriggerEditor::saveTrigger()
     }
 
     mpTriggersMainArea->trimName();
-    QString const name = mpTriggersMainArea->lineEdit_trigger_name->text();
-    QString const command = mpTriggersMainArea->lineEdit_trigger_command->text();
+    const QString name = mpTriggersMainArea->lineEdit_trigger_name->text();
+    const QString command = mpTriggersMainArea->lineEdit_trigger_command->text();
     bool const isMultiline = mpTriggersMainArea->groupBox_multiLineTrigger->isChecked();
     QStringList patterns;
     QList<int> patternKinds;
@@ -4457,12 +4457,12 @@ void dlgTriggerEditor::saveTrigger()
         patterns << pattern;
     }
 
-    QString const script = mpSourceEditorEdbeeDocument->text();
+    const QString script = mpSourceEditorEdbeeDocument->text();
 
     int const triggerID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (pT) {
-        QString const old_name = pT->getName();
+        const QString old_name = pT->getName();
         pT->setName(name);
         pT->setCommand(command);
         pT->setRegexCodeList(patterns, patternKinds);
@@ -4594,15 +4594,15 @@ void dlgTriggerEditor::saveTimer()
     }
 
     mpTimersMainArea->trimName();
-    QString const name = mpTimersMainArea->lineEdit_timer_name->text();
-    QString const script = mpSourceEditorEdbeeDocument->text();
+    const QString name = mpTimersMainArea->lineEdit_timer_name->text();
+    const QString script = mpSourceEditorEdbeeDocument->text();
 
 
     int const timerID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
     if (pT) {
         pT->setName(name);
-        QString const command = mpTimersMainArea->lineEdit_timer_command->text();
+        const QString command = mpTimersMainArea->lineEdit_timer_command->text();
         int const hours = mpTimersMainArea->timeEdit_timer_hours->time().hour();
         int const minutes = mpTimersMainArea->timeEdit_timer_minutes->time().minute();
         int const secs = mpTimersMainArea->timeEdit_timer_seconds->time().second();
@@ -4710,11 +4710,11 @@ void dlgTriggerEditor::saveAlias()
 
     mpAliasMainArea->trimName();
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
-    QString const regex = mpAliasMainArea->lineEdit_alias_pattern->text();
+    const QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
     if (!regex.isEmpty() && ((name.isEmpty()) || (name == tr("New alias")))) {
         name = regex;
     }
-    QString const substitution = mpAliasMainArea->lineEdit_alias_command->text();
+    const QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
     //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
     QRegularExpression const rx(regex);
     QRegularExpressionMatch const match = rx.match(substitution);
@@ -4731,13 +4731,13 @@ void dlgTriggerEditor::saveAlias()
         return;
     }
 
-    QString const script = mpSourceEditorEdbeeDocument->text();
+    const QString script = mpSourceEditorEdbeeDocument->text();
 
 
     int const triggerID = pItem->data(0, Qt::UserRole).toInt();
     TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
-        QString const old_name = pT->getName();
+        const QString old_name = pT->getName();
         pT->setName(name);
         pT->setCommand(substitution);
         pT->setRegexCode(regex); // This could generate an error state if regex does not compile
@@ -4843,11 +4843,11 @@ void dlgTriggerEditor::saveAction()
     }
 
     mpActionsMainArea->trimName();
-    QString const name = mpActionsMainArea->lineEdit_action_name->text();
-    QString const icon = mpActionsMainArea->lineEdit_action_icon->text();
-    QString const commandDown = mpActionsMainArea->lineEdit_action_button_command_down->text();
-    QString const commandUp = mpActionsMainArea->lineEdit_action_button_command_up->text();
-    QString const script = mpSourceEditorEdbeeDocument->text();
+    const QString name = mpActionsMainArea->lineEdit_action_name->text();
+    const QString icon = mpActionsMainArea->lineEdit_action_icon->text();
+    const QString commandDown = mpActionsMainArea->lineEdit_action_button_command_down->text();
+    const QString commandUp = mpActionsMainArea->lineEdit_action_button_command_up->text();
+    const QString script = mpSourceEditorEdbeeDocument->text();
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
     int const rotation = qMax(0, mpActionsMainArea->comboBox_action_button_rotation->currentIndex());
     int const columns = mpActionsMainArea->spinBox_action_bar_columns->text().toInt();
@@ -5005,7 +5005,7 @@ void dlgTriggerEditor::writeScript(int id)
         return;
     }
 
-    QString const scriptCode = pT->getScript();
+    const QString scriptCode = pT->getScript();
     mpSourceEditorEdbeeDocument->setText(scriptCode);
 }
 
@@ -5019,8 +5019,8 @@ void dlgTriggerEditor::saveScript()
     QString old_name;
 
     mpScriptsMainArea->trimName();
-    QString const name = mpScriptsMainArea->lineEdit_script_name->text();
-    QString const script = mpSourceEditorEdbeeDocument->text();
+    const QString name = mpScriptsMainArea->lineEdit_script_name->text();
+    const QString script = mpSourceEditorEdbeeDocument->text();
     mpScriptsMainAreaEditHandlerItem = nullptr;
     QList<QListWidgetItem*> itemList;
     for (int i = 0; i < mpScriptsMainArea->listWidget_script_registered_event_handlers->count(); i++) {
@@ -5201,7 +5201,7 @@ void dlgTriggerEditor::saveVar()
     if (!variable) {
         return;
     }
-    QString const newName = mpVarsMainArea->lineEdit_var_name->text();
+    const QString newName = mpVarsMainArea->lineEdit_var_name->text();
     QString newValue = mpSourceEditorEdbeeDocument->text();
     if (newName.isEmpty()) {
         slot_variableSelected(pItem);
@@ -5387,8 +5387,8 @@ void dlgTriggerEditor::saveKey()
     if (name.isEmpty() || name == tr("New key")) {
         name = mpKeysMainArea->lineEdit_key_binding->text();
     }
-    QString const command = mpKeysMainArea->lineEdit_key_command->text();
-    QString const script = mpSourceEditorEdbeeDocument->text();
+    const QString command = mpKeysMainArea->lineEdit_key_command->text();
+    const QString script = mpSourceEditorEdbeeDocument->text();
 
 
     int const triggerID = pItem->data(0, Qt::UserRole).toInt();
@@ -5724,7 +5724,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         }
         // Scroll to the last used pattern:
         mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), 49)));
-        QString const command = pT->getCommand();
+        const QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
         mpTriggersMainArea->lineEdit_trigger_command->setText(command);
         mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(pT->isMultiline());
@@ -5793,9 +5793,9 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
     int const ID = pItem->data(0, Qt::UserRole).toInt();
     TAlias* pT = mpHost->getAliasUnit()->getAlias(ID);
     if (pT) {
-        QString const pattern = pT->getRegexCode();
-        QString const command = pT->getCommand();
-        QString const name = pT->getName();
+        const QString pattern = pT->getRegexCode();
+        const QString command = pT->getCommand();
+        const QString name = pT->getName();
 
         mpAliasMainArea->lineEdit_alias_pattern->setText(pattern);
         mpAliasMainArea->lineEdit_alias_command->setText(command);
@@ -5842,12 +5842,12 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     int const ID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(ID);
     if (pT) {
-        QString const command = pT->getCommand();
-        QString const name = pT->getName();
+        const QString command = pT->getCommand();
+        const QString name = pT->getName();
         mpKeysMainArea->lineEdit_key_command->clear();
         mpKeysMainArea->lineEdit_key_command->setText(command);
         mpKeysMainArea->lineEdit_key_name->setText(name);
-        QString const keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), pT->getKeyModifiers());
+        const QString keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), pT->getKeyModifiers());
         mpKeysMainArea->lineEdit_key_binding->setText(keyName);
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
@@ -6327,7 +6327,7 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     int const ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
     if (pT) {
-        QString const name = pT->getName();
+        const QString name = pT->getName();
         QStringList eventHandlerList = pT->getEventHandlerList();
         for (int i = 0; i < eventHandlerList.size(); i++) {
             auto pItem = new QListWidgetItem(mpScriptsMainArea->listWidget_script_registered_event_handlers);
@@ -6335,7 +6335,7 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
             mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
         }
         mpScriptsMainArea->lineEdit_script_name->clear();
-        QString const script = pT->getScript();
+        const QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
@@ -6381,8 +6381,8 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
     int const ID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(ID);
     if (pT) {
-        QString const command = pT->getCommand();
-        QString const name = pT->getName();
+        const QString command = pT->getCommand();
+        const QString name = pT->getName();
         mpTimersMainArea->lineEdit_timer_command->setText(command);
         mpTimersMainArea->lineEdit_timer_name->setText(name);
         QTime const time = pT->getTime();
@@ -6462,7 +6462,7 @@ void dlgTriggerEditor::populateKeys()
             continue;
         }
 
-        QString const s = key->getName();
+        const QString s = key->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(mpKeyBaseItem, sList);
@@ -6541,7 +6541,7 @@ void dlgTriggerEditor::populateActions()
             continue;
         }
 
-        QString const s = action->getName();
+        const QString s = action->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(mpActionBaseItem, sList);
@@ -6624,7 +6624,7 @@ void dlgTriggerEditor::populateAliases()
             continue;
         }
 
-        QString const s = alias->getName();
+        const QString s = alias->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(mpAliasBaseItem, sList);
@@ -6699,7 +6699,7 @@ void dlgTriggerEditor::populateScripts()
 {
     std::list<TScript*> const baseNodeList_scripts = mpHost->getScriptUnit()->getScriptRootNodeList();
     for (auto script : baseNodeList_scripts) {
-        QString const s = script->getName();
+        const QString s = script->getName();
 
         QStringList sList;
         sList << s;
@@ -6757,7 +6757,7 @@ void dlgTriggerEditor::populateTimers()
         if (timer->isTemporary()) {
             continue;
         }
-        QString const s = timer->getName();
+        const QString s = timer->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(mpTimerBaseItem, sList);
@@ -6847,7 +6847,7 @@ void dlgTriggerEditor::populateTriggers()
         if (trigger->isTemporary()) {
             continue;
         }
-        QString const s = trigger->getName();
+        const QString s = trigger->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(mpTriggerBaseItem, sList);
@@ -6953,7 +6953,7 @@ void dlgTriggerEditor::expand_child_triggers(TTrigger* pTriggerParent, QTreeWidg
 {
     std::list<TTrigger*>* childrenList = pTriggerParent->getChildrenList();
     for (auto trigger : *childrenList) {
-        QString const s = trigger->getName();
+        const QString s = trigger->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(pWidgetItemParent, sList);
@@ -7037,7 +7037,7 @@ void dlgTriggerEditor::expand_child_key(TKey* pTriggerParent, QTreeWidgetItem* p
 {
     std::list<TKey*>* childrenList = pTriggerParent->getChildrenList();
     for (auto key : *childrenList) {
-        QString const s = key->getName();
+        const QString s = key->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(pWidgetItemParent, sList);
@@ -7104,7 +7104,7 @@ void dlgTriggerEditor::expand_child_scripts(TScript* pTriggerParent, QTreeWidget
 {
     std::list<TScript*>* childrenList = pTriggerParent->getChildrenList();
     for (auto script : *childrenList) {
-        QString const s = script->getName();
+        const QString s = script->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(pWidgetItemParent, sList);
@@ -7162,7 +7162,7 @@ void dlgTriggerEditor::expand_child_alias(TAlias* pTriggerParent, QTreeWidgetIte
 {
     std::list<TAlias*>* childrenList = pTriggerParent->getChildrenList();
     for (auto alias : *childrenList) {
-        QString const s = alias->getName();
+        const QString s = alias->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(pWidgetItemParent, sList);
@@ -7228,7 +7228,7 @@ void dlgTriggerEditor::expand_child_action(TAction* pTriggerParent, QTreeWidgetI
 {
     std::list<TAction*>* childrenList = pTriggerParent->getChildrenList();
     for (auto action : *childrenList) {
-        QString const s = action->getName();
+        const QString s = action->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(pWidgetItemParent, sList);
@@ -7288,7 +7288,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
 {
     std::list<TTimer*>* childrenList = pTimerParent->getChildrenList();
     for (auto timer : *childrenList) {
-        QString const s = timer->getName();
+        const QString s = timer->getName();
         QStringList sList;
         sList << s;
         auto pItem = new QTreeWidgetItem(pWidgetItemParent, sList);
@@ -8157,7 +8157,7 @@ void dlgTriggerEditor::slot_scriptMainAreaEditHandler(QListWidgetItem*)
     }
     mIsScriptsMainAreaEditHandler = true;
     mpScriptsMainAreaEditHandlerItem = pItem;
-    QString const regex = pItem->text();
+    const QString regex = pItem->text();
     if (regex.isEmpty()) {
         mIsScriptsMainAreaEditHandler = false;
         return;
@@ -9046,7 +9046,7 @@ void dlgTriggerEditor::slot_import()
         qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
     }
 
-    QString const fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
     if (fileName.isEmpty()) {
         return;
     }
@@ -9264,8 +9264,8 @@ void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardMo
     if (!pKeyUnit) {
         return;
     }
-    QString const keyName = pKeyUnit->getKeyName(key, modifier);
-    QString const name = keyName;
+    const QString keyName = pKeyUnit->getKeyName(key, modifier);
+    const QString name = keyName;
     mpKeysMainArea->lineEdit_key_binding->setText(name);
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
@@ -9344,7 +9344,7 @@ void dlgTriggerEditor::slot_soundTrigger()
 {
     // Use the existing path/filename if it is not empty, otherwise start in
     // profile home directory:
-    QString const fileName = QFileDialog::getOpenFileName(this,
+    const QString fileName = QFileDialog::getOpenFileName(this,
                                                     tr("Choose sound file"),
                                                     mpTriggersMainArea->lineEdit_soundFile->text().isEmpty()
                                                     ? mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())
@@ -9822,8 +9822,8 @@ void dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger(const bool state)
 
     if (state) {
         // Enabled so make buttons have full colour:
-        QString const fgColor = mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString();
-        QString const bgColor = mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString();
+        const QString fgColor = mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString();
+        const QString bgColor = mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString();
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, true));
         mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(bgColor, true));
         mpTriggersMainArea->pushButtonFgColor->setText(fgColor == QLatin1String("transparent") ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());

@@ -106,7 +106,7 @@ TChar::TChar(const TChar& copy)
 const QString timeStampFormat = qsl("hh:mm:ss.zzz ");
 const QString blankTimeStamp  = qsl("------------ ");
 
-// Store for text and attributes (such as character color) to be drawn on screen 
+// Store for text and attributes (such as character color) to be drawn on screen
 // Contents are rendered by a TTextEdit
 TBuffer::TBuffer(Host* pH, TConsole* pConsole)
 : mpConsole(pConsole)
@@ -524,7 +524,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF && mpHost->mServerMXPenabled && isFromServer) {
                         mGotCSI = false;
 
-                        QString const code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
+                        const QString code = QString(localBuffer.substr(localBufferPosition, spanEnd - spanStart).c_str());
                         mpHost->mMxpProcessor.setMode(code);
                     }
                     // end of if (!mpHost->mFORCE_MXP_NEGOTIATION_OFF)
@@ -1198,7 +1198,7 @@ void TBuffer::decodeSGR(const QString& sequence)
 
     QStringList const parameterStrings = sequence.split(QChar(';'));
     for (int paraIndex = 0, total = parameterStrings.count(); paraIndex < total; ++paraIndex) {
-        QString const allParameterElements = parameterStrings.at(paraIndex);
+        const QString allParameterElements = parameterStrings.at(paraIndex);
         if (allParameterElements.contains(QLatin1String(":"))) {
             /******************************************************************
              * Parameter string with colon separated Parameter (sub) elements *
@@ -2117,8 +2117,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             for (int i = lineBuffer.back().size() - 1; i >= 0; --i) {
                 if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1) {
                     const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
-                    QString const tmp = lineBuffer.back().mid(0, linebreakPos);
-                    QString const lineRest = lineBuffer.back().mid(linebreakPos);
+                    const QString tmp = lineBuffer.back().mid(0, linebreakPos);
+                    const QString lineRest = lineBuffer.back().mid(linebreakPos);
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
@@ -2210,8 +2210,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
                 // insert linebreak either at linebreaking character location or at last character of line
                 if (lineBreaks.indexOf(lineBuffer.back().at(i)) > -1 || i == 0) {
                     const int linebreakPos = (i != 0) ? i + 1 : lineBuffer.back().size();
-                    QString const tmp = lineBuffer.back().mid(0, linebreakPos);
-                    QString const lineRest = lineBuffer.back().mid(linebreakPos);
+                    const QString tmp = lineBuffer.back().mid(0, linebreakPos);
+                    const QString lineRest = lineBuffer.back().mid(linebreakPos);
                     lineBuffer.back() = tmp;
                     std::deque<TChar> newLine;
 
@@ -2352,7 +2352,7 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
             id = 0;
         }
         // This is rather inefficient as s is only ever one QChar long
-        QString const s(lineBuffer.at(y).at(x));
+        const QString s(lineBuffer.at(y).at(x));
         slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags, id);
     }
     return slice;
@@ -2394,11 +2394,11 @@ void TBuffer::paste(QPoint& P, const TBuffer& chunk)
         QPoint P_current(cx, y);
         if ((y < getLastLineNumber()) && (!needAppend)) {
             const TChar& format = chunk.buffer.at(0).at(cx);
-            QString const s = QString(chunk.lineBuffer.at(0).at(cx));
+            const QString s = QString(chunk.lineBuffer.at(0).at(cx));
             insertInLine(P_current, s, format);
         } else {
             hasAppended = true;
-            QString const s(chunk.lineBuffer.at(0).at(cx));
+            const QString s(chunk.lineBuffer.at(0).at(cx));
             append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags);
         }
     }
@@ -2425,7 +2425,7 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
         if (!linkId) {
             id = 0;
         }
-        QString const s(chunk.lineBuffer.at(0).at(cx));
+        const QString s(chunk.lineBuffer.at(0).at(cx));
         append(s, 0, 1, chunk.buffer.at(0).at(cx).mFgColor, chunk.buffer.at(0).at(cx).mBgColor, chunk.buffer.at(0).at(cx).mFlags, id);
     }
 
@@ -2486,7 +2486,7 @@ inline int TBuffer::wrap(int startLine)
         bool const isPrompt = promptBuffer[i];
         std::deque<TChar> newLine;
         QString lineText = "";
-        QString const time = timeBuffer[i];
+        const QString time = timeBuffer[i];
         int indent = 0;
         if (static_cast<int>(buffer[i].size()) >= mWrapAt) {
             for (int i3 = 0; i3 < mWrapIndent; ++i3) {
@@ -2709,7 +2709,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
 
     buffer.erase(buffer.begin() + startLine);
     lineBuffer.removeAt(startLine);
-    QString const time = timeBuffer.at(startLine);
+    const QString time = timeBuffer.at(startLine);
     timeBuffer.removeAt(startLine);
     bool const isPrompt = promptBuffer.at(startLine);
     promptBuffer.removeAt(startLine);
@@ -3416,7 +3416,7 @@ bool TBuffer::processUtf8Sequence(const std::string& bufferData, const bool isFr
 
         // Will be one (BMP codepoint) or two (non-BMP codepoints) QChar(s)
         if (isValid) {
-            QString const codePoint = QString(bufferData.substr(pos, utf8SequenceLength).c_str());
+            const QString codePoint = QString(bufferData.substr(pos, utf8SequenceLength).c_str());
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got start or length wrong in std::string::substr()

@@ -348,13 +348,13 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         int latencyFontPointSize = 21;
         QFont latencyFont = QFont(qsl("Bitstream Vera Sans Mono"), latencyFontPointSize, QFont::Normal);
         const int latencyFontSizeMargin = 10;
-        QString const dummyTextA = tr("N:%1 S:%2",
+        const QString dummyTextA = tr("N:%1 S:%2",
                                 // intentional comment to separate arguments
                                 "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
                                 "'S'ystem (processing) time")
                                      .arg(0.0, 0, 'f', 3)
                                      .arg(0.0, 0, 'f', 3);
-        QString const dummyTextB = tr("<no GA> S:%1",
+        const QString dummyTextB = tr("<no GA> S:%1",
                                 // intentional comment to separate arguments
                                 "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
                                 "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
@@ -636,8 +636,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
         }
         if (!mpHost.isNull()) {
             TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-            QString const func = "handleWindowResizeEvent";
-            QString const n = "WindowResizeEvent";
+            const QString func = "handleWindowResizeEvent";
+            const QString n = "WindowResizeEvent";
             pLua->call(func, n);
 
             raiseMudletSysWindowResizeEvent(x, y);
@@ -646,8 +646,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
 //create the sysUserWindowResize Event for automatic resizing with Geyser
     if (mType & (UserWindow) && !mpHost.isNull()) {
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-        QString const func = "handleWindowResizeEvent";
-        QString const n = "WindowResizeEvent";
+        const QString func = "handleWindowResizeEvent";
+        const QString n = "WindowResizeEvent";
         pLua->call(func, n);
 
         TEvent mudletEvent {};
@@ -786,8 +786,8 @@ void TConsole::closeEvent(QCloseEvent* event)
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
             QDir const dir_map;
-            QString const directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-            QString const filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
+            const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+            const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
             if (!dir_map.exists(directory_map)) {
                 dir_map.mkpath(directory_map);
             }
@@ -829,8 +829,8 @@ void TConsole::closeEvent(QCloseEvent* event)
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!
                 QDir const dir_map;
-                QString const directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-                QString const filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+                const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+                const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -899,8 +899,8 @@ void TConsole::slot_toggleReplayRecording()
     }
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
-        QString const directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
-        QString const mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+        const QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
+        const QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
         QDir const dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
@@ -1097,7 +1097,7 @@ void TConsole::scrollUp(int lines)
     if (lowerAppears) {
         QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
         if (!mpHost->mTutorialForSplitscreenScrollbackAlreadyShown) {
-            QString const infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.");
+            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.");
             mpHost->postMessage(infoMsg);
             mpHost->mTutorialForSplitscreenScrollbackAlreadyShown = true;
         }
@@ -1556,7 +1556,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 
     int begin = -1;
     for (int i = 0; i < numOfMatch; i++) {
-        QString const li = buffer.line(mUserCursor.y());
+        const QString li = buffer.line(mUserCursor.y());
         if (li.isEmpty()) {
             continue;
         }
@@ -1759,7 +1759,7 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
 // An overload of print(const QString& msg):
 void TConsole::print(const char* txt)
 {
-    QString const msg(txt);
+    const QString msg(txt);
     print(msg);
 }
 
@@ -1790,7 +1790,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
 
 void TConsole::printSystemMessage(const QString& msg)
 {
-    QString const txt = tr("System Message: %1").arg(msg);
+    const QString txt = tr("System Message: %1").arg(msg);
     print(txt, mSystemMessageFgColor, mSystemMessageBgColor);
 }
 
@@ -1962,7 +1962,7 @@ void TConsole::dragEnterEvent(QDragEnterEvent* e)
 void TConsole::dropEvent(QDropEvent* e)
 {
     for (const auto& url : e->mimeData()->urls()) {
-        QString const fname = url.toLocalFile();
+        const QString fname = url.toLocalFile();
         QFileInfo const info(fname);
         if (info.exists()) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)

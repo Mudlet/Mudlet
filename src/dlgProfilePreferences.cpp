@@ -677,7 +677,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
     // This will also set mudlet::mUsingMudletDictionaries as appropriate:
-    QString const path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);
+    const QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, currentDictionary);
 
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
@@ -845,7 +845,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mIsToLogInHtml->setChecked(pHost->mIsNextLogFileInHtmlFormat);
 
     bool const isLogFileNameEntryShown = pHost->mLogFileNameFormat.isEmpty();
-    QString const logExtension = pHost->mIsNextLogFileInHtmlFormat ? ".html" : ".txt";
+    const QString logExtension = pHost->mIsNextLogFileInHtmlFormat ? ".html" : ".txt";
     label_logFileNameExtension->setVisible(isLogFileNameEntryShown);
     lineEdit_logFileName->setVisible(isLogFileNameEntryShown);
     label_logFileName->setVisible(isLogFileNameEntryShown);
@@ -900,7 +900,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     mpMenu->clear();
     for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
-        QString const s = profileList.at(i);
+        const QString s = profileList.at(i);
         if (s.isEmpty() || !s.compare(pHost->getName())) {
             // Do not include THIS profile in the list - it will
             // automatically get saved - as the file to copy to the other
@@ -1080,7 +1080,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 QList<QSslError> const sslErrors = pHost->mTelnet.getSslErrors();
 
                 for (int a = 0; a < sslErrors.count(); a++) {
-                    QString const thisError = qsl("<li>%1</li>").arg(sslErrors.at(a).errorString());
+                    const QString thisError = qsl("<li>%1</li>").arg(sslErrors.at(a).errorString());
                     notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), thisError));
 
                     if (sslErrors.at(a).error() == QSslError::SelfSignedCertificate) {
@@ -2202,7 +2202,7 @@ void dlgProfilePreferences::fillOutMapHistory()
         return;
     }
 
-    QString const profile_name = pHost->getName();
+    const QString profile_name = pHost->getName();
     auto const locale = mudlet::self()->getUserLocale();
     int longestMapHistoryLength = 0;
     QIcon const icon_autoSave{QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png")))};
@@ -2231,11 +2231,11 @@ void dlgProfilePreferences::fillOutMapHistory()
         if (match.capturedStart() != -1) {
             // A recognised date-time stamp file name of any Mudlet map file type:
             QString day;
-            QString const month = match.captured(2);
+            const QString month = match.captured(2);
             QString year;
-            QString const hour = match.captured(4);
-            QString const minute = match.captured(5);
-            QString const second = match.captured(6);
+            const QString hour = match.captured(4);
+            const QString minute = match.captured(5);
+            const QString second = match.captured(6);
             if (match.captured(1).toInt() > 31 && match.captured(3).toInt() >= 1 && match.captured(3).toInt() <= 31) {
                 year = match.captured(1);
                 day = match.captured(3);
@@ -2243,9 +2243,9 @@ void dlgProfilePreferences::fillOutMapHistory()
                 day = match.captured(1);
                 year = match.captured(3);
             }
-            QString const extension = match.captured(7);
+            const QString extension = match.captured(7);
             QDateTime const datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
-            QString const itemText = locale.toString(datetime, dateTimeFormat);
+            const QString itemText = locale.toString(datetime, dateTimeFormat);
             longestMapHistoryLength = qMax(longestMapHistoryLength, itemText.size());
             if (!extension.compare(QLatin1String("xml"), Qt::CaseInsensitive)) {
                 comboBox_mapHistory->addItem(icon_xmlFile, itemText, QVariant(mapPathFileName));
@@ -2261,7 +2261,7 @@ void dlgProfilePreferences::fillOutMapHistory()
             // The auto-saved file:
             QFileInfo const fileInfo(mapSaveDir, entry);
             auto lastModified = fileInfo.lastModified();
-            QString const itemText = locale.toString(lastModified, dateTimeFormat);
+            const QString itemText = locale.toString(lastModified, dateTimeFormat);
             longestMapHistoryLength = qMax(longestMapHistoryLength, itemText.size());
             comboBox_mapHistory->addItem(icon_autoSave, itemText, QVariant(mapPathFileName));
         } else {
@@ -2438,7 +2438,7 @@ void dlgProfilePreferences::slot_saveMap()
 
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost)
 {
-    QString const mapsPath = mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName());
+    const QString mapsPath = mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName());
     QDir const mapsDir = QDir(mapsPath);
     return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName());
 }
@@ -2486,7 +2486,7 @@ void dlgProfilePreferences::slot_copyMap()
     while (itAction.hasNext()) {
         QAction* _action = itAction.next();
         if (_action->isChecked()) {
-            QString const toProfileName = _action->text();
+            const QString toProfileName = _action->text();
             toProfilesRoomIdMap.insert(toProfileName, 0);
             // 0 is used as sentinel value that we don't have a valid Id yet
             // for the given Host - the contents of this map will be used to
@@ -2494,10 +2494,10 @@ void dlgProfilePreferences::slot_copyMap()
 
             // Check for the destination directory for the other profiles
             QDir const toProfileDir;
-            QString const toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, toProfileName);
+            const QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, toProfileName);
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
-                    QString const errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
+                    const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map for other profile \"%1\".\n"
                                         "Please check that you have permissions/access to:\n"
                                         "\"%2\"\n"
                                         "and there is enough space. The copying operation has failed.")
@@ -2610,7 +2610,7 @@ void dlgProfilePreferences::slot_copyMap()
     // we just saved!
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
-    QString const sourceMapFolder(mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()));
+    const QString sourceMapFolder(mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()));
     QStringList const mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
@@ -2633,7 +2633,7 @@ void dlgProfilePreferences::slot_copyMap()
     itOtherProfile.toFront();
     while (itOtherProfile.hasNext()) {
         itOtherProfile.next();
-        QString const otherHostName = itOtherProfile.key();
+        const QString otherHostName = itOtherProfile.key();
         // Copy over into the profiles map folder, so it is loaded first when map is open - this covers the offline case
         label_mapFileActionResult->setText(tr("Copying over map to %1 - please wait...").arg(otherHostName));
         qApp->processEvents(); // Copied from "Loading map - please wait..." case
@@ -2692,7 +2692,7 @@ void dlgProfilePreferences::slot_setLogDir()
      * dialog while the directory selector is open...!
      */
     // Seems to return "." when Cancel is hit:
-    QString const currentLogDir = QFileDialog::getExistingDirectory(
+    const QString currentLogDir = QFileDialog::getExistingDirectory(
             this, tr("Where should Mudlet save log files?"), (mLogDirPath.isEmpty() ? lineEdit_logFileFolder->placeholderText() : mLogDirPath), QFileDialog::DontUseNativeDialog);
 
     if (!currentLogDir.isEmpty() && currentLogDir != nullptr) {
@@ -2849,7 +2849,7 @@ void dlgProfilePreferences::slot_saveAndClose()
             console->changeColors();
         }
 
-        QString const lIgnore = doubleclick_ignore_lineedit->text();
+        const QString lIgnore = doubleclick_ignore_lineedit->text();
         pHost->mDoubleClickIgnore.clear();
         for (auto character : lIgnore) {
             pHost->mDoubleClickIgnore.insert(character);
@@ -2857,15 +2857,15 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
-        QString const oldIrcNick = dlgIRC::readIrcNickName(pHost);
-        QString const oldIrcPass = dlgIRC::readIrcPassword(pHost);
-        QString const oldIrcHost = dlgIRC::readIrcHostName(pHost);
-        QString const oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
+        const QString oldIrcNick = dlgIRC::readIrcNickName(pHost);
+        const QString oldIrcPass = dlgIRC::readIrcPassword(pHost);
+        const QString oldIrcHost = dlgIRC::readIrcHostName(pHost);
+        const QString oldIrcPort = QString::number(dlgIRC::readIrcHostPort(pHost));
         bool const oldIrcSecure = dlgIRC::readIrcHostSecure(pHost);
-        QString const oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
+        const QString oldIrcChannels = dlgIRC::readIrcChannels(pHost).join(" ");
 
         QString newIrcNick = ircNick->text();
-        QString const newIrcPass = ircPassword->text();
+        const QString newIrcPass = ircPassword->text();
         QString newIrcHost = ircHostName->text();
         QString newIrcPort = ircHostPort->text();
         bool const newIrcSecure = ircHostSecure->isChecked();
@@ -2895,7 +2895,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         if (!newIrcChannels.isEmpty()) {
             QStringList const tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-            for (QString const s : tL) {
+            for (const QString s : tL) {
                 if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                     newChanList << s;
                 }
@@ -3316,14 +3316,14 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
     }
 
     QDir const dir;
-    QString const cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    const QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     if (!dir.mkpath(cacheDir)) {
         qWarning() << "Couldn't create cache directory for edbee themes: " << cacheDir;
         return;
     }
 
     QSettings settings("mudlet", "Mudlet");
-    QString const themesURL = settings.value("colorSublimeThemesURL", qsl("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
+    const QString themesURL = settings.value("colorSublimeThemesURL", qsl("https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip")).toString();
     // a default update period is 24h
     // it would be nice to use C++14's numeric separator but Qt Creator still
     // does not like them for its Clang code model analyser (and the built in
@@ -3426,8 +3426,8 @@ void dlgProfilePreferences::populateThemesList()
     if (themesFile.open(QIODevice::ReadOnly)) {
         unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
         for (auto theme : qAsConst(unsortedThemes)) {
-            QString const themeText = theme.toObject()["Title"].toString();
-            QString const themeFileName = theme.toObject()["FileName"].toString();
+            const QString themeText = theme.toObject()["Title"].toString();
+            const QString themeFileName = theme.toObject()["FileName"].toString();
 
             if (!themeText.isEmpty() && !themeFileName.isEmpty()) {
                 sortedThemes << std::make_pair(themeText, themeFileName);
@@ -3618,7 +3618,7 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
     QHashIterator<QString, QSet<int>> itUsedSymbol(roomSymbolsHash);
     while (itUsedSymbol.hasNext()) {
         itUsedSymbol.next();
-        QString const symbol = itUsedSymbol.key();
+        const QString symbol = itUsedSymbol.key();
         QList<int> roomsWithSymbol = itUsedSymbol.value().values();
         if (roomsWithSymbol.count() > 1) {
             std::sort(roomsWithSymbol.begin(), roomsWithSymbol.end());
@@ -3762,7 +3762,7 @@ void dlgProfilePreferences::generateDiscordTooltips()
     }
 
     auto setToolTip = [=](QWidget* widget, const QString& highlight) {
-        QString const tooltip = qsl(R"(
+        const QString tooltip = qsl(R"(
   <style type="text/css">
     .tg  {border-collapse:collapse;border-spacing:0;}
     .tg td{font-size:12px;padding:10px 5px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}

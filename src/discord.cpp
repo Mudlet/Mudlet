@@ -539,7 +539,7 @@ QString Discord::deduceGameName(const QString& address)
 // first is true.
 QPair<bool, QString> Discord::gameIntegrationSupported(const QString& address)
 {
-    QString const deducedName = deduceGameName(address);
+    const QString deducedName = deduceGameName(address);
 
     // Handle using localhost as an off-line testing case
     if (deducedName == QLatin1String("localhost")) {
@@ -558,7 +558,7 @@ bool Discord::libraryLoaded()
 // quint64, or qulonglong)
 bool Discord::setApplicationID(Host* pHost, const QString& text)
 {
-    QString const oldID = mHostApplicationIDs.value(pHost);
+    const QString oldID = mHostApplicationIDs.value(pHost);
     if (oldID == text) {
         // No change so do nothing
         return true;

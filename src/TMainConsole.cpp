@@ -91,8 +91,8 @@ TMainConsole::~TMainConsole()
 
 void TMainConsole::setLabelStyleSheet(std::string& buf, std::string& stylesheet)
 {
-    QString const key{buf.c_str()};
-    QString const sheet{stylesheet.c_str()};
+    const QString key{buf.c_str()};
+    const QString sheet{stylesheet.c_str()};
     if (mLabelMap.find(key) != mLabelMap.end()) {
         QLabel* pC = mLabelMap[key];
         if (!pC) {
@@ -218,7 +218,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         out.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
         if (isMessageEnabled) {
-            QString const message = qsl("%1\n").arg(tr("Logging has started. Log file is %1").arg(mLogFile.fileName()));
+            const QString message = qsl("%1\n").arg(tr("Logging has started. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
             // This puts text onto console that is IMMEDIATELY POSTED into log file so
             // must be done BEFORE logging starts - or actually mLogToLogFile gets set!
@@ -228,7 +228,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         QFile::remove(loggingPath);
         mLogToLogFile = false;
         if (isMessageEnabled) {
-            QString const message = qsl("%1\n").arg(tr("Logging has been stopped. Log file is %1").arg(mLogFile.fileName()));
+            const QString message = qsl("%1\n").arg(tr("Logging has been stopped. Log file is %1").arg(mLogFile.fileName()));
             printSystemMessage(message);
             // This puts text onto console that is IMMEDIATELY POSTED into log file so
             // must be done AFTER logging ends - or actually mLogToLogFile gets reset!
@@ -273,7 +273,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
             bool isAtBody = false;
             bool foundBody = false;
             while (!mLogStream.atEnd()) {
-                QString const line = mLogStream.readLine();
+                const QString line = mLogStream.readLine();
                 if (line.contains("<body><div>")) {
                     // Begin writing old log to the current log when the body is
                     // found.
@@ -326,7 +326,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
-        QString const endDateTimeLine = logDateTime.toString(tr("'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
+        const QString endDateTimeLine = logDateTime.toString(tr("'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
                                              "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << qsl("<p>%1</p>\n").arg(endDateTimeLine);
@@ -344,7 +344,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
 
 void TMainConsole::selectCurrentLine(std::string& buf)
 {
-    QString const key = buf.c_str();
+    const QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         TConsole::selectCurrentLine();
         return;
@@ -357,7 +357,7 @@ void TMainConsole::selectCurrentLine(std::string& buf)
 
 std::list<int> TMainConsole::getFgColor(std::string& buf)
 {
-    QString const key = buf.c_str();
+    const QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         return TConsole::getFgColor();
     }
@@ -371,7 +371,7 @@ std::list<int> TMainConsole::getFgColor(std::string& buf)
 
 std::list<int> TMainConsole::getBgColor(std::string& buf)
 {
-    QString const key = buf.c_str();
+    const QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         return TConsole::getBgColor();
     }
@@ -399,7 +399,7 @@ QPair<quint8, TChar> TMainConsole::getTextAttributes(const QString& name) const
 
 void TMainConsole::luaWrapLine(std::string& buf, int line)
 {
-    QString const key = buf.c_str();
+    const QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         TConsole::luaWrapLine(line);
         return;
@@ -412,7 +412,7 @@ void TMainConsole::luaWrapLine(std::string& buf, int line)
 
 QString TMainConsole::getCurrentLine(std::string& buf)
 {
-    QString const key = buf.c_str();
+    const QString key = buf.c_str();
     if (key.isEmpty() || key == QLatin1String("main")) {
         return TConsole::getCurrentLine();
     }
@@ -930,7 +930,7 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 
 QPair<bool, QString> TMainConsole::addWordToSet(const QString& word)
 {
-    QString const errMsg = qsl("the word \"%1\" already seems to be in the user dictionary");
+    const QString errMsg = qsl("the word \"%1\" already seems to be in the user dictionary");
     QPair<bool, QString> result{};
     if (!mEnableUserDictionary) {
         return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
@@ -970,7 +970,7 @@ QPair<bool, QString> TMainConsole::addWordToSet(const QString& word)
 
 QPair<bool, QString> TMainConsole::removeWordFromSet(const QString& word)
 {
-    QString const errMsg = qsl("the word \"%1\" does not seem to be in the user dictionary");
+    const QString errMsg = qsl("the word \"%1\" does not seem to be in the user dictionary");
     QPair<bool, QString> result{};
     if (!mEnableUserDictionary) {
         return qMakePair(false, QLatin1String("a user dictionary is not enable for this profile"));
@@ -1015,7 +1015,7 @@ void TMainConsole::setSystemSpellDictionary(const QString& newDict)
 
     mSpellDic = newDict;
 
-    QString const path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, mpHost->getSpellDic());
+    const QString path = mudlet::getMudletPath(mudlet::hunspellDictionaryPath, mpHost->getSpellDic());
     QString spell_aff = qsl("%1%2.aff").arg(path, newDict);
     QString spell_dic = qsl("%1%2.dic").arg(path, newDict);
 
@@ -1214,7 +1214,7 @@ void TMainConsole::finalize()
 // to the TMap class...?
 bool TMainConsole::saveMap(const QString& location, int saveVersion)
 {
-    QString const filename_map = location.isEmpty() ?
+    const QString filename_map = location.isEmpty() ?
         mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"))) :
         location;
 
@@ -1358,7 +1358,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
     QFile file(filePathNameString);
     if (!file.exists()) {
         if (!errMsg) {
-            QString const infoMsg = tr("[ ERROR ]  - Map file not found, path and name used was:\n"
+            const QString infoMsg = tr("[ ERROR ]  - Map file not found, path and name used was:\n"
                                  "%1.")
                                       .arg(filePathNameString);
             pHost->postMessage(infoMsg);
@@ -1373,7 +1373,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
 
     if (file.open(QFile::ReadOnly | QFile::Text)) {
         if (!errMsg) {
-            QString const infoMsg = tr("[ INFO ]  - Map file located and opened, now parsing it...");
+            const QString infoMsg = tr("[ INFO ]  - Map file located and opened, now parsing it...");
             pHost->postMessage(infoMsg);
         }
 
@@ -1383,7 +1383,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
         pHost->mpMap->pushErrorMessagesToFile(tr(R"(Importing map(1) "%1" at %2 report)").arg(location, now.toString(Qt::ISODate)));
     } else {
         if (!errMsg) {
-            QString const infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
+            const QString infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
             pHost->postMessage(infoMsg);
         } else {
             *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
@@ -1410,7 +1410,7 @@ void TMainConsole::slot_reloadMap(QList<QString> profilesList)
         return;
     }
 
-    QString const infoMsg = tr("[ INFO ]  - Map reload request received from system...");
+    const QString infoMsg = tr("[ INFO ]  - Map reload request received from system...");
     pHost->postMessage(infoMsg);
 
     QString outcomeMsg;
@@ -1444,7 +1444,7 @@ void TMainConsole::showStatistics()
         return;
     }
 
-    QString const header = qsl("%1\n").arg(tr(
+    const QString header = qsl("%1\n").arg(tr(
         "+--------------------------------------------------------------+\n"
         "|                      system statistics                       |\n"
         "+--------------------------------------------------------------+",
@@ -1503,7 +1503,7 @@ void TMainConsole::showStatistics()
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
     // Footer for the system's statistics information displayed in the console, it should be 64 'narrow' characters wide
-    QString const footer = qsl("\n+--------------------------------------------------------------+\n");
+    const QString footer = qsl("\n+--------------------------------------------------------------+\n");
     mpHost->mpConsole->print(footer, QColor(150, 120, 0), Qt::black);
 
     mpHost->mLuaInterpreter.compileAndExecuteScript(QLatin1String("resetFormat();"));

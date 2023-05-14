@@ -175,7 +175,7 @@ QString IrcMessageFormatter::formatKickMessage(IrcKickMessage* message, bool isF
 QString IrcMessageFormatter::formatModeMessage(IrcModeMessage* message, bool isForLua)
 {
     Q_UNUSED(isForLua)
-    QString const args = message->arguments().join(" ");
+    const QString args = message->arguments().join(" ");
     if (message->isReply()) {
         return QObject::tr("! %1 mode is %2 %3").arg(message->target(), message->mode(), args);
     } else {
@@ -207,7 +207,7 @@ QString IrcMessageFormatter::formatNamesMessage(IrcNamesMessage* message, bool i
     if (isForLua) {
         // lua actually needs the names for parsing, since getting a names
         // list from the UI userModel alone would be limiting to the IRC commands.
-        QString const nameList = message->names().join(" ");
+        const QString nameList = message->names().join(" ");
         return QObject::tr("! %1 has %2 users: %3").arg(message->channel(), count, nameList);
     } else {
         return QObject::tr("! %1 has %2 users").arg(message->channel(), count);
@@ -256,7 +256,7 @@ QString IrcMessageFormatter::formatNoticeMessage(IrcNoticeMessage* message, bool
         // lua only needs the message text.
         return IrcTextFormat().toPlainText(message->content());
     } else {
-        QString const content = IrcTextFormat().toHtml(message->content());
+        const QString content = IrcTextFormat().toHtml(message->content());
         return QObject::tr("&lt;%1%2&gt; [%3] %4").arg(message->nick(), pfx, message->target(), content);
     }
 }

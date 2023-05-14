@@ -163,7 +163,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     /*||(mVersionMajor==1&&mVersionMinor)*/) {
                     // Minor check is not currently relevant, just abort on 2.000f or more
 
-                    QString const moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
+                    const QString moanMsg = tr("[ ALERT ] - Sorry, the file being read:\n"
                                          "\"%1\"\n"
                                          "reports it has a version (%2) it must have come from a later Mudlet version,\n"
                                          "and this one cannot read it, you need a newer Mudlet!")
@@ -270,7 +270,7 @@ void XMLimport::readVariable(TVar* pParent)
     int keyType = 0;
     int valueType;
 
-    QString const what = name().toString();
+    const QString what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -318,7 +318,7 @@ void XMLimport::readHiddenVariables()
 
         if (isStartElement()) {
             if (name() == qsl("name")) {
-                QString const var = readElementText();
+                const QString var = readElementText();
                 vu->addHidden(var);
                 continue;
             }
@@ -430,7 +430,7 @@ void XMLimport::readArea()
 {
     if (attributes().hasAttribute(qsl("id"))) {
         int const id = attributes().value(qsl("id")).toString().toInt();
-        QString const name = attributes().value(qsl("name")).toString();
+        const QString name = attributes().value(qsl("name")).toString();
 
         mpHost->mpMap->mpRoomDB->addArea(id, name);
     }
@@ -659,7 +659,7 @@ void XMLimport::readHelpPackage()
             break;
         } else if (isStartElement()) {
             if (name() == qsl("helpURL")) {
-                QString const contents = readElementText();
+                const QString contents = readElementText();
                 mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
             }
         }
@@ -1196,7 +1196,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
     pT->mColorTrigger = attributes().value(qsl("isColorTrigger")) == YES;
 
     // Is this a "TriggerGroup" or a "Trigger"
-    QString const what = name().toString();
+    const QString what = name().toString();
     while (!atEnd()) {
         readNext();
 
@@ -1206,7 +1206,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
             if (name() == qsl("name")) {
                 pT->setName(readElementText());
             } else if (name() == qsl("script")) {
-                QString const tempScript = readScriptElement();
+                const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
                 }
@@ -1307,7 +1307,7 @@ int XMLimport::readTimer(TTimer* pParent)
         pT->mModuleMember = true;
     }
 
-    QString const what = name().toString();
+    const QString what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1318,7 +1318,7 @@ int XMLimport::readTimer(TTimer* pParent)
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString const tempScript = readScriptElement();
+                const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTimer(...): ERROR: can not compile timer's lua code for: " << pT->getName();
                 }
@@ -1374,7 +1374,7 @@ int XMLimport::readAlias(TAlias* pParent)
         pT->mModuleMember = true;
     }
 
-    QString const what = name().toString();
+    const QString what = name().toString();
     while (!atEnd()) {
         readNext();
 
@@ -1386,7 +1386,7 @@ int XMLimport::readAlias(TAlias* pParent)
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString const tempScript = readScriptElement();
+                const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAlias(...): ERROR: can not compile alias's lua code for: " << pT->getName();
                 }
@@ -1441,7 +1441,7 @@ int XMLimport::readAction(TAction* pParent)
         pT->mModuleMember = true;
     }
 
-    QString const what = name().toString();
+    const QString what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1452,7 +1452,7 @@ int XMLimport::readAction(TAction* pParent)
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString const tempScript = readScriptElement();
+                const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAction(...): ERROR: can not compile action's lua code for: " << pT->getName();
                 }
@@ -1531,7 +1531,7 @@ int XMLimport::readScript(TScript* pParent)
         script->mModuleMember = true;
     }
 
-    QString const what = name().toString();
+    const QString what = name().toString();
     while (!atEnd()) {
         readNext();
         if (isEndElement()) {
@@ -1542,7 +1542,7 @@ int XMLimport::readScript(TScript* pParent)
             } else if (name() == qsl("packageName")) {
                 script->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString const tempScript = readScriptElement();
+                const QString tempScript = readScriptElement();
                 if (!script->setScript(tempScript)) {
                     qDebug().nospace().noquote() << "XMLimport::readScript(...) ERROR - can not compile script's lua code for \"" << script->getName() << "\"; reason: " << script->getError() << ".";
                 }
@@ -1592,7 +1592,7 @@ int XMLimport::readKey(TKey* pParent)
         pT->mModuleMember = true;
     }
 
-    QString const what = name().toString();
+    const QString what = name().toString();
     while (!atEnd()) {
         readNext();
 
@@ -1604,7 +1604,7 @@ int XMLimport::readKey(TKey* pParent)
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
             } else if (name() == qsl("script")) {
-                QString const tempScript = readScriptElement();
+                const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readKey(...): ERROR: can not compile key's lua code for: " << pT->getName();
                 }
@@ -1687,7 +1687,7 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName, con
             break;
         } else if (isStartElement()) {
             if (name() == qsl("integer")) {
-                QString const numberText = readElementText();
+                const QString numberText = readElementText();
                 bool ok = false;
                 int const num = numberText.toInt(&ok, 10);
                 if (Q_LIKELY(!numberText.isEmpty() && ok)) {
@@ -1712,7 +1712,7 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName, con
                     default:
                         mpHost->postMessage(qsl("[ ERROR ] - \"%1\" as a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element \"%2\" cannot be understood by this version of Mudlet, is it from a later version? Converting it to a SUBSTRING type so the data can be shown but it will probably not work as expected.").arg(numberText, parentName));
                         list << REGEX_SUBSTRING; //Set it to the default type
-                    }                        
+                    }
 
                 } else {
                     qWarning(R"(XMLimport::readIntegerList(...) ERROR: unable to convert: "%s" to a number when reading the 'regexCodePropertyList' element of the 'Trigger' or 'TriggerGroup' element "%s"!)",

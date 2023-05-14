@@ -1121,7 +1121,7 @@ void mudlet::scanForQtTranslations(const QString& path)
         itTranslation.next();
         const QString languageCode = itTranslation.key();
         std::unique_ptr<QTranslator> pQtTranslator = std::make_unique<QTranslator>();
-        QString const translationFileName(qsl("qt_%1.qm").arg(languageCode));
+        const QString translationFileName(qsl("qt_%1.qm").arg(languageCode));
         if (pQtTranslator->load(translationFileName, path)) {
             // qDebug().noquote().nospace() << "    found a Qt translation for locale code: \"" << languageCode << "\"";
             /*
@@ -1162,7 +1162,7 @@ void mudlet::loadTranslators(const QString& languageCode)
 
     translation const currentTranslation = mTranslationsMap.value(languageCode);
     QPointer<QTranslator> const pQtTranslator = new QTranslator;
-    QString const qtTranslatorFileName = currentTranslation.getQtTranslationFileName();
+    const QString qtTranslatorFileName = currentTranslation.getQtTranslationFileName();
     if (!qtTranslatorFileName.isEmpty()) {
         // Need to use load(fileName (e.g. {qt_xx_YY.qm"}, pathName) form - Qt
         // mangles the former to find the actual best one to use, but we
@@ -1177,7 +1177,7 @@ void mudlet::loadTranslators(const QString& languageCode)
     }
 
     QPointer<QTranslator> const pMudletTranslator = new QTranslator;
-    QString const mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
+    const QString mudletTranslatorFileName = currentTranslation.getMudletTranslationFileName();
     if (!mudletTranslatorFileName.isEmpty()) {
         bool const isOk = pMudletTranslator->load(mudletTranslatorFileName, mPathNameMudletTranslations);
         if (isOk && !pMudletTranslator->isEmpty()) {
@@ -1259,7 +1259,7 @@ void mudlet::slot_closeCurrentProfile()
 
 void mudlet::slot_closeProfileRequested(int tab)
 {
-    QString const name = mpTabBar->tabData(tab).toString();
+    const QString name = mpTabBar->tabData(tab).toString();
     closeHost(name);
 }
 
@@ -1370,7 +1370,7 @@ void mudlet::reshowRequiredMainConsoles()
 // Moved as much as possible to activateProfile()...
 void mudlet::slot_tabChanged(int tabID)
 {
-    QString const hostName = mpTabBar->tabData(tabID).toString();
+    const QString hostName = mpTabBar->tabData(tabID).toString();
     activateProfile(mHostManager.getHost(hostName));
 }
 
@@ -1386,7 +1386,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pH->mpConsole = pConsole;
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
-    QString const tabName = pH->getName();
+    const QString tabName = pH->getName();
     int const newTabID = mpTabBar->addTab(tabName);
     /*
      * There is a sneaky feature on some OSes (I found it on FreeBSD but
@@ -1471,7 +1471,7 @@ void mudlet::slot_timerFires()
     }
 
     // Pull the Host name and TTimer::id from the properties:
-    QString const hostName(pQT->property(TTimer::scmProperty_HostName).toString());
+    const QString hostName(pQT->property(TTimer::scmProperty_HostName).toString());
     if (Q_UNLIKELY(hostName.isEmpty())) {
         qWarning().nospace().noquote() << "mudlet::slot_timerFires() INFO - Host name is empty - so TTimer has probably been deleted.";
         pQT->deleteLater();
@@ -1586,7 +1586,7 @@ bool mudlet::saveWindowLayout()
         return false;
     }
 
-    QString const layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
+    const QString layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
 
     QSaveFile layoutFile(layoutFilePath);
     if (layoutFile.open(QIODevice::WriteOnly)) {
@@ -1617,7 +1617,7 @@ bool mudlet::loadWindowLayout()
     }
     qDebug() << "mudlet::loadWindowLayout() - loading layout.";
 
-    QString const layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
+    const QString layoutFilePath = getMudletPath(mainDataItemPath, qsl("windowLayout.dat"));
 
     QFile layoutFile(layoutFilePath);
     if (layoutFile.exists()) {
@@ -2437,7 +2437,7 @@ void mudlet::updateDiscordNamedIcon()
         return;
     }
 
-    QString const gameName = pHost->getDiscordGameName();
+    const QString gameName = pHost->getDiscordGameName();
 
     bool const hasCustom = !pHost->getDiscordInviteURL().isEmpty();
 
@@ -2476,7 +2476,7 @@ void mudlet::slot_replay()
         return;
     }
 
-    QString const fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Select Replay"),
                                                     getMudletPath(profileReplayAndLogFilesPath, pHost->getName()),
                                                     tr("*.dat"));
     if (fileName.isEmpty()) {
@@ -2550,7 +2550,7 @@ void mudlet::startAutoLogin(const QStringList& cliProfiles)
     }
 
     for (auto& hostName : hostList) {
-        QString const val = readProfileData(hostName, qsl("autologin"));
+        const QString val = readProfileData(hostName, qsl("autologin"));
         if (val.toInt() == Qt::Checked) {
             doAutoLogin(hostName);
             openedProfile = true;
@@ -2683,7 +2683,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     LuaInterface* lI = pHost->getLuaInterface();
     lI->getVars(true);
 
-    QString const folder = getMudletPath(profileXmlFilesPath, profile_name);
+    const QString folder = getMudletPath(profileXmlFilesPath, profile_name);
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
@@ -2706,7 +2706,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
         if (auto [success, message] = importer.importPackage(&file); !success) {
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
                 "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
-        
+
             qDebug().nospace().noquote() << "mudlet::doAutoLogin(\"" << profile_name << "\") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
         } else {
             pHost->mLoadedOk = true;
@@ -2723,7 +2723,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     pHost->setLogin(readProfileData(profile_name, qsl("login")));
     pHost->setPass(readProfileData(profile_name, qsl("password")));
 
-    QString const val = readProfileData(profile_name, qsl("autoreconnect"));
+    const QString val = readProfileData(profile_name, qsl("autoreconnect"));
     if (!val.isEmpty() && val.toInt() == Qt::Checked) {
         pHost->setAutoReconnect(true);
     } else {
@@ -2832,7 +2832,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     if (connect) {
         pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
     } else {
-        QString const infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
+        const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
     }
 }
@@ -2913,7 +2913,7 @@ void mudlet::slot_compactInputLine(const bool state)
         mpCurrentActiveHost->setCompactInputLine(state);
         // Make sure players don't get confused when accidentally hiding buttons.
         if (QKeySequence* shortcut = mpShortcutsManager->getSequence(qsl("Compact input line")); state && !mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown && shortcut && !shortcut->isEmpty()) {
-            QString const infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.",
+            const QString infoMsg = tr("[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.",
                                  "Here %1 will be replaced with the keyboard shortcut, default is ALT+L.").arg(shortcut->toString());
             mpCurrentActiveHost->postMessage(infoMsg);
             mpCurrentActiveHost->mTutorialForCompactLineAlreadyShown = true;
@@ -3127,8 +3127,8 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     // Value is: absolute path needed when extracting files
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs)) {
-            QString const entryInArchive(zs.name);
-            QString const pathInArchive(entryInArchive.section(qsl("/"), 0, -2));
+            const QString entryInArchive(zs.name);
+            const QString pathInArchive(entryInArchive.section(qsl("/"), 0, -2));
             // TODO: We are supposed to validate the fields (except the
             // "valid" one itself) in zs before using them:
             // i.e. check that zs.name is valid ( zs.valid & ZIP_STAT_NAME )
@@ -3148,7 +3148,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     QMapIterator<QString, QString> itPath(directoriesNeededMap);
     while (itPath.hasNext()) {
         itPath.next();
-        QString const folderToCreate = qsl("%1%2").arg(destination, itPath.value());
+        const QString folderToCreate = qsl("%1%2").arg(destination, itPath.value());
         if (!tmpDir.exists(folderToCreate)) {
             if (!tmpDir.mkpath(folderToCreate)) {
                 zip_close(archive);
@@ -3162,7 +3162,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
         // No need to check return value as we've already done it first time
         zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs);
-        QString const entryInArchive(zs.name);
+        const QString entryInArchive(zs.name);
         if (!entryInArchive.endsWith(QLatin1Char('/'))) {
             // TODO: check that zs.size is valid ( zs.valid & ZIP_STAT_SIZE )
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
@@ -3249,7 +3249,7 @@ bool mudlet::loadEdbeeTheme(const QString& themeName, const QString& themeFile)
     // getMudletPath(...) needs the themeFile to determine if it is the
     // "default" which is stored in the resource file and not downloaded into
     // the cache:
-    QString const themeLocation(getMudletPath(editorWidgetThemePathFile, themeFile));
+    const QString themeLocation(getMudletPath(editorWidgetThemePathFile, themeFile));
     auto result = themeManager->readThemeFile(themeLocation, themeName);
     if (result == nullptr) {
         qWarning() << themeManager->lastErrorMessage();
@@ -3940,7 +3940,7 @@ bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash
             int endPos = graphemeFinder.toNextBoundary();
             do {
                 if (endPos > 0) {
-                    QString const grapheme(dictionaryLine.mid(startPos, endPos - startPos));
+                    const QString grapheme(dictionaryLine.mid(startPos, endPos - startPos));
                     if (gc.contains(grapheme)) {
                         ++gc[grapheme];
                     } else {
@@ -4108,7 +4108,7 @@ int mudlet::scanWordList(QStringList& wl, QHash<QString, unsigned int>& gc)
         int endPos = graphemeFinder.toNextBoundary();
         do {
             if (endPos > 0) {
-                QString const grapheme(wl.at(index).mid(startPos, endPos - startPos));
+                const QString grapheme(wl.at(index).mid(startPos, endPos - startPos));
                 if (gc.contains(grapheme)) {
                     ++gc[grapheme];
                 } else {
@@ -4238,8 +4238,8 @@ Hunhandle* mudlet::prepareSharedDictionary()
 bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& wordSet)
 {
     // First update the line count in the list of words
-    QString const dictionaryPath(qsl("%1.dic").arg(pathFileBaseName));
-    QString const affixPath(qsl("%1.aff").arg(pathFileBaseName));
+    const QString dictionaryPath(qsl("%1.dic").arg(pathFileBaseName));
+    const QString affixPath(qsl("%1.aff").arg(pathFileBaseName));
     QHash<QString, unsigned int> graphemeCounts;
 
     // The file will have previously been created - for it to be missing now is
@@ -4561,7 +4561,7 @@ void mudlet::slot_tabMoved(const int oldPos, const int newPos)
 void mudlet::refreshTabBar()
 {
     for (const auto& pHost : mHostManager) {
-        QString const hostName = pHost->getName();
+        const QString hostName = pHost->getName();
         if (smDebugMode) {
             mpTabBar->applyPrefixToDisplayedText(hostName, TDebug::getTag(pHost.data()));
         } else {
@@ -4629,7 +4629,7 @@ bool mudlet::desktopInDarkMode()
     QProcess process;
     process.start(qsl("gsettings"), QStringList() << qsl("get") << qsl("org.gnome.desktop.interface") << qsl("gtk-theme"));
     process.waitForFinished();
-    QString const output = QString::fromUtf8(process.readAllStandardOutput());
+    const QString output = QString::fromUtf8(process.readAllStandardOutput());
     return output.contains(qsl("-dark"), Qt::CaseInsensitive);
 #endif
 

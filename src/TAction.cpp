@@ -121,7 +121,7 @@ bool TAction::setScript(const QString& script)
 bool TAction::compileScript()
 {
     mFuncName = QString("Action") + QString::number(mID);
-    QString const code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    const QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
     if (mpHost->mLuaInterpreter.compile(code, error, QString("Button: ") + getName())) {
         mNeedsToBeCompiled = false;
@@ -179,7 +179,7 @@ void TAction::expandToolbar(TToolBar* pT)
             continue;
         }
         QIcon const icon(action->mIcon);
-        QString const name = action->getName();
+        const QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);
         button->setText(name);
@@ -271,7 +271,7 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
             continue;
         }
         QIcon const icon(action->mIcon);
-        QString const name = action->getName();
+        const QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);
         button->setText(name);

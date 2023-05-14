@@ -524,7 +524,7 @@ void TMap::audit()
     _time.start();
 
     { // Blocked - just to limit the scope of infoMsg...!
-        QString const infoMsg = tr("[ INFO ]  - Map audit starting...");
+        const QString infoMsg = tr("[ INFO ]  - Map audit starting...");
         postMessage(infoMsg);
     }
 
@@ -554,7 +554,7 @@ void TMap::audit()
                         int const newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
-                                QString const msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
+                                const QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
                                 postMessage(msg);
                             }
                             appendAreaErrorMsg(areaID, tr("[ INFO ] - Converting old style label id: %1.").arg(i));
@@ -562,7 +562,7 @@ void TMap::audit()
 
                         } else {
                             if (mudlet::self()->showMapAuditErrors()) {
-                                QString const msg = tr("[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.").arg(areaID).arg(i);
+                                const QString msg = tr("[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.").arg(areaID).arg(i);
                                 postMessage(msg);
                             }
                             appendAreaErrorMsg(areaID, tr("[ WARN ] - CONVERTING: cannot convert old style label with id: %1.").arg(i));
@@ -594,14 +594,14 @@ void TMap::audit()
     }
 
     { // Blocked - just to limit the scope of infoMsg...!
-        QString const infoMsg = tr("[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...").arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
+        const QString infoMsg = tr("[  OK  ]  - Auditing of map completed (%1s). Enjoy your game...").arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
         postMessage(infoMsg);
         appendErrorMsg(infoMsg);
     }
 
     auto loadTime = mpHost->getLuaInterpreter()->condenseMapLoad();
     if (loadTime != -1.0) {
-        QString const msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
+        const QString msg = tr("[  OK  ]  - Map loaded successfully (%1s).").arg(loadTime);
         postMessage(msg);
     }
 }
@@ -1106,7 +1106,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-         QString const errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
+         const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
                              "for this version of Mudlet. Supported are only formats up to version %2.")
                                  .arg(QString::number(saveVersion), QString::number(mMaxVersion));
         appendErrorMsgWithNoLf(errMsg, false);
@@ -1122,7 +1122,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mVersion) {
-        QString const message = tr("[ ALERT ] - Saving map in format version \"%1\" that is different than \"%2\" which\n"
+        const QString message = tr("[ ALERT ] - Saving map in format version \"%1\" that is different than \"%2\" which\n"
                              "it was loaded as. This may be an issue if you want to share the resulting\n"
                              "map with others relying on the original format.")
                                   .arg(mSaveVersion)
@@ -1132,7 +1132,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     }
 
     if (mSaveVersion != mDefaultVersion) {
-        QString const message = tr("[ WARN ]  - Saving map in format version \"%1\" different from the\n"
+        const QString message = tr("[ WARN ]  - Saving map in format version \"%1\" different from the\n"
                              "recommended map version %2 for this version of Mudlet.")
                                   .arg(mSaveVersion)
                                   .arg(mDefaultVersion);
@@ -1366,7 +1366,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             QMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
             while (itCustomLine.hasNext()) {
                 itCustomLine.next();
-                QString const direction(itCustomLine.key());
+                const QString direction(itCustomLine.key());
                 if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
                     || direction == QLatin1String("down")
                     || direction == QLatin1String("ne")
@@ -1386,7 +1386,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             QMapIterator<QString, bool> itCustomLineArrow(pR->customLinesArrow);
             while (itCustomLineArrow.hasNext()) {
                 itCustomLineArrow.next();
-                QString const direction(itCustomLineArrow.key());
+                const QString direction(itCustomLineArrow.key());
                 if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
                     || direction == QLatin1String("down")
                     || direction == QLatin1String("ne")
@@ -1406,7 +1406,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             QMapIterator<QString, QColor> itCustomLineColor(pR->customLinesColor);
             while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
-                QString const direction(itCustomLineColor.key());
+                const QString direction(itCustomLineColor.key());
                 QList<int> colorComponents;
                 colorComponents << itCustomLineColor.value().red() << itCustomLineColor.value().green() << itCustomLineColor.value().blue();
                 if (direction == QLatin1String("n") || direction == QLatin1String("e") || direction == QLatin1String("s") || direction == QLatin1String("w") || direction == QLatin1String("up")
@@ -1482,7 +1482,7 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
 {
     int version = 0;
     if (!file.open(QFile::ReadOnly)) {
-        QString const errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
+        const QString errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
         appendErrorMsg(errMsg, false);
         postMessage(errMsg);
         return false;
@@ -1504,14 +1504,14 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
     ifs >> version;
     if ((version < 1) || (version > 127)) {
-        QString const errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
+        const QString errMsg = tr("[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates\n"
                             "its format version seems to be \"%1\" and that doesn't make sense. The file is:\n"
                             "\"%2\".")
                                  .arg(version)
                                  .arg(file.fileName());
         appendErrorMsgWithNoLf(errMsg);
         postMessage(errMsg);
-        QString const infoMsg = tr("[ INFO ]  - Ignoring this unlikely map file.");
+        const QString infoMsg = tr("[ INFO ]  - Ignoring this unlikely map file.");
         appendErrorMsgWithNoLf(infoMsg);
         postMessage(infoMsg);
         ifs.setDevice(nullptr);
@@ -1519,14 +1519,14 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
         return false;
     }
     if (version > mMaxVersion) {
-        QString const errMsg = tr("[ ALERT ] - Map file is too new. Its format version \"%1\" is higher than this version of\n"
+        const QString errMsg = tr("[ ALERT ] - Map file is too new. Its format version \"%1\" is higher than this version of\n"
                             "Mudlet can handle (%2)! The file is:\n\"%3\".")
                                  .arg(version)
                                  .arg(mMaxVersion)
                                  .arg(file.fileName());
         appendErrorMsgWithNoLf(errMsg);
         postMessage(errMsg);
-        QString const infoMsg = tr("[ INFO ]  - You will need to update your Mudlet to read the map file.");
+        const QString infoMsg = tr("[ INFO ]  - You will need to update your Mudlet to read the map file.");
         appendErrorMsgWithNoLf(infoMsg);
         postMessage(infoMsg);
         ifs.setDevice(nullptr);
@@ -1535,21 +1535,21 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     }
 
     if (version < 4) {
-        QString const alertMsg = tr("[ ALERT ] - Map file is really old. Its format version \"%1\" is so ancient that\n"
+        const QString alertMsg = tr("[ ALERT ] - Map file is really old. Its format version \"%1\" is so ancient that\n"
                               "this version of Mudlet may not gain enough information from\n"
                               "it but it will try! The file is: \"%2\".")
                                    .arg(version)
                                    .arg(file.fileName());
         appendErrorMsgWithNoLf(alertMsg, false);
         postMessage(alertMsg);
-        QString const infoMsg = tr("[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
+        const QString infoMsg = tr("[ INFO ]  - You might wish to donate THIS map file to the Mudlet Museum!\n"
                              "There is so much data that it DOES NOT have that you could be\n"
                              "better off starting again...");
         appendErrorMsgWithNoLf(infoMsg, false);
         postMessage(infoMsg);
     } else {
         // Less than (but not less than 4) or equal to default version
-        QString const infoMsg = tr("[ INFO ]  - Reading map. Format version: %1. File:\n"
+        const QString infoMsg = tr("[ INFO ]  - Reading map. Format version: %1. File:\n"
                              "\"%2\",\n"
                              "please wait...").arg(version).arg(file.fileName());
         appendErrorMsg(tr(R"([ INFO ]  - Reading map. Format version: %1. File: "%2".)").arg(version).arg(file.fileName()), false);
@@ -1605,12 +1605,12 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
             } else {
                 if (auto [isOk, message] = readJsonMapFile(fileName, true); !isOk) {
                    // Failed to read the JSON file
-                   QString const errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
+                   const QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
                                        "%1; the file is:\n"
                                        "\"%2\".").arg(message, fileName);
                    appendErrorMsgWithNoLf(errMsg);
                    postMessage(errMsg);
-                   QString const infoMsg = tr("[ INFO ]  - Ignoring this map file.");
+                   const QString infoMsg = tr("[ INFO ]  - Ignoring this map file.");
                    appendErrorMsgWithNoLf(infoMsg);
                    postMessage(infoMsg);
                } else {
@@ -1683,9 +1683,9 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 // we CAN fix past mistakes by only considering the first ten
                 // elements:
                 QStringList const fontStrings{mUserData.take(qsl("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
-                QString const fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
-                QString const fontFudgeFactorString = mUserData.take(qsl("system.fallback_mapSymbolFontFudgeFactor"));
-                QString const onlyUseSymbolFontString = mUserData.take(qsl("system.fallback_onlyUseMapSymbolFont"));
+                const QString fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
+                const QString fontFudgeFactorString = mUserData.take(qsl("system.fallback_mapSymbolFontFudgeFactor"));
+                const QString onlyUseSymbolFontString = mUserData.take(qsl("system.fallback_onlyUseMapSymbolFont"));
                 if (!fontString.isEmpty()) {
                     mMapSymbolFont.fromString(fontString);
                 }
@@ -1781,7 +1781,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
         if (!mpRoomDB->getAreaMap().keys().contains(-1)) {
             auto pDefaultA = new TArea(this, mpRoomDB);
             mpRoomDB->restoreSingleArea(-1, pDefaultA);
-            QString const defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
+            const QString defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
                                                  "area) not found, adding reserved -1 id.");
             appendErrorMsgWithNoLf(defaultAreaInsertionMsg, false);
             if (mudlet::self()->showMapAuditErrors()) {
@@ -1860,7 +1860,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
         restore16ColorSet();
 
-        QString const okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
+        const QString okMsg = tr("[ INFO ]  - Successfully read the map file (%1s), checking some\n"
                            "consistency details..." )
                                 .arg(_time.nsecsElapsed() * 1.0e-9, 0, 'f', 2);
 
@@ -1919,7 +1919,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     QFile file(qsl("%1/%2").arg(folder, entries.at(0)));
 
     if (!file.open(QFile::ReadOnly)) {
-        QString const errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
+        const QString errMsg = tr(R"([ ERROR ] - Unable to open map file for reading: "%1"!)").arg(file.fileName());
         appendErrorMsg(errMsg, false);
         postMessage(errMsg);
         return false;
@@ -1935,7 +1935,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
     ifs >> otherProfileVersion;
 
-    QString const infoMsg = tr(R"([ INFO ]  - Checking map file "%1", format version "%2".)").arg(file.fileName()).arg(otherProfileVersion);
+    const QString infoMsg = tr(R"([ INFO ]  - Checking map file "%1", format version "%2".)").arg(file.fileName()).arg(otherProfileVersion);
     appendErrorMsg(infoMsg, false);
     if (mudlet::self()->showMapAuditErrors()) {
         postMessage(infoMsg);
@@ -2428,7 +2428,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     // Incidentally this should address: https://bugs.launchpad.net/mudlet/+bug/852861
     if (mImportRunning) {
-        QString const warnMsg = tr("[ WARN ]  - Attempt made to download an XML map when one has already been\n"
+        const QString warnMsg = tr("[ WARN ]  - Attempt made to download an XML map when one has already been\n"
                                          "requested or is being imported from a local file - wait for that\n"
                                          "operation to complete (if it cannot be canceled) before retrying!");
         postMessage(warnMsg);
@@ -2449,7 +2449,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     if (!url.isValid()) {
-        QString const errMsg = tr("[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:\n"
+        const QString errMsg = tr("[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:\n"
                                         "%1\n"
                                         "and the error message (may contain technical details) was:"
                                         "\"%2\".")
@@ -2461,9 +2461,9 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     // Check to ensure we have a map directory to save the map files to.
     QDir const toProfileDir;
-    QString const toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+    const QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
     if (!toProfileDir.mkpath(toProfileDirPathString)) {
-        QString const errMsg = tr("[ ERROR ] - Unable to use or create directory to store map.\n"
+        const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map.\n"
                             "Please check that you have permissions/access to:\n"
                             "\"%1\"\n"
                             "and there is enough space. The download operation has failed.")
@@ -2489,7 +2489,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     mExpectedFileSize = 4000000;
 
-    QString const infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
+    const QString infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
     postMessage(infoMsg);
     qApp->processEvents();
     // Attempts to ensure INFO message gets shown before download is initiated!
@@ -2534,7 +2534,7 @@ bool TMap::importMap(QFile& file, QString* errMsg)
             *errMsg = tr("loadMap: unable to perform request, a map is already being downloaded or\n"
                          "imported at user request.");
         } else {
-            QString const warnMsg = qsl("[ WARN ]  - Attempt made to import an XML map when one is already being\n"
+            const QString warnMsg = qsl("[ WARN ]  - Attempt made to import an XML map when one is already being\n"
                                              "downloaded or is being imported from a local file - wait for that\n"
                                              "operation to complete (if it cannot be canceled) before retrying!");
             postMessage(warnMsg);
@@ -2635,7 +2635,7 @@ void TMap::slot_setDownloadProgress(qint64 got, qint64 total)
 
 void TMap::slot_downloadCancel()
 {
-    QString const alertMsg = tr("[ ALERT ] - Map download was canceled, on user's request.");
+    const QString alertMsg = tr("[ ALERT ] - Map download was canceled, on user's request.");
     postMessage(alertMsg);
     if (mpProgressDialog) {
         mpProgressDialog->deleteLater();
@@ -2654,7 +2654,7 @@ void TMap::slot_downloadError(QNetworkReply::NetworkError error)
 
     if (error != QNetworkReply::OperationCanceledError) {
         // No point in reporting Cancel as that is handled elsewhere
-        QString const errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1.").arg(mpNetworkReply->errorString());
+        const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1.").arg(mpNetworkReply->errorString());
         postMessage(errMsg);
     }
 }
@@ -2685,7 +2685,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     if (reply->error() != QNetworkReply::NoError) {
         if (reply->error() != QNetworkReply::OperationCanceledError) {
             // Don't post an error for the cancel case - it has already been done
-            QString const alertMsg = tr("[ ALERT ] - Map download failed, error reported was:\n%1.").arg(reply->errorString());
+            const QString alertMsg = tr("[ ALERT ] - Map download failed, error reported was:\n%1.").arg(reply->errorString());
             postMessage(alertMsg);
             cleanup();
             return;
@@ -2697,14 +2697,14 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     QSaveFile writeFile(mLocalMapFileName);
     QFile readFile(mLocalMapFileName);
     if (!writeFile.open(QFile::WriteOnly)) {
-        QString const alertMsg = tr("[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg(mLocalMapFileName);
+        const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to open destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
         return;
     }
     // The QNetworkReply is Ok here:
     if (writeFile.write(reply->readAll()) == -1) {
-        QString const alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
+        const QString alertMsg = tr("[ ALERT ] - Map download failed, unable to write destination file:\n%1.").arg(mLocalMapFileName);
         postMessage(alertMsg);
         cleanup();
         return;
@@ -2720,7 +2720,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         return;
     }
 
-    QString const infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
+    const QString infoMsg = tr("[ INFO ]  - ... map downloaded and stored, now parsing it...");
     postMessage(infoMsg);
 
     // Since the download is complete but we do not offer to
@@ -2736,7 +2736,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     } else {
         parsingFileName = mLocalMapFileName;
         if (!readFile.open(QFile::OpenMode(QFile::ReadOnly | QFile::Text))) {
-            QString const alertMsg = tr("[ ERROR ] - Map download problem, unable to read destination file:\n%1.").arg(parsingFileName);
+            const QString alertMsg = tr("[ ERROR ] - Map download problem, unable to read destination file:\n%1.").arg(parsingFileName);
             postMessage(alertMsg);
             cleanup();
             return;
@@ -2756,7 +2756,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         pHost->raiseEvent(mapDownloadEvent);
     } else {
         // Failure in parse file...
-        QString const alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
+        const QString alertMsg = tr("[ ERROR ] - Map download problem, failure in parsing destination file:\n%1.").arg(parsingFileName);
         postMessage(alertMsg);
     }
     cleanup();
@@ -2851,7 +2851,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     QString destination{dest};
 
     if (destination.isEmpty()) {
-        QString const destFolder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+        const QString destFolder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
         QDir const destDir(destFolder);
         if (!destDir.exists()) {
             destDir.mkdir(destFolder);
@@ -3140,7 +3140,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     if (mapObj.contains(QLatin1String("userData"))) {
         readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
-    QString const mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
+    const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     float const mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
     bool const isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
     int const playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());

@@ -56,7 +56,7 @@ void FontManager::loadFonts(const QString& folder)
     dir.setNameFilters(filters);
 
     for (auto fontFile : dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
-        QString const fontFilePathName = qsl("%1/%2").arg(dir.absolutePath(), fontFile);
+        const QString fontFilePathName = qsl("%1/%2").arg(dir.absolutePath(), fontFile);
         loadFont(fontFilePathName);
     }
 }

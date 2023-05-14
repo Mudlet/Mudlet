@@ -380,7 +380,7 @@ int main(int argc, char* argv[])
     if (show_splash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString const sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
+        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -418,7 +418,7 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString const sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
         QFont const font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
@@ -446,7 +446,7 @@ int main(int argc, char* argv[])
     }
     app->processEvents();
 
-    QString const homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
+    const QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
     QDir const dir;
     bool first_launch = false;
     if (!dir.exists(homeDirectory)) {
@@ -455,11 +455,11 @@ int main(int argc, char* argv[])
     }
 
 #if defined(INCLUDE_FONTS)
-    QString const bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
     }
-    QString const ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
@@ -468,7 +468,7 @@ int main(int argc, char* argv[])
     removeOldNoteColorEmojiFonts();
     // PLACEMARKER: current Noto Color Emoji font directory specification:
     // Release: "Unicode 15.0"
-    QString const notoFontDirectory{qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -529,7 +529,7 @@ int main(int argc, char* argv[])
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
-    QString const homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
+    const QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
 #if defined(Q_OS_WIN32)
     /*
      * From Qt Documentation for:

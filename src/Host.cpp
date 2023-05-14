@@ -376,8 +376,8 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mLuaInterpreter.updateAnsi16ColorsInTable();
     mLuaInterpreter.updateExtendedAnsiColorsInTable();
 
-    QString const directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("log"));
-    QString const logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
+    const QString directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("log"));
+    const QString logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
     QDir const dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
         dirLogFile.mkpath(directoryLogFile);
@@ -514,7 +514,7 @@ void Host::loadPackageInfo()
 {
     QStringList const packages = mInstalledPackages;
     for (int i = 0; i < packages.size(); i++) {
-        QString const packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, getName(), packages.at(i))};
+        const QString packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, getName(), packages.at(i))};
         QDir const dir(packagePath);
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
@@ -524,7 +524,7 @@ void Host::loadPackageInfo()
 
 void Host::createModuleBackup(const QString &filename, const QString &saveName)
 {
-    QString const time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
+    const QString time = QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss");
     QFile::copy(filename, saveName + time);
 }
 
@@ -556,7 +556,7 @@ void Host::saveModules(bool backup)
 {
     QMapIterator<QString, QStringList> it(modulesToWrite);
     mModulesToSync.clear();
-    QString const savePath = mudlet::getMudletPath(mudlet::moduleBackupsPath);
+    const QString savePath = mudlet::getMudletPath(mudlet::moduleBackupsPath);
     auto savePathDir = QDir(savePath);
     if (!savePathDir.exists()) {
         savePathDir.mkpath(savePath);
@@ -564,8 +564,8 @@ void Host::saveModules(bool backup)
     while (it.hasNext()) {
         it.next();
         QStringList entry = it.value();
-        QString const moduleName = it.key();
-        QString const filename = entry[0];
+        const QString moduleName = it.key();
+        const QString filename = entry[0];
 
         if (backup) {
             createModuleBackup(filename, savePath + moduleName);
@@ -614,8 +614,8 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
         return;
     }
     zip* zipFile = nullptr;
-    QString const packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
-    QString const filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
+    const QString packagePathName = mudlet::getMudletPath(mudlet::profilePackagePath, mHostName, moduleName);
+    const QString filename_xml = mudlet::getMudletPath(mudlet::profilePackagePathFileName, mHostName, moduleName);
     int err = 0;
     zipFile = zip_open(zipName.toStdString().c_str(), ZIP_CREATE, &err);
     if (!zipFile) {
@@ -1008,14 +1008,14 @@ unsigned int Host::assemblePath()
     unsigned int totalWeight = 0;
     QStringList pathList;
     for (int const i : qAsConst(mpMap->mPathList)) {
-        QString const n = QString::number(i);
+        const QString n = QString::number(i);
         pathList.append(n);
     }
     QStringList directionList = mpMap->mDirList;
     QStringList weightList;
     for (int const stepWeight : qAsConst(mpMap->mWeightList)) {
         totalWeight += stepWeight;
-        QString const n = QString::number(stepWeight);
+        const QString n = QString::number(stepWeight);
         weightList.append(n);
     }
     QString tableName = qsl("speedWalkPath");
@@ -1070,19 +1070,19 @@ void Host::startSpeedWalk()
 {
     int const totalWeight = assemblePath();
     Q_UNUSED(totalWeight);
-    QString const f = qsl("doSpeedWalk");
-    QString const n = QString();
+    const QString f = qsl("doSpeedWalk");
+    const QString n = QString();
     mLuaInterpreter.call(f, n);
 }
 
 void Host::startSpeedWalk(int sourceRoom, int targetRoom)
 {
-    QString const sourceName = qsl("speedWalkFrom");
+    const QString sourceName = qsl("speedWalkFrom");
     mLuaInterpreter.set_lua_integer(sourceName, sourceRoom);
-    QString const targetName = qsl("speedWalkTo");
+    const QString targetName = qsl("speedWalkTo");
     mLuaInterpreter.set_lua_integer(targetName, targetRoom);
-    QString const f = qsl("doSpeedWalk");
-    QString const n = QString();
+    const QString f = qsl("doSpeedWalk");
+    const QString n = QString();
     mLuaInterpreter.call(f, n);
 }
 
@@ -1564,7 +1564,7 @@ void Host::raiseEvent(const TEvent& pE)
         return;
     }
 
-    static QString const star = qsl("*");
+    static const QString star = qsl("*");
 
     if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
         QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
@@ -1699,8 +1699,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
     }
     QFile file2;
     if (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive)) {
-        QString const _home = mudlet::getMudletPath(mudlet::profileHomePath, getName());
-        QString const _dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+        const QString _home = mudlet::getMudletPath(mudlet::profileHomePath, getName());
+        const QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
         // home directory for the PROFILE
         QDir const _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -1767,7 +1767,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
                 }
             }
             // continuing, so update the folder name on disk
-            QString const newpath(qsl("%1/%2").arg(_home, packageName));
+            const QString newpath(qsl("%1/%2").arg(_home, packageName));
             _dir.rename(_dir.absolutePath(), newpath);
             _dir = QDir(newpath);
         }
@@ -2014,7 +2014,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
     getActionUnit()->updateToolbar();
 
-    QString const dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
+    const QString dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
 
     // ensure only one timer is running in case multiple modules are uninstalled at once
@@ -2042,7 +2042,7 @@ bool Host::uninstallPackage(const QString& packageName, int module)
 
 void Host::readPackageConfig(const QString& luaConfig, QString& packageName, bool isModule)
 {
-    QString const newName = getPackageConfig(luaConfig, isModule);
+    const QString newName = getPackageConfig(luaConfig, isModule);
     if (!newName.isEmpty()) {
         packageName = sanitizePackageName(newName);
     }

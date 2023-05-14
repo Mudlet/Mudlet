@@ -24,12 +24,12 @@
 TMxpTagHandlerResult TMxpFontTagHandler::handleStartTag(TMxpContext& context, TMxpClient& client, MxpStartTag* tag)
 {
     Q_UNUSED(context)
-    QString const fontFace = tag->getAttributeByNameOrIndex("FACE", 0);
-    QString const fontSize = tag->getAttributeByNameOrIndex("SIZE", 1);
+    const QString fontFace = tag->getAttributeByNameOrIndex("FACE", 0);
+    const QString fontSize = tag->getAttributeByNameOrIndex("SIZE", 1);
     client.pushFont(fontFace, fontSize);
 
-    QString const fgColor = tag->getAttributeByNameOrIndex("COLOR", 2);
-    QString const bgColor = tag->getAttributeByNameOrIndex("BACK", 3);
+    const QString fgColor = tag->getAttributeByNameOrIndex("COLOR", 2);
+    const QString bgColor = tag->getAttributeByNameOrIndex("BACK", 3);
     client.pushColor(fgColor, bgColor);
 
     return MXP_TAG_HANDLED;

@@ -494,7 +494,7 @@ void dlgRoomExits::save()
         } else if (pI->checkState(ExitsTreeWidget::colIndex_doorNone) == Qt::Checked) {
             door = 0;
         }
-        QString const key = pI->text(ExitsTreeWidget::colIndex_command);
+        const QString key = pI->text(ExitsTreeWidget::colIndex_command);
         if (key != mSpecialExitCommandPlaceholder
             && value != 0 && mpHost->mpMap->mpRoomDB->getRoom(value) != nullptr) {
             originalExitCmds.remove(key);
@@ -1569,7 +1569,7 @@ void dlgRoomExits::init()
     while (it.hasNext()) {
         it.next();
         int const id_to = it.value();
-        QString const dir = it.key();
+        const QString dir = it.key();
         auto pSpecialExit = new TExit();
         // It should be impossible for this not to be valid:
         Q_ASSERT_X(pSpecialExit, "dlgRoomExits::init(...)", "failed to generate a new TExit");
@@ -1997,7 +1997,7 @@ void dlgRoomExits::slot_checkModified()
                         || pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt() <= 0) {
                         continue; // Ignore new or to be deleted entries
                     }
-                    QString const currentCmd = pI->text(ExitsTreeWidget::colIndex_command);
+                    const QString currentCmd = pI->text(ExitsTreeWidget::colIndex_command);
                     TExit currentExit;
                     currentExit.destination = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
                     currentExit.hasNoRoute = pI->checkState(ExitsTreeWidget::colIndex_lockExit) == Qt::Checked;

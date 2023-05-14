@@ -61,7 +61,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     QMap<QString, QString> areaNames;
     while (it.hasNext()) {
         it.next();
-        QString const name = it.value();
+        const QString name = it.value();
         areaNames.insert(name.toLower(), name);
     }
     //areaNames.sort();
@@ -144,7 +144,7 @@ void dlgMapper::updateAreaComboBox()
         return;
     }
 
-    QString const oldValue = comboBox_showArea->currentText(); // Remember where we were
+    const QString oldValue = comboBox_showArea->currentText(); // Remember where we were
     QMapIterator<int, QString> itAreaNamesA(mpMap->mpRoomDB->getAreaNamesMap());
     //insert sort them alphabetically (case INsensitive)
     QMap<QString, QString> areaNames;
@@ -344,7 +344,7 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
         int const playerRoomArea = pR->getArea();
         TArea* pA = mpMap->mpRoomDB->getArea(playerRoomArea);
         if (pA) {
-            QString const areaName = mpMap->mpRoomDB->getAreaNamesMap().value(playerRoomArea);
+            const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(playerRoomArea);
             if (!areaName.isEmpty()) {
                 comboBox_showArea->setCurrentText(areaName);
             } else {

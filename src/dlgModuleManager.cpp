@@ -108,7 +108,7 @@ void dlgModuleManager::layoutModules()
             // checkbox more central in the column
             masterModule->setTextAlignment(Qt::AlignCenter);
 
-            QString const moduleName = pModules[i];
+            const QString moduleName = pModules[i];
             itemEntry->setText(moduleName);
             itemEntry->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
             itemLocation->setText(moduleInfo[0]);
@@ -130,7 +130,7 @@ void dlgModuleManager::slot_installModule()
         return;
     }
 
-    QString const fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), QDir::currentPath());
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Load Mudlet Module"), QDir::currentPath());
     if (fileName.isEmpty()) {
         return;
     }
@@ -234,12 +234,12 @@ void dlgModuleManager::slot_helpModule()
         if (!mudlet::self()->openWebPage(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")))) {
             //failed first open, try for a module related path
             QTableWidgetItem* item = moduleTable->item(cRow, 3);
-            QString const itemPath = item->text();
+            const QString itemPath = item->text();
             QStringList path = itemPath.split(QDir::separator());
             path.pop_back();
             path.append(QDir::separator());
             path.append(mpHost->moduleHelp.value(pI->text()).value(QLatin1String("helpURL")));
-            QString const path2 = path.join(QString());
+            const QString path2 = path.join(QString());
             if (!mudlet::self()->openWebPage(path2)) {
                 helpButton->setDisabled(true);
             }

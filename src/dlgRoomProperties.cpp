@@ -147,7 +147,7 @@ void dlgRoomProperties::init(
 
 void dlgRoomProperties::initLockInstructions()
 {
-    QString const instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
+    const QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
                            // Intentional comment to separate arguments!
                            "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
                            mpRooms.size());
@@ -309,7 +309,7 @@ void dlgRoomProperties::accept()
     //   to the other room data here) - They need no further review at this time.
 
     // Find symbol to return back
-    QString const newSymbol = getNewSymbol();
+    const QString newSymbol = getNewSymbol();
     bool changeSymbol = true;
     QColor const newSymbolColor = selectedSymbolColor;
     bool changeSymbolColor = true;
@@ -374,7 +374,7 @@ int dlgRoomProperties::getNewWeight()
     if (mpWeights.size() <= 1) {
         return spinBox_weight->value();
     }
-    QString const newWeightText = comboBox_weight->currentText();
+    const QString newWeightText = comboBox_weight->currentText();
     if (newWeightText == multipleValuesPlaceholder) {
         return -1; // User did not want to select any weight, so we will do no change
     }
