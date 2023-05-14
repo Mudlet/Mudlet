@@ -1963,7 +1963,7 @@ void TConsole::dropEvent(QDropEvent* e)
 {
     for (const auto& url : e->mimeData()->urls()) {
         const QString fname = url.toLocalFile();
-        QFileInfo const info(fname);
+        const QFileInfo info(fname);
         if (info.exists()) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             const QPoint pos = e->pos();

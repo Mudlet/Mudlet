@@ -1340,7 +1340,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
 
     bool result = false;
 
-    QFileInfo const fileInfo(location);
+    const QFileInfo fileInfo(location);
     QString filePathNameString;
     if (!fileInfo.filePath().isEmpty()) {
         if (fileInfo.isRelative()) {

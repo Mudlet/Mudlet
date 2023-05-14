@@ -82,7 +82,7 @@ void FontManager::loadFont(const QString& filePath, const QString& belongsTo)
 
 bool FontManager::fontAlreadyLoaded(const QString& filePath)
 {
-    QFileInfo const fontFile(filePath);
+    const QFileInfo fontFile(filePath);
     auto fileName = fontFile.fileName();
 
     return loadedFontPaths.contains(fileName);
@@ -90,7 +90,7 @@ bool FontManager::fontAlreadyLoaded(const QString& filePath)
 
 void FontManager::rememberFont(const QString& filePath, int fontID, const QString& belongsTo)
 {
-    QFileInfo const fontFile(filePath);
+    const QFileInfo fontFile(filePath);
     auto fileName = fontFile.fileName();
 
     if (loadedFontPaths.contains(fileName)) {

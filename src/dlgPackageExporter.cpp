@@ -304,7 +304,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
 
     //get files and folders from package
     ui->listWidget_addedFiles->clear();
-    QFileInfo const info(qsl("%1/%2/").arg(packagePath, packageName));
+    const QFileInfo info(qsl("%1/%2/").arg(packagePath, packageName));
     if (!info.exists()) {
         return;
     }
@@ -312,7 +312,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QStringList ignore;
     ignore << QLatin1String("config.lua") << qsl("%1.xml").arg(packageName);
     while (it.hasNext()) {
-        QFileInfo const f(it.next());
+        const QFileInfo f(it.next());
         if (ignore.contains(f.fileName(), Qt::CaseInsensitive)) {
             continue;
         }
@@ -396,7 +396,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             }
             for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = mDescriptionImages.at(i);
-                QFileInfo const info(fname);
+                const QFileInfo info(fname);
                 fname = QUrl::toPercentEncoding(fname).constData();
                 plainText.replace(qsl("$%1").arg(info.fileName()), fname);
             }
@@ -419,7 +419,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             QDropEvent* dropEvent = static_cast<QDropEvent*>(evt);
             for (const auto& url : dropEvent->mimeData()->urls()) {
                 const QString fname = url.toLocalFile();
-                QFileInfo const info(fname);
+                const QFileInfo info(fname);
                 if (info.exists()) {
                     ui->listWidget_addedFiles->addItem(fname);
                 }
@@ -447,7 +447,7 @@ void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& t
     }
     targetDir.mkdir(toDir);
     while (it.hasNext()) {
-        QFileInfo const f(it.next());
+        const QFileInfo f(it.next());
         if (f.fileName() == QLatin1String(".") || f.fileName() == QLatin1String("..") || f.isSymLink()) {
             continue;
         }
@@ -520,7 +520,7 @@ void dlgPackageExporter::slot_exportPackage()
     // start copying assets in the background
     auto assetsFuture = QtConcurrent::run(dlgPackageExporter::copyAssetsToTmp, assetPaths, tempPath);
 
-    QFileInfo const iconFile = copyIconToTmp(tempPath);
+    const QFileInfo iconFile = copyIconToTmp(tempPath);
 
     mXmlPathFileName = qsl("%1/%2.xml").arg(stagingDirName, mPackageName);
     writeConfigFile(stagingDirName, iconFile, plainDescription);
@@ -601,7 +601,7 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
     QString plainDescription = mPlainDescription;
     for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
         const QString fname = mDescriptionImages.at(i);
-        QFileInfo const info(fname);
+        const QFileInfo info(fname);
         if (plainDescription.contains(qsl("$%1").arg(info.fileName()))) {
             newImagesList.append(fname);
         }
@@ -615,7 +615,7 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
             descriptionImageDir.mkpath(descriptionImagesDirName);
         }
         for (int i = newImagesList.size() - 1; i >= 0; i--) {
-            QFileInfo const imageFile(newImagesList.at(i));
+            const QFileInfo imageFile(newImagesList.at(i));
             if (imageFile.exists()) {
                 QString imageDir = descriptionImagesDirName;
                 imageDir.append(imageFile.fileName());
@@ -644,7 +644,7 @@ void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QStr
     // iterate through all images in folder, if our list doesn't contain it - remove
     QDirIterator allImagesCopied(qsl("%1.mudlet/description_images").arg(tempPath), QDir::Files);
     while (allImagesCopied.hasNext()) {
-        QFileInfo const copiedImage(allImagesCopied.next());
+        const QFileInfo copiedImage(allImagesCopied.next());
         if (!imagesInUse.contains(copiedImage.baseName())) {
             if (!QFile(copiedImage.absoluteFilePath()).remove()) {
                 qDebug() << "couldn't remove unused image" << copiedImage.fileName();
@@ -836,7 +836,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
 
 QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 {
-    QFileInfo const iconFile(mPackageIconPath);
+    const QFileInfo iconFile(mPackageIconPath);
     if (iconFile.exists()) {
         QString iconDirName = qsl("%1.mudlet/Icon/").arg(tempPath);
         const QDir iconDir = QDir(iconDirName);
@@ -852,7 +852,7 @@ QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath)
 {
     for (const auto& assetPath : assetPaths) {
-        QFileInfo const asset(assetPath);
+        const QFileInfo asset(assetPath);
         QString filePath = tempPath;
         filePath.append(asset.fileName());
         if (!asset.exists()) {
@@ -924,7 +924,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             continue;
         }
 
-        QFileInfo const stagingFileInfo(stagingFile.fileInfo());
+        const QFileInfo stagingFileInfo(stagingFile.fileInfo());
         if (!stagingFileInfo.isReadable()) {
             qWarning() << "dlgPackageExporter::slot_exportPackage() skipping file: " << stagingFile.fileName() << "it is NOT readable!";
             continue;
@@ -1540,7 +1540,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
                        << "svg";
         for (const auto& url : source->urls()) {
             const QString fname = url.toLocalFile();
-            QFileInfo const info(fname);
+            const QFileInfo info(fname);
             if (info.exists() && accepted_types.contains(info.suffix().trimmed(), Qt::CaseInsensitive)) {
                 if (!my_parent->mDescriptionImages.contains(fname)) {
                     my_parent->mDescriptionImages.append(fname);
@@ -1555,7 +1555,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
             QString plainText = my_parent->mPlainDescription;
             for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = my_parent->mDescriptionImages.at(i);
-                QFileInfo const info(fname);
+                const QFileInfo info(fname);
                 fname = QUrl::toPercentEncoding(fname).constData();
                 plainText.replace(qsl("$%1").arg(info.fileName()), fname);
             }

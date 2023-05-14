@@ -17419,7 +17419,7 @@ int TLuaInterpreter::addFileWatch(lua_State * L)
     auto path = getVerifiedString(L, __func__, 1, "path");
     auto& host = getHostFromLua(L);
 
-    QFileInfo const fileInfo(path);
+    const QFileInfo fileInfo(path);
     if (!fileInfo.exists()) {
         return warnArgumentValue(L, __func__, qsl("path '%1' does not exist").arg(path));
     }

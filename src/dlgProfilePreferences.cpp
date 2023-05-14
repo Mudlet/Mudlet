@@ -2259,7 +2259,7 @@ void dlgProfilePreferences::fillOutMapHistory()
             }
         } else if (!entry.compare(QLatin1String("autosave.dat"), Qt::CaseInsensitive)) {
             // The auto-saved file:
-            QFileInfo const fileInfo(mapSaveDir, entry);
+            const QFileInfo fileInfo(mapSaveDir, entry);
             auto lastModified = fileInfo.lastModified();
             const QString itemText = locale.toString(lastModified, dateTimeFormat);
             longestMapHistoryLength = qMax(longestMapHistoryLength, itemText.size());

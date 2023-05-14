@@ -908,7 +908,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
             profile_history->addItem(mudlet::self()->getUserLocale().toString(datetime, mDateTimeFormat), QVariant(entry));
         } else if (entry == QLatin1String("autosave.xml")) {
-            QFileInfo const fileInfo(dir, entry);
+            const QFileInfo fileInfo(dir, entry);
             auto lastModified = fileInfo.lastModified();
             profile_history->addItem(QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))),
                                      mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat),
