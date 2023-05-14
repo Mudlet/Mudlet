@@ -90,7 +90,7 @@ MapInfoProperties MapInfoContributorManager::shortInfo(int roomID, int selection
     QString infoText;
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
-        QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+        const QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         static const QRegularExpression trailingPunctuation(qsl("[.,/]+$"));
         auto roomName = QString(room->name);
         if (mpHost->mMapViewOnly) {
@@ -113,7 +113,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
     TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomID);
     if (room) {
         TArea* area = mpHost->mpMap->mpRoomDB->getArea(areaId);
-        QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+        const QString areaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
         if (area) {
             infoText = qsl("%1\n").arg(
                            tr("Area:%1%2 ID:%1%3 x:%1%4%1<‑>%1%5 y:%1%6%1<‑>%1%7 z:%1%8%1<‑>%1%9",

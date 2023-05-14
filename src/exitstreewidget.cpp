@@ -42,7 +42,7 @@ void ExitsTreeWidget::keyPressEvent(QKeyEvent* event)
         closePersistentEditor(currentItem(), colIndex_command);
     }
     if (event->key() == Qt::Key_Delete && hasFocus()) {
-        QList<QTreeWidgetItem*> selection = selectedItems();
+        QList<QTreeWidgetItem*> const selection = selectedItems();
         for (auto pItem : selection) {
             takeTopLevelItem(indexOfTopLevelItem(pItem));
         }

@@ -166,7 +166,7 @@ bool TKey::setScript(const QString& script)
 bool TKey::compileScript()
 {
     mFuncName = QString("Key") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    const QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
     QString error;
     if (mpHost->mLuaInterpreter.compile(code, error, QString("Key: ") + getName())) {
         mNeedsToBeCompiled = false;

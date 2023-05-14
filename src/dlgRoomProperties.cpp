@@ -147,7 +147,7 @@ void dlgRoomProperties::init(
 
 void dlgRoomProperties::initLockInstructions()
 {
-    QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
+    const QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
                            // Intentional comment to separate arguments!
                            "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
                            mpRooms.size());
@@ -309,9 +309,9 @@ void dlgRoomProperties::accept()
     //   to the other room data here) - They need no further review at this time.
 
     // Find symbol to return back
-    QString newSymbol = getNewSymbol();
+    const QString newSymbol = getNewSymbol();
     bool changeSymbol = true;
-    QColor newSymbolColor = selectedSymbolColor;
+    QColor const newSymbolColor = selectedSymbolColor;
     bool changeSymbolColor = true;
     if (newSymbol == multipleValuesPlaceholder) {
         // We don't want to change then
@@ -320,7 +320,7 @@ void dlgRoomProperties::accept()
     }
 
     // Find weight to return back
-    int newWeight = getNewWeight();
+    const int newWeight = getNewWeight();
     bool changeWeight = true;
     if (newWeight <= -1) {
         // We don't want to change then
@@ -328,7 +328,7 @@ void dlgRoomProperties::accept()
     }
 
     // Find lock status to return back
-    Qt::CheckState newCheckState = checkBox_locked->checkState();
+    Qt::CheckState const newCheckState = checkBox_locked->checkState();
     bool changeLockStatus = true;
     bool newLockStatus;
     if (newCheckState == Qt::PartiallyChecked) {
@@ -360,8 +360,8 @@ QString dlgRoomProperties::getNewSymbol()
     }
     QString newSymbolText = comboBox_roomSymbol->currentText();
     // Parse the initial text before the curly braces containing count
-    QRegularExpression countStripper(qsl("^(.*) {.*}$"));
-    QRegularExpressionMatch match = countStripper.match(newSymbolText);
+    QRegularExpression const countStripper(qsl("^(.*) {.*}$"));
+    QRegularExpressionMatch const match = countStripper.match(newSymbolText);
     if (match.hasMatch() && match.lastCapturedIndex() > 0) {
         return match.captured(1);
     }
@@ -374,13 +374,13 @@ int dlgRoomProperties::getNewWeight()
     if (mpWeights.size() <= 1) {
         return spinBox_weight->value();
     }
-    QString newWeightText = comboBox_weight->currentText();
+    const QString newWeightText = comboBox_weight->currentText();
     if (newWeightText == multipleValuesPlaceholder) {
         return -1; // User did not want to select any weight, so we will do no change
     }
     // Parse an initial number out of what was selected or typed
-    QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
-    QRegularExpressionMatch match = countStripper.match(newWeightText);
+    QRegularExpression const countStripper(qsl("^\\s*(\\d+)"));
+    QRegularExpressionMatch const match = countStripper.match(newWeightText);
     if (match.hasMatch() && match.lastCapturedIndex() > 0) {
         return match.captured(1).toInt();
     }
@@ -417,13 +417,13 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
     auto font = mpHost->mpMap->mMapSymbolFont;
     font.setPointSize(font.pointSize() * 0.9);
     if (!symbolString.isEmpty()) {
-        QFontMetrics mapSymbolFontMetrics = QFontMetrics(font);
-        QVector<quint32> codePoints = symbolString.toUcs4();
+        QFontMetrics const mapSymbolFontMetrics = QFontMetrics(font);
+        QVector<quint32> const codePoints = symbolString.toUcs4();
         QVector<bool> isUsable;
         for (int i = 0; i < codePoints.size(); ++i) {
             isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
         }
-        bool needToFallback = isUsable.contains(false);
+        const bool needToFallback = isUsable.contains(false);
         if (needToFallback) {
             symbolString = QString(QChar::ReplacementCharacter);
             font.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
@@ -556,7 +556,7 @@ void dlgRoomProperties::slot_openRoomColorSelector()
         auto pI = new QListWidgetItem(listWidget);
         QPixmap pix = QPixmap(50, 50);
         pix.fill(c);
-        QIcon mi(pix);
+        const QIcon mi(pix);
         pI->setIcon(mi);
         pI->setText(QString::number(it.key()));
         listWidget->addItem(pI);

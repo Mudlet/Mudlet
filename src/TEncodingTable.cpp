@@ -35,7 +35,7 @@ QList<QByteArray> TEncodingTable::getEncodingNames() const
 
         QMutableByteArrayListIterator itEncoding(results);
         while (itEncoding.hasNext()) {
-            QByteArray encoding{itEncoding.next()};
+            QByteArray const encoding{itEncoding.next()};
             QTextCodec* pEncoding = QTextCodec::codecForName(encoding);
             if (!pEncoding) {
                 // We do not have that encoder available after all

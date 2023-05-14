@@ -102,8 +102,8 @@ QString TVar::getName()
 
 bool TVarLessThan(TVar* varA, TVar* varB)
 {
-    QString a = varA->getName();
-    QString b = varB->getName();
+    const QString a = varA->getName();
+    const QString b = varB->getName();
     bool isAOk = false;
     bool isBOk = false;
 
