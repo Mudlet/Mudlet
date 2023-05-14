@@ -7,8 +7,8 @@
   "configurePresets": [
     {
       "name": "ninja-multi-vcpkg",
-      "displayName": "Ninja Multi-Config",
-      "description": "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+      "displayName": "Vcpkg Config",
+      "description": "Configure with vcpkg dependencies and generate Ninja project files for all configurations",
       "binaryDir": "${sourceDir}/builds/${presetName}",
       "generator": "Ninja Multi-Config",
       "cacheVariables": {
@@ -18,23 +18,44 @@
         }
       },
       "environment": {
-        "VCPKG_ROOT": "./vcpkg"
+        "VCPKG_ROOT": "./3rdparty/vcpkg"
       }
+    },
+    {
+      "name": "ninja-multi",
+      "displayName": "Config",
+      "description": "Configure and generate Ninja project files for all configurations",
+      "binaryDir": "${sourceDir}/builds/${presetName}",
+      "generator": "Ninja Multi-Config"
     }
   ],
   "buildPresets": [
     {
-      "name": "debug",
-      "configurePreset": "ninja-multi-vcpkg",
+      "name": "ninja-vcpkg-debug",
       "displayName": "Debug",
+      "configurePreset": "ninja-multi",
       "description": "Build a release version of Mudlet",
       "configuration": "Debug"
     },
     {
-      "name": "release",
-      "configurePreset": "ninja-multi-vcpkg",
+      "name": "ninja-vcpkg-release",
       "displayName": "Release",
+      "configurePreset": "ninja-multi",
       "description": "Build a debug version of Mudlet",
+      "configuration": "Release"
+    },
+    {
+      "name": "ninja-debug",
+      "displayName": "Debug",
+      "configurePreset": "ninja-multi-vcpkg",
+      "description": "Build a release version of Mudlet using vcpkg dependencies",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ninja-release",
+      "displayName": "Release",
+      "configurePreset": "ninja-multi-vcpkg",
+      "description": "Build a debug version of Mudlet using vcpkg dependencies",
       "configuration": "Release"
     }
   ]
