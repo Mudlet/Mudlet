@@ -151,7 +151,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
 
     // inform the command parser of the target for this message.
     // parses the message and then reverts the target to avoid confusing our UI.
-    QString lastParserTarget = commandParser->target();
+    const QString lastParserTarget = commandParser->target();
     commandParser->setTarget(msgTarget);
     IrcCommand* command = commandParser->parse(message);
     commandParser->setTarget(lastParserTarget);
@@ -160,7 +160,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         return QPair<bool, QString>(false, qsl("message could not be parsed"));
     }
 
-    bool isCustomCommand = processCustomCommand(command);
+    const bool isCustomCommand = processCustomCommand(command);
     if (isCustomCommand) {
         return QPair<bool, QString>(true, qsl("command processed by client"));
     }
@@ -191,7 +191,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
 
 void dlgIRC::ircRestart(bool reloadConfigs)
 {
-    QString msg = tr("Restarting IRC Client");
+    const QString msg = tr("Restarting IRC Client");
     ircBrowser->append(IrcMessageFormatter::formatMessage("! %1.").arg(msg));
 
     // issue a quit message to the network if we're connected.
@@ -200,7 +200,7 @@ void dlgIRC::ircRestart(bool reloadConfigs)
     }
 
     // remove the old buffers.
-    for (QString chName : qAsConst(mChannels)) {
+    for (const QString chName : qAsConst(mChannels)) {
         if (chName == serverBuffer->name()) {
             continue; // skip the server-buffer.
         }
@@ -304,7 +304,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
     if (cmdName == "CLEAR") {
         auto * buffer = bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
         if (cmd->parameters().count() > 1) {
-            QString bufferName = cmd->parameters().at(1);
+            const QString bufferName = cmd->parameters().at(1);
             //QString cBufferName = buffer->title();
             if (!bufferName.isEmpty()) {
                 buffer = bufferModel->find(bufferName);
@@ -368,12 +368,12 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
             }
         }
         if (limit <= 0) {
-            QString error = tr("[Error] MSGLIMIT requires <limit> to be a whole number greater than zero!");
+            const QString error = tr("[Error] MSGLIMIT requires <limit> to be a whole number greater than zero!");
             ircBrowser->append(IrcMessageFormatter::formatMessage(error, qsl("indianred")));
             return true;
         }
         if (cmd->parameters().count() > 2) {
-            QString bufferName = cmd->parameters().at(2);
+            const QString bufferName = cmd->parameters().at(2);
             if (!bufferName.isEmpty()) {
                 IrcBuffer* buffer = bufferModel->find(bufferName);
                 if (buffer) {
@@ -430,7 +430,7 @@ void dlgIRC::slot_onTextEdited()
 
 void dlgIRC::slot_onTextEntered()
 {
-    QString input = lineEdit->text();
+    const QString input = lineEdit->text();
 
     // add this line to our history list.
     if (!input.isEmpty()) {
@@ -449,7 +449,7 @@ void dlgIRC::slot_onTextEntered()
     IrcCommand* command = commandParser->parse(input);
     if (command) {
         // handle custom commands
-        bool isCustomCommand = processCustomCommand(command);
+        const bool isCustomCommand = processCustomCommand(command);
         if (isCustomCommand) {
             lineEdit->clear();
             return;
@@ -479,7 +479,7 @@ void dlgIRC::slot_onTextEntered()
         lineEdit->clear();
     } else if (input.length() > 1) {
         QString error;
-        QString command = lineEdit->text().mid(1).split(" ", Qt::SkipEmptyParts).value(0).toUpper();
+        const QString command = lineEdit->text().mid(1).split(" ", Qt::SkipEmptyParts).value(0).toUpper();
         if (commandParser->commands().contains(command)) {
             error = tr("[ERROR] Syntax: %1").arg(commandParser->syntax(command).replace(qsl("<"), qsl("&lt;")).replace(qsl(">"), qsl("&gt;")));
         } else {
@@ -528,7 +528,7 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     userModel->setSortMethod(Irc::SortByTitle);
     userModels.insert(buffer, userModel);
     // activate the new buffer
-    int idx = bufferModel->buffers().indexOf(buffer);
+    const int idx = bufferModel->buffers().indexOf(buffer);
     if (idx != -1) {
         bufferList->setCurrentIndex(bufferModel->index(idx));
     }
@@ -565,7 +565,7 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
         }
         IrcBuffer* buffer = bufferModel->add(user->name());
         // activate the new query
-        int idx = bufferModel->buffers().indexOf(buffer);
+        const int idx = bufferModel->buffers().indexOf(buffer);
         if (idx != -1) {
             bufferList->setCurrentIndex(bufferModel->index(idx));
         }
@@ -598,14 +598,14 @@ void dlgIRC::slot_receiveMessage(IrcMessage* message)
     }
     QTextDocument* document = bufferTexts.value(buffer);
     if (document) {
-        QString html = IrcMessageFormatter::formatMessage(message);
+        const QString html = IrcMessageFormatter::formatMessage(message);
         if (!html.isEmpty()) {
             // send a plain-text formatted copy of the message to Lua, as long as it isn't our own.
             if (!message->isOwn()) {
-                QString textToLua = IrcMessageFormatter::formatMessage(message, true);
+                const QString textToLua = IrcMessageFormatter::formatMessage(message, true);
                 if (!textToLua.isEmpty()) {
-                    QString from = message->nick();
-                    QString to = getMessageTarget(message, buffer->title());
+                    const QString from = message->nick();
+                    const QString to = getMessageTarget(message, buffer->title());
                     mpHost->postIrcMessage(from, to, textToLua);
                 }
             }
@@ -628,7 +628,7 @@ void dlgIRC::slot_onAnchorClicked(const QUrl& link)
 void dlgIRC::slot_nickNameRequired(const QString& reserved, QString* alt)
 {
     Q_UNUSED(alt)
-    QString newNick = qsl("%1_%2").arg(reserved, QString::number(rand() % 10000));
+    const QString newNick = qsl("%1_%2").arg(reserved, QString::number(rand() % 10000));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, newNick)));
     connection->setNickName(newNick);
 }
@@ -652,26 +652,26 @@ void dlgIRC::slot_joinedChannel(IrcJoinMessage* message)
         mReadyForSending = true;
     }
 
-    QString chan = message->channel();
+    const QString chan = message->channel();
     if (!mChannels.contains(chan)) {
         mChannels << chan;
     }
 
     if (message->isOwn()) {
-        QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
+        const QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
         mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
     }
 }
 
 void dlgIRC::slot_partedChannel(IrcPartMessage* message)
 {
-    QString chan = message->channel();
+    const QString chan = message->channel();
     if (mChannels.contains(chan)) {
         mChannels.removeAll(chan);
     }
 
     if (message->isOwn()) {
-        QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
+        const QString luaText = IrcMessageFormatter::formatMessage(static_cast<IrcMessage*>(message), true);
         mpHost->postIrcMessage(message->nick(), message->channel(), luaText);
     }
 }
@@ -727,7 +727,7 @@ QString dlgIRC::readIrcHostName(Host* pH)
 
 int dlgIRC::readIrcHostPort(Host* pH)
 {
-    QString portStr = pH->readProfileData(dlgIRC::HostPortCfgItem);
+    const QString portStr = pH->readProfileData(dlgIRC::HostPortCfgItem);
     bool ok;
     int port = portStr.toInt(&ok);
     if (portStr.isEmpty() || !ok) {
@@ -740,7 +740,7 @@ int dlgIRC::readIrcHostPort(Host* pH)
 
 bool dlgIRC::readIrcHostSecure(Host* pH)
 {
-    QString secureStr = pH->readProfileData(dlgIRC::HostSecureCfgItem);
+    const QString secureStr = pH->readProfileData(dlgIRC::HostSecureCfgItem);
     return secureStr.contains(QLatin1String("true"), Qt::CaseInsensitive);
 }
 
@@ -767,7 +767,7 @@ QString dlgIRC::readIrcPassword(Host* pH)
 QString dlgIRC::readAppDefaultIrcNick()
 {
     QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("irc_nick")));
-    bool opened = file.open(QIODevice::ReadOnly);
+    const bool opened = file.open(QIODevice::ReadOnly);
     QString rstr;
     if (opened) {
         QDataStream ifs(&file);
@@ -783,7 +783,7 @@ QString dlgIRC::readAppDefaultIrcNick()
 void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 {
     QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("irc_nick")));
-    bool opened = file.open(QIODevice::WriteOnly);
+    const bool opened = file.open(QIODevice::WriteOnly);
     if (opened) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
@@ -799,7 +799,7 @@ void dlgIRC::writeAppDefaultIrcNick(const QString& nick)
 QStringList dlgIRC::readIrcChannels(Host* pH)
 {
     QStringList channels;
-    QString channelstr = pH->readProfileData(dlgIRC::ChannelsCfgItem);
+    const QString channelstr = pH->readProfileData(dlgIRC::ChannelsCfgItem);
     if (channelstr.isEmpty()) {
         channels << dlgIRC::DefaultChannels;
     } else {

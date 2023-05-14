@@ -61,9 +61,9 @@ dlgNotepad::~dlgNotepad()
 
 void dlgNotepad::save()
 {
-    QString directoryFile = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName());
-    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
-    QDir dirFile;
+    const QString directoryFile = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName());
+    const QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    const QDir dirFile;
     if (!dirFile.exists(directoryFile)) {
         dirFile.mkpath(directoryFile);
     }

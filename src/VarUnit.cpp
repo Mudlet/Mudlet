@@ -189,7 +189,7 @@ QStringList VarUnit::shortVarName(TVar* var)
 
 void VarUnit::addVariable(TVar* var)
 {
-    QString fullName = varName(var).join(qsl("."));
+    const QString fullName = varName(var).join(qsl("."));
     // pointers.insert(var->pointer);
     variableSet.insert(fullName);
     if (var->hidden) {
@@ -214,7 +214,7 @@ void VarUnit::addHidden(const QString& var)
 
 void VarUnit::removeHidden(TVar* var)
 {
-    QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarName(var).join(qsl("."));
     hidden.remove(fullName);
     hiddenByUser.remove(fullName);
     var->hidden = false;
@@ -229,21 +229,21 @@ void VarUnit::removeHidden(const QString& name)
 
 void VarUnit::addSavedVar(TVar* var)
 {
-    QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarName(var).join(qsl("."));
     var->saved = true;
     savedVars.insert(fullName);
 }
 
 void VarUnit::removeSavedVar(TVar* var)
 {
-    QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarName(var).join(qsl("."));
     savedVars.remove(fullName);
     var->saved = false;
 }
 
 bool VarUnit::isSaved(TVar* var)
 {
-    QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarName(var).join(qsl("."));
     return (savedVars.contains(fullName) || var->saved);
 }
 
