@@ -148,7 +148,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                     versionString = attributes().value(qsl("version")).toString();
                     if (!versionString.isEmpty()) {
                         bool isOk = false;
-                        float const versionNumber = versionString.toFloat(&isOk);
+                        const float versionNumber = versionString.toFloat(&isOk);
                         if (isOk) {
                             mVersionMajor = qFloor(versionNumber);
                             mVersionMinor = qRound(1000.0 * versionNumber) - (1000 * mVersionMajor);

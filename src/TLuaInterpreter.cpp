@@ -8925,7 +8925,7 @@ int TLuaInterpreter::highlightRoom(lua_State* L)
     const int bgr = getVerifiedInt(L, __func__, 5, "color2Red");
     const int bgg = getVerifiedInt(L, __func__, 6, "color2Green");
     const int bgb = getVerifiedInt(L, __func__, 7, "color2Blue");
-    float const radius = getVerifiedFloat(L, __func__, 8, "highlightRadius");
+    const float radius = getVerifiedFloat(L, __func__, 8, "highlightRadius");
     const int alpha1 = getVerifiedInt(L, __func__, 9, "color1Alpha");
     const int alpha2 = getVerifiedInt(L, __func__, 10, "color2Alpha");
 
@@ -8966,9 +8966,9 @@ int TLuaInterpreter::createMapLabel(lua_State* L)
     const int args = lua_gettop(L);
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
     const QString text = getVerifiedString(L, __func__, 2, "text");
-    float const posx = getVerifiedFloat(L, __func__, 3, "posX");
-    float const posy = getVerifiedFloat(L, __func__, 4, "posY");
-    float const posz = getVerifiedFloat(L, __func__, 5, "posZ");
+    const float posx = getVerifiedFloat(L, __func__, 3, "posX");
+    const float posy = getVerifiedFloat(L, __func__, 4, "posY");
+    const float posz = getVerifiedFloat(L, __func__, 5, "posZ");
     const int fgr = getVerifiedInt(L, __func__, 6, "fgRed");
     const int fgg = getVerifiedInt(L, __func__, 7, "fgGreen");
     const int fgb = getVerifiedInt(L, __func__, 8, "fgBlue");
@@ -9056,12 +9056,12 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     const int args = lua_gettop(L);
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
     const QString imagePathFileName = getVerifiedString(L, __func__, 2, "imagePathFileName");
-    float const posx = getVerifiedFloat(L, __func__, 3, "posX");
-    float const posy = getVerifiedFloat(L, __func__, 4, "posY");
-    float const posz = getVerifiedFloat(L, __func__, 5, "posZ");
-    float const width = getVerifiedFloat(L, __func__, 6, "width");
-    float const height = getVerifiedFloat(L, __func__, 7, "height");
-    float const zoom = getVerifiedFloat(L, __func__, 8, "zoom");
+    const float posx = getVerifiedFloat(L, __func__, 3, "posX");
+    const float posy = getVerifiedFloat(L, __func__, 4, "posY");
+    const float posz = getVerifiedFloat(L, __func__, 5, "posZ");
+    const float width = getVerifiedFloat(L, __func__, 6, "width");
+    const float height = getVerifiedFloat(L, __func__, 7, "height");
+    const float zoom = getVerifiedFloat(L, __func__, 8, "zoom");
     const bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
     bool temporary = false;
     if (args > 9) {

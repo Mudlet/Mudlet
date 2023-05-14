@@ -324,7 +324,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                             closestSquareDistance = meanToRoom.lengthSquared();
                             closestCenterRoom = room;
                         } else {
-                            float const currentRoomSquareDistance = meanToRoom.lengthSquared();
+                            const float currentRoomSquareDistance = meanToRoom.lengthSquared();
                             if (closestSquareDistance > currentRoomSquareDistance) {
                                 closestSquareDistance = currentRoomSquareDistance;
                                 closestCenterRoom = room;
@@ -387,7 +387,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                         closestSquareDistance = meanToRoom.lengthSquared();
                         closestCenterRoom = room;
                     } else {
-                        float const currentRoomSquareDistance = meanToRoom.lengthSquared();
+                        const float currentRoomSquareDistance = meanToRoom.lengthSquared();
                         if (closestSquareDistance > currentRoomSquareDistance) {
                             closestSquareDistance = currentRoomSquareDistance;
                             closestCenterRoom = room;
@@ -417,7 +417,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
 void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
 {
     // Some constants used to prevent small, unreadable symbols:
-    static float const symbolLowerSizeLimit = 8.0;
+    static const float symbolLowerSizeLimit = 8.0;
     static unsigned const int minimumUsableFontSize = 8;
 
     // Draw onto a rectangle that will fit the room symbol rectangle,
@@ -711,7 +711,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
     painter.setPen(roomPen);
 
     if (mBubbleMode) {
-        float const roomRadius = 0.5 * rSize * mRoomWidth;
+        const float roomRadius = 0.5 * rSize * mRoomWidth;
         QPointF const roomCenter = QPointF(rx, ry);
         if (!isRoomSelected) {
             // CHECK: The use of a gradient fill to a white center on round
@@ -739,7 +739,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
             // within the area - there is a separate block of code further down
             // in this method that handles clicking on the out of area exit so
             // that a speed walk is done to the room in the OTHER area:
-            float const roomRadius = 0.4 * mRoomWidth;
+            const float roomRadius = 0.4 * mRoomWidth;
             QPointF const roomCenter = QPointF(rx, ry);
             QRadialGradient gradient(roomCenter, roomRadius);
             gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
@@ -811,7 +811,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
 
     // Do we need to draw the custom (user specified) highlight
     if (pRoom->highlight) {
-        float const roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
+        const float roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
         QPointF const roomCenter = QPointF(rx, ry);
         QRadialGradient gradient(roomCenter, roomRadius);
         gradient.setColorAt(0.85, pRoom->highlightColor);
@@ -1120,7 +1120,7 @@ inline void T2DMap::drawRoom(QPainter& painter,
                 // that it is useful, note that there is similar code for a
                 // room being clicked on that is WITHIN the area, that is
                 // above this point in the source code:
-                float const roomRadius = (0.8 * mRoomWidth) / 2.0;
+                const float roomRadius = (0.8 * mRoomWidth) / 2.0;
                 QRadialGradient gradient(roomCenter, roomRadius);
                 gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
                 gradient.setColorAt(0.80, QColor(150, 100, 100, 150));
@@ -1336,7 +1336,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     const int zLevel = mOz;
 
-    float const exitWidth = 1 / eSize * mRoomWidth * rSize;
+    const float exitWidth = 1 / eSize * mRoomWidth * rSize;
 
     painter.fillRect(0, 0, width(), height(), mpHost->mBgColor_2);
 
@@ -1417,8 +1417,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
             continue;
         }
 
-        float const rx = room->x *       mRoomWidth + static_cast<float>(mRX);
-        float const ry = room->y * -1 * mRoomHeight + static_cast<float>(mRY);
+        const float rx = room->x *       mRoomWidth + static_cast<float>(mRX);
+        const float ry = room->y * -1 * mRoomHeight + static_cast<float>(mRY);
         if (rx < 0 || ry < 0 || rx > widgetWidth || ry > widgetHeight) {
             continue;
         }
@@ -1518,12 +1518,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
     if (mMultiSelectionHighlightRoomId > 0 && mMultiSelectionSet.size() > 1) {
         TRoom* pR_multiSelectionHighlight = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
         if (pR_multiSelectionHighlight) {
-            float const r_mSx = pR_multiSelectionHighlight->x * mRoomWidth + mRX;
-            float const r_mSy = pR_multiSelectionHighlight->y * -1 * mRoomHeight + mRY;
+            const float r_mSx = pR_multiSelectionHighlight->x * mRoomWidth + mRX;
+            const float r_mSy = pR_multiSelectionHighlight->y * -1 * mRoomHeight + mRY;
             QPen const savePen = painter.pen();
             QBrush const saveBrush = painter.brush();
-            float const roomRadius = mRoomWidth * 1.2;
-            float const roomDiagonal = mRoomWidth * 1.2;
+            const float roomRadius = mRoomWidth * 1.2;
+            const float roomDiagonal = mRoomWidth * 1.2;
             QPointF const roomCenter = QPointF(r_mSx, r_mSy);
 
             QPen yellowPen(QColor(255, 255, 50, 192)); // Quarter opaque yellow pen
@@ -2504,11 +2504,11 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
 
     label.pix = pixmap.copy(drawRectangle);
     auto normalizedLabelRectangle = labelRectangle.normalized();
-    float const mx = (normalizedLabelRectangle.topLeft().x() / mRoomWidth) + mOx - (xspan / 2.0);
-    float const my = (yspan / 2.0) - (labelRectangle.topLeft().y() / mRoomHeight) - mOy;
+    const float mx = (normalizedLabelRectangle.topLeft().x() / mRoomWidth) + mOx - (xspan / 2.0);
+    const float my = (yspan / 2.0) - (labelRectangle.topLeft().y() / mRoomHeight) - mOy;
 
-    float const mx2 = (normalizedLabelRectangle.bottomRight().x() / mRoomWidth) + mOx - (xspan / 2.0);
-    float const my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mOy;
+    const float mx2 = (normalizedLabelRectangle.bottomRight().x() / mRoomWidth) + mOx - (xspan / 2.0);
+    const float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mOy;
     label.pos = QVector3D(mx, my, mOz);
     label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
 
@@ -2596,8 +2596,8 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         auto pArea = mpMap->mpRoomDB->getArea(mAreaID);
         if (!mLabelHighlighted && mCustomLineSelectedRoom == 0) {
             mMultiRect = QRect(event->pos(), event->pos());
-            float const fx = ((xspan / 2.0) - mOx) * mRoomWidth;
-            float const fy = ((yspan / 2.0) - mOy) * mRoomHeight;
+            const float fx = ((xspan / 2.0) - mOx) * mRoomWidth;
+            const float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
 
             if (pArea) {
                 QSetIterator<int> itRoom(pArea->getAreaRooms());
@@ -2938,8 +2938,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
             TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if (room) {
-                float const mx = (event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0);
-                float const my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
+                const float mx = (event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0);
+                const float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
                 // might be useful to have a snap to grid type option
                 room->customLines[mCustomLinesRoomExit].push_back(QPointF(mx, my));
                 room->calcRoomDimensions();
@@ -2953,8 +2953,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             // But NOT if got one or more rooms already selected!
             TArea* pA = mpMap->mpRoomDB->getArea(mAreaID);
             if (pA) {
-                float const mx = (event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0);
-                float const my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
+                const float mx = (event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0);
+                const float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
                 QPointF const pc = QPointF(mx, my);
                 QSetIterator<int> itRoom = pA->rooms;
                 while (itRoom.hasNext()) {
@@ -3047,8 +3047,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             if (!pArea) {
                 return;
             }
-            float const fx = ((xspan / 2.0) - mOx) * mRoomWidth;
-            float const fy = ((yspan / 2.0) - mOy) * mRoomHeight;
+            const float fx = ((xspan / 2.0) - mOx) * mRoomWidth;
+            const float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
 
             if (!event->modifiers().testFlag(Qt::ControlModifier)) {
                 if (!mMapViewOnly) {
@@ -3110,8 +3110,8 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     }
 
                     QPointF labelPosition;
-                    float const labelX = mapLabel.pos.x() * mRoomWidth + mRX;
-                    float const labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
+                    const float labelX = mapLabel.pos.x() * mRoomWidth + mRX;
+                    const float labelY = mapLabel.pos.y() * mRoomHeight * -1 + mRY;
 
                     labelPosition.setX(labelX);
                     labelPosition.setY(labelY);
@@ -3202,8 +3202,8 @@ std::pair<int, int> T2DMap::getMousePosition()
 {
     const QPoint mousePosition = this->mapFromGlobal(QCursor::pos());
 
-    float const mx = (mousePosition.x() / mRoomWidth) + mOx - (xspan / 2.0);
-    float const my = (yspan / 2.0) - (mousePosition.y() / mRoomHeight) - mOy;
+    const float mx = (mousePosition.x() / mRoomWidth) + mOx - (xspan / 2.0);
+    const float my = (yspan / 2.0) - (mousePosition.y() / mRoomHeight) - mOy;
 
     return {std::round(mx), std::round(my)};
 }
@@ -4235,8 +4235,8 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 if (!mapLabel.highlight) {
                     continue;
                 }
-                float const mx = (static_cast<float>(event->pos().x()) / mRoomWidth) + static_cast<float>(mOx) -(xspan / 2.0f);
-                float const my = (yspan / 2.0f) - (static_cast<float>(event->pos().y()) / mRoomHeight) - static_cast<float>(mOy);
+                const float mx = (static_cast<float>(event->pos().x()) / mRoomWidth) + static_cast<float>(mOx) -(xspan / 2.0f);
+                const float my = (yspan / 2.0f) - (static_cast<float>(event->pos().y()) / mRoomHeight) - static_cast<float>(mOy);
                 mapLabel.pos = QVector3D(mx, my, static_cast<float>(mOz));
                 pA->mMapLabels[itMapLabel.key()] = mapLabel;
                 needUpdate = true;
@@ -4275,8 +4275,8 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
 
         if (!mSizeLabel) { // NOT sizing a label
             mMultiSelectionSet.clear();
-            float const fx = xspan / 2.0f * mRoomWidth - mRoomWidth * static_cast<float>(mOx);
-            float const fy = yspan / 2.0f * mRoomHeight - mRoomHeight * static_cast<float>(mOy);
+            const float fx = xspan / 2.0f * mRoomWidth - mRoomWidth * static_cast<float>(mOx);
+            const float fy = yspan / 2.0f * mRoomHeight - mRoomHeight * static_cast<float>(mOy);
             QSetIterator<int> itSelectedRoom(pArea->getAreaRooms());
             while (itSelectedRoom.hasNext()) {
                 const int currentRoomId = itSelectedRoom.next();
@@ -4291,8 +4291,8 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                     continue;
                 }
 
-                float const rx = static_cast<float>(room->x) * mRoomWidth  + fx;
-                float const ry = static_cast<float>(room->y * -1) * mRoomHeight + fy;
+                const float rx = static_cast<float>(room->x) * mRoomWidth  + fx;
+                const float ry = static_cast<float>(room->y * -1) * mRoomHeight + fy;
                 QRectF dr;
                 if (pArea->gridMode) {
                     dr = QRectF(static_cast<qreal>(rx - (mRoomWidth / 2.0f)), static_cast<qreal>(ry - (mRoomHeight / 2.0f)), static_cast<qreal>(mRoomWidth), static_cast<qreal>(mRoomHeight));
@@ -4456,7 +4456,7 @@ bool T2DMap::getCenterSelection()
                 closestSquareDistance = meanToRoom.lengthSquared();
                 mMultiSelectionHighlightRoomId = currentRoomId;
             } else {
-                float const currentRoomSquareDistance = meanToRoom.lengthSquared();
+                const float currentRoomSquareDistance = meanToRoom.lengthSquared();
                 if (closestSquareDistance > currentRoomSquareDistance) {
                     closestSquareDistance = currentRoomSquareDistance;
                     mMultiSelectionHighlightRoomId = currentRoomId;
@@ -5063,8 +5063,8 @@ void T2DMap::resizeMultiSelectionWidget()
         // The following factors are tweaks to ensure that the widget shows all
         // the rows, as the header seems bigger than the value returned, static values
         // used to enable values to be changed by debugger at runtime!
-        static float const headerFactor = 1.2;
-        static float const rowFactor = 1.0;
+        static const float headerFactor = 1.2;
+        static const float rowFactor = 1.0;
         _newHeight = headerFactor * mMultiSelectionListWidget.header()->height();
         if (rowItem) { // Have some data rows - and we have forced them to be the same height:
             _newHeight += rowFactor * mMultiSelectionListWidget.topLevelItemCount() * mMultiSelectionListWidget.visualItemRect(rowItem).height();
