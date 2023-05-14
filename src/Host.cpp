@@ -378,7 +378,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     const QString directoryLogFile = mudlet::getMudletPath(mudlet::profileDataItemPath, mHostName, qsl("log"));
     const QString logFileName = qsl("%1/errors.txt").arg(directoryLogFile);
-    QDir const dirLogFile;
+    const QDir dirLogFile;
     if (!dirLogFile.exists(directoryLogFile)) {
         dirLogFile.mkpath(directoryLogFile);
     }
@@ -515,7 +515,7 @@ void Host::loadPackageInfo()
     QStringList const packages = mInstalledPackages;
     for (int i = 0; i < packages.size(); i++) {
         const QString packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, getName(), packages.at(i))};
-        QDir const dir(packagePath);
+        const QDir dir(packagePath);
         if (dir.exists(qsl("config.lua"))) {
             getPackageConfig(dir.absoluteFilePath(qsl("config.lua")));
         }
@@ -621,7 +621,7 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     if (!zipFile) {
         return;
     }
-    QDir const packageDir = QDir(packagePathName);
+    const QDir packageDir = QDir(packagePathName);
     if (!packageDir.exists()) {
         packageDir.mkpath(packagePathName);
     }
@@ -811,7 +811,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         return std::make_tuple(false, filename_xml, qsl("profile loading is in progress"));
     }
 
-    QDir const dir_xml;
+    const QDir dir_xml;
     if (!dir_xml.exists(directory_xml)) {
         dir_xml.mkpath(directory_xml);
     }
@@ -1702,7 +1702,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         const QString _home = mudlet::getMudletPath(mudlet::profileHomePath, getName());
         const QString _dest = mudlet::getMudletPath(mudlet::profilePackagePath, getName(), packageName);
         // home directory for the PROFILE
-        QDir const _tmpDir(_home);
+        const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
@@ -1877,7 +1877,7 @@ QString Host::sanitizePackageName(const QString packageName) const {
 bool Host::removeDir(const QString& dirName, const QString& originalPath)
 {
     bool result = true;
-    QDir const dir(dirName);
+    const QDir dir(dirName);
     if (dir.exists(dirName)) {
         for (QFileInfo  const&info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
             // prevent recursion outside of the original branch

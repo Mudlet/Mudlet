@@ -187,7 +187,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
 
         // The preset file name formats are derived from date/times so that
         // alphabetical filename and date sort order are the same...
-        QDir const dirLogFile;
+        const QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
         }
@@ -1218,7 +1218,7 @@ bool TMainConsole::saveMap(const QString& location, int saveVersion)
         mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss"))) :
         location;
 
-    QDir const dir_map(mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName));
+    const QDir dir_map(mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName));
     if (!dir_map.exists() && !dir_map.mkpath(dir_map.path())) {
         return false;
     }

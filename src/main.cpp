@@ -447,7 +447,7 @@ int main(int argc, char* argv[])
     app->processEvents();
 
     const QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
-    QDir const dir;
+    const QDir dir;
     bool first_launch = false;
     if (!dir.exists(homeDirectory)) {
         dir.mkpath(homeDirectory);

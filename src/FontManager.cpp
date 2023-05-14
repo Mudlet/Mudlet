@@ -31,7 +31,7 @@
 
 void FontManager::addFonts()
 {
-    QDir const dir(mudlet::getMudletPath(mudlet::mainFontsPath));
+    const QDir dir(mudlet::getMudletPath(mudlet::mainFontsPath));
 
     if (!dir.exists()) {
         return;

@@ -272,7 +272,7 @@ void TMedia::stopAllMediaPlayers()
 void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 {
     const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
-    QDir const mediaDir(mediaPath);
+    const QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
         qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
@@ -562,7 +562,7 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 void TMedia::downloadFile(TMediaData& mediaData)
 {
     const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
-    QDir const mediaDir(mediaPath);
+    const QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
         qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
@@ -571,7 +571,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
 
     if (!mediaData.getMediaFileName().isEmpty() && mediaData.getMediaFileName().contains('/')) {
         const QString mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
-        QDir const mediaSubDir(mediaSubPath);
+        const QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
             qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1")
@@ -580,7 +580,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
         }
     }
 
-    QDir const dir;
+    const QDir dir;
     const QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 
     if (!dir.mkpath(cacheDir)) {

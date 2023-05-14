@@ -610,7 +610,7 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
     if (!newImagesList.isEmpty()) {
         //Create description image dir
         const QString descriptionImagesDirName = qsl("%1.mudlet/description_images/").arg(tempPath);
-        QDir const descriptionImageDir = QDir(descriptionImagesDirName);
+        const QDir descriptionImageDir = QDir(descriptionImagesDirName);
         if (!descriptionImageDir.exists()) {
             descriptionImageDir.mkpath(descriptionImagesDirName);
         }
@@ -839,7 +839,7 @@ QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
     QFileInfo const iconFile(mPackageIconPath);
     if (iconFile.exists()) {
         QString iconDirName = qsl("%1.mudlet/Icon/").arg(tempPath);
-        QDir const iconDir = QDir(iconDirName);
+        const QDir iconDir = QDir(iconDirName);
         if (!iconDir.exists()) {
             iconDir.mkpath(iconDirName);
         }

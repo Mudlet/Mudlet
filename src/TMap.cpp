@@ -1572,7 +1572,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 
     if (location.isEmpty()) {
         folder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-        QDir const dir(folder);
+        const QDir dir(folder);
         QStringList filters;
         filters << qsl("*.[dD][aA][tT]");
         filters << qsl("*.[jJ][sS][oO][nN]");
@@ -2460,7 +2460,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     }
 
     // Check to ensure we have a map directory to save the map files to.
-    QDir const toProfileDir;
+    const QDir toProfileDir;
     const QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
     if (!toProfileDir.mkpath(toProfileDirPathString)) {
         const QString errMsg = tr("[ ERROR ] - Unable to use or create directory to store map.\n"
@@ -2852,7 +2852,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
 
     if (destination.isEmpty()) {
         const QString destFolder = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-        QDir const destDir(destFolder);
+        const QDir destDir(destFolder);
         if (!destDir.exists()) {
             destDir.mkdir(destFolder);
         }

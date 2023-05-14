@@ -687,7 +687,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_spellCheck->setText(tr("System dictionaries:", "On *nix systems where we find the system ones we use them."));
     }
 
-    QDir const dir(path);
+    const QDir dir(path);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     // QRegularExpression rex(qsl(R"(\.dic$)"));
     // Use the affix file as that may eliminate supplimental dictionaries:
@@ -2439,7 +2439,7 @@ void dlgProfilePreferences::slot_saveMap()
 QString dlgProfilePreferences::mapSaveLoadDirectory(Host* pHost)
 {
     const QString mapsPath = mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName());
-    QDir const mapsDir = QDir(mapsPath);
+    const QDir mapsDir = QDir(mapsPath);
     return mapsDir.exists() ? mapsPath : mudlet::getMudletPath(mudlet::profileHomePath, pHost->getName());
 }
 
@@ -2493,7 +2493,7 @@ void dlgProfilePreferences::slot_copyMap()
             // update, or rather REPLACE TMap::mRoomIdHash
 
             // Check for the destination directory for the other profiles
-            QDir const toProfileDir;
+            const QDir toProfileDir;
             const QString toProfileDirPathString = mudlet::getMudletPath(mudlet::profileMapsPath, toProfileName);
             if (!toProfileDir.exists(toProfileDirPathString)) {
                 if (!toProfileDir.mkpath(toProfileDirPathString)) {
@@ -3315,7 +3315,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
         return;
     }
 
-    QDir const dir;
+    const QDir dir;
     const QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
     if (!dir.mkpath(cacheDir)) {
         qWarning() << "Couldn't create cache directory for edbee themes: " << cacheDir;

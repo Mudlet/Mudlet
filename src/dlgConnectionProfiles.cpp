@@ -525,8 +525,8 @@ void dlgConnectionProfiles::slot_saveName()
 
     setItemName(pItem, newProfileName);
 
-    QDir const currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
-    QDir const dir;
+    const QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
+    const QDir dir;
 
     if (currentPath.exists()) {
         // CHECKME: previous code specified a path ending in a '/'
@@ -676,7 +676,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    QDir const profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
+    const QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
     if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
         // shortcut - don't show profile deletion confirmation if there is no data to delete
         reallyDeleteProfile(profile);
@@ -1332,7 +1332,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     }
 
     // copy the folder on-disk
-    QDir const dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
+    const QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
     if (!dir.exists()) {
         mCopyingProfile = false;
         return;
@@ -1374,7 +1374,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
         return;
     }
 
-    QDir const newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    const QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
         return;
@@ -1443,8 +1443,8 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
 
 void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, const QString& newname)
 {
-    QDir const oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
-    QDir const newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
+    const QDir oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
+    const QDir newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
     newProfiledir.mkpath(newProfiledir.absolutePath());
     QStringList entries = oldProfiledir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     if (entries.empty()) {
@@ -1805,12 +1805,12 @@ bool dlgConnectionProfiles::validateProfile()
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
 bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
 {
-    QDir const sourceDir(sourceFolder);
+    const QDir sourceDir(sourceFolder);
     if (!sourceDir.exists()) {
         return false;
     }
 
-    QDir const destDir(destFolder);
+    const QDir destDir(destFolder);
     if (!destDir.exists()) {
         destDir.mkdir(destFolder);
     }

@@ -14909,7 +14909,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
         extractLocation.append(QLatin1String("/"));
     }
 
-    QDir const dir;
+    const QDir dir;
     if (!dir.mkpath(extractLocation)) {
         return warnArgumentValue(L, __func__, "couldn't create output directory to put the extracted files into");
     }
