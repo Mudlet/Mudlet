@@ -7151,7 +7151,7 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
 {
     Host const& host = getHostFromLua(L);
 
-    QPoint const pos = host.mpConsole->mapFromGlobal(QCursor::pos());
+    const QPoint pos = host.mpConsole->mapFromGlobal(QCursor::pos());
 
     lua_pushnumber(L, pos.x());
     lua_pushnumber(L, pos.y());

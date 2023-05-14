@@ -1825,7 +1825,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
 
 void mudlet::readLateSettings(const QSettings& settings)
 {
-    QPoint const pos = settings.value(qsl("pos"), QPoint(0, 0)).toPoint();
+    const QPoint pos = settings.value(qsl("pos"), QPoint(0, 0)).toPoint();
     QSize const size = settings.value(qsl("size"), QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
     // a netbook or not before this gets called so only change if there is a

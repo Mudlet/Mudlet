@@ -948,7 +948,7 @@ void dlgTriggerEditor::readSettings()
     QSettings const settings_new("mudlet", "Mudlet");
     QSettings const settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
-    QPoint const pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
+    const QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
     QSize const size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
     move(pos);

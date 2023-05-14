@@ -1224,7 +1224,7 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
 
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
-    QPoint const globalPos = profiles_tree_widget->mapToGlobal(pos);
+    const QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     QMenu menu;

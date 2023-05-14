@@ -502,7 +502,7 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
         mudlet::self()->addDockWidget(((pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pToolBar);
         if (pAction->mToolbarLastFloatingState) {
             pToolBar->setFloating(true);
-            QPoint const pos = QPoint(pAction->mPosX, pAction->mPosY);
+            const QPoint pos = QPoint(pAction->mPosX, pAction->mPosY);
             pToolBar->show();
             pToolBar->move(pos);
         } else {

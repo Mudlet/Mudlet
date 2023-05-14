@@ -1966,7 +1966,7 @@ void TConsole::dropEvent(QDropEvent* e)
         QFileInfo const info(fname);
         if (info.exists()) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            QPoint const pos = e->pos();
+            const QPoint pos = e->pos();
 #else
             QPoint pos = e->position().toPoint();
 #endif
@@ -1989,7 +1989,7 @@ void TConsole::dropEvent(QDropEvent* e)
     if (e->mimeData()->hasText()) {
         if (QUrl const url(e->mimeData()->text()); url.isValid()) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            QPoint const pos = e->pos();
+            const QPoint pos = e->pos();
 #else
             QPoint pos = e->position().toPoint();
 #endif
@@ -2053,7 +2053,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     default:                mudletEvent.mArgumentList.append(QString::number(0));
     }
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    QPoint const pos = event->pos();
+    const QPoint pos = event->pos();
 #else
     QPoint pos = event->position().toPoint();
 #endif

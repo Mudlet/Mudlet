@@ -3117,7 +3117,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     labelPosition.setY(labelY);
                     const int mx = event->pos().x();
                     const int my = event->pos().y();
-                    QPoint const click = QPoint(mx, my);
+                    const QPoint click = QPoint(mx, my);
                     QRectF const br = QRect(labelX, labelY, mapLabel.clickSize.width(), mapLabel.clickSize.height());
                     if (br.contains(click)) {
                         mapLabel.highlight = !mapLabel.highlight;
@@ -3200,7 +3200,7 @@ void T2DMap::updateSelectionWidget()
 // returns the current mouse position as X, Y coordinates on the map
 std::pair<int, int> T2DMap::getMousePosition()
 {
-    QPoint const mousePosition = this->mapFromGlobal(QCursor::pos());
+    const QPoint mousePosition = this->mapFromGlobal(QCursor::pos());
 
     float const mx = (mousePosition.x() / mRoomWidth) + mOx - (xspan / 2.0);
     float const my = (yspan / 2.0) - (mousePosition.y() / mRoomHeight) - mOy;
