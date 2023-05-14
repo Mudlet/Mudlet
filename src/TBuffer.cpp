@@ -551,7 +551,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                         // Note: we are using the background color for the
                         // foreground color as well so that we are transparent:
-                        TChar const c(mBackGroundColor, mBackGroundColor, attributeFlags);
+                        const TChar c(mBackGroundColor, mBackGroundColor, attributeFlags);
                         for (int spaceCount = 0; spaceCount < spacesNeeded; ++spaceCount) {
                             mMudLine.append(QChar::Space);
                             mMudBuffer.push_back(c);
@@ -2076,7 +2076,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         // buffer is completely empty
         std::deque<TChar> newLine;
         // The ternary operator is used here to set/reset only the TChar::Echo bit in the flags:
-        TChar const c(format.mFgColor,
+        const TChar c(format.mFgColor,
                 format.mBgColor,
                 (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
                  : (format.mFlags & TChar::TestMask)));
@@ -2148,7 +2148,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             }
         }
         lineBuffer.back().append(text.at(i));
-        TChar const c(format.mFgColor,
+        const TChar c(format.mFgColor,
                 format.mBgColor,
                 (mEchoingText ? (TChar::Echo | (format.mFlags & TChar::TestMask))
                  : (format.mFlags & TChar::TestMask)),
@@ -2172,7 +2172,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     int last = buffer.size() - 1;
     if (last < 0) {
         std::deque<TChar> newLine;
-        TChar const c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
+        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
@@ -2241,7 +2241,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             }
         }
         lineBuffer.back().append(text.at(i));
-        TChar const c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
@@ -2264,7 +2264,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     if (Q_UNLIKELY(lastLine < 0)) {
         // There are NO lines in the buffer - so initialize with a new empty line
         std::deque<TChar> newLine;
-        TChar const c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
+        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags));
         newLine.push_back(c);
         buffer.push_back(newLine);
         lineBuffer.push_back(QString());
@@ -2286,7 +2286,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
 
     for (int i = sub_start; i <= (sub_start + lineEndPos); i++) {
         lineBuffer.back().append(text.at(i));
-        TChar const c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
+        const TChar c(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
         buffer.back().push_back(c);
         if (firstChar) {
             timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
@@ -2314,7 +2314,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         }
         for (int i = 0, total = text.size(); i < total; ++i) {
             lineBuffer[y].insert(x + i, text.at(i));
-            TChar const c = format;
+            const TChar c = format;
             auto it = buffer[y].begin();
             buffer[y].insert(it + x + i, c);
         }
@@ -2481,7 +2481,7 @@ inline int TBuffer::wrap(int startLine)
     QStringList timeList;
     QList<bool> promptList;
     int lineCount = 0;
-    TChar const pSpace(mpConsole);
+    const TChar pSpace(mpConsole);
     for (int i = startLine, total = static_cast<int>(buffer.size()); i < total; ++i) {
         const bool isPrompt = promptBuffer[i];
         std::deque<TChar> newLine;
@@ -2647,7 +2647,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
         int indent = 0;
         if (static_cast<int>(buffer[line].size()) >= screenWidth) {
             for (int prependSpaces = 0; prependSpaces < indentSize; ++prependSpaces) {
-                TChar const pSpace = format;
+                const TChar pSpace = format;
                 newLine.push_back(pSpace);
                 lineText.append(QChar::Space);
             }
