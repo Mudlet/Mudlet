@@ -286,7 +286,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     } else {
         ui->Icon->hide();
     }
-    QIcon const myIcon(mPackageIconPath);
+    const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
     ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->lineEdit_title->setText(packageInfo.value(qsl("title")));
@@ -351,7 +351,7 @@ void dlgPackageExporter::slot_importIcon()
         return;
     }
     mPackageIconPath = fileName;
-    QIcon const myIcon(mPackageIconPath);
+    const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
     ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->Icon->show();

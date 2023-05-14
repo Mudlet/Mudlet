@@ -2205,9 +2205,9 @@ void dlgProfilePreferences::fillOutMapHistory()
     const QString profile_name = pHost->getName();
     auto const locale = mudlet::self()->getUserLocale();
     int longestMapHistoryLength = 0;
-    QIcon const icon_autoSave{QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png")))};
-    QIcon const icon_xmlFile{QIcon::fromTheme(qsl("application-xml"), QIcon(qsl(":/icons/application-xml.png")))};
-    QIcon const icon_jsonFile{QIcon::fromTheme(qsl("application-json"), QIcon(qsl(":/icons/application-json.png")))};
+    const QIcon icon_autoSave{QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png")))};
+    const QIcon icon_xmlFile{QIcon::fromTheme(qsl("application-xml"), QIcon(qsl(":/icons/application-xml.png")))};
+    const QIcon icon_jsonFile{QIcon::fromTheme(qsl("application-json"), QIcon(qsl(":/icons/application-json.png")))};
     QString dateTimeFormat = mudlet::self()->getUserLocale().dateTimeFormat();
     if (dateTimeFormat.contains(QLatin1Char('t'))) {
         // There is a timezone identifier in there - which (apart from perhaps

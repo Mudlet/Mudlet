@@ -178,7 +178,7 @@ void TAction::expandToolbar(TToolBar* pT)
             // buttons show in a "greyed-out" state... - Slysven
             continue;
         }
-        QIcon const icon(action->mIcon);
+        const QIcon icon(action->mIcon);
         const QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);
@@ -270,7 +270,7 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
         if (!action->isActive()) {
             continue;
         }
-        QIcon const icon(action->mIcon);
+        const QIcon icon(action->mIcon);
         const QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);

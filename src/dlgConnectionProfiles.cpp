@@ -179,8 +179,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // change it anyhow:
         abort->setIcon(QIcon::fromTheme(qsl("dialog-close"), QIcon(qsl(":/icons/dialog-close.png"))));
 
-        QIcon const icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
-        QIcon const icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
+        const QIcon icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
+        const QIcon icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
 
         offline_button->setIcon(QIcon(qsl(":/icons/mudlet_editor.png")));
         connect_button->setIcon(icon_connect);

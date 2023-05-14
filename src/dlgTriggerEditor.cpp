@@ -779,35 +779,35 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     QPixmap pixMap_subString(256, 256);
     pixMap_subString.fill(Qt::black);
-    QIcon const icon_subString(pixMap_subString);
+    const QIcon icon_subString(pixMap_subString);
 
     QPixmap pixMap_perl_regex(256, 256);
     pixMap_perl_regex.fill(Qt::blue);
-    QIcon const icon_perl_regex(pixMap_perl_regex);
+    const QIcon icon_perl_regex(pixMap_perl_regex);
 
     QPixmap pixMap_begin_of_line_substring(256, 256);
     pixMap_begin_of_line_substring.fill(Qt::red);
-    QIcon const icon_begin_of_line_substring(pixMap_begin_of_line_substring);
+    const QIcon icon_begin_of_line_substring(pixMap_begin_of_line_substring);
 
     QPixmap pixMap_exact_match(256, 256);
     pixMap_exact_match.fill(Qt::green);
-    QIcon const icon_exact_match(pixMap_exact_match);
+    const QIcon icon_exact_match(pixMap_exact_match);
 
     QPixmap pixMap_lua_function(256, 256);
     pixMap_lua_function.fill(Qt::cyan);
-    QIcon const icon_lua_function(pixMap_lua_function);
+    const QIcon icon_lua_function(pixMap_lua_function);
 
     QPixmap pixMap_line_spacer(256, 256);
     pixMap_line_spacer.fill(Qt::magenta);
-    QIcon const icon_line_spacer(pixMap_line_spacer);
+    const QIcon icon_line_spacer(pixMap_line_spacer);
 
     QPixmap pixMap_color_trigger(256, 256);
     pixMap_color_trigger.fill(Qt::lightGray);
-    QIcon const icon_color_trigger(pixMap_color_trigger);
+    const QIcon icon_color_trigger(pixMap_color_trigger);
 
     QPixmap pixMap_prompt(256, 256);
     pixMap_prompt.fill(Qt::yellow);
-    QIcon const icon_prompt(pixMap_prompt);
+    const QIcon icon_prompt(pixMap_prompt);
 
     QStringList patternList;
     patternList << tr("substring")

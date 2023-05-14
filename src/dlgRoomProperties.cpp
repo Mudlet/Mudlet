@@ -556,7 +556,7 @@ void dlgRoomProperties::slot_openRoomColorSelector()
         auto pI = new QListWidgetItem(listWidget);
         QPixmap pix = QPixmap(50, 50);
         pix.fill(c);
-        QIcon const mi(pix);
+        const QIcon mi(pix);
         pI->setIcon(mi);
         pI->setText(QString::number(it.key()));
         listWidget->addItem(pI);
