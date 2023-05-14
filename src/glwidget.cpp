@@ -463,7 +463,7 @@ void GLWidget::paintGL()
             exitList.push_back(pR->getNorthwest());
             exitList.push_back(pR->getUp());
             exitList.push_back(pR->getDown());
-            int const e = pR->z;
+            const int e = pR->z;
             const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 1);
@@ -486,7 +486,7 @@ void GLWidget::paintGL()
                               planeColor[ef][2],
                               planeColor[ef][3]);*/
                 }
-                for (int const k : exitList) {
+                for (const int k : exitList) {
                     bool areaExit = false;
                     if (k == -1) {
                         continue;
@@ -897,7 +897,7 @@ void GLWidget::paintGL()
                     }
                 }
             } else {
-                for (int const k : exitList) {
+                for (const int k : exitList) {
                     bool areaExit = false;
                     if (k == -1) {
                         continue;
@@ -1330,7 +1330,7 @@ void GLWidget::paintGL()
         QSetIterator<int> itRoom(pArea->getAreaRooms());
         while (itRoom.hasNext()) {
             glDisable(GL_LIGHT1);
-            int const currentRoomId = itRoom.next();
+            const int currentRoomId = itRoom.next();
             TRoom* pR = mpMap->mpRoomDB->getRoom(currentRoomId);
             if (!pR) {
                 continue;
@@ -1353,7 +1353,7 @@ void GLWidget::paintGL()
                 }
             }
 
-            int const e = pR->z;
+            const int e = pR->z;
             const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 36); //gut:96
@@ -2060,8 +2060,8 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
 #else
         auto eventPos = event->position().toPoint();
 #endif
-        int const x = eventPos.x();
-        int const y = height() - eventPos.y(); // the opengl origin is at bottom left
+        const int x = eventPos.x();
+        const int y = height() - eventPos.y(); // the opengl origin is at bottom left
         GLuint buff[16] = {0};
         GLint hits;
         GLint view[4];
@@ -2169,8 +2169,8 @@ void GLWidget::mouseReleaseEvent(QMouseEvent* event)
 
 void GLWidget::wheelEvent(QWheelEvent* e)
 {
-    int const xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
-    int const yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
+    const int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
+    const int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
     bool used = false;
     if (yDelta) {
         if (abs(mScale) < 0.3) {

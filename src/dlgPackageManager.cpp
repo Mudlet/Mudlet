@@ -198,7 +198,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
         additionalDetails->show();
         detailsLabel->show();
     }
-    int const maxHeight = additionalDetails->rowCount() * additionalDetails->rowHeight(0);
+    const int maxHeight = additionalDetails->rowCount() * additionalDetails->rowHeight(0);
     additionalDetails->setMaximumHeight(maxHeight);
     additionalDetails->verticalScrollBar()->hide();
     packageTable->scrollToItem(pItem);
@@ -229,7 +229,7 @@ void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& pack
 void dlgPackageManager::slot_toggleRemoveButton()
 {
     QModelIndexList const selection = packageTable->selectionModel()->selectedRows();
-    int const selectionCount = selection.count();
+    const int selectionCount = selection.count();
     removeButton->setEnabled(selectionCount);
     if (selectionCount) {
         removeButton->setText(tr("Remove %n package(s)",

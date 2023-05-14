@@ -635,7 +635,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     search_engine_combobox->addItems(QStringList(mpHost->mSearchEngineData.keys()));
 
     // set to saved value or default to Google
-    int const savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
+    const int savedText = search_engine_combobox->findText(mpHost->getSearchEngine().first);
     search_engine_combobox->setCurrentIndex(savedText == -1 ? 1 : savedText);
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
@@ -953,7 +953,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                     comboBox_mapFileSaveFormatVersion->addItem(tr("%1 {Downgraded, for sharing with older version users, NOT recommended}").arg(i), QVariant(i));
                 }
             }
-            int const _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
+            const int _indexForCurrentSaveFormat = comboBox_mapFileSaveFormatVersion->findData(pHost->mpMap->mSaveVersion, Qt::UserRole);
             if (_indexForCurrentSaveFormat >= 0) {
                 comboBox_mapFileSaveFormatVersion->setCurrentIndex(_indexForCurrentSaveFormat);
             }
@@ -967,7 +967,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mpDoubleSpinBox_mapSymbolFontFudge->setSingleStep(0.01);
         auto * pmapViewLayout = qobject_cast<QGridLayout*>(groupBox_mapViewOptions->layout());
         if (pmapViewLayout) {
-            int const existingRows = pmapViewLayout->rowCount();
+            const int existingRows = pmapViewLayout->rowCount();
             pmapViewLayout->addWidget(pLabel_mapSymbolFontFudge, existingRows, 0);
             pmapViewLayout->addWidget(mpDoubleSpinBox_mapSymbolFontFudge, existingRows, 1);
         } else {
@@ -1032,7 +1032,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         // first) value
         comboBox_encoding->setCurrentIndex(0);
     } else {
-        int const currentIndex = comboBox_encoding->findData(pHost->mTelnet.getEncoding());
+        const int currentIndex = comboBox_encoding->findData(pHost->mTelnet.getEncoding());
         if (currentIndex >=0) {
             comboBox_encoding->setCurrentIndex(currentIndex);
         } else {
@@ -2594,7 +2594,7 @@ void dlgProfilePreferences::slot_copyMap()
                            // show up when saving big maps
 
     // Temporarily use whatever version is currently set
-    int const oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
+    const int oldSaveVersionFormat = pHost->mpMap->mSaveVersion;
     pHost->mpMap->mSaveVersion = comboBox_mapFileSaveFormatVersion->currentData().toInt();
 
     if (!pHost->mpConsole->saveMap(QString())) {
@@ -2946,8 +2946,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         slot_setDisplayFont();
 
         if (console) {
-            int const x = console->width();
-            int const y = console->height();
+            const int x = console->width();
+            const int y = console->height();
             QSize const s = QSize(x, y);
             QResizeEvent event(s, s);
             QApplication::sendEvent(console, &event);
@@ -3328,7 +3328,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
     // it would be nice to use C++14's numeric separator but Qt Creator still
     // does not like them for its Clang code model analyser (and the built in
     // one is even less receptive to): 86'400'000
-    int const themesUpdatePeriod = settings.value("themesUpdatePeriod", 86400000).toInt();
+    const int themesUpdatePeriod = settings.value("themesUpdatePeriod", 86400000).toInt();
     // save the defaults in settings so the field is visible for editing in config file if needed
     settings.setValue("colorSublimeThemesURL", themesURL);
     settings.setValue("themesUpdatePeriod", themesUpdatePeriod);
@@ -3886,7 +3886,7 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont & font)
         return;
     }
 
-    int const pointSize = pHost->mpMap->mMapSymbolFont.pointSize();
+    const int pointSize = pHost->mpMap->mMapSymbolFont.pointSize();
     if (pHost->mpMap->mMapSymbolFont != font) {
         pHost->mpMap->mMapSymbolFont = font;
         pHost->mpMap->mMapSymbolFont.setPointSize(pointSize);

@@ -812,7 +812,7 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     appendToDetails(qsl("version"), ui->lineEdit_version->text());
     appendToDetails(qsl("dependencies"), dependencies.join(","));
     QDateTime iso8601timestamp = QDateTime::currentDateTime();
-    int const offset = iso8601timestamp.offsetFromUtc();
+    const int offset = iso8601timestamp.offsetFromUtc();
     iso8601timestamp.setOffsetFromUtc(offset);
     QDateTime iso8601time(QDateTime::currentDateTime());
     iso8601time.setTimeSpec(Qt::OffsetFromUTC);
@@ -1460,7 +1460,7 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
     if (!debounce) {
         debounce = true;
         QTimer::singleShot(0, this, [this]() {
-            int const itemsToExport = countCheckedItems();
+            const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
                 mpSelectionText->setTitle(tr("Select what to export (%n item(s))",
                                              // Intentional comment to separate arguments
@@ -1524,7 +1524,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
     dlgPackageExporter* my_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     if (source->hasUrls()) {
         QTextCursor myCursor = textCursor();
-        int const oldPos = myCursor.position();
+        const int oldPos = myCursor.position();
         // Allows to insert image at cursor position if using copy/paste
         if (hasFocus()) {
             myCursor.setPosition(oldPos);

@@ -465,15 +465,15 @@ QString IrcMessageFormatter::formatSeconds(int secs)
 QString IrcMessageFormatter::formatDuration(int secs)
 {
     QStringList idle;
-    if (int const days = secs / 86400) {
+    if (const int days = secs / 86400) {
         idle += QObject::tr("%1 days").arg(days);
     }
     secs %= 86400;
-    if (int const hours = secs / 3600) {
+    if (const int hours = secs / 3600) {
         idle += QObject::tr("%1 hours").arg(hours);
     }
     secs %= 3600;
-    if (int const mins = secs / 60) {
+    if (const int mins = secs / 60) {
         idle += QObject::tr("%1 mins").arg(mins);
     }
     idle += QObject::tr("%1 secs").arg(secs % 60);

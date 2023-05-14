@@ -216,7 +216,7 @@ void Discord::setEndTimeStamp(Host* pHost, int64_t epochTimeStamp)
 
 void Discord::setParty(Host* pHost, int partySize)
 {
-    int const validPartySize = qMax(0, partySize);
+    const int validPartySize = qMax(0, partySize);
     if (validPartySize) {
         // Is more than zero:
         if (mPartyMax.value(pHost) < validPartySize) {
@@ -238,8 +238,8 @@ void Discord::setParty(Host* pHost, int partySize)
 
 void Discord::setParty(Host* pHost, int partySize, int partyMax)
 {
-    int const validPartySize = qMax(0, partySize);
-    int const validPartyMax = qMax(0, partyMax);
+    const int validPartySize = qMax(0, partySize);
+    const int validPartyMax = qMax(0, partyMax);
 
     if (validPartyMax) {
         // We have a party max size that is a positive number - so use the

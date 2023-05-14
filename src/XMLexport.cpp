@@ -470,7 +470,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(
             static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
-    if (int const mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
+    if (const int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
         // Don't bother to include the attribute if ignoreIterator is the default (zero)
         // value - and as ignoreIterator is an ASCII digit ignoreIterator only needs
         // QString::toLatin1() encoding:
@@ -884,7 +884,7 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
-            for (int const i : qAsConst(pT->mPatternKinds)) {
+            for (const int i : qAsConst(pT->mPatternKinds)) {
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }

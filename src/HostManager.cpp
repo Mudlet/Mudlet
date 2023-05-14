@@ -32,7 +32,7 @@ bool HostManager::deleteHost(const QString& hostname)
         qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: not a member of host pool... aborting!";
         return false;
     } else {
-        int const ret = mHostPool.remove(hostname);
+        const int ret = mHostPool.remove(hostname);
         return ret;
     }
 }
@@ -54,7 +54,7 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
         return false;
     }
 
-    int const id = mHostPool.size() + 1;
+    const int id = mHostPool.size() + 1;
     QSharedPointer<Host> const pNewHost(new Host(portnumber, hostname, login, pass, id));
 
     if (Q_UNLIKELY(!pNewHost)) {
@@ -118,7 +118,7 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
     allValidHosts = afterSendingHost;
     allValidHosts.append(beforeSendingHost);
 
-    for (int const validHost : qAsConst(allValidHosts)) {
+    for (const int validHost : qAsConst(allValidHosts)) {
         hostList.at(validHost)->raiseEvent(event);
     }
 }

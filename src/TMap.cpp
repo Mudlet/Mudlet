@@ -207,7 +207,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     if (!pFromR) {
         return qsl("fromID (%1) does not exist").arg(fromRoomId);
     }
-    int const area = pFromR->getArea();
+    const int area = pFromR->getArea();
     // This will get converted to a positive value on first use:
     int minDistance = -1;
     int minDistanceRoom = 0;
@@ -218,16 +218,16 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
                 .arg(QString::number(fromRoomId), TRoom::dirCodeToString(dirType), QString::number(dirType));
     }
 
-    int const reverseDir = scmReverseDirections.value(dirType);
+    const int reverseDir = scmReverseDirections.value(dirType);
     QVector3D const unitVector = scmUnitVectors.value(dirType);
     // QVector3D is composed of floating point values so we need to round them
     // if we want to assign them to integral variables without compiler warnings!
-    int const ux = qRound(unitVector.x());
-    int const uy = qRound(unitVector.y());
-    int const uz = qRound(unitVector.z());
-    int const rx = pFromR->x;
-    int const ry = pFromR->y;
-    int const rz = pFromR->z;
+    const int ux = qRound(unitVector.x());
+    const int uy = qRound(unitVector.y());
+    const int uz = qRound(unitVector.z());
+    const int rx = pFromR->x;
+    const int ry = pFromR->y;
+    const int rz = pFromR->z;
     int dx = 0;
     int dy = 0;
     int dz = 0;
@@ -380,7 +380,7 @@ QString TMap::connectExitStubByToId(const int fromRoomId, const int toRoomId)
     }
 
     // else we must have just one direction:
-    int const usableStubDirection = *(usableStubDirections.constBegin());
+    const int usableStubDirection = *(usableStubDirections.constBegin());
     setExit(fromRoomId, toRoomId, usableStubDirection);
     setExit(toRoomId, fromRoomId, scmReverseDirections.value(usableStubDirection));
     setUnsaved(__func__);
@@ -541,17 +541,17 @@ void TMap::audit()
         QMapIterator<int, TArea*> itArea(mpRoomDB->getAreaMap());
         while (itArea.hasNext()) {
             itArea.next();
-            int const areaID = itArea.key();
+            const int areaID = itArea.key();
             TArea* pArea = mpRoomDB->getArea(areaID);
             if (!pArea->mMapLabels.isEmpty()) {
                 QList<int> const labelIDList = pArea->mMapLabels.keys();
-                for (int const& i : labelIDList) {
+                for (const int& i : labelIDList) {
                     TMapLabel const l = pArea->mMapLabels.value(i);
                     if (l.pix.isNull()) {
                         // Note that two of the last three arguments here
                         // (false, 40.0) are not the defaults (true, 30.0) used
                         // now:
-                        int const newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt);
+                        const int newID = createMapLabel(areaID, l.text, l.pos.x(), l.pos.y(), l.pos.z(), l.fgColor, l.bgColor, true, false, false, 40.0, 50, std::nullopt);
                         if (newID > -1) {
                             if (mudlet::self()->showMapAuditErrors()) {
                                 const QString msg = tr("[ INFO ] - CONVERTING: old style label, areaID:%1 labelID:%2.").arg(areaID).arg(i);
@@ -613,10 +613,10 @@ QList<int> TMap::detectRoomCollisions(int id)
     if (!pR) {
         return collList;
     }
-    int const area = pR->getArea();
-    int const x = pR->x;
-    int const y = pR->y;
-    int const z = pR->z;
+    const int area = pR->getArea();
+    const int x = pR->x;
+    const int y = pR->y;
+    const int z = pR->z;
     TArea* pA = mpRoomDB->getArea(area);
     if (!pA) {
         return collList;
@@ -624,7 +624,7 @@ QList<int> TMap::detectRoomCollisions(int id)
 
     QSetIterator<int> itRoom(pA->getAreaRooms());
     while (itRoom.hasNext()) {
-        int const checkRoomId = itRoom.next();
+        const int checkRoomId = itRoom.next();
         pR = mpRoomDB->getRoom(checkRoomId);
         if (!pR) {
             continue;
@@ -709,7 +709,7 @@ void TMap::initGraph()
 
     // Now identify the routes between rooms, and pick out the best edges of parallel ones
     for (auto l : locations) {
-        unsigned int const source = l.id;
+        unsigned const int source = l.id;
         TRoom* pSourceR = l.pR;
         QHash<unsigned int, route> bestRoutes;
         // key is target (destination room),
@@ -1059,7 +1059,7 @@ bool TMap::findPath(int from, int to)
                 mWeightList.clear(); // Reset any partial results...
                 return false;
             }
-            unsigned int const previousRoomId = (locations.at(previousVertex)).id;
+            unsigned const int previousRoomId = (locations.at(previousVertex)).id;
             QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
             route const r = edgeHash.value(edgeRoomIdPair);
             mPathList.prepend(currentRoomId);
@@ -1164,7 +1164,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
     QMapIterator<int, TArea*> itAreaList(mpRoomDB->getAreaMap());
     while (itAreaList.hasNext()) {
         itAreaList.next();
-        int const areaID = itAreaList.key();
+        const int areaID = itAreaList.key();
         TArea* pA = itAreaList.value();
         ofs << areaID;
         if (mSaveVersion >= 18) {
@@ -2184,7 +2184,7 @@ int TMap::createMapLabel(int area, const QString& text, float x, float y, float 
     label.size = s;
     label.clickSize = s;
 
-    int const labelId = pA->createLabelId();
+    const int labelId = pA->createLabelId();
     if (Q_LIKELY(labelId >= 0)) {
         pA->mMapLabels.insert(labelId, label);
         if (mpMapper) {
@@ -2223,7 +2223,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.size = QSizeF(width, height);
     label.pix = pix;
 
-    int const labelId = pA->createLabelId();
+    const int labelId = pA->createLabelId();
     if (Q_LIKELY(labelId >=0)) {
         pA->mMapLabels.insert(labelId, label);
         if (mpMapper) {
@@ -3143,7 +3143,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     float const mapSymbolFontFudgeFactor = (qRound(mapObj[QLatin1String("mapSymbolFontFudgeFactor")].toDouble() * 1000.0)) / 1000;
     bool const isOnlyMapSymbolFontToBeUsed = mapObj[QLatin1String("onlyMapSymbolFontToBeUsed")].toBool();
-    int const playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
+    const int playerRoomStyle = qRound(mapObj[QLatin1String("playerRoomStyle")].toDouble());
     quint8 const playerRoomOuterDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomOuterDiameterPercentage")].toDouble());
     quint8 const playerRoomInnerDiameterPercentage = qRound(mapObj[QLatin1String("playerRoomInnerDiameterPercentage")].toDouble());
     QColor playerRoomOuterColor;
@@ -3163,9 +3163,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         if (!envColorObj.isEmpty()) {
             for (auto& key : envColorObj.keys()) {
                 bool isOk = false;
-                int const index = key.toInt(&isOk);
+                const int index = key.toInt(&isOk);
                 if (isOk && envColorObj.value(key).isDouble()) {
-                    int const value = envColorObj.value(key).toInt();
+                    const int value = envColorObj.value(key).toInt();
                     envColors.insert(index, value);
                 }
             }
@@ -3335,7 +3335,7 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
     } else {
         colorRGBAArray = obj.value(QLatin1String("color24RGB")).toArray();
     }
-    int const size = colorRGBAArray.size();
+    const int size = colorRGBAArray.size();
     if ((size == 3 || size == 4)
         && colorRGBAArray.at(0).isDouble()
         && colorRGBAArray.at(1).isDouble()

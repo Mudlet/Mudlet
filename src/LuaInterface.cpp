@@ -107,7 +107,7 @@ void LuaInterface::getAllChildren(TVar* var, QList<TVar*>* list)
 bool LuaInterface::loadKey(lua_State* L, TVar* var)
 {
     if (setjmp(buf) == 0) {
-        int const keyType = var->getKeyType();
+        const int keyType = var->getKeyType();
         if (var->isReference()) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
@@ -161,7 +161,7 @@ bool LuaInterface::reparentCVariable(TVar* from, TVar* to, TVar* curVar)
             // moving from global to global or nowhere
             return true;
         }
-        int const stackSize = lua_gettop(mL);
+        const int stackSize = lua_gettop(mL);
         bool const isSaved = varUnit->isSaved(curVar);
         if (isSaved) {
             QList<TVar*> list;
@@ -317,7 +317,7 @@ bool LuaInterface::setCValue(QList<TVar*> vars)
     //make the new stack
     TVar* var = vars.back();
     if (setjmp(buf) == 0) {
-        int const stackSize = lua_gettop(mL);
+        const int stackSize = lua_gettop(mL);
         lua_getglobal(mL, (vars[0]->getName()).toUtf8().constData());
         int i = 1;
         for (; i < vars.size() - 1; i++) {
@@ -558,8 +558,8 @@ bool LuaInterface::loadVar(TVar* var)
     //puts the value of a variable on the -1 position of the stack
     if (setjmp(buf) == 0) {
 
-        int const kType = var->getKeyType();
-        int const vType = var->getValueType();
+        const int kType = var->getKeyType();
+        const int vType = var->getValueType();
         if (vType == LUA_TTABLE) {
             if (kType == LUA_TNUMBER) {
                 lua_pushnumber(mL, QString(var->getName()).toInt());
@@ -603,7 +603,7 @@ void LuaInterface::renameVar(TVar* var)
     }
 
     for (int i = 1; i < vars.size(); i++) {
-        int const kType = vars[i]->getKeyType();
+        const int kType = vars[i]->getKeyType();
         if (kType == LUA_TNUMBER) {
             oldVariable.append(qsl("[%1]").arg(vars.at(i)->getName()));
             if (i < vars.size() - 1) {
@@ -682,7 +682,7 @@ QString LuaInterface::getValue(TVar* var)
         if (vars.empty()) {
             return {};
         }
-        int const pCount = vars.size(); //how many things we need to pop from the stack at the end
+        const int pCount = vars.size(); //how many things we need to pop from the stack at the end
         //load from _G first
         auto firstVariable = vars.constFirst();
         if (firstVariable->getKeyType() == LUA_TSTRING) {
@@ -691,8 +691,8 @@ QString LuaInterface::getValue(TVar* var)
             lua_rawgeti(mL, LUA_GLOBALSINDEX, firstVariable->getName().toInt());
         }
         if (lua_isnoneornil(mL, lua_gettop(mL))) {
-            qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName() 
-                << "onto the Lua stack in order to get value of" << var->getName() 
+            qDebug() << "LuaInterface::getValue: Couldn't put root value" << firstVariable->getName()
+                << "onto the Lua stack in order to get value of" << var->getName()
                 << ", perhaps the key type isn't supported?";
             return {};
         }
@@ -701,7 +701,7 @@ QString LuaInterface::getValue(TVar* var)
                 return {};
             }
         }
-        int const valueType = lua_type(mL, -1);
+        const int valueType = lua_type(mL, -1);
         QString value;
         if (valueType == LUA_TBOOLEAN) {
             value = lua_toboolean(mL, -1) == 0 ? QLatin1String("false") : QLatin1String("true");
@@ -718,8 +718,8 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 {
     depth++;
     while (lua_next(L, index)) {
-        int const vType = lua_type(L, -1);
-        int const kType = lua_type(L, -2);
+        const int vType = lua_type(L, -1);
+        const int kType = lua_type(L, -2);
         lua_pushvalue(L, -2); //we do this because extracting the key with tostring changes it
         QString keyName;
         QString valueName;
@@ -807,7 +807,7 @@ void LuaInterface::getVars(bool hide)
     global->setValue("{}", LUA_TTABLE);
     QListIterator<int> it(lrefs);
     while (it.hasNext()) {
-        int const ref = it.next();
+        const int ref = it.next();
         luaL_unref(mL, LUA_REGISTRYINDEX, ref);
     }
     varUnit->clear();

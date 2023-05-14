@@ -123,7 +123,7 @@ void TToolBar::addButton(TFlipButton* pB)
 
     pB->setStyleSheet(pB->mpTAction->css);
     pB->setFlat(pB->mpTAction->getButtonFlat());
-    int const rotation = pB->mpTAction->getButtonRotation();
+    const int rotation = pB->mpTAction->getButtonRotation();
     switch (rotation) {
     case 0:
         pB->setOrientation(Qt::Horizontal);
@@ -146,8 +146,8 @@ void TToolBar::addButton(TFlipButton* pB)
         }
         if (columns > 0) {
             mItemCount++;
-            int const row = mItemCount / columns;
-            int const col = mItemCount % columns;
+            const int row = mItemCount / columns;
+            const int col = mItemCount % columns;
             if (mVerticalOrientation) {
                 mpLayout->addWidget(pB, row, col);
             } else {
@@ -175,8 +175,8 @@ void TToolBar::finalize()
     if (columns <= 0) {
         columns = 1;
     }
-    int const row = (++mItemCount) / columns;
-    int const column = (mItemCount - 1) % columns;
+    const int row = (++mItemCount) / columns;
+    const int column = (mItemCount - 1) % columns;
     mpLayout->addWidget(fillerWidget, row, column);
     // 3 lines above are to avoid order of operations problem of original line
     // (-Wsequence-point warning on mItemCount) NEEDS TO BE CHECKED:

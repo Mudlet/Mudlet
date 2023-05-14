@@ -811,7 +811,7 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (!mUserAgreedToCloseConsole) {
     ASK:
-        int const choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        const int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
             event->setAccepted(false);
             event->ignore();
@@ -1148,8 +1148,8 @@ void TConsole::reset()
 
 void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, QPoint P, bool customFormat, QVector<int> luaReference)
 {
-    int const x = P.x();
-    int const y = P.y();
+    const int x = P.x();
+    const int y = P.y();
     QPoint P2 = P;
     P2.setX(x + text.size());
 
@@ -1190,11 +1190,11 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
 
             buffer.applyLink(P, P2, func, hint, luaReference);
             if (text.indexOf("\n") != -1) {
-                int const y_tmp = mUserCursor.y();
-                int const down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                const int y_tmp = mUserCursor.y();
+                const int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
-                int const y_neu = y_tmp + down;
-                int const x_adjust = text.lastIndexOf("\n");
+                const int y_neu = y_tmp + down;
+                const int x_adjust = text.lastIndexOf("\n");
                 int x_neu = 0;
                 if (x_adjust != -1) {
                     x_neu = text.size() - x_adjust - 1 > 0 ? text.size() - x_adjust - 1 : 0;
@@ -1210,8 +1210,8 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
 
 void TConsole::insertText(const QString& text, QPoint P)
 {
-    int const x = P.x();
-    int const y = P.y();
+    const int x = P.x();
+    const int y = P.y();
     if (mTriggerEngineMode) {
         mpHost->getLuaInterpreter()->adjustCaptureGroups(x, text.size());
         buffer.insertInLine(P, text, mFormatCurrent);
@@ -1226,9 +1226,9 @@ void TConsole::insertText(const QString& text, QPoint P)
             mLowerPane->showNewLines();
         } else {
             buffer.insertInLine(mUserCursor, text, mFormatCurrent);
-            int const y_tmp = mUserCursor.y();
+            const int y_tmp = mUserCursor.y();
             if (text.indexOf(QChar::LineFeed) != -1) {
-                int const down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                const int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
             } else {
                 mUpperPane->needUpdate(y_tmp, y_tmp + 1);
@@ -1241,18 +1241,18 @@ void TConsole::insertText(const QString& text, QPoint P)
 
 void TConsole::replace(const QString& text)
 {
-    int const x = P_begin.x();
-    int const o = P_end.x() - P_begin.x();
-    int const r = text.size();
+    const int x = P_begin.x();
+    const int o = P_end.x() - P_begin.x();
+    const int r = text.size();
 
     if (mTriggerEngineMode) {
         if (hasSelection()) {
             if (r < o) {
-                int const a = -1 * (o - r);
+                const int a = -1 * (o - r);
                 mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
             }
             if (r > o) {
-                int const a = r - o;
+                const int a = r - o;
                 mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
             }
         } else {
@@ -1320,7 +1320,7 @@ int TConsole::getLineCount()
 QStringList TConsole::getLines(int from, int to)
 {
     QStringList ret;
-    int const delta = abs(from - to);
+    const int delta = abs(from - to);
     for (int i = 0; i < delta; i++) {
         ret << buffer.line(from + i);
     }
@@ -1335,8 +1335,8 @@ void TConsole::selectCurrentLine()
 std::list<int> TConsole::getFgColor()
 {
     std::list<int> result;
-    int const x = P_begin.x();
-    int const y = P_begin.y();
+    const int x = P_begin.x();
+    const int y = P_begin.y();
     if (y < 0) {
         return result;
     }
@@ -1348,7 +1348,7 @@ std::list<int> TConsole::getFgColor()
     }
 
     auto line = buffer.buffer.at(y);
-    int const len = static_cast<int>(line.size());
+    const int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
         QColor const color(line.at(x).foreground());
         result.push_back(color.red());
@@ -1362,8 +1362,8 @@ std::list<int> TConsole::getFgColor()
 std::list<int> TConsole::getBgColor()
 {
     std::list<int> result;
-    int const x = P_begin.x();
-    int const y = P_begin.y();
+    const int x = P_begin.x();
+    const int y = P_begin.y();
     if (y < 0) {
         return result;
     }
@@ -1375,7 +1375,7 @@ std::list<int> TConsole::getBgColor()
     }
 
     auto line = buffer.buffer.at(y);
-    int const len = static_cast<int>(line.size());
+    const int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
         QColor const color(line.at(x).background());
         result.push_back(color.red());
@@ -1388,8 +1388,8 @@ std::list<int> TConsole::getBgColor()
 
 QPair<quint8, TChar> TConsole::getTextAttributes() const
 {
-    int const x = P_begin.x();
-    int const y = P_begin.y();
+    const int x = P_begin.x();
+    const int y = P_begin.y();
     if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size()) || x >= (static_cast<int>(buffer.buffer.at(y).size()) - 1)) {
         return qMakePair(2, TChar());
     }
@@ -1521,7 +1521,7 @@ int TConsole::getLastLineNumber()
 
 void TConsole::moveCursorEnd()
 {
-    int const y = buffer.getLastLineNumber();
+    const int y = buffer.getLastLineNumber();
     int x = buffer.line(y).size() - 1;
     x = x >= 0 ? x : 0;
     moveCursor(x, y);
@@ -1571,7 +1571,7 @@ int TConsole::select(const QString& text, int numOfMatch)
         }
     }
 
-    int const end = begin + text.size();
+    const int end = begin + text.size();
     P_begin.setX(begin);
     P_begin.setY(mUserCursor.y());
     P_end.setX(end);
@@ -1596,7 +1596,7 @@ bool TConsole::selectSection(int from, int to)
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
         return false;
     }
-    int const s = buffer.buffer[mUserCursor.y()].size();
+    const int s = buffer.buffer[mUserCursor.y()].size();
     if (from > s || from + to > s) {
         return false;
     }
@@ -1713,7 +1713,7 @@ void TConsole::printCommand(QString& msg)
 {
     if (mTriggerEngineMode) {
         msg.append(QChar::LineFeed);
-        int const lineBeforeNewContent = buffer.getLastLineNumber();
+        const int lineBeforeNewContent = buffer.getLastLineNumber();
         if (lineBeforeNewContent >= 0) {
             if (buffer.lineBuffer.at(lineBeforeNewContent).right(1) != QChar(QChar::LineFeed)) {
                 msg.prepend(QChar::LineFeed);
@@ -1721,7 +1721,7 @@ void TConsole::printCommand(QString& msg)
         }
         buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
     } else {
-        int const lineBeforeNewContent = buffer.size() - 2;
+        const int lineBeforeNewContent = buffer.size() - 2;
         if (lineBeforeNewContent >= 0) {
             int promptEnd = buffer.buffer.at(lineBeforeNewContent).size();
             if (promptEnd < 0) {
@@ -1731,7 +1731,7 @@ void TConsole::printCommand(QString& msg)
                 QPoint P(promptEnd, lineBeforeNewContent);
                 TChar const format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
-                int const down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
 
                 mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
@@ -1938,9 +1938,9 @@ QSize TConsole::getMainWindowSize() const
         return mOldSize;
     }
     QSize const consoleSize = size();
-    int const toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
-    int const toolbarHeight = mpTopToolBar->height();
-    int const commandLineHeight = mpCommandLine->height();
+    const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
+    const int toolbarHeight = mpTopToolBar->height();
+    const int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
     return mainWindowSize;
 }

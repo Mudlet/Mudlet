@@ -79,10 +79,10 @@ QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
     QMap<int, QMap<int, QMultiMap<int, int>>> kS;
     QList<TRoom*> const roomList = mpRoomDB->getRoomPtrList();
     for (auto room : roomList) {
-        int const id = room->getId();
-        int const x = room->x;
-        int const y = room->y;
-        int const z = room->z;
+        const int id = room->getId();
+        const int x = room->x;
+        const int y = room->y;
+        const int z = room->z;
         QMap<int, QMultiMap<int, int>> const _y;
         QMultiMap<int, int> const _z;
         if (!kS.contains(x)) {
@@ -101,7 +101,7 @@ QList<int> TArea::getRoomsByPosition(int x, int y, int z)
     QList<int> dL;
     QSetIterator<int> itAreaRoom(rooms);
     while (itAreaRoom.hasNext()) {
-        int const roomId = itAreaRoom.next();
+        const int roomId = itAreaRoom.next();
         TRoom* pR = mpRoomDB->getRoom(roomId);
         if (pR) {
             if (pR->x == x && pR->y == y && pR->z == z) {
@@ -133,8 +133,8 @@ QList<int> TArea::getCollisionNodes()
             QList<int> z_coordinates;
             while (it3.hasNext()) {
                 it3.next();
-                int const z = it3.key();
-                int const node = it3.value();
+                const int z = it3.key();
+                const int node = it3.value();
 
                 if (!z_coordinates.contains(node)) {
                     z_coordinates.append(node);
@@ -244,7 +244,7 @@ void TArea::determineAreaExits()
     mAreaExits.clear();
     QSetIterator<int> itRoom(rooms);
     while (itRoom.hasNext()) {
-        int const id = itRoom.next();
+        const int id = itRoom.next();
         TRoom* pR = mpRoomDB->getRoom(id);
         if (!pR) {
             continue;
@@ -332,9 +332,9 @@ void TArea::fast_calcSpan(int id)
         return;
     }
 
-    int const x = pR->x;
-    int const y = pR->y;
-    int const z = pR->z;
+    const int x = pR->x;
+    const int y = pR->y;
+    const int z = pR->z;
     if (x > max_x) {
         max_x = x;
     }
@@ -381,7 +381,7 @@ void TArea::calcSpan()
     bool isFirstDone = false;
     QSetIterator<int> itRoom(rooms);
     while (itRoom.hasNext()) {
-        int const id = itRoom.next();
+        const int id = itRoom.next();
         TRoom* pR = mpRoomDB->getRoom(id);
         if (!pR) {
             continue;
@@ -552,7 +552,7 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
     // IS one
     QSetIterator<int> itRoomWithOtherAreaSpecialExit = roomsWithOtherAreaSpecialExits;
     while (itRoomWithOtherAreaSpecialExit.hasNext()) {
-        int const fromRoomId = itRoomWithOtherAreaSpecialExit.next();
+        const int fromRoomId = itRoomWithOtherAreaSpecialExit.next();
         TRoom* pFromRoom = mpRoomDB->getRoom(fromRoomId);
         if (pFromRoom) {
             QMapIterator<QString, int> itSpecialExit(pFromRoom->getSpecialExits());
@@ -600,7 +600,7 @@ void TArea::writeJsonArea(QJsonArray& array) const
     writeJsonUserData(areaObj);
 
     QList<int> roomList{rooms.begin(), rooms.end()};
-    int const roomCount = roomList.count();
+    const int roomCount = roomList.count();
     if (roomCount > 1) {
         std::sort(roomList.begin(), roomList.end());
     }
@@ -646,7 +646,7 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     int roomCount = 0;
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
-        int const roomId = pR->readJsonRoom(areaObj.value(QLatin1String("rooms")).toArray(), roomIndex, id);
+        const int roomId = pR->readJsonRoom(areaObj.value(QLatin1String("rooms")).toArray(), roomIndex, id);
         rooms.insert(roomId);
         // This also sets the room id for the TRoom:
         mpRoomDB->addRoom(roomId, pR, true);
@@ -807,7 +807,7 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
 {
     TMapLabel label;
 
-    int const labelId = labelObj.value(QLatin1String("id")).toInt();
+    const int labelId = labelObj.value(QLatin1String("id")).toInt();
 
     label.pos = readJson3DCoordinates(labelObj, QLatin1String("coordinates"));
 

@@ -242,7 +242,7 @@ void dlgColorTrigger::slot_setRBGButtonFocus()
 void dlgColorTrigger::slot_grayColorChanged(int sliderValue)
 {
     mGrayAnsiColorNumber = 232 + sliderValue;
-    int const value = (sliderValue - 232) * 10 + 8;
+    const int value = (sliderValue - 232) * 10 + 8;
 
     mGrayAnsiColor = QColor(value, value, value);
     label_grayValue->setText(qsl("[%1]").arg(QString::number(mGrayAnsiColorNumber)));

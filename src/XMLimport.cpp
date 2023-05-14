@@ -373,12 +373,12 @@ void XMLimport::readMap()
     }
 
     mpHost->mpMap->reportStringToProgressDialog(tr("Assigning rooms to their areas..."));
-    int const roomTotal = tempAreaRoomsHash.count();
+    const int roomTotal = tempAreaRoomsHash.count();
     int currentRoomCount = 0;
 
     QListIterator<int> itAreaWithRooms(tempAreaRoomsHash.uniqueKeys());
     while (itAreaWithRooms.hasNext()) {
-        int const areaId = itAreaWithRooms.next();
+        const int areaId = itAreaWithRooms.next();
         auto values = tempAreaRoomsHash.values(areaId);
         QSet<int> const areaRoomsSet{values.begin(), values.end()};
 
@@ -407,8 +407,8 @@ void XMLimport::readEnvColors()
 
 void XMLimport::readEnvColor()
 {
-    int const id = attributes().value(qsl("id")).toString().toInt();
-    int const color = attributes().value(qsl("color")).toString().toInt();
+    const int id = attributes().value(qsl("id")).toString().toInt();
+    const int color = attributes().value(qsl("color")).toString().toInt();
 
     mpHost->mpMap->mEnvColors[id] = color;
 }
@@ -429,7 +429,7 @@ void XMLimport::readAreas()
 void XMLimport::readArea()
 {
     if (attributes().hasAttribute(qsl("id"))) {
-        int const id = attributes().value(qsl("id")).toString().toInt();
+        const int id = attributes().value(qsl("id")).toString().toInt();
         const QString name = attributes().value(qsl("name")).toString();
 
         mpHost->mpMap->mpRoomDB->addArea(id, name);
@@ -499,13 +499,13 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
                       // entranceMultiHash
         } else if (Q_LIKELY(name() == qsl("exit"))) {
             QString dir = attributes().value(qsl("direction")).toString();
-            int const e = attributes().value(qsl("target")).toString().toInt();
+            const int e = attributes().value(qsl("target")).toString().toInt();
             // If there is a "hidden" exit mark it as a locked door, otherwise
             // if there is a "door" mark it as an open/closed/locked door
             // depending on the value (I.R.E. MUD maps always uses "1" for "door"
             // and/or "hidden" - though the latter does not always appear with
             // former):
-            int const door = (attributes().hasAttribute(qsl("hidden")) && attributes().value(qsl("hidden")).toString().toInt() == 1)
+            const int door = (attributes().hasAttribute(qsl("hidden")) && attributes().value(qsl("hidden")).toString().toInt() == 1)
                     ? 3
                     : (attributes().hasAttribute(qsl("door")) && attributes().value(qsl("door")).toString().toInt() >= 0 && attributes().value(qsl("door")).toString().toInt() <= 3)
                       ? attributes().value(qsl("door")).toString().toInt()
@@ -1689,7 +1689,7 @@ void XMLimport::readIntegerList(QList<int>& list, const QString& parentName, con
             if (name() == qsl("integer")) {
                 const QString numberText = readElementText();
                 bool ok = false;
-                int const num = numberText.toInt(&ok, 10);
+                const int num = numberText.toInt(&ok, 10);
                 if (Q_LIKELY(!numberText.isEmpty() && ok)) {
                     switch (num) {
                     case REGEX_SUBSTRING:
@@ -1883,7 +1883,7 @@ void XMLimport::readStopWatchMap()
             break;
         } else if (isStartElement()) {
             if (name() == qsl("stopwatch")) {
-                int const watchId = attributes().value(qsl("id")).toInt();
+                const int watchId = attributes().value(qsl("id")).toInt();
                 auto pStopWatch = new stopWatch();
                 pStopWatch->setName(attributes().value(qsl("name")).toString());
                 pStopWatch->mIsPersistent = true;

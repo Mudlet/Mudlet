@@ -1387,7 +1387,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
     const QString tabName = pH->getName();
-    int const newTabID = mpTabBar->addTab(tabName);
+    const int newTabID = mpTabBar->addTab(tabName);
     /*
      * There is a sneaky feature on some OSes (I found it on FreeBSD but
      * it is notable switched OFF by default on MacOs) where Qt adds an
@@ -1448,8 +1448,8 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // Setting mpCurrentActiveHost to pH is now done by the following
     slot_tabChanged(newTabID);
 
-    int const x = pH->mpConsole->width();
-    int const y = pH->mpConsole->height();
+    const int x = pH->mpConsole->width();
+    const int y = pH->mpConsole->height();
     QSize const s = QSize(x, y);
     QResizeEvent event(s, s);
     updateDiscordNamedIcon();
@@ -1480,7 +1480,7 @@ void mudlet::slot_timerFires()
 
     Host* pHost = mHostManager.getHost(hostName);
     Q_ASSERT_X(pHost, "mudlet::slot_timerFires()", "Unable to deduce Host pointer from data in QTimer");
-    int const id = pQT->property(TTimer::scmProperty_TTimerId).toInt();
+    const int id = pQT->property(TTimer::scmProperty_TTimerId).toInt();
     if (Q_UNLIKELY(!id)) {
         qWarning().nospace().noquote() << "mudlet::slot_timerFires() INFO - TTimer ID is zero - so TTimer has probably been deleted.";
         pQT->deleteLater();
@@ -3970,7 +3970,7 @@ bool mudlet::scanDictionaryFile(const QString& dictionaryPath, int& oldWC, QHash
         QCollator sorter;
         sorter.setCaseSensitivity(Qt::CaseSensitive);
         std::sort(wl.begin(), wl.end(), sorter);
-        int const dupCount = wl.removeDuplicates();
+        const int dupCount = wl.removeDuplicates();
         if (dupCount) {
             qDebug().nospace().noquote() << "  Removed " << dupCount << " duplicates.";
         }
@@ -4029,7 +4029,7 @@ int mudlet::getDictionaryWordCount(const QString &dictionaryPath)
     // Read the header line containing the word count:
     ds.readLineInto(&dictionaryLine);
     bool isOk = false;
-    int const oldWordCount = dictionaryLine.toInt(&isOk);
+    const int oldWordCount = dictionaryLine.toInt(&isOk);
     dict.close();
     if (isOk) {
         return oldWordCount;
@@ -4091,7 +4091,7 @@ bool mudlet::overwriteAffixFile(const QString& affixPath, const QHash<QString, u
 // Returns the count of words in the first argument:
 int mudlet::scanWordList(QStringList& wl, QHash<QString, unsigned int>& gc)
 {
-    int const wordCount = wl.count();
+    const int wordCount = wl.count();
     if (wordCount > 1) {
         // This will use the system default locale - it might be better to use
         // the Mudlet one...
@@ -4149,7 +4149,7 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     }
 
     // We have read, sorted (and deduplicated if it was) the wordlist
-    int const wordCount = wordList.count();
+    const int wordCount = wordList.count();
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
     } else if (wordCount < oldWordCount) {
@@ -4210,7 +4210,7 @@ Hunhandle* mudlet::prepareSharedDictionary()
     }
 
     // We have read, sorted (and deduplicated if it was) the wordlist
-    int const wordCount = wordList.count();
+    const int wordCount = wordList.count();
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Considered an extra " << wordCount - oldWordCount << " words.";
     } else if (wordCount < oldWordCount) {
@@ -4244,7 +4244,7 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
 
     // The file will have previously been created - for it to be missing now is
     // not expected - thought it shouldn't really be fatal...
-    int const oldWordCount = getDictionaryWordCount(dictionaryPath);
+    const int oldWordCount = getDictionaryWordCount(dictionaryPath);
     if (oldWordCount == -1) {
         return false;
     }
@@ -4252,7 +4252,7 @@ bool mudlet::saveDictionary(const QString& pathFileBaseName, QSet<QString>& word
     QStringList wordList{wordSet.begin(), wordSet.end()};
 
     // This also sorts wordList as a wanted side-effect:
-    int const wordCount = scanWordList(wordList, graphemeCounts);
+    const int wordCount = scanWordList(wordList, graphemeCounts);
     // We have sorted and scanned the wordlist
     if (wordCount > oldWordCount) {
         qDebug().nospace().noquote() << "  Saved an extra " << wordCount - oldWordCount << " words in dictionary.";
@@ -4425,7 +4425,7 @@ void mudlet::activateProfile(Host* pHost)
     }
 
     const QString newActiveHostName{pHost->getName()};
-    int const newActiveTabIndex = hostNameToTabMap.value(newActiveHostName, -1);
+    const int newActiveTabIndex = hostNameToTabMap.value(newActiveHostName, -1);
 
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
         // Tell the old profile that it is losing focus:
@@ -4480,8 +4480,8 @@ void mudlet::activateProfile(Host* pHost)
     mpCurrentActiveHost->raiseEvent(focusGainedEvent);
 
     // Tell the new profile's main window that it might be resize via a Qt event:
-    int const x = mpCurrentActiveHost->mpConsole->width();
-    int const y = mpCurrentActiveHost->mpConsole->height();
+    const int x = mpCurrentActiveHost->mpConsole->width();
+    const int y = mpCurrentActiveHost->mpConsole->height();
     QSize const s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
@@ -4534,7 +4534,7 @@ void mudlet::setupTrayIcon()
 void mudlet::slot_tabMoved(const int oldPos, const int newPos)
 {
     const QStringList& tabNamesInOrder = mpTabBar->tabNames();
-    int const itemsCount = mpSplitter_profileContainer->count();
+    const int itemsCount = mpSplitter_profileContainer->count();
     Q_ASSERT_X(itemsCount == tabNamesInOrder.count(), "mudlet::slot_tabMoved(...)", "mismatch in count of tabs and TMainConsoles");
     QMap<QString, QWidget*> widgetMap;
     // Gather the QWidget pointers for each TMainConsole and store them

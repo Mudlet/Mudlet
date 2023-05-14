@@ -123,7 +123,7 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
             TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
             if (exitToRoom) {
                 // Valid exit roomID in place:
-                int const exitAreaID = exitToRoom->getArea();
+                const int exitAreaID = exitToRoom->getArea();
                 bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
                 bool const exitRoomLocked = exitToRoom->isLocked;
                 mpDlgRoomExits->setActionOnExit(mpEditor, exitRoomLocked
@@ -202,7 +202,7 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     QString roomIdToolTipText;
     if (pExitToRoom) {
         // A valid exit roomID number:
-        int const exitAreaID = pExitToRoom->getArea();
+        const int exitAreaID = pExitToRoom->getArea();
         bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
         bool const exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
@@ -481,8 +481,8 @@ void dlgRoomExits::save()
 
     for (int i = 0; i < specialExits->topLevelItemCount(); ++i) {
         QTreeWidgetItem* pI = specialExits->topLevelItem(i);
-        int const value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
-        int const weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
+        const int value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
+        const int weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
         int door = 0;
         bool locked = false;
         if (pI->checkState(ExitsTreeWidget::colIndex_doorLocked) == Qt::Checked) {
@@ -953,7 +953,7 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).toInt());
     if (pExitToRoom) {
         // A valid exit roomID number:
-        int const exitAreaID = pExitToRoom->getArea();
+        const int exitAreaID = pExitToRoom->getArea();
         bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
         bool const exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
@@ -1109,7 +1109,7 @@ void dlgRoomExits::normalExitEdited(const QString& roomExitIdText, QLineEdit* pE
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(roomExitIdText.toInt());
     if (exitToRoom) {
-        int const exitAreaID = exitToRoom->getArea();
+        const int exitAreaID = exitToRoom->getArea();
         bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
         bool const exitRoomLocked = exitToRoom->isLocked;
         QString exitAreaName;
@@ -1457,7 +1457,7 @@ void dlgRoomExits::initExit(int direction,
     if (exitId > 0 && pExitR) {                         //Does this exit point anywhere
         exitLineEdit->setText(QString::number(exitId)); //Put in the value
         exitLineEdit->setEnabled(true);                 //Enable it for editing
-        int const exitAreaID = pExitR->getArea();
+        const int exitAreaID = pExitR->getArea();
         bool const outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
         bool const exitRoomLocked = pExitR->isLocked;
         QString exitAreaName;
@@ -1568,7 +1568,7 @@ void dlgRoomExits::init()
     QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
         it.next();
-        int const id_to = it.value();
+        const int id_to = it.value();
         const QString dir = it.key();
         auto pSpecialExit = new TExit();
         // It should be impossible for this not to be valid:
@@ -1617,7 +1617,7 @@ void dlgRoomExits::init()
         pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         {
-            int const specialDoor = pR->getDoor(dir);
+            const int specialDoor = pR->getDoor(dir);
             switch (specialDoor) {
             case 0:
                 pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Checked);
@@ -1962,7 +1962,7 @@ void dlgRoomExits::slot_checkModified()
     // At the same time existing special exits which now have a empty/zero
     // value in the ExitsTreeWidget::colIndex_exitRoomId field will be deleted if "save"ed...
     if (!isModified) {
-        int const originalCount = originalSpecialExits.count();
+        const int originalCount = originalSpecialExits.count();
         int currentCount = 0;
         for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
             QTreeWidgetItem* pI = specialExits->topLevelItem(i);

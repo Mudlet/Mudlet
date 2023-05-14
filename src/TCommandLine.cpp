@@ -183,7 +183,7 @@ bool TCommandLine::event(QEvent* event)
                 // implicit <SHIFT>):
                 const int currentIndex = mudlet::self()->mpTabBar->currentIndex();
                 const int count = mudlet::self()->mpTabBar->count();
-                int const newIndex = (currentIndex - 1 < 0) ? (count - 1) : (currentIndex - 1);
+                const int newIndex = (currentIndex - 1 < 0) ? (count - 1) : (currentIndex - 1);
                 mudlet::self()->slot_tabChanged(newIndex);
                 ke->accept();
                 return true;
@@ -216,7 +216,7 @@ bool TCommandLine::event(QEvent* event)
                 // Switch to NEXT profile tab
                 const int currentIndex = mudlet::self()->mpTabBar->currentIndex();
                 const int count = mudlet::self()->mpTabBar->count();
-                int const newIndex = (currentIndex + 1 < count) ? (currentIndex + 1) : 0;
+                const int newIndex = (currentIndex + 1 < count) ? (currentIndex + 1) : 0;
                 mudlet::self()->slot_tabChanged(newIndex);
                 ke->accept();
                 return true;
@@ -606,7 +606,7 @@ void TCommandLine::adjustHeight()
     if (lines > 10) {
         lines = 10;
     }
-    int const fontH = QFontMetrics(font()).height();
+    const int fontH = QFontMetrics(font()).height();
     // Adjust height margin based on font size and if it is more than one row
     int marginH = lines > 1 ? 2+fontH/3 : 5;
     if (lines > 1 && marginH < 8) {
@@ -619,8 +619,8 @@ void TCommandLine::adjustHeight()
     if (_height > height() || _height < height()) {
         mpConsole->layerCommandLine->setMinimumHeight(_height);
         mpConsole->layerCommandLine->setMaximumHeight(_height);
-        int const x = mpConsole->width();
-        int const y = mpConsole->height();
+        const int x = mpConsole->width();
+        const int y = mpConsole->height();
         QSize const s = QSize(x, y);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpConsole, &event);
@@ -1009,7 +1009,7 @@ void TCommandLine::handleTabCompletion(bool direction)
         QString lastWord;
         QRegularExpression const reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
         QRegularExpressionMatch const match = reg.match(mTabCompletionTyped);
-        int const typePosition = match.capturedStart();
+        const int typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
             lastWord = match.captured(1);
         } else {
@@ -1060,7 +1060,7 @@ void TCommandLine::handleAutoCompletion()
     neu.chop(textCursor().selectedText().size());
     setPlainText(neu);
     mTabCompletionOld = neu;
-    int const oldLength = toPlainText().size();
+    const int oldLength = toPlainText().size();
     if (mAutoCompletionCount >= mHistoryList.size()) {
         mAutoCompletionCount = mHistoryList.size() - 1;
     }
@@ -1095,7 +1095,7 @@ void TCommandLine::historyMove(MoveDirection direction)
     if (mHistoryList.empty()) {
         return;
     }
-    int const shift = (direction == MOVE_UP ? 1 : -1);
+    const int shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().isEmpty()) || !mpHost->mHighlightHistory) {
         mHistoryBuffer += shift;
         if (mHistoryBuffer >= mHistoryList.size()) {

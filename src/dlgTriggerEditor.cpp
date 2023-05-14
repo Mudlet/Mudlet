@@ -850,7 +850,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     }
     // force the minimum size of the scroll area for the trigger items to be one
     // and a half trigger item widgets:
-    int const triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
+    const int triggerWidgetItemMinHeight = qRound(mTriggerPatternEdit.at(0)->minimumSizeHint().height() * 1.5);
     mpScrollArea->setMinimumHeight(triggerWidgetItemMinHeight);
 
     widget_searchTerm->updateGeometry();
@@ -1004,7 +1004,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
         // This was inside the loop but it is a constant value for the duration
         // of this method!
-        int const idSearch = pItem->data(0, IdRole).toInt();
+        const int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
@@ -1057,7 +1057,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
     case EditorViewType::cmAliasView: {
         foundItemsList = treeWidget_aliases->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
 
-        int const idSearch = pItem->data(0, IdRole).toInt();
+        const int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
@@ -1105,7 +1105,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
     case EditorViewType::cmScriptView: {
         foundItemsList = treeWidget_scripts->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
 
-        int const idSearch = pItem->data(0, IdRole).toInt();
+        const int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
@@ -1156,7 +1156,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
     case EditorViewType::cmActionView: {
         foundItemsList = treeWidget_actions->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
 
-        int const idSearch = pItem->data(0, IdRole).toInt();
+        const int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetitem : qAsConst(foundItemsList)) {
 
@@ -1220,7 +1220,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
     case EditorViewType::cmTimerView: {
         foundItemsList = treeWidget_timers->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
 
-        int const idSearch = pItem->data(0, IdRole).toInt();
+        const int idSearch = pItem->data(0, IdRole).toInt();
 
         for (auto treeWidgetItem : qAsConst(foundItemsList)) {
 
@@ -1264,8 +1264,8 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         foundItemsList = treeWidget_keys->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
 
         for (auto treeWidgetItem : qAsConst(foundItemsList)) {
-            int const idTree = treeWidgetItem->data(0, IdRole).toInt();
-            int const idSearch = pItem->data(0, IdRole).toInt();
+            const int idTree = treeWidgetItem->data(0, IdRole).toInt();
+            const int idSearch = pItem->data(0, IdRole).toInt();
             if (idTree == idSearch) {
                 slot_showKeys();
                 slot_keySelected(treeWidgetItem);
@@ -1448,7 +1448,7 @@ void dlgTriggerEditor::searchVariables(const QString& text)
                 while (itSubString.hasNext()) {
                     const QString intermediate = itSubString.next();
                     bool isOk = false;
-                    int const numberValue = intermediate.toInt(&isOk);
+                    const int numberValue = intermediate.toInt(&isOk);
                     if (isOk && QString::number(numberValue) == intermediate) {
                         // This seems to be an integer
                         idString.append(qsl("[%1]").arg(intermediate));
@@ -1533,7 +1533,7 @@ void dlgTriggerEditor::searchKeys(const QString& text)
 
         // Script content
         QStringList const textList = key->getScript().split("\n");
-        int const total = textList.count();
+        const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
             if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
@@ -1605,7 +1605,7 @@ void dlgTriggerEditor::searchTimers(const QString& text)
 
         // Script content
         QStringList const textList = timer->getScript().split("\n");
-        int const total = textList.count();
+        const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
             if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
@@ -1898,7 +1898,7 @@ void dlgTriggerEditor::searchAliases(const QString& text)
 
         // Script content - now put last
         QStringList const textList = alias->getScript().split("\n");
-        int const total = textList.count();
+        const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
             if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
@@ -2193,7 +2193,7 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
 
         // Script content - now put last
         QStringList const textList = alias->getScript().split("\n");
-        int const total = textList.count();
+        const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
             if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
@@ -2477,7 +2477,7 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
 
         // Script content
         QStringList const textList = timer->getScript().split("\n");
-        int const total = textList.count();
+        const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
             if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
@@ -2551,7 +2551,7 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
 
         // Script content
         QStringList const textList = key->getScript().split("\n");
-        int const total = textList.count();
+        const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
             if (textList.at(index).isEmpty() || !textList.at(index).contains(text, ((mSearchOptions & SearchOptionCaseSensitive) ? Qt::CaseSensitive : Qt::CaseInsensitive))) {
@@ -3703,7 +3703,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     TTrigger* pT = nullptr;
 
     if (pParent) {
-        int const parentID = pParent->data(0, Qt::UserRole).toInt();
+        const int parentID = pParent->data(0, Qt::UserRole).toInt();
 
         TTrigger* pParentTrigger = mpHost->getTriggerUnit()->getTrigger(parentID);
         if (pParentTrigger) {
@@ -3750,7 +3750,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     pT->mStayOpen = 0;
     pT->setConditionLineDelta(0);
     pT->registerTrigger();
-    int const childID = pT->getID();
+    const int childID = pT->getID();
     pNewItem->setData(0, Qt::UserRole, childID);
     QIcon icon;
     QString itemDescription;
@@ -3808,7 +3808,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     TTimer* pT = nullptr;
 
     if (pParent) {
-        int const parentID = pParent->data(0, Qt::UserRole).toInt();
+        const int parentID = pParent->data(0, Qt::UserRole).toInt();
 
         TTimer* pParentTrigger = mpHost->getTimerUnit()->getTimer(parentID);
         if (pParentTrigger) {
@@ -3851,7 +3851,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
     mpHost->getTimerUnit()->registerTimer(pT);
-    int const childID = pT->getID();
+    const int childID = pT->getID();
     pNewItem->setData(0, Qt::UserRole, childID);
     QIcon icon;
 
@@ -3967,7 +3967,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
     TKey* pT = nullptr;
 
     if (pParent) {
-        int const parentID = pParent->data(0, Qt::UserRole).toInt();
+        const int parentID = pParent->data(0, Qt::UserRole).toInt();
 
         TKey* pParentTrigger = mpHost->getKeyUnit()->getKey(parentID);
         if (pParentTrigger) {
@@ -4011,7 +4011,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
     pT->registerKey();
-    int const childID = pT->getID();
+    const int childID = pT->getID();
     pNewItem->setData(0, Qt::UserRole, childID);
     QIcon icon;
     QString itemDescription;
@@ -4057,7 +4057,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     TAlias* pT = nullptr;
 
     if (pParent) {
-        int const parentID = pParent->data(0, Qt::UserRole).toInt();
+        const int parentID = pParent->data(0, Qt::UserRole).toInt();
 
         TAlias* pParentTrigger = mpHost->getAliasUnit()->getAlias(parentID);
         if (pParentTrigger) {
@@ -4102,7 +4102,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
     pT->registerAlias();
-    int const childID = pT->getID();
+    const int childID = pT->getID();
     pNewItem->setData(0, Qt::UserRole, childID);
     QIcon icon;
     QString itemDescription;
@@ -4152,7 +4152,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     QPointer<TAction> pT = nullptr;
 
     if (pParent) {
-        int const parentID = pParent->data(0, Qt::UserRole).toInt();
+        const int parentID = pParent->data(0, Qt::UserRole).toInt();
 
         TAction* pParentAction = mpHost->getActionUnit()->getAction(parentID);
         if (pParentAction) {
@@ -4189,7 +4189,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
     pT->registerAction();
-    int const childID = pT->getID();
+    const int childID = pT->getID();
     pNewItem->setData(0, Qt::UserRole, childID);
     QIcon icon;
     QString itemDescription;
@@ -4240,7 +4240,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     TScript* pT = nullptr;
 
     if (pParent) {
-        int const parentID = pParent->data(0, Qt::UserRole).toInt();
+        const int parentID = pParent->data(0, Qt::UserRole).toInt();
 
         TScript* pParentTrigger = mpHost->getScriptUnit()->getScript(parentID);
         if (pParentTrigger) {
@@ -4283,7 +4283,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     pT->setIsFolder(isFolder);
     pT->setIsActive(false);
     pT->registerScript();
-    int const childID = pT->getID();
+    const int childID = pT->getID();
     pNewItem->setData(0, Qt::UserRole, childID);
     QIcon icon;
     QString itemDescription;
@@ -4422,7 +4422,7 @@ void dlgTriggerEditor::saveTrigger()
     QList<int> patternKinds;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
-        int const patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
+        const int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
         if (pattern.isEmpty() && patternType != REGEX_PROMPT && patternType != REGEX_LINE_SPACER) {
             continue;
         }
@@ -4459,7 +4459,7 @@ void dlgTriggerEditor::saveTrigger()
 
     const QString script = mpSourceEditorEdbeeDocument->text();
 
-    int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (pT) {
         const QString old_name = pT->getName();
@@ -4598,15 +4598,15 @@ void dlgTriggerEditor::saveTimer()
     const QString script = mpSourceEditorEdbeeDocument->text();
 
 
-    int const timerID = pItem->data(0, Qt::UserRole).toInt();
+    const int timerID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
     if (pT) {
         pT->setName(name);
         const QString command = mpTimersMainArea->lineEdit_timer_command->text();
-        int const hours = mpTimersMainArea->timeEdit_timer_hours->time().hour();
-        int const minutes = mpTimersMainArea->timeEdit_timer_minutes->time().minute();
-        int const secs = mpTimersMainArea->timeEdit_timer_seconds->time().second();
-        int const msecs = mpTimersMainArea->timeEdit_timer_msecs->time().msec();
+        const int hours = mpTimersMainArea->timeEdit_timer_hours->time().hour();
+        const int minutes = mpTimersMainArea->timeEdit_timer_minutes->time().minute();
+        const int secs = mpTimersMainArea->timeEdit_timer_seconds->time().second();
+        const int msecs = mpTimersMainArea->timeEdit_timer_msecs->time().msec();
         QTime const time(hours, minutes, secs, msecs);
         pT->setTime(time);
         pT->setCommand(command);
@@ -4734,7 +4734,7 @@ void dlgTriggerEditor::saveAlias()
     const QString script = mpSourceEditorEdbeeDocument->text();
 
 
-    int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
         const QString old_name = pT->getName();
@@ -4849,8 +4849,8 @@ void dlgTriggerEditor::saveAction()
     const QString commandUp = mpActionsMainArea->lineEdit_action_button_command_up->text();
     const QString script = mpSourceEditorEdbeeDocument->text();
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
-    int const rotation = qMax(0, mpActionsMainArea->comboBox_action_button_rotation->currentIndex());
-    int const columns = mpActionsMainArea->spinBox_action_bar_columns->text().toInt();
+    const int rotation = qMax(0, mpActionsMainArea->comboBox_action_button_rotation->currentIndex());
+    const int columns = mpActionsMainArea->spinBox_action_bar_columns->text().toInt();
     bool const isChecked = mpActionsMainArea->checkBox_action_button_isPushDown->isChecked();
     // bottom location is no longer supported i.e. location = 1 = 0 = location top
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
@@ -4860,12 +4860,12 @@ void dlgTriggerEditor::saveAction()
     }
 
     // currentIndex() can return -1 if no setting was previously made - need to fixup:
-    int const orientation = qMax(0, mpActionsMainArea->comboBox_action_bar_orientation->currentIndex());
+    const int orientation = qMax(0, mpActionsMainArea->comboBox_action_bar_orientation->currentIndex());
 
     // This is an unnecessary level of indentation but has been retained to
     // reduce the noise in a git commit/diff caused by the removal of a
     // redundant "if( pITem )" - can be removed next time the file is modified
-    int const actionID = pItem->data(0, Qt::UserRole).toInt();
+    const int actionID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
         // Check if data has been changed before it gets updated.
@@ -4995,7 +4995,7 @@ void dlgTriggerEditor::writeScript(int id)
     if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView != EditorViewType::cmScriptView) {
         return;
     }
-    int const scriptID = pItem->data(0, Qt::UserRole).toInt();
+    const int scriptID = pItem->data(0, Qt::UserRole).toInt();
     if (scriptID != id) {
         return;
     }
@@ -5036,7 +5036,7 @@ void dlgTriggerEditor::saveScript()
     }
 
 
-    int const scriptID = pItem->data(0, Qt::UserRole).toInt();
+    const int scriptID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(scriptID);
     if (!pT) {
         return;
@@ -5148,8 +5148,8 @@ int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int new
     if (!var) {
         return 2;
     }
-    int const currentNameType = var->getKeyType();
-    int const currentValueType = var->getValueType();
+    const int currentNameType = var->getKeyType();
+    const int currentValueType = var->getValueType();
     //most anything is ok to do.  We just want to enforce these rules:
     //you cannot change the type of a table that has children
     //rule removed to see if anything bad happens:
@@ -5214,7 +5214,7 @@ void dlgTriggerEditor::saveVar()
         uiNameType = LUA_TNONE;
     }
     //check variable recasting
-    int const varRecast = canRecast(pItem, uiNameType, uiValueType);
+    const int varRecast = canRecast(pItem, uiNameType, uiValueType);
     if ((uiNameType == -1) || (variable && uiNameType != variable->getKeyType())) {
         if (QString(newName).toInt()) {
             uiNameType = LUA_TNUMBER;
@@ -5391,7 +5391,7 @@ void dlgTriggerEditor::saveKey()
     const QString script = mpSourceEditorEdbeeDocument->text();
 
 
-    int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
     if (pT) {
         pItem->setText(0, name);
@@ -5521,7 +5521,7 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
         return;
     }
 
-    int const row = pBox->itemData(0).toInt();
+    const int row = pBox->itemData(0).toInt();
     if (row < 0 || row >= 50) {
         return;
     }
@@ -5626,7 +5626,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
     mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, QVariant());
     mpTriggersMainArea->spinBox_lineMargin->setValue(1);
 
-    int const ID = pItem->data(0, Qt::UserRole).toInt();
+    const int ID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(ID);
     if (pT) {
         QStringList const patternList = pT->getPatternsList();
@@ -5645,7 +5645,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             }
             // Use operator[] so we have write access to the array/list member:
             dlgTriggerPatternEdit* pPatternItem = mTriggerPatternEdit[i];
-            int const pType = propertyList.at(i);
+            const int pType = propertyList.at(i);
             if (!pType) {
                 // If the control is for the default (0) case nudge the setting
                 // up and down so that it copies the colour icon for the
@@ -5790,7 +5790,7 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
     clearDocument(mpSourceEditorEdbee); // Alias Select
 
     mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
-    int const ID = pItem->data(0, Qt::UserRole).toInt();
+    const int ID = pItem->data(0, Qt::UserRole).toInt();
     TAlias* pT = mpHost->getAliasUnit()->getAlias(ID);
     if (pT) {
         const QString pattern = pT->getRegexCode();
@@ -5839,7 +5839,7 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     clearDocument(mpSourceEditorEdbee); // Key Select
 
     mpKeysMainArea->lineEdit_key_binding->setText(pItem->text(0));
-    int const ID = pItem->data(0, Qt::UserRole).toInt();
+    const int ID = pItem->data(0, Qt::UserRole).toInt();
     TKey* pT = mpHost->getKeyUnit()->getKey(ID);
     if (pT) {
         const QString command = pT->getCommand();
@@ -5903,8 +5903,8 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
     if (!pItem || mChangingVar) {
         return;
     }
-    int const column = 0;
-    int const state = pItem->checkState(column);
+    const int column = 0;
+    const int state = pItem->checkState(column);
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     TVar* var = vu->getWVar(pItem);
@@ -5973,8 +5973,8 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
     }
 
     mChangingVar = true;
-    int const column = treeWidget_variables->currentColumn();
-    int const state = pItem->checkState(column);
+    const int column = treeWidget_variables->currentColumn();
+    const int state = pItem->checkState(column);
     LuaInterface* lI = mpHost->getLuaInterface();
     VarUnit* vu = lI->getVarUnit();
     TVar* var = vu->getWVar(pItem); // This does NOT modify pItem or what it points at
@@ -6048,8 +6048,8 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
         return;
     }
 
-    int const varType = var->getValueType();
-    int const keyType = var->getKeyType();
+    const int varType = var->getValueType();
+    const int keyType = var->getKeyType();
     QIcon icon;
 
     switch (keyType) {
@@ -6189,7 +6189,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
     mpCurrentActionItem = pItem; //remember what has been clicked to save it
     // ID will be 0 for the root of the treewidget and it is not appropriate
     // to show any right hand side details - pT will also be nullptr!
-    int const ID = pItem->data(0, Qt::UserRole).toInt();
+    const int ID = pItem->data(0, Qt::UserRole).toInt();
     TAction* pT = mpHost->getActionUnit()->getAction(ID);
     if (pT) {
         mpActionsMainArea->lineEdit_action_name->setText(pT->getName());
@@ -6324,7 +6324,7 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     mpScriptsMainArea->lineEdit_script_name->clear();
     mpScriptsMainArea->listWidget_script_registered_event_handlers->clear();
     mpScriptsMainArea->lineEdit_script_name->setText(pItem->text(0));
-    int const ID = pItem->data(0, Qt::UserRole).toInt();
+    const int ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
     if (pT) {
         const QString name = pT->getName();
@@ -6378,7 +6378,7 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
     mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
 
-    int const ID = pItem->data(0, Qt::UserRole).toInt();
+    const int ID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(ID);
     if (pT) {
         const QString command = pT->getCommand();
@@ -8480,7 +8480,7 @@ void dlgTriggerEditor::exportTrigger(const QString& fileName)
     TTrigger* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8504,7 +8504,7 @@ void dlgTriggerEditor::exportTimer(const QString& fileName)
     TTimer* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getTimerUnit()->getTimer(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8528,7 +8528,7 @@ void dlgTriggerEditor::exportAlias(const QString& fileName)
     TAlias* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getAliasUnit()->getAlias(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8552,7 +8552,7 @@ void dlgTriggerEditor::exportAction(const QString& fileName)
     TAction* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_actions->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getActionUnit()->getAction(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8576,7 +8576,7 @@ void dlgTriggerEditor::exportScript(const QString& fileName)
     TScript* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getScriptUnit()->getScript(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8600,7 +8600,7 @@ void dlgTriggerEditor::exportKey(const QString& fileName)
     TKey* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getKeyUnit()->getKey(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8625,7 +8625,7 @@ void dlgTriggerEditor::exportTriggerToClipboard()
     TTrigger* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_triggers->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8648,7 +8648,7 @@ void dlgTriggerEditor::exportTimerToClipboard()
     TTimer* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_timers->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getTimerUnit()->getTimer(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8671,7 +8671,7 @@ void dlgTriggerEditor::exportAliasToClipboard()
     TAlias* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_aliases->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getAliasUnit()->getAlias(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8694,7 +8694,7 @@ void dlgTriggerEditor::exportActionToClipboard()
     TAction* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_actions->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getActionUnit()->getAction(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8717,7 +8717,7 @@ void dlgTriggerEditor::exportScriptToClipboard()
     TScript* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getScriptUnit()->getScript(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8740,7 +8740,7 @@ void dlgTriggerEditor::exportKeyToClipboard()
     TKey* pT = nullptr;
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         pT = mpHost->getKeyUnit()->getKey(triggerID);
         if (pT) {
             name = pT->getName();
@@ -8893,7 +8893,7 @@ void dlgTriggerEditor::slot_pasteXml()
         auto parentRow = parent.row();
         auto parentId = parent.data(Qt::UserRole).toInt();
 
-        int const siblingRow = treeWidget_triggers->currentIndex().row() + 1;
+        const int siblingRow = treeWidget_triggers->currentIndex().row() + 1;
         mpHost->getTriggerUnit()->reParentTrigger(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
@@ -8902,7 +8902,7 @@ void dlgTriggerEditor::slot_pasteXml()
         auto parentRow = parent.row();
         auto parentId = parent.data(Qt::UserRole).toInt();
 
-        int const siblingRow = treeWidget_timers->currentIndex().row() + 1;
+        const int siblingRow = treeWidget_timers->currentIndex().row() + 1;
         mpHost->getTimerUnit()->reParentTimer(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
@@ -8911,7 +8911,7 @@ void dlgTriggerEditor::slot_pasteXml()
         auto parentRow = parent.row();
         auto parentId = parent.data(Qt::UserRole).toInt();
 
-        int const siblingRow = treeWidget_aliases->currentIndex().row() + 1;
+        const int siblingRow = treeWidget_aliases->currentIndex().row() + 1;
         mpHost->getAliasUnit()->reParentAlias(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
@@ -8920,7 +8920,7 @@ void dlgTriggerEditor::slot_pasteXml()
         auto parentRow = parent.row();
         auto parentId = parent.data(Qt::UserRole).toInt();
 
-        int const siblingRow = treeWidget_scripts->currentIndex().row() + 1;
+        const int siblingRow = treeWidget_scripts->currentIndex().row() + 1;
         mpHost->getScriptUnit()->reParentScript(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
@@ -8929,7 +8929,7 @@ void dlgTriggerEditor::slot_pasteXml()
         auto parentRow = parent.row();
         auto parentId = parent.data(Qt::UserRole).toInt();
 
-        int const siblingRow = treeWidget_actions->currentIndex().row() + 1;
+        const int siblingRow = treeWidget_actions->currentIndex().row() + 1;
         mpHost->getActionUnit()->reParentAction(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
@@ -8938,7 +8938,7 @@ void dlgTriggerEditor::slot_pasteXml()
         auto parentRow = parent.row();
         auto parentId = parent.data(Qt::UserRole).toInt();
 
-        int const siblingRow = treeWidget_keys->currentIndex().row() + 1;
+        const int siblingRow = treeWidget_keys->currentIndex().row() + 1;
         mpHost->getKeyUnit()->reParentKey(importedItemID, 0, parentId, parentRow, siblingRow);
         break;
     }
@@ -9269,7 +9269,7 @@ void dlgTriggerEditor::key_grab_callback(const Qt::Key key, const Qt::KeyboardMo
     mpKeysMainArea->lineEdit_key_binding->setText(name);
     QTreeWidgetItem* pItem = treeWidget_keys->currentItem();
     if (pItem) {
-        int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
         TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
         if (pT) {
             pT->setKeyCode(key);
@@ -9377,7 +9377,7 @@ void dlgTriggerEditor::slot_colorTriggerFg()
     if (!pItem) {
         return;
     }
-    int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (!pT) {
         return;
@@ -9441,7 +9441,7 @@ void dlgTriggerEditor::slot_colorTriggerBg()
     if (!pItem) {
         return;
     }
-    int const triggerID = pItem->data(0, Qt::UserRole).toInt();
+    const int triggerID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (!pT) {
         return;

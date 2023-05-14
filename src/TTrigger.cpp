@@ -302,7 +302,7 @@ bool TTrigger::match_perl(char* haystackC, const QString& haystack, int patternN
         return false; //regex compile error
     }
 
-    int const haystackCLength = strlen(haystackC);
+    const int haystackCLength = strlen(haystackC);
     int rc = -1;
     int ovector[MAX_CAPTURE_GROUPS * 3];
 
@@ -342,8 +342,8 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
     NameGroupMatches nameGroups;
     for (i = 0; i < rc; i++) {
         const char *substring_start = haystackC + ovector[2 * i];
-        int const substring_length = ovector[2 * i + 1] - ovector[2 * i];
-        int const utf16_pos = haystack.indexOf(QString(substring_start));
+        const int substring_length = ovector[2 * i + 1] - ovector[2 * i];
+        const int utf16_pos = haystack.indexOf(QString(substring_start));
         std::string match;
         if (substring_length < 1) {
             captureList.push_back(match);
@@ -372,7 +372,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &tabptr);
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
         for (i = 0; i < namecount; i++) {
-            int const n = (tabptr[0] << 8) | tabptr[1];
+            const int n = (tabptr[0] << 8) | tabptr[1];
             auto name = QString::fromUtf8(&tabptr[2]).trimmed(); //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
             auto* substring_start = haystackC + ovector[2*n]; //NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-bounds-constant-array-index)
             auto substring_length = ovector[2*n+1] - ovector[2*n]; //NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
@@ -388,7 +388,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
     }
     for (; mPerlSlashGOption;) {
         int options = 0;
-        int const start_offset = ovector[1];
+        const int start_offset = ovector[1];
 
         if (ovector[0] == ovector[1]) {
             if (ovector[0] >= haystackCLength) {
@@ -416,8 +416,8 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
 
         for (i = 0; i < rc; i++) {
             const char *substring_start = haystackC + ovector[2 * i];
-            int const substring_length = ovector[2 * i + 1] - ovector[2 * i];
-            int const utf16_pos = haystack.indexOf(QString(substring_start));
+            const int substring_length = ovector[2 * i + 1] - ovector[2 * i];
+            const int utf16_pos = haystack.indexOf(QString(substring_start));
 
             std::string match;
             if (substring_length < 1) {
@@ -437,13 +437,13 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
 
     END : {
         if (mIsColorizerTrigger) {
-            int const r1 = mBgColor.red();
-            int const g1 = mBgColor.green();
-            int const b1 = mBgColor.blue();
-            int const r2 = mFgColor.red();
-            int const g2 = mFgColor.green();
-            int const b2 = mFgColor.blue();
-            int const total = captureList.size();
+            const int r1 = mBgColor.red();
+            const int g1 = mBgColor.green();
+            const int b1 = mBgColor.blue();
+            const int r2 = mFgColor.red();
+            const int g2 = mFgColor.green();
+            const int b2 = mFgColor.blue();
+            const int total = captureList.size();
             TConsole* pC = mpHost->mpConsole;
             if (Q_UNLIKELY(!pC)) {
                 return;
@@ -452,9 +452,9 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
             auto its = captureList.begin();
             auto iti = posList.begin();
             for (int position = 1; iti != posList.end(); ++iti, ++its, position++) {
-                int const begin = *iti;
+                const int begin = *iti;
                 std::string const& s = *its;
-                int const length = QString::fromStdString(s).size();
+                const int length = QString::fromStdString(s).size();
                 if (total > 1) {
                     // skip complete match in Perl /g option type of triggers
                     // to enable people to highlight capture groups if there are any
@@ -487,7 +487,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
             pL->clearCaptureGroups();
             if (mFilterTrigger) {
                 if (captureList.size() > 1) {
-                    int const total = captureList.size();
+                    const int total = captureList.size();
                     auto its = captureList.begin();
                     auto iti = posList.begin();
                     for (int filterPosition = 1; iti != posList.end(); ++iti, ++its, filterPosition++) {
@@ -530,21 +530,21 @@ void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int 
         TDebug(Qt::darkCyan, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
     if (mIsColorizerTrigger) {
-        int const r1 = mBgColor.red();
-        int const g1 = mBgColor.green();
-        int const b1 = mBgColor.blue();
-        int const r2 = mFgColor.red();
-        int const g2 = mFgColor.green();
-        int const b2 = mFgColor.blue();
+        const int r1 = mBgColor.red();
+        const int g1 = mBgColor.green();
+        const int b1 = mBgColor.blue();
+        const int r2 = mFgColor.red();
+        const int g2 = mFgColor.green();
+        const int b2 = mFgColor.blue();
         TConsole* pC = mpHost->mpConsole;
         if (Q_UNLIKELY(!pC)) {
             return;
         }
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
-            int const begin = *iti;
+            const int begin = *iti;
             std::string const& s = *its;
-            int const length = QString::fromStdString(s).size();
+            const int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 pC->setBgColor(r1, g1, b1, 255);
@@ -642,7 +642,7 @@ void TTrigger::setExpiryCount(int expiryCount)
 
 bool TTrigger::match_substring(const QString& haystack, const QString& needle, int patternNumber, int posOffset)
 {
-    int const where = haystack.indexOf(needle);
+    const int where = haystack.indexOf(needle);
     if (where != -1) {
         processSubstringMatch(haystack, needle, patternNumber, posOffset, where);
         return true;
@@ -667,12 +667,12 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         TDebug(Qt::cyan, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(regexNumber) << ") matched.\n" >> mpHost;
     }
     if (mIsColorizerTrigger) {
-        int const r1 = mBgColor.red();
-        int const g1 = mBgColor.green();
-        int const b1 = mBgColor.blue();
-        int const r2 = mFgColor.red();
-        int const g2 = mFgColor.green();
-        int const b2 = mFgColor.blue();
+        const int r1 = mBgColor.red();
+        const int g1 = mBgColor.green();
+        const int b1 = mBgColor.blue();
+        const int r2 = mFgColor.red();
+        const int g2 = mFgColor.green();
+        const int b2 = mFgColor.blue();
         TConsole* pC = mpHost->mpConsole;
         if (Q_UNLIKELY(!pC)) {
             return;
@@ -680,9 +680,9 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         pC->deselect();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
-            int const begin = *iti;
+            const int begin = *iti;
             std::string const& s = *its;
-            int const length = QString::fromStdString(s).size();
+            const int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 pC->setBgColor(r1, g1, b1, 255);
@@ -786,12 +786,12 @@ bool TTrigger::match_color_pattern(int line, int patternNumber)
 void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList)
 {
     if (mIsColorizerTrigger) {
-        int const r1 = mBgColor.red();
-        int const g1 = mBgColor.green();
-        int const b1 = mBgColor.blue();
-        int const r2 = mFgColor.red();
-        int const g2 = mFgColor.green();
-        int const b2 = mFgColor.blue();
+        const int r1 = mBgColor.red();
+        const int g1 = mBgColor.green();
+        const int b1 = mBgColor.blue();
+        const int r2 = mFgColor.red();
+        const int g2 = mFgColor.green();
+        const int b2 = mFgColor.blue();
         TConsole* pC = mpHost->mpConsole;
         if (Q_UNLIKELY(!pC)) {
             return;
@@ -799,10 +799,10 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
         pC->deselect();
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
-            int const begin = *iti;
+            const int begin = *iti;
             //                qDebug() << "TTrigger::match_color_pattern(" << line << "," << patternNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
             std::string const& s = *its;
-            int const length = QString::fromStdString(s).size();
+            const int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 pC->setBgColor(r1, g1, b1, 255);
@@ -931,21 +931,21 @@ void TTrigger::processExactMatch(const QString& line, int patternNumber, int pos
         TDebug(Qt::yellow, Qt::black) << "Trigger name=" << mName << "(" << mPatterns.value(patternNumber) << ") matched.\n" >> mpHost;
     }
     if (mIsColorizerTrigger) {
-        int const r1 = mBgColor.red();
-        int const g1 = mBgColor.green();
-        int const b1 = mBgColor.blue();
-        int const r2 = mFgColor.red();
-        int const g2 = mFgColor.green();
-        int const b2 = mFgColor.blue();
+        const int r1 = mBgColor.red();
+        const int g1 = mBgColor.green();
+        const int b1 = mBgColor.blue();
+        const int r2 = mFgColor.red();
+        const int g2 = mFgColor.green();
+        const int b2 = mFgColor.blue();
         TConsole* pC = mpHost->mpConsole;
         if (Q_UNLIKELY(!pC)) {
             return;
         }
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
-            int const begin = *iti;
+            const int begin = *iti;
             std::string const& s = *its;
-            int const length = QString::fromStdString(s).size();
+            const int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 pC->setBgColor(r1, g1, b1, 255);
@@ -1003,14 +1003,14 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
         if (mIsMultiline) {
             for (auto& matchStatePair : mConditionMap) {
                 matchStatePair.second->newLineArrived();
-                int const next = matchStatePair.second->nextCondition();
+                const int next = matchStatePair.second->nextCondition();
                 if (next > highestCondition) {
                     highestCondition = next;
                 }
             }
         }
 
-        int const size = mPatternKinds.size();
+        const int size = mPatternKinds.size();
         for (int patternNumber = 0;; patternNumber++) {
             if (patternNumber >= size) {
                 break;
@@ -1088,7 +1088,7 @@ bool TTrigger::match(char* haystackC, const QString& haystack, int line, int pos
                         multiCaptureList = matchStatePair.second->multiCaptureList;
                         if (!multiCaptureList.empty()) {
                             for (auto mit = multiCaptureList.begin(); mit != multiCaptureList.end(); mit++, k++) {
-                                int const total = (*mit).size();
+                                const int total = (*mit).size();
                                 auto its = (*mit).begin();
                                 for (int i = 1; its != (*mit).end(); ++its, i++) {
                                     std::string s = *its;

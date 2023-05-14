@@ -625,7 +625,7 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     if (!packageDir.exists()) {
         packageDir.mkpath(packagePathName);
     }
-    int const xmlIndex = zip_name_locate(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
+    const int xmlIndex = zip_name_locate(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), ZIP_FL_ENC_GUESS);
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
     if (mudlet::smDebugMode && s == nullptr) {
@@ -1007,13 +1007,13 @@ unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
-    for (int const i : qAsConst(mpMap->mPathList)) {
+    for (const int i : qAsConst(mpMap->mPathList)) {
         const QString n = QString::number(i);
         pathList.append(n);
     }
     QStringList directionList = mpMap->mDirList;
     QStringList weightList;
-    for (int const stepWeight : qAsConst(mpMap->mWeightList)) {
+    for (const int stepWeight : qAsConst(mpMap->mWeightList)) {
         totalWeight += stepWeight;
         const QString n = QString::number(stepWeight);
         weightList.append(n);
@@ -1068,7 +1068,7 @@ bool Host::checkForCustomSpeedwalk()
 
 void Host::startSpeedWalk()
 {
-    int const totalWeight = assemblePath();
+    const int totalWeight = assemblePath();
     Q_UNUSED(totalWeight);
     const QString f = qsl("doSpeedWalk");
     const QString n = QString();
@@ -1230,7 +1230,7 @@ int Host::findStopWatchId(const QString& name) const
 {
     // Scan through existing names, in ascending id order
     QList<int> stopWatchIdList = mStopWatchMap.keys();
-    int const total = stopWatchIdList.size();
+    const int total = stopWatchIdList.size();
     if (total > 1) {
         std::sort(stopWatchIdList.begin(), stopWatchIdList.end());
     }
@@ -1446,7 +1446,7 @@ QPair<bool, QString> Host::setStopWatchName(const QString& currentName, const QS
     stopWatch* pStopWatch = nullptr;
     // Scan through existing names, in ascending id order
     QList<int> stopWatchIdList = mStopWatchMap.keys();
-    int const total = stopWatchIdList.size();
+    const int total = stopWatchIdList.size();
     if (total > 1) {
         std::sort(stopWatchIdList.begin(), stopWatchIdList.end());
     }
@@ -2293,16 +2293,16 @@ QColor Host::getAnsiColor(const int ansiCode, const bool isBackground) const
         } else if (ansiCode >= 16 && ansiCode <= 231) {
             // because color 1-15 behave like normal ANSI colors we need to subtract 16
             // 6x6 RGB color space
-            int const r = (ansiCode - 16) / 36;
-            int const g = (ansiCode - 16 - (r * 36)) / 6;
-            int const b = (ansiCode - 16 - (r * 36)) - (g * 6);
+            const int r = (ansiCode - 16) / 36;
+            const int g = (ansiCode - 16 - (r * 36)) / 6;
+            const int b = (ansiCode - 16 - (r * 36)) - (g * 6);
             // Values are scaled according to the standard Xterm color palette
             // http://jonasjacek.github.io/colors/
             return QColor(r == 0 ? 0 : (r - 1) * 40 + 95,
                           g == 0 ? 0 : (g - 1) * 40 + 95,
                           b == 0 ? 0 : (b - 1) * 40 + 95);
         } else if (ansiCode < 256) {
-            int const k = (ansiCode - 232) * 10 + 8;
+            const int k = (ansiCode - 232) * 10 + 8;
             return QColor(k, k, k);
         } else {
             return QColor(); // No-op

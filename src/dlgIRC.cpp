@@ -528,7 +528,7 @@ void dlgIRC::slot_onBufferAdded(IrcBuffer* buffer)
     userModel->setSortMethod(Irc::SortByTitle);
     userModels.insert(buffer, userModel);
     // activate the new buffer
-    int const idx = bufferModel->buffers().indexOf(buffer);
+    const int idx = bufferModel->buffers().indexOf(buffer);
     if (idx != -1) {
         bufferList->setCurrentIndex(bufferModel->index(idx));
     }
@@ -565,7 +565,7 @@ void dlgIRC::slot_onUserActivated(const QModelIndex& index)
         }
         IrcBuffer* buffer = bufferModel->add(user->name());
         // activate the new query
-        int const idx = bufferModel->buffers().indexOf(buffer);
+        const int idx = bufferModel->buffers().indexOf(buffer);
         if (idx != -1) {
             bufferList->setCurrentIndex(bufferModel->index(idx));
         }

@@ -240,7 +240,7 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference)
 {
-    int const id = mLinkStore.addLinks(command, hint, mpHost, luaReference);
+    const int id = mLinkStore.addLinks(command, hint, mpHost, luaReference);
 
     if (!trigMode) {
         append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, id);
@@ -539,7 +539,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     const int dataLength = spanEnd - spanStart;
                     QByteArray const temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
                     bool isOk = false;
-                    int const spacesNeeded = temp.toInt(&isOk);
+                    const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
                         const TChar::AttributeFlags attributeFlags =
                                 ((mIsDefaultColor ? mBold : false) ? TChar::Bold : TChar::None)
@@ -579,7 +579,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     const int dataLength = spanEnd - spanStart;
                     QByteArray const temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
                     bool isOk = false;
-                    int const argValue = temp.toInt(&isOk);
+                    const int argValue = temp.toInt(&isOk);
                     if (isOk) {
                         if (argValue >= 0 && argValue < 3) {
                             qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - ED (erase in display) sequence of form CSI" << temp << "J received,\nrejecting as incompatible with Mudlet.";
@@ -751,7 +751,7 @@ COMMIT_LINE:
 
             mMudLine.clear();
             mMudBuffer.clear();
-            int const line = lineBuffer.size() - 1;
+            const int line = lineBuffer.size() - 1;
             mpHost->mpConsole->runTriggers(line);
             // Only use of TBuffer::wrap(), breaks up new text
             // NOTE: it MAY have been clobbered by the trigger engine!
@@ -955,7 +955,7 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
             mForeGroundColorLight = mForeGroundColor;
 
         } else {
-            int const value = (tag - 232) * 10 + 8;
+            const int value = (tag - 232) * 10 + 8;
             mForeGroundColor = QColor(value, value, value);
             mForeGroundColorLight = mForeGroundColor;
         }
@@ -1118,7 +1118,7 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
                                       b == 0 ? 0 : (b - 1) * 40 + 95);
 
         } else {
-            int const value = (tag - 232) * 10 + 8;
+            const int value = (tag - 232) * 10 + 8;
             mBackGroundColor = QColor(value, value, value);
         }
 
@@ -1226,7 +1226,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     madeElements << parameterStrings.at(paraIndex); // "38"
                     madeElements << parameterStrings.at(paraIndex + 1); // "2" or "5" hopefully
                     bool isOk = false;
-                    int const sgr38_type = madeElements.at(1).toInt(&isOk);
+                    const int sgr38_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
                         // Oh dear that parameter is empty or equivalent to zero
                         // so we cannot do anything more
@@ -1323,7 +1323,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
                     bool isOk = false;
-                    int const sgr48_type = madeElements.at(1).toInt(&isOk);
+                    const int sgr48_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
                         // Oh dear that parameter is empty or equivalent to zero
                         // so we cannot do anything more
@@ -1402,7 +1402,7 @@ void TBuffer::decodeSGR(const QString& sequence)
             } else if (parameterElements.at(0) == QLatin1String("4")) {
                 // New way of controlling underline
                 bool isOk = false;
-                int const value = parameterElements.at(1).toInt(&isOk);
+                const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - failed to detect underline parameter element (the second part) in a SGR...;4:?;..m sequence assuming it is a zero!";
@@ -1428,7 +1428,7 @@ void TBuffer::decodeSGR(const QString& sequence)
             } else if (parameterElements.at(0) == QLatin1String("3")) {
                 // New way of controlling italics
                 bool isOk = false;
-                int const value = parameterElements.at(1).toInt(&isOk);
+                const int value = parameterElements.at(1).toInt(&isOk);
                 if (!isOk) {
                     // missing value
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR(\"" << sequence << "\") ERROR - failed to detect italic parameter element (the second part) in a SGR...;3:?;../m sequence assuming it is a zero!";
@@ -1609,7 +1609,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
                     bool isOk = false;
-                    int const sgr38_type = madeElements.at(1).toInt(&isOk);
+                    const int sgr38_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
                         // Oh dear that parameter is empty or equivalent to zero
                         // so we cannot do anything more
@@ -1728,7 +1728,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
                     bool isOk = false;
-                    int const sgr48_type = madeElements.at(1).toInt(&isOk);
+                    const int sgr48_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
                         // Oh dear that parameter is empty or equivalent to zero
                         // so we cannot do anything more
@@ -2302,8 +2302,8 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
     if (text.isEmpty()) {
         return false;
     }
-    int const x = P.x();
-    int const y = P.y();
+    const int x = P.x();
+    const int y = P.y();
     if ((y >= 0) && (y < static_cast<int>(buffer.size()))) {
         if (x < 0) {
             return false;
@@ -2331,7 +2331,7 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
 {
     TBuffer slice(mpHost);
     slice.clear();
-    int const y = P1.y();
+    const int y = P1.y();
     int x = P1.x();
     if (y < 0 || y >= static_cast<int>(buffer.size())) {
         return slice;
@@ -2341,8 +2341,8 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         x = 0;
     }
     int oldLinkId{}, id{};
-    for (int const total = P2.x(); x < total; ++x) {
-        int const linkId = buffer.at(y).at(x).linkIndex();
+    for (const int total = P2.x(); x < total; ++x) {
+        const int linkId = buffer.at(y).at(x).linkIndex();
         if (linkId && (linkId != oldLinkId)) {
             id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
             oldLinkId = linkId;
@@ -2373,7 +2373,7 @@ void TBuffer::paste(QPoint& P, const TBuffer& chunk)
     bool const needAppend = false;
     bool hasAppended = false;
     int y = P.y();
-    int const x = P.x();
+    const int x = P.x();
     if (chunk.buffer.empty()) {
         return;
     }
@@ -2417,7 +2417,7 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     }
     int oldLinkId{}, id{};
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
-        int const linkId = chunk.buffer.at(0).at(cx).linkIndex();
+        const int linkId = chunk.buffer.at(0).at(cx).linkIndex();
         if (linkId && (oldLinkId != linkId)) {
             id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId), mpHost);
             oldLinkId = linkId;
@@ -2438,7 +2438,7 @@ int TBuffer::calculateWrapPosition(int lineNumber, int begin, int end)
     if (lineBuffer.size() < lineNumber) {
         return 0;
     }
-    int const lineSize = static_cast<int>(lineBuffer[lineNumber].size()) - 1;
+    const int lineSize = static_cast<int>(lineBuffer[lineNumber].size()) - 1;
     if (lineSize < end) {
         end = lineSize;
     }
@@ -2456,7 +2456,7 @@ inline int TBuffer::skipSpacesAtBeginOfLine(const int row, const int column)
 {
     int offset = 0;
     int position = column;
-    int const endOfLinePosition = lineBuffer.at(row).size();
+    const int endOfLinePosition = lineBuffer.at(row).size();
     while (position < endOfLinePosition) {
         if (buffer.at(row).at(position).mFlags & TChar::Echo) {
             break;
@@ -2497,7 +2497,7 @@ inline int TBuffer::wrap(int startLine)
         }
         int lastSpace = 0;
         int wrapPos = 0;
-        int const length = buffer[i].size();
+        const int length = buffer[i].size();
         if (length == 0) {
             tempList.append(QString());
             std::deque<TChar> const emptyLine;
@@ -2511,7 +2511,7 @@ inline int TBuffer::wrap(int startLine)
             } else {
                 lastSpace = 0;
             }
-            int const wrapPosition = (lastSpace) ? lastSpace : (mWrapAt - indent);
+            const int wrapPosition = (lastSpace) ? lastSpace : (mWrapAt - indent);
             for (int i3 = 0; i3 < wrapPosition; ++i3) {
                 if (lastSpace > 0) {
                     if (i2 > lastSpace) {
@@ -2555,7 +2555,7 @@ inline int TBuffer::wrap(int startLine)
         promptBuffer.pop_back();
     }
 
-    int const insertedLines = queue.size() - 1;
+    const int insertedLines = queue.size() - 1;
     while (!queue.empty()) {
         buffer.push_back(queue.front());
         queue.pop();
@@ -2714,7 +2714,7 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
     bool const isPrompt = promptBuffer.at(startLine);
     promptBuffer.removeAt(startLine);
 
-    int const insertedLines = queue.size() - 1;
+    const int insertedLines = queue.size() - 1;
     int i = 0;
     while (!queue.empty()) {
         buffer.insert(buffer.begin() + startLine + i, queue.front());
@@ -2733,8 +2733,8 @@ int TBuffer::wrapLine(int startLine, int screenWidth, int indentSize, TChar& for
 
 bool TBuffer::moveCursor(QPoint& where)
 {
-    int const x = where.x();
-    int const y = where.y();
+    const int x = where.x();
+    const int y = where.y();
     if (y < 0) {
         return false;
     }
@@ -2794,7 +2794,7 @@ QStringList TBuffer::split(int line, const QRegularExpression& splitter)
 
 void TBuffer::expandLine(int y, int count, TChar& pC)
 {
-    int const size = buffer[y].size() - 1;
+    const int size = buffer[y].size() - 1;
     for (int i = size, total = size + count; i < total; ++i) {
         buffer[y].push_back(pC);
         lineBuffer[y].append(QChar::Space);
@@ -2803,10 +2803,10 @@ void TBuffer::expandLine(int y, int count, TChar& pC)
 
 bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with, TChar& format)
 {
-    int const x1 = P_begin.x();
-    int const x2 = P_end.x();
-    int const y1 = P_begin.y();
-    int const y2 = P_end.y();
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
     if ((y1 >= static_cast<int>(buffer.size())) || (y2 >= static_cast<int>(buffer.size()))) {
         return false;
     }
@@ -2898,7 +2898,7 @@ void TBuffer::shrinkBuffer()
 bool TBuffer::deleteLines(int from, int to)
 {
     if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to >= 0) && (to < static_cast<int>(buffer.size()))) {
-        int const delta = to - from + 1;
+        const int delta = to - from + 1;
 
         for (int i = from, total = from + delta; i < total; ++i) {
             lineBuffer.removeAt(i);
@@ -2915,10 +2915,10 @@ bool TBuffer::deleteLines(int from, int to)
 
 bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint, QVector<int> luaReference)
 {
-    int const x1 = P_begin.x();
-    int const x2 = P_end.x();
-    int const y1 = P_begin.y();
-    int const y2 = P_end.y();
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
     int linkID = 0;
 
     // clang-format off
@@ -2962,10 +2962,10 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
 // Can set multiple attributes to given state
 bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const TChar::AttributeFlags attributes, const bool state)
 {
-    int const x1 = P_begin.x();
-    int const x2 = P_end.x();
-    int const y1 = P_begin.y();
-    int const y2 = P_end.y();
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
 
     // clang-format off
     if ((x1 >= 0)
@@ -3004,10 +3004,10 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
 
 bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
 {
-    int const x1 = P_begin.x();
-    int const x2 = P_end.x();
-    int const y1 = P_begin.y();
-    int const y2 = P_end.y();
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
 
     // clang-format off
     if ((x1 >= 0)
@@ -3046,10 +3046,10 @@ bool TBuffer::applyFgColor(const QPoint& P_begin, const QPoint& P_end, const QCo
 
 bool TBuffer::applyBgColor(const QPoint& P_begin, const QPoint& P_end, const QColor& newColor)
 {
-    int const x1 = P_begin.x();
-    int const x2 = P_end.x();
-    int const y1 = P_begin.y();
-    int const y2 = P_end.y();
+    const int x1 = P_begin.x();
+    const int x2 = P_end.x();
+    const int y1 = P_begin.y();
+    const int y2 = P_end.y();
 
     // clang-format off
     if ((x1 >= 0)

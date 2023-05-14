@@ -1136,7 +1136,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         while (it.hasNext()) {
             it.next();
             const QString exitName = it.key();
-            int const exitRoomId = it.value();
+            const int exitRoomId = it.value();
             if (exitName.isEmpty()) {
                 if (mudlet::self()->showMapAuditErrors()) {
                     const QString warnMsg = tr("[ WARN ]  - In room id:%1 removing invalid (special) exit to %2 {with no name!}").arg(id, 6, QLatin1Char('0')).arg(exitRoomId, 6, QLatin1Char('0'));
@@ -1178,7 +1178,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         QMutableMapIterator<QString, int> it(mSpecialExits);
         while (it.hasNext()) {
             it.next();
-            int const exitRoomId = it.value();
+            const int exitRoomId = it.value();
             const QString exitName = it.key();
 
             if (exitRoomId > 0) {
@@ -1342,7 +1342,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         QStringList extras;
         QSetIterator<int> itSpareExitLock(exitLocksCopy);
         while (itSpareExitLock.hasNext()) {
-            int const dirCode = itSpareExitLock.next();
+            const int dirCode = itSpareExitLock.next();
             extras.append(dirCodeToDisplayName(dirCode));
             exitLocks.removeAll(dirCode);
         }
@@ -1743,7 +1743,7 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
     const QJsonObject roomObj{array.at(index).toObject()};
     // This is not needed to be stored into id as that is done when the room is
     // added to the TRoomDB via a TRoomDB::addRoom(...) call:
-    int const roomId = roomObj.value(QLatin1String("id")).toInt();
+    const int roomId = roomObj.value(QLatin1String("id")).toInt();
     name = roomObj.value(QLatin1String("name")).toString();
     area = areaId;
     readJsonUserData(roomObj.value(QLatin1String("userData")).toObject());
@@ -1869,7 +1869,7 @@ void TRoom::writeJsonNormalExit(QJsonArray& array, const int dir) const
 {
     QJsonObject exitObj;
     const QString directionString = dirCodeToString(dir);
-    int const exitId = getExit(dir);
+    const int exitId = getExit(dir);
     const QString directionKey = dirCodeToShortString(dir);
     // Skip any unreal exits:
     if (exitId < 1) {
@@ -1903,7 +1903,7 @@ void TRoom::writeJsonNormalExit(QJsonArray& array, const int dir) const
 
 bool TRoom::readJsonNormalExit(const QJsonObject& exitObj, const int dir)
 {
-    int const exitRoomId = exitObj.value(QLatin1String("exitId")).toInt();
+    const int exitRoomId = exitObj.value(QLatin1String("exitId")).toInt();
     bool hasCustomExit = false;
     if (exitRoomId < 1) {
         qDebug().nospace().noquote() << "TRoom::readJsonNormalExit(...) INFO - when reading exits for room id: " << id << " the normal \"" << dirCodeToString(dir)
@@ -2011,7 +2011,7 @@ void TRoom::writeJsonSpecialExit(QJsonArray& array, const QString& dir, const in
 
 bool TRoom::readJsonSpecialExit(const QJsonObject& exitObj, const QString& dir)
 {
-    int const exitRoomId = exitObj.value(QLatin1String("exitId")).toInt();
+    const int exitRoomId = exitObj.value(QLatin1String("exitId")).toInt();
     bool hasCustomExit = false;
     if (exitRoomId < 1) {
         qDebug().nospace().noquote() << "TRoom::readJsonSpecialExit(...) INFO - when reading exits for room id: " << id << " the special \"" << dir
@@ -2266,7 +2266,7 @@ void TRoom::readJsonExitStubs(const QJsonObject& obj)
     for (const auto exitStubValue : exitStubsArray) {
         const QJsonObject exitStubObj{exitStubValue.toObject()};
         const QString direction{exitStubObj.value(QLatin1String("name")).toString()};
-        int const dir = stringToDirCode(direction);
+        const int dir = stringToDirCode(direction);
         QString doorKey;
         if (dir != DIR_OTHER) {
             doorKey = dirCodeToShortString(dir);

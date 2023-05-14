@@ -405,7 +405,7 @@ QByteArray TTextCodec_437::convertFromUnicode(const QChar *in, int length, Conve
         } else {
             // In range of Extended ASCII \x80 up to end of BMP \xffff so let's
             // find out if it is in the lookup table.
-            int const pos = CptoUnicode.indexOf(in[i]);
+            const int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
             Q_ASSERT_X(pos < 128, "TTextCodec_437", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
@@ -509,7 +509,7 @@ QByteArray TTextCodec_667::convertFromUnicode(const QChar *in, int length, Conve
         } else {
             // In range of Extended ASCII \x80 up to end of BMP \xffff so let's
             // find out if it is in the lookup table.
-            int const pos = CptoUnicode.indexOf(in[i]);
+            const int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
             Q_ASSERT_X(pos < 128, "TTextCodec_667", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
@@ -613,7 +613,7 @@ QByteArray TTextCodec_737::convertFromUnicode(const QChar *in, int length, Conve
         } else {
             // In range of Extended ASCII \x80 up to end of BMP \xffff so let's
             // find out if it is in the lookup table.
-            int const pos = CptoUnicode.indexOf(in[i]);
+            const int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
             Q_ASSERT_X(pos < 128, "TTextCodec_737", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
@@ -717,7 +717,7 @@ QByteArray TTextCodec_869::convertFromUnicode(const QChar *in, int length, Conve
         } else {
             // In range of Extended ASCII \x80 up to end of BMP \xffff so let's
             // find out if it is in the lookup table.
-            int const pos = CptoUnicode.indexOf(in[i]);
+            const int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
             Q_ASSERT_X(pos < 128, "TTextCodec_869", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");

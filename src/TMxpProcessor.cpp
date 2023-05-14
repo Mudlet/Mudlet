@@ -28,7 +28,7 @@
 bool TMxpProcessor::setMode(const QString& code)
 {
     bool isOk = false;
-    int const modeCode = code.toInt(&isOk);
+    const int modeCode = code.toInt(&isOk);
     if (isOk) {
         return setMode(modeCode);
     } else {

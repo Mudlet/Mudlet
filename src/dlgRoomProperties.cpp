@@ -320,7 +320,7 @@ void dlgRoomProperties::accept()
     }
 
     // Find weight to return back
-    int const newWeight = getNewWeight();
+    const int newWeight = getNewWeight();
     bool changeWeight = true;
     if (newWeight <= -1) {
         // We don't want to change then

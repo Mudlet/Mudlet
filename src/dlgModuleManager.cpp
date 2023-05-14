@@ -73,7 +73,7 @@ void dlgModuleManager::layoutModules()
     QMap<int, QStringList> mOrder;
     while (it.hasNext()) {
         it.next();
-        int const priority = mpHost->mModulePriorities[it.key()];
+        const int priority = mpHost->mModulePriorities[it.key()];
         if (mOrder.contains(priority)) {
             mOrder[priority].append(it.key());
         } else {
@@ -86,7 +86,7 @@ void dlgModuleManager::layoutModules()
         QStringList pModules = it2.value();
         pModules.sort();
         for (int i = 0; i < pModules.size(); i++) {
-            int const row = moduleTable->rowCount();
+            const int row = moduleTable->rowCount();
             moduleTable->insertRow(row);
             auto masterModule = new QTableWidgetItem();
             auto itemEntry = new QTableWidgetItem();
@@ -155,7 +155,7 @@ void dlgModuleManager::slot_uninstallModule()
         return;
     }
 
-    int const cRow = moduleTable->currentRow();
+    const int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
     if (pI) {
         mpHost->uninstallPackage(pI->text(), 1);
@@ -172,7 +172,7 @@ void dlgModuleManager::slot_moduleClicked(QTableWidgetItem* pItem)
         return;
     }
 
-    int const i = pItem->row();
+    const int i = pItem->row();
 
     QTableWidgetItem* entry = moduleTable->item(i, 0);
     QTableWidgetItem* checkStatus = moduleTable->item(i, 2);
@@ -201,7 +201,7 @@ void dlgModuleManager::slot_moduleChanged(QTableWidgetItem* pItem)
         return;
     }
 
-    int const i = pItem->row();
+    const int i = pItem->row();
 
     QStringList moduleStringList;
     QTableWidgetItem* entry = moduleTable->item(i, 0);
@@ -225,7 +225,7 @@ void dlgModuleManager::slot_helpModule()
     if (!mpHost) {
         return;
     }
-    int const cRow = moduleTable->currentRow();
+    const int cRow = moduleTable->currentRow();
     QTableWidgetItem* pI = moduleTable->item(cRow, 0);
     if (!pI) {
         return;

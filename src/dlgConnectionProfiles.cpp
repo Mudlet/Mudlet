@@ -499,7 +499,7 @@ void dlgConnectionProfiles::slot_saveName()
     const QString newProfileName = profile_name_entry->text().trimmed();
     const QString newProfileHost = host_name_entry->text().trimmed();
     const QString newProfilePort = port_entry->text().trimmed();
-    int const newProfileSslTsl = port_ssl_tsl->isChecked() * 2;
+    const int newProfileSslTsl = port_ssl_tsl->isChecked() * 2;
 
     validateProfile();
     if (!validName || newProfileName.isEmpty() || !pItem) {
@@ -507,7 +507,7 @@ void dlgConnectionProfiles::slot_saveName()
     }
 
     const QString currentProfileEditName = pItem->data(csmNameRole).toString();
-    int const row = mProfileList.indexOf(currentProfileEditName);
+    const int row = mProfileList.indexOf(currentProfileEditName);
     if ((row >= 0) && (row < mProfileList.size())) {
         mProfileList[row] = newProfileName;
     } else {
@@ -1689,7 +1689,7 @@ bool dlgConnectionProfiles::validateProfile()
         }
 
         bool ok;
-        int const num = port.trimmed().toInt(&ok);
+        const int num = port.trimmed().toInt(&ok);
         if (!port.isEmpty() && (num > 65536 && ok)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2\n\n").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.")));

@@ -85,7 +85,7 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
 
     pB->setStyleSheet(pB->mpTAction->css);
     pB->setFlat(pB->mpTAction->getButtonFlat());
-    int const rotation = pB->mpTAction->getButtonRotation();
+    const int rotation = pB->mpTAction->getButtonRotation();
     switch (rotation) {
     case 0:
         pB->setOrientation(Qt::Horizontal);
@@ -108,8 +108,8 @@ void TEasyButtonBar::addButton(TFlipButton* pB)
         }
         if (columns > 0) {
             mItemCount++;
-            int const row = mItemCount / columns;
-            int const col = mItemCount % columns;
+            const int row = mItemCount / columns;
+            const int col = mItemCount % columns;
             if (mVerticalOrientation) {
                 mpLayout->addWidget(pB, row, col);
             } else {
@@ -142,8 +142,8 @@ void TEasyButtonBar::finalize()
     if (columns <= 0) {
         columns = 1;
     }
-    int const row = (++mItemCount) / columns;
-    int const column = mItemCount % columns;
+    const int row = (++mItemCount) / columns;
+    const int column = mItemCount % columns;
     if (mpLayout) {
         mpLayout->addWidget(fillerWidget, row, column);
     }

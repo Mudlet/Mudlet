@@ -787,10 +787,10 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
 
     connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, this, [&](qint64 progress) {
-        int const volume = pPlayer.getMediaData().getMediaVolume();
-        int const fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
-        int const fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
-        int const startPosition = pPlayer.getMediaData().getMediaStart();
+        const int volume = pPlayer.getMediaData().getMediaVolume();
+        const int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
+        const int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
+        const int startPosition = pPlayer.getMediaData().getMediaStart();
         bool const fadeInUsed = fadeInPosition != TMediaData::MediaFadeNotSet;
         bool const fadeOutUsed = fadeOutPosition != TMediaData::MediaFadeNotSet;
         bool actionTaken = false;
@@ -808,7 +808,7 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         }
 
         if (!actionTaken && fadeOutUsed && progress > 0) {
-            int const duration = pPlayer.getMediaPlayer()->duration();
+            const int duration = pPlayer.getMediaPlayer()->duration();
 
             if (progress > duration - fadeOutPosition) {
                 double const fadeOutVolume = static_cast<double>(volume * (duration - progress)) / static_cast<double>(fadeOutPosition * 1.0);
