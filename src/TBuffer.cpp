@@ -1196,7 +1196,7 @@ void TBuffer::decodeSGR(const QString& sequence)
 
     const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
 
-    QStringList const parameterStrings = sequence.split(QChar(';'));
+    const QStringList parameterStrings = sequence.split(QChar(';'));
     for (int paraIndex = 0, total = parameterStrings.count(); paraIndex < total; ++paraIndex) {
         const QString allParameterElements = parameterStrings.at(paraIndex);
         if (allParameterElements.contains(QLatin1String(":"))) {
@@ -1204,7 +1204,7 @@ void TBuffer::decodeSGR(const QString& sequence)
              * Parameter string with colon separated Parameter (sub) elements *
              ******************************************************************/
             // We have colon separated parameter elements, so we must have at least 2 members
-            QStringList const parameterElements(allParameterElements.split(QChar(':')));
+            const QStringList parameterElements(allParameterElements.split(QChar(':')));
             if (parameterElements.at(0) == QLatin1String("38")) {
                 if (parameterElements.count() >= 2) {
                     decodeSGR38(parameterElements, true);

@@ -1682,7 +1682,7 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
                 // this suggests that only one or ten elements are accepted so
                 // we CAN fix past mistakes by only considering the first ten
                 // elements:
-                QStringList const fontStrings{mUserData.take(qsl("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
+                const QStringList fontStrings{mUserData.take(qsl("system.fallback_mapSymbolFont")).split(QLatin1Char(','))};
                 const QString fontString{fontStrings.mid(0, 10).join(QLatin1Char(','))};
                 const QString fontFudgeFactorString = mUserData.take(qsl("system.fallback_mapSymbolFontFudgeFactor"));
                 const QString onlyUseSymbolFontString = mUserData.take(qsl("system.fallback_onlyUseMapSymbolFont"));

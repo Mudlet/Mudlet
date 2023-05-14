@@ -891,7 +891,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     // load profiles into mappers "copy map to profile" combobox
     // this feature should work seamlessly both for online and offline profiles
-    QStringList const profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
+    const QStringList profileList = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Time); // sort by profile "hotness"
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
     if (!mpMenu) {
@@ -2224,7 +2224,7 @@ void dlgProfilePreferences::fillOutMapHistory()
     const QRegularExpression mapSaveRegularExpression{qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+)(?:map)?\\.(dat|xml|json)"), QRegularExpression::CaseInsensitiveOption};
     QDir mapSaveDir(mudlet::getMudletPath(mudlet::profileMapsPath, profile_name).append(QLatin1Char('/')));
     mapSaveDir.setSorting(QDir::Time);
-    QStringList const mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    const QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (const auto& entry : mapSaveEntries) {
         QRegularExpressionMatch const match = mapSaveRegularExpression.match(entry);
         const QString mapPathFileName = mapSaveDir.absoluteFilePath(entry);
@@ -2611,7 +2611,7 @@ void dlgProfilePreferences::slot_copyMap()
     QString thisProfileLatestMapPathFileName;
     QFile thisProfileLatestMapFile;
     const QString sourceMapFolder(mudlet::getMudletPath(mudlet::profileMapsPath, pHost->getName()));
-    QStringList const mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    const QStringList mProfileList = QDir(sourceMapFolder).entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (unsigned int i = 0, total = mProfileList.size(); i < total; ++i) {
         thisProfileLatestMapPathFileName = mProfileList.at(i);
         if (thisProfileLatestMapPathFileName.isEmpty()) {
@@ -2894,7 +2894,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         if (!newIrcChannels.isEmpty()) {
-            QStringList const tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
+            const QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
             for (const QString s : tL) {
                 if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                     newChanList << s;

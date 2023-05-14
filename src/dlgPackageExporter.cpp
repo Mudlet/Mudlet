@@ -296,7 +296,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     ui->textEdit_description->setMarkdown(description);
     const QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
-    QStringList const dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
+    const QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
     ui->comboBox_dependencies->clear();
     if (!dependencies.at(0).isEmpty()) {
         ui->comboBox_dependencies->addItems(dependencies);

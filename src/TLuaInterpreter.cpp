@@ -1697,7 +1697,7 @@ int TLuaInterpreter::getMapEvents(lua_State* L)
                 QMapIterator<QString, QStringList> it(host.mpMap->mpMapper->mp2dMap->mUserActions);
                 while (it.hasNext()) {
                     it.next();
-                    QStringList const eventInfo = it.value();
+                    const QStringList eventInfo = it.value();
                     lua_createtable(L, 0, 4);
                     lua_pushstring(L, eventInfo.at(0).toUtf8().constData());
                     lua_setfield(L, -2, "event name");
@@ -9161,7 +9161,7 @@ int TLuaInterpreter::getDoors(lua_State* L)
     }
 
     lua_newtable(L);
-    QStringList const keys = pR->doors.keys();
+    const QStringList keys = pR->doors.keys();
     for (unsigned int i = 0, total = keys.size(); i < total; ++i) {
         lua_pushstring(L, keys.at(i).toUtf8().constData());
         lua_pushnumber(L, pR->doors.value(keys.at(i)));
@@ -9470,7 +9470,7 @@ int TLuaInterpreter::getCustomLines(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(roomID));
     }
     lua_newtable(L); //return table customLines[]
-    QStringList const exits = pR->customLines.keys();
+    const QStringList exits = pR->customLines.keys();
     for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
         lua_pushstring(L, exits.at(i).toUtf8().constData());
         lua_newtable(L); //customLines[direction]
@@ -9542,7 +9542,7 @@ int TLuaInterpreter::getCustomLines1(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("room %1 doesn't exist").arg(roomID));
     }
     lua_newtable(L); //return table customLines[]
-    QStringList const exits = pR->customLines.keys();
+    const QStringList exits = pR->customLines.keys();
     for (int i = 0, iTotal = exits.size(); i < iTotal; ++i) {
         lua_pushstring(L, exits.at(i).toUtf8().constData());
         lua_newtable(L); //customLines[direction]
@@ -9618,7 +9618,7 @@ int TLuaInterpreter::getExitWeights(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
     lua_newtable(L);
     if (pR) {
-        QStringList const keys = pR->getExitWeights().keys();
+        const QStringList keys = pR->getExitWeights().keys();
         for (int i = 0; i < keys.size(); i++) {
             lua_pushstring(L, keys.at(i).toUtf8().constData());
             lua_pushnumber(L, pR->getExitWeight(keys.at(i)));
@@ -10025,7 +10025,7 @@ int TLuaInterpreter::getSpecialExits(lua_State* L)
         lua_pushnumber(L, exitRoomIdList.at(i));
         lua_newtable(L);
         {
-            QStringList const exitCommandsToThisRoomId = specialExitsByExitId.values(exitRoomIdList.at(i));
+            const QStringList exitCommandsToThisRoomId = specialExitsByExitId.values(exitRoomIdList.at(i));
             int bestUnlockedExitIndex = -1;
             int bestUnlockedExitWeight = -1;
             int bestLockedExitIndex = -1;
@@ -16319,7 +16319,7 @@ int TLuaInterpreter::startTempKey(int& modifier, int& keycode, const QString& fu
 int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT = nullptr;
-    QStringList const sList {regex};
+    const QStringList sList {regex};
     QList<int> const propertyList {REGEX_EXACT_MATCH};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
@@ -16337,7 +16337,7 @@ int TLuaInterpreter::startTempExactMatchTrigger(const QString& regex, const QStr
 int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT = nullptr;
-    QStringList const sList {regex};
+    const QStringList sList {regex};
     QList<int> const propertyList {REGEX_BEGIN_OF_LINE_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
@@ -16355,7 +16355,7 @@ int TLuaInterpreter::startTempBeginOfLineTrigger(const QString& regex, const QSt
 int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT = nullptr;
-    QStringList const sList {regex};
+    const QStringList sList {regex};
     QList<int> const propertyList {REGEX_SUBSTRING};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
@@ -16373,7 +16373,7 @@ int TLuaInterpreter::startTempTrigger(const QString& regex, const QString& funct
 int TLuaInterpreter::startTempPromptTrigger(const QString& function, int expiryCount)
 {
     TTrigger* pT;
-    QStringList const sList = {QString()};
+    const QStringList sList = {QString()};
     QList<int> const propertyList = {REGEX_PROMPT};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
@@ -16436,7 +16436,7 @@ int TLuaInterpreter::startTempColorTrigger(int fg, int bg, const QString& functi
 int TLuaInterpreter::startTempRegexTrigger(const QString& regex, const QString& function, int expiryCount)
 {
     TTrigger* pT = nullptr;
-    QStringList const sList {regex};
+    const QStringList sList {regex};
     QList<int> const propertyList {REGEX_PERL};
     pT = new TTrigger("a", sList, propertyList, false, mpHost);
     pT->setIsFolder(false);
@@ -16539,7 +16539,7 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
 {
     TTrigger* pT;
     QList<int> const propertyList = {REGEX_PROMPT};
-    QStringList const patterns = {QString()};
+    const QStringList patterns = {QString()};
 
     if (parent.isEmpty()) {
         pT = new TTrigger("a", patterns, propertyList, false, mpHost);
@@ -17492,7 +17492,7 @@ int TLuaInterpreter::getMouseEvents(lua_State * L)
     QMapIterator<QString, QStringList> it(host.mConsoleActions);
     while (it.hasNext()) {
         it.next();
-        QStringList const eventInfo = it.value();
+        const QStringList eventInfo = it.value();
         lua_createtable(L, 0, 3);
         lua_pushstring(L, eventInfo.at(0).toUtf8().constData());
         lua_setfield(L, -2, "event name");

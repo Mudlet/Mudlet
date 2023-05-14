@@ -971,7 +971,7 @@ void XMLimport::readHost(Host* pHost)
                 while (it.hasNext()) {
                     it.next();
                     QStringList moduleList;
-                    QStringList const entryList = it.value();
+                    const QStringList entryList = it.value();
                     moduleList << entryList.at(0);
                     moduleList << entryList.at(1);
                     pHost->mInstalledModules[it.key()] = moduleList;

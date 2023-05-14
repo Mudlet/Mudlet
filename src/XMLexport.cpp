@@ -497,7 +497,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             while (it.hasNext()) {
                 it.next();
                 mInstalledModules.append_child("key").text().set(it.key().toUtf8().constData());
-                QStringList const entry = it.value();
+                const QStringList entry = it.value();
                 mInstalledModules.append_child("filepath").text().set(entry.at(0).toUtf8().constData());
                 if (entry.at(0).endsWith(qsl("mpackage"), Qt::CaseInsensitive) || entry.at(0).endsWith(qsl("zip"), Qt::CaseInsensitive)) {
                     mInstalledModules.append_child("zipSync").text().set(entry.at(1).toUtf8().constData());
@@ -878,7 +878,7 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             auto regexCodeList = trigger.append_child("regexCodeList");
             // Revert the first 16 ANSI colour codes back to the wrong values
             // that are still used in the save files
-            QStringList const unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mPatterns, pT->mPatternKinds);
+            const QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mPatterns, pT->mPatternKinds);
             for (int i = 0; i < unfixedAnsiColourPatternList.size(); ++i) {
                 regexCodeList.append_child("string").text().set(unfixedAnsiColourPatternList.at(i).toUtf8().constData());
             }

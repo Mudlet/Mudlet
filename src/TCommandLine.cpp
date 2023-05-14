@@ -977,7 +977,7 @@ void TCommandLine::handleTabCompletion(bool direction)
         amount = 500;
     }
 
-    QStringList const bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
+    const QStringList bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
     QString buffer = bufferList.join(QChar::Space);
 
     buffer.replace(QChar(0x21af), QChar::LineFeed);
@@ -985,7 +985,7 @@ void TCommandLine::handleTabCompletion(bool direction)
 
     QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
     wordList.append(commandLineSuggestions.values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead.
-    QStringList const blacklist = tabCompleteBlacklist.values();
+    const QStringList blacklist = tabCompleteBlacklist.values();
     QStringList toDelete;
 
     for (const QString& wstr : qAsConst(wordList)) {

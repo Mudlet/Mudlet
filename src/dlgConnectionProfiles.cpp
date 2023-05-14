@@ -878,7 +878,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     QDir dir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
     dir.setSorting(QDir::Time);
-    QStringList const entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    const QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
     for (const auto& entry : entries) {
         QRegularExpression const rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));

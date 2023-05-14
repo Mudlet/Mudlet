@@ -405,7 +405,7 @@ mudlet::mudlet()
 #if defined(INCLUDE_UPDATER)
     if (scmIsPublicTestVersion) {
         mpActionReportIssue = new QAction(tr("Report issue"), this);
-        QStringList const issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
+        const QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
         mpActionReportIssue->setIcon(QIcon(qsl(":/icons/%1").arg(issueReportIcons.at(randomIcon))));
         mpActionReportIssue->setToolTip(utils::richText(tr("The public test build gets newer features to you quicker, and you help us find issues in them quicker. Spotted something odd? Let us know asap!")));
@@ -2802,7 +2802,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     //Load rest of modules after scripts
     while (it2.hasNext()) {
         it2.next();
-        QStringList const modules = it2.value();
+        const QStringList modules = it2.value();
         mudlet::installModulesList(pHost, modules);
     }
 
@@ -3690,7 +3690,7 @@ bool mudlet::migratePasswordsToSecureStorage()
     }
     mStorePasswordsSecurely = true;
 
-    QStringList const profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
+    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath))
                                    .entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     for (const auto& profile : profiles) {
@@ -3749,7 +3749,7 @@ bool mudlet::migratePasswordsToProfileStorage()
     }
     mStorePasswordsSecurely = false;
 
-    QStringList const profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    const QStringList profiles = QDir(mudlet::getMudletPath(mudlet::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
     for (const auto& profile : profiles) {
         auto* job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));

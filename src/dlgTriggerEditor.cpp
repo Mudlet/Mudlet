@@ -1315,7 +1315,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
     case EditorViewType::cmVarsView: {
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
-        QStringList const varShort = pItem->data(0, IdRole).toStringList();
+        const QStringList varShort = pItem->data(0, IdRole).toStringList();
         QList<QTreeWidgetItem*> list;
         recurseVariablesDown(mpVarBaseItem, list);
         QListIterator<QTreeWidgetItem*> it(list);
@@ -1435,7 +1435,7 @@ void dlgTriggerEditor::searchVariables(const QString& text)
             QTreeWidgetItem* parent = nullptr;
             const QString name = varDecendent->getName();
             const QString value = varDecendent->getValue();
-            QStringList const idStringList = vu->shortVarName(varDecendent);
+            const QStringList idStringList = vu->shortVarName(varDecendent);
             QString idString;
             // Take the first element - to comply with lua requirement it
             // must begin with not a digit and not contain any spaces so is
@@ -1532,7 +1532,7 @@ void dlgTriggerEditor::searchKeys(const QString& text)
         }
 
         // Script content
-        QStringList const textList = key->getScript().split("\n");
+        const QStringList textList = key->getScript().split("\n");
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
@@ -1604,7 +1604,7 @@ void dlgTriggerEditor::searchTimers(const QString& text)
         }
 
         // Script content
-        QStringList const textList = timer->getScript().split("\n");
+        const QStringList textList = timer->getScript().split("\n");
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
@@ -1897,7 +1897,7 @@ void dlgTriggerEditor::searchAliases(const QString& text)
         }
 
         // Script content - now put last
-        QStringList const textList = alias->getScript().split("\n");
+        const QStringList textList = alias->getScript().split("\n");
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
@@ -2192,7 +2192,7 @@ void dlgTriggerEditor::recursiveSearchAlias(TAlias* pTriggerParent, const QStrin
         }
 
         // Script content - now put last
-        QStringList const textList = alias->getScript().split("\n");
+        const QStringList textList = alias->getScript().split("\n");
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
@@ -2476,7 +2476,7 @@ void dlgTriggerEditor::recursiveSearchTimers(TTimer* pTriggerParent, const QStri
         }
 
         // Script content
-        QStringList const textList = timer->getScript().split("\n");
+        const QStringList textList = timer->getScript().split("\n");
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
@@ -2550,7 +2550,7 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
         }
 
         // Script content
-        QStringList const textList = key->getScript().split("\n");
+        const QStringList textList = key->getScript().split("\n");
         const int total = textList.count();
         for (int index = 0; index < total; ++index) {
             // CHECK: This may NOT be an optimisation...!
@@ -3692,7 +3692,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     } else {
         name = tr("New trigger");
     }
-    QStringList const patterns;
+    const QStringList patterns;
     QList<int> const patternKinds;
     const QString script = "";
     QStringList nameL;
@@ -5629,7 +5629,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(ID);
     if (pT) {
-        QStringList const patternList = pT->getPatternsList();
+        const QStringList patternList = pT->getPatternsList();
         QList<int> const propertyList = pT->getRegexCodePropertyList();
 
         if (patternList.size() != propertyList.size()) {

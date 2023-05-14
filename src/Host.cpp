@@ -512,7 +512,7 @@ void Host::autoSaveMap()
 
 void Host::loadPackageInfo()
 {
-    QStringList const packages = mInstalledPackages;
+    const QStringList packages = mInstalledPackages;
     for (int i = 0; i < packages.size(); i++) {
         const QString packagePath{mudlet::self()->getMudletPath(mudlet::profilePackagePath, getName(), packages.at(i))};
         const QDir dir(packagePath);
@@ -597,7 +597,7 @@ void Host::reloadModules()
         QMapIterator<int, QStringList> it(moduleOrder);
         while (it.hasNext()) {
             it.next();
-            QStringList const moduleList = it.value();
+            const QStringList moduleList = it.value();
             for (auto moduleName : moduleList) {
                 if (mModulesToSync.contains(moduleName)) {
                     otherHost->reloadModule(moduleName, mHostName);
@@ -692,7 +692,7 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     moduleIterator.toFront();
     while (moduleIterator.hasNext()) {
         moduleIterator.next();
-        QStringList const entry = installedModules[moduleIterator.key()];
+        const QStringList entry = installedModules[moduleIterator.key()];
         mInstalledModules[moduleIterator.key()] = entry;
     }
 }
@@ -1580,13 +1580,13 @@ void Host::raiseEvent(const TEvent& pE)
     }
 
     if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
-        QStringList const functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
+        const QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
         for (int i = 0, total = functionsList.size(); i < total; ++i) {
             mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
     }
     if (mAnonymousEventHandlerFunctions.contains(star)) {
-        QStringList const functionsList = mAnonymousEventHandlerFunctions.value(star);
+        const QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
         for (int i = 0, total = functionsList.size(); i < total; ++i) {
             mLuaInterpreter.callEventHandler(functionsList.at(i), pE);
         }
@@ -4002,7 +4002,7 @@ void Host::setupIreDriverBugfix()
     // but other games implementing GA don't. Thus, only enable the workaround
     // for the former only
 
-    QStringList const ireGameUrls{"achaea.com", "lusternia.com", "imperian.com", "aetolia.com", "starmourn.com"};
+    const QStringList ireGameUrls{"achaea.com", "lusternia.com", "imperian.com", "aetolia.com", "starmourn.com"};
     if (ireGameUrls.contains(getUrl(), Qt::CaseInsensitive)) {
         set_USE_IRE_DRIVER_BUGFIX(true);
     }

@@ -944,7 +944,7 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
-    QStringList const fileNameList = TMedia::getFileNameList(mediaData);
+    const QStringList fileNameList = TMedia::getFileNameList(mediaData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
         qWarning() << qsl("TMedia::play() WARNING - could not generate a list of media file names.");

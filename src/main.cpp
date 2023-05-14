@@ -371,8 +371,8 @@ int main(int argc, char* argv[])
         commandLineTranslator.clear();
     }
 
-    QStringList const cliProfiles = parser.values(profileToOpen);
-    QStringList const onlyProfiles = parser.values(onlyPredefinedProfileToShow);
+    const QStringList cliProfiles = parser.values(profileToOpen);
+    const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
     const bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
     QImage splashImage = mudlet::getSplashScreen();
