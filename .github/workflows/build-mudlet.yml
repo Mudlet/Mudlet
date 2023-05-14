@@ -271,7 +271,8 @@ jobs:
     - name: Build Mudlet
       uses: lukka/run-cmake@v10
       with:
-        configurePreset: 'Release'
+        configurePreset: 'ninja-vcpkg-multi'
+        buildPreset: 'ninja-vcpkg-release'
         configurePresetAdditionalArgs: "['-DCMAKE_PREFIX_PATH=${{env.MINGW_BASE_DIR}}', '-DVCPKG_APPLOCAL_DEPS=OFF', '--debug-find']"
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
