@@ -31,28 +31,28 @@
   ],
   "buildPresets": [
     {
-      "name": "ninja-vcpkg-debug",
+      "name": "ninja-debug",
       "displayName": "Debug",
       "configurePreset": "ninja-multi",
       "description": "Build a release version of Mudlet",
       "configuration": "Debug"
     },
     {
-      "name": "ninja-vcpkg-release",
+      "name": "ninja-release",
       "displayName": "Release",
       "configurePreset": "ninja-multi",
       "description": "Build a debug version of Mudlet",
       "configuration": "Release"
     },
     {
-      "name": "ninja-debug",
+      "name": "ninja-vcpkg-debug",
       "displayName": "Debug",
       "configurePreset": "ninja-vcpkg-multi",
       "description": "Build a release version of Mudlet using vcpkg dependencies",
       "configuration": "Debug"
     },
     {
-      "name": "ninja-release",
+      "name": "ninja-vcpkg-release",
       "displayName": "Release",
       "configurePreset": "ninja-vcpkg-multi",
       "description": "Build a debug version of Mudlet using vcpkg dependencies",
