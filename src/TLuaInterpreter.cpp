@@ -13289,7 +13289,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
             e.append(lua_tostring(L, 1));
         }
         errorMsg = "<b><font color='blue'>";
-        errorMsg.append(e.c_str());
+        errorMsg.append(QString::fromStdString(e).toHtmlEscaped().toUtf8());
         errorMsg.append("</font></b>");
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);

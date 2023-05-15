@@ -2904,7 +2904,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose, true);
         mpProgressDialog->close();
         mpProgressDialog = nullptr;
-        return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination, file.errorString())};
+        return {false, qsl("could not open save file \"%1\", reason: %2").arg(destination.toHtmlEscaped(), file.errorString())};
     }
 
     QJsonObject mapObj;
