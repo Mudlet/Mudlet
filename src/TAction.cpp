@@ -121,7 +121,7 @@ bool TAction::setScript(const QString& script)
 bool TAction::compileScript()
 {
     mFuncName = QString("Action") + QString::number(mID);
-    const QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    const QString code = QString("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
     if (mpHost->mLuaInterpreter.compile(code, error, QString("Button: ") + getName())) {
         mNeedsToBeCompiled = false;
