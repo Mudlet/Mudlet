@@ -3105,7 +3105,7 @@ void dlgTriggerEditor::children_icon_timer(QTreeWidgetItem* pWidgetItemParent)
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                         } else {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveFolder.arg(itemDescription);
+                            itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactive;
@@ -3228,7 +3228,7 @@ void dlgTriggerEditor::children_icon_alias(QTreeWidgetItem* pWidgetItemParent)
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveFolder.arg(itemDescription);
+                        itemDescription = descInactiveParent.arg(itemDescription);
                     }
 
                 } else {
@@ -3352,7 +3352,7 @@ void dlgTriggerEditor::children_icon_script(QTreeWidgetItem* pWidgetItemParent)
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveFolder.arg(itemDescription);
+                        itemDescription = descInactiveParent.arg(itemDescription);
                     }
                 } else {
                     itemDescription = descInactive;
@@ -3525,7 +3525,7 @@ void dlgTriggerEditor::children_icon_action(QTreeWidgetItem* pWidgetItemParent)
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                        itemDescription = descInactiveFolder.arg(itemDescription);
+                        itemDescription = descInactiveParent.arg(itemDescription);
                     }
 
                 } else {
@@ -7345,7 +7345,7 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked.png")), QIcon::Normal, QIcon::Off);
                         } else {
                             icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_checked_grey.png")), QIcon::Normal, QIcon::Off);
-                            itemDescription = descInactiveFolder.arg(itemDescription);
+                            itemDescription = descInactiveParent.arg(itemDescription);
                         }
                     } else {
                         itemDescription = descInactive;
