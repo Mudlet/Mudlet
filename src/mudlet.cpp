@@ -2687,6 +2687,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
+    // pre-install packages when loading this profile for the first time
     bool preInstallPackages = false;
     if (entries.isEmpty()) {
         preInstallPackages = true;
