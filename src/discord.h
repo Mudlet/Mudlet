@@ -136,7 +136,7 @@ private:
 // Note "inline" is REQUIRED:
 inline QDebug& operator<<(QDebug& debug, const localDiscordPresence& ldp)
 {
-    QDebugStateSaver saver(debug);
+    QDebugStateSaver const saver(debug);
     Q_UNUSED(saver);
 
     QString result = qsl("localDiscordPresence(\n"

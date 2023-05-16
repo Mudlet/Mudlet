@@ -215,7 +215,7 @@ void dlgPackageExporter::slot_removeDependency()
 
 void dlgPackageExporter::slot_packageChanged(int index)
 {
-    QString packageName = ui->packageList->currentText();
+    const QString packageName = ui->packageList->currentText();
     uncheckAllChildren();
     if (index != 0) {
         ui->lineEdit_packageName->setText(packageName);
@@ -274,19 +274,19 @@ void dlgPackageExporter::slot_packageChanged(int index)
         }
     }
 
-    QString packagePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+    const QString packagePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageIconPath.clear();
-    QMap<QString, QString> packageInfo = mpHost->mPackageInfo.value(packageName);
+    QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
     ui->lineEdit_author->setText(packageInfo.value(qsl("author")));
-    QString icon{packageInfo.value(qsl("icon"))};
+    const QString icon{packageInfo.value(qsl("icon"))};
     if (!icon.isEmpty()) {
         mPackageIconPath = qsl("%1/%2/.mudlet/Icon/%3").arg(packagePath, packageName, icon);
         ui->Icon->show();
     } else {
         ui->Icon->hide();
     }
-    QIcon myIcon(mPackageIconPath);
+    const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
     ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->lineEdit_title->setText(packageInfo.value(qsl("title")));
@@ -294,9 +294,9 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QString description{mPlainDescription};
     description.replace(QLatin1String("$packagePath"), qsl("%1/%2").arg(packagePath, packageName));
     ui->textEdit_description->setMarkdown(description);
-    QString version = packageInfo.value(qsl("version"));
+    const QString version = packageInfo.value(qsl("version"));
     ui->lineEdit_version->setText(version);
-    QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
+    const QStringList dependencies = packageInfo.value(qsl("dependencies")).split(QLatin1Char(','));
     ui->comboBox_dependencies->clear();
     if (!dependencies.at(0).isEmpty()) {
         ui->comboBox_dependencies->addItems(dependencies);
@@ -304,7 +304,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
 
     //get files and folders from package
     ui->listWidget_addedFiles->clear();
-    QFileInfo info(qsl("%1/%2/").arg(packagePath, packageName));
+    const QFileInfo info(qsl("%1/%2/").arg(packagePath, packageName));
     if (!info.exists()) {
         return;
     }
@@ -312,7 +312,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QStringList ignore;
     ignore << QLatin1String("config.lua") << qsl("%1.xml").arg(packageName);
     while (it.hasNext()) {
-        QFileInfo f(it.next());
+        const QFileInfo f(it.next());
         if (ignore.contains(f.fileName(), Qt::CaseInsensitive)) {
             continue;
         }
@@ -346,12 +346,12 @@ void dlgPackageExporter::checkToEnableExportButton()
 
 void dlgPackageExporter::slot_importIcon()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), QDir::currentPath(), tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), QDir::currentPath(), tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
     if (fileName.isEmpty()) {
         return;
     }
     mPackageIconPath = fileName;
-    QIcon myIcon(mPackageIconPath);
+    const QIcon myIcon(mPackageIconPath);
     ui->Icon->clear();
     ui->Icon->setPixmap(myIcon.pixmap(ui->Icon->size()));
     ui->Icon->show();
@@ -386,17 +386,17 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
-            QString profilePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
+            const QString profilePath{mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())};
             //$packagePath will be replaced by the resource path if an existing package is selected
             if (ui->packageList->currentIndex() != 0) {
-                QString packageName = ui->packageList->currentText();
+                const QString packageName = ui->packageList->currentText();
                 plainText.replace(QLatin1String("$packagePath"), qsl("%1/%2").arg(profilePath, packageName));
             } else {
                 plainText.replace(QLatin1String("$packagePath"), profilePath);
             }
             for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = mDescriptionImages.at(i);
-                QFileInfo info(fname);
+                const QFileInfo info(fname);
                 fname = QUrl::toPercentEncoding(fname).constData();
                 plainText.replace(qsl("$%1").arg(info.fileName()), fname);
             }
@@ -418,8 +418,8 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
         if (evt->type() == QEvent::Drop) {
             QDropEvent* dropEvent = static_cast<QDropEvent*>(evt);
             for (const auto& url : dropEvent->mimeData()->urls()) {
-                QString fname = url.toLocalFile();
-                QFileInfo info(fname);
+                const QString fname = url.toLocalFile();
+                const QFileInfo info(fname);
                 if (info.exists()) {
                     ui->listWidget_addedFiles->addItem(fname);
                 }
@@ -447,7 +447,7 @@ void dlgPackageExporter::copy_directory(const QString& fromDir, const QString& t
     }
     targetDir.mkdir(toDir);
     while (it.hasNext()) {
-        QFileInfo f(it.next());
+        const QFileInfo f(it.next());
         if (f.fileName() == QLatin1String(".") || f.fileName() == QLatin1String("..") || f.isSymLink()) {
             continue;
         }
@@ -487,7 +487,7 @@ void dlgPackageExporter::slot_exportPackage()
     // To avoid confusion if the user looks in that part of their file-system we
     // will append a "/mudlet" suffix so they can see that we are interested in
     // those files:
-    QString stagingDirName = qsl("%1/mudlet/%2").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation), mPackageName);
+    const QString stagingDirName = qsl("%1/mudlet/%2").arg(QStandardPaths::writableLocation(QStandardPaths::TempLocation), mPackageName);
     QDir packageDir = QDir(stagingDirName);
     if (!packageDir.exists()) {
         packageDir.mkpath(stagingDirName);
@@ -496,7 +496,7 @@ void dlgPackageExporter::slot_exportPackage()
         packageDir.mkpath(stagingDirName);
     }
 
-    QString tempPath = qsl("%1/").arg(stagingDirName);
+    const QString tempPath = qsl("%1/").arg(stagingDirName);
 
     mExportingPackage = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
@@ -520,7 +520,7 @@ void dlgPackageExporter::slot_exportPackage()
     // start copying assets in the background
     auto assetsFuture = QtConcurrent::run(dlgPackageExporter::copyAssetsToTmp, assetPaths, tempPath);
 
-    QFileInfo iconFile = copyIconToTmp(tempPath);
+    const QFileInfo iconFile = copyIconToTmp(tempPath);
 
     mXmlPathFileName = qsl("%1/%2.xml").arg(stagingDirName, mPackageName);
     writeConfigFile(stagingDirName, iconFile, plainDescription);
@@ -600,8 +600,8 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
     //don't change the original plain description here as it may still be needed, for example if creating another package
     QString plainDescription = mPlainDescription;
     for (int i = mDescriptionImages.size() - 1; i >= 0; i--) {
-        QString fname = mDescriptionImages.at(i);
-        QFileInfo info(fname);
+        const QString fname = mDescriptionImages.at(i);
+        const QFileInfo info(fname);
         if (plainDescription.contains(qsl("$%1").arg(info.fileName()))) {
             newImagesList.append(fname);
         }
@@ -609,20 +609,20 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
 
     if (!newImagesList.isEmpty()) {
         //Create description image dir
-        QString descriptionImagesDirName = qsl("%1.mudlet/description_images/").arg(tempPath);
-        QDir descriptionImageDir = QDir(descriptionImagesDirName);
+        const QString descriptionImagesDirName = qsl("%1.mudlet/description_images/").arg(tempPath);
+        const QDir descriptionImageDir = QDir(descriptionImagesDirName);
         if (!descriptionImageDir.exists()) {
             descriptionImageDir.mkpath(descriptionImagesDirName);
         }
         for (int i = newImagesList.size() - 1; i >= 0; i--) {
-            QFileInfo imageFile(newImagesList.at(i));
+            const QFileInfo imageFile(newImagesList.at(i));
             if (imageFile.exists()) {
                 QString imageDir = descriptionImagesDirName;
                 imageDir.append(imageFile.fileName());
                 QFile::copy(imageFile.absoluteFilePath(), imageDir);
             }
             //replaces spaces with %20 in image file name to create a compatible url
-            QString imageName = QUrl::toPercentEncoding(imageFile.fileName()).constData();
+            const QString imageName = QUrl::toPercentEncoding(imageFile.fileName()).constData();
             //replace temporary path with the path that is now inside the package
             plainDescription.replace(qsl("$%1").arg(imageFile.fileName()), qsl("$packagePath/.mudlet/description_images/%1").arg(imageName));
         }
@@ -633,7 +633,7 @@ QString dlgPackageExporter::copyNewImagesToTmp(const QString& tempPath) const
 // purge images from tmp which are no longer used by the description
 void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QString& plainDescription)
 {
-    static QRegularExpression imagesInUsePattern(R"(\$packagePath\/\.mudlet\/description_images\/(.+?)\.)");
+    static QRegularExpression const imagesInUsePattern(R"(\$packagePath\/\.mudlet\/description_images\/(.+?)\.)");
     QStringList imagesInUse;
     QRegularExpressionMatchIterator i = imagesInUsePattern.globalMatch(plainDescription);
     while (i.hasNext()) {
@@ -644,7 +644,7 @@ void dlgPackageExporter::cleanupUnusedImages(const QString& tempPath, const QStr
     // iterate through all images in folder, if our list doesn't contain it - remove
     QDirIterator allImagesCopied(qsl("%1.mudlet/description_images").arg(tempPath), QDir::Files);
     while (allImagesCopied.hasNext()) {
-        QFileInfo copiedImage(allImagesCopied.next());
+        const QFileInfo copiedImage(allImagesCopied.next());
         if (!imagesInUse.contains(copiedImage.baseName())) {
             if (!QFile(copiedImage.absoluteFilePath()).remove()) {
                 qDebug() << "couldn't remove unused image" << copiedImage.fileName();
@@ -812,14 +812,14 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
     appendToDetails(qsl("version"), ui->lineEdit_version->text());
     appendToDetails(qsl("dependencies"), dependencies.join(","));
     QDateTime iso8601timestamp = QDateTime::currentDateTime();
-    int offset = iso8601timestamp.offsetFromUtc();
+    const int offset = iso8601timestamp.offsetFromUtc();
     iso8601timestamp.setOffsetFromUtc(offset);
     QDateTime iso8601time(QDateTime::currentDateTime());
     iso8601time.setTimeSpec(Qt::OffsetFromUTC);
     mPackageConfig.append(qsl("created = \"%1\"\n").arg(iso8601timestamp.toString(Qt::ISODate)));
     mPackageComment.append(qsl("    created: %1\n").arg(iso8601timestamp.toString(Qt::ISODate)));
 
-    QString luaConfig = qsl("%1/config.lua").arg(stagingDirName);
+    const QString luaConfig = qsl("%1/config.lua").arg(stagingDirName);
     QSaveFile configFile(luaConfig);
     if (configFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         QTextStream out(&configFile);
@@ -836,10 +836,10 @@ void dlgPackageExporter::writeConfigFile(const QString& stagingDirName, const QF
 
 QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 {
-    QFileInfo iconFile(mPackageIconPath);
+    const QFileInfo iconFile(mPackageIconPath);
     if (iconFile.exists()) {
         QString iconDirName = qsl("%1.mudlet/Icon/").arg(tempPath);
-        QDir iconDir = QDir(iconDirName);
+        const QDir iconDir = QDir(iconDirName);
         if (!iconDir.exists()) {
             iconDir.mkpath(iconDirName);
         }
@@ -852,7 +852,7 @@ QFileInfo dlgPackageExporter::copyIconToTmp(const QString& tempPath) const
 std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath)
 {
     for (const auto& assetPath : assetPaths) {
-        QFileInfo asset(assetPath);
+        const QFileInfo asset(assetPath);
         QString filePath = tempPath;
         filePath.append(asset.fileName());
         if (!asset.exists()) {
@@ -886,7 +886,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     if (!archive) {
         zip_error_t zipError;
         zip_error_init_with_code(&zipError, ze);
-        QString errMsg = tr("Failed to open package file. Error is: \"%1\".",
+        const QString errMsg = tr("Failed to open package file. Error is: \"%1\".",
                             // Intentional comment to separate arguments
                             "This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing "
                             "file anywhere "
@@ -916,7 +916,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     // Value is fullName in file-system:
     QMap<QString, QString> fileEntries;
     while (stagingFile.hasNext() && isOk) {
-        QString itEntry = stagingFile.next();
+        const QString itEntry = stagingFile.next();
         Q_UNUSED(itEntry);
         // Dot and DotDot entries are no use to us so skip them
         if (!(stagingFile.fileName().compare(qsl(".")) && stagingFile.fileName().compare(qsl("..")))) {
@@ -924,7 +924,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
             continue;
         }
 
-        QFileInfo stagingFileInfo(stagingFile.fileInfo());
+        const QFileInfo stagingFileInfo(stagingFile.fileInfo());
         if (!stagingFileInfo.isReadable()) {
             qWarning() << "dlgPackageExporter::slot_exportPackage() skipping file: " << stagingFile.fileName() << "it is NOT readable!";
             continue;
@@ -955,11 +955,11 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
 
     QStringListIterator itDirectoryName(directoryEntries);
     while (itDirectoryName.hasNext() && isOk) {
-        QString directoryName = itDirectoryName.next();
+        const QString directoryName = itDirectoryName.next();
         // zip_dir_add(...) returns the index of the
         // added directory item in the archive or -1 on error:
         if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
-            QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".").arg(directoryName.toHtmlEscaped(), zip_strerror(archive));
+            const QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".").arg(directoryName.toHtmlEscaped(), zip_strerror(archive));
             zip_discard(archive);
             return {false, errorMsg};
         }
@@ -1028,13 +1028,13 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         ze = zip_close(archive);
         if (ze) {
             // libzip's C interface around the error message isn't trivial - so copy it over into Qt land where things are simpler
-            QString zipError{zip_strerror(archive)};
+            const QString zipError{zip_strerror(archive)};
             if (zipError == qsl("Operation cancelled")) {
                 zip_discard(archive);
                 return {false, tr("Export cancelled.")};
             }
 
-            QString errorMsg = tr("Failed to zip up the package. Error is: \"%1\".",
+            const QString errorMsg = tr("Failed to zip up the package. Error is: \"%1\".",
                                   // Intentional comment to separate arguments
                                   "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be "
                                   "the point at which something breaks because a problem was not spotted/detected in the process earlier...")
@@ -1089,7 +1089,7 @@ void dlgPackageExporter::slot_addFiles()
 
 void dlgPackageExporter::slot_openPackageLocation()
 {
-    QString profileName(mpHost->getName());
+    const QString profileName(mpHost->getName());
 
     mPackagePath = QFileDialog::getExistingDirectory(
             nullptr, tr("Where do you want to save the package?"), mudlet::getMudletPath(mudlet::profileHomePath, profileName), QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
@@ -1142,7 +1142,7 @@ void dlgPackageExporter::checkChildren(QTreeWidgetItem* item) const
     if (!mCheckChildren) {
         return;
     }
-    QString packageName = ui->packageList->currentText();
+    const QString packageName = ui->packageList->currentText();
     auto checkState = item->checkState(0);
     // Don't check top folder if it has the same name as the package
     if (item->text(0) == packageName && item->data(0, Qt::UserRole) == isTopFolder) {
@@ -1430,7 +1430,7 @@ void dlgPackageExporter::listTimers()
     }
 }
 
-void dlgPackageExporter::displayResultMessage(const QString& html, bool const isSuccessMessage)
+void dlgPackageExporter::displayResultMessage(const QString& html, const bool isSuccessMessage)
 {
     if (!isSuccessMessage) {
         // Big RED error message
@@ -1460,7 +1460,7 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
     if (!debounce) {
         debounce = true;
         QTimer::singleShot(0, this, [this]() {
-            int itemsToExport = countCheckedItems();
+            const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
                 mpSelectionText->setTitle(tr("Select what to export (%n item(s))",
                                              // Intentional comment to separate arguments
@@ -1524,7 +1524,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
     dlgPackageExporter* my_parent = static_cast<dlgPackageExporter*>(topLevelWidget());
     if (source->hasUrls()) {
         QTextCursor myCursor = textCursor();
-        int oldPos = myCursor.position();
+        const int oldPos = myCursor.position();
         // Allows to insert image at cursor position if using copy/paste
         if (hasFocus()) {
             myCursor.setPosition(oldPos);
@@ -1539,13 +1539,13 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
                        << "bmp"
                        << "svg";
         for (const auto& url : source->urls()) {
-            QString fname = url.toLocalFile();
-            QFileInfo info(fname);
+            const QString fname = url.toLocalFile();
+            const QFileInfo info(fname);
             if (info.exists() && accepted_types.contains(info.suffix().trimmed(), Qt::CaseInsensitive)) {
                 if (!my_parent->mDescriptionImages.contains(fname)) {
                     my_parent->mDescriptionImages.append(fname);
                 }
-                QString imgSrc = qsl("![Image]($%1)").arg(info.fileName());
+                const QString imgSrc = qsl("![Image]($%1)").arg(info.fileName());
                 myCursor.insertText(imgSrc);
             }
         }
@@ -1555,7 +1555,7 @@ void dlgPackageExporterDescription::insertFromMimeData(const QMimeData* source)
             QString plainText = my_parent->mPlainDescription;
             for (int i = my_parent->mDescriptionImages.size() - 1; i >= 0; i--) {
                 QString fname = my_parent->mDescriptionImages.at(i);
-                QFileInfo info(fname);
+                const QFileInfo info(fname);
                 fname = QUrl::toPercentEncoding(fname).constData();
                 plainText.replace(qsl("$%1").arg(info.fileName()), fname);
             }
