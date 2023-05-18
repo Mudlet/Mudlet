@@ -180,7 +180,7 @@ void dlgMapLabel::slot_updateControls()
 
 void dlgMapLabel::slot_updateControlsVisibility()
 {
-    bool isText = isTextLabel();
+    const bool isText = isTextLabel();
     label_image->setVisible(!isText);
     lineEdit_image->setVisible(!isText);
     checkBox_stretchImage->setVisible(!isText);
