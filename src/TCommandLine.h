@@ -27,7 +27,6 @@
 #include "TConsole.h"
 
 #include "pre_guard.h"
-#include <QActionGroup>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QString>
@@ -77,16 +76,17 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const { return mpConsole; }
-    // First value is true to forget the NEXT line only, the second is
-    // otherwise true to remember all other; if the first is true the state
-    // of the second is to be disregarded:
-    std::pair<bool, bool> commandLineHistoryOptions() const { return {mForgetNextCommand, mSaveCommands}; }
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
     QString mCommandLineName;
 
     QMap<QString, QString> contextMenuItems;
+
+    // Set to true (by default) to save the commands in the mHistoryList at the
+    // end of the session:
+    bool mSaveCommands = true;
+
 
 public slots:
     void slot_popupMenu();
@@ -95,10 +95,6 @@ public slots:
     void slot_clearSelection(bool yes);
     void slot_adjustAccessibleNames();
     void slot_saveHistory();
-    void slot_saveCommandHistory();
-    void slot_doNotSaveCommandHistory();
-    void slot_doNotSaveNextCommand();
-    void slot_changeCommandLineHistoryOptions(const int);
 
 private:
     bool event(QEvent*) override;
@@ -115,11 +111,6 @@ private:
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
 
-    QPointer<QMenu> mpCmdHistorySubMenu;
-    QPointer<QActionGroup> mpActionGroup_cmdHistory;
-    QPointer<QAction> mpAction_saveCommandHistory;
-    QPointer<QAction> mpAction_doNotSaveNextCommand;
-    QPointer<QAction> mpAction_doNotSaveCommandHistory;
     QPointer<Host> mpHost;
     CommandLineType mType = UnknownType;
     KeyUnit* mpKeyUnit = nullptr;
@@ -143,15 +134,8 @@ private:
     char** mpUserSuggestionsList = nullptr;
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
+    // The file used to store the command history between sessions:
     QString mBackingFileName;
-    // Set to true when the command history context menu option
-    // mpAction_doNotSaveNextCommand is the one activated - it gets reset
-    // and the option goes back to the mpAction_saveCommandHistory state after
-    // the enter key is used to enter a command:
-    bool mForgetNextCommand = false;
-    // Set to true (by default) to save the commands in the mHistoryList at the
-    // end of the session:
-    bool mSaveCommands = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)

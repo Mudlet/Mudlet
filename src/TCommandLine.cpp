@@ -81,68 +81,14 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TCommandLine::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
-    // Restore the settings:
-    std::tie(mBackingFileName, mSaveCommands, mForgetNextCommand) = mpHost->getCmdLineSettings(mType, name);
+    // Restore the history settings:
+    std::tie(mBackingFileName, mSaveCommands) = mpHost->getCmdLineSettings(mType, name);
 
     // Restore any previous historic commands even if we are not going to save
     // them under current settings:
     restoreHistory();
 
-    mpCmdHistorySubMenu = new QMenu(tr("Command history options..."), this);
-    mpActionGroup_cmdHistory = new QActionGroup(mpCmdHistorySubMenu);
-    mpAction_saveCommandHistory = new QAction(mpActionGroup_cmdHistory);
-    mpAction_doNotSaveNextCommand = new QAction(mpActionGroup_cmdHistory);
-    mpAction_doNotSaveCommandHistory = new QAction(mpActionGroup_cmdHistory);
-    slot_changeCommandLineHistoryOptions(mpHost->getCommandLineHistorySaveSize());
-
-    mpAction_saveCommandHistory->setCheckable(true);
-    QIcon icon_saveCommandHistory;
-    icon_saveCommandHistory.addPixmap(QPixmap(qsl(":/icons/log-all-commands.png")), QIcon::Normal, QIcon::Off);
-    icon_saveCommandHistory.addPixmap(QPixmap(qsl(":/icons/log-all-commands-on.png")), QIcon::Normal, QIcon::On);
-    mpAction_saveCommandHistory->setIcon(icon_saveCommandHistory);
-
-    QIcon icon_doNotSaveNextCommand;
-    icon_doNotSaveNextCommand.addPixmap(QPixmap(qsl(":/icons/do-not-log-this-command.png")), QIcon::Normal, QIcon::Off);
-    icon_doNotSaveNextCommand.addPixmap(QPixmap(qsl(":/icons/do-not-log-this-command-on.png")), QIcon::Normal, QIcon::On);
-    mpAction_doNotSaveNextCommand->setCheckable(true);
-    mpAction_doNotSaveNextCommand->setIcon(icon_doNotSaveNextCommand);
-
-    QIcon icon_doNotSaveCommandHistory;
-    icon_doNotSaveCommandHistory.addPixmap(QPixmap(qsl(":/icons/do-not-log-commands.png")), QIcon::Normal, QIcon::Off);
-    icon_doNotSaveCommandHistory.addPixmap(QPixmap(qsl(":/icons/do-not-log-commands-on.png")), QIcon::Normal, QIcon::On);
-    mpAction_doNotSaveCommandHistory->setCheckable(true);
-    mpAction_doNotSaveCommandHistory->setIcon(icon_doNotSaveCommandHistory);
-
-    // It is not possible to show an icon for each of the states AS WELL
-    // as the QRadioButton to show the current selection for SOME or
-    // possibly now ALL styles. There are two potential solutions that
-    // are worth consideration:
-    // A) Have different icons for the off/on (unchecked/checked) state
-    // for each option {I already had a set of 6 prepared for a
-    // previous incarnation of the PR that introduces "Saving command
-    // history" that used separate buttons alongside the QPlainTextEdit
-    // but that was not used} so the one selected can be picked out.
-    // B) Derive a class that modifies the base QMenu to have icons that
-    // combine a supplied QIcon with an additional generated "radio button"
-    // for the "selected item in a button group" as per:
-    // https://forum.qt.io/topic/32747/can-checkable-qactions-menu-items-with-icons-also-show-check-indicators
-    // I have gone with A) for the moment - SlySven 2023/05
-
-    mpCmdHistorySubMenu->insertAction(nullptr, mpAction_doNotSaveCommandHistory);
-    mpCmdHistorySubMenu->insertAction(mpAction_doNotSaveCommandHistory, mpAction_doNotSaveNextCommand);
-    mpCmdHistorySubMenu->insertAction(mpAction_doNotSaveNextCommand, mpAction_saveCommandHistory);
-    // Though this seems to makes sense, it does hide the sub-menu options
-    // completely if the command history is disabled in the preferences:
-    // mpCmdHistorySubMenu->setEnabled(mpHost->getCommandLineHistorySaveSize());
-    // Set up the texts depending on whether the command line history is
-    // enabled globally for this profile:
-    slot_changeCommandLineHistoryOptions(mpHost->getCommandLineHistorySaveSize());
-
     connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
-    connect(pHost, &Host::signal_changeCommandLineHistorySaveSize, this, &TCommandLine::slot_changeCommandLineHistoryOptions);
-    connect(mpAction_saveCommandHistory, &QAction::triggered, this, &TCommandLine::slot_saveCommandHistory);
-    connect(mpAction_doNotSaveNextCommand, &QAction::triggered, this, &TCommandLine::slot_doNotSaveNextCommand);
-    connect(mpAction_doNotSaveCommandHistory, &QAction::triggered, this, &TCommandLine::slot_doNotSaveCommandHistory);
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -744,9 +690,6 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 #else
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
 #endif
-        auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().constFirst());
-        auto menuAction_commandHistory = popup->insertMenu(separator_aboveStandardMenu, mpCmdHistorySubMenu);
-
         if (mpHost->mEnableSpellCheck) {
             QTextCursor c = cursorForPosition(event->pos());
             c.select(QTextCursor::WordUnderCursor);
@@ -760,10 +703,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             QAction* action_removeWord = nullptr;
             QAction* action_dictionarySeparatorLine = nullptr;
 
-            if (Q_LIKELY(handle_profile)) {
-                // This is always likely because the option to disable just the
-                // user dictionary has been disabled!
-
+            if (handle_profile) {
                 // TODO: Make icons for these?
 //                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
 //                    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
@@ -805,7 +745,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
                 if (!Hunspell_spell(handle_system, encodedText.constData())) {
                     // The word is NOT in the main system dictionary:
-                    if (Q_LIKELY(handle_profile)) {
+                    if (handle_profile) {
                         // Have a user dictionary so check it:
                         if (!Hunspell_spell(handle_profile, mSpellCheckedWord.toUtf8().constData())) {
                             // The word is NOT in the profile one either - so enable add option
@@ -825,22 +765,19 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                         }
                     }
                 }
-                // Else the word IS in the main system dictionary
-                // - however we still get suggested alternatives:
+
                 mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
             } else {
                 mSystemDictionarySuggestionsCount = 0;
             }
 
-            if (Q_LIKELY(handle_profile)) {
-                // Have a user dictionary so also check it for suggestions:
+            if (handle_profile) {
                 mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, mSpellCheckedWord.toUtf8().constData());
             } else {
                 mUserDictionarySuggestionsCount = 0;
             }
 
             if (mSystemDictionarySuggestionsCount) {
-                // We have some system dictionary suggestions:
                 for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
                     auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
 #if defined(Q_OS_FREEBSD)
@@ -856,7 +793,6 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 }
 
             } else {
-                // We don't have some system dictionary suggestions:
                 auto pA = new QAction(tr("no suggestions (system)",
                                          // Intentional comment
                                          "used when the command spelling checker using the selected system dictionary has no words to suggest"));
@@ -864,10 +800,8 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 spellings_system << pA;
             }
 
-            if (Q_LIKELY(handle_profile)) {
-                // We have a user dictionary
+            if (handle_profile) {
                 if (mUserDictionarySuggestionsCount) {
-                    // We have some user dictionary suggestions:
                     for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
                         auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
 #if defined(Q_OS_FREEBSD)
@@ -883,7 +817,6 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                     }
 
                 } else {
-                    // We do not have any user dictionary suggestions:
                     QAction* pA = nullptr;
                     auto mainConsole = mpConsole->mpHost->mpConsole;
                     if (mainConsole->isUsingSharedDictionary()) {
@@ -900,38 +833,28 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 }
             }
 
-           /* Case for when spell checking is enabled:
+           /*
             * Build up the extra context menu items from the BOTTOM up, so that
             * the top of the context menu looks like:
-            * ##===
-            * || profile dictionary suggestions
-            * || --------- separator_aboveDictionarySeparatorLine
-            * || \/ System dictionary suggestions /\ Profile  <== Text
-            * || --------- separator_aboveSystemDictionarySuggestions
-            * ##=== There /IS\IS NOT/ a user dictionary
-            * || \/ System dictionary suggestions /\ Profile  <== Text (Not now possible)
-            * ##===
+            *
+            * profile dictionary suggestions
+            * --------- separator_aboveDictionarySeparatorLine
+            * \/ System dictionary suggestions /\ Profile  <== Text
+            * --------- separator_aboveSystemDictionarySuggestions
             * system dictionary suggestions
             * --------- separator_aboveAddAndRemove
             * Add word action
             * Remove word action
-            * --------- separator_aboveCommandHistoryOptions
-            * Command History submenu...
-            *     Save commands in history
-            *     Do not save next command at all
-            *     Do not save commands in history
             * --------- separator_aboveStandardMenu
             *
-            * The insertAction[s](...)/(Separator(...)) insert their second
-            * argument (or the item generated by themself) before the first (or
+            * The insertAction[s](...)/(Separator(...)) insert their things
+            * second argument (or generated by themself) before the first (or
             * only) argument given.
             */
 
-            auto separator_aboveCommandHistoryOptions = popup->insertSeparator(menuAction_commandHistory);
-            if (Q_LIKELY(handle_profile)) {
-                // We have a user-dictionary in use (in fact the option to
-                // disable it independently of the system one has been removed)
-                popup->insertAction(separator_aboveCommandHistoryOptions, action_removeWord);
+            auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().constFirst());
+            if (handle_profile) {
+                popup->insertAction(separator_aboveStandardMenu, action_removeWord);
                 popup->insertAction(action_removeWord, action_addWord);
                 auto separator_aboveAddAndRemove = popup->insertSeparator(action_addWord);
                 popup->insertActions(separator_aboveAddAndRemove, spellings_system);
@@ -940,29 +863,9 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 auto separator_aboveDictionarySeparatorLine = popup->insertSeparator(action_dictionarySeparatorLine);
                 popup->insertActions(separator_aboveDictionarySeparatorLine, spellings_profile);
             } else {
-                popup->insertActions(separator_aboveCommandHistoryOptions, spellings_system);
+                popup->insertActions(separator_aboveStandardMenu, spellings_system);
             }
-
-        } else {
-            // No spelling checking is enabled
-           /*
-            * Build up the extra context menu items from the BOTTOM up, so that
-            * the top of the context menu looks like:
-            *
-            * Command History submenu...
-            *     Save commands in history
-            *     Do not save next command at all
-            *     Do not save commands in history
-            * --------- separator_aboveStandardMenu
-            *
-            * The insertAction[s](...)/(Separator(...)) insert their second
-            * argument (or the item generated by themself) before the first (or
-            * only) argument given.
-            */
         }
-
-        // in either case show the context menu - either the one with the
-        // prefixed spellings, or the standard one:
 
         popup->addSeparator();
         foreach(auto label, contextMenuItems.keys()) {
@@ -1006,7 +909,6 @@ void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
     Q_UNUSED(event)
-    const QString _t = toPlainText();
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
@@ -1035,26 +937,15 @@ void TCommandLine::enterCommand(QKeyEvent* event)
             mHistoryBuffer = 1;
         }
 
-        // Keeping this outside of the mForgetNextCommand test means that
-        // activating the "forget this one" option can be used to "forget" any
-        // prior instances of the same command (text) that may have gotten into
-        // the history - even in previous sesssions:
         mHistoryList.removeAll(toPlainText());
-
-        if (!mForgetNextCommand) {
-            if (!mHistoryList.isEmpty()) {
-                mHistoryList[0] = toPlainText();
-            } else {
-                mHistoryList.push_front(toPlainText());
-            }
-            mHistoryList.push_front(QString());
-
+        if (!mHistoryList.isEmpty()) {
+            mHistoryList[0] = toPlainText();
         } else {
-            // Resets the mForgetNextCommand flag and also switches the
-            // option selected back to the mpAction_saveCommandHistory one:
-            slot_saveCommandHistory();
+            mHistoryList.push_front(toPlainText());
         }
+        mHistoryList.push_front(QString());
     }
+
     if (mpHost->mAutoClearCommandLineAfterSend) {
 #if defined (Q_OS_MACOS)
         // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
@@ -1196,8 +1087,9 @@ void TCommandLine::handleAutoCompletion()
             }
             moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
             return;
+        } else {
+            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
         }
-        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     }
     mAutoCompletionCount = -1;
 }
@@ -1590,7 +1482,7 @@ void TCommandLine::slot_saveHistory()
         return;
     }
 
-    pHost->setCommandLineHistorySettings(mType, mSaveCommands, mForgetNextCommand, mCommandLineName);
+    pHost->setCmdLineSettings(mType, mSaveCommands, mCommandLineName);
     auto saveSize = pHost->getCommandLineHistorySaveSize();
     if (!saveSize || !mSaveCommands) {
         // Option has been disabled so do nothing (won't delete the previous one
@@ -1614,281 +1506,6 @@ void TCommandLine::slot_saveHistory()
         if (!historyFile.commit()) {
             qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName
                                          << " of type: " << mType << " reason: " << historyFile.errorString();
-        }
-    }
-}
-
-void TCommandLine::slot_saveCommandHistory()
-{
-    mForgetNextCommand = false;
-    mSaveCommands = true;
-    if (!mpCmdHistorySubMenu.isNull()) {
-        if (!mpAction_saveCommandHistory->isChecked()) {
-            mpAction_saveCommandHistory->setChecked(true);
-        }
-        if (mpHost->getCommandLineHistorySaveSize()) {
-            // The QPixmap is only used here to get it's original size:
-            mpCmdHistorySubMenu->setIcon(mpAction_saveCommandHistory->icon().pixmap(QPixmap(qsl(":/icons/log-all-commands.png")).size(),
-                                                                                    QIcon::Normal,
-                                                                                    QIcon::Off));
-            mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: Save commands",
-                                                      // Intentional comment to separate arguments
-                                                      "This wording without the \"Command history sub-menu - current selection: \" "
-                                                      "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                      "those relying on accessibility features can tell this is the option chosen "
-                                                      "from the main menu when the sub-menu is not visible."));
-        } else {
-            // The QPixmap is only used here to get it's original size:
-            mpCmdHistorySubMenu->setIcon(mpAction_saveCommandHistory->icon().pixmap(QPixmap(qsl(":/icons/log-all-commands.png")).size(),
-                                                                                    QIcon::Disabled,
-                                                                                    QIcon::Off));
-            mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: Save commands (Disabled by preferences)",
-                                                      // Intentional comment to separate arguments
-                                                      "This wording without the \"Command history sub-menu - current selection: \" "
-                                                      "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                      "those relying on accessibility features can tell this is the option chosen "
-                                                      "from the main menu when the sub-menu is not visible."));
-        }
-    }
-}
-
-void TCommandLine::slot_doNotSaveCommandHistory()
-{
-    mForgetNextCommand = false;
-    mSaveCommands = false;
-    if (!mpCmdHistorySubMenu.isNull()) {
-        if (!mpAction_doNotSaveCommandHistory->isChecked()) {
-            mpAction_doNotSaveCommandHistory->setChecked(true);
-        }
-        if (mpHost->getCommandLineHistorySaveSize()) {
-            // The QPixmap is only used here to get it's original size:
-            mpCmdHistorySubMenu->setIcon(mpAction_doNotSaveCommandHistory->icon().pixmap(QPixmap(qsl(":/icons/do-not-log-commands.png")).size(),
-                                                                                         QIcon::Normal,
-                                                                                         QIcon::Off));
-            mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: Do not save commands",
-                                                      // Intentional comment to separate arguments
-                                                      "This wording without the \"Command history sub-menu - current selection: \" "
-                                                      "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                      "those relying on accessibility features can tell this is the option chosen "
-                                                      "from the main menu when the sub-menu is not visible."));
-        } else {
-            // The QPixmap is only used here to get it's original size:
-            mpCmdHistorySubMenu->setIcon(mpAction_doNotSaveCommandHistory->icon().pixmap(QPixmap(qsl(":/icons/do-not-log-commands.png")).size(),
-                                                                                      QIcon::Disabled,
-                                                                                      QIcon::Off));
-            mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: Do not save commands (Forced by preferences)",
-                                                      // Intentional comment to separate arguments
-                                                      "This wording without the \"Command history sub-menu - current selection: \" "
-                                                      "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                      "those relying on accessibility features can tell this is the option chosen "
-                                                      "from the main menu when the sub-menu is not visible."));
-        }
-    }
-}
-
-void TCommandLine::slot_doNotSaveNextCommand()
-{
-    mForgetNextCommand = true;
-    // We need to set this flag so it takes effect when the prior one gets reset
-    mSaveCommands = true;
-    if (!mpCmdHistorySubMenu.isNull()) {
-        if (!mpAction_doNotSaveNextCommand->isChecked()) {
-            mpAction_doNotSaveNextCommand->setChecked(true);
-        }
-        if (mpHost->getCommandLineHistorySaveSize()) {
-            // The QPixmap is only used here to get it's original size:
-            mpCmdHistorySubMenu->setIcon(mpAction_doNotSaveNextCommand->icon().pixmap(QPixmap(qsl(":/icons/do-not-log-this-command.png")).size(),
-                                                                                      QIcon::Normal,
-                                                                                      QIcon::Off));
-            mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: Do not save next command",
-                                                      // Intentional comment to separate arguments
-                                                      "This wording without the \"Command history sub-menu - current selection: \" "
-                                                      "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                      "those relying on accessibility features can tell this is the option chosen "
-                                                      "from the main menu when the sub-menu is not visible."));
-        } else {
-            // The QPixmap is only used here to get it's original size:
-            mpCmdHistorySubMenu->setIcon(mpAction_doNotSaveNextCommand->icon().pixmap(QPixmap(qsl(":/icons/do-not-log-this-command.png")).size(),
-                                                                                      QIcon::Disabled,
-                                                                                      QIcon::Off));
-            mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: Do not save next command (Disabled by preferences)",
-                                                      // Intentional comment to separate arguments
-                                                      "This wording without the \"Command history sub-menu - current selection: \" "
-                                                      "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                      "those relying on accessibility features can tell this is the option chosen "
-                                                      "from the main menu when the sub-menu is not visible."));
-        }
-    }
-}
-
-void TCommandLine::slot_changeCommandLineHistoryOptions(const int linesToSave)
-{
-    if (mpCmdHistorySubMenu.isNull() || mpAction_saveCommandHistory.isNull() || mpAction_doNotSaveNextCommand.isNull() || mpAction_doNotSaveCommandHistory.isNull()) {
-        // Don't do anything if any element is missing
-        return;
-    }
-
-    if (linesToSave) {
-        mpAction_saveCommandHistory->setText(tr("Save commands",
-                                                // Intentional comment to separate arguments
-                                                "This wording with an additional prefix should be duplicated as the accessible "
-                                                "name for the sub-menu that this item is in when this is the selected item so "
-                                                "those relying on accessibility features can tell this is the option chosen "
-                                                "from the main menu when the sub-menu is not visible."));
-        mpAction_saveCommandHistory->setToolTip(utils::richText(tr("Commands entered on this command line will be remembered between sessions.")));
-
-        mpAction_doNotSaveNextCommand->setText(tr("Do not save next command",
-                                                  // Intentional comment to separate arguments
-                                                  "This wording with an additional prefix should be duplicated as the accessible "
-                                                  "name for the sub-menu that this item is in when this is the selected item so "
-                                                  "those relying on accessibility features can tell this is the option chosen "
-                                                  "from the main menu when the sub-menu is not visible."));
-        mpAction_doNotSaveNextCommand->setToolTip(tr("<p>This particular command will not be remembered, this is recommended when "
-                                                     "entering a password so that it is not saved in the relevant "
-                                                     "<tt>command_history_XXX</tt> file as that will otherwise compromised the "
-                                                     "'Secure password' storage system.</p>"
-                                                     "<p><i>Selecting this option will only last for one command and will switch "
-                                                     "back to 'Save commands' after that command has been entered."));
-
-        mpAction_doNotSaveCommandHistory->setText(tr("Do not save commands",
-                                                     // Intentional comment to separate arguments
-                                                     "This wording with an additional prefix should be duplicated as the accessible "
-                                                     "name for the sub-menu that this item is in when this is the selected item so "
-                                                     "those relying on accessibility features can tell this is the option chosen "
-                                                     "from the main menu when the sub-menu is not visible."));
-        mpAction_doNotSaveCommandHistory->setToolTip(utils::richText(tr("Commands entered via this command line will not be saved between sessions.")));
-
-        mpAction_saveCommandHistory->setEnabled(true);
-        mpAction_doNotSaveNextCommand->setEnabled(true);
-        mpAction_doNotSaveCommandHistory->setEnabled(true);
-
-        if (mForgetNextCommand) {
-            if (!mpAction_doNotSaveNextCommand->isChecked()) {
-                mpAction_doNotSaveNextCommand->setChecked(true);
-            }
-            mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: do not save next command",
-                                                      // Intentional comment to separate arguments
-                                                      "This wording without the \"Command history sub-menu - current selection: \" "
-                                                      "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                      "those relying on accessibility features can tell this is the option chosen "
-                                                      "from the main menu when the sub-menu is not visible."));
-            // The QPixmap is only used here to get it's original size:
-            mpCmdHistorySubMenu->setIcon(mpAction_doNotSaveNextCommand->icon().pixmap(QPixmap(qsl(":/icons/do-not-log-this-command.png")).size(),
-                                                                                    QIcon::Normal,
-                                                                                    QIcon::Off));
-        } else {
-            if (mSaveCommands) {
-                if (!mpAction_saveCommandHistory->isChecked()) {
-                    mpAction_saveCommandHistory->setChecked(true);
-                }
-                mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: save commands",
-                                                          // Intentional comment to separate arguments
-                                                          "This wording without the \"Command history sub-menu - current selection: \" "
-                                                          "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                          "those relying on accessibility features can tell this is the option chosen "
-                                                          "from the main menu when the sub-menu is not visible."));
-                // The QPixmap is only used here to get it's original size:
-                mpCmdHistorySubMenu->setIcon(mpAction_saveCommandHistory->icon().pixmap(QPixmap(qsl(":/icons/log-all-commands.png")).size(),
-                                                                                        QIcon::Normal,
-                                                                                        QIcon::Off));
-            } else {
-                if (!mpAction_doNotSaveCommandHistory->isChecked()) {
-                    mpAction_doNotSaveCommandHistory->setChecked(true);
-                }
-                mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: do not save commands",
-                                                          // Intentional comment to separate arguments
-                                                          "This wording with an additional prefix should be duplicated as the accessible "
-                                                          "name for the sub-menu that this item is in when this is the selected item so "
-                                                          "those relying on accessibility features can tell this is the option chosen "
-                                                          "from the main menu when the sub-menu is not visible."));
-                // The QPixmap is only used here to get it's original size:
-                mpCmdHistorySubMenu->setIcon(mpAction_doNotSaveCommandHistory->icon().pixmap(QPixmap(qsl(":/icons/do-not-log-commands.png")).size(),
-                                                                                        QIcon::Normal,
-                                                                                        QIcon::Off));
-            }
-        }
-    } else {
-        // Disabled by master setting in preferences
-        mpAction_saveCommandHistory->setText(tr("Save commands (Disabled by preferences)",
-                                                // Intentional comment to separate arguments
-                                                "This wording with an additional prefix should be duplicated as the accessible "
-                                                "name for the sub-menu that this item is in when this is the selected item so "
-                                                "those relying on accessibility features can tell this is the option chosen "
-                                                "from the main menu when the sub-menu is not visible."));
-        mpAction_saveCommandHistory->setToolTip(tr("<p>If command remembering was enabled globally then commands entered on this "
-                                                   "command line would be remembered between sessions if this option was selected.</p>"
-                                                   "<p><i>Adjust <tt></tt> away from <tt>None</tt> in the preferences to reenable this control and feature.</p>"));
-
-        mpAction_doNotSaveNextCommand->setText(tr("Do not save next command (Disabled by preferences)",
-                                                  // Intentional comment to separate arguments
-                                                  "This wording with an additional prefix should be duplicated as the accessible "
-                                                  "name for the sub-menu that this item is in when this is the selected item so "
-                                                  "those relying on accessibility features can tell this is the option chosen "
-                                                  "from the main menu when the sub-menu is not visible."));
-        mpAction_doNotSaveNextCommand->setToolTip(tr("<p>If command remembering was enabled globally, this particular command would "
-                                                     "not be remembered, since that is not active this option is not needed and all "
-                                                     "the setting options here are disabled.</p>"
-                                                     "<p><i>Adjust <tt></tt> away from <tt>None</tt> in the preferences to reenable this control and feature.</p>"));
-
-        mpAction_doNotSaveCommandHistory->setText(tr("Do not save commands (Forced by preferences)",
-                                                    // Intentional comment to separate arguments
-                                                    "This wording with an additional prefix should be duplicated as the accessible "
-                                                    "name for the sub-menu that this item is in when this is the selected item so "
-                                                    "those relying on accessibility features can tell this is the option chosen "
-                                                    "from the main menu when the sub-menu is not visible."));
-        mpAction_doNotSaveCommandHistory->setToolTip(tr("<p>If command remembering was enabled globally then commands entered on this "
-                                                        "command line will not be saved between sessions; since it is disabled then "
-                                                        "that happens without needed to selected this option.</p>"
-                                                        "<p><i>Adjust <tt></tt> away from <tt>None</tt> in the preferences to reenable this control.</p>"));
-
-        mpAction_saveCommandHistory->setEnabled(false);
-        mpAction_doNotSaveNextCommand->setEnabled(false);
-        mpAction_doNotSaveCommandHistory->setEnabled(false);
-
-        if (mForgetNextCommand) {
-            if (!mpAction_doNotSaveNextCommand->isChecked()) {
-                mpAction_doNotSaveNextCommand->setChecked(true);
-            }
-            mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: do not save next command (Disabled by preferences)",
-                                                      // Intentional comment to separate arguments
-                                                      "This wording without the \"Command history sub-menu - current selection: \" "
-                                                      "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                      "those relying on accessibility features can tell this is the option chosen "
-                                                      "from the main menu when the sub-menu is not visible."));
-            // The QPixmap is only used here to get it's original size:
-            mpCmdHistorySubMenu->setIcon(mpAction_doNotSaveNextCommand->icon().pixmap(QPixmap(qsl(":/icons/do-not-log-this-command.png")).size(),
-                                                                                      QIcon::Disabled,
-                                                                                      QIcon::Off));
-        } else {
-            if (mSaveCommands) {
-                if (!mpAction_saveCommandHistory->isChecked()) {
-                    mpAction_saveCommandHistory->setChecked(true);
-                }
-                mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: save commands (Disabled by preferences)",
-                                                          // Intentional comment to separate arguments
-                                                          "This wording without the \"Command history sub-menu - current selection: \" "
-                                                          "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                          "those relying on accessibility features can tell this is the option chosen "
-                                                          "from the main menu when the sub-menu is not visible."));
-                // The QPixmap is only used here to get it's original size:
-                mpCmdHistorySubMenu->setIcon(mpAction_saveCommandHistory->icon().pixmap(QPixmap(qsl(":/icons/log-all-commands.png")).size(),
-                                                                                        QIcon::Disabled,
-                                                                                        QIcon::Off));
-            } else {
-                if (!mpAction_doNotSaveCommandHistory->isChecked()) {
-                    mpAction_doNotSaveCommandHistory->setChecked(true);
-                }
-                mpCmdHistorySubMenu->setAccessibleName(tr("Command history sub-menu - current selection: do not save commands (Forced by preferences)",
-                                                          // Intentional comment to separate arguments
-                                                          "This wording without the \"Command history sub-menu - current selection: \" "
-                                                          "prefix should be duplicated as the text for the item in the sub-menu so "
-                                                          "those relying on accessibility features can tell this is the option chosen "
-                                                          "from the main menu when the sub-menu is not visible."));
-                // The QPixmap is only used here to get it's original size:
-                mpCmdHistorySubMenu->setIcon(mpAction_doNotSaveCommandHistory->icon().pixmap(QPixmap(qsl(":/icons/do-not-log-commands.png")).size(),
-                                                                                             QIcon::Disabled,
-                                                                                             QIcon::Off));
-            }
         }
     }
 }

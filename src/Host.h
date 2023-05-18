@@ -411,8 +411,8 @@ public:
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
     void loadMap();
-    std::tuple<QString, bool, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
-    void setCommandLineHistorySettings(const TCommandLine::CommandLineType, const bool saveCommands, const bool forgetNextCommand, const QString&);
+    std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
+    void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
     void setCommandLineHistorySaveSize(const int lines);
 
@@ -710,14 +710,6 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
-    // Tells all command lines that the number of lines to save has changed;
-    // importantly it may signal that the number has gone to zero so as to
-    // disable the feature globally - which should then disable the individual
-    // per-commandline controls to save/not save the next one/not save any
-    // in the history for the next session (and modifies the texts as
-    // appropriate):
-    void signal_changeCommandLineHistorySaveSize(const int);
-
 
 private slots:
     void slot_purgeTemps();

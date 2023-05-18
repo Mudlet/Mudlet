@@ -2187,24 +2187,23 @@ QString Host::readProfileIniData(const QString& item)
 }
 
 // This function retrieves command line history settings based on the given
-// command line type and name. It reads the saveCommands and forgetNextCommand
-// settings from the profile.ini file, which is intended to replace all other
-// single data item files in the profile's home directory. For the main command
-// line, a predefined file name is used, while for any other command line, the
-// function first looks for a mapping from a number-suffixed file to a command
-// line name. If the mapping is not found, a new file name and default settings
-// for saveCommands and forgetNextCommand are created, stored, and returned.
+// command line type and name. It reads the saveCommands setting from the
+// profile.ini file, which is intended to replace all other single data item
+// files in the profile's home directory. For the main command line, a
+// predefined file name is used, while for any other command line, the function
+// first looks for a mapping from a number-suffixed file to a command line
+// name. If the mapping is not found, a new file name and default setting for
+// saveCommands is created, stored, and returned.
 // Because '/' and '\\' are used by the QSettings class in key names for
 // special purposes we MUST filter them out in the name, we'll replace them
 // with '_'s:
-std::tuple<QString, bool, bool> Host::getCmdLineSettings(const TCommandLine::CommandLineType type, const QString& name)
+std::tuple<QString, bool> Host::getCmdLineSettings(const TCommandLine::CommandLineType type, const QString& name)
 {
     if (type == TCommandLine::MainCommandLine) {
         // This one does not need the name to be kept in a QSettings but we
-        // still need to retrieve the other pair of settings:
+        // still need to retrieve the other setting:
         auto saveCommands = static_cast<bool>(readProfileIniData(qsl("CommandLines/SaveHistory/main")).compare(qsl("false"), Qt::CaseInsensitive));
-        auto forgetNextCommand = !static_cast<bool>(readProfileIniData(qsl("CommandLines/ForgetNextCommand/main")).compare(qsl("true"), Qt::CaseInsensitive));
-        return {qsl("command_history_main"), saveCommands, forgetNextCommand};
+        return {qsl("command_history_main"), saveCommands};
     }
     QString localName{name};
     localName.replace(QRegularExpression(qsl("[\\/]")), qsl("_"));
@@ -2219,11 +2218,9 @@ std::tuple<QString, bool, bool> Host::getCmdLineSettings(const TCommandLine::Com
     // it to a boolean - so that a missing value will give a non-zero value
     // which becomes a true:
     auto saveCommands = static_cast<bool>(readProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName)).compare(qsl("false"), Qt::CaseInsensitive));
-    // And we want this one to default to false if not found:
-    auto forgetNextCommand = !static_cast<bool>(readProfileIniData(qsl("CommandLines/ForgetNextCommand/%1").arg(localName)).compare(qsl("true"), Qt::CaseInsensitive));
     if (!fileName.isEmpty()) {
         // Ah, we've used this name before, so return the details:
-        return {fileName, saveCommands, forgetNextCommand};
+        return {fileName, saveCommands};
     }
 
     // Else the name is not in the settings so we will have to create one:
@@ -2241,18 +2238,16 @@ std::tuple<QString, bool, bool> Host::getCmdLineSettings(const TCommandLine::Com
     fileName = qsl("command_history_%1").arg(usedIndex, 2, 10, QLatin1Char('0'));
     // Save it:
     writeProfileIniData(qsl("CommandLines/NameMapping/%1").arg(localName), fileName);
-    // And a default pair of other settings:
+    // And a default setting:
     writeProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName), saveCommands ? qsl("true") : qsl("false"));
-    writeProfileIniData(qsl("CommandLines/ForgetNextCommand/%1").arg(localName), forgetNextCommand ? qsl("true") : qsl("false"));
-    // And return it - with the defaulted other pair of settings:
-    return {fileName, saveCommands, forgetNextCommand};
+    // And return it - with the defaulted other setting:
+    return {fileName, saveCommands};
 }
 
-void Host::setCommandLineHistorySettings(const TCommandLine::CommandLineType type, const bool saveCommands, const bool forgetNextCommand, const QString& name)
+void Host::setCmdLineSettings(const TCommandLine::CommandLineType type, const bool saveCommands, const QString& name)
 {
     if (type == TCommandLine::MainCommandLine) {
         writeProfileIniData(qsl("CommandLines/SaveHistory/main"), saveCommands ? qsl("true") : qsl("false"));
-        writeProfileIniData(qsl("CommandLines/ForgetNextCommand/main"), forgetNextCommand ? qsl("true") : qsl("false"));
         return;
     }
     QString localName{name};
@@ -2263,7 +2258,6 @@ void Host::setCommandLineHistorySettings(const TCommandLine::CommandLineType typ
     // inside the actual file but are accessed correctly only if given as a
     // forward slash in the code:
     writeProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName), saveCommands ? qsl("true") : qsl("false"));
-    writeProfileIniData(qsl("CommandLines/ForgetNextCommand/%1").arg(localName), forgetNextCommand ? qsl("true") : qsl("false"));
 }
 
 // Derived from the one in dlgConnectionProfile class - but it does not need a
@@ -4312,6 +4306,5 @@ void Host::setCommandLineHistorySaveSize(const int lines)
 {
     if (mCommandLineHistorySaveSize != lines) {
         mCommandLineHistorySaveSize = lines;
-        emit signal_changeCommandLineHistorySaveSize(lines);
     }
 }
