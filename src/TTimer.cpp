@@ -195,7 +195,7 @@ bool TTimer::compileScript()
     mFuncName = qsl("Timer%1").arg(QString::number(mID));
     const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, "Timer: %1".arg(getName()))) {
+    if (mpHost->mLuaInterpreter.compile(code, error, qsl("Timer: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
