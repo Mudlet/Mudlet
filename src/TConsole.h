@@ -35,12 +35,13 @@
 #include "pre_guard.h"
 #include <QDataStream>
 #include <QElapsedTimer>
-#include <QHBoxLayout>
 #include <QFile>
+#include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
 #include <QPointer>
+#include <QSaveFile>
 #include <QWidget>
-#include <QIcon>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
@@ -263,7 +264,7 @@ public:
 
     QElapsedTimer mProcessingTimer;
     bool mRecordReplay = false;
-    QFile mReplayFile;
+    QSaveFile mReplayFile;
     QDataStream mReplayStream;
 
     bool mTriggerEngineMode = false;
@@ -335,7 +336,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
-    QDebugStateSaver saver(debug);
+    QDebugStateSaver const saver(debug);
     switch (type) {
     case TConsole::UnknownType:           text = qsl("Unknown"); break;
     case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;

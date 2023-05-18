@@ -61,7 +61,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     QMap<QString, QString> areaNames;
     while (it.hasNext()) {
         it.next();
-        QString name = it.value();
+        const QString name = it.value();
         areaNames.insert(name.toLower(), name);
     }
     //areaNames.sort();
@@ -144,13 +144,13 @@ void dlgMapper::updateAreaComboBox()
         return;
     }
 
-    QString oldValue = comboBox_showArea->currentText(); // Remember where we were
+    const QString oldValue = comboBox_showArea->currentText(); // Remember where we were
     QMapIterator<int, QString> itAreaNamesA(mpMap->mpRoomDB->getAreaNamesMap());
     //insert sort them alphabetically (case INsensitive)
     QMap<QString, QString> areaNames;
     while (itAreaNamesA.hasNext()) {
         itAreaNamesA.next();
-        if (itAreaNamesA.key() == -1 && !mShowDefaultArea) {
+        if (itAreaNamesA.key() == -1 && !mpMap->getDefaultAreaShown()) {
             continue; // Skip the default area from the listing if so directed
         }
 
@@ -166,7 +166,7 @@ void dlgMapper::updateAreaComboBox()
 
     comboBox_showArea->clear();
 
-    if (areaNames.isEmpty() || (mpMap && areaNames.count() == 1 && (*areaNames.constBegin() == mpMap->getDefaultAreaName()) && !mShowDefaultArea)) {
+    if (areaNames.isEmpty() || (mpMap && areaNames.count() == 1 && (*areaNames.constBegin() == mpMap->getDefaultAreaName()) && !mpMap->getDefaultAreaShown())) {
         // IF there are no area names to show - should be impossible as there
         // should always be the "Default Area" one
         // OR there is only one sorted name
@@ -179,7 +179,7 @@ void dlgMapper::updateAreaComboBox()
         return;
     }
 
-    if (areaNames.count() == ((areaNames.contains(mpMap->getDefaultAreaName()) && !mShowDefaultArea) ? 2 : 1)) {
+    if (areaNames.count() == ((areaNames.contains(mpMap->getDefaultAreaName()) && !mpMap->getDefaultAreaShown()) ? 2 : 1)) {
         // IF we have exactly 2 (if we are NOT showing the default area AND the names include it)
         //         OR exactly 1 otherwise
         // THEN
@@ -289,7 +289,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
 
 void dlgMapper::slot_roomSize(int size)
 {
-    float floatSize = static_cast<float>(size / 10.0);
+    const float floatSize = static_cast<float>(size / 10.0);
     mp2dMap->setRoomSize(floatSize);
     mp2dMap->update();
 }
@@ -332,14 +332,6 @@ void dlgMapper::slot_toggleRoundRooms(const bool state)
     }
 }
 
-void dlgMapper::setDefaultAreaShown(bool state)
-{
-    if (mShowDefaultArea != state) {
-        mShowDefaultArea = state;
-        updateAreaComboBox();
-    }
-}
-
 void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
 {
     Host* pHost = mpHost;
@@ -349,10 +341,10 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
 
     TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
     if (pR) {
-        int playerRoomArea = pR->getArea();
+        const int playerRoomArea = pR->getArea();
         TArea* pA = mpMap->mpRoomDB->getArea(playerRoomArea);
         if (pA) {
-            QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(playerRoomArea);
+            const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(playerRoomArea);
             if (!areaName.isEmpty()) {
                 comboBox_showArea->setCurrentText(areaName);
             } else {

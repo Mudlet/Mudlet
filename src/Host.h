@@ -123,7 +123,7 @@ private:
 #ifndef QT_NO_DEBUG_STREAM
 inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
 {
-    QDebugStateSaver saver(debug);
+    QDebugStateSaver const saver(debug);
     Q_UNUSED(saver);
     debug.nospace() << qsl("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
                        .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
@@ -520,6 +520,10 @@ public:
     int mScreenHeight;
     int mScreenWidth;
 
+    // has the profile save data been loaded without issues?
+    // if there were issues during loading, we should not save anything on close
+    bool mLoadedOk = false;
+
     int mTimeout;
 
     QString mUrl;
@@ -662,6 +666,7 @@ public:
     QMap<QString, QKeySequence*> profileShortcuts;
 
     bool mTutorialForCompactLineAlreadyShown;
+    bool mTutorialForSplitscreenScrollbackAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
     enum class BlankLineBehaviour {
@@ -744,7 +749,6 @@ private:
     int mHostID;
     QString mHostName;
     QString mDiscordGameName; // Discord self-reported game name
-
     bool mIsClosingDown;
 
     QString mLine;

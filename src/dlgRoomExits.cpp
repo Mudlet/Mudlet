@@ -123,9 +123,9 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
             TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
             if (exitToRoom) {
                 // Valid exit roomID in place:
-                int exitAreaID = exitToRoom->getArea();
-                bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-                bool exitRoomLocked = exitToRoom->isLocked;
+                const int exitAreaID = exitToRoom->getArea();
+                const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+                const bool exitRoomLocked = exitToRoom->isLocked;
                 mpDlgRoomExits->setActionOnExit(mpEditor, exitRoomLocked
                                                 ? mpDlgRoomExits->mpAction_exitRoomLocked
                                                 : outOfAreaExit
@@ -202,9 +202,9 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     QString roomIdToolTipText;
     if (pExitToRoom) {
         // A valid exit roomID number:
-        int exitAreaID = pExitToRoom->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = pExitToRoom->isLocked;
+        const int exitAreaID = pExitToRoom->getArea();
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -481,8 +481,8 @@ void dlgRoomExits::save()
 
     for (int i = 0; i < specialExits->topLevelItemCount(); ++i) {
         QTreeWidgetItem* pI = specialExits->topLevelItem(i);
-        int value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
-        int weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
+        const int value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
+        const int weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
         int door = 0;
         bool locked = false;
         if (pI->checkState(ExitsTreeWidget::colIndex_doorLocked) == Qt::Checked) {
@@ -494,7 +494,7 @@ void dlgRoomExits::save()
         } else if (pI->checkState(ExitsTreeWidget::colIndex_doorNone) == Qt::Checked) {
             door = 0;
         }
-        QString key = pI->text(ExitsTreeWidget::colIndex_command);
+        const QString key = pI->text(ExitsTreeWidget::colIndex_command);
         if (key != mSpecialExitCommandPlaceholder
             && value != 0 && mpHost->mpMap->mpRoomDB->getRoom(value) != nullptr) {
             originalExitCmds.remove(key);
@@ -953,9 +953,9 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).toInt());
     if (pExitToRoom) {
         // A valid exit roomID number:
-        int exitAreaID = pExitToRoom->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = pExitToRoom->isLocked;
+        const int exitAreaID = pExitToRoom->getArea();
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1046,13 +1046,13 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
         if (exitRoomLocked) {
             if (outOfAreaExit) {
                 return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".")
-                                               .arg(exitRoomName, exitAreaName),
+                                               .arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
                                            tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
                                               // Intentional comment to separate arguments
                                               "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
             }
             return doubleParagraph.arg(tr("Exit to \"%1\".")
-                                           .arg(exitRoomName),
+                                           .arg(exitRoomName.toHtmlEscaped()),
                                        tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
                                           // Intentional comment to separate arguments
                                           "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
@@ -1060,14 +1060,14 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
         }
         if (outOfAreaExit) {
             return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".")
-                                           .arg(exitRoomName, exitAreaName),
+                                           .arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
                                        tr("<b>Room</b> Weight of destination: %1.",
                                           // Intentional comment to separate arguments
                                           "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
                                            .arg(exitRoomWeight));
         }
         return doubleParagraph.arg(tr("Exit to \"%1\".")
-                                       .arg(exitRoomName),
+                                       .arg(exitRoomName.toHtmlEscaped()),
                                    tr("<b>Room</b> Weight of destination: %1.",
                                       // Intentional comment to separate arguments
                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
@@ -1077,7 +1077,7 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
     if (exitRoomLocked) {
         if (outOfAreaExit) {
             return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
-                                           .arg(exitAreaName),
+                                           .arg(exitAreaName.toHtmlEscaped()),
                                        tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
                                           // Intentional comment to separate arguments
                                           "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
@@ -1091,7 +1091,7 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
 
     if (outOfAreaExit) {
         return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
-                                       .arg(exitAreaName),
+                                       .arg(exitAreaName.toHtmlEscaped()),
                                    tr("<b>Room</b> Weight of destination: %1.",
                                       // Intentional comment to separate arguments
                                       "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
@@ -1109,9 +1109,9 @@ void dlgRoomExits::normalExitEdited(const QString& roomExitIdText, QLineEdit* pE
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(roomExitIdText.toInt());
     if (exitToRoom) {
-        int exitAreaID = exitToRoom->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = exitToRoom->isLocked;
+        const int exitAreaID = exitToRoom->getArea();
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = exitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1457,9 +1457,9 @@ void dlgRoomExits::initExit(int direction,
     if (exitId > 0 && pExitR) {                         //Does this exit point anywhere
         exitLineEdit->setText(QString::number(exitId)); //Put in the value
         exitLineEdit->setEnabled(true);                 //Enable it for editing
-        int exitAreaID = pExitR->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = pExitR->isLocked;
+        const int exitAreaID = pExitR->getArea();
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = pExitR->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1568,8 +1568,8 @@ void dlgRoomExits::init()
     QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
         it.next();
-        int id_to = it.value();
-        QString dir = it.key();
+        const int id_to = it.value();
+        const QString dir = it.key();
         auto pSpecialExit = new TExit();
         // It should be impossible for this not to be valid:
         Q_ASSERT_X(pSpecialExit, "dlgRoomExits::init(...)", "failed to generate a new TExit");
@@ -1617,7 +1617,7 @@ void dlgRoomExits::init()
         pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         {
-            int specialDoor = pR->getDoor(dir);
+            const int specialDoor = pR->getDoor(dir);
             switch (specialDoor) {
             case 0:
                 pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Checked);
@@ -1962,7 +1962,7 @@ void dlgRoomExits::slot_checkModified()
     // At the same time existing special exits which now have a empty/zero
     // value in the ExitsTreeWidget::colIndex_exitRoomId field will be deleted if "save"ed...
     if (!isModified) {
-        int originalCount = originalSpecialExits.count();
+        const int originalCount = originalSpecialExits.count();
         int currentCount = 0;
         for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
             QTreeWidgetItem* pI = specialExits->topLevelItem(i);
@@ -1997,7 +1997,7 @@ void dlgRoomExits::slot_checkModified()
                         || pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt() <= 0) {
                         continue; // Ignore new or to be deleted entries
                     }
-                    QString currentCmd = pI->text(ExitsTreeWidget::colIndex_command);
+                    const QString currentCmd = pI->text(ExitsTreeWidget::colIndex_command);
                     TExit currentExit;
                     currentExit.destination = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
                     currentExit.hasNoRoute = pI->checkState(ExitsTreeWidget::colIndex_lockExit) == Qt::Checked;

@@ -61,13 +61,13 @@ dlgNotepad::~dlgNotepad()
 
 void dlgNotepad::save()
 {
-    QString directoryFile = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName());
-    QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
-    QDir dirFile;
+    const QString directoryFile = mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName());
+    const QString fileName = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    const QDir dirFile;
     if (!dirFile.exists(directoryFile)) {
         dirFile.mkpath(directoryFile);
     }
-    QFile file;
+    QSaveFile file;
     file.setFileName(fileName);
     file.open(QIODevice::WriteOnly);
     QTextStream fileStream;
@@ -77,7 +77,9 @@ void dlgNotepad::save()
     fileStream.setCodec(QTextCodec::codecForName("UTF-8"));
 #endif
     fileStream << notesEdit->toPlainText();
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "dlgNotepad::save: error saving notepad contents: " << file.errorString();
+    }
 
     mNeedToSave = false;
 }

@@ -305,34 +305,30 @@ void XMLexport::sanitizeForQxml(std::string& output)
 
 bool XMLexport::saveXml(const QString& fileName)
 {
-    QFile file(fileName);
+    QSaveFile file(fileName);
 
-    if (!file.open(QFile::WriteOnly)) {
-        qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to open file, reason: " << file.errorString() << ".";
+    auto printErrorMessage = [&](const QString& errorString) {
+        qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << errorString << ".";
+    };
+
+    if (!file.open(QIODevice::WriteOnly)) {
+        printErrorMessage(file.errorString().prepend("failed to open file, "));
         return false;
     }
 
-    bool result = saveXmlFile(file);
-    if (!result) {
-        if (file.error() != QFile::NoError) {
-            // Error reason was related to QFile:
-            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: " << file.errorString() << ".";
-        } else {
-            // Error was due to failure in document preparation
-            qDebug().noquote().nospace() << "XMLexport::saveXml(\"" << fileName << "\") ERROR - failed to save package, reason: XML document preparation failure.";
-        }
+    bool success = saveXmlFile(file);
+    if (!success) {
+        printErrorMessage((file.error() != QFileDevice::NoError) ? file.errorString() : "XML document preparation failure");
+    } else if (!file.commit()) {
+        printErrorMessage(file.errorString());
+        success = false;
     }
 
-    file.close();
-    return result;
+    return success;
 }
 
-// This has been factored out to a separate method from saveXml(const QString&)
-// because there are situations where we have a QFile instance already and
-// just passing a filename and then creating another QFile instance on the
-// same file in the filesystem is less than optimum.
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
-bool XMLexport::saveXmlFile(QFile& file)
+bool XMLexport::saveXmlFile(QSaveFile& file)
 {
     std::stringstream saveStringStream(std::ios::out);
     // Remember, the mExportDoc is the data in the form of a pugi::xml_document
@@ -350,7 +346,7 @@ bool XMLexport::saveXmlFile(QFile& file)
     // Now we can use Qt's file handling which does handle non-Latin1 named
     // files - which MinGW's STL file handling (on Windows platform) does not:
     file.write(output.data());
-    return file.error() == QFile::NoError;
+    return file.error() == QFileDevice::NoError;
 }
 
 QString XMLexport::saveXml()
@@ -474,7 +470,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(
             static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
-    if (int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
+    if (const int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
         // Don't bother to include the attribute if ignoreIterator is the default (zero)
         // value - and as ignoreIterator is an ASCII digit ignoreIterator only needs
         // QString::toLatin1() encoding:
@@ -501,7 +497,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             while (it.hasNext()) {
                 it.next();
                 mInstalledModules.append_child("key").text().set(it.key().toUtf8().constData());
-                QStringList entry = it.value();
+                const QStringList entry = it.value();
                 mInstalledModules.append_child("filepath").text().set(entry.at(0).toUtf8().constData());
                 if (entry.at(0).endsWith(qsl("mpackage"), Qt::CaseInsensitive) || entry.at(0).endsWith(qsl("zip"), Qt::CaseInsensitive)) {
                     mInstalledModules.append_child("zipSync").text().set(entry.at(1).toUtf8().constData());
@@ -882,13 +878,13 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             auto regexCodeList = trigger.append_child("regexCodeList");
             // Revert the first 16 ANSI colour codes back to the wrong values
             // that are still used in the save files
-            QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mPatterns, pT->mPatternKinds);
+            const QStringList unfixedAnsiColourPatternList = remapAnsiToColorNumber(pT->mPatterns, pT->mPatternKinds);
             for (int i = 0; i < unfixedAnsiColourPatternList.size(); ++i) {
                 regexCodeList.append_child("string").text().set(unfixedAnsiColourPatternList.at(i).toUtf8().constData());
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
-            for (int i : qAsConst(pT->mPatternKinds)) {
+            for (const int i : qAsConst(pT->mPatternKinds)) {
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }
@@ -1196,13 +1192,13 @@ QStringList XMLexport::remapAnsiToColorNumber(const QStringList & patternList, c
 {
 
     QStringList results;
-    QRegularExpression regex = QRegularExpression(qsl("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
+    QRegularExpression const regex = QRegularExpression(qsl("^ANSI_COLORS_F{(\\d+|IGNORE|DEFAULT)}_B{(\\d+|IGNORE|DEFAULT)}$"));
     QStringListIterator itPattern(patternList);
     QListIterator<int> itType(typeList);
     while (itPattern.hasNext() && itType.hasNext()) {
         if (itType.next() == REGEX_COLOR_PATTERN) {
             if (!itPattern.next().isEmpty()) {
-                QRegularExpressionMatch match = regex.match(itPattern.peekPrevious());
+                QRegularExpressionMatch const match = regex.match(itPattern.peekPrevious());
                 // Although we define two '('...')' capture groups the count/size is
                 // 3 (0 is the whole string)!
                 if (match.hasMatch() && match.capturedTexts().size() == 3) {

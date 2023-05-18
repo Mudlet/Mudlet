@@ -152,7 +152,9 @@
         <file>icons/mume.png</file>
         <file>icons/mudren.png</file>
         <file>icons/offsettimer-off.png</file>
+        <file>icons/offsettimer-off-grey.png</file>
         <file>icons/offsettimer-on.png</file>
+        <file>icons/offsettimer-on-grey.png</file>
         <file>icons/package-exporter.png</file>
         <file>icons/package-manager.png</file>
         <file>icons/password-show-off.png</file>
