@@ -7947,11 +7947,11 @@ int TLuaInterpreter::tempAlias(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#findItems
 int TLuaInterpreter::findItems(lua_State* L)
 {
-    int n = lua_gettop(L);
-    auto name = getVerifiedString(L, __func__, 1, "item name");
+    const int n = lua_gettop(L);
+    const auto name = getVerifiedString(L, __func__, 1, "item name");
     // Although we only use 6 ASCII strings the user may not enter a purely
     // ASCII value which we might have to report...
-    QString type = getVerifiedString(L, __func__, 2, "item type").toLower();
+    const QString type = getVerifiedString(L, __func__, 2, "item type");
     bool exactMatch = true;
     bool caseSensitive = true;
     if (n > 2) {
@@ -7961,7 +7961,7 @@ int TLuaInterpreter::findItems(lua_State* L)
         caseSensitive = getVerifiedBool(L, __func__, 3, "case sensitive", true);
     }
     Host& host = getHostFromLua(L);
-    auto generateList = [](auto vector, auto l) {
+    auto generateList = [](const auto vector, auto l) {
         lua_newtable(l);
         int index = 0;
         for (const auto& item : vector) {
@@ -7971,32 +7971,32 @@ int TLuaInterpreter::findItems(lua_State* L)
         }
     };
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
-        auto itemList = host.getTimerUnit()->findItems(name, exactMatch, caseSensitive);
+        const auto itemList = host.getTimerUnit()->findItems(name, exactMatch, caseSensitive);
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
-        auto itemList = host.getTriggerUnit()->findItems(name, exactMatch, caseSensitive);
+        const auto itemList = host.getTriggerUnit()->findItems(name, exactMatch, caseSensitive);
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
-        auto itemList = host.getAliasUnit()->findItems(name, exactMatch, caseSensitive);
+        const auto itemList = host.getAliasUnit()->findItems(name, exactMatch, caseSensitive);
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
-        auto itemList = host.getKeyUnit()->findItems(name, exactMatch, caseSensitive);
+        const auto itemList = host.getKeyUnit()->findItems(name, exactMatch, caseSensitive);
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
-        auto itemList = host.getActionUnit()->findItems(name, exactMatch, caseSensitive);
+        const auto itemList = host.getActionUnit()->findItems(name, exactMatch, caseSensitive);
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
-        auto itemList = host.getScriptUnit()->findItems(name, exactMatch, caseSensitive);
+        const auto itemList = host.getScriptUnit()->findItems(name, exactMatch, caseSensitive);
         generateList(itemList, L);
         return 1;
     }
@@ -16204,14 +16204,17 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode, int pos)
+// pos is 0 for the first script with the matching name so needs
+// to be incremented if it is to be referred to in an error message, but can
+// be used to directly index into the QVector<int> that is "ids".
+std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, const QString& luaCode, const int pos)
 {
     if (name.isEmpty()) {
         return {-1, qsl("cannot have an empty string as name")};
     }
 
-    auto ids = mpHost->getScriptUnit()->findItems(name);
-    auto id = -1;
+    const auto ids = mpHost->getScriptUnit()->findItems(name);
+    int id = -1;
     TScript* pS = nullptr;
     if (pos > 0 || pos <= static_cast<int>(ids.size())) {
         id = ids.at(static_cast<size_t>(pos - 1));

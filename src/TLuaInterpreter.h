@@ -152,7 +152,7 @@ public:
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
-    std::pair<int, QString> setScriptCode(QString& name, const QString& luaCode, int pos);
+    std::pair<int, QString> setScriptCode(const QString& name, const QString& luaCode, const int pos);
     std::pair<int, QString> startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
     std::pair<int, QString> startPermKey(QString&, QString&, int&, int&, QString&);
 
