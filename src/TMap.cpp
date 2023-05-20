@@ -2682,10 +2682,8 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
 
-    if (reply->error() != QNetworkReply::NoError) {
-        if (reply->error() != QNetworkReply::OperationCanceledError) {
+    if (reply->error() != QNetworkReply::NoError && reply->error() != QNetworkReply::OperationCanceledError) {
             // Don't post an error for the cancel case - it has already been done
-            // Don't report on the map not downloading properly, because we already reported before. Just do the cleanup.
             cleanup();
             return;
         }
