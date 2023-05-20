@@ -8227,7 +8227,7 @@ int TLuaInterpreter::getScript(lua_State* L)
     Host& host = getHostFromLua(L);
 
     auto ids = host.getScriptUnit()->findItems(name);
-    if (pos > 1 && pos < static_cast<int>(ids.size())) {
+    if (pos >= 1 && pos <= static_cast<int>(ids.size())) {
         auto pS = host.getScriptUnit()->getScript(ids.at(pos - 1));
         if (pS) {
             lua_pushstring(L, pS->getScript().toUtf8().constData());
