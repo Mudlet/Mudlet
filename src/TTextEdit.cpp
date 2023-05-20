@@ -2176,81 +2176,152 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         switch (value) {
         case 0x003c:                    return htmlCenter(qsl("&lt;")); break; // As '<' gets interpreted as an opening HTML tag we have to handle it specially
         case 0x003e:                    return htmlCenter(qsl("&gt;")); break; // '>' does not seem to get interpreted as a closing HTML tag but for symmetry it is probably best to also handle it in the same way
-        case QChar::Tabulation:         return htmlCenter(tr("{tab}", "Unicode U+0009 codepoint.")); break;
-        case QChar::LineFeed:           return htmlCenter(tr("{line-feed}", "Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.")); break;
-        case QChar::CarriageReturn:     return htmlCenter(tr("{carriage-return}", "Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.")); break;
-        case QChar::Space:              return htmlCenter(tr("{space}", "Unicode U+0020 codepoint.")); break;
-        case QChar::Nbsp:               return htmlCenter(tr("{non-breaking space}", "Unicode U+00A0 codepoint.")); break;
-        case QChar::SoftHyphen:         return htmlCenter(tr("{soft hyphen}", "Unicode U+00AD codepoint.")); break;
-        case 0x034F:                    return htmlCenter(tr("{combining grapheme joiner}", "Unicode U+034F codepoint (badly named apparently - see Wikipedia!)")); break;
-        case 0x1680:                    return htmlCenter(tr("{ogham space mark}", "Unicode U+1680 codepoint.")); break;
-        case 0x2000:                    return htmlCenter(tr("{'n' quad}", "Unicode U+2000 codepoint.")); break;
-        case 0x2001:                    return htmlCenter(tr("{'m' quad}", "Unicode U+2001 codepoint.")); break;
-        case 0x2002:                    return htmlCenter(tr("{'n' space}", "Unicode U+2002 codepoint - En ('n') wide space.")); break;
-        case 0x2003:                    return htmlCenter(tr("{'m' space}", "Unicode U+2003 codepoint - Em ('m') wide space.")); break;
-        case 0x2004:                    return htmlCenter(tr("{3-per-em space}", "Unicode U+2004 codepoint - three-per-em ('m') wide (thick) space.")); break;
-        case 0x2005:                    return htmlCenter(tr("{4-per-em space}", "Unicode U+2005 codepoint - four-per-em ('m') wide (Middle) space.")); break;
-        case 0x2006:                    return htmlCenter(tr("{6-per-em space}", "Unicode U+2006 codepoint - six-per-em ('m') wide (Sometimes the same as a Thin) space.")); break;
-        case 0x2007:                    return htmlCenter(tr("{digit space}", "Unicode U+2007 codepoint - figure (digit) wide space.")); break;
-        case 0x2008:                    return htmlCenter(tr("{punctuation wide space}", "Unicode U+2008 codepoint.")); break;
-        case 0x2009:                    return htmlCenter(tr("{5-per-em space}", "Unicode U+2009 codepoint - five-per-em ('m') wide space.")); break;
-        case 0x200A:                    return htmlCenter(tr("{hair width space}", "Unicode U+200A codepoint - thinnest space.")); break;
-        case 0x200B:                    return htmlCenter(tr("{zero width space}", "Unicode U+200B codepoint.")); break;
-        case 0x200C:                    return htmlCenter(tr("{Zero width non-joiner}", "Unicode U+200C codepoint.")); break;
-        case 0x200D:                    return htmlCenter(tr("{zero width joiner}", "Unicode U+200D codepoint.")); break;
-        case 0x200E:                    return htmlCenter(tr("{left-to-right mark}", "Unicode U+200E codepoint.")); break;
-        case 0x200F:                    return htmlCenter(tr("{right-to-left mark}", "Unicode U+200F codepoint.")); break;
-        case QChar::LineSeparator:      return htmlCenter(tr("{line separator}", "Unicode 0x2028 codepoint.")); break;
-        case QChar::ParagraphSeparator: return htmlCenter(tr("{paragraph separator}", "Unicode U+2029 codepoint.")); break;
-        case 0x202A:                    return htmlCenter(tr("{Left-to-right embedding}", "Unicode U+202A codepoint.")); break;
-        case 0x202B:                    return htmlCenter(tr("{right-to-left embedding}", "Unicode U+202B codepoint.")); break;
-        case 0x202C:                    return htmlCenter(tr("{pop directional formatting}", "Unicode U+202C codepoint - pop (undo last) directional formatting.")); break;
-        case 0x202D:                    return htmlCenter(tr("{Left-to-right override}", "Unicode U+202D codepoint.")); break;
-        case 0x202E:                    return htmlCenter(tr("{right-to-left override}", "Unicode U+202E codepoint.")); break;
-        case 0x202F:                    return htmlCenter(tr("{narrow width no-break space}", "Unicode U+202F codepoint.")); break;
-        case 0x205F:                    return htmlCenter(tr("{medium width mathematical space}", "Unicode U+205F codepoint.")); break;
-        case 0x2060:                    return htmlCenter(tr("{zero width non-breaking space}", "Unicode U+2060 codepoint.")); break;
-        case 0x2061:                    return htmlCenter(tr("{function application}", "Unicode U+2061 codepoint - function application (whatever that means!)")); break;
-        case 0x2062:                    return htmlCenter(tr("{invisible times}", "Unicode U+2062 codepoint.")); break;
-        case 0x2063:                    return htmlCenter(tr("{invisible separator}", "Unicode U+2063 codepoint - invisible separator or comma.")); break;
-        case 0x2064:                    return htmlCenter(tr("{invisible plus}", "Unicode U+2064 codepoint.")); break;
-        case 0x2066:                    return htmlCenter(tr("{left-to-right isolate}", "Unicode U+2066 codepoint.")); break;
-        case 0x2067:                    return htmlCenter(tr("{right-to-left isolate}", "Unicode U+2067 codepoint.")); break;
-        case 0x2068:                    return htmlCenter(tr("{first strong isolate}", "Unicode U+2068 codepoint.")); break;
-        case 0x2069:                    return htmlCenter(tr("{pop directional isolate}", "Unicode U+2069 codepoint - pop (undo last) directional isolate.")); break;
-        case 0x206A:                    return htmlCenter(tr("{inhibit symmetrical swapping}", "Unicode U+206A codepoint.")); break;
-        case 0x206B:                    return htmlCenter(tr("{activate symmetrical swapping}", "Unicode U+206B codepoint.")); break;
-        case 0x206C:                    return htmlCenter(tr("{inhibit arabic form-shaping}", "Unicode U+206C codepoint.")); break;
-        case 0x206D:                    return htmlCenter(tr("{activate arabic form-shaping}", "Unicode U+206D codepoint.")); break;
-        case 0x206E:                    return htmlCenter(tr("{national digit shapes}", "Unicode U+206E codepoint.")); break;
-        case 0x206F:                    return htmlCenter(tr("{nominal Digit shapes}", "Unicode U+206F codepoint.")); break;
-        case 0x3000:                    return htmlCenter(tr("{ideographic space}", "Unicode U+3000 codepoint - ideographic (CJK Wide) space")); break;
-        case 0xFE00:                    return htmlCenter(tr("{variation selector 1}", "Unicode U+FE00 codepoint.")); break;
-        case 0xFE01:                    return htmlCenter(tr("{variation selector 2}", "Unicode U+FE01 codepoint.")); break;
-        case 0xFE02:                    return htmlCenter(tr("{variation selector 3}", "Unicode U+FE02 codepoint.")); break;
-        case 0xFE03:                    return htmlCenter(tr("{variation selector 4}", "Unicode U+FE03 codepoint.")); break;
-        case 0xFE04:                    return htmlCenter(tr("{variation selector 5}", "Unicode U+FE04 codepoint.")); break;
-        case 0xFE05:                    return htmlCenter(tr("{variation selector 6}", "Unicode U+FE05 codepoint.")); break;
-        case 0xFE06:                    return htmlCenter(tr("{variation selector 7}", "Unicode U+FE06 codepoint.")); break;
-        case 0xFE07:                    return htmlCenter(tr("{variation selector 8}", "Unicode U+FE07 codepoint.")); break;
-        case 0xFE08:                    return htmlCenter(tr("{variation selector 9}", "Unicode U+FE08 codepoint.")); break;
-        case 0xFE09:                    return htmlCenter(tr("{variation selector 10}", "Unicode U+FE09 codepoint.")); break;
-        case 0xFE0A:                    return htmlCenter(tr("{variation selector 11}", "Unicode U+FE0A codepoint.")); break;
-        case 0xFE0B:                    return htmlCenter(tr("{variation selector 12}", "Unicode U+FE0B codepoint.")); break;
-        case 0xFE0C:                    return htmlCenter(tr("{variation selector 13}", "Unicode U+FE0C codepoint.")); break;
-        case 0xFE0D:                    return htmlCenter(tr("{variation selector 14}", "Unicode U+FE0D codepoint.")); break;
-        case 0xFE0E:                    return htmlCenter(tr("{variation selector 15}", "Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black & white) rendition.")); break;
-        case 0xFE0F:                    return htmlCenter(tr("{variation selector 16}", "Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured 'Emoji' rendition.")); break;
-        case 0xFEFF:                    return htmlCenter(tr("{zero width no-break space}", "Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).")); break;
+        //: Unicode U+0009 codepoint.
+        case QChar::Tabulation:         return htmlCenter(tr("{tab}")); break;
+        //: Unicode U+000A codepoint. Not likely to be seen as it gets filtered out.
+        case QChar::LineFeed:           return htmlCenter(tr("{line-feed}")); break;
+        //: Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.
+        case QChar::CarriageReturn:     return htmlCenter(tr("{carriage-return}")); break;
+        //: Unicode U+0020 codepoint.
+        case QChar::Space:              return htmlCenter(tr("{space}")); break;
+        //: Unicode U+00A0 codepoint.
+        case QChar::Nbsp:               return htmlCenter(tr("{non-breaking space}")); break;
+        //: Unicode U+00AD codepoint.
+        case QChar::SoftHyphen:         return htmlCenter(tr("{soft hyphen}")); break;
+        //: Unicode U+034F codepoint (badly named apparently - see Wikipedia!)
+        case 0x034F:                    return htmlCenter(tr("{combining grapheme joiner}")); break;
+        //: Unicode U+1680 codepoint.
+        case 0x1680:                    return htmlCenter(tr("{ogham space mark}")); break;
+        //: Unicode U+2000 codepoint.
+        case 0x2000:                    return htmlCenter(tr("{'n' quad}")); break;
+        //: Unicode U+2001 codepoint.
+        case 0x2001:                    return htmlCenter(tr("{'m' quad}")); break;
+        //: Unicode U+2002 codepoint - En ('n') wide space.
+        case 0x2002:                    return htmlCenter(tr("{'n' space}")); break;
+        //: Unicode U+2003 codepoint - Em ('m') wide space.
+        case 0x2003:                    return htmlCenter(tr("{'m' space}")); break;
+        //: Unicode U+2004 codepoint - three-per-em ('m') wide (thick) space.
+        case 0x2004:                    return htmlCenter(tr("{3-per-em space}")); break;
+        //: Unicode U+2005 codepoint - four-per-em ('m') wide (Middle) space.
+        case 0x2005:                    return htmlCenter(tr("{4-per-em space}")); break;
+        //: Unicode U+2006 codepoint - six-per-em ('m') wide (Sometimes the same as a Thin) space.
+        case 0x2006:                    return htmlCenter(tr("{6-per-em space}")); break;
+        //: Unicode U+2007 codepoint - figure (digit) wide space.
+        case 0x2007:                    return htmlCenter(tr("{digit space}")); break;
+        //: Unicode U+2008 codepoint.
+        case 0x2008:                    return htmlCenter(tr("{punctuation wide space}")); break;
+        //: Unicode U+2009 codepoint - five-per-em ('m') wide space.
+        case 0x2009:                    return htmlCenter(tr("{5-per-em space}")); break;
+        //: Unicode U+200A codepoint - thinnest space.
+        case 0x200A:                    return htmlCenter(tr("{hair width space}")); break;
+        //: Unicode U+200B codepoint.
+        case 0x200B:                    return htmlCenter(tr("{zero width space}")); break;
+        //: Unicode U+200C codepoint.
+        case 0x200C:                    return htmlCenter(tr("{Zero width non-joiner}")); break;
+        //: Unicode U+200D codepoint.
+        case 0x200D:                    return htmlCenter(tr("{zero width joiner}")); break;
+        //: Unicode U+200E codepoint.
+        case 0x200E:                    return htmlCenter(tr("{left-to-right mark}")); break;
+        //: Unicode U+200F codepoint.
+        case 0x200F:                    return htmlCenter(tr("{right-to-left mark}")); break;
+        //: Unicode 0x2028 codepoint.
+        case QChar::LineSeparator:      return htmlCenter(tr("{line separator}")); break;
+        //: Unicode U+2029 codepoint.
+        case QChar::ParagraphSeparator: return htmlCenter(tr("{paragraph separator}")); break;
+        //: Unicode U+202A codepoint.
+        case 0x202A:                    return htmlCenter(tr("{Left-to-right embedding}")); break;
+        //: Unicode U+202B codepoint.
+        case 0x202B:                    return htmlCenter(tr("{right-to-left embedding}")); break;
+        //: Unicode U+202C codepoint - pop (undo last) directional formatting.
+        case 0x202C:                    return htmlCenter(tr("{pop directional formatting}")); break;
+        //: Unicode U+202D codepoint.
+        case 0x202D:                    return htmlCenter(tr("{Left-to-right override}")); break;
+        //: Unicode U+202E codepoint.
+        case 0x202E:                    return htmlCenter(tr("{right-to-left override}")); break;
+        //: Unicode U+202F codepoint.
+        case 0x202F:                    return htmlCenter(tr("{narrow width no-break space}")); break;
+        //: Unicode U+205F codepoint.
+        case 0x205F:                    return htmlCenter(tr("{medium width mathematical space}")); break;
+        //: Unicode U+2060 codepoint.
+        case 0x2060:                    return htmlCenter(tr("{zero width non-breaking space}")); break;
+        //: Unicode U+2061 codepoint - function application (whatever that means!)
+        case 0x2061:                    return htmlCenter(tr("{function application}")); break;
+        //: Unicode U+2062 codepoint.
+        case 0x2062:                    return htmlCenter(tr("{invisible times}")); break;
+        //: Unicode U+2063 codepoint - invisible separator or comma.
+        case 0x2063:                    return htmlCenter(tr("{invisible separator}")); break;
+        //: Unicode U+2064 codepoint.
+        case 0x2064:                    return htmlCenter(tr("{invisible plus}")); break;
+        //: Unicode U+2066 codepoint.
+        case 0x2066:                    return htmlCenter(tr("{left-to-right isolate}")); break;
+        //: Unicode U+2067 codepoint.
+        case 0x2067:                    return htmlCenter(tr("{right-to-left isolate}")); break;
+        //: Unicode U+2068 codepoint.
+        case 0x2068:                    return htmlCenter(tr("{first strong isolate}")); break;
+        //: Unicode U+2069 codepoint - pop (undo last) directional isolate.
+        case 0x2069:                    return htmlCenter(tr("{pop directional isolate}")); break;
+        //: Unicode U+206A codepoint.
+        case 0x206A:                    return htmlCenter(tr("{inhibit symmetrical swapping}")); break;
+        //: Unicode U+206B codepoint.
+        case 0x206B:                    return htmlCenter(tr("{activate symmetrical swapping}")); break;
+        //: Unicode U+206C codepoint.
+        case 0x206C:                    return htmlCenter(tr("{inhibit arabic form-shaping}")); break;
+        //: Unicode U+206D codepoint.
+        case 0x206D:                    return htmlCenter(tr("{activate arabic form-shaping}")); break;
+        //: Unicode U+206E codepoint.
+        case 0x206E:                    return htmlCenter(tr("{national digit shapes}")); break;
+        //: Unicode U+206F codepoint.
+        case 0x206F:                    return htmlCenter(tr("{nominal Digit shapes}")); break;
+        //: Unicode U+3000 codepoint - ideographic (CJK Wide) space
+        case 0x3000:                    return htmlCenter(tr("{ideographic space}")); break;
+        //: Unicode U+FE00 codepoint.
+        case 0xFE00:                    return htmlCenter(tr("{variation selector 1}")); break;
+        //: Unicode U+FE01 codepoint.
+        case 0xFE01:                    return htmlCenter(tr("{variation selector 2}")); break;
+        //: Unicode U+FE02 codepoint.
+        case 0xFE02:                    return htmlCenter(tr("{variation selector 3}")); break;
+        //: Unicode U+FE03 codepoint.
+        case 0xFE03:                    return htmlCenter(tr("{variation selector 4}")); break;
+        //: Unicode U+FE04 codepoint.
+        case 0xFE04:                    return htmlCenter(tr("{variation selector 5}")); break;
+        //: Unicode U+FE05 codepoint.
+        case 0xFE05:                    return htmlCenter(tr("{variation selector 6}")); break;
+        //: Unicode U+FE06 codepoint.
+        case 0xFE06:                    return htmlCenter(tr("{variation selector 7}")); break;
+        //: Unicode U+FE07 codepoint.
+        case 0xFE07:                    return htmlCenter(tr("{variation selector 8}")); break;
+        //: Unicode U+FE08 codepoint.
+        case 0xFE08:                    return htmlCenter(tr("{variation selector 9}")); break;
+        //: Unicode U+FE09 codepoint.
+        case 0xFE09:                    return htmlCenter(tr("{variation selector 10}")); break;
+        //: Unicode U+FE0A codepoint.
+        case 0xFE0A:                    return htmlCenter(tr("{variation selector 11}")); break;
+        //: Unicode U+FE0B codepoint.
+        case 0xFE0B:                    return htmlCenter(tr("{variation selector 12}")); break;
+        //: Unicode U+FE0C codepoint.
+        case 0xFE0C:                    return htmlCenter(tr("{variation selector 13}")); break;
+        //: Unicode U+FE0D codepoint.
+        case 0xFE0D:                    return htmlCenter(tr("{variation selector 14}")); break;
+        //: Unicode U+FE0E codepoint - after an Emoji codepoint forces the textual (black & white) rendition.
+        case 0xFE0E:                    return htmlCenter(tr("{variation selector 15}")); break;
+        //: Unicode U+FE0F codepoint - after an Emoji codepoint forces the proper coloured 'Emoji' rendition.
+        case 0xFE0F:                    return htmlCenter(tr("{variation selector 16}")); break;
+        //: Unicode U+FEFF codepoint - also known as the Byte-order-mark at start of text!).
+        case 0xFEFF:                    return htmlCenter(tr("{zero width no-break space}")); break;
         /*
          * case 0xFFF0:
          * to
          * case 0xFFF8: see default code-block
          */
-        case 0xFFF9:                    return htmlCenter(tr("{interlinear annotation anchor}", "Unicode U+FFF9 codepoint.")); break;
-        case 0xFFFA:                    return htmlCenter(tr("{interlinear annotation separator}", "Unicode U+FFFA codepoint.")); break;
-        case 0xFFFB:                    return htmlCenter(tr("{interlinear annotation terminator}", "Unicode U+FFFB codepoint.")); break;
-        case 0xFFFC:                    return htmlCenter(tr("{object replacement character}", "Unicode U+FFFC codepoint.")); break;
+        
+        //: Unicode U+FFF9 codepoint.
+        case 0xFFF9:                    return htmlCenter(tr("{interlinear annotation anchor}")); break;
+        //: Unicode U+FFFA codepoint.
+        case 0xFFFA:                    return htmlCenter(tr("{interlinear annotation separator}")); break;
+        //: Unicode U+FFFB codepoint
+        case 0xFFFB:                    return htmlCenter(tr("{interlinear annotation terminator}")); break;
+        //: Unicode U+FFFC codepoint.
+        case 0xFFFC:                    return htmlCenter(tr("{object replacement character}")); break;
         /*
          * case 0xFFFD: special case, is the replacement character and will mark
          *              characters that have already failed to be decoded
@@ -2262,9 +2333,11 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
             [[fallthrough]];
         default:
             if (value >= 0xFDD0 && value <= 0xFDEF) {
-                return htmlCenter(tr("{noncharacter}", "Unicode codepoint in range U+FFD0 to U+FDEF - not a character.")); break;
+                //: Unicode codepoint in range U+FFD0 to U+FDEF - not a character
+                return htmlCenter(tr("{noncharacter}")); break;
             } else if ((value >= 0xFFF0 && value <= 0xFFF8) || value == 0xFFFE || value == 0xFFFF) {
-                return htmlCenter(tr("{noncharacter}", "Unicode codepoint in range U+FFFx - not a character.")); break;
+                //: Unicode codepoint in range U+FFFx - not a character.
+                return htmlCenter(tr("{noncharacter}")); break;
             } else {
                 return htmlCenter(first);
             }
@@ -2273,15 +2346,21 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
         // The code point is NOT on the BMP
         quint32 value = QChar::surrogateToUcs4(first, second);
         switch (value) {
-        case 0x1F3FB:                   return htmlCenter(tr("{FitzPatrick modifier 1 or 2}", "Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.")); break;
-        case 0x1F3FC:                   return htmlCenter(tr("{FitzPatrick modifier 3}", "Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.")); break;
-        case 0x1F3FD:                   return htmlCenter(tr("{FitzPatrick modifier 4}", "Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.")); break;
-        case 0x1F3FE:                   return htmlCenter(tr("{FitzPatrick modifier 5}", "Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.")); break;
-        case 0x1F3FF:                   return htmlCenter(tr("{FitzPatrick modifier 6}", "Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.")); break;
+        //: Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.
+        case 0x1F3FB:                   return htmlCenter(tr("{FitzPatrick modifier 1 or 2}")); break;
+        //: Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.
+        case 0x1F3FC:                   return htmlCenter(tr("{FitzPatrick modifier 3}")); break;
+        //: Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.
+        case 0x1F3FD:                   return htmlCenter(tr("{FitzPatrick modifier 4}")); break;
+        //: Unicode codepoint U+0001F3FE - FitzPatrick modifier (Emoji Human skin-tone) 5.
+        case 0x1F3FE:                   return htmlCenter(tr("{FitzPatrick modifier 5}")); break;
+        //: Unicode codepoint U+0001F3FF - FitzPatrick modifier (Emoji Human skin-tone) 6.
+        case 0x1F3FF:                   return htmlCenter(tr("{FitzPatrick modifier 6}")); break;
         default:
             // The '%' is the modulus operator here:
             if ((value % 0x10000 == 0xFFFE) || (value % 0x10000 == 0xFFFF)) {
-                return htmlCenter(tr("{noncharacter}", "Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.")); break;
+                //: Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.
+                return htmlCenter(tr("{noncharacter}")); break;
             } else {
                 // The '%' is the QStringBuilder append operator here:
                 return htmlCenter(first % second);
@@ -2552,30 +2631,34 @@ void TTextEdit::slot_analyseSelection()
                                        "<tr><th>%9</th>%10</tr>"
                                        "<tr><th>%11</th>%12</tr>"
                                        "</table></small><br>")
-                                .arg(tr("Index (UTF-16)",
-                                        "1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}"),
-                                     utf16indexes)
-                                .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>",
-                                        "2nd Row heading for Text analyser output, table item is the unicode code point (will be "
-                                        "between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}"),
-                                     utf16Vals)
-                                .arg(tr("Visual",
-                                        "3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped "
-                                        "letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}"),
-                                     graphemes)
-                                .arg(tr("Index (UTF-8)",
-                                        "4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system "
-                                        "uses {this translation used 2 times}"),
-                                     utf8Indexes)
-                                .arg(tr("Byte",
-                                        "5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua "
-                                        "system uses {this translation used 2 times}"),
-                                     utf8Vals)
-                                .arg(tr("Lua character or code",
-                                        "6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about "
-                                        "this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used "
-                                        "2 times}"),
-                                     luaCodes);
+                                //: 1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}
+                                .arg(tr("Index (UTF-16)"), utf16indexes)
+                                /*:
+                                2nd Row heading for Text analyser output, table item is the unicode code point (will be
+                                between 000001 and 10FFFF in hexadecimal) {this translation used 2 times}
+                                */
+                                .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>"), utf16Vals)
+                                /*:
+                                3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped
+                                letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}
+                                */
+                                .arg(tr("Visual"), graphemes)
+                                /*:
+                                4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system
+                                uses {this translation used 2 times}
+                                */
+                                .arg(tr("Index (UTF-8)"), utf8Indexes)
+                                /*:
+                                5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua
+                                system uses {this translation used 2 times}
+                                */
+                                .arg(tr("Byte"), utf8Vals)
+                                /*:
+                                6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about
+                                this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used
+                                2 times}"
+                                */
+                                .arg(tr("Lua character or code"), luaCodes);
                 isFirstRow = false;
             } else {
                 completedRows.append(
@@ -2614,29 +2697,34 @@ void TTextEdit::slot_analyseSelection()
                         "<tr><th>%12</th>%13</tr>"
                         "</table></small>")
                         .arg(completedRows)
-                        .arg(tr("Index (UTF-16)", "1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}"),
-                             utf16indexes)
-                        .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>",
-                                "2nd Row heading for Text analyser output, table item is the unicode code point (will be between "
-                                "000001 and 10FFFF in hexadecimal) {this translation used 2 times}"),
-                             utf16Vals)
-                        .arg(tr("Visual",
-                                "3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter "
-                                "code if the character is whitespace or otherwise unshowable {this translation used 2 times}"),
-                             graphemes)
-                        .arg(tr("Index (UTF-8)",
-                                "4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system "
-                                "uses {this translation used 2 times}"),
-                             utf8Indexes)
-                        .arg(tr("Byte",
-                                "5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua "
-                                "system uses {this translation used 2 times}"),
-                             utf8Vals)
-                        .arg(tr("Lua character or code",
-                                "6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about "
-                                "this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2 "
-                                "times}"),
-                             luaCodes));
+                        //: 1st Row heading for Text analyser output, table item is the count into the QChars/TChars that make up the text {this translation used 2 times}
+                        .arg(tr("Index (UTF-16)"), utf16indexes)
+                        /*:
+                        2nd Row heading for Text analyser output, table item is the unicode code point (will be between
+                        000001 and 10FFFF in hexadecimal) {this translation used 2 times}
+                        */
+                        .arg(tr("U+<i>####</i> Unicode Code-point <i>(High:Low Surrogates)</i>"), utf16Vals)
+                        /*:
+                        3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a '{'...'}' wrapped letter
+                        code if the character is whitespace or otherwise unshowable {this translation used 2 times}
+                        */
+                        .arg(tr("Visual"), graphemes)
+                        /*:
+                        4th Row heading for Text analyser output, table item is the count into the bytes that make up the UTF-8 form of the text that the Lua system
+                        uses {this translation used 2 times}
+                        */
+                        .arg(tr("Index (UTF-8)"), utf8Indexes)
+                        /*:
+                        5th Row heading for Text analyser output, table item is the unsigned 8-bit integer for the particular byte in the UTF-8 form of the text that the Lua
+                        system uses {this translation used 2 times}
+                        */
+                        .arg(tr("Byte"), utf8Vals)
+                        /*:
+                        6th Row heading for Text analyser output, table item is either the ASCII character or the numeric code for the byte in the row about
+                        this item in the table, as displayed the thing shown can be used in a Lua string entry to reproduce this byte {this translation used 2
+                        times}
+                        */
+                        .arg(tr("Lua character or code"), luaCodes));
         } else {
             mpContextMenuAnalyser->setToolTip(
                         qsl("%1"

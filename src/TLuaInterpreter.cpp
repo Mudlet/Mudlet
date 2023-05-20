@@ -14168,7 +14168,12 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     // Log error to Editor's Errors TConsole:
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->mpErrorConsole->print(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" %1:<%2> %3:<%4>\n").arg(tr("object", "object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>"), name, tr("function", "function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>"), function), QColor(Qt::green), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" %1:<%2> %3:<%4>\n").arg(
+            //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
+            tr("object"),
+            name,
+            //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
+            tr("function"), function), QColor(Qt::green), QColor(Qt::black));
         mpHost->mpEditorDialog->mpErrorConsole->print(qsl("        <%1>\n").arg(e.c_str()), QColor(Qt::red), QColor(Qt::black));
     }
 
@@ -14182,7 +14187,12 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
             mpHost->postMessage(qsl("\n"));
         }
 
-        mpHost->postMessage(qsl("[  LUA  ] - %1: <%2> %3:<%4>\n<%5>").arg(tr("object", "object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>"), name, tr("function", "function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>"), function, e.c_str()));
+        mpHost->postMessage(qsl("[  LUA  ] - %1: <%2> %3:<%4>\n<%5>").arg(
+            //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
+            tr("object"),
+            name,
+            //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
+            tr("function"), function, e.c_str()));
     }
 }
 
@@ -15099,12 +15109,13 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
         if (lua_isstring(pGlobalLua, -1)) {
             luaErrorMsg = tr("Lua error: %1").arg(lua_tostring(pGlobalLua, -1));
         }
-        resultMsgsQueue.enqueue(tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4",
-                                   // Intentional comment to separate arguments
-                                   "%1 is the name of the module;"
-                                   "%2 will be a line-feed inserted to put the next argument on a new line;"
-                                   "%3 is the error message from the lua sub-system;"
-                                   "%4 can be an additional message about the expected effect (but may be blank).")
+        /*:
+        %1 is the name of the module;
+        %2 will be a line-feed inserted to put the next argument on a new line;
+        %3 is the error message from the lua sub-system;
+        %4 can be an additional message about the expected effect (but may be blank).
+        */
+        resultMsgsQueue.enqueue(tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4")
                                 .arg((description.isEmpty() ? requirement : description),
                                      QLatin1String("\n"),
                                      luaErrorMsg,

@@ -176,7 +176,8 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         if (mpHost->mLogFileNameFormat.isEmpty()) {
             if (mpHost->mLogFileName.isEmpty()) {
                 // If no log name is set, use the default placeholder
-                logFileName = tr("logfile", "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).");
+                //: Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).
+                logFileName = tr("logfile");
             } else {
                 // Otherwise a specific name as one is given
                 logFileName = mpHost->mLogFileName;
@@ -296,8 +297,8 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
                 logStream << "  </div><hr><div>\n";
             }
             logStream << qsl("<p>%1</p>\n")
-                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
-                                                      "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
+                         //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.")));
             // <div></div> tags required around outside of the body <span></spans> for
             // strict HTML 4 as we do not use <p></p>s or anything else
 
@@ -318,16 +319,16 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
                 mLogStream << qsl("⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯").repeated(8).append(QChar::LineFeed);
             }
             mLogStream << qsl("%1\n")
-                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
-                                                      "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale")));
+                         //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
+                         .arg(logDateTime.toString(tr("'Log session starting at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.")));
 
         }
         logButton->setToolTip(utils::richText(tr("Stop logging game output to log file.")));
     } else {
         // Logging is being turned off
         buffer.logRemainingOutput();
-        const QString endDateTimeLine = logDateTime.toString(tr("'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'.",
-                                             "This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale"));
+        //: This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale
+        const QString endDateTimeLine = logDateTime.toString(tr("'Log session ending at 'hh:mm:ss' on 'dddd', 'd' 'MMMM' 'yyyy'."));
         if (mpHost->mIsCurrentLogFileInHtmlFormat) {
             mLogStream << qsl("<p>%1</p>\n").arg(endDateTimeLine);
             mLogStream << "  </div></body>\n";
@@ -1162,18 +1163,20 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
 
     double const processT = mProcessingTimer.elapsed() / 1000.0;
     if (mpHost->mTelnet.mGA_Driver) {
-        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2",
-                                              // intentional comment to separate arguments
-                                              "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
-                                              "'S'ystem (processing) time")
+        /*:
+        The first argument 'N' represents the 'N'etwork latency; the second 'S' the
+        'S'ystem (processing) time
+        */
+        mpLineEdit_networkLatency->setText(tr("N:%1 S:%2")
                                                    .arg(mpHost->mTelnet.networkLatencyTime, 0, 'f', 3)
                                                    .arg(processT, 0, 'f', 3));
     } else {
-        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1",
-                                              // intentional comment to separate arguments
-                                              "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
-                                              "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
-                                              "network latency...")
+        /*:
+        The argument 'S' represents the 'S'ystem (processing) time, in this situation
+        the Game Server is not sending \"GoAhead\" signals so we cannot deduce the
+        network latency...
+        */
+        mpLineEdit_networkLatency->setText(tr("<no GA> S:%1")
                                                    .arg(processT, 0, 'f', 3));
     }
     // Modify the tab text if this is not the currently active host - this
@@ -1454,24 +1457,29 @@ void TMainConsole::showStatistics()
     QStringList subjects;
     QStringList tables;
     if (pHost->mTelnet.isGMCPEnabled()) {
-        subjects << tr("GMCP events:", "Heading for the system's statistics information displayed in the console");
+        //: Heading for the system's statistics information displayed in the console
+        subjects << tr("GMCP events:");
         tables << QLatin1String("gmcp");
     }
     if (pHost->mTelnet.isATCPEnabled()) {
-        subjects << tr("ATCP events:", "Heading for the system's statistics information displayed in the console");
+        //: Heading for the system's statistics information displayed in the console
+        subjects << tr("ATCP events:");
         tables << QLatin1String("atcp");
     }
     if (pHost->mTelnet.isChannel102Enabled()) {
-        subjects << tr("Channel102 events:", "Heading for the system's statistics information displayed in the console");
+        //: Heading for the system's statistics information displayed in the console
+        subjects << tr("Channel102 events:");
         tables << QLatin1String("channel102");
     }
     if (pHost->mTelnet.isMSSPEnabled()) {
-        subjects << tr("MSSP events:", "Heading for the system's statistics information displayed in the console");
+        //: Heading for the system's statistics information displayed in the console
+        subjects << tr("MSSP events:");
         tables << QLatin1String("mssp");
     }
     if (pHost->mTelnet.isMSDPEnabled()) {
         // This might be a nil rather than an empty table if not present:
-        subjects << tr("MSDP events:", "Heading for the system's statistics information displayed in the console");
+        //: Heading for the system's statistics information displayed in the console
+        subjects << tr("MSDP events:");
         tables << QLatin1String("msdp");
     }
 
@@ -1482,23 +1490,28 @@ void TMainConsole::showStatistics()
     }
 
     const QString itemScript = "setFgColor(190,150,0); setUnderline(true); echo([[\n\n%1\n]]); setBold(false);setUnderline(false);setFgColor(150,120,0)";
-    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Report:", "Heading for the system's statistics information displayed in the console")));
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Trigger Report:")));
     QString itemMsg = std::get<0>(mpHost->getTriggerUnit()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:", "Heading for the system's statistics information displayed in the console")));
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Timer Report:")));
     itemMsg = std::get<0>(mpHost->getTimerUnit()->assembleReport());;
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Alias Report:", "Heading for the system's statistics information displayed in the console")));
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Alias Report:")));
     itemMsg = std::get<0>(mpHost->getAliasUnit()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Keybinding Report:", "Heading for the system's statistics information displayed in the console")));
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Keybinding Report:")));
     itemMsg = std::get<0>(mpHost->getKeyUnit()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
-    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Script Report:", "Heading for the system's statistics information displayed in the console")));
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Script Report:")));
     itemMsg = std::get<0>(mpHost->getScriptUnit()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
