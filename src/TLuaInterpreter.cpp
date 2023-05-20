@@ -7958,7 +7958,7 @@ int TLuaInterpreter::findItems(lua_State* L)
         exactMatch = getVerifiedBool(L, __func__, 3, "exact match", true);
     }
     if (n > 3) {
-        caseSensitive = getVerifiedBool(L, __func__, 3, "case sensitive", true);
+        caseSensitive = getVerifiedBool(L, __func__, 4, "case sensitive", true);
     }
     Host& host = getHostFromLua(L);
     auto generateList = [](const auto vector, auto l) {
