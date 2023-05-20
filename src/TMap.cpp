@@ -2654,7 +2654,7 @@ void TMap::slot_downloadError(QNetworkReply::NetworkError error)
 
     if (error != QNetworkReply::OperationCanceledError) {
         // No point in reporting Cancel as that is handled elsewhere
-        const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1.").arg(mpNetworkReply->errorString());
+        const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1").arg(mpNetworkReply->errorString());
         postMessage(errMsg);
     }
 }
@@ -2685,8 +2685,7 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     if (reply->error() != QNetworkReply::NoError) {
         if (reply->error() != QNetworkReply::OperationCanceledError) {
             // Don't post an error for the cancel case - it has already been done
-            const QString alertMsg = tr("[ ALERT ] - Map download failed, error reported was:\n%1.").arg(reply->errorString());
-            postMessage(alertMsg);
+            // Don't report on the map not downloading properly, because we already reported before. Just do the cleanup.
             cleanup();
             return;
         }
