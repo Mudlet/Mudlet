@@ -176,7 +176,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
         if (mpHost->mLogFileNameFormat.isEmpty()) {
             if (mpHost->mLogFileName.isEmpty()) {
                 // If no log name is set, use the default placeholder
-                //: Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {2 of 2}).
+                //: Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {one of two copies}).
                 logFileName = tr("logfile");
             } else {
                 // Otherwise a specific name as one is given
