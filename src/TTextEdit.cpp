@@ -2313,7 +2313,7 @@ inline QString TTextEdit::convertWhitespaceToVisual(const QChar& first, const QC
          * to
          * case 0xFFF8: see default code-block
          */
-        
+
         //: Unicode U+FFF9 codepoint.
         case 0xFFF9:                    return htmlCenter(tr("{interlinear annotation anchor}")); break;
         //: Unicode U+FFFA codepoint.

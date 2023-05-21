@@ -233,7 +233,7 @@ void dlgPackageManager::slot_toggleRemoveButton()
     removeButton->setEnabled(selectionCount);
     if (selectionCount) {
         //: Message on button in package manager to remove one or more (%n is the count of) selected package(s).
-        removeButton->setText(tr("Remove %n package(s)", "", selectionCount));
+        removeButton->setText(tr("Remove %n package(s)", nullptr, selectionCount));
     } else {
         //: Message on button in package manager initially and when there is no packages to remove
         removeButton->setText(tr("Remove package"));

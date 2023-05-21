@@ -2779,7 +2779,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
 
             popup->addSeparator();
 
-            const QString viewModeItem = mMapViewOnly ? 
+            const QString viewModeItem = mMapViewOnly ?
                 //: 2D Mapper context menu (room) item
                 tr("Switch to editing mode") :
                 //: 2D Mapper context menu (room) item
@@ -2861,7 +2861,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
                     lineProperties->setText(tr("properties..."));
                     lineProperties->setToolTip(utils::richText(tr("Change the properties of this custom line")));
                     connect(lineProperties, &QAction::triggered, this, &T2DMap::slot_customLineProperties);
-                    
+
                     //: 2D Mapper context menu (custom line editing) item
                     auto deleteLine = new QAction(tr("Delete line"), this);
                     //: 2D Mapper context menu (custom line editing) item tooltip

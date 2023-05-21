@@ -716,7 +716,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                     */
                     action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
                 } else {
-                    /*: 
+                    /*:
                     This line is shown in the list of spelling suggestions on the profile's command-
                     line context menu to clearly divide up where the suggestions for correct
                     spellings are coming from.  The precise format might be modified as long as it

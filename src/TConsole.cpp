@@ -358,7 +358,7 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         /*:
         The argument 'S' represents the 'S'ystem (processing) time, in this situation
         the Game Server is not sending "GoAhead" signals so we cannot deduce the
-        network latency...                             
+        network latency...
         */
         const QString dummyTextB = tr("<no GA> S:%1")
                                      .arg(0.0, 0, 'f', 3);

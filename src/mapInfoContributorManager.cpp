@@ -215,7 +215,7 @@ MapInfoProperties MapInfoContributorManager::fullInfo(int roomID, int selectionS
                 provided so that non-English translations can select required plural forms as
                 needed.
                 */
-                               tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms", "", selectionSize)
+                               tr("Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms", nullptr, selectionSize)
                                     .arg(QChar(160),
                                         QString::number(roomID),
                                         QString::number(room->x),

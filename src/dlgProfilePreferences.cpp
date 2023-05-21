@@ -158,7 +158,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     will also be disabled (greyed out) in the zero case but the text will still be
     visible.
     */
-    pushButton_copyMap->setText(tr("copy to %n destination(s)", "", 0));
+    pushButton_copyMap->setText(tr("copy to %n destination(s)", nullptr, 0));
 
     if (pHost) {
         initWithHost(pHost);
@@ -367,7 +367,7 @@ void dlgProfilePreferences::setupPasswordsMigration()
 
     connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, this, [=](const QString& profile) {
         //: This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely
-        label_password_migration_notification->setText(tr("Migrated %1...").arg(profile));                
+        label_password_migration_notification->setText(tr("Migrated %1...").arg(profile));
     });
 
     connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, this, [=]() {
@@ -3113,14 +3113,14 @@ void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
     will also be disabled (greyed out) in the zero case but the text will still be
     visible.
     */
-    pushButton_copyMap->setText(tr("copy to %n destination(s)", "", selectionCount));
+    pushButton_copyMap->setText(tr("copy to %n destination(s)", nullptr, selectionCount));
     if (selectionCount) {
         pushButton_copyMap->setEnabled(true);
         /*:
         text on button to select other profiles to receive the map from this profile,
         %n is the number of other profiles that have already been selected to receive it and will always be 1 or more
         */
-        pushButton_chooseProfiles->setText(tr("%n selected - change destinations...", "", selectionCount));
+        pushButton_chooseProfiles->setText(tr("%n selected - change destinations...", nullptr, selectionCount));
     } else {
         pushButton_copyMap->setEnabled(false);
         /*:
