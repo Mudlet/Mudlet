@@ -482,7 +482,7 @@ void cTelnet::slot_socketDisconnected()
                   .arg(timeDiff.addMSecs(mConnectionTimer.elapsed())
                                 /*:
                                 This is the format to be used to show the profile connection time, it follows
-                                the rules of the \"QDateTime::toString(...)\" function and may need
+                                the rules of the "QDateTime::toString(...)" function and may need
                                 modification for some locales, e.g. France, Spain.
                                 */
                                .toString(tr("hh:mm:ss.zzz")));
@@ -2379,7 +2379,7 @@ void cTelnet::postMessage(QString msg)
             QString prefix = body.at(0).left(prefixLength).toUpper();
             QString firstLineTail = body.at(0).mid(prefixLength);
             body.removeFirst();
-            //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
+            //: Keep the capitalisation, the translated text at 7 letters max so it aligns nicely
             if (prefix.contains(tr("ERROR")) || prefix.contains(QLatin1String("ERROR"))) {
                 mpHost->mpConsole->print(prefix, Qt::red, mpHost->mBgColor);                                  // Bright Red
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow

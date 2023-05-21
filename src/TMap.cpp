@@ -2564,7 +2564,7 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         // until now:
         isLocalImport = true;
         mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
-        //: This is a title of a progress dialog.
+        //: This is a title of a progress window.
         mpProgressDialog->setWindowTitle(tr("Map import"));
         mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
         mpProgressDialog->setMinimumWidth(300);

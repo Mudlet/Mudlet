@@ -3822,7 +3822,7 @@ void dlgProfilePreferences::generateDiscordTooltips()
                                        state,
                                        //: Discord Rich Presence party size
                                        tr("Party size"),
-                                       //: , Discord Rich Presence maximum party size
+                                       //: Discord Rich Presence maximum party size
                                        tr("Party max"))
                                   //: Discord Rich Presence time until or time elapsed
                                   .arg(tr("Time"));

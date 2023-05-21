@@ -1052,7 +1052,7 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
             }
             return doubleParagraph.arg(tr("Exit to \"%1\".")
                                            .arg(exitRoomName.toHtmlEscaped()),
-                                       //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it.
+                                       //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
                                        tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
 
         }
@@ -1072,12 +1072,12 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
         if (outOfAreaExit) {
             return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
                                            .arg(exitAreaName.toHtmlEscaped()),
-                                       //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it.
+                                       //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
                                        tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
         }
 
         return doubleParagraph.arg(tr("Exit to unnamed room is valid."),
-                                   //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it.
+                                   //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
                                    tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
     }
 
@@ -1507,7 +1507,7 @@ void dlgRoomExits::init()
     roomID->setText(QString::number(mRoomID));
     if (pR->isLocked) {
         // Revise the tool tip:
-        //: This text is a revision to the default tooltip text set for this widget in the 'room_exits.ui' file. Bold HTML tags are used to emphasis that this room's locked status overrides any weight or lock (\"No route\") setting of any exit that comes to it.
+        //: This text is a revision to the default tooltip text set for this widget in the 'room_exits.ui' file. Bold HTML tags are used to emphasis that this room's locked status overrides any weight or lock ("No route") setting of any exit that comes to it.
         roomID->setToolTip(utils::richText(tr("This is the Room ID number for this room; this <b>room is locked</b> so it will not be used for speed-walks at all.")));
     } else {
         // Hide the padlock icon to the right of the room number display to
