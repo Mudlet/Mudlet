@@ -8200,13 +8200,11 @@ int TLuaInterpreter::setScript(lua_State* L)
     }
 
     auto [id, message] = pLuaInterpreter->setScriptCode(name, luaCode, --pos);
-    lua_pushnumber(L, id);
     if (id == -1) {
-        lua_pushfstring(L, "permScript: cannot set script (%s)", message.toUtf8().constData());
+        lua_pushfstring(L, "setScript: cannot set script (%s)", message.toUtf8().constData());
         return lua_error(L);
     }
     lua_pushnumber(L, id);
-
     return 1;
 }
 
