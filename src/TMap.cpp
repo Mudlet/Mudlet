@@ -2683,10 +2683,9 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
     }
 
     if (reply->error() != QNetworkReply::NoError && reply->error() != QNetworkReply::OperationCanceledError) {
-            // Don't report on any errors here as we've already done so in slot_downloadError(...) previously.
-            cleanup();
-            return;
-        }
+        // Don't report on any errors here as we've already done so in slot_downloadError(...) previously.
+        cleanup();
+        return;
         // else was QNetworkReply::OperationCanceledError and we already handle
         // THAT in slot_downloadCancel()
     }
