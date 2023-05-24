@@ -16216,18 +16216,18 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
     const auto ids = mpHost->getScriptUnit()->findItems(name);
     int id = -1;
     TScript* pS = nullptr;
-    if (pos > 0 || pos <= static_cast<int>(ids.size())) {
-        id = ids.at(static_cast<size_t>(pos - 1));
+    if (pos >= 0 && pos < ids.size()) {
+        id = ids.at(pos);
         pS = mpHost->getScriptUnit()->getScript(id);
     }
     if (!pS) {
-        return {-1, qsl("script \"%1\" at position %2 not found").arg(name, QString::number(pos))}; //script not found
+        return {-1, qsl("script \"%1\" at position %2 not found").arg(name, QString::number(pos + 1))}; //script not found
     }
     const auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
         const QString errMsg = pS->getError();
         pS->setScript(oldCode);
-        return {-1, qsl("unable to compile \"%1\" at position %2, reason: %3").arg(luaCode, QString::number(pos), errMsg)};
+        return {-1, qsl("unable to compile \"%1\" for the script \"%2\" at position %3, reason: %4").arg(luaCode, name, QString::number(pos + 1), errMsg)};
     }
     mpHost->mpEditorDialog->writeScript(id);
     return {id, QString()};
