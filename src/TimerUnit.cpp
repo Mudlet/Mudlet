@@ -326,13 +326,16 @@ TTimer* TimerUnit::findFirstTimer(const QString& name) const
 std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
 {
     std::vector<int> ids;
-    for (auto& item : qAsConst(mTimerMap)) {
-        if (exactMatch) {
-            if (!item->getName().compare(name, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : qAsConst(mTimerMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
-        } else {
-            if (item->getName().contains(name, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
+        }
+    } else {
+        for (auto& item : qAsConst(mTimerMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
         }
