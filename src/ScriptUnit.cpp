@@ -215,19 +215,19 @@ void ScriptUnit::compileAll()
 
 std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
 {
-    std::vector<int> Ids;
+    std::vector<int> ids;
     for (auto& item : qAsConst(mScriptMap)) {
         if (exactMatch) {
             if (!item->getName().compare(name, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
-                Ids.push_back(item->getID());
+                ids.push_back(item->getID());
             }
         } else {
             if (item->getName().contains(name, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
-                Ids.push_back(item->getID());
+                ids.push_back(item->getID());
             }
         }
     }
-    return Ids;
+    return ids;
 }
 
 void ScriptUnit::assembleReport(TScript* pItem)
