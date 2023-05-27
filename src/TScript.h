@@ -27,6 +27,7 @@
 #include "pre_guard.h"
 #include <QPointer>
 #include <QStringList>
+#include <optional>
 #include "post_guard.h"
 
 class Host;
