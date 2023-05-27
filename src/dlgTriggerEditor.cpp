@@ -5143,8 +5143,6 @@ void dlgTriggerEditor::saveScript()
 void dlgTriggerEditor::clearEditorNotification() const
 {
     mpSystemMessageArea->hide();
-    qDebug() << "Clear editor notification called.";
-
 }
 
 int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int newValueType)
