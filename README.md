@@ -21,6 +21,9 @@
   <a href="https://www.codefactor.io/repository/github/mudlet/mudlet">
     <img src="https://www.codefactor.io/repository/github/mudlet/mudlet/badge" alt="CodeFactor" />
   </a>
+  <a href="https://console.algora.io/org/Mudlet/bounties?status=open">
+    <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fconsole.algora.io%2Fapi%2Fshields%2FMudlet%2Fbounties%3Fstatus%3Dopen"/>
+  </a>
 </p>
 
 <p align="center">
