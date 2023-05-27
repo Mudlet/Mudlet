@@ -63,7 +63,7 @@ QString TEntityResolver::resolveCode(const QString& entityValue)
 QString TEntityResolver::resolveCode(const QString& entityValue, int base)
 {
     bool isNum = false;
-    ushort code = entityValue.toUShort(&isNum, base);
+    ushort const code = entityValue.toUShort(&isNum, base);
     return isNum ? resolveCode(code) : entityValue;
 }
 
