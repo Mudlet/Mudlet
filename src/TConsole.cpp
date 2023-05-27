@@ -1069,7 +1069,7 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
 
 void TConsole::scrollDown(int lines)
 {
-    if (!mScrollingEnabled) {
+    if ((mType & (UserWindow|SubConsole)) && !mScrollingEnabled) {
         return;
     }
 
@@ -1092,7 +1092,7 @@ void TConsole::scrollDown(int lines)
 
 void TConsole::scrollUp(int lines)
 {
-    if (!mScrollingEnabled) {
+    if ((mType & (UserWindow|SubConsole)) && !mScrollingEnabled) {
         return;
     }
 
@@ -1717,8 +1717,11 @@ void TConsole::setHorizontalScrollBar(bool isEnabled)
     }
 }
 
-void TConsole::setScrolling(bool enabled) {
-    mScrollingEnabled = enabled;
+void TConsole::setScrolling(bool enabled)
+{
+    if (mType & (UserWindow | SubConsole)) {
+        mScrollingEnabled = enabled;
+    }
 }
 
 void TConsole::printCommand(QString& msg)
