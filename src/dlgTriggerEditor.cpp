@@ -172,7 +172,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // set the stretch factor of the message area to 0 and everything else to 1,
     // so our errors box doesn't stretch to produce a grey area
     layoutColumn->addWidget(mpSystemMessageArea, 0);
-    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, mpSystemMessageArea, &QWidget::hide);
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
@@ -5093,7 +5093,13 @@ void dlgTriggerEditor::saveScript()
     }
 
     if (pT->state()) {
-        clearEditorNotification();
+        if (auto error = pT->getLoadingError(); error) {
+            showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
+                           "possibly by another script. The error was:%2%3")
+                                .arg(qsl("<br>"), error.value()));
+        } else {
+            clearEditorNotification();
+        }
 
         if (old_name == tr("New script") || old_name == tr("New script group")) {
             QIcon _icon;
@@ -5137,6 +5143,8 @@ void dlgTriggerEditor::saveScript()
 void dlgTriggerEditor::clearEditorNotification() const
 {
     mpSystemMessageArea->hide();
+    qDebug() << "Clear editor notification called.";
+
 }
 
 int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int newValueType)
@@ -6339,7 +6347,10 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
         clearDocument(mpSourceEditorEdbee, script);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
-        if (!pT->state()) {
+        if (auto error = pT->getLoadingError(); error) {
+            showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
+                           "possibly by another script. The error was:%2%3").arg(qsl("<br>"), error.value()));
+        } else if (!pT->state()) {
             showError(pT->getError());
         }
 
@@ -10058,4 +10069,21 @@ void dlgTriggerEditor::setEditorShowBidi(const bool state)
     config->setRenderBidiContolCharacters(state);
     config->endChanges();
     mpSourceEditorEdbee->controller()->update();
+}
+
+void dlgTriggerEditor::hideSystemMessageArea()
+{
+    mpSystemMessageArea->hide();
+
+    if (mCurrentView != EditorViewType::cmScriptView) {
+        return;
+    }
+
+    QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
+    if (pItem) {
+        TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
+        if (pT && pT->getLoadingError()) {
+            pT->clearLoadingError();
+        }
+    }
 }

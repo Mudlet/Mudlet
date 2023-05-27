@@ -224,6 +224,7 @@ public:
     void setSearchOptions(const SearchOptions);
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
+    void hideSystemMessageArea();
 
 public slots:
     void slot_toggleHiddenVariables(bool);
