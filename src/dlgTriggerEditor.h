@@ -517,7 +517,7 @@ private:
     edbee::TextDocument* mpSourceEditorEdbeeDocument = nullptr;
     edbee::TextSearcher* mpSourceEditorSearcher = nullptr;
 
-    std::unique_ptr<QRegularExpression> simplifyEdbeeStatusBarRegex;
+    inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
     QAction* mAddItem = nullptr;
     QAction* mDeleteItem = nullptr;
