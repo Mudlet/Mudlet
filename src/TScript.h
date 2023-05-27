@@ -45,9 +45,9 @@ public:
 
     QString getName() { return mName; }
     void setName(const QString& name) { mName = name; }
-    void compile();
-    void compileAll();
-    bool compileScript();
+    void compile(bool saveLoadingError = false);
+    void compileAll(bool saveLoadingError = false);
+    bool compileScript(bool saveLoadingError = false);
     void execute();
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
@@ -55,6 +55,9 @@ public:
     void callEventHandler(const TEvent&);
     void setEventHandlerList(QStringList handlerList);
     QStringList getEventHandlerList() { return mEventHandlerList; }
+    std::optional<QString> getLoadingError();
+    void setLoadingError(const QString& error);
+    void clearLoadingError();
     bool exportItem;
     bool mModuleMasterFolder;
 
@@ -67,6 +70,7 @@ private:
     bool mNeedsToBeCompiled;
     QStringList mEventHandlerList;
     bool mModuleMember;
+    std::optional<QString> mLoadingError;
 };
 
 #endif // MUDLET_TSCRIPT_H
