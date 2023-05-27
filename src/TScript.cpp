@@ -174,7 +174,9 @@ std::optional<QString> TScript::getLoadingError()
 // error: The error message to set as the loading error.
 void TScript::setLoadingError(const QString& error)
 {
-    mLoadingError = error;
+    if (!error.isEmpty()) {
+        mLoadingError = error;
+    }
 }
 
 // Clears the loading error message for this script.
