@@ -7463,6 +7463,7 @@ void dlgTriggerEditor::enterEvent(TEnterEvent* event)
 void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 {
     Q_UNUSED(pE)
+    qDebug() << "focusInEvent fired!!";
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -10084,6 +10085,29 @@ void dlgTriggerEditor::hideSystemMessageArea()
         TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
         if (pT && pT->getLoadingError()) {
             pT->clearLoadingError();
+        }
+    }
+}
+
+// In case the profile was reset while the editor was out of focus, checks for any script loading errors and displays them
+void dlgTriggerEditor::changeEvent(QEvent* e)
+{
+    if (e->type() == QEvent::ActivationChange && this->isActiveWindow()) {
+        if (mCurrentView == EditorViewType::cmScriptView) {
+            QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
+            if (!pItem) {
+                return;
+            }
+
+            TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
+            if (!pT) {
+                return;
+            }
+            if (auto error = pT->getLoadingError(); error) {
+                showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
+                               "possibly by another script. The error was:%2%3")
+                                    .arg(qsl("<br>"), error.value()));
+            }
         }
     }
 }
