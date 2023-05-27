@@ -2528,7 +2528,8 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
 
     auto console = CONSOLE(L, windowName);
     console->setScrolling(true);
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrolling
@@ -2543,7 +2544,8 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
 
     auto console = CONSOLE(L, windowName);
     console->setScrolling(false);
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
