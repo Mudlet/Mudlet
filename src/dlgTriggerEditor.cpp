@@ -10094,16 +10094,16 @@ void dlgTriggerEditor::changeEvent(QEvent* e)
 {
     if (e->type() == QEvent::ActivationChange && this->isActiveWindow()) {
         if (mCurrentView == EditorViewType::cmScriptView) {
-            QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
-            if (!pItem) {
+            auto scriptTreeWidgetItem = treeWidget_scripts->currentItem();
+            if (!scriptTreeWidgetItem) {
                 return;
             }
 
-            TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
-            if (!pT) {
+            TScript* script = mpHost->getScriptUnit()->getScript(scriptTreeWidgetItem->data(0, Qt::UserRole).toInt());
+            if (!script) {
                 return;
             }
-            if (auto error = pT->getLoadingError(); error) {
+            if (auto error = script->getLoadingError(); error) {
                 showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
                                "possibly by another script. The error was:%2%3")
                                     .arg(qsl("<br>"), error.value()));
