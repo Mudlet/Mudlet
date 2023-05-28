@@ -168,6 +168,79 @@ private slots:
         QCOMPARE(stub.mHints[0], "say I am Gandalf");
     }
 
+    void testResolvingEntityWithPipe()
+    {
+        TMxpStubContext ctx;
+        TMxpStubClient stub;
+
+        ctx.getEntityResolver().registerEntity("&frontHint;", "");
+        ctx.getEntityResolver().registerEntity("&frontHref;", "");
+
+        ctx.getEntityResolver().registerEntity("&backHints;", "");
+        ctx.getEntityResolver().registerEntity("&backHrefs;", "");
+
+        TMxpSendTagHandler sendTagHandler;
+        TMxpTagHandler& tagHandler = sendTagHandler;
+
+        // First check the SEND TAG with empty entities
+        auto startTag = parseNode("<SEND href=\"&frontHref;look|say hello&backHrefs;\" hint=\"&frontHint;LOOK AROUND|SAY HELLO&backHints;\">");
+        auto endTag = parseNode("</SEND>");
+
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+        tagHandler.handleContent("TAG CONTENT");
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+
+        QCOMPARE(stub.mHrefs.size(), 2);
+        QCOMPARE(stub.mHrefs[0], "send([[look]])");
+        QCOMPARE(stub.mHrefs[1], "send([[say hello]])");
+
+        QCOMPARE(stub.mHints.size(), 2);
+        QCOMPARE(stub.mHints[0], "LOOK AROUND");
+        QCOMPARE(stub.mHints[1], "SAY HELLO");
+
+        // Now add top menu entries
+
+        ctx.getEntityResolver().registerEntity("&frontHint;", "WHO IS ONLINE?|");
+        ctx.getEntityResolver().registerEntity("&frontHref;", "who|");
+
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+        tagHandler.handleContent("TAG CONTENT");
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+
+        QCOMPARE(stub.mHrefs.size(), 3);
+        QCOMPARE(stub.mHrefs[0], "send([[who]])");
+        QCOMPARE(stub.mHrefs[1], "send([[look]])");
+        QCOMPARE(stub.mHrefs[2], "send([[say hello]])");
+
+        QCOMPARE(stub.mHints.size(), 3);
+        QCOMPARE(stub.mHints[0], "WHO IS ONLINE?");
+        QCOMPARE(stub.mHints[1], "LOOK AROUND");
+        QCOMPARE(stub.mHints[2], "SAY HELLO");
+
+        // Finally add something to the end of the menu
+
+        ctx.getEntityResolver().registerEntity("&backHints;", "|KNOCK AT THE DOOR|BREAK THE DOOR");
+        ctx.getEntityResolver().registerEntity("&backHrefs;", "|knock at door|break door");
+
+        tagHandler.handleTag(ctx, stub, startTag->asStartTag());
+        tagHandler.handleContent("TAG CONTENT");
+        tagHandler.handleTag(ctx, stub, endTag->asEndTag());
+
+        QCOMPARE(stub.mHrefs.size(), 5);
+        QCOMPARE(stub.mHrefs[0], "send([[who]])");
+        QCOMPARE(stub.mHrefs[1], "send([[look]])");
+        QCOMPARE(stub.mHrefs[2], "send([[say hello]])");
+        QCOMPARE(stub.mHrefs[3], "send([[knock at door]])");
+        QCOMPARE(stub.mHrefs[4], "send([[break door]])");
+
+        QCOMPARE(stub.mHints.size(), 5);
+        QCOMPARE(stub.mHints[0], "WHO IS ONLINE?");
+        QCOMPARE(stub.mHints[1], "LOOK AROUND");
+        QCOMPARE(stub.mHints[2], "SAY HELLO");
+        QCOMPARE(stub.mHints[3], "KNOCK AT THE DOOR");
+        QCOMPARE(stub.mHints[4], "BREAK THE DOOR");
+    }
+
     void testSendHrefHintMismatch() {
         // Example from starmourn on WARES command from NPCs
         // <SEND HREF="PROBE SUSPENDERS30901|BUY SUSPENDERS30901" hint="Click to see command menu">30901</SEND>
