@@ -2517,21 +2517,59 @@ int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
+// This (and the next) function originally only worked on TConsole instances
+// to show/hide a command line at the bottom (and the first would create the
+// TCommandLine if needed) but they have been extended to also work on extra
+// commandlines inserted by the createCommandLine(...) function:
 int TLuaInterpreter::enableCommandLine(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->setCmdVisible(true);
-    return 0;
+    const QString commandLineName{CMDLINE_NAME(L, 1)};
+    if (isMain(commandLineName)) {
+        return warnArgumentValue(L, __func__, "this function is not permitted on the main command line");
+    }
+    auto console = CONSOLE_NIL(L, commandLineName);
+    if (console) {
+        // This name matches a TConsole instance so we are referring to a
+        // TCommandLine at the bottom of it - so need to call the original
+        // function that creates the latter if needed:
+        console->setCmdVisible(true);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Else this might refer to an additional command line which must exist
+    // for it to be shown by this function - the following macro will fail
+    // (and return with a nil and an error message) if it doesn't:
+    auto commandLine = COMMANDLINE(L, commandLineName);
+    commandLine->setVisible(true);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableCommandLine
 int TLuaInterpreter::disableCommandLine(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->setCmdVisible(false);
-    return 0;
+    const QString commandLineName{CMDLINE_NAME(L, 1)};
+    if (isMain(commandLineName)) {
+        return warnArgumentValue(L, __func__, "this function is not permitted on the main command line");
+    }
+    auto console = CONSOLE_NIL(L, commandLineName);
+    if (console) {
+        // This name matches a TConsole instance so we are referring to a
+        // TCommandLine at the bottom of it - so need to call the original
+        // function:
+        console->setCmdVisible(false);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Else this might refer to an additional command line which must exist
+    // for it to be shown by this function - the following macro will fail
+    // (and return with a nil and an error message) if it doesn't:
+    auto commandLine = COMMANDLINE(L, commandLineName);
+    commandLine->setVisible(false);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#replace
