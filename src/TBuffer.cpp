@@ -765,6 +765,12 @@ COMMIT_LINE:
             timeBuffer.push_back(QString());
             promptBuffer << false;
             if (static_cast<int>(buffer.size()) > mLinesLimit) {
+                // Whilst we also include a call to TConsole::checkNumberOfLines(...)
+                // in all other methods where the following is used (because
+                // both need to monitor the number of lines of text in the
+                // buffer) the event that the former may be required to
+                // generate is NOT used for the TMainConsole case whereas this
+                // (translateToPlainText(...)) method is ONLY for that one:
                 shrinkBuffer();
             }
             continue;
@@ -2087,12 +2093,11 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         promptBuffer << false;
         last = 0;
     }
-    bool firstChar = (lineBuffer.back().isEmpty());
-    int length = text.size();
-    if (length < 1) {
+    if (text.isEmpty()) {
         return;
     }
-    length = std::min(length, MAX_CHARACTERS_PER_ECHO);
+    bool firstChar = (lineBuffer.back().isEmpty());
+    int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -2159,6 +2164,15 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
             firstChar = false;
         }
     }
+
+    // Whilst shrinkBuffer() is used when the buffer exceeds a user defined
+    // limit to prevent it growing beyond a "reasonable" size we also
+    // want to check - for TConsoles that have been set to be "non-scrollable"
+    // - that the content has not exceeded the number of lines that can be
+    // shown in the upper pane and to raise an event if it has
+    if (!mpConsole.isNull()) {
+        mpConsole->checkNumberOfLines(lineBuffer.size());
+    }
 }
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
@@ -2180,12 +2194,11 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         promptBuffer << false;
         last = 0;
     }
-    bool firstChar = (lineBuffer.back().size() == 0);
-    int length = text.size();
-    if (length < 1) {
+    if (text.isEmpty()) {
         return;
     }
-    length = std::min(length, MAX_CHARACTERS_PER_ECHO);
+    bool firstChar = (lineBuffer.back().isEmpty());
+    int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -2248,6 +2261,11 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
             firstChar = false;
         }
     }
+    // Check - for "non-scrollable" TConsoles that the content has not exceeded
+    // the number of lines that can be shown and raise an event if it has:
+    if (!mpConsole.isNull()) {
+        mpConsole->checkNumberOfLines(lineBuffer.size());
+    }
 }
 
 void TBuffer::appendLine(const QString& text, const int sub_start, const int sub_end,
@@ -2273,12 +2291,11 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         lastLine = 0;
     }
 
-    bool firstChar = (lineBuffer.back().size() == 0);
-    int length = text.size();
-    if (length < 1) {
+    if (text.isEmpty()) {
         return;
     }
-    length = std::min(length, MAX_CHARACTERS_PER_ECHO);
+    bool firstChar = (lineBuffer.back().isEmpty());
+    int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
     int lineEndPos = sub_end;
     if (lineEndPos >= length) {
         lineEndPos = text.size() - 1;
@@ -2292,6 +2309,11 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
             timeBuffer.back() = QTime::currentTime().toString(timeStampFormat);
             firstChar = false;
         }
+    }
+    // Check - for "non-scrollable" TConsoles that the content has not exceeded
+    // the number of lines that can be shown and raise an event if it has:
+    if (!mpConsole.isNull()) {
+        mpConsole->checkNumberOfLines(lineBuffer.size());
     }
 }
 

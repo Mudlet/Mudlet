@@ -208,6 +208,10 @@ public:
     void setSearchOptions(const SearchOptions);
     void setProxyForFocus(TCommandLine*);
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
+    // Raises an event if the number of lines (in the
+    // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
+    // non-scrolling window:
+    void checkNumberOfLines(const int lineCount);
 
 
     QPointer<Host> mpHost;
