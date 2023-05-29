@@ -765,7 +765,7 @@ COMMIT_LINE:
             timeBuffer.push_back(QString());
             promptBuffer << false;
             if (static_cast<int>(buffer.size()) > mLinesLimit) {
-                // Whilst we also include a call to TConsole::raiseLinesOverflowEventIfRequired(...)
+                // Whilst we also include a call to TConsole::handleLinesOverflowEvent(...)
                 // in all other methods where the following is used (because
                 // both need to monitor the number of lines of text in the
                 // buffer) the event that the former may be required to
@@ -2171,7 +2171,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     // - that the content has not exceeded the number of lines that can be
     // shown in the upper pane and to raise an event if it has
     if (!mpConsole.isNull()) {
-        mpConsole->raiseLinesOverflowEventIfRequired(lineBuffer.size());
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
     }
 }
 
@@ -2264,7 +2264,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     // Check - for "non-scrollable" TConsoles that the content has not exceeded
     // the number of lines that can be shown and raise an event if it has:
     if (!mpConsole.isNull()) {
-        mpConsole->raiseLinesOverflowEventIfRequired(lineBuffer.size());
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
     }
 }
 
@@ -2313,7 +2313,7 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
     // Check - for "non-scrollable" TConsoles that the content has not exceeded
     // the number of lines that can be shown and raise an event if it has:
     if (!mpConsole.isNull()) {
-        mpConsole->raiseLinesOverflowEventIfRequired(lineBuffer.size());
+        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
     }
 }
 

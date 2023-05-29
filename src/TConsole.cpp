@@ -2349,7 +2349,7 @@ void TConsole::slot_clearSearchResults()
     mLowerPane->forceUpdate();
 }
 
-void TConsole::raiseLinesOverflowEventIfRequired(const int lineCount)
+void TConsole::handleLinesOverflowEvent(const int lineCount)
 {
     if (mType & ~(UserWindow | SubConsole)) {
         // It isn't a type that we need to worry about the number of lines of

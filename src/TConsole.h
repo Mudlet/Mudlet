@@ -211,7 +211,7 @@ public:
     // Raises an event if the number of lines (in the
     // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
     // non-scrolling window:
-    void raiseLinesOverflowEventIfRequired(const int lineCount);
+    void handleLinesOverflowEvent(const int lineCount);
 
 
     QPointer<Host> mpHost;
