@@ -2656,7 +2656,7 @@ void TMap::slot_downloadError(QNetworkReply::NetworkError error)
 
     if (error != QNetworkReply::OperationCanceledError) {
         // No point in reporting Cancel as that is handled elsewhere
-        const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1.").arg(mpNetworkReply->errorString());
+        const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1").arg(mpNetworkReply->errorString());
         postMessage(errMsg);
     }
 }
@@ -2684,14 +2684,10 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
 
-    if (reply->error() != QNetworkReply::NoError) {
-        if (reply->error() != QNetworkReply::OperationCanceledError) {
-            // Don't post an error for the cancel case - it has already been done
-            const QString alertMsg = tr("[ ALERT ] - Map download failed, error reported was:\n%1.").arg(reply->errorString());
-            postMessage(alertMsg);
-            cleanup();
-            return;
-        }
+    if (reply->error() != QNetworkReply::NoError && reply->error() != QNetworkReply::OperationCanceledError) {
+        // Don't report on any errors here as we've already done so in slot_downloadError(...) previously.
+        cleanup();
+        return;
         // else was QNetworkReply::OperationCanceledError and we already handle
         // THAT in slot_downloadCancel()
     }
