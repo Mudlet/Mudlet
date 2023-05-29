@@ -705,25 +705,27 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 action_removeWord->setEnabled(false);
 //                }
                 if (mudlet::self()->mUsingMudletDictionaries) {
-                    action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which we have "
-                                                                         "bundled with Mudlet; the entries about this line are the ones that the user "
-                                                                         "has personally added."));
+                    /*:
+                    This line is shown in the list of spelling suggestions on the profile's command-
+                    line context menu to clearly divide up where the suggestions for correct
+                    spellings are coming from.  The precise format might be modified as long as it
+                    is clear that the entries below this line in the menu come from the spelling
+                    dictionary that the user has chosen in the profile setting which we have
+                    bundled with Mudlet; the entries about this line are the ones that the user
+                    has personally added.
+                    */
+                    action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
                 } else {
-                    action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which is provided "
-                                                                         "as part of the OS; the entries about this line are the ones that the user has "
-                                                                         "personally added."));
+                    /*:
+                    This line is shown in the list of spelling suggestions on the profile's command-
+                    line context menu to clearly divide up where the suggestions for correct
+                    spellings are coming from.  The precise format might be modified as long as it
+                    is clear that the entries below this line in the menu come from the spelling
+                    dictionary that the user has chosen in the profile setting which is provided
+                    as part of the OS; the entries about this line are the ones that the user has
+                    personally added.
+                    */
+                    action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
                 }
                 action_dictionarySeparatorLine->setEnabled(false);
             }
@@ -1321,91 +1323,103 @@ void TCommandLine::slot_adjustAccessibleNames()
     switch (mType) {
     case MainCommandLine:
         if (multipleProfilesActive) {
-            setAccessibleName(tr("Input line for \"%1\" profile.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe the main command line for a "
-                                 "Mudlet profile when more than one profile is loaded, %1 is the "
-                                 "profile name. Because this is likely to be used often it should be "
-                                 "kept as short as possible.").arg(hostName));
+            /*:
+            Accessibility-friendly name to describe the main command line for a
+            Mudlet profile when more than one profile is loaded, %1 is the
+            profile name. Because this is likely to be used often it should be
+            kept as short as possible.
+            */
+            setAccessibleName(tr("Input line for \"%1\" profile.").arg(hostName));
+            /*:
+            Accessibility-friendly description for the main command line for
+            a Mudlet profile when more than one profile is loaded, %1 is the
+            profile name. Because this is likely to be used often it should be
+            kept as short as possible.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
-                                        "to run commands locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for the main command line for "
-                                        "a Mudlet profile when more than one profile is loaded, %1 is the "
-                                        "profile name. Because this is likely to be used often it should be "
-                                        "kept as short as possible.").arg(hostName));
+                                        "to run commands locally.").arg(hostName));
         } else {
-            setAccessibleName(tr("Input line.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe the main command line for a "
-                                 "Mudlet profile when only one profile is loaded. Because this is "
-                                 "likely to be used often it should be kept as short as possible."));
+            /*:
+            Accessibility-friendly name to describe the main command line for a
+            Mudlet profile when only one profile is loaded. Because this is
+            likely to be used often it should be kept as short as possible.
+            */
+            setAccessibleName(tr("Input line."));
+            /*:
+            Accessibility-friendly description for the main command line for
+            a Mudlet profile when only one profile is loaded. Because this is
+            likely to be used often it should be kept as short as possible.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
-                                        "locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for the main command line for "
-                                        "a Mudlet profile when only one profile is loaded. Because this is "
-                                        "likely to be used often it should be kept as short as possible."));
+                                        "locally."));
         }
         break;
     case SubCommandLine:
         if (multipleProfilesActive) {
-            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe an extra command line on "
-                                 "top of console/window when more than one profile is loaded, %1 is "
-                                 "the command line name, %2 is the name of the window/console that "
-                                 "it is on and %3 is the name of the profile.")
+            /*:
+            Accessibility-friendly name to describe an extra command line on
+            top of console/window when more than one profile is loaded, %1 is
+            the command line name, %2 is the name of the window/console that
+            it is on and %3 is the name of the profile.
+            */
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.")
                                       .arg(mCommandLineName, mpConsole->mConsoleName, hostName));
+            /*:
+            Accessibility-friendly description for an extra command line on top of a
+            console/window when more than one profile is loaded, %1 is the profile
+            name.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
-                                        "to run commands locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for an extra command line on top of a "
-                                        "console/window when more than one profile is loaded, %1 is the profile "
-                                        "name.").arg(hostName));
+                                        "to run commands locally.").arg(hostName));
         } else {
-            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe an extra command line on "
-                                 "top of console/window when only one profile is loaded, %1 is the "
-                                 "command line name and %2 is the name of the window/console that "
-                                 "it is on.")
+            /*:
+            Accessibility-friendly name to describe an extra command line on
+            top of console/window when only one profile is loaded, %1 is the
+            command line name and %2 is the name of the window/console that
+            it is on.
+            */
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window.")
                                       .arg(mCommandLineName, mpConsole->mConsoleName));
+            /*:
+            Accessibility-friendly description for an extra command line on
+            top of a console/window when only one profile is loaded.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
-                                        "locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for an extra command line on "
-                                        "top of a console/window when only one profile is loaded."));
+                                        "locally."));
         }
         break;
     case ConsoleCommandLine:
         // The mCommandLine for this type is the same as the parent TConsole
         if (multipleProfilesActive) {
-            setAccessibleName(tr("Input line of \"%1\" window of \"%2\" profile.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe the built-in command line of a "
-                                 "console/window other than the main one, when more than one profile is "
-                                 "loaded, %1 is the name of the window/console and %2 is the name of the "
-                                 "profile.").arg(mCommandLineName, hostName));
+            /*:
+            Accessibility-friendly name to describe the built-in command line of a
+            console/window other than the main one, when more than one profile is
+            loaded, %1 is the name of the window/console and %2 is the name of the
+            profile.
+            */
+            setAccessibleName(tr("Input line of \"%1\" window of \"%2\" profile.").arg(mCommandLineName, hostName));
+            /*:
+            Accessibility-friendly description for the built-in command line of a
+            console/window other than the main window's one when more than one profile is
+            loaded, %1 is the profile name.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
-                                        "to run commands locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for the built-in command line of a "
-                                        "console/window other than the main window's one when more than one profile is "
-                                        "loaded, %1 is the profile name.").arg(hostName));
+                                        "to run commands locally.").arg(hostName));
         } else {
-            setAccessibleName(tr("Input line of \"%1\" window.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe the built-in command line "
-                                 "of a console/window other than the main one, when only one "
-                                 "profile is loaded, %1 is the name of the window/console.")
+            /*:
+            Accessibility-friendly name to describe the built-in command line
+            of a console/window other than the main one, when only one
+            profile is loaded, %1 is the name of the window/console.
+            */
+            setAccessibleName(tr("Input line of \"%1\" window.")
                                       .arg(mCommandLineName));
+            /*:
+            Accessibility-friendly description for the built-in command line of a
+            console/window other than the main window's one when only one profile is
+            loaded.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
-                                        "locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for the built-in command line of a "
-                                        "console/window other than the main window's one when only one profile is "
-                                        "loaded."));
+                                        "locally."));
         }
         break;
     case UnknownType:

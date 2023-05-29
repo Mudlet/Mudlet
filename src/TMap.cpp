@@ -2497,10 +2497,11 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     mpNetworkReply = mpNetworkAccessManager->get(request);
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update
-    mpProgressDialog = new QProgressDialog(tr("Downloading map file for use in %1...",
-                                              "%1 is the name of the current Mudlet profile")
+    //: %1 is the name of the current Mudlet profile
+    mpProgressDialog = new QProgressDialog(tr("Downloading map file for use in %1...")
                                               .arg(mProfileName), tr("Abort"), 0, 0);
-    mpProgressDialog->setWindowTitle(tr("Map download", "This is a title of a progress window."));
+    //: This is a title of a progress window.
+    mpProgressDialog->setWindowTitle(tr("Map download"));
     mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(300);
     mpProgressDialog->setAutoClose(false);
@@ -2563,7 +2564,8 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         // until now:
         isLocalImport = true;
         mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
-        mpProgressDialog->setWindowTitle(tr("Map import", "This is a title of a progress dialog."));
+        //: This is a title of a progress window.
+        mpProgressDialog->setWindowTitle(tr("Map import"));
         mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
         mpProgressDialog->setMinimumWidth(300);
         mpProgressDialog->setAutoClose(false);
@@ -2891,7 +2893,8 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
                                            mpHost->mpConsole);
     mpProgressDialog->setValue(0);
     mpProgressDialog->setWindowModality(Qt::NonModal);
-    mpProgressDialog->setWindowTitle(tr("Map JSON export", "This is a title of a progress window."));
+    //: This is a title of a progress window.
+    mpProgressDialog->setWindowTitle(tr("Map JSON export"));
     mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(500);
     mpProgressDialog->setAutoClose(false);
@@ -3127,7 +3130,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                                            mpHost->mpConsole);
     mpProgressDialog->setValue(0);
     mpProgressDialog->setWindowModality(Qt::NonModal);
-    mpProgressDialog->setWindowTitle(tr("Map JSON import", "This is a title of a progress window."));
+    //: This is a title of a progress window.
+    mpProgressDialog->setWindowTitle(tr("Map JSON import"));
     mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(500);
     mpProgressDialog->setAutoClose(false);

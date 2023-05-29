@@ -30,7 +30,8 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     setupUi(this);
 
     setAttribute(Qt::WA_DeleteOnClose);
-    setWindowTitle(tr("Create label", "Create label dialog title"));
+    //: Create label dialog title
+    setWindowTitle(tr("Create label"));
 
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::slot_updateControlsVisibility);
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
@@ -70,7 +71,8 @@ void dlgMapLabel::slot_pickFgColor()
 {
     fgColorDialog = new QColorDialog(this);
     fgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
-    fgColorDialog->setWindowTitle(tr("Foreground color", "2D mapper create label color dialog title"));
+    //: 2D mapper create label color dialog title
+    fgColorDialog->setWindowTitle(tr("Foreground color"));
     fgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
         fgColor = color;
@@ -90,7 +92,8 @@ void dlgMapLabel::slot_pickBgColor()
     auto originalColor = QColor(bgColor);
     bgColorDialog = new QColorDialog(this);
     bgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
-    bgColorDialog->setWindowTitle(tr("Background color", "2D mapper create label color dialog title"));
+    //: 2D mapper create label color dialog title
+    bgColorDialog->setWindowTitle(tr("Background color"));
     bgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
         bgColor = color;
@@ -109,7 +112,8 @@ void dlgMapLabel::slot_pickFont()
     auto originalFont = QFont(font);
     fontDialog = new QFontDialog(font, this);
     fontDialog->setAttribute(Qt::WA_DeleteOnClose);
-    fontDialog->setWindowTitle(tr("Label font", "2D mapper create label font dialog title"));
+    //: 2D mapper create label font dialog title
+    fontDialog->setWindowTitle(tr("Label font"));
     connect(fontDialog, &QFontDialog::currentFontChanged, this, [&](const QFont& pFont) {
         font = pFont;
         emit updated();
@@ -126,7 +130,8 @@ void dlgMapLabel::slot_pickFont()
 
 void dlgMapLabel::slot_pickFile()
 {
-    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image", "2D Mapper create label file dialog title"));
+    //: 2D Mapper create label file dialog title
+    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"));
     emit updated();
 }
 

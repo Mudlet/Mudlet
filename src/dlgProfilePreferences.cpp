@@ -146,19 +146,19 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                               "if a log file of the same name already exists.)</p>"));
     lineEdit_logFileName->setToolTip(utils::richText(tr("Set a custom name for your log. (New logs are appended if a log file of the same name "
                                                         "already exists).")));
-    lineEdit_logFileName->setPlaceholderText(tr("logfile",
-                                                "Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {1 of 2})."));
+    //: Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {one of two copies}).
+    lineEdit_logFileName->setPlaceholderText(tr("logfile"));
     label_logFileNameExtension->setVisible(false);
     label_logFileName->setVisible(false);
     lineEdit_logFileName->setVisible(false);
-    pushButton_copyMap->setText(tr("copy to %n destination(s)",
-                                   // Intentional comment to separate arguments
-                                   "text on button to put the map from this profile into the other profiles to "
-                                   "receive the map from this profile, %n is the number of other profiles that "
-                                   "have already been selected to receive it and will be zero or more. The button "
-                                   "will also be disabled (greyed out) in the zero case but the text will still be "
-                                   "visible.",
-                                   0));
+    /*:
+    text on button to put the map from this profile into the other profiles to
+    receive the map from this profile, %n is the number of other profiles that
+    have already been selected to receive it and will be zero or more. The button
+    will also be disabled (greyed out) in the zero case but the text will still be
+    visible.
+    */
+    pushButton_copyMap->setText(tr("copy to %n destination(s)", nullptr, 0));
 
     if (pHost) {
         initWithHost(pHost);
@@ -366,8 +366,8 @@ void dlgProfilePreferences::setupPasswordsMigration()
     });
 
     connect(mudlet::self(), &mudlet::signal_passwordMigratedToSecure, this, [=](const QString& profile) {
-        label_password_migration_notification->setText(
-                tr("Migrated %1...", "This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely").arg(profile));
+        //: This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely
+        label_password_migration_notification->setText(tr("Migrated %1...").arg(profile));
     });
 
     connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, this, [=]() {
@@ -682,9 +682,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
     if (mudlet::self()->mUsingMudletDictionaries) {
-        checkBox_spellCheck->setText(tr("Mudlet dictionaries:", "On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones."));
+        //: On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones
+        checkBox_spellCheck->setText(tr("Mudlet dictionaries:"));
     } else {
-        checkBox_spellCheck->setText(tr("System dictionaries:", "On *nix systems where we find the system ones we use them."));
+        //: On *nix systems where we find the system ones we use them
+        checkBox_spellCheck->setText(tr("System dictionaries:"));
     }
 
     const QDir dir(path);
@@ -1737,7 +1739,8 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
         return;
     }
 
-    auto color = QColorDialog::getColor(presentColor, this, tr("Pick color", "Generic pick color dialog title"),
+    //: Generic pick color dialog title
+    auto color = QColorDialog::getColor(presentColor, this, tr("Pick color"),
                                         allowAlpha ? QColorDialog::ShowAlphaChannel : QColorDialog::ColorDialogOptions());
     if (color.isValid()) {
         presentColor = color;
@@ -3103,27 +3106,28 @@ void dlgProfilePreferences::slot_chosenProfilesChanged(QAction* _action)
             ++selectionCount;
         }
     }
-    pushButton_copyMap->setText(tr("copy to %n destination(s)",
-                                   // Intentional comment to separate arguments
-                                   "text on button to put the map from this profile into the other profiles to "
-                                   "receive the map from this profile, %n is the number of other profiles that "
-                                   "have already been selected to receive it and will be zero or more. The button "
-                                   "will also be disabled (greyed out) in the zero case but the text will still be "
-                                   "visible.",
-                                   selectionCount));
+    /*:
+    text on button to put the map from this profile into the other profiles to
+    receive the map from this profile, %n is the number of other profiles that
+    have already been selected to receive it and will be zero or more. The button
+    will also be disabled (greyed out) in the zero case but the text will still be
+    visible.
+    */
+    pushButton_copyMap->setText(tr("copy to %n destination(s)", nullptr, selectionCount));
     if (selectionCount) {
         pushButton_copyMap->setEnabled(true);
-        pushButton_chooseProfiles->setText(tr("%n selected - change destinations...",
-                                              // Intentional comment to separate arguments
-                                              "text on button to select other profiles to receive the map from this profile, "
-                                              "%n is the number of other profiles that have already been selected to receive it and will always be 1 or more",
-                                              selectionCount));
+        /*:
+        text on button to select other profiles to receive the map from this profile,
+        %n is the number of other profiles that have already been selected to receive it and will always be 1 or more
+        */
+        pushButton_chooseProfiles->setText(tr("%n selected - change destinations...", nullptr, selectionCount));
     } else {
         pushButton_copyMap->setEnabled(false);
-        pushButton_chooseProfiles->setText(tr("pick destinations...",
-                                              // Intentional comment to separate arguments
-                                              "text on button to select other profiles to receive the map from this profile, "
-                                              "this is used when no profiles have been selected"));
+        /*:
+        text on button to select other profiles to receive the map from this profile,
+        this is used when no profiles have been selected
+        */
+        pushButton_chooseProfiles->setText(tr("pick destinations..."));
     }
 }
 
@@ -3806,15 +3810,22 @@ void dlgProfilePreferences::generateDiscordTooltips()
   </table>
       )")
                                   .arg(highlight,
-                                       tr("Large icon", "Discord Rich Presence large icon"),
-                                       tr("Detail", "Discord Rich Presence detail"),
+                                       //: Discord Rich Presence large icon
+                                       tr("Large icon"),
+                                       //: Discord Rich Presence detail
+                                       tr("Detail"),
                                        detail,
-                                       tr("Small icon", "Discord Rich Presence small icon"),
-                                       tr("State", "Discord Rich Presence state"),
+                                       //: Discord Rich Presence small icon"
+                                       tr("Small icon"),
+                                       //: Discord Rich Presence state
+                                       tr("State"),
                                        state,
-                                       tr("Party size", "Discord Rich Presence party size"),
-                                       tr("Party max", "Discord Rich Presence maximum party size"))
-                                  .arg(tr("Time", "Discord Rich Presence time until or time elapsed"));
+                                       //: Discord Rich Presence party size
+                                       tr("Party size"),
+                                       //: Discord Rich Presence maximum party size
+                                       tr("Party max"))
+                                  //: Discord Rich Presence time until or time elapsed
+                                  .arg(tr("Time"));
         widget->setToolTip(tooltip);
     };
 
