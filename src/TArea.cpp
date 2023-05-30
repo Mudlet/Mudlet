@@ -752,7 +752,8 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
 
     writeJsonSize(labelObj, QLatin1String("size"), pLabel->size);
 
-    if (!(pLabel->text.isEmpty() || !pLabel->text.compare(tr("no text", "Default text if a label is created in mapper with no text")))) {
+    //: Default text if a label is created in mapper with no text
+    if (!(pLabel->text.isEmpty() || !pLabel->text.compare(tr("no text")))) {
         // Don't include the text if it is am image:
         QJsonValue const textValue{pLabel->text};
         labelObj.insert(QLatin1String("text"), textValue);

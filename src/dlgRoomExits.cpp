@@ -1047,62 +1047,50 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
             if (outOfAreaExit) {
                 return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".")
                                                .arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
-                                           tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
-                                              // Intentional comment to separate arguments
-                                              "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
+                                           //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
+                                           tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
             }
             return doubleParagraph.arg(tr("Exit to \"%1\".")
                                            .arg(exitRoomName.toHtmlEscaped()),
-                                       tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
-                                          // Intentional comment to separate arguments
-                                          "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
+                                       //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
+                                       tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
 
         }
         if (outOfAreaExit) {
             return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".")
                                            .arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
-                                       tr("<b>Room</b> Weight of destination: %1.",
-                                          // Intentional comment to separate arguments
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                           .arg(exitRoomWeight));
+                                       //: Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not
+                                       tr("<b>Room</b> Weight of destination: %1.").arg(exitRoomWeight));
         }
         return doubleParagraph.arg(tr("Exit to \"%1\".")
                                        .arg(exitRoomName.toHtmlEscaped()),
-                                   tr("<b>Room</b> Weight of destination: %1.",
-                                      // Intentional comment to separate arguments
-                                      "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                       .arg(exitRoomWeight));
+                                   //: Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not
+                                   tr("<b>Room</b> Weight of destination: %1.").arg(exitRoomWeight));
     }
 
     if (exitRoomLocked) {
         if (outOfAreaExit) {
             return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
                                            .arg(exitAreaName.toHtmlEscaped()),
-                                       tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
-                                          // Intentional comment to separate arguments
-                                          "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
+                                       //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
+                                       tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
         }
 
         return doubleParagraph.arg(tr("Exit to unnamed room is valid."),
-                                   tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
-                                      // Intentional comment to separate arguments
-                                      "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
+                                   //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
+                                   tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
     }
 
     if (outOfAreaExit) {
         return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
                                        .arg(exitAreaName.toHtmlEscaped()),
-                                   tr("<b>Room</b> Weight of destination: %1.",
-                                      // Intentional comment to separate arguments
-                                      "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                       .arg(exitRoomWeight));
+                                   //: Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.
+                                   tr("<b>Room</b> Weight of destination: %1.").arg(exitRoomWeight));
     }
 
     return doubleParagraph.arg(tr("Exit to unnamed room is valid."),
-                               tr("<b>Room</b> Weight of destination: %1.",
-                                  // Intentional comment to separate arguments
-                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                     .arg(exitRoomWeight));
+                               //: Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.
+                               tr("<b>Room</b> Weight of destination: %1.").arg(exitRoomWeight));
 }
 
 void dlgRoomExits::normalExitEdited(const QString& roomExitIdText, QLineEdit* pExit, QCheckBox* pNoRoute, QCheckBox* pStub, QSpinBox* pWeight, QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked, const QString& invalidExitToolTipText, const QString& noExitToolTipText)
@@ -1519,9 +1507,8 @@ void dlgRoomExits::init()
     roomID->setText(QString::number(mRoomID));
     if (pR->isLocked) {
         // Revise the tool tip:
-        roomID->setToolTip(utils::richText(tr("This is the Room ID number for this room; this <b>room is locked</b> so it will not be used for speed-walks at all.",
-                                              // Intentional comment to separate arguments
-                                              "This text is a revision to the default tooltip text set for this widget in the 'room_exits.ui' file. Bold HTML tags are used to emphasis that this room's locked status overrides any weight or lock (\"No route\") setting of any exit that comes to it.")));
+        //: This text is a revision to the default tooltip text set for this widget in the 'room_exits.ui' file. Bold HTML tags are used to emphasis that this room's locked status overrides any weight or lock ("No route") setting of any exit that comes to it.
+        roomID->setToolTip(utils::richText(tr("This is the Room ID number for this room; this <b>room is locked</b> so it will not be used for speed-walks at all.")));
     } else {
         // Hide the padlock icon to the right of the room number display to
         // show the unlocked status of the room:
