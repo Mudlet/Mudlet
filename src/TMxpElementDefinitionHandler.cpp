@@ -46,7 +46,21 @@ TMxpTagHandlerResult TMxpElementDefinitionHandler::handleStartTag(TMxpContext& c
     }
 
     if (tag->hasAttribute("ATT")) {
-        element.attrs = tag->getAttributeValue("ATT").toLower().split(' ', Qt::SkipEmptyParts);
+        // Split attribute list into list of attributes and loop over each definiten
+        element.attrs = tag->getAttributeValue("ATT").split(' ', Qt::SkipEmptyParts);
+
+        for (int i = 0, numattr = element.attrs.size(); i < numattr; i++) {
+            QString attr = element.attrs.at(i);
+            // Find an argument after a = (if any), like in ATT="NAME=someone"
+            QString arg = attr.section("=", 1);
+
+            // The attribute name is the first part before any = . We have them all lowercase internally
+            element.attrs[i] = attr = attr.section("=", 0, 0).toLower();
+            if (!arg.isEmpty()) {
+                // If a default argument was specified, store it.
+                element.defaultValues[attr] = arg;
+            }
+        }
     }
 
     if (tag->hasAttribute("TAG")) {

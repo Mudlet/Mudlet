@@ -121,6 +121,10 @@ QString TMxpCustomElementTagHandler::mapAttributes(const TMxpElement& element, c
             return tag->getAttribute(attrIndex).getName();
         }
 
+        // If an attribute was not given, use its default value - if defined:
+        if (element.defaultValues.contains(attrName.toLower())) {
+            return element.defaultValues.value(attrName.toLower());
+        }
         return text;
     };
 
@@ -151,6 +155,9 @@ const QMap<QString, QString>& TMxpCustomElementTagHandler::parseFlagAttributes(c
             values[attrName] = tag->getAttributeValue(attrName);
         } else if (tag->getAttributesCount() > i) {
             values[attrName] = tag->getAttribute(i).getName();
+        } else if (el.defaultValues.contains(attrName)) {
+            // if we have no explicit value for the attribute, but a default, use that one.
+            values[attrName] = el.defaultValues.value(attrName);
         }
     }
     return values;
