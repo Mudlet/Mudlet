@@ -765,7 +765,7 @@ void Host::resetProfile_phase2()
     getAliasUnit()->compileAll();
     getActionUnit()->compileAll();
     getKeyUnit()->compileAll();
-    getScriptUnit()->compileAll();
+    getScriptUnit()->compileAll(true);
 
     mResetProfile = false;
 
