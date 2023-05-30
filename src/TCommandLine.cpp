@@ -307,14 +307,7 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_Return: // This is the main one (not the keypad)
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
                 // If Ctrl-Return is pressed - scroll to the bottom of text:
-                mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size();
-                mpConsole->mLowerPane->hide();
-                mpConsole->buffer.mCursorY = mpConsole->buffer.size();
-                mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
-                mpConsole->mUpperPane->mCursorX = 0;
-                mpConsole->mUpperPane->mIsTailMode = true;
-                mpConsole->mUpperPane->updateScreenView();
-                mpConsole->mUpperPane->forceUpdate();
+                mpConsole->clearSplit();
                 ke->accept();
                 return true;
 

@@ -160,7 +160,7 @@ public:
     void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
-    void setScrolling(bool enabled);
+    void setScrolling(const bool state);
     void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
@@ -212,6 +212,7 @@ public:
     // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
     // non-scrolling window:
     void handleLinesOverflowEvent(const int lineCount);
+    void clearSplit();
 
 
     QPointer<Host> mpHost;
