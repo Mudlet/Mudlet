@@ -2814,6 +2814,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     pHost->mIsProfileLoadingSequence = true;
     // The Host instance gets its TMainConsole here:
     addConsoleForNewHost(pHost);
+    // enable script compilation (which is off by default)
     pHost->mBlockScriptCompile = false;
     // This uses the external LuaGlobal.lua file to load all the other external
     // lua files, including the condenseMapLoad() function needed by the
@@ -2842,7 +2843,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     // This will build all the scripts in the collection of script items (but
     // not triggers/aliases/etc) - presumably so that the event handlers
     // are ready for use.
-    pHost->getScriptUnit()->compileAll();
+    pHost->getScriptUnit()->compileAll(true);
     pHost->updateAnsi16ColorsInTable();
 
     //Load rest of modules after scripts

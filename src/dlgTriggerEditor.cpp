@@ -182,7 +182,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // set the stretch factor of the message area to 0 and everything else to 1,
     // so our errors box doesn't stretch to produce a grey area
     layoutColumn->addWidget(mpSystemMessageArea, 0);
-    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, mpSystemMessageArea, &QWidget::hide);
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
@@ -5103,7 +5103,13 @@ void dlgTriggerEditor::saveScript()
     }
 
     if (pT->state()) {
-        clearEditorNotification();
+        if (auto error = pT->getLoadingError(); error) {
+            showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
+                           "possibly by another script. The error was:%2%3")
+                                .arg(qsl("<br>"), error.value()));
+        } else {
+            clearEditorNotification();
+        }
 
         if (old_name == tr("New script") || old_name == tr("New script group")) {
             QIcon _icon;
@@ -6346,7 +6352,10 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
         clearDocument(mpSourceEditorEdbee, script);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
-        if (!pT->state()) {
+        if (auto error = pT->getLoadingError(); error) {
+            showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
+                           "possibly by another script. The error was:%2%3").arg(qsl("<br>"), error.value()));
+        } else if (!pT->state()) {
             showError(pT->getError());
         }
 
@@ -7459,6 +7468,7 @@ void dlgTriggerEditor::enterEvent(TEnterEvent* event)
 void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 {
     Q_UNUSED(pE)
+    qDebug() << "focusInEvent fired!!";
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -10066,4 +10076,44 @@ void dlgTriggerEditor::setEditorShowBidi(const bool state)
     config->setRenderBidiContolCharacters(state);
     config->endChanges();
     mpSourceEditorEdbee->controller()->update();
+}
+
+void dlgTriggerEditor::hideSystemMessageArea()
+{
+    mpSystemMessageArea->hide();
+
+    if (mCurrentView != EditorViewType::cmScriptView) {
+        return;
+    }
+
+    QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
+    if (pItem) {
+        TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
+        if (pT && pT->getLoadingError()) {
+            pT->clearLoadingError();
+        }
+    }
+}
+
+// In case the profile was reset while the editor was out of focus, checks for any script loading errors and displays them
+void dlgTriggerEditor::changeEvent(QEvent* e)
+{
+    if (e->type() == QEvent::ActivationChange && this->isActiveWindow()) {
+        if (mCurrentView == EditorViewType::cmScriptView) {
+            auto scriptTreeWidgetItem = treeWidget_scripts->currentItem();
+            if (!scriptTreeWidgetItem) {
+                return;
+            }
+
+            TScript* script = mpHost->getScriptUnit()->getScript(scriptTreeWidgetItem->data(0, Qt::UserRole).toInt());
+            if (!script) {
+                return;
+            }
+            if (auto error = script->getLoadingError(); error) {
+                showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
+                               "possibly by another script. The error was:%2%3")
+                                    .arg(qsl("<br>"), error.value()));
+            }
+        }
+    }
 }
