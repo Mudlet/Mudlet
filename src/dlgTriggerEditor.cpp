@@ -2848,7 +2848,7 @@ void dlgTriggerEditor::activeToggle_trigger()
     } else {
         pT->setIsActive(false);
         showError(tr(R"(<b>Unable to activate a filter or trigger or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError().toHtmlEscaped()));
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
     }
@@ -3043,7 +3043,7 @@ void dlgTriggerEditor::activeToggle_timer()
     } else {
         pT->setIsActive(false);
         showError(tr(R"(<p><b>Unable to activate an offset timer or timer or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError().toHtmlEscaped()));
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
     }
@@ -3186,7 +3186,7 @@ void dlgTriggerEditor::activeToggle_alias()
     } else {
         pT->setIsActive(false);
         showError(tr(R"(<p><b>Unable to activate an alias or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError().toHtmlEscaped()));
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
     }
@@ -3311,7 +3311,7 @@ void dlgTriggerEditor::activeToggle_script()
     } else {
         pT->setIsActive(false);
         showError(tr(R"(<p><b>Unable to activate a script group or script or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError().toHtmlEscaped()));
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
     }
@@ -3467,7 +3467,7 @@ void dlgTriggerEditor::activeToggle_action()
     } else {
         pT->setIsActive(false);
         showError(tr(R"(<p><b>Unable to activate a button/menu/toolbar or the part of a module "<tt>%1</tt>" that contains them; reason: %2.</b></p>
-                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError().toHtmlEscaped()));
+                     <p><i>You will need to reactivate this after the problem has been corrected.</i></p>)").arg(pT->getName().toHtmlEscaped(), pT->getError()));
         icon.addPixmap(QPixmap(qsl(":/icons/tools-report-bug.png")), QIcon::Normal, QIcon::Off);
         itemDescription = descError;
     }
