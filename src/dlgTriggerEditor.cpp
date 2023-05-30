@@ -3623,7 +3623,7 @@ void dlgTriggerEditor::activeToggle_key()
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
     showInfo(
-            QString("Trying to %2 key <em>%1</em> %3.").arg(pT->getName().toHtmlEscaped(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: %1").arg(pT->getError().toHtmlEscaped())));
+            QString("Trying to %2 key <em>%1</em> %3.").arg(pT->getName().toHtmlEscaped(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: %1").arg(pT->getError())));
     if (pItem->childCount() > 0) {
         children_icon_key(pItem);
     }
