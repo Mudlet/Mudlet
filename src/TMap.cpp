@@ -2497,10 +2497,11 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
     mpNetworkReply = mpNetworkAccessManager->get(request);
     // Using zero for both min and max values should cause the bar to oscillate
     // until the first update
-    mpProgressDialog = new QProgressDialog(tr("Downloading map file for use in %1...",
-                                              "%1 is the name of the current Mudlet profile")
+    //: %1 is the name of the current Mudlet profile
+    mpProgressDialog = new QProgressDialog(tr("Downloading map file for use in %1...")
                                               .arg(mProfileName), tr("Abort"), 0, 0);
-    mpProgressDialog->setWindowTitle(tr("Map download", "This is a title of a progress window."));
+    //: This is a title of a progress window.
+    mpProgressDialog->setWindowTitle(tr("Map download"));
     mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(300);
     mpProgressDialog->setAutoClose(false);
@@ -2563,7 +2564,8 @@ bool TMap::readXmlMapFile(QFile& file, QString* errMsg)
         // until now:
         isLocalImport = true;
         mpProgressDialog = new QProgressDialog(tr("Importing XML map file for use in %1...").arg(mProfileName), QString(), 0, 0);
-        mpProgressDialog->setWindowTitle(tr("Map import", "This is a title of a progress dialog."));
+        //: This is a title of a progress window.
+        mpProgressDialog->setWindowTitle(tr("Map import"));
         mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
         mpProgressDialog->setMinimumWidth(300);
         mpProgressDialog->setAutoClose(false);
@@ -2654,7 +2656,7 @@ void TMap::slot_downloadError(QNetworkReply::NetworkError error)
 
     if (error != QNetworkReply::OperationCanceledError) {
         // No point in reporting Cancel as that is handled elsewhere
-        const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1.").arg(mpNetworkReply->errorString());
+        const QString errMsg = tr("[ ERROR ] - Map download encountered an error:\n%1").arg(mpNetworkReply->errorString());
         postMessage(errMsg);
     }
 }
@@ -2682,14 +2684,10 @@ void TMap::slot_replyFinished(QNetworkReply* reply)
         qWarning() << "TMap::slot_replyFinished( QNetworkReply * ) ERROR - received argument was not the expected stored pointer.";
     }
 
-    if (reply->error() != QNetworkReply::NoError) {
-        if (reply->error() != QNetworkReply::OperationCanceledError) {
-            // Don't post an error for the cancel case - it has already been done
-            const QString alertMsg = tr("[ ALERT ] - Map download failed, error reported was:\n%1.").arg(reply->errorString());
-            postMessage(alertMsg);
-            cleanup();
-            return;
-        }
+    if (reply->error() != QNetworkReply::NoError && reply->error() != QNetworkReply::OperationCanceledError) {
+        // Don't report on any errors here as we've already done so in slot_downloadError(...) previously.
+        cleanup();
+        return;
         // else was QNetworkReply::OperationCanceledError and we already handle
         // THAT in slot_downloadCancel()
     }
@@ -2891,7 +2889,8 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
                                            mpHost->mpConsole);
     mpProgressDialog->setValue(0);
     mpProgressDialog->setWindowModality(Qt::NonModal);
-    mpProgressDialog->setWindowTitle(tr("Map JSON export", "This is a title of a progress window."));
+    //: This is a title of a progress window.
+    mpProgressDialog->setWindowTitle(tr("Map JSON export"));
     mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(500);
     mpProgressDialog->setAutoClose(false);
@@ -3127,7 +3126,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                                            mpHost->mpConsole);
     mpProgressDialog->setValue(0);
     mpProgressDialog->setWindowModality(Qt::NonModal);
-    mpProgressDialog->setWindowTitle(tr("Map JSON import", "This is a title of a progress window."));
+    //: This is a title of a progress window.
+    mpProgressDialog->setWindowTitle(tr("Map JSON import"));
     mpProgressDialog->setWindowIcon(QIcon(qsl(":/icons/mudlet_map_download.png")));
     mpProgressDialog->setMinimumWidth(500);
     mpProgressDialog->setAutoClose(false);

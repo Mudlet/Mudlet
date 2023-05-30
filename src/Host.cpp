@@ -629,9 +629,8 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     zip_delete(zipFile, xmlIndex);
     struct zip_source* s = zip_source_file(zipFile, filename_xml.toUtf8().constData(), 0, -1);
     if (mudlet::smDebugMode && s == nullptr) {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".",
-                                                         // Intentional comment to separate arguments
-                                                         "This error message will appear when the xml file inside the module zip cannot be updated for some reason.")
+        //: This error message will appear when the xml file inside the module zip cannot be updated for some reason.
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to open xml file \"%1\" inside module %2 to update it. Error message was: \"%3\".")
                                                               .arg(filename_xml, zipName, zip_strerror(zipFile));
     }
     err = zip_file_add(zipFile, qsl("%1.xml").arg(moduleName).toUtf8().constData(), s, ZIP_FL_ENC_UTF_8 | ZIP_FL_OVERWRITE);
@@ -641,9 +640,8 @@ void Host::updateModuleZips(const QString& zipName, const QString& moduleName)
     }
 
     if (mudlet::smDebugMode && err == -1) {
-        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".",
-                                                         // Intentional comment to separate arguments
-                                                         "This error message will appear when a module is saved as package but cannot be done for some reason.")
+        //: This error message will appear when a module is saved as package but cannot be done for some reason.
+        TDebug(QColor(Qt::white), QColor(Qt::red)) << tr("Failed to save \"%1\" to module \"%2\". Error message was: \"%3\".")
                                                               .arg(moduleName, zipName, zip_strerror(zipFile));
     }
 }
@@ -2394,13 +2392,15 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         if (richPresenceSupported.first && pMudlet->mDiscord.usingMudletsDiscordID(this)) {
             pMudlet->mDiscord.setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
             pMudlet->mDiscord.setLargeImage(this, richPresenceSupported.second);
-            pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+            //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
+            pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
         } else {
             // We are using a custom application id, so the top line is
             // likely to be saying "Playing MudName"
             if (richPresenceSupported.first) {
                 pMudlet->mDiscord.setDetailText(this, QString());
-                pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3", "%1 is the game name and %2:%3 is game server address like: mudlet.org:23").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+                //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
+                pMudlet->mDiscord.setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
                 pMudlet->mDiscord.setLargeImage(this, qsl("server-icon"));
             }
         }
