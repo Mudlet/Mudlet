@@ -139,16 +139,26 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     // Descriptions for screen readers, clarify to translators that the context of "activated" is current status and not confirmation of toggle.
-    descActive = tr("activated", "Item is currently on, short enough to be spoken");
-    descInactive = tr("deactivated", "Item is currently off, short enough to be spoken");
-    descActiveFolder = tr("activated folder", "Folder is currently turned on");
-    descInactiveFolder = tr("deactivated folder", "Folder is currently turned off");
-    descError = tr("deactivated due to error", "Item is currently inactive because of errors, short enough to be spoken");
-    descInactiveParent = tr("%1 in a deactivated group", "Item is currently turned on individually, but is member of an inactive group");
-    descActiveFilterChain = tr("activated filter chain", "A trigger that unlocks other triggers is currently turned on, short enough to be spoken");
-    descInactiveFilterChain = tr("deactivated filter chain", "A trigger that unlocks other triggers is currently turned off, short enough to be spoken");
-    descActiveOffsetTimer = tr("activated offset timer", "A timer that starts after another timer is currently turned on");
-    descInactiveOffsetTimer = tr("deactivated offset timer", "A timer that starts after another timer is currently turned off");
+    //: Item is currently on, short enough to be spoken
+    descActive = tr("activated");
+    //: Item is currently off, short enough to be spoken
+    descInactive = tr("deactivated");
+    //: Folder is currently turned on
+    descActiveFolder = tr("activated folder");
+    //: Folder is currently turned off
+    descInactiveFolder = tr("deactivated folder");
+    //: Item is currently inactive because of errors, short enough to be spoken
+    descError = tr("deactivated due to error");
+    //: Item is currently turned on individually, but is member of an inactive group
+    descInactiveParent = tr("%1 in a deactivated group");
+    //: A trigger that unlocks other triggers is currently turned on, short enough to be spoken
+    descActiveFilterChain = tr("activated filter chain");
+    //: A trigger that unlocks other triggers is currently turned off, short enough to be spoken
+    descInactiveFilterChain = tr("deactivated filter chain");
+    //: A timer that starts after another timer is currently turned on
+    descActiveOffsetTimer = tr("activated offset timer");
+    //: A timer that starts after another timer is currently turned off
+    descInactiveOffsetTimer = tr("deactivated offset timer");
     descNewFolder = tr("new folder");
     descNewItem = tr("new item");
 
@@ -565,10 +575,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
     toolBar->addAction(mSaveItem);
-    toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions",
-                               // Intentional comment to separate arguments
-                               "This is the toolbar that is initially placed at the top of the editor.")
-                            .arg(hostName));
+    //: This is the toolbar that is initially placed at the top of the editor.
+    toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions").arg(hostName));
 
     toolBar->addSeparator();
 
@@ -601,10 +609,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(showDebugAreaAction);
 
     toolBar2->setMovable(true);
-    toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items",
-                                // Intentional comment to separate arguments
-                                "This is the toolbar that is initially placed at the left side of the editor.")
-                             .arg(hostName));
+    //: This is the toolbar that is initially placed at the left side of the editor.
+    toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items").arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
     // Inserting them in this order also causes the first one (the top toolbar)
@@ -762,10 +768,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     treeWidget_searchResults->setColumnCount(4);
     QStringList labelList;
-    labelList << tr("Type", "Heading for the first column of the search results")
-              << tr("Name", "Heading for the second column of the search results")
-              << tr("Where", "Heading for the third column of the search results")
-              << tr("What", "Heading for the fourth column of the search results");
+    //: Heading for the first column of the search results
+    labelList << tr("Type")
+              //: Heading for the second column of the search results
+              << tr("Name")
+              //: Heading for the third column of the search results
+              << tr("Where")
+              //: Heading for the fourth column of the search results
+              << tr("What");
     treeWidget_searchResults->setHeaderLabels(labelList);
 
     slot_showSearchAreaResults(false);
@@ -5553,32 +5563,30 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
 
             if (textAnsiFg == TTrigger::scmIgnored) {
                 pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored",
-                                                             "Color trigger ignored foreground color button, ensure all three instances have the same text"));
+                //: Color trigger ignored foreground color button, ensure all three instances have the same text
+                pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored"));
             } else if (textAnsiFg == TTrigger::scmDefault) {
                 pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                pPatternItem->pushButton_fgColor->setText(tr("Default foreground color",
-                                                             "Color trigger default foreground color button, ensure all three instances have the same text"));
+                //: Color trigger default foreground color button, ensure all three instances have the same text
+                pPatternItem->pushButton_fgColor->setText(tr("Default foreground color"));
             } else {
                 pPatternItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiFg, false)));
-                pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]",
-                                                             "Color trigger ANSI foreground color button, ensure all three instances have the same text")
-                                                          .arg(QString::number(textAnsiFg)));
+                //: Color trigger ANSI foreground color button, ensure all three instances have the same text
+                pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]").arg(QString::number(textAnsiFg)));
             }
 
             if (textAnsiBg == TTrigger::scmIgnored) {
                 pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                pPatternItem->pushButton_bgColor->setText(tr("Background color ignored",
-                                                             "Color trigger ignored background color button, ensure all three instances have the same text"));
+                //: Color trigger ignored background color button, ensure all three instances have the same text
+                pPatternItem->pushButton_bgColor->setText(tr("Background color ignored"));
             } else if (textAnsiBg == TTrigger::scmDefault) {
                 pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                pPatternItem->pushButton_bgColor->setText(tr("Default background color",
-                                                             "Color trigger default background color button, ensure all three instances have the same text"));
+                //: Color trigger default background color button, ensure all three instances have the same text
+                pPatternItem->pushButton_bgColor->setText(tr("Default background color"));
             } else {
                 pPatternItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiBg, true)));
-                pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]",
-                                                             "Color trigger ANSI background color button, ensure all three instances have the same text")
-                                                          .arg(QString::number(textAnsiBg)));
+                //: Color trigger ANSI background color button, ensure all three instances have the same text
+                pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]").arg(QString::number(textAnsiBg)));
             }
 
         } /*else {
@@ -5663,32 +5671,31 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
                 if (pT->mColorPatternList.at(i)) {
                     if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmIgnored) {
                         pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored",
-                                                                     "Color trigger ignored foreground color button, ensure all three instances have the same text"));
+                        //: Color trigger ignored foreground color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored"));
                     } else if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmDefault) {
                         pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                        pPatternItem->pushButton_fgColor->setText(tr("Default foreground color",
-                                                                     "Color trigger default foreground color button, ensure all three instances have the same text"));
+                        //: Color trigger default foreground color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_fgColor->setText(tr("Default foreground color"));
                     } else {
                         pPatternItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mFgColor));
-                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]",
-                                                                     "Color trigger ANSI foreground color button, ensure all three instances have the same text")
-                                                                     .arg(QString::number(pT->mColorPatternList.at(i)->ansiFg)));
+                        //: Color trigger ANSI foreground color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]").arg(QString::number(pT->mColorPatternList.at(i)->ansiFg)));
                     }
 
                     if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmIgnored) {
                         pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                        pPatternItem->pushButton_bgColor->setText(tr("Background color ignored",
-                                                                     "Color trigger ignored background color button, ensure all three instances have the same text"));
+                        //: Color trigger ignored background color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_bgColor->setText(tr("Background color ignored"));
                     } else if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmDefault) {
                         pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                        pPatternItem->pushButton_bgColor->setText(tr("Default background color",
-                                                                     "Color trigger default background color button, ensure all three instances have the same text"));
+                        //: Color trigger default background color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_bgColor->setText(tr("Default background color"));
                     } else {
                         pPatternItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mBgColor));
-                        pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]",
-                                                                     "Color trigger ANSI background color button, ensure all three instances have the same text")
-                                                                  .arg(QString::number(pT->mColorPatternList.at(i)->ansiBg)));
+                        //: Color trigger ANSI background color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]").arg(QString::number(pT->mColorPatternList.at(i)->ansiBg)));
+
                     }
                 } else {
                     qWarning() << "dlgTriggerEditor::slot_triggerSelected(...) ERROR: TTrigger instance has an mColorPattern of size:"
@@ -5747,12 +5754,12 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         const bool transparentBg = bgColor == QColorConstants::Transparent;
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, pT->isColorizerTrigger()));
         mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, transparentFg ? qsl("transparent") : fgColor.name());
-        mpTriggersMainArea->pushButtonFgColor->setText(transparentFg ? tr("keep",
-             "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonFgColor->setText(transparentFg ? tr("keep") : QString());
         mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(pT->getBgColor(), pT->isColorizerTrigger()));
         mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, transparentBg ? qsl("transparent") : bgColor.name());
-        mpTriggersMainArea->pushButtonBgColor->setText(transparentBg ? tr("keep",
-             "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonBgColor->setText(transparentBg ? tr("keep") : QString());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -9315,7 +9322,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     color = color.isValid() ? color : QColorConstants::Transparent;
     const bool keepColor = color == QColorConstants::Transparent;
     mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
-    mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+    mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? tr("keep") : QString());
     mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
 }
 
@@ -9336,7 +9344,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     color = color.isValid() ? color : QColorConstants::Transparent;
     const bool keepColor = color == QColorConstants::Transparent;
     mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
-    mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+    mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? tr("keep") : QString());
     mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
 }
 
@@ -9349,6 +9358,7 @@ void dlgTriggerEditor::slot_soundTrigger()
                                                     mpTriggersMainArea->lineEdit_soundFile->text().isEmpty()
                                                     ? mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())
                                                     : mpTriggersMainArea->lineEdit_soundFile->text(),
+                                                    //: This the list of file extensions that are considered for sounds from triggers, the terms inside of the '('...')' and the ";;" are used programmatically and should not be changed.
                                                     tr("Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;"
                                                        "Advanced Audio Coding-stream(*.aac);;"
                                                        "MPEG-2 Audio Layer 3(*.mp3);;"
@@ -9357,9 +9367,7 @@ void dlgTriggerEditor::slot_soundTrigger()
                                                        "PCM Audio(*.pcm);;"
                                                        "Wave(*.wav);;"
                                                        "Windows Media Audio(*.wma);;"
-                                                       "All files(*.*)",
-                                                       // Intentional comment
-                                                       "This the list of file extensions that are considered for sounds from triggers, the terms inside of the '('...')' and the \";;\" are used programmatically and should not be changed."));
+                                                       "All files(*.*)"));
     if (!fileName.isEmpty()) {
         // This will only be executed if the user did not press cancel
         mpTriggersMainArea->lineEdit_soundFile->setToolTip(fileName);
@@ -9421,15 +9429,14 @@ void dlgTriggerEditor::slot_colorTriggerFg()
     pPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
 
     if (pT->mColorTriggerFgAnsi == TTrigger::scmIgnored) {
-        pB->setText(tr("Foreground color ignored",
-                       "Color trigger ignored foreground color button, ensure all three instances have the same text"));
+        //: Color trigger ignored foreground color button, ensure all three instances have the same text
+        pB->setText(tr("Foreground color ignored"));
     } else if (pT->mColorTriggerFgAnsi == TTrigger::scmDefault) {
-        pB->setText(tr("Default foreground color",
-                       "Color trigger default foreground color button, ensure all three instances have the same text"));
+        //: Color trigger default foreground color button, ensure all three instances have the same text
+        pB->setText(tr("Default foreground color"));
     } else {
-        pB->setText(tr("Foreground color [ANSI %1]",
-                       "Color trigger ANSI foreground color button, ensure all three instances have the same text")
-                    .arg(QString::number(pT->mColorTriggerFgAnsi)));
+        //: Color trigger ANSI foreground color button, ensure all three instances have the same text
+        pB->setText(tr("Foreground color [ANSI %1]").arg(QString::number(pT->mColorTriggerFgAnsi)));
     }
 }
 
@@ -9484,15 +9491,14 @@ void dlgTriggerEditor::slot_colorTriggerBg()
     pPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
 
     if (pT->mColorTriggerBgAnsi == TTrigger::scmIgnored) {
-        pB->setText(tr("Background color ignored",
-                       "Color trigger ignored background color button, ensure all three instances have the same text"));
+        //: Color trigger ignored background color button, ensure all three instances have the same text
+        pB->setText(tr("Background color ignored"));
     } else if (pT->mColorTriggerBgAnsi == TTrigger::scmDefault) {
-        pB->setText(tr("Default background color",
-                       "Color trigger default background color button, ensure all three instances have the same text"));
+        //: Color trigger default background color button, ensure all three instances have the same text
+        pB->setText(tr("Default background color"));
     } else {
-        pB->setText(tr("Background color [ANSI %1]",
-                       "Color trigger ANSI background color button, ensure all three instances have the same text")
-                    .arg(QString::number(pT->mColorTriggerBgAnsi)));
+        //: Color trigger ANSI background color button, ensure all three instances have the same text
+        pB->setText(tr("Background color [ANSI %1]").arg(QString::number(pT->mColorTriggerBgAnsi)));
     }
 }
 
@@ -9826,8 +9832,10 @@ void dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger(const bool state)
         const QString bgColor = mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString();
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, true));
         mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(bgColor, true));
-        mpTriggersMainArea->pushButtonFgColor->setText(fgColor == QLatin1String("transparent") ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
-        mpTriggersMainArea->pushButtonBgColor->setText(bgColor == QLatin1String("transparent") ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonFgColor->setText(fgColor == QLatin1String("transparent") ? tr("keep") : QString());
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonBgColor->setText(bgColor == QLatin1String("transparent") ? tr("keep") : QString());
     } else {
         // Disabled so make buttons greyed out a bit:
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString(), false));
