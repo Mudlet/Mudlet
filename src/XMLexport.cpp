@@ -439,8 +439,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mSslIgnoreAll") = pHost->mSslIgnoreAll ? "yes" : "no";
     host.append_attribute("mAskTlsAvailable") = pHost->mAskTlsAvailable ? "yes" : "no";
     host.append_attribute("mDiscordAccessFlags") = QString::number(pHost->mDiscordAccessFlags).toUtf8().constData();
-    host.append_attribute("mRequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();
-    host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
+    host.append_attribute("RequiredDiscordUserId") = pHost->mRequiredDiscordUserId.toUtf8().constData();
+    if (!pHost->mRequiredDiscordUserName.isEmpty() || !pHost->mRequiredDiscordUserDiscriminator.isEmpty()) {
+        host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
+        host.append_attribute("mRequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();
+    }
     host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
     host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
     quint8 styleCode = 0;

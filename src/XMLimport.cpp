@@ -821,6 +821,12 @@ void XMLimport::readHost(Host* pHost)
         pHost->mDiscordAccessFlags = static_cast<Host::DiscordOptionFlags>(attributes().value(qsl("mDiscordAccessFlags")).toString().toInt());
     }
 
+    if (attributes().hasAttribute(QLatin1String("RequiredDiscordUserId"))) {
+        pHost->mRequiredDiscordUserId = attributes().value(QLatin1String("RequiredDiscordUserId")).toString();
+    } else {
+        pHost->mRequiredDiscordUserId.clear();
+    }
+
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
         pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
     } else {

@@ -408,6 +408,9 @@ public:
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
     void loadMap();
+    bool inProfileLoadingSequence() const { return mIsProfileLoadingSequence; }
+    void startingProfileLoadingSequence() { mIsProfileLoadingSequence = true; }
+    void completedProfileLoadingSequence();
 
 
     cTelnet mTelnet;
@@ -461,11 +464,6 @@ public:
     QString mProxyPassword;
 
     bool mIsGoingDown;
-    // Used to force the test compilation of the scripts for TActions ("Buttons")
-    // that are pushdown buttons that run when they are "pushed down" during
-    // loading even though the buttons start out with themselves NOT being
-    // pushed down:
-    bool mIsProfileLoadingSequence;
 
     bool mNoAntiAlias;
 
@@ -704,6 +702,7 @@ signals:
 
 private slots:
     void slot_purgeTemps();
+    void slot_discordReadyReceived(const QString& userId, const QString& userName, const QString& userDiscriminator);
 
 private:
     void installPackageFonts(const QString &packageName);
@@ -794,6 +793,14 @@ private:
     // Will be null/empty if they have not set their own invite
     QString mDiscordInviteURL;
 
+    // From 2023/05 Discord are changing the way usernames are handled such
+    // that the Discriminator is going away and the format for usernames is
+    // being severely reduced - but the userId is not changing. This means
+    // that we want to encourage existing users with a non-empty username
+    // or discriminator to change to just use the "snowflake" (long unique
+    // number) form - which will be stored here - and used in preference the
+    // two other values:
+    QString mRequiredDiscordUserId;
     // Will be null/empty if we are not concerned to check the use of Discord
     // Rich Presence against the local user currently logged into Discord -
     // these two will be checked against the values from the Discord instance
@@ -878,6 +885,14 @@ private:
     bool mFocusTimerRunning = false;
 
     QMargins mBorders;
+
+    // Used to force the test compilation of the scripts for TActions ("Buttons")
+    // that are pushdown buttons that run when they are "pushed down" during
+    // loading even though the buttons start out with themselves NOT being
+    // pushed down:
+    // Made private so it requires calls from methods to set/reset and those
+    // can run additional code now desired to be associated with changing it:
+    bool mIsProfileLoadingSequence = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
