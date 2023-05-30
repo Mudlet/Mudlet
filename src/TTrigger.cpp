@@ -240,7 +240,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
             std::stringstream func;
             func << "trigger" << mID << "condition" << i;
             funcName = func.str();
-            const QString code = qsl("function %1()\n%2\nend\n").arg(funcName.c_str(), patterns[i]);
+            const QString code = qsl("function %1() %2\nend").arg(funcName.c_str(), patterns[i]);
             QString error;
             if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                 setError(qsl("<b><font color='blue'>%1</font></b>")
@@ -1324,7 +1324,7 @@ bool TTrigger::setScript(const QString& script)
 bool TTrigger::compileScript()
 {
     mFuncName = qsl("Trigger%1").arg(QString::number(mID));
-    const QString code = qsl("function %1()\n%2\nend\n").arg(mFuncName, mScript);
+    const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
     if (mpLua->compile(code, error, qsl("Trigger: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
