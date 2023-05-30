@@ -224,7 +224,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
                 }
                 setError(qsl("<b><font color='blue'>%1</font></b>")
                          .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
-                         .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), error)));
+                         .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
                 state = false;
             } else {
                 if (mudlet::smDebugMode) {
@@ -245,7 +245,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds)
             if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
                 setError(qsl("<b><font color='blue'>%1</font></b>")
                          .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)")
-                         .arg(QString::number(i + 1), patterns.at(i), error)));
+                         .arg(QString::number(i + 1), patterns.at(i), QString(error).toHtmlEscaped())));
                 state = false;
                 if (mudlet::smDebugMode) {
                     TDebug(Qt::white, Qt::red) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
