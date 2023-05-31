@@ -77,10 +77,10 @@ public:
     QString style;
 
     // Count how many of this format have been stacked/applied on top of each other
-    unsigned int boldCtr = 0;
-    unsigned int italicCtr = 0;
-    unsigned int underlineCtr = 0;
-    unsigned int strikeOutCtr = 0;
+    unsigned int boldCounter = 0;
+    unsigned int italicCounter = 0;
+    unsigned int underlineCounter = 0;
+    unsigned int strikeOutCounter = 0;
 
     QString getVersion() override
     {
@@ -121,54 +121,54 @@ public:
     void setBold(bool bold) override
     {
         if (bold) {
-            boldCtr++;
-        } else if (boldCtr > 0) {
-            boldCtr--;
+            boldCounter++;
+        } else if (boldCounter > 0) {
+            boldCounter--;
         }
     }
 
     void setItalic(bool italic) override
     {
         if (italic) {
-            italicCtr++;
-        } else if (italicCtr > 0) {
-            italicCtr--;
+            italicCounter++;
+        } else if (italicCounter > 0) {
+            italicCounter--;
         }
     }
 
     void setUnderline(bool underline) override
     {
         if (underline) {
-            underlineCtr++;
-        } else if (underlineCtr > 0) {
-            underlineCtr--;
+            underlineCounter++;
+        } else if (underlineCounter > 0) {
+            underlineCounter--;
         }
     }
 
     void setStrikeOut(bool strikeOut) override
     {
         if (strikeOut) {
-            strikeOutCtr++;
-        } else if (strikeOutCtr > 0) {
-            strikeOutCtr--;
+            strikeOutCounter++;
+        } else if (strikeOutCounter > 0) {
+            strikeOutCounter--;
         }
     }
 
     bool bold() override
     {
-        return boldCtr > 0;
+        return boldCounter > 0;
     }
     bool italic() override
     {
-        return italicCtr > 0;
+        return italicCounter > 0;
     }
     bool underline() override
     {
-        return underlineCtr > 0;
+        return underlineCounter > 0;
     }
     bool strikeOut() override
     {
-        return strikeOutCtr > 0;
+        return strikeOutCounter > 0;
     }
 
     void resetTextProperties() override

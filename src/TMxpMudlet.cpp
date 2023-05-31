@@ -119,46 +119,46 @@ TLinkStore& TMxpMudlet::getLinkStore()
 void TMxpMudlet::setBold(bool bold)
 {
     if (bold) {
-        boldCtr++;
-    } else if (boldCtr > 0) {
-        boldCtr--;
+        boldCounter++;
+    } else if (boldCounter > 0) {
+        boldCounter--;
     }
 }
 
 void TMxpMudlet::setItalic(bool italic)
 {
     if (italic) {
-        italicCtr++;
-    } else if (italicCtr > 0) {
-        italicCtr--;
+        italicCounter++;
+    } else if (italicCounter > 0) {
+        italicCounter--;
     }
 }
 
 void TMxpMudlet::setUnderline(bool underline)
 {
     if (underline) {
-        underlineCtr++;
-    } else if (underlineCtr > 0) {
-        underlineCtr--;
+        underlineCounter++;
+    } else if (underlineCounter > 0) {
+        underlineCounter--;
     }
 }
 
 void TMxpMudlet::setStrikeOut(bool strikeOut)
 {
     if (strikeOut) {
-        strikeOutCtr++;
-    } else if (strikeOutCtr > 0) {
-        strikeOutCtr--;
+        strikeOutCounter++;
+    } else if (strikeOutCounter > 0) {
+        strikeOutCounter--;
     }
 }
 
 // reset text Properties (from open tags) at end of line
 void TMxpMudlet::resetTextProperties()
 {
-    boldCtr = 0;
-    italicCtr = 0;
-    underlineCtr = 0;
-    strikeOutCtr = 0;
+    boldCounter = 0;
+    italicCounter = 0;
+    underlineCounter = 0;
+    strikeOutCounter = 0;
 
     while (!fgColors.isEmpty())
         fgColors.pop_back();

@@ -37,10 +37,10 @@ class TMediaData;
 class TMxpMudlet : public TMxpClient
 {
     // Count how many of this format have been stacked/applied on top of each other
-    unsigned int boldCtr = 0;
-    unsigned int italicCtr = 0;
-    unsigned int underlineCtr = 0;
-    unsigned int strikeOutCtr = 0;
+    unsigned int boldCounter = 0;
+    unsigned int italicCounter = 0;
+    unsigned int underlineCounter = 0;
+    unsigned int strikeOutCounter = 0;
     QString mxpStyle; // Name/Version of the MXP style sheet uploaded by the mud
 
 public:
@@ -91,10 +91,10 @@ public:
     void setUnderline(bool underline) override;
     void setStrikeOut(bool strikeOut) override;
 
-    bool bold() override { return boldCtr > 0; }
-    bool italic() override { return italicCtr > 0; }
-    bool underline() override { return underlineCtr > 0; }
-    bool strikeOut() override { return strikeOutCtr > 0; }
+    bool bold() override { return boldCounter > 0; }
+    bool italic() override { return italicCounter > 0; }
+    bool underline() override { return underlineCounter > 0; }
+    bool strikeOut() override { return strikeOutCounter > 0; }
 
     void resetTextProperties() override;
 
