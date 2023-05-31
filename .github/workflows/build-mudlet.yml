@@ -65,6 +65,7 @@ jobs:
       if: runner.os == 'Linux'
       with:
         limit-access-to-actor: true
+        detached: true
 
     - name: (Windows) Install Qt
       uses: jurplel/install-qt-action@v3
@@ -370,7 +371,7 @@ jobs:
     # we need to be in the right place for LuaGlobals.lua to load
     - name: Prep binary for running tests
       if: matrix.run_tests == 'true'
-      run: cp ${{runner.workspace}}/b/ninja/src/Release/mudlet ${{github.workspace}}/src
+      run: cp ${{github.workspace}}/builds/ninja-vcpkg-multi/src/Release/mudlet ${{github.workspace}}/src
       shell: bash
 
     - name: Run Lua tests
@@ -378,7 +379,7 @@ jobs:
       timeout-minutes: 5
       uses: GabrielBB/xvfb-action@v1.6
       with:
-        run: ${{github.workspace}}/src/Release/mudlet --profile "Mudlet self-test" --mirror
+        run: ${{github.workspace}}/builds/ninja-vcpkg-multi/src/Release/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
