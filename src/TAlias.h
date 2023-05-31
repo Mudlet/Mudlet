@@ -73,12 +73,14 @@ public:
     QSharedPointer<pcre> mpRegex;
     QString mScript;
     QPointer<Host> mpHost;
-    bool mNeedsToBeCompiled = true;
     bool mModuleMember = false;
     bool mModuleMasterFolder = false;
     QString mFuncName;
     bool exportItem = true;
     bool mRegisteredAnonymousLuaFunction = false;
+
+private:
+    bool mNeedsToBeCompiled = true;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

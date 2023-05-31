@@ -44,7 +44,7 @@ TDebug& TDebug::operator>>(Host* pHost)
         if (Q_LIKELY(!msg.isEmpty())) {
             // Don't enqueue empty messages
             auto tag = deduceProfileTag(msg, pHost);
-            TDebugMessage newMessage(msg, tag, fgColor, bgColor);
+            TDebugMessage const newMessage(msg, tag, fgColor, bgColor);
             smMessageQueue.enqueue(newMessage);
         }
 

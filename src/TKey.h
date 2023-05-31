@@ -90,7 +90,6 @@ private:
     Qt::Key mKeyCode = {};
     Qt::KeyboardModifiers mKeyModifier = Qt::NoModifier;
 
-    QString mRegexCode;
     QString mScript;
     QString mFuncName;
     QPointer<Host> mpHost;

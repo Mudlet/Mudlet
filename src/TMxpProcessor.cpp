@@ -28,7 +28,7 @@
 bool TMxpProcessor::setMode(const QString& code)
 {
     bool isOk = false;
-    int modeCode = code.toInt(&isOk);
+    const int modeCode = code.toInt(&isOk);
     if (isOk) {
         return setMode(modeCode);
     } else {
@@ -131,14 +131,14 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch)
     }
 
     if (mMxpTagBuilder.hasTag()) {
-        QScopedPointer<MxpTag> tag(mMxpTagBuilder.buildTag());
+        QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
         //        qDebug() << "TAG RECEIVED: " << tag->asString();
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
             mMXP_MODE = mMXP_DEFAULT;
         }
 
-        TMxpTagHandlerResult result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
+        TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
     }
 
