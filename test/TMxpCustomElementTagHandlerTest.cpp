@@ -192,37 +192,36 @@ private slots:
         tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("This is bold red");
         // is it?
-        // QCOMPARE(stub.isBold(), true); // This test cannot be used b4 the MXPFormatting Tags PR is merged
+        QCOMPARE(stub.bold(), true);
         QCOMPARE(stub.fgColor, "red");
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         // back to defaults:
-        // QCOMPARE(stub.isBold(), false);
+        QCOMPARE(stub.bold(), false);
         QCOMPARE(stub.fgColor, "");
 
         startTag = parseNode("<boldtext COL=blue>)");
         tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("This is bold blue text");
         // is it?
-        // QCOMPARE(stub.isBold(), true);
+        QCOMPARE(stub.bold(), true);
         QCOMPARE(stub.fgColor, "blue");
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         // back to defaults:
-        // QCOMPARE(stub.isBold(), false);
+        QCOMPARE(stub.bold(), false);
         QCOMPARE(stub.fgColor, "");
 
         startTag = parseNode("<boldtext blue>)");
         tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("This is also bold blue text");
         // is it?
-
-        // QCOMPARE(stub.isBold(), true);
-        // QCOMPARE(stub.fgColor, "blue");
+        QCOMPARE(stub.bold(), true);
+        QCOMPARE(stub.fgColor, "blue");
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         // back to defaults:
-        // QCOMPARE(stub.isBold(), false);
+        QCOMPARE(stub.bold(), false);
         QCOMPARE(stub.fgColor, "");
     }
 
