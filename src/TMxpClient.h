@@ -67,10 +67,10 @@ public:
     virtual void setUnderline(bool val) = 0;
     virtual void setStrikeOut(bool val) = 0;
 
-    virtual bool isBold() = 0;
-    virtual bool isItalic() = 0;
-    virtual bool isUnderline() = 0;
-    virtual bool isStrikeOut() = 0;
+    virtual bool bold() = 0;
+    virtual bool italic() = 0;
+    virtual bool underline() = 0;
+    virtual bool strikeOut() = 0;
 
     virtual void resetTextProperties() = 0;
 

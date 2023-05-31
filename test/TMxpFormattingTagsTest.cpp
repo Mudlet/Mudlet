@@ -53,24 +53,24 @@ private slots:
 
         // Check general functionality:
         tagHandler.handleTag(ctx, stub, parseNode("<I>")->asTag());
-        QVERIFY(stub.isItalic());
+        QVERIFY(stub.italic());
         tagHandler.handleTag(ctx, stub, parseNode("</I>")->asTag());
-        QVERIFY(!stub.isItalic());
+        QVERIFY(!stub.italic());
 
         tagHandler.handleTag(ctx, stub, parseNode("<B>")->asTag());
-        QVERIFY(stub.isBold());
+        QVERIFY(stub.bold());
         tagHandler.handleTag(ctx, stub, parseNode("</B>")->asTag());
-        QVERIFY(!stub.isBold());
+        QVERIFY(!stub.bold());
 
         tagHandler.handleTag(ctx, stub, parseNode("<S>")->asTag());
-        QVERIFY(stub.isStrikeOut());
+        QVERIFY(stub.strikeOut());
         tagHandler.handleTag(ctx, stub, parseNode("</S>")->asTag());
-        QVERIFY(!stub.isStrikeOut());
+        QVERIFY(!stub.strikeOut());
 
         tagHandler.handleTag(ctx, stub, parseNode("<U>")->asTag());
-        QVERIFY(stub.isUnderline());
+        QVERIFY(stub.underline());
         tagHandler.handleTag(ctx, stub, parseNode("</U>")->asTag());
-        QVERIFY(!stub.isUnderline());
+        QVERIFY(!stub.underline());
     }
 
     void testNestedFormatting()
@@ -83,43 +83,43 @@ private slots:
 
         // Now we mix and match, and also use some aliases:
         tagHandler.handleTag(ctx, stub, parseNode("<I>")->asTag());
-        QVERIFY(stub.isItalic());
+        QVERIFY(stub.italic());
         tagHandler.handleTag(ctx, stub, parseNode("<STRONG>")->asTag());
-        QVERIFY(stub.isItalic() && stub.isBold());
+        QVERIFY(stub.italic() && stub.bold());
 
         tagHandler.handleTag(ctx, stub, parseNode("<EM>")->asTag());
         tagHandler.handleTag(ctx, stub, parseNode("<S>")->asTag());
-        QVERIFY(stub.isItalic() && stub.isBold() && stub.isStrikeOut());
+        QVERIFY(stub.italic() && stub.bold() && stub.strikeOut());
 
         tagHandler.handleTag(ctx, stub, parseNode("</S>")->asTag());
-        QVERIFY(stub.isItalic() && stub.isBold() && !stub.isStrikeOut());
+        QVERIFY(stub.italic() && stub.bold() && !stub.strikeOut());
 
         tagHandler.handleTag(ctx, stub, parseNode("<UNDERLINE>")->asTag());
-        QVERIFY(stub.isItalic() && stub.isBold() && stub.isUnderline());
+        QVERIFY(stub.italic() && stub.bold() && stub.underline());
 
         tagHandler.handleTag(ctx, stub, parseNode("</UNDERLINE>")->asTag());
-        QVERIFY(stub.isItalic() && stub.isBold() && !stub.isUnderline());
+        QVERIFY(stub.italic() && stub.bold() && !stub.underline());
 
         // Closing EM (an alias for I) should still stay italics, as we opened two of them
         tagHandler.handleTag(ctx, stub, parseNode("</EM>")->asTag());
-        QVERIFY(stub.isItalic() && stub.isBold() && !stub.isUnderline());
+        QVERIFY(stub.italic() && stub.bold() && !stub.underline());
 
         tagHandler.handleTag(ctx, stub, parseNode("</STRONG>")->asTag());
-        QVERIFY(stub.isItalic() && !stub.isBold() && !stub.isUnderline());
+        QVERIFY(stub.italic() && !stub.bold() && !stub.underline());
 
         tagHandler.handleTag(ctx, stub, parseNode("</I>")->asTag());
-        QVERIFY(!stub.isItalic() && !stub.isBold() && !stub.isUnderline());
+        QVERIFY(!stub.italic() && !stub.bold() && !stub.underline());
 
         // Behaviour when closing unopened tags, or closing out of order is undefined, but should be handled gracefully
         // and not crash (current implementation: tags can be closed out of order, if unopened they are ignored)
         tagHandler.handleTag(ctx, stub, parseNode("</BOLD>")->asTag());
-        QVERIFY(!stub.isItalic() && !stub.isBold() && !stub.isUnderline() && !stub.isStrikeOut());
+        QVERIFY(!stub.italic() && !stub.bold() && !stub.underline() && !stub.strikeOut());
 
         tagHandler.handleTag(ctx, stub, parseNode("<BOLD>")->asTag());
-        QVERIFY(!stub.isItalic() && stub.isBold() && !stub.isUnderline() && !stub.isStrikeOut());
+        QVERIFY(!stub.italic() && stub.bold() && !stub.underline() && !stub.strikeOut());
 
         tagHandler.handleTag(ctx, stub, parseNode("</BOLD>")->asTag());
-        QVERIFY(!stub.isItalic() && !stub.isBold() && !stub.isUnderline() && !stub.isStrikeOut());
+        QVERIFY(!stub.italic() && !stub.bold() && !stub.underline() && !stub.strikeOut());
     }
 
     void cleanupTestCase()

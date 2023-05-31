@@ -91,10 +91,10 @@ public:
     void setUnderline(bool underline) override;
     void setStrikeOut(bool strikeOut) override;
 
-    bool isBold() override { return boldCtr > 0; }
-    bool isItalic() override { return italicCtr > 0; }
-    bool isUnderline() override { return underlineCtr > 0; }
-    bool isStrikeOut() override { return strikeOutCtr > 0; }
+    bool bold() override { return boldCtr > 0; }
+    bool italic() override { return italicCtr > 0; }
+    bool underline() override { return underlineCtr > 0; }
+    bool strikeOut() override { return strikeOutCtr > 0; }
 
     void resetTextProperties() override;
 

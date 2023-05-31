@@ -154,19 +154,19 @@ public:
         }
     }
 
-    bool isBold() override
+    bool bold() override
     {
         return boldCtr > 0;
     }
-    bool isItalic() override
+    bool italic() override
     {
         return italicCtr > 0;
     }
-    bool isUnderline() override
+    bool underline() override
     {
         return underlineCtr > 0;
     }
-    bool isStrikeOut() override
+    bool strikeOut() override
     {
         return strikeOutCtr > 0;
     }

@@ -542,12 +542,12 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
                         const TChar::AttributeFlags attributeFlags =
-                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.isBold() : false) ? TChar::Bold : TChar::None)
-                                | (mItalics || mpHost->mMxpClient.isItalic() ? TChar::Italic : TChar::None)
+                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+                                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                                 | (mOverline ? TChar::Overline : TChar::None)
                                 | (mReverse ? TChar::Reverse : TChar::None)
-                                | (mStrikeOut || mpHost->mMxpClient.isStrikeOut() ? TChar::StrikeOut : TChar::None)
-                                | (mUnderline || mpHost->mMxpClient.isUnderline() ? TChar::Underline : TChar::None);
+                                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None);
 
                         // Note: we are using the background color for the
                         // foreground color as well so that we are transparent:
@@ -693,12 +693,12 @@ COMMIT_LINE:
                     continue;
                 } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
                     const TChar::AttributeFlags attributeFlags =
-                            ((mIsDefaultColor ? mBold || mpHost->mMxpClient.isBold(): false) ? TChar::Bold : TChar::None)
-                            | (mItalics || mpHost->mMxpClient.isItalic() ? TChar::Italic : TChar::None)
+                            ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold(): false) ? TChar::Bold : TChar::None)
+                            | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                             | (mOverline ? TChar::Overline : TChar::None)
                             | (mReverse ? TChar::Reverse : TChar::None)
-                            | (mStrikeOut || mpHost->mMxpClient.isStrikeOut() ? TChar::StrikeOut : TChar::None)
-                            | (mUnderline || mpHost->mMxpClient.isUnderline() ? TChar::Underline : TChar::None);
+                            | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+                            | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None);
 
                     // Note: we are using the background color for the
                     // foreground color as well so that we are transparent:
@@ -830,12 +830,12 @@ COMMIT_LINE:
         }
 
         const TChar::AttributeFlags attributeFlags =
-                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.isBold() : false) ? TChar::Bold : TChar::None)
-                | (mItalics || mpHost->mMxpClient.isItalic() ? TChar::Italic : TChar::None)
+                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
                 | (mOverline ? TChar::Overline : TChar::None)
                 | (mReverse ? TChar::Reverse : TChar::None)
-                | (mStrikeOut || mpHost->mMxpClient.isStrikeOut() ? TChar::StrikeOut : TChar::None)
-                | (mUnderline || mpHost->mMxpClient.isUnderline() ? TChar::Underline : TChar::None);
+                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None);
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
