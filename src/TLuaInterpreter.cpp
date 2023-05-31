@@ -2516,6 +2516,38 @@ int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrolling
+int TLuaInterpreter::enableScrolling(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    console->setScrolling(true);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrolling
+int TLuaInterpreter::disableScrolling(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    console->setScrolling(false);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
 // This (and the next) function originally only worked on TConsole instances
 // to show/hide a command line at the bottom (and the first would create the
@@ -15699,6 +15731,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getConfig", TLuaInterpreter::getConfig);
     lua_register(pGlobalLua, "setSaveCommandHistory", TLuaInterpreter::setSaveCommandHistory);
     lua_register(pGlobalLua, "getSaveCommandHistory", TLuaInterpreter::getSaveCommandHistory);
+    lua_register(pGlobalLua, "enableScrolling", TLuaInterpreter::enableScrolling);
+    lua_register(pGlobalLua, "disableScrolling", TLuaInterpreter::disableScrolling);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
