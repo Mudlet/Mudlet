@@ -1728,7 +1728,7 @@ void TConsole::setScrolling(const bool state)
 {
     if (mType & (UserWindow | SubConsole)) {
         mScrollingEnabled = state;
-        if (!state) {
+        if (!mScrollingEnabled) {
             clearSplit();
         }
     }
