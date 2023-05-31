@@ -20,7 +20,6 @@
 #include <LuaInterface.h>
 #include <TVar.h>
 #include <VarUnit.h>
-#include <lua.h>
 #include <QtTest/QtTest>
 
 extern "C" {

@@ -24,7 +24,6 @@
 #include "LuaInterface.h"
 #include "VarUnit.h"
 #include "utils.h"
-#include <lua.h>
 
 #include <csetjmp>
 

@@ -29,8 +29,11 @@
 #include "pre_guard.h"
 #include <QDebug>
 #include <QPointer>
-#include <lua.h>
 #include "post_guard.h"
+
+extern "C" {
+    #include <lua.h>
+}
 
 class Host;
 

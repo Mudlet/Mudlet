@@ -27,9 +27,11 @@
 #include <QDebug>
 #include <QList>
 #include <QString>
-#include <lua.h>
 #include "post_guard.h"
 
+extern "C" {
+    #include <lua.h>
+}
 
 class TVar
 {
