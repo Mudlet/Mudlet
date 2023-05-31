@@ -160,9 +160,15 @@ void TMxpMudlet::resetTextProperties()
     underlineCounter = 0;
     strikeOutCounter = 0;
 
-    while (!fgColors.isEmpty())
+    // for the next two, we can assume both lists are usually empty (in case of properly
+    // balanced MXP tags), and if not, they'll only contain very few entries. Thus it seems
+    // sensible to check first, and then just remove all of the few nodes rather than
+    // removing the whole list first and then create a new one from scratch.
+    while (!fgColors.isEmpty()) {
         fgColors.pop_back();
+    }
 
-    while (!bgColors.isEmpty())
+    while (!bgColors.isEmpty()) {
         bgColors.pop_back();
+    }
 }
