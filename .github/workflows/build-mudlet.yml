@@ -170,11 +170,11 @@ jobs:
       uses: leafo/gh-actions-luarocks@v4
       if: runner.os == 'Linux'
 
-#    - name: Setup tmate session
-#      uses: mxschmitt/action-tmate@v3
-#      if: runner.os == 'Linux'
-#      with:
-#        limit-access-to-actor: true
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: runner.os == 'Linux'
+      with:
+        limit-access-to-actor: true
 
     - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
@@ -370,7 +370,7 @@ jobs:
     # we need to be in the right place for LuaGlobals.lua to load
     - name: Prep binary for running tests
       if: matrix.run_tests == 'true'
-      run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
+      run: cp ${{runner.workspace}}/b/ninja/src/Release/mudlet ${{github.workspace}}/src
       shell: bash
 
     - name: Run Lua tests
@@ -378,7 +378,7 @@ jobs:
       timeout-minutes: 5
       uses: GabrielBB/xvfb-action@v1.6
       with:
-        run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+        run: ${{github.workspace}}/src/Release/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
