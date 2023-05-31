@@ -1724,10 +1724,13 @@ void TConsole::setHorizontalScrollBar(bool isEnabled)
     }
 }
 
-void TConsole::setScrolling(bool enabled)
+void TConsole::setScrolling(const bool state)
 {
     if (mType & (UserWindow | SubConsole)) {
-        mScrollingEnabled = enabled;
+        mScrollingEnabled = state;
+        if (!mScrollingEnabled) {
+            clearSplit();
+        }
     }
 }
 
@@ -2411,4 +2414,16 @@ void TConsole::handleLinesOverflowEvent(const int lineCount)
     sysWindowOverflow.mArgumentList.append(QString::number(-linesSpare));
     sysWindowOverflow.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     mpHost->raiseEvent(sysWindowOverflow);
+}
+
+void TConsole::clearSplit()
+{
+    mLowerPane->mCursorY = buffer.size();
+    mLowerPane->hide();
+    buffer.mCursorY = buffer.size();
+    mUpperPane->mCursorY = buffer.size();
+    mUpperPane->mCursorX = 0;
+    mUpperPane->mIsTailMode = true;
+    mUpperPane->updateScreenView();
+    mUpperPane->forceUpdate();
 }
