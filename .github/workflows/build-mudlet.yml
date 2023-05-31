@@ -60,6 +60,12 @@ jobs:
         submodules: true
         fetch-depth: 0
 
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      if: runner.os == 'Linux'
+      with:
+        limit-access-to-actor: true
+
     - name: (Windows) Install Qt
       uses: jurplel/install-qt-action@v3
       if: runner.os == 'Windows'
@@ -169,12 +175,6 @@ jobs:
     - name: (Linux) Install latest Luarocks
       uses: leafo/gh-actions-luarocks@v4
       if: runner.os == 'Linux'
-
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: runner.os == 'Linux'
-      with:
-        limit-access-to-actor: true
 
     - name: (Linux) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'Linux'
