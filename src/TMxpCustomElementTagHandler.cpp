@@ -90,13 +90,8 @@ MxpStartTag TMxpCustomElementTagHandler::resolveElementDefinition(const TMxpElem
     auto mapping = [customTag, element](const MxpTagAttribute& attr) {
         if (!attr.hasValue()) {
             return MxpTagAttribute(mapAttributes(element, attr.getName(), customTag));
-        } else {
-            if (attr.isNamed("hint")) { // not needed according to the spec, but kept to avoid changes for the user interface
-                return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue().toUpper(), customTag));
-            } else {
-                return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
-            }
         }
+        return MxpTagAttribute(attr.getName(), mapAttributes(element, attr.getValue(), customTag));
     };
 
     return definitionTag->transform(mapping);
