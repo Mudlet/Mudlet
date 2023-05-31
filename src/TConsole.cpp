@@ -1466,6 +1466,11 @@ void TConsole::setCmdVisible(bool isVisible)
     QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // create MiniConsole commandline if it's not existing
     if (!mpCommandLine) {
+        if (!isVisible) {
+            // If we don't have one and we are being told to hide it then
+            // really there is nothing to do - so lets do nothing:
+            return;
+        }
         mpCommandLine = new TCommandLine(mpHost, mConsoleName, TCommandLine::ConsoleCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
