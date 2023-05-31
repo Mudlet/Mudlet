@@ -1474,10 +1474,12 @@ void TCommandLine::restoreHistory()
     }
     // else no such file - which will be the case for the first time the
     // command line is created - so it might not be an error:
-    qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: "
-             << mCommandLineName << " of type: " << mType
-             << " because the file: " << mBackingFileName
-             << " does not exist in the profile's home directory, unless this is a new command line then this is an unexpected error.";
+    if (mCommandLineName != qsl("main")) {
+        qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: "
+                << mCommandLineName << " of type: " << mType
+                << " because the file: " << mBackingFileName
+                << " does not exist in the profile's home directory, unless this is a new command line then this is an unexpected error.";
+    }
 }
 
 void TCommandLine::slot_saveHistory()
