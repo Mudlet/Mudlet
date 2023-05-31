@@ -1487,14 +1487,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
 
     if (event->button() == Qt::MiddleButton) {
-        mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size(); //
-        mpConsole->mLowerPane->hide();
-        mpBuffer->mCursorY = mpBuffer->size();
-        mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size(); //
-        mpConsole->mUpperPane->mCursorX = 0;
-        mpConsole->mUpperPane->mIsTailMode = true;
-        mpConsole->mUpperPane->updateScreenView();
-        mpConsole->mUpperPane->forceUpdate();
+        mpConsole->clearSplit();
         event->accept();
         return;
     }
