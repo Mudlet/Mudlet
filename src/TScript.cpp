@@ -84,14 +84,14 @@ void TScript::setEventHandlerList(QStringList handlerList)
 }
 
 
-void TScript::compileAll()
+void TScript::compileAll(bool saveLoadingError)
 {
     if (mpHost->mResetProfile) {
         mNeedsToBeCompiled = true;
     }
-    compile();
+    compile(saveLoadingError);
     for (auto script : *mpMyChildrenList) {
-        script->compileAll();
+        script->compileAll(saveLoadingError);
     }
 }
 
@@ -103,10 +103,10 @@ void TScript::callEventHandler(const TEvent& pEvent)
     }
 }
 
-void TScript::compile()
+void TScript::compile(bool saveLoadingError)
 {
     if (mNeedsToBeCompiled) {
-        if (!compileScript()) {
+        if (!compileScript(saveLoadingError)) {
             if (mudlet::smDebugMode) {
                 TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of script:" << mName << "\n" >> mpHost;
             }
@@ -114,7 +114,7 @@ void TScript::compile()
         }
     }
     for (auto script : *mpMyChildrenList) {
-        script->compile();
+        script->compile(saveLoadingError);
     }
 }
 
@@ -128,7 +128,7 @@ bool TScript::setScript(const QString& script)
     return mOK_code;
 }
 
-bool TScript::compileScript()
+bool TScript::compileScript(bool saveLoadingError)
 {
     QString error;
     if (mpHost->mLuaInterpreter.compile(mScript, error, QString("Script: ") + getName())) {
@@ -141,6 +141,9 @@ bool TScript::compileScript()
     } else {
         mOK_code = false;
         setError(error);
+        if (saveLoadingError) {
+            setLoadingError(error);
+        }
         return false;
     }
 }
@@ -153,4 +156,33 @@ void TScript::execute()
         }
     }
     mpHost->mLuaInterpreter.call(mFuncName, mName);
+}
+
+// Gets the Lua error message for this script if one occurred during profile load
+// Returns:
+// - The loading error message if there was one
+// - An empty optional if no loading error occurred
+std::optional<QString> TScript::getLoadingError()
+{
+    return mLoadingError;
+}
+
+// Sets the loading error message for this script.
+// Used when an error occurs loading the script during profile load.
+// The loading error can later be retrieved using getLoadingError().
+//
+// error: The error message to set as the loading error.
+void TScript::setLoadingError(const QString& error)
+{
+    if (!error.isEmpty()) {
+        mLoadingError = error;
+    }
+}
+
+// Clears the loading error message for this script.
+// Used to clear a loading error once it has been handled.
+// After calling this, getLoadingError() will return an empty optional.
+void TScript::clearLoadingError()
+{
+    mLoadingError.reset();
 }

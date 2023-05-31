@@ -33,6 +33,12 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
         mIsHrefInContent = true;
     }
 
+    // Entities in href and hint may contain | separators, so interpolate them first:
+    href = ctx.getEntityResolver().interpolate(href);
+    if (!hint.isEmpty()) {
+        hint = ctx.getEntityResolver().interpolate(hint);
+    }
+
     QStringList hrefs = href.split('|');
     QStringList hints = hint.isEmpty() ? hrefs : hint.split('|');
 
