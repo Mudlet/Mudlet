@@ -1227,6 +1227,7 @@ function getConfig(...)
       "announceIncomingText", 
       "blankLinesBehaviour", 
       "caretShortcut", 
+      "commandLineHistorySaveSize", 
     }
     for _,v in ipairs(list) do
       result[v] = oldgetConfig(v)

@@ -818,6 +818,13 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         return std::make_tuple(false, QString(), qsl("a save is already in progress"));
     }
 
+    if (saveFolder.isEmpty() && saveName.isEmpty()) {
+        // This is likely to be the save as the profile is closed
+        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments "
+                                        "so assuming it is a end of session save and the TCommandLines' histories need saving...";
+        emit signal_saveCommandLinesHistory();
+    }
+
     emit profileSaveStarted();
     qApp->processEvents();
 
@@ -2140,6 +2147,115 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule)
     lua_pop(L, -1);
     lua_close(L);
     return QString();
+}
+
+// writeProfileIniData(...) and readProfileIniData(...) might eventually
+// replace writeProfileData(...) and readProfileData(...) but for now are just
+// used to store some information about one or more TCommandLine's mHistoryData:
+bool Host::writeProfileIniData(const QString& item, const QString& what)
+{
+    QSettings settings(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // This will ensure compatibility going forward and backward
+    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+    settings.setValue(item, what);
+    settings.sync();
+    switch (settings.status()) {
+    case QSettings::NoError:
+        return true;
+    case QSettings::FormatError:
+        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Format error\".";
+        return false;
+    case QSettings::AccessError:
+        qWarning().nospace().noquote() << "Host::writeProfileIniData(\"" << item << "\", \"" << what << "\") ERROR - failed to save this detail, reason: \"Access error\".";
+        return false;
+    }
+    Q_UNREACHABLE();
+}
+
+QString Host::readProfileIniData(const QString& item)
+{
+    QSettings settings(mudlet::getMudletPath(mudlet::profileDataItemPath, getName(), qsl("profile.ini")), QSettings::IniFormat);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    // This will ensure compatibility going forward and backward
+    settings.setIniCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+    return settings.value(item).toString();
+}
+
+// This function retrieves command line history settings based on the given
+// command line type and name. It reads the saveCommands setting from the
+// profile.ini file, which is intended to replace all other single data item
+// files in the profile's home directory. For the main command line, a
+// predefined file name is used, while for any other command line, the function
+// first looks for a mapping from a number-suffixed file to a command line
+// name. If the mapping is not found, a new file name and default setting for
+// saveCommands is created, stored, and returned.
+// Because '/' and '\\' are used by the QSettings class in key names for
+// special purposes we MUST filter them out in the name, we'll replace them
+// with '_'s:
+std::tuple<QString, bool> Host::getCmdLineSettings(const TCommandLine::CommandLineType type, const QString& name)
+{
+    if (type == TCommandLine::MainCommandLine) {
+        // This one does not need the name to be kept in a QSettings but we
+        // still need to retrieve the other setting:
+        auto saveCommands = static_cast<bool>(readProfileIniData(qsl("CommandLines/SaveHistory/main")).compare(qsl("false"), Qt::CaseInsensitive));
+        return {qsl("command_history_main"), saveCommands};
+    }
+    QString localName{name};
+    localName.replace(QRegularExpression(qsl("[\\/]")), qsl("_"));
+    // We use a '/' in the name as that denotes a grouping (section) within the
+    // QSetting's (INI) format with the left-most side of the first '/' as a
+    // section header. They actually get converted to `\\` (a single backslash)
+    // inside the actual file but are accessed correctly only if given as a
+    // forward slash in the code:
+    auto fileName = readProfileIniData(qsl("CommandLines/NameMapping/%1").arg(localName));
+    // We want this to default to true if the setting doesn't exist, so we will
+    // compare it to the opposite (which will be zero for a match) and convert
+    // it to a boolean - so that a missing value will give a non-zero value
+    // which becomes a true:
+    auto saveCommands = static_cast<bool>(readProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName)).compare(qsl("false"), Qt::CaseInsensitive));
+    if (!fileName.isEmpty()) {
+        // Ah, we've used this name before, so return the details:
+        return {fileName, saveCommands};
+    }
+
+    // Else the name is not in the settings so we will have to create one:
+    // Get the highest number used so far:
+    bool isOk = false;
+    auto usedIndex = readProfileIniData(qsl("CommandLines/UsedIndexes")).toInt(&isOk);
+    if (!isOk || !usedIndex) {
+        // The value was not found / is null - so force it to be the right one
+        // to start with, remembering that it will be incremented before use:
+        usedIndex = 0;
+    }
+    // Increment it and save the new value
+    writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(++usedIndex));
+    // Generate the name
+    fileName = qsl("command_history_%1").arg(usedIndex, 2, 10, QLatin1Char('0'));
+    // Save it:
+    writeProfileIniData(qsl("CommandLines/NameMapping/%1").arg(localName), fileName);
+    // And a default setting:
+    writeProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName), saveCommands ? qsl("true") : qsl("false"));
+    // And return it - with the defaulted other setting:
+    return {fileName, saveCommands};
+}
+
+void Host::setCmdLineSettings(const TCommandLine::CommandLineType type, const bool saveCommands, const QString& name)
+{
+    if (type == TCommandLine::MainCommandLine) {
+        writeProfileIniData(qsl("CommandLines/SaveHistory/main"), saveCommands ? qsl("true") : qsl("false"));
+        return;
+    }
+    QString localName{name};
+    localName.replace(QRegularExpression(qsl("[\\/]")), qsl("_"));
+    // We use a '/' in the name as that donotes a grouping (section) within the
+    // QSetting's (INI) format with the left-most side of the first '/' as a
+    // section header. They actually get converted to `\\` (a single backslash)
+    // inside the actual file but are accessed correctly only if given as a
+    // forward slash in the code:
+    writeProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName), saveCommands ? qsl("true") : qsl("false"));
 }
 
 // Derived from the one in dlgConnectionProfile class - but it does not need a
@@ -4184,4 +4300,11 @@ void Host::setBorders(QMargins borders)
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpConsole, &event);
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);
+}
+
+void Host::setCommandLineHistorySaveSize(const int lines)
+{
+    if (mCommandLineHistorySaveSize != lines) {
+        mCommandLineHistorySaveSize = lines;
+    }
 }

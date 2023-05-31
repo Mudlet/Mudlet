@@ -597,6 +597,26 @@
             </property>
            </widget>
           </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_commandLineHistorySaveSize">
+            <property name="text">
+             <string>Number of lines of command line history to save:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_commandLineHistorySaveSize</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1" alignment="Qt::AlignLeft">
+           <widget class="QComboBox" name="comboBox_commandLineHistorySaveSize">
+            <property name="toolTip">
+             <string>&lt;p&gt;Sets the maximum number of the most recent entries used in each separate command line that are now stored between sessions.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This limit is only applied when the data is stored at the end of a session; whilst a profile is active the command history is unlimited with any reused entries returned to the front of the list.&lt;/i&gt;&lt;/p&gt;</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -4135,6 +4155,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_highlightHistory</tabstop>
   <tabstop>command_separator_lineedit</tabstop>
   <tabstop>commandLineMinimumHeight</tabstop>
+  <tabstop>comboBox_commandLineHistorySaveSize</tabstop>
   <tabstop>checkBox_spellCheck</tabstop>
   <tabstop>dictList</tabstop>
   <tabstop>radioButton_userDictionary_profile</tabstop>
