@@ -37,6 +37,7 @@
 #include <QKeyEvent>
 #include <QRegularExpression>
 #include <QScrollBar>
+#include <QSaveFile>
 #include "post_guard.h"
 
 TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
@@ -80,6 +81,14 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TCommandLine::slot_adjustAccessibleNames);
     slot_adjustAccessibleNames();
+    // Restore the history settings:
+    std::tie(mBackingFileName, mSaveCommands) = mpHost->getCmdLineSettings(mType, name);
+
+    // Restore any previous historic commands even if we are not going to save
+    // them under current settings:
+    restoreHistory();
+
+    connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -307,14 +316,7 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_Return: // This is the main one (not the keypad)
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
                 // If Ctrl-Return is pressed - scroll to the bottom of text:
-                mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size();
-                mpConsole->mLowerPane->hide();
-                mpConsole->buffer.mCursorY = mpConsole->buffer.size();
-                mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
-                mpConsole->mUpperPane->mCursorX = 0;
-                mpConsole->mUpperPane->mIsTailMode = true;
-                mpConsole->mUpperPane->updateScreenView();
-                mpConsole->mUpperPane->forceUpdate();
+                mpConsole->clearSplit();
                 ke->accept();
                 return true;
 
@@ -693,6 +695,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             QAction* action_addWord = nullptr;
             QAction* action_removeWord = nullptr;
             QAction* action_dictionarySeparatorLine = nullptr;
+
             if (handle_profile) {
                 // TODO: Make icons for these?
 //                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
@@ -705,25 +708,27 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
                 action_removeWord->setEnabled(false);
 //                }
                 if (mudlet::self()->mUsingMudletDictionaries) {
-                    action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which we have "
-                                                                         "bundled with Mudlet; the entries about this line are the ones that the user "
-                                                                         "has personally added."));
+                    /*:
+                    This line is shown in the list of spelling suggestions on the profile's command-
+                    line context menu to clearly divide up where the suggestions for correct
+                    spellings are coming from.  The precise format might be modified as long as it
+                    is clear that the entries below this line in the menu come from the spelling
+                    dictionary that the user has chosen in the profile setting which we have
+                    bundled with Mudlet; the entries about this line are the ones that the user
+                    has personally added.
+                    */
+                    action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
                 } else {
-                    action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which is provided "
-                                                                         "as part of the OS; the entries about this line are the ones that the user has "
-                                                                         "personally added."));
+                    /*:
+                    This line is shown in the list of spelling suggestions on the profile's command-
+                    line context menu to clearly divide up where the suggestions for correct
+                    spellings are coming from.  The precise format might be modified as long as it
+                    is clear that the entries below this line in the menu come from the spelling
+                    dictionary that the user has chosen in the profile setting which is provided
+                    as part of the OS; the entries about this line are the ones that the user has
+                    personally added.
+                    */
+                    action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
                 }
                 action_dictionarySeparatorLine->setEnabled(false);
             }
@@ -842,7 +847,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             * only) argument given.
             */
 
-            auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
+            auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().constFirst());
             if (handle_profile) {
                 popup->insertAction(separator_aboveStandardMenu, action_removeWord);
                 popup->insertAction(action_removeWord, action_addWord);
@@ -855,9 +860,6 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
             } else {
                 popup->insertActions(separator_aboveStandardMenu, spellings_system);
             }
-            // else the word is in the dictionary - in either ca`se show the context
-            // menu - either the one with the prefixed spellings, or the standard
-            // one:
         }
 
         popup->addSeparator();
@@ -885,41 +887,41 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
         event->accept();
     }
 
-    // Process any other possible mousePressEvent - which is default popup
-    // handling - and which accepts the event:
+    // Process any other possible mousePressEvent - which is default context
+    // menu handling - and which accepts the event:
     QPlainTextEdit::mousePressEvent(event);
     mudlet::self()->activateProfile(mpHost);
 }
 
 void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
 {
-    // Process any other possible mousePressEvent - which is default popup
-    // handling - and which accepts the event:
-    QPlainTextEdit::mousePressEvent(event);
+    // Process any other possible mouseReleaseEvent - which is default context
+    // menu handling - and which accepts the event:
+    QPlainTextEdit::mouseReleaseEvent(event);
     mudlet::self()->activateProfile(mpHost);
 }
 
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
     Q_UNUSED(event)
-    const QString _t = toPlainText();
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
     mLastCompletion.clear();
     mUserKeptOnTyping = false;
 
-    QStringList _l = _t.split(QChar::LineFeed);
+    QStringList commandList = toPlainText().split(QChar::LineFeed);
 
-    for (int i = 0; i < _l.size(); i++) {
+    for (int i = 0; i < commandList.size(); ++i) {
         if (mType != MainCommandLine && mActionFunction) {
-            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, _l[i]);
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, commandList.at(i));
         } else {
-            mpHost->send(_l[i]);
+            mpHost->send(commandList.at(i));
         }
         // send command to your MiniConsole
         if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
-            mpConsole->printCommand(_l[i]);
+            // This usage of commandList modifies the content!!!
+            mpConsole->printCommand(commandList[i]);
         }
     }
 
@@ -938,6 +940,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
         mHistoryList.push_front(QString());
     }
+
     if (mpHost->mAutoClearCommandLineAfterSend) {
 #if defined (Q_OS_MACOS)
         // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
@@ -1321,94 +1324,195 @@ void TCommandLine::slot_adjustAccessibleNames()
     switch (mType) {
     case MainCommandLine:
         if (multipleProfilesActive) {
-            setAccessibleName(tr("Input line for \"%1\" profile.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe the main command line for a "
-                                 "Mudlet profile when more than one profile is loaded, %1 is the "
-                                 "profile name. Because this is likely to be used often it should be "
-                                 "kept as short as possible.").arg(hostName));
+            /*:
+            Accessibility-friendly name to describe the main command line for a
+            Mudlet profile when more than one profile is loaded, %1 is the
+            profile name. Because this is likely to be used often it should be
+            kept as short as possible.
+            */
+            setAccessibleName(tr("Input line for \"%1\" profile.").arg(hostName));
+            /*:
+            Accessibility-friendly description for the main command line for
+            a Mudlet profile when more than one profile is loaded, %1 is the
+            profile name. Because this is likely to be used often it should be
+            kept as short as possible.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
-                                        "to run commands locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for the main command line for "
-                                        "a Mudlet profile when more than one profile is loaded, %1 is the "
-                                        "profile name. Because this is likely to be used often it should be "
-                                        "kept as short as possible.").arg(hostName));
+                                        "to run commands locally.").arg(hostName));
         } else {
-            setAccessibleName(tr("Input line.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe the main command line for a "
-                                 "Mudlet profile when only one profile is loaded. Because this is "
-                                 "likely to be used often it should be kept as short as possible."));
+            /*:
+            Accessibility-friendly name to describe the main command line for a
+            Mudlet profile when only one profile is loaded. Because this is
+            likely to be used often it should be kept as short as possible.
+            */
+            setAccessibleName(tr("Input line."));
+            /*:
+            Accessibility-friendly description for the main command line for
+            a Mudlet profile when only one profile is loaded. Because this is
+            likely to be used often it should be kept as short as possible.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
-                                        "locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for the main command line for "
-                                        "a Mudlet profile when only one profile is loaded. Because this is "
-                                        "likely to be used often it should be kept as short as possible."));
+                                        "locally."));
         }
         break;
     case SubCommandLine:
         if (multipleProfilesActive) {
-            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe an extra command line on "
-                                 "top of console/window when more than one profile is loaded, %1 is "
-                                 "the command line name, %2 is the name of the window/console that "
-                                 "it is on and %3 is the name of the profile.")
+            /*:
+            Accessibility-friendly name to describe an extra command line on
+            top of console/window when more than one profile is loaded, %1 is
+            the command line name, %2 is the name of the window/console that
+            it is on and %3 is the name of the profile.
+            */
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.")
                                       .arg(mCommandLineName, mpConsole->mConsoleName, hostName));
+            /*:
+            Accessibility-friendly description for an extra command line on top of a
+            console/window when more than one profile is loaded, %1 is the profile
+            name.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
-                                        "to run commands locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for an extra command line on top of a "
-                                        "console/window when more than one profile is loaded, %1 is the profile "
-                                        "name.").arg(hostName));
+                                        "to run commands locally.").arg(hostName));
         } else {
-            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe an extra command line on "
-                                 "top of console/window when only one profile is loaded, %1 is the "
-                                 "command line name and %2 is the name of the window/console that "
-                                 "it is on.")
+            /*:
+            Accessibility-friendly name to describe an extra command line on
+            top of console/window when only one profile is loaded, %1 is the
+            command line name and %2 is the name of the window/console that
+            it is on.
+            */
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window.")
                                       .arg(mCommandLineName, mpConsole->mConsoleName));
+            /*:
+            Accessibility-friendly description for an extra command line on
+            top of a console/window when only one profile is loaded.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
-                                        "locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for an extra command line on "
-                                        "top of a console/window when only one profile is loaded."));
+                                        "locally."));
         }
         break;
     case ConsoleCommandLine:
         // The mCommandLine for this type is the same as the parent TConsole
         if (multipleProfilesActive) {
-            setAccessibleName(tr("Input line of \"%1\" window of \"%2\" profile.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe the built-in command line of a "
-                                 "console/window other than the main one, when more than one profile is "
-                                 "loaded, %1 is the name of the window/console and %2 is the name of the "
-                                 "profile.").arg(mCommandLineName, hostName));
+            /*:
+            Accessibility-friendly name to describe the built-in command line of a
+            console/window other than the main one, when more than one profile is
+            loaded, %1 is the name of the window/console and %2 is the name of the
+            profile.
+            */
+            setAccessibleName(tr("Input line of \"%1\" window of \"%2\" profile.").arg(mCommandLineName, hostName));
+            /*:
+            Accessibility-friendly description for the built-in command line of a
+            console/window other than the main window's one when more than one profile is
+            loaded, %1 is the profile name.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
-                                        "to run commands locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for the built-in command line of a "
-                                        "console/window other than the main window's one when more than one profile is "
-                                        "loaded, %1 is the profile name.").arg(hostName));
+                                        "to run commands locally.").arg(hostName));
         } else {
-            setAccessibleName(tr("Input line of \"%1\" window.",
-                                 // Intentional comment to separate arguments
-                                 "Accessibility-friendly name to describe the built-in command line "
-                                 "of a console/window other than the main one, when only one "
-                                 "profile is loaded, %1 is the name of the window/console.")
+            /*:
+            Accessibility-friendly name to describe the built-in command line
+            of a console/window other than the main one, when only one
+            profile is loaded, %1 is the name of the window/console.
+            */
+            setAccessibleName(tr("Input line of \"%1\" window.")
                                       .arg(mCommandLineName));
+            /*:
+            Accessibility-friendly description for the built-in command line of a
+            console/window other than the main window's one when only one profile is
+            loaded.
+            */
             setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
-                                        "locally.",
-                                        // Intentional comment to separate arguments
-                                        "Accessibility-friendly description for the built-in command line of a "
-                                        "console/window other than the main window's one when only one profile is "
-                                        "loaded."));
+                                        "locally."));
         }
         break;
     case UnknownType:
         Q_UNREACHABLE();
+    }
+}
+
+void TCommandLine::restoreHistory()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        qWarning().nospace().noquote() << "TCommandLine::restoreHistory() ERROR - got a Host pointer that was null - unable to save command history for the command line called: " << mCommandLineName
+                                       << " of type: " << mType;
+        return;
+    }
+
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QFile historyFile(pathFileName, this);
+    if (historyFile.exists()) {
+        if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
+            // In Qt6 the default encoding is UTF-8
+            QTextStream ifs(&historyFile);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            ifs.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+            QString buffer;
+            while (!ifs.atEnd() && ifs.status() == QTextStream::Ok) {
+                ifs.readLineInto(&buffer);
+                mHistoryList.append(buffer);
+            }
+
+            if (historyFile.error() != QFileDevice::NoError) {
+                qWarning() << "TCommandLine::restoreHistory() ERROR - unable to read command history from file for the command line called: " << mCommandLineName << " of type: " << mType
+                           << " reason: " << historyFile.errorString();
+                historyFile.close();
+                return;
+            }
+
+            historyFile.close();
+            // Success!
+            return;
+        }
+
+        // else failed to open the file despite it existing
+        if (historyFile.error() != QFileDevice::NoError) {
+            qWarning() << "TCommandLine::restoreHistory() ERROR - unable to open command history for the command line called: "
+                       << mCommandLineName << " of type: " << mType
+                       << " reason: " << historyFile.errorString();
+            return;
+        }
+    }
+    // else no such file - which will be the case for the first time the
+    // command line is created - so it might not be an error:
+    qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: "
+             << mCommandLineName << " of type: " << mType
+             << " because the file: " << mBackingFileName
+             << " does not exist in the profile's home directory, unless this is a new command line then this is an unexpected error.";
+}
+
+void TCommandLine::slot_saveHistory()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        qWarning().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - got a Host pointer that was null - unable to save command history for the command line called: " << mCommandLineName
+                                       << " of type: " << mType;
+        return;
+    }
+
+    pHost->setCmdLineSettings(mType, mSaveCommands, mCommandLineName);
+    auto saveSize = pHost->getCommandLineHistorySaveSize();
+    if (!saveSize || !mSaveCommands) {
+        // Option has been disabled so do nothing (won't delete the previous one
+        // though!):
+        return;
+    }
+
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QSaveFile historyFile(pathFileName, this);
+    if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        QTextStream ofs(&historyFile);
+        // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        ofs.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+        // We need to add one here because usually the first line in
+        // mHistoryList is an empty one - maybe it might represent the current
+        // line and will get captured/saved if the profile is closed with some
+        // unsent text in the command line?
+        ofs << mHistoryList.mid(0, saveSize + 1).join(QChar::LineFeed);
+        if (!historyFile.commit()) {
+            qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName
+                                         << " of type: " << mType << " reason: " << historyFile.errorString();
+        }
     }
 }

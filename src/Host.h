@@ -30,6 +30,7 @@
 #include "AliasUnit.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
+#include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
@@ -312,7 +313,9 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
+    bool writeProfileIniData(const QString& item, const QString& what);
     QString readProfileData(const QString&);
+    QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
@@ -408,6 +411,10 @@ public:
     QMargins borders() const { return mBorders; }
     void setBorders(const QMargins);
     void loadMap();
+    std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
+    void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
+    int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
+    void setCommandLineHistorySaveSize(const int lines);
 
 
     cTelnet mTelnet;
@@ -701,6 +708,8 @@ signals:
     // Tells all consoles associated with this Host (but NOT the Central Debug
     // one) to change the way they show  control characters:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
+    // Tells all command lines to save their history:
+    void signal_saveCommandLinesHistory();
 
 private slots:
     void slot_purgeTemps();
@@ -878,6 +887,15 @@ private:
     bool mFocusTimerRunning = false;
 
     QMargins mBorders;
+
+    // The range - applied to ALL command lines - is 0 to 10000, with the knob
+    // on the profile preferences having a log-step action with multiples
+    // of 10 to integer powers and steps of (0,) 10, 20, 50, 100. Prior to the
+    // introduction of this feature the control would effectively have been
+    // zero - and whilst the knob shows the special value of "None" then
+    // to reproduce that behavior there is little reason to not enable it
+    // by default:
+    int mCommandLineHistorySaveSize = 500;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

@@ -57,7 +57,7 @@ public:
     }
 
     TScript* getScript(int id);
-    void compileAll();
+    void compileAll(bool saveLoadingError = false);
     bool registerScript(TScript* pT);
     void unregisterScript(TScript* pT);
     void reParentScript(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);

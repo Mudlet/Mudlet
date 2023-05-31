@@ -204,11 +204,11 @@ int ScriptUnit::getNewID()
     return ++mMaxID;
 }
 
-void ScriptUnit::compileAll()
+void ScriptUnit::compileAll(bool saveLoadingError)
 {
     for (auto script : mScriptRootNodeList) {
         if (script->isActive()) {
-            script->compileAll();
+            script->compileAll(saveLoadingError);
         }
     }
 }

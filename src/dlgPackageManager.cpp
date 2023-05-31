@@ -104,7 +104,7 @@ void dlgPackageManager::slot_installPackage()
 
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
+        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName.toHtmlEscaped(), file.errorString()));
         return;
     }
 
@@ -232,13 +232,10 @@ void dlgPackageManager::slot_toggleRemoveButton()
     const int selectionCount = selection.count();
     removeButton->setEnabled(selectionCount);
     if (selectionCount) {
-        removeButton->setText(tr("Remove %n package(s)",
-                                  // Intentional comment to separate arguments
-                                  "Message on button in package manager to remove one or more (%n is the count of) selected package(s).",
-                                  selectionCount));
+        //: Message on button in package manager to remove one or more (%n is the count of) selected package(s).
+        removeButton->setText(tr("Remove %n package(s)", nullptr, selectionCount));
     } else {
-        removeButton->setText(tr("Remove package",
-                                  // Intentional comment to separate arguments
-                                  "Message on button in package manager initially and when there is no packages to remove."));
+        //: Message on button in package manager initially and when there is no packages to remove
+        removeButton->setText(tr("Remove package"));
     }
 }
