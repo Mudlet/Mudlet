@@ -61,13 +61,13 @@
       <location filename="../src/Host.cpp" line="633"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</extracomment>
-      <translation type="unfinished"/>
+      <translation>فشل فتح ملف xml &quot;%1&quot; داخل الوحدة البرمجية %2 لتحديثه. رسالة الخطأ كانت: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="644"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when a module is saved as package but cannot be done for some reason.</extracomment>
-      <translation type="unfinished"/>
+      <translation>فشل حفظ &quot;%1&quot; إلى الوحدة البرمجية &quot;%2&quot;. رسالة الخطأ كانت: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="943"/>
@@ -594,7 +594,7 @@ please wait...</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)
 ----------
 2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</extracomment>
-      <translation type="unfinished"/>
+      <translation>الخصائص</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2584"/>
@@ -603,37 +603,37 @@ please wait...</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)
 ----------
 2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</extracomment>
-      <translation type="unfinished"/>
+      <translation>الخصائص ...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2586"/>
       <source>Change the properties of this line</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>تغيير خصائص هذا الخط</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2589"/>
       <source>Finish</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>إنهاء</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2591"/>
       <source>Finish drawing this line</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>الانتهاء من رسم هذا الخط</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2658"/>
       <source>Create new map</source>
       <extracomment>2D Mapper context menu (no map found) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>إنشاء خريطة جديدة</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2661"/>
       <source>Load map</source>
       <extracomment>2D Mapper context menu (no map found) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>تحميل خريطة</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2678"/>
@@ -648,7 +648,7 @@ please wait...</source>
       <extracomment>2D Mapper context menu (room) item
 ----------
 2D Mapper context menu (label) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>نقل</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2692"/>
@@ -717,7 +717,7 @@ please wait...</source>
       <extracomment>2D Mapper context menu (room) item
 ----------
 2D Mapper context menu (label) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>حذف</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2750"/>
@@ -741,13 +741,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2764"/>
       <source>Create label...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>إنشاء عنوان...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2766"/>
       <source>Create label to show text or an image</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>إنشاء عنوان لعرض صورة أو نلص</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2773"/>
@@ -765,13 +765,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2784"/>
       <source>Switch to editing mode</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>الانتقال لوضع التحرير</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2786"/>
       <source>Switch to viewing mode</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>الانتقال لوضع العرض</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2795"/>
@@ -911,13 +911,13 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3685"/>
       <source>OK</source>
       <extracomment>dialog (room(s) move) button</extracomment>
-      <translation type="unfinished"/>
+      <translation>حسنا</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3691"/>
       <source>Cancel</source>
       <extracomment>dialog (room(s) move) button</extracomment>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5019"/>
@@ -1594,7 +1594,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="15186"/>
       <source>[ ERROR ] - Cannot find Lua module %1.%2%3%4</source>
       <extracomment>%1 is the name of the module; %2 will be a line-feed inserted to put the next argument on a new line; %3 is the error message from the lua sub-system; %4 can be an additional message about the expected effect (but may be blank).</extracomment>
-      <translation type="unfinished"/>
+      <translation>خطأ لم نتمكن من أيجاد وحدة lua %1 %2 %3 %4</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15798"/>
@@ -3044,13 +3044,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2177"/>
       <source>{carriage-return}</source>
       <extracomment>Unicode U+000D codepoint. Not likely to be seen as it gets filtered out.</extracomment>
-      <translation type="unfinished"/>
+      <translation>حد السطر</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2179"/>
       <source>{space}</source>
       <extracomment>Unicode U+0020 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>مسافة</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2181"/>
@@ -4053,7 +4053,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2044"/>
       <source>Cancel</source>
       <extracomment>Cancel download of GUI package from Server</extracomment>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2227"/>
@@ -4099,7 +4099,7 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2444"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>حسنا</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2642"/>
@@ -5700,19 +5700,19 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/dlgMapLabel.cpp" line="34"/>
       <source>Create label</source>
       <extracomment>Create label dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>إنشاء عنوان</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
       <source>Foreground color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>لون الواجهة الأمامية</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="96"/>
       <source>Background color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>لون الخلفية</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="116"/>
@@ -7074,13 +7074,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="545"/>
       <source>OK</source>
       <extracomment>confirm room color selection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>حسنا</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="551"/>
       <source>Cancel</source>
       <extracomment>cancel room color selection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>إلغاء</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="442"/>
