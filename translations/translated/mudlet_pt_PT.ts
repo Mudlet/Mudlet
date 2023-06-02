@@ -114,7 +114,7 @@ Por favor aguarde...</translation>
       <location filename="../src/Host.cpp" line="2519"/>
       <source>%1 at %2:%3</source>
       <extracomment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 em %2:%3</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2925"/>
@@ -581,13 +581,13 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2573"/>
       <source>Undo</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desfazer</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2575"/>
       <source>Undo last point</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Desfazer o último ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2582"/>
@@ -596,7 +596,7 @@ Por favor aguarde...</translation>
       <extracomment>2D Mapper context menu (drawing custom exit line) item name (but not used as display text as that is set separately)
 ----------
 2D Mapper context menu (custom line editing) item name (but not used as display text as that is set separately)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Propriedades</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2584"/>
@@ -605,37 +605,37 @@ Por favor aguarde...</translation>
       <extracomment>2D Mapper context menu (drawing custom exit line) item display text (has to be entered separately as the ... would get stripped off otherwise)
 ----------
 2D Mapper context menu (custom line editing) item display text (has to be entered separately as the ... would get stripped off otherwise</extracomment>
-      <translation type="unfinished"/>
+      <translation>propriedades ...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2586"/>
       <source>Change the properties of this line</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mudar as propriedades desta linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2589"/>
       <source>Finish</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Concluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2591"/>
       <source>Finish drawing this line</source>
       <extracomment>2D Mapper context menu (drawing custom exit line) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Acabar de desenhar esta linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2658"/>
       <source>Create new map</source>
       <extracomment>2D Mapper context menu (no map found) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Criar novo mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2661"/>
       <source>Load map</source>
       <extracomment>2D Mapper context menu (no map found) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Carregar mapa</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2678"/>
@@ -650,7 +650,7 @@ Por favor aguarde...</translation>
       <extracomment>2D Mapper context menu (room) item
 ----------
 2D Mapper context menu (label) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mover</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2692"/>
@@ -680,13 +680,13 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2711"/>
       <source>Replace an exit line with a custom line</source>
       <extracomment>2D Mapper context menu (room) item tooltip (enabled state)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Substitua uma linha de saída com uma linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2716"/>
       <source>Custom exit lines are not shown and are not editable in grid mode</source>
       <extracomment>2D Mapper context menu (room) item tooltip (disabled state)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Linhas de saída personalizadas não são mostradas e não são editáveis em modo de grelha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2725"/>
@@ -698,7 +698,7 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2727"/>
       <source>Increase map X-Y spacing for the selected group of rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aumentar o espaçamento X-Y do mapa para os grupos de espaços selecionados</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2734"/>
@@ -710,7 +710,7 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2736"/>
       <source>Decrease map X-Y spacing for the selected group of rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Diminuir o espaçamento X-Y do mapa para os grupos de quartos selecionados</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2743"/>
@@ -719,7 +719,7 @@ Por favor aguarde...</translation>
       <extracomment>2D Mapper context menu (room) item
 ----------
 2D Mapper context menu (label) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Excluir</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2750"/>
@@ -779,61 +779,61 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2795"/>
       <source>Move label</source>
       <extracomment>2D Mapper context menu item (label) tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mover Etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2800"/>
       <source>Delete label</source>
       <extracomment>2D Mapper context menu (label) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Eliminar etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2815"/>
       <source>Add point</source>
       <extracomment>2D Mapper context menu (custom line editing) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Adicionar ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2823"/>
       <source>Divide segment by adding a new point mid-way along</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Divida o segmento adicionando um novo ponto a meio do caminho</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2827"/>
       <source>Select a point first, then add a new point mid-way along the segment towards room</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (disabled state, i.e must do the suggested action first)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Primeiro selecione um ponto, de seguida adicione um novo ponto a meio do segmento em direção ao espaço</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2831"/>
       <source>Remove point</source>
       <extracomment>2D Mapper context menu (custom line editing) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Remover Ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2839"/>
       <source>Merge pair of segments by removing this point</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state but will be able to be done again on this item)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Junte um par de segmentos removendo este ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2843"/>
       <source>Remove last segment by removing this point</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (enabled state but is the last time this action can be done on this item)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Remova o último segmento removendo este ponto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2848"/>
       <source>use &quot;delete line&quot; to remove the only segment ending in an editable point</source>
       <extracomment>(2D Mapper context menu (custom line editing) item tooltip (disabled state this action can not be done again on this item but something else can be the quoted action &quot;delete line&quot; should match the translation for that action))</extracomment>
-      <translation type="unfinished"/>
+      <translation>use &quot;remover linha&quot; para remover o único segmento que termine num ponto editável</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2853"/>
       <source>Select a point first, then remove it</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip (disabled state, user will need to do something before it can be used)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Primeiro selecione um ponto, de seguida remova-o</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2862"/>
@@ -844,19 +844,19 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="2866"/>
       <source>Delete line</source>
       <extracomment>2D Mapper context menu (custom line editing) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Apagar linha</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2868"/>
       <source>Delete all of this custom line</source>
       <extracomment>2D Mapper context menu (custom line editing) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Remover tudo desta linha personalizada</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3100"/>
       <source>Drag to select multiple rooms or labels, release to finish...</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation type="unfinished"/>
+      <translation>Arraste para selecionar múltiplos espaços ou etiquetas, solte para terminar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3358"/>
@@ -913,26 +913,26 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="3685"/>
       <source>OK</source>
       <extracomment>dialog (room(s) move) button</extracomment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3691"/>
       <source>Cancel</source>
       <extracomment>dialog (room(s) move) button</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5019"/>
       <location filename="../src/T2DMap.cpp" line="5053"/>
       <source>Left-click to add point, right-click to undo/change/finish...</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation type="unfinished"/>
+      <translation>Clique com o botão esquerdo para adicionar um ponto, ou com o botão direito para desfazer/alterar/terminar...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5064"/>
       <source>Left-click and drag a square for the size and position of your label</source>
       <extracomment>2D Mapper big, bottom of screen help message</extracomment>
-      <translation type="unfinished"/>
+      <translation>Clique e arraste com o botão esquerdo um retângulo para o tamanho e a posição da sua etiqueta</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="579"/>
@@ -952,12 +952,12 @@ Por favor aguarde...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="92"/>
       <source>ID</source>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="94"/>
       <source>Name</source>
-      <translation type="unfinished"/>
+      <translation>Nome</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1220"/>
@@ -969,7 +969,7 @@ Por favor aguarde...</translation>
       <location filename="../src/T2DMap.cpp" line="1485"/>
       <source>no text</source>
       <extracomment>Default text if a label is created in mapper with no text</extracomment>
-      <translation type="unfinished"/>
+      <translation>sem texto</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2382"/>
@@ -1065,7 +1065,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TArea.cpp" line="756"/>
       <source>no text</source>
       <extracomment>Default text if a label is created in mapper with no text</extracomment>
-      <translation type="unfinished"/>
+      <translation>sem texto</translation>
     </message>
   </context>
   <context>
@@ -1084,13 +1084,13 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="720"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <extracomment>This line is shown in the list of spelling suggestions on the profile&apos;s command- line context menu to clearly divide up where the suggestions for correct spellings are coming from. The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</extracomment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet▼ │ sugestões do dicionário │ ▲Utilizador▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="731"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <extracomment>This line is shown in the list of spelling suggestions on the profile&apos;s command- line context menu to clearly divide up where the suggestions for correct spellings are coming from. The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</extracomment>
-      <translation type="unfinished"/>
+      <translation>▼Sistema▼ │ sugestões do dicionário │ ▲Utilizador▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="791"/>
@@ -1571,14 +1571,14 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TLuaInterpreter.cpp" line="14260"/>
       <source>object</source>
       <extracomment>object is the Mudlet alias/trigger/script, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</extracomment>
-      <translation type="unfinished"/>
+      <translation>objecto</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="14244"/>
       <location filename="../src/TLuaInterpreter.cpp" line="14263"/>
       <source>function</source>
       <extracomment>function is the Lua function, used in this sample message: object:&lt;Alias1&gt; function:&lt;cure_me&gt;</extracomment>
-      <translation type="unfinished"/>
+      <translation>função</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="15178"/>
@@ -1687,7 +1687,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="180"/>
       <source>logfile</source>
       <extracomment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {one of two copies}).</extracomment>
-      <translation type="unfinished"/>
+      <translation>logfile</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="232"/>
@@ -1699,13 +1699,13 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="323"/>
       <source>&apos;Log session starting at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <extracomment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</extracomment>
-      <translation type="unfinished"/>
+      <translation>&apos;Log da sessão começado a &apos;hh:mm:ss&apos; de &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="331"/>
       <source>&apos;Log session ending at &apos;hh:mm:ss&apos; on &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</source>
       <extracomment>This is the format argument to QDateTime::toString(...) and needs to follow the rules for that function {literal text must be single quoted} as well as being suitable for the translation locale</extracomment>
-      <translation type="unfinished"/>
+      <translation>&apos;Sessão de log terminada às &apos;hh:mm:ss&apos; em &apos;dddd&apos;, &apos;d&apos; &apos;MMMM&apos; &apos;yyyy&apos;.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="342"/>
@@ -3102,13 +3102,13 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2197"/>
       <source>{3-per-em space}</source>
       <extracomment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2199"/>
       <source>{4-per-em space}</source>
       <extracomment>Unicode U+2005 codepoint - four-per-em (&apos;m&apos;) wide (Middle) space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{4-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2201"/>
@@ -3324,25 +3324,25 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2271"/>
       <source>{variation selector 1}</source>
       <extracomment>Unicode U+FE00 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2273"/>
       <source>{variation selector 2}</source>
       <extracomment>Unicode U+FE01 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2275"/>
       <source>{variation selector 3}</source>
       <extracomment>Unicode U+FE02 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2277"/>
       <source>{variation selector 4}</source>
       <extracomment>Unicode U+FE03 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2279"/>
@@ -3462,19 +3462,19 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2343"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <extracomment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2345"/>
       <source>{FitzPatrick modifier 3}</source>
       <extracomment>Unicode codepoint U+0001F3FC - FitzPatrick modifier (Emoji Human skin-tone) 3.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2347"/>
       <source>{FitzPatrick modifier 4}</source>
       <extracomment>Unicode codepoint U+0001F3FD - FitzPatrick modifier (Emoji Human skin-tone) 4.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 4}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2349"/>
@@ -4050,7 +4050,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2044"/>
       <source>Cancel</source>
       <extracomment>Cancel download of GUI package from Server</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2227"/>
@@ -4071,7 +4071,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2383"/>
       <source>ERROR</source>
       <extracomment>Keep the capitalisation, the translated text at 7 letters max so it aligns nicely</extracomment>
-      <translation type="unfinished"/>
+      <translation>ERRO</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2396"/>
@@ -4096,7 +4096,7 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2444"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2642"/>
@@ -5347,7 +5347,7 @@ Count</source>
       <location filename="../src/dlgColorTrigger.cpp" line="219"/>
       <source>%1 [%2]</source>
       <extracomment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="373"/>
@@ -5703,13 +5703,13 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/dlgMapLabel.cpp" line="75"/>
       <source>Foreground color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cor de primeiro plano</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="96"/>
       <source>Background color</source>
       <extracomment>2D mapper create label color dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cor de fundo</translation>
     </message>
     <message>
       <location filename="../src/dlgMapLabel.cpp" line="116"/>
@@ -5721,7 +5721,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/dlgMapLabel.cpp" line="134"/>
       <source>Select image</source>
       <extracomment>2D Mapper create label file dialog title</extracomment>
-      <translation type="unfinished"/>
+      <translation>Selecione a Imagem</translation>
     </message>
   </context>
   <context>
@@ -6276,7 +6276,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/dlgProfilePreferences.cpp" line="150"/>
       <source>logfile</source>
       <extracomment>Must be a valid default filename for a log-file and is used if the user does not enter any other value (Ensure all instances have the same translation {one of two copies}).</extracomment>
-      <translation type="unfinished"/>
+      <translation>logfile</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/dlgProfilePreferences.cpp" line="161"/>
@@ -7071,13 +7071,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="545"/>
       <source>OK</source>
       <extracomment>confirm room color selection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="551"/>
       <source>Cancel</source>
       <extracomment>cancel room color selection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cancelar</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="442"/>
@@ -10850,85 +10850,85 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="964"/>
       <source>ISO 8859-2 (Central European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-2 (Europa Central/Central European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="966"/>
       <source>ISO 8859-3 (South European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-3 (Europa do Sul/South European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="968"/>
       <source>ISO 8859-4 (Baltic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-4 (Báltico/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="970"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-5 (Cirílico/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="972"/>
       <source>ISO 8859-6 (Arabic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-6 (Árabe/Arabic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="974"/>
       <source>ISO 8859-7 (Greek)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-7 (Grego/Greek)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="976"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-8 (Hebraico Visual/Hebrew Visual)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="978"/>
       <source>ISO 8859-9 (Turkish)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-9 (Turco/Turkish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="980"/>
       <source>ISO 8859-10 (Nordic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-10 (Nordico/Nordic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="982"/>
       <source>ISO 8859-11 (Latin/Thai)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-11 (Latim/Tailandês/Latin/Thai)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="984"/>
       <source>ISO 8859-13 (Baltic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-13 (Báltico/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="986"/>
       <source>ISO 8859-14 (Celtic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-14 (Celta/Celtic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="988"/>
       <source>ISO 8859-15 (Western)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-15 (Ocidental/Western)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="990"/>
       <source>ISO 8859-16 (Romanian)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ISO 8859-16 (Romeno/Romanian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="992"/>
@@ -10955,13 +10955,13 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="1004"/>
       <source>CP850 (Western Europe)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>CP850 (Europa Ocidental/Western Europe)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1006"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>CP866 (Cirílico/Russo/Cyrillic/Russian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1008"/>
@@ -10980,73 +10980,73 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="1014"/>
       <source>KOI8-R (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>KOI8-R (Cirílico/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1016"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>KOI8-U (Cirílico/Ucraniano/Cyrillic/Ukrainian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1018"/>
       <source>MACINTOSH</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>MACINTOSH</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1020"/>
       <source>WINDOWS-1250 (Central European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1250 (Europa Central/Central European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1022"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1251 (Cirílico/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1024"/>
       <source>WINDOWS-1252 (Western)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1252 (Ocidental/Western)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1026"/>
       <source>WINDOWS-1253 (Greek)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1253 (Grego/Greek)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1028"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1254 (Turco/Turkish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1030"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1255 (Hebraico/Hebrew)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1032"/>
       <source>WINDOWS-1256 (Arabic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1256 (Árabe/Arabic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1034"/>
       <source>WINDOWS-1257 (Baltic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1257 (Báltico/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1036"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>WINDOWS-1258 (Vietnamita/Vietnamese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2753"/>
