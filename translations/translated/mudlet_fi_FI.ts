@@ -117,7 +117,7 @@ Odota...</translation>
       <location filename="../src/Host.cpp" line="2519"/>
       <source>%1 at %2:%3</source>
       <extracomment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 osoitteessa %2:%3</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2925"/>
@@ -5400,7 +5400,7 @@ Count</source>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1241"/>
       <source>Set custom color</source>
       <extracomment>Set a custom color to show for the profile in the connection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aseta mukautettu väri</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1572"/>
