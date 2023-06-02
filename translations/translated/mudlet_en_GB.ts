@@ -1465,13 +1465,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2218"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profile &quot;%1&quot; user window &quot;%2&quot; past content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2220"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profile &quot;%1&quot; user window &quot;%2&quot; live content.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2223"/>
@@ -4060,7 +4060,7 @@ or your nameservers are not working properly.</translation>
     <message>
       <location filename="../src/ctelnet.cpp" line="488"/>
       <source>hh:mm:ss.zzz</source>
-      <translation type="unfinished"/>
+      <translation>hh:mm:ss.zzz</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="525"/>
@@ -5171,19 +5171,19 @@ Count</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="188"/>
       <source>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</source>
       <extracomment>about:Ben Carlsen</extracomment>
-      <translation type="unfinished"/>
+      <translation>Developed the first version of our Mac OSX installer. He is the former maintainer of the Mac version of Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="192"/>
       <source>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</source>
       <extracomment>about:Ben Smith</extracomment>
-      <translation type="unfinished"/>
+      <translation>Joined in December 2009 though he&apos;s been around much longer. Contributed to the Lua API and is the former maintainer of the Lua API.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="196"/>
       <source>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</source>
       <extracomment>about:Blaine von Roeder</extracomment>
-      <translation type="unfinished"/>
+      <translation>Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches and has helped with release management of 1.0.5.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="200"/>
@@ -5195,7 +5195,7 @@ Count</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="203"/>
       <source>Contributed to the Lua API.</source>
       <extracomment>about:Carter Dewey</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contributed to the Lua API.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="206"/>
@@ -5219,7 +5219,7 @@ Count</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="217"/>
       <source>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</source>
       <extracomment>about:James Younquist</extracomment>
-      <translation type="unfinished"/>
+      <translation>Contributed the Geyser layout manager for Mudlet in March 2010. It is written in Lua and aims at simplifying user GUI scripting.</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="221"/>
@@ -5496,7 +5496,7 @@ Count</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="280"/>
       <source>Button to select a mud game to play, double-click it to connect and start playing it.</source>
       <extracomment>Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option</extracomment>
-      <translation type="unfinished"/>
+      <translation>Button to select a mud game to play, double-click it to connect and start playing it.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="922"/>
@@ -5513,7 +5513,7 @@ Count</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1236"/>
       <source>Set custom icon</source>
       <extracomment>Set a custom picture to show for the profile in the connection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Set custom icon</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1241"/>
@@ -6065,7 +6065,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/dlgPackageExporter.cpp" line="130"/>
       <source>Package Exporter - %1</source>
       <extracomment>Title of the window. The %1 will be replaced by the current profile&apos;s name</extracomment>
-      <translation type="unfinished"/>
+      <translation>Package Exporter - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="175"/>
@@ -6427,7 +6427,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/dlgProfilePreferences.cpp" line="686"/>
       <source>Mudlet dictionaries:</source>
       <extracomment>On Windows and MacOs, we have to bundle our own dictionaries with our application - and we also use them on *nix systems where we do not find the system ones</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mudlet dictionaries:</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="689"/>
@@ -6445,61 +6445,61 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/dlgProfilePreferences.cpp" line="803"/>
       <source>10</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="804"/>
       <source>20</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>20</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
       <source>50</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>50</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="806"/>
       <source>100</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>100</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="807"/>
       <source>200</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>200</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="808"/>
       <source>500</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>500</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="809"/>
       <source>1,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>1,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="810"/>
       <source>2,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>2,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="811"/>
       <source>5,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>5,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="812"/>
       <source>10,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1760"/>
@@ -7217,7 +7217,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="246"/>
       <location filename="../src/dlgRoomProperties.cpp" line="286"/>
       <source>count</source>
-      <translation type="unfinished"/>
+      <translation>count</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="517"/>
@@ -8536,12 +8536,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="776"/>
       <source>Where</source>
-      <translation type="unfinished"/>
+      <translation>Where</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="778"/>
       <source>What</source>
-      <translation type="unfinished"/>
+      <translation>What</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="824"/>
@@ -10985,13 +10985,13 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
       <location filename="../src/mudlet.cpp" line="948"/>
       <source>ASCII (Basic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>ASCII (Basic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="950"/>
       <source>UTF-8 (Recommended)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>UTF-8 (Recommended)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="952"/>
