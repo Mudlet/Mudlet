@@ -221,6 +221,7 @@
     "getRoomArea": "getRoomArea(roomID)",
     "getRoomAreaName": "getRoomAreaName(areaID or areaName)",
     "getRoomChar": "getRoomChar(roomID)",
+    "getRoomCharColor": "r,g,b = getRoomCharColor(roomID)",
     "getRoomCoordinates": "x,y,z = getRoomCoordinates(roomID)",
     "getRoomEnv": "envID = getRoomEnv(roomID)",
     "getRoomExits": "getRoomExits (roomID)",
