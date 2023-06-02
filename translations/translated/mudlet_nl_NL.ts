@@ -117,7 +117,7 @@ wacht aub...</translation>
       <location filename="../src/Host.cpp" line="2519"/>
       <source>%1 at %2:%3</source>
       <extracomment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 op %2:%3</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2925"/>
@@ -914,13 +914,13 @@ wacht aub...</translation>
       <location filename="../src/T2DMap.cpp" line="3685"/>
       <source>OK</source>
       <extracomment>dialog (room(s) move) button</extracomment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3691"/>
       <source>Cancel</source>
       <extracomment>dialog (room(s) move) button</extracomment>
-      <translation type="unfinished"/>
+      <translation>Annuleren</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="5019"/>
@@ -961,7 +961,7 @@ wacht aub...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="94"/>
       <source>Name</source>
-      <translation type="unfinished"/>
+      <translation>Naam</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="1220"/>
@@ -3103,7 +3103,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2197"/>
       <source>{3-per-em space}</source>
       <extracomment>Unicode U+2004 codepoint - three-per-em (&apos;m&apos;) wide (thick) space.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{3-per-em space}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2199"/>
@@ -3325,19 +3325,19 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
       <location filename="../src/TTextEdit.cpp" line="2271"/>
       <source>{variation selector 1}</source>
       <extracomment>Unicode U+FE00 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 1}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2273"/>
       <source>{variation selector 2}</source>
       <extracomment>Unicode U+FE01 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2275"/>
       <source>{variation selector 3}</source>
       <extracomment>Unicode U+FE02 codepoint.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{variation selector 3}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2277"/>
@@ -3463,7 +3463,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2343"/>
       <source>{FitzPatrick modifier 1 or 2}</source>
       <extracomment>Unicode codepoint U+0001F3FB - FitzPatrick modifier (Emoji Human skin-tone) 1-2.</extracomment>
-      <translation type="unfinished"/>
+      <translation>{FitzPatrick modifier 1 or 2}</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2345"/>
@@ -4051,7 +4051,7 @@ changed.</source>
       <location filename="../src/ctelnet.cpp" line="2044"/>
       <source>Cancel</source>
       <extracomment>Cancel download of GUI package from Server</extracomment>
-      <translation type="unfinished"/>
+      <translation>Annuleren</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2227"/>
@@ -4097,7 +4097,7 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2444"/>
       <source>OK</source>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2642"/>
@@ -5348,7 +5348,7 @@ Count</source>
       <location filename="../src/dlgColorTrigger.cpp" line="219"/>
       <source>%1 [%2]</source>
       <extracomment>Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 [%2]</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="373"/>
@@ -7072,13 +7072,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="545"/>
       <source>OK</source>
       <extracomment>confirm room color selection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>OK</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="551"/>
       <source>Cancel</source>
       <extracomment>cancel room color selection dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Annuleren</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="442"/>
