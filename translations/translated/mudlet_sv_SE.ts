@@ -114,7 +114,7 @@ Vänligen vänta...</translation>
       <location filename="../src/Host.cpp" line="2519"/>
       <source>%1 at %2:%3</source>
       <extracomment>%1 is the game name and %2:%3 is game server address like: mudlet.org:23</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 på %2:%3</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2925"/>
@@ -953,7 +953,7 @@ Vänligen vänta...</translation>
     <message>
       <location filename="../src/T2DMap.cpp" line="92"/>
       <source>ID</source>
-      <translation type="unfinished"/>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="94"/>
