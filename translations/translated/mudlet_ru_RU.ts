@@ -6511,19 +6511,19 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/dlgProfilePreferences.cpp" line="803"/>
       <source>10</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="804"/>
       <source>20</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>20</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
       <source>50</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>50</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="806"/>
