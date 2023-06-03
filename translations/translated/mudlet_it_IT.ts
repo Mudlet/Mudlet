@@ -4096,7 +4096,7 @@ per aprire questo file hai bisogno dell'ultima versione di Mudlet!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="169"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi da utilizzare se il comando fornito corrisponde al pattern. (facoltativo)&lt;/p&gt;&lt;p&gt;Puoi inserire un altro alias o un comando da inviare direttamente al gioco. Per comandi complessi che richiedono la modifica di variabili di questo profilo, utilizza invece uno script Lua nell'area editor sottostante. E' possibile utilizzare sia questo campo che uno script Lua - il contenuto di questo campo verrà utilizzato prima di eseguire lo script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="172"/>
@@ -6524,61 +6524,61 @@ Prova a caricare una versione più vecchia in &apos;Connetti - Opzioni - Cronolo
       <location filename="../src/dlgProfilePreferences.cpp" line="803"/>
       <source>10</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="804"/>
       <source>20</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>20</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
       <source>50</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>50</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="806"/>
       <source>100</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>100</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="807"/>
       <source>200</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>200</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="808"/>
       <source>500</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>500</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="809"/>
       <source>1,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>1.000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="810"/>
       <source>2,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>2.000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="811"/>
       <source>5,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>5.000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="812"/>
       <source>10,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10.000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1760"/>
@@ -6807,7 +6807,7 @@ e che ci sia sufficiente spazio disco. L'operazione di copia è fallita.</transl
       <location filename="../src/dlgProfilePreferences.cpp" line="3846"/>
       <source>Time</source>
       <extracomment>Discord Rich Presence time until or time elapsed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tempo</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4337"/>
@@ -7815,7 +7815,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="6356"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="10113"/>
       <source>While loading the profile, this script had an error that has since been fixed, possibly by another script. The error was:%2%3</source>
-      <translation type="unfinished"/>
+      <translation>Durante il caricamento del profilo, questo script ha generato un errore che poi è stato corretto, probabilmente da un altro script. L'errore era:%2%3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5367"/>
@@ -9003,7 +9003,7 @@ dalla GUI)</translation>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="50"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi da utilizzare se il comando fornito corrisponde al pattern. (facoltativo)&lt;/p&gt;&lt;p&gt;Puoi inserire un altro alias o un comando da inviare direttamente al gioco. Per comandi complessi che richiedono la modifica di variabili di questo profilo, utilizza invece uno script Lua nell'area editor sottostante. E' possibile utilizzare sia questo campo che uno script Lua - il contenuto di questo campo verrà utilizzato prima di eseguire lo script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="53"/>
@@ -12429,12 +12429,12 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="603"/>
       <source>Number of lines of command line history to save:</source>
-      <translation type="unfinished"/>
+      <translation>Numero di righe della linea dei comandi da mantenere nella cronologia:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="616"/>
       <source>&lt;p&gt;Sets the maximum number of the most recent entries used in each separate command line that are now stored between sessions.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This limit is only applied when the data is stored at the end of a session; whilst a profile is active the command history is unlimited with any reused entries returned to the front of the list.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Imposta il numero massimo di comandi utilizzati in ogni linea dei comandi che vengono memorizzate tra le sessioni.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Questo limite viene applicato solo quando i dati vengono memorizzati al termine di una sessione; mentre un profilo è attivo la cronologia dei comandi è illimitata con eventuali voci riutilizzate inserite all'inizio della lista.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="793"/>
@@ -14074,7 +14074,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="74"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi da utilizzare se il comando fornito corrisponde al pattern. (facoltativo)&lt;/p&gt;&lt;p&gt;Puoi inserire un altro alias o un comando da inviare direttamente al gioco. Per comandi complessi che richiedono la modifica di variabili di questo profilo, utilizza invece uno script Lua nell'area editor sottostante. E' possibile utilizzare sia questo campo che uno script Lua - il contenuto di questo campo verrà utilizzato prima di eseguire lo script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="77"/>
@@ -14235,7 +14235,7 @@ o script LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="124"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Inserisci uno o più comandi da utilizzare se il comando fornito corrisponde al pattern. (facoltativo)&lt;/p&gt;&lt;p&gt;Puoi inserire un altro alias o un comando da inviare direttamente al gioco. Per comandi complessi che richiedono la modifica di variabili di questo profilo, utilizza invece uno script Lua nell'area editor sottostante. E' possibile utilizzare sia questo campo che uno script Lua - il contenuto di questo campo verrà utilizzato prima di eseguire lo script.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
