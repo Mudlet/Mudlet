@@ -11353,7 +11353,7 @@ Prova a caricare una versione più vecchia in &apos;Connetti - Opzioni - Cronolo
       <location filename="../src/mudlet.cpp" line="2964"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <extracomment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</extracomment>
-      <translation>[  INFO ]  - Riga di input in modalità compatta. Premi %1 per mostrare di nuovo i pulsanti in basso a destra.</translation>
+      <translation>[ INFO ]  - Riga di input in modalità compatta. Premi %1 per mostrare di nuovo i pulsanti in basso a destra.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3023"/>
