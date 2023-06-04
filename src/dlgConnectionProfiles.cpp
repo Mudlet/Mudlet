@@ -1561,6 +1561,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     pHost->hideMudletsVariables();
     if (entries.isEmpty()) {
         firstTimeLoad = true;
+        pHost->mLoadedOk = true;
     } else {
         QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
