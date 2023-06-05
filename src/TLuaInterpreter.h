@@ -471,6 +471,7 @@ public:
     static int enableHorizontalScrollBar(lua_State*);
     static int enableScrolling(lua_State*);
     static int disableScrolling(lua_State*);
+    static int scrollingState(lua_State*);
     static int enableCommandLine(lua_State*);
     static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State*);
