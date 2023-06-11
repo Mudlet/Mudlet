@@ -1229,10 +1229,12 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
             if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
                 setCursor(Qt::PointingHandCursor);
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
+                QStringList commands = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
+                // If a special tooltip hint was given, use that one.
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                QToolTip::showText(event->globalPos(), tooltip.join(QChar::LineFeed));
+                QToolTip::showText(event->globalPos(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
 #else
-                QToolTip::showText(event->globalPosition().toPoint(), tooltip.join(QChar::LineFeed));
+                QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
 #endif
             } else {
                 setCursor(Qt::IBeamCursor);
@@ -1858,13 +1860,16 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
+                        // skip a special tooltip hint, if one was given
+                        int hint_offset = hint.size() > command.size() ? 1 : 0;
+
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;
-                            if (i < hint.size()) {
-                                pA = popup->addAction(hint[i]);
-                                mPopupCommands[hint[i]] = {command[i], luaReference.value(i, 0)};
+                            if (i + hint_offset < hint.size()) {
+                                pA = popup->addAction(hint[i + hint_offset]);
+                                mPopupCommands[hint[i + hint_offset]] = {command[i], luaReference.value(i, 0)};
                             } else {
                                 pA = popup->addAction(command[i]);
                                 mPopupCommands[command[i]] = {command[i], luaReference.value(i, 0)};
