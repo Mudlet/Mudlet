@@ -70,7 +70,7 @@ public:
         return mMediaPlayer->playbackState();
 #endif
     }
-    void setVolume(int volume) {
+    void setVolume(int volume) const {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         return mMediaPlayer->setVolume(volume);
 #else

@@ -59,6 +59,7 @@ void TMedia::playMedia(TMediaData& mediaData)
     mediaData.setMediaFileName(mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == qsl("Off")) {
+        TMedia::processUrl(mediaData);
         return;
     }
 
@@ -778,15 +779,14 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged, nullptr, nullptr);
     connect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged, this,
-            [&](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, pPlayer); });
+            [=](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, pPlayer); });
 #else
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::playbackStateChanged, nullptr, nullptr);
     connect(pPlayer.getMediaPlayer(), &QMediaPlayer::playbackStateChanged, this,
-            [&](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, pPlayer); });
+            [=](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, pPlayer); });
 #endif
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
-
-    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, this, [&](qint64 progress) {
+    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, this, [=](qint64 progress) {
         const int volume = pPlayer.getMediaData().getMediaVolume();
         const int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
         const int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
