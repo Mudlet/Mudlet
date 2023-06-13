@@ -865,6 +865,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     widget_searchTerm->updateGeometry();
 
+    showIDLabels(mpHost->showIdsInEditor());
     if (mAutosaveInterval > 0) {
         startTimer(mAutosaveInterval * 1min);
     }
@@ -10131,4 +10132,14 @@ void dlgTriggerEditor::changeEvent(QEvent* e)
             }
         }
     }
+}
+
+void dlgTriggerEditor::showIDLabels(const bool visible)
+{
+    mpAliasMainArea->frameId->setVisible(visible);
+    mpActionsMainArea->frameId->setVisible(visible);
+    mpKeysMainArea->frameId->setVisible(visible);
+    mpScriptsMainArea->frameId->setVisible(visible);
+    mpTimersMainArea->frameId->setVisible(visible);
+    mpTriggersMainArea->frameId->setVisible(visible);
 }

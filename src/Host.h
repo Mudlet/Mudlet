@@ -415,7 +415,8 @@ public:
     void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
     void setCommandLineHistorySaveSize(const int lines);
-
+    bool showIdsInEditor() const { return mShowIDsInEditor; }
+    void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -896,6 +897,9 @@ private:
     // to reproduce that behavior there is little reason to not enable it
     // by default:
     int mCommandLineHistorySaveSize = 500;
+
+    // Whether to display each item's ID number in the editor:
+    bool mShowIDsInEditor = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)
