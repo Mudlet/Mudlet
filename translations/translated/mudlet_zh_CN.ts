@@ -1235,7 +1235,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2109"/>
       <source>Debug messages from all profiles are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>所有配置文件的调试消息都显示在这里。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2112"/>
@@ -1259,7 +1259,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2126"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>编辑器的错误窗口用于配置文件 &quot;%1&quot;, 历史内容。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2128"/>
@@ -1365,7 +1365,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="1110"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - 分屏回滚已激活。按CTRL-ENTER 键取消。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1922"/>
