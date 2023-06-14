@@ -160,6 +160,7 @@ public:
     void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
+    void setScrolling(const bool state);
     void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
@@ -207,6 +208,11 @@ public:
     void setSearchOptions(const SearchOptions);
     void setProxyForFocus(TCommandLine*);
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
+    // Raises an event if the number of lines (in the
+    // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
+    // non-scrolling window:
+    void handleLinesOverflowEvent(const int lineCount);
+    void clearSplit();
 
 
     QPointer<Host> mpHost;
@@ -296,6 +302,7 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
+    bool mScrollingEnabled = true;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
 
@@ -336,7 +343,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
-    QDebugStateSaver saver(debug);
+    QDebugStateSaver const saver(debug);
     switch (type) {
     case TConsole::UnknownType:           text = qsl("Unknown"); break;
     case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;
