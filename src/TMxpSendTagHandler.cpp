@@ -42,7 +42,8 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
     QStringList hrefs = href.split('|');
     QStringList hints = hint.isEmpty() ? hrefs : hint.split('|');
 
-    while (hints.size() > hrefs.size()) {
+    // remove excess hints, but allow for a custom tooltip
+    while (hints.size() > hrefs.size() + 1) {
         hints.removeFirst();
     }
 
