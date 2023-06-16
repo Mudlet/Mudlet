@@ -2548,8 +2548,8 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollingState
-int TLuaInterpreter::scrollingState(lua_State* L)
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollingActive
+int TLuaInterpreter::scrollingActive(lua_State* L)
 {
     QString const windowName {WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
@@ -15748,7 +15748,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getSaveCommandHistory", TLuaInterpreter::getSaveCommandHistory);
     lua_register(pGlobalLua, "enableScrolling", TLuaInterpreter::enableScrolling);
     lua_register(pGlobalLua, "disableScrolling", TLuaInterpreter::disableScrolling);
-    lua_register(pGlobalLua, "scrollingState", TLuaInterpreter::scrollingState);
+    lua_register(pGlobalLua, "scrollingActive", TLuaInterpreter::scrollingActive);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
