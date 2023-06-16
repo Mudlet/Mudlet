@@ -5206,3 +5206,14 @@ void T2DMap::setPlayerRoomStyle(const int type)
         mPlayerRoomColorGradentStops[4] = QGradientStop(0.95, QColor(255, 0, 0, 150));
     } // End of switch ()
 }
+
+void T2DMap::clearSelection()
+{
+    if (!mMultiSelection && !mMultiSelectionSet.isEmpty()) {
+        mMultiSelectionSet.clear();
+        mMultiSelectionHighlightRoomId = 0;
+        mMultiSelectionListWidget.hide();
+        mMultiSelectionListWidget.clear();
+        update();
+    }
+}
