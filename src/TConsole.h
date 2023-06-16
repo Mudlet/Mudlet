@@ -161,6 +161,7 @@ public:
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
     void setScrolling(const bool state);
+    bool getScrolling() const { return mScrollingEnabled; }
     void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
@@ -302,7 +303,6 @@ public:
     int mBgImageMode = 0;
     QString mBgImagePath;
     bool mHScrollBarEnabled = false;
-    bool mScrollingEnabled = true;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
 
@@ -335,6 +335,7 @@ private:
     SearchOptions mSearchOptions = SearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
+    bool mScrollingEnabled = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
