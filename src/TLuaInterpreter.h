@@ -471,6 +471,7 @@ public:
     static int enableHorizontalScrollBar(lua_State*);
     static int enableScrolling(lua_State*);
     static int disableScrolling(lua_State*);
+    static int scrollingActive(lua_State*);
     static int enableCommandLine(lua_State*);
     static int disableCommandLine(lua_State*);
     static int enableClickthrough(lua_State*);
@@ -653,6 +654,7 @@ public:
     static int getConfig(lua_State*);
     static int getSaveCommandHistory(lua_State*);
     static int setSaveCommandHistory(lua_State*);
+    static int clearMapSelection(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
