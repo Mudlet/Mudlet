@@ -2548,6 +2548,21 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollingActive
+int TLuaInterpreter::scrollingActive(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        // Handle the main console case:
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    lua_pushboolean(L, console->getScrolling());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
 // This (and the next) function originally only worked on TConsole instances
 // to show/hide a command line at the bottom (and the first would create the
@@ -15734,6 +15749,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "enableScrolling", TLuaInterpreter::enableScrolling);
     lua_register(pGlobalLua, "disableScrolling", TLuaInterpreter::disableScrolling);
     lua_register(pGlobalLua, "clearMapSelection", TLuaInterpreter::clearMapSelection);
+    lua_register(pGlobalLua, "scrollingActive", TLuaInterpreter::scrollingActive);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
