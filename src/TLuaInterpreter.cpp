@@ -15748,6 +15748,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getSaveCommandHistory", TLuaInterpreter::getSaveCommandHistory);
     lua_register(pGlobalLua, "enableScrolling", TLuaInterpreter::enableScrolling);
     lua_register(pGlobalLua, "disableScrolling", TLuaInterpreter::disableScrolling);
+    lua_register(pGlobalLua, "clearMapSelection", TLuaInterpreter::clearMapSelection);
     lua_register(pGlobalLua, "scrollingActive", TLuaInterpreter::scrollingActive);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
@@ -16776,6 +16777,25 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
 
     }
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearMapSelection
+int TLuaInterpreter::clearMapSelection(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (pHost->mpMap->mpMapper->mp2dMap->mMultiSelection) {
+        return warnArgumentValue(L, __func__, "rooms are being selected right now and cannot be stopped at this point");
+    }
+    if (pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.isEmpty()) {
+        lua_pushboolean(L, false);
+    } else {
+        pHost->mpMap->mpMapper->mp2dMap->clearSelection();
+        lua_pushboolean(L, true);
+    }
     return 1;
 }
 
