@@ -3074,7 +3074,7 @@ you can use it but there could be issues with aligning columns of text</string>
                 <set>Qt::ImhDigitsOnly</set>
                </property>
                <property name="inputMask">
-                <string notr="true">9999;#</string>
+                <string notr="true">9000;#</string>
                </property>
                <property name="maxLength">
                 <number>4</number>

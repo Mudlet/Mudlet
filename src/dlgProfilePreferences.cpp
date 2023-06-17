@@ -41,14 +41,15 @@
 #include <QColorDialog>
 #include <QFileDialog>
 #include <QFontDialog>
+#include <QHBoxLayout>
+#include <QKeySequenceEdit>
 #include <QNetworkDiskCache>
 #include <QPainter>
+#include <QRegularExpressionValidator>
 #include <QString>
 #include <QTableWidget>
 #include <QToolBar>
 #include <QUiLoader>
-#include <QKeySequenceEdit>
-#include <QHBoxLayout>
 #include "../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h"
 #include "post_guard.h"
 
@@ -849,6 +850,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
         lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
         lineEdit_discordUserDiscriminator->setText(pHost->mRequiredDiscordUserDiscriminator);
+        // Now allows a single '0' as an alternative to a full four digit
+        // discriminator so that things still work with "new" format names after
+        // the 2023/05 Discord naming changes:
+        QRegularExpressionValidator discriminatorValidator(csmDiscordDiscriminatorRegEx);
+        lineEdit_discordUserDiscriminator->setValidator(&discriminatorValidator);
+        connect(lineEdit_discordUserDiscriminator, &QLineEdit::editingFinished, this, &dlgProfilePreferences::slot_validateDiscordDiscriminator, Qt::UniqueConnection);
     }
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
@@ -3031,9 +3038,11 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->mRequiredDiscordUserName = lineEdit_discordUserName->text().trimmed();
         if (lineEdit_discordUserDiscriminator->hasAcceptableInput()) {
-            // The input mask specifies 4 digits [0-9]
+            // The input mask specifies at least one digit and up to 4 digits [0-9]
+            // The validator should accept a single '0' or exactly 4 digits
             pHost->mRequiredDiscordUserDiscriminator = lineEdit_discordUserDiscriminator->text();
         } else {
+            lineEdit_discordUserDiscriminator->clear();
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
 
@@ -4446,4 +4455,18 @@ void dlgProfilePreferences::slot_changeLargeAreaExitArrows(const bool state)
     }
 
     pHost->setLargeAreaExitArrows(state);
+}
+
+void dlgProfilePreferences::slot_validateDiscordDiscriminator()
+{
+    if (lineEdit_discordUserDiscriminator->text().isEmpty()) {
+        return;
+    }
+    QRegularExpressionMatch match = csmDiscordDiscriminatorRegEx.match(lineEdit_discordUserDiscriminator->text());
+    if (match.hasMatch()) {
+        // It is okay:
+        return;
+    }
+    // Else it isn't so clear it:
+    lineEdit_discordUserDiscriminator->clear();
 }

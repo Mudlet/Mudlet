@@ -823,12 +823,44 @@ void XMLimport::readHost(Host* pHost)
 
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserName"))) {
         pHost->mRequiredDiscordUserName = attributes().value(QLatin1String("mRequiredDiscordUserName")).toString();
+        if (!pHost->mRequiredDiscordUserName.isEmpty()) {
+            static const QRegularExpression newDiscordUserNameValid{qsl("^[a-z,0-9,\\.,_]+$")};
+            QRegularExpressionMatch match = newDiscordUserNameValid.match(pHost->mRequiredDiscordUserName);
+            if (!match.hasMatch()) {
+                // We have a user name that contains characters that do not
+                // match the post 2023/05 Discord user-name changes
+                QString warningMessage{tr("[ WARN ]  - A Discord-RPC username has been specified in the preferences for this\n"
+                                          "profile of: \"%1\"\n"
+                                          "however, from May 2023, Discord is changing the user name format to be a unique\n"
+                                          "string for each user that contains only lower case ASCII alphabet ('a' to 'z'),\n"
+                                          "digits ('0' to '9'), '_' and '.'. This name does not meet that requirement and\n"
+                                          "will need to be changed when your Discord name is updated to the new format.\n"
+                                          "Once that happens you will need to adjust this value in the \"Chat\" tab of\n"
+                                          "the settings otherwise the Discord-RPC integration for this profile will stop\n"
+                                          "working.\n")
+                            .arg(pHost->mRequiredDiscordUserName)};
+                pHost->postMessage(warningMessage);
+            }
+        }
     } else {
         pHost->mRequiredDiscordUserName.clear();
     }
 
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
         pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
+        if (!pHost->mRequiredDiscordUserDiscriminator.isEmpty() && pHost->mRequiredDiscordUserDiscriminator.compare(QLatin1String("0"))) {
+            // We have a discriminator which won't work after the 2023/05
+            // Discord user name changes
+            QString warningMessage{tr("[ WARN ]  - A Discord-RPC 'discriminator has been specified in the preferences\n"
+                                      "for this profile of: \"%1\" however, from May 2023, Discord is removing this\n"
+                                      "and changing the user name format to be a unique string for each user. So when\n"
+                                      "your Discord name is updated to the new format you will also need to remove\n"
+                                      "or set to a single '0' (which is what Discord will use during the change-over)\n"
+                                      "this value in the \"Chat\" tab of the settings otherwise the Discord-RPC\n"
+                                      "integration for this profile will stop working.")
+                        .arg(pHost->mRequiredDiscordUserDiscriminator)};
+            pHost->postMessage(warningMessage);
+        }
     } else {
         pHost->mRequiredDiscordUserDiscriminator.clear();
     }
