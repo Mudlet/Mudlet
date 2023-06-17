@@ -5866,7 +5866,6 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     if (pT) {
         const QString command = pT->getCommand();
         const QString name = pT->getName();
-        mpKeysMainArea->lineEdit_key_command->clear();
         mpKeysMainArea->lineEdit_key_command->setText(command);
         mpKeysMainArea->lineEdit_key_name->setText(name);
         mpKeysMainArea->label_idNumber->setText(QString::number(ID));
@@ -6360,12 +6359,11 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
             pItem->setText(eventHandlerList[i]);
             mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
         }
-        mpScriptsMainArea->lineEdit_script_name->clear();
-        mpScriptsMainArea->label_idNumber->clear();
         const QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
+        mpScriptsMainArea->label_idNumber->setText(QString::number(ID));
         if (auto error = pT->getLoadingError(); error) {
             showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
                            "possibly by another script. The error was:%2%3").arg(qsl("<br>"), error.value()));
