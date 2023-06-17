@@ -76,7 +76,7 @@
       <item>
        <widget class="QFrame" name="frameId">
         <property name="frameShape">
-         <enum>QFrame::Box</enum>
+         <enum>QFrame::NoFrame</enum>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_frameId">
          <property name="leftMargin">
