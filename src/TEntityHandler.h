@@ -38,14 +38,14 @@ public:
     void reset();
 
     bool isEntityResolved() const;
-    char getResultAndReset();
+    QString getResultAndReset();
 
 private:
     const TEntityResolver& mpEntityResolver;
 
     QString mCurrentEntity;
     bool mIsResolved = false;
-    char mResult = '\0';
+    QString mResult;
 
 };
 

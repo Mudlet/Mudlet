@@ -27,12 +27,7 @@ bool TEntityHandler::handle(char character)
 {
     if (character == ';' && !mCurrentEntity.isEmpty()) { // END OF ENTITY
         mCurrentEntity.append(character);
-
-        QString resolved = mpEntityResolver.getResolution(mCurrentEntity);
-        // we only get the last character, current implementation of TBuffer loop is based on one char at a time
-        // TODO: it could be interesting to have a way to send longer sequences to the buffer
-        mResult = resolved.back().toLatin1();
-
+        mResult = mpEntityResolver.getResolution(mCurrentEntity);
         mIsResolved = true;
         mCurrentEntity.clear();
         return true;
@@ -57,7 +52,7 @@ void TEntityHandler::reset()
     mCurrentEntity.clear();
     mIsResolved = false;
 }
-char TEntityHandler::getResultAndReset()
+QString TEntityHandler::getResultAndReset()
 {
     reset();
     return mResult;

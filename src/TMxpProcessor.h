@@ -31,7 +31,7 @@
 class Host;
 
 enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
-enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE };
+enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE, HANDLER_INSERT_ENTITY_VALUE };
 
 // handles the MXP protocol
 class TMxpProcessor
@@ -53,7 +53,7 @@ public:
     bool isEnabled() const;
     void resetToDefaultMode();
 
-    TMxpProcessingResult processMxpInput(char& ch);
+    TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities, QString *entityValue);
     void processRawInput(char ch);
 
 

@@ -401,11 +401,18 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // repeated switch(...) and branch to one of a series of decoding methods
     // each with another up to 128 value switch()
 
-    size_t const localBufferLength = localBuffer.length();
+    size_t localBufferLength = localBuffer.length();
     size_t localBufferPosition = 0;
     if (!localBufferLength) {
         return;
     }
+
+    // If we are resolving/interpolating an MXP entity, the interpolated text
+    // ends a localBuffer[endOfMXPEntity - 1]. This is used to inhibit an
+    // (infinite) recursion like <!EN E "foobar&E;>&E;
+    // Interpolating a predefined entity like <!EN E "foobar&frac12;>&E;
+    // will work though.
+    size_t endOfMXPEntity = 0;
 
     while (true) {
         if (localBufferPosition >= localBufferLength) {
@@ -653,13 +660,39 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         if (mpHost->mMxpProcessor.isEnabled()) {
             if (mpHost->mServerMXPenabled) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
-                    TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch);
+                    // The MXP Processor will return the contents of the entity here.
+                    // We use this to mangle the value into the localBuffer:
+                    QString entityValue;
+
+                    // The comparison signals to the processor, if custom entities may be resolved
+                    // (countermeasure against infinite recursion)
+                    TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch,
+                            localBufferPosition >= endOfMXPEntity, &entityValue);
+
                     if (result == HANDLER_NEXT_CHAR) {
                         localBufferPosition++;
                         continue;
                     } else if (result == HANDLER_COMMIT_LINE) { // BR tag
                         ch = '\n';
                         goto COMMIT_LINE;
+                    } else if (result == HANDLER_INSERT_ENTITY_VALUE) {
+                        // We need to insert the entity value into the buffer at the current position to
+                        // process it
+                        size_t valueLength = entityValue.length();
+
+                        if (valueLength == 1) {
+                            // this is likely a predefined entity. Either way, it cannot
+                            // contain a full MXP tag or entity, so we just pass this on:
+                            ch = entityValue[0].toLatin1();
+                        } else {
+                            localBufferPosition++; // advance past closing ';'
+                            localBuffer.insert(localBufferPosition, entityValue.toLatin1());
+                            localBufferLength += valueLength;
+                            endOfMXPEntity = localBufferPosition + valueLength;
+                            // ch = (*entityValue).back().toLatin1(); REMOVE ME, JUST A HINT
+                            // Now restart to parse the newly inserted text
+                            continue;
+                        }
                     } else { //HANDLER_FALL_THROUGH -> do nothing
                         assert(localBuffer[localBufferPosition] == ch);
                     }

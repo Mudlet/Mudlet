@@ -145,7 +145,7 @@ void TMxpProcessor::enable()
     mMXP = true;
 }
 
-TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch)
+TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities, QString *entityValue)
 {
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
         return HANDLER_NEXT_CHAR;
@@ -165,7 +165,10 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch)
 
     if (mEntityHandler.handle(ch)) {             // ch is part of an entity
         if (mEntityHandler.isEntityResolved()) { // entity has been mapped (i.e. ch == ';')
-            ch = mEntityHandler.getResultAndReset();
+            *entityValue = mEntityHandler.getResultAndReset();
+            // This is for backwards compatibility only and not used! (will remove it later)
+            ch = (*entityValue).back().toLatin1();
+            return HANDLER_INSERT_ENTITY_VALUE;
         } else { // ask for the next char
             return HANDLER_NEXT_CHAR;
         }
