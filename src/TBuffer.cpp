@@ -414,6 +414,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // will work though.
     size_t endOfMXPEntity = 0;
 
+    // A similar index which points behind the name of an entity like
+    // &unknown; which does not exist and will be printed literal, w/o
+    // any MXP interpretation
+    size_t endOfLiteralEntity = 0;
+
     while (true) {
         if (localBufferPosition >= localBufferLength) {
             return;
@@ -657,7 +662,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
-        if (mpHost->mMxpProcessor.isEnabled()) {
+        if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
             if (mpHost->mServerMXPenabled) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
                     // The MXP Processor will return the contents of the entity here.
@@ -675,24 +680,52 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     } else if (result == HANDLER_COMMIT_LINE) { // BR tag
                         ch = '\n';
                         goto COMMIT_LINE;
-                    } else if (result == HANDLER_INSERT_ENTITY_VALUE) {
+                    } else if (result == HANDLER_INSERT_ENTITY_CUST) {
                         // We need to insert the entity value into the buffer at the current position to
                         // process it
                         size_t valueLength = entityValue.length();
 
-                        if (valueLength == 1) {
-                            // this is likely a predefined entity. Either way, it cannot
-                            // contain a full MXP tag or entity, so we just pass this on:
-                            ch = entityValue[0].toLatin1();
-                        } else {
-                            localBufferPosition++; // advance past closing ';'
-                            localBuffer.insert(localBufferPosition, entityValue.toLatin1());
-                            localBufferLength += valueLength;
-                            endOfMXPEntity = localBufferPosition + valueLength;
-                            // ch = (*entityValue).back().toLatin1(); REMOVE ME, JUST A HINT
-                            // Now restart to parse the newly inserted text
-                            continue;
+                        localBuffer.replace(0, localBufferPosition + 1, entityValue.toLatin1());
+                        localBufferLength = localBuffer.length();
+                        localBufferPosition = 0;
+                        endOfMXPEntity = valueLength;
+                        endOfLiteralEntity = 0;
+                        // Now restart to parse the newly inserted text
+                        continue;
+                    } else if (result == HANDLER_INSERT_ENTITY_LIT) {
+                        // We need to insert the entity value into the buffer at the current position to
+                        // process it
+                        size_t valueLength = entityValue.length();
+
+                        localBuffer.replace(0, localBufferPosition + 1, entityValue.toLatin1());
+                        localBufferLength  = localBuffer.length();;
+                        localBufferPosition = 0;
+                        endOfMXPEntity = valueLength;
+                        endOfLiteralEntity = valueLength;
+                        // Now restart to parse the newly inserted text
+                        continue;
+                    } else if (result == HANDLER_INSERT_ENTITY_SYS) {
+                        // System entities are literal QString / UTF values which we can just 'print'
+
+                        const TChar::AttributeFlags attributeFlags =
+                                ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
+                                | (mItalics || mpHost->mMxpClient.italic() ? TChar::Italic : TChar::None)
+                                | (mOverline ? TChar::Overline : TChar::None)
+                                | (mReverse ? TChar::Reverse : TChar::None)
+                                | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
+                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None);
+
+                        TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
+
+                        size_t valueLength = entityValue.length();
+                        mMudLine.append(entityValue);
+                        // We also need to set the color attributes for the special character
+                        while (valueLength--) {
+                            mMudBuffer.push_back(c);
                         }
+                        // We already handled the input, go to the next character
+                        localBufferPosition++;
+                        continue;
                     } else { //HANDLER_FALL_THROUGH -> do nothing
                         assert(localBuffer[localBufferPosition] == ch);
                     }

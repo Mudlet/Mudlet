@@ -20,24 +20,43 @@
 #include "TEntityResolver.h"
 #include "utils.h"
 
-QString TEntityResolver::getResolution(const QString& entity) const
+QString TEntityResolver::getResolution(const QString& entity, bool resolveCustomEntities, TEntityType *entityType) const
 {
     if (entity.front() != '&' || entity.back() != ';') {
+        if (entityType) {
+            *entityType = ENTITY_TYPE_UNKNOWN;
+        }
         return entity;
     }
 
-    auto ptr = mEntititesMap.find(entity.toLower());
-    if (ptr != mEntititesMap.end()) {
-        return *ptr;
+    if (resolveCustomEntities) {
+        auto ptr = mEntititesMap.find(entity.toLower());
+        if (ptr != mEntititesMap.end()) {
+            if (entityType) {
+                *entityType = ENTITY_TYPE_CUSTOM;
+            }
+            return *ptr;
+        }
     }
 
     auto stdPtr = scmStandardEntites.find(entity.toLower());
     if (stdPtr != scmStandardEntites.end()) {
+        if (entityType) {
+            *entityType = ENTITY_TYPE_SYSTEM;
+        }
         return *stdPtr;
     }
 
-
-    return entity[1] == '#' ? resolveCode(entity.mid(2, entity.size() - 3)) : entity;
+    if (entity[1] == '#') {
+        if (entityType) {
+            *entityType = ENTITY_TYPE_SYSTEM;
+        }
+        return resolveCode(entity.mid(2, entity.size() - 3));
+    }
+    if (entityType) {
+        *entityType = ENTITY_TYPE_UNKNOWN;
+    }
+    return entity;
 }
 
 bool TEntityResolver::registerEntity(const QString& entity, const QString& str)

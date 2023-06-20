@@ -163,12 +163,17 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
     }
 
-    if (mEntityHandler.handle(ch)) {             // ch is part of an entity
+    if (mEntityHandler.handle(ch, resolveCustomEntities)) {             // ch is part of an entity
         if (mEntityHandler.isEntityResolved()) { // entity has been mapped (i.e. ch == ';')
             *entityValue = mEntityHandler.getResultAndReset();
-            // This is for backwards compatibility only and not used! (will remove it later)
-            ch = (*entityValue).back().toLatin1();
-            return HANDLER_INSERT_ENTITY_VALUE;
+            switch(mEntityHandler.getEntityType()) {
+                case ENTITY_TYPE_CUSTOM:
+                    return HANDLER_INSERT_ENTITY_CUST;
+                case ENTITY_TYPE_SYSTEM:
+                    return HANDLER_INSERT_ENTITY_SYS;
+                default:
+                    return HANDLER_INSERT_ENTITY_LIT;
+            }
         } else { // ask for the next char
             return HANDLER_NEXT_CHAR;
         }

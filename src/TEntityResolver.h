@@ -26,6 +26,8 @@
 #include "post_guard.h"
 #include <functional>
 
+enum TEntityType { ENTITY_TYPE_SYSTEM, ENTITY_TYPE_CUSTOM, ENTITY_TYPE_UNKNOWN };
+
 class TEntityResolver
 {
 public:
@@ -40,7 +42,7 @@ public:
     bool registerEntity(const QString& entity, const QString& str);
     bool unregisterEntity(const QString& entity);
 
-    QString getResolution(const QString& entityValue) const;
+    QString getResolution(const QString& entityValue, bool resolveCustomEntities = true, TEntityType *entityType = NULL) const;
 
     static QString resolveCode(ushort val);
     static QString resolveCode(const QString& entityValue);

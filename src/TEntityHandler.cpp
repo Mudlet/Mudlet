@@ -23,20 +23,22 @@
 #include "TEntityHandler.h"
 
 // returns true if the char is handled by the EntityHandler (i.e. it is part of an entity)
-bool TEntityHandler::handle(char character)
+bool TEntityHandler::handle(char character, bool resolveCustomEntities)
 {
     if (character == ';' && !mCurrentEntity.isEmpty()) { // END OF ENTITY
         mCurrentEntity.append(character);
-        mResult = mpEntityResolver.getResolution(mCurrentEntity);
+        mResult = mpEntityResolver.getResolution(mCurrentEntity, resolveCustomEntities, &entityType);
         mIsResolved = true;
         mCurrentEntity.clear();
         return true;
     } else if (character == '&' || !mCurrentEntity.isEmpty()) { // START OR MIDDLE OF ENTITY
         mIsResolved = false;
+        entityType = ENTITY_TYPE_UNKNOWN;
         mCurrentEntity.append(character);
         return true;
     } else if (mCurrentEntity.length() > 7) { // LONG ENTITY? MAYBE INVALID... IGNORE IT
         reset();
+        entityType = ENTITY_TYPE_UNKNOWN;
         return false;
     } else {
         return false;
