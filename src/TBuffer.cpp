@@ -680,7 +680,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     case HANDLER_INSERT_ENTITY_CUST:
                         // custom entity value set with <!EN>, recurse except for other custom entities
                     case HANDLER_INSERT_ENTITY_LIT: {
-                        // Unknown entity name liek &unknown; push back into buffer for codeset interpretation,
+                        // Unknown entity name like &unknown; push back into buffer for codeset interpretation,
                         // but no MXP parsing.
 
                         // We need to insert the entity value into the buffer at the current position to
@@ -688,11 +688,27 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
 
                         localBuffer.replace(0, localBufferPosition + 1, mpHost->mMxpProcessor.getEntityValue().toLatin1());
+
+                        if (result == HANDLER_INSERT_ENTITY_LIT) {
+                            if (localBufferPosition < endOfMXPEntity) {
+                                // This is a special case, our unknown entity might actually be a custom one
+                                // inside a custom one which we refused to resolve to avoid an endless recursion.
+                                // So we carefully adjust the end marker so custom entities are not reenabled to early
+                                endOfMXPEntity -= localBufferPosition + 1 - valueLength;
+                                endOfLiteralEntity = valueLength;
+                            } else {
+                                endOfMXPEntity = valueLength;
+                            }
+                            endOfLiteralEntity = valueLength;
+                        } else {
+                            // HANDLER_INSERT_ENTITY_CUST
+                            endOfMXPEntity = valueLength;
+                            endOfLiteralEntity = 0;
+                        }
+
+                        // Now restart the loop to parse the newly inserted text
                         localBufferLength = localBuffer.length();
                         localBufferPosition = 0;
-                        endOfMXPEntity = valueLength;
-                        endOfLiteralEntity = (result == HANDLER_INSERT_ENTITY_LIT) ? valueLength : 0;
-                        // Now restart the loop to parse the newly inserted text
                         continue;
                     }
                     case HANDLER_INSERT_ENTITY_SYS: {

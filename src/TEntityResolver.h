@@ -42,6 +42,9 @@ public:
     bool registerEntity(const QString& entity, const QString& str);
     bool unregisterEntity(const QString& entity);
 
+    // Having this optional pointer argument may not be optimal, but some callers must know the type
+    // and we cannot have a private variable recording it as many classes calling us are using this
+    // as a const class.
     QString getResolution(const QString& entityValue, bool resolveCustomEntities = true, TEntityType *entityType = nullptr) const;
 
     static QString resolveCode(ushort val);
