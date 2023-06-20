@@ -39,7 +39,19 @@ QString TEntityResolver::getResolution(const QString& entity, bool resolveCustom
         }
     }
 
-    auto stdPtr = scmStandardEntites.find(entity.toLower());
+    // Although Mudlet ignores case, MXP defines entity names as case-sensitive.
+    // Also, the predefined entities &Auml; and &auml; are for example different.
+    // So we first check for an exact match:
+    auto stdPtr = scmStandardEntites.find(entity);
+    if (stdPtr != scmStandardEntites.end()) {
+        if (entityType) {
+            *entityType = ENTITY_TYPE_SYSTEM;
+        }
+        return *stdPtr;
+    }
+
+    // then see if there is at least a case-insensitive match for backwards compatibility:
+    stdPtr = scmStandardEntites.find(entity.toLower());
     if (stdPtr != scmStandardEntites.end()) {
         if (entityType) {
             *entityType = ENTITY_TYPE_SYSTEM;
@@ -166,14 +178,20 @@ const QHash<QString, QString> TEntityResolver::scmStandardEntites = {
         {qsl("&ordf;"), qsl("ª")},
         {qsl("&laquo;"), qsl("«")},
         {qsl("&not;"), qsl("¬")},
-        {qsl("&shy;"), qsl("­")},
+        // This was an invisible soft-hyphen. However, Mudlet can't
+        // display it, even throws a debug msg. So we do like other
+        // clients, just use a std hyphen:
+        {qsl("&shy;"), QChar(0x2010)},
         {qsl("&reg;"), qsl("®")},
         {qsl("&macr;"), qsl("¯")},
         {qsl("&deg;"), qsl("°")},
         {qsl("&plusmn;"), qsl("±")},
+        {qsl("&divide;"), qsl("÷")},
+        {qsl("&times;"), qsl("×")},
         {qsl("&sup2;"), qsl("²")},
         {qsl("&sup3;"), qsl("³")},
         {qsl("&acute;"), qsl("´")},
+        {qsl("&uml;"), qsl("¨")},
         {qsl("&micro;"), qsl("µ")},
         {qsl("&para;"), qsl("¶")},
         {qsl("&middot;"), qsl("·")},
@@ -184,6 +202,67 @@ const QHash<QString, QString> TEntityResolver::scmStandardEntites = {
         {qsl("&frac14;"), qsl("¼")},
         {qsl("&frac12;"), qsl("½")},
         {qsl("&frac34;"), qsl("¾")},
-        {qsl("&iquest;"), qsl("¿")}
+        {qsl("&iquest;"), qsl("¿")},
+        {qsl("&Aacute;"), qsl("Á")},
+        {qsl("&aacute;"), qsl("á")},
+        {qsl("&Acirc;"), qsl("Â")},
+        {qsl("&acirc;"), qsl("â")},
+        {qsl("&AElig;"), qsl("Æ")},
+        {qsl("&aelig;"), qsl("æ")},
+        {qsl("&Agrave;"), qsl("À")},
+        {qsl("&agrave;"), qsl("à")},
+        {qsl("&Aring;"), qsl("Å")},
+        {qsl("&aring;"), qsl("å")},
+        {qsl("&Atilde;"), qsl("Ã")},
+        {qsl("&atilde;"), qsl("ã")},
+        {qsl("&Auml;"), qsl("Ä")},
+        {qsl("&auml;"), qsl("ä")},
+        {qsl("&Ccedil;"), qsl("Ç")},
+        {qsl("&ccedil;"), qsl("ç")},
+        {qsl("&Eacute;"), qsl("É")},
+        {qsl("&eacute;"), qsl("é")},
+        {qsl("&Ecirc;"), qsl("Ê")},
+        {qsl("&ecirc;"), qsl("ê")},
+        {qsl("&Egrave;"), qsl("È")},
+        {qsl("&egrave;"), qsl("è")},
+        {qsl("&Euml;"), qsl("Ë")},
+        {qsl("&euml;"), qsl("ë")},
+        {qsl("&Iacute;"), qsl("Í")},
+        {qsl("&iacute;"), qsl("í")},
+        {qsl("&Icirc;"), qsl("Î")},
+        {qsl("&icirc;"), qsl("î")},
+        {qsl("&Igrave;"), qsl("Ì")},
+        {qsl("&igrave;"), qsl("ì")},
+        {qsl("&Iuml;"), qsl("Ï")},
+        {qsl("&iuml;"), qsl("ï")},
+        {qsl("&ETH;"), qsl("Ð")},
+        {qsl("&eth;"), qsl("ð")},
+        {qsl("&Ntilde;"), qsl("Ñ")},
+        {qsl("&ntilde;"), qsl("ñ")},
+        {qsl("&Oacute;"), qsl("Ó")},
+        {qsl("&oacute;"), qsl("ó")},
+        {qsl("&Ocirc;"), qsl("Ô")},
+        {qsl("&ocirc;"), qsl("ô")},
+        {qsl("&Ograve;"), qsl("Ò")},
+        {qsl("&ograve;"), qsl("ò")},
+        {qsl("&Oslash;"), qsl("Ø")},
+        {qsl("&oslash;"), qsl("ø")},
+        {qsl("&Otilde;"), qsl("Õ")},
+        {qsl("&otilde;"), qsl("õ")},
+        {qsl("&Ouml;"), qsl("Ö")},
+        {qsl("&ouml;"), qsl("ö")},
+        {qsl("&Uacute;"), qsl("Ú")},
+        {qsl("&uacute;"), qsl("ú")},
+        {qsl("&Ucirc;"), qsl("Û")},
+        {qsl("&ucirc;"), qsl("û")},
+        {qsl("&Ugrave;"), qsl("Ù")},
+        {qsl("&ugrave;"), qsl("ù")},
+        {qsl("&Uuml;"), qsl("Ü")},
+        {qsl("&uuml;"), qsl("ü")},
+        {qsl("&Yacute;"), qsl("Ý")},
+        {qsl("&yacute;"), qsl("ý")},
+        {qsl("&THORN;"), qsl("Þ")},
+        {qsl("&thorn;"), qsl("þ")},
+        {qsl("&szlig;"), qsl("ß")}
 };
 // clang-format on
