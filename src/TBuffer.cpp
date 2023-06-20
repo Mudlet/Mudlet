@@ -665,47 +665,39 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
             if (mpHost->mServerMXPenabled) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
-                    // The MXP Processor will return the contents of the entity here.
-                    // We use this to mangle the value into the localBuffer:
-                    QString entityValue;
-
                     // The comparison signals to the processor, if custom entities may be resolved
                     // (countermeasure against infinite recursion)
-                    TMxpProcessingResult const result = mpHost->mMxpProcessor.processMxpInput(ch,
-                            localBufferPosition >= endOfMXPEntity, &entityValue);
+                    TMxpProcessingResult const result =
+                            mpHost->mMxpProcessor.processMxpInput(ch, localBufferPosition >= endOfMXPEntity);
 
-                    if (result == HANDLER_NEXT_CHAR) {
+                    switch (result) {
+                    case HANDLER_NEXT_CHAR:
                         localBufferPosition++;
                         continue;
-                    } else if (result == HANDLER_COMMIT_LINE) { // BR tag
+                    case HANDLER_COMMIT_LINE: // BR tag
                         ch = '\n';
                         goto COMMIT_LINE;
-                    } else if (result == HANDLER_INSERT_ENTITY_CUST) {
+                    case HANDLER_INSERT_ENTITY_CUST:
+                        // custom entity value set with <!EN>, recurse except for other custom entities
+                    case HANDLER_INSERT_ENTITY_LIT: {
+                        // Unknown entity name liek &unknown; push back into buffer for codeset interpretation,
+                        // but no MXP parsing.
+
                         // We need to insert the entity value into the buffer at the current position to
                         // process it
-                        size_t valueLength = entityValue.length();
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
 
-                        localBuffer.replace(0, localBufferPosition + 1, entityValue.toLatin1());
+                        localBuffer.replace(0, localBufferPosition + 1, mpHost->mMxpProcessor.getEntityValue().toLatin1());
                         localBufferLength = localBuffer.length();
                         localBufferPosition = 0;
                         endOfMXPEntity = valueLength;
-                        endOfLiteralEntity = 0;
-                        // Now restart to parse the newly inserted text
+                        endOfLiteralEntity = (result == HANDLER_INSERT_ENTITY_LIT) ? valueLength : 0;
+                        // Now restart the loop to parse the newly inserted text
                         continue;
-                    } else if (result == HANDLER_INSERT_ENTITY_LIT) {
-                        // We need to insert the entity value into the buffer at the current position to
-                        // process it
-                        size_t valueLength = entityValue.length();
-
-                        localBuffer.replace(0, localBufferPosition + 1, entityValue.toLatin1());
-                        localBufferLength  = localBuffer.length();;
-                        localBufferPosition = 0;
-                        endOfMXPEntity = valueLength;
-                        endOfLiteralEntity = valueLength;
-                        // Now restart to parse the newly inserted text
-                        continue;
-                    } else if (result == HANDLER_INSERT_ENTITY_SYS) {
-                        // System entities are literal QString / UTF values which we can just 'print'
+                    }
+                    case HANDLER_INSERT_ENTITY_SYS: {
+                        // System entities are literal QString / UTF values which we just 'print'
+                        // There is no further MXP or Codeset evaluation
 
                         const TChar::AttributeFlags attributeFlags =
                                 ((mIsDefaultColor ? mBold || mpHost->mMxpClient.bold() : false) ? TChar::Bold : TChar::None)
@@ -717,8 +709,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
 
                         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
-                        size_t valueLength = entityValue.length();
-                        mMudLine.append(entityValue);
+                        size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
+                        mMudLine.append(mpHost->mMxpProcessor.getEntityValue());
                         // We also need to set the color attributes for the special character
                         while (valueLength--) {
                             mMudBuffer.push_back(c);
@@ -726,7 +718,9 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         // We already handled the input, go to the next character
                         localBufferPosition++;
                         continue;
-                    } else { //HANDLER_FALL_THROUGH -> do nothing
+                    }
+                    default:
+                        //HANDLER_FALL_THROUGH -> do nothing
                         assert(localBuffer[localBufferPosition] == ch);
                     }
                 } else {

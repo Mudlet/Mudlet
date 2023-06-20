@@ -145,7 +145,7 @@ void TMxpProcessor::enable()
     mMXP = true;
 }
 
-TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities, QString *entityValue)
+TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustomEntities)
 {
     if (!mMxpTagBuilder.accept(ch) && mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag()) {
         return HANDLER_NEXT_CHAR;
@@ -165,7 +165,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
 
     if (mEntityHandler.handle(ch, resolveCustomEntities)) {             // ch is part of an entity
         if (mEntityHandler.isEntityResolved()) { // entity has been mapped (i.e. ch == ';')
-            *entityValue = mEntityHandler.getResultAndReset();
+            lastEntityValue = mEntityHandler.getResultAndReset();
             switch(mEntityHandler.getEntityType()) {
                 case ENTITY_TYPE_CUSTOM:
                     return HANDLER_INSERT_ENTITY_CUST;

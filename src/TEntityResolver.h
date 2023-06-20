@@ -42,7 +42,7 @@ public:
     bool registerEntity(const QString& entity, const QString& str);
     bool unregisterEntity(const QString& entity);
 
-    QString getResolution(const QString& entityValue, bool resolveCustomEntities = true, TEntityType *entityType = NULL) const;
+    QString getResolution(const QString& entityValue, bool resolveCustomEntities = true, TEntityType *entityType = nullptr) const;
 
     static QString resolveCode(ushort val);
     static QString resolveCode(const QString& entityValue);

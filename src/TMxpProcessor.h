@@ -53,9 +53,9 @@ public:
     bool isEnabled() const;
     void resetToDefaultMode();
 
-    TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities, QString *entityValue);
+    TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities);
     void processRawInput(char ch);
-
+    inline QString getEntityValue() { return lastEntityValue;}
 
 private:
     // State of MXP system:
@@ -70,6 +70,9 @@ private:
     TEntityHandler mEntityHandler;
 
     TMxpClient* mpMxpClient = nullptr;
+
+    // value of the last resolved entity:
+    QString lastEntityValue;
 };
 
 #endif //MUDLET_TMXPPROCESSOR_H
