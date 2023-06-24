@@ -166,7 +166,7 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     if (mEntityHandler.handle(ch, resolveCustomEntities)) {             // ch is part of an entity
         if (mEntityHandler.isEntityResolved()) { // entity has been mapped (i.e. ch == ';')
             lastEntityValue = mEntityHandler.getResultAndReset();
-            switch(mEntityHandler.getEntityType()) {
+            switch (mEntityHandler.getEntityType()) {
                 case ENTITY_TYPE_CUSTOM:
                     return HANDLER_INSERT_ENTITY_CUST;
                 case ENTITY_TYPE_SYSTEM:
