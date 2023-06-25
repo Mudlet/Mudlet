@@ -679,6 +679,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         goto COMMIT_LINE;
                     case HANDLER_INSERT_ENTITY_CUST:
                         // custom entity value set with <!EN>, recurse except for other custom entities
+                        [[fallthrough]];
                     case HANDLER_INSERT_ENTITY_LIT: {
                         // Unknown entity name like &unknown; push back into buffer for codeset interpretation,
                         // but no MXP parsing.

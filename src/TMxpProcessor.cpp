@@ -170,7 +170,8 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
                 case ENTITY_TYPE_CUSTOM:
                     return HANDLER_INSERT_ENTITY_CUST;
                 case ENTITY_TYPE_SYSTEM:
-                    return HANDLER_INSERT_ENTITY_SYS;
+                    // Note special handling for '\n' as a result of &newline;
+                    return lastEntityValue == qsl("\n") ? HANDLER_COMMIT_LINE : HANDLER_INSERT_ENTITY_SYS;
                 default:
                     return HANDLER_INSERT_ENTITY_LIT;
             }

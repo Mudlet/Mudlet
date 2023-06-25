@@ -178,10 +178,7 @@ const QHash<QString, QString> TEntityResolver::scmStandardEntites = {
         {qsl("&ordf;"), qsl("ª")},
         {qsl("&laquo;"), qsl("«")},
         {qsl("&not;"), qsl("¬")},
-        // This was an invisible soft-hyphen. However, Mudlet can't
-        // display it, even throws a debug msg. So we do like other
-        // clients, just use a std hyphen:
-        {qsl("&shy;"), QChar(0x2010)},
+        {qsl("&shy;"), QChar(0x00AD)},
         {qsl("&reg;"), qsl("®")},
         {qsl("&macr;"), qsl("¯")},
         {qsl("&deg;"), qsl("°")},
