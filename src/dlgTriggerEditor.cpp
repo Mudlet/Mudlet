@@ -481,6 +481,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mDeleteItem, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
 
     mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
+    mAddGroup->setToolTip(tr("Add Group (Control+Shift+N)"));
+    mAddGroup->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mAddGroup->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_N));
+    frame_left->addAction(mAddGroup);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
     // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
