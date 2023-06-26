@@ -10,6 +10,7 @@
 -- @field wrapAt Where line wrapping occurs. Default is 300 characters.
 Geyser.MiniConsole = Geyser.Window:new({
   name = "MiniConsoleClass",
+  scrolling = true,
   wrapAt = 300, })
 
 --- Override reposition to reset autowrap
@@ -549,6 +550,18 @@ function Geyser.MiniConsole:getWindowWrap()
   return getWindowWrap(self.name)
 end
 
+--- Disables scrolling for the miniconsole
+function Geyser.MiniConsole:disableScrolling()
+  self.scrolling = false
+  disableScrolling(self.name)
+end
+
+--- Enables scrolling for the miniconsole
+function Geyser.MiniConsole:enableScrolling()
+  self.scrolling = true
+  enableScrolling(self.name)
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 
@@ -616,6 +629,11 @@ function Geyser.MiniConsole:new (cons, container)
     end
     if me.cmdLineStylesheet and me.commandLine then
       me:setCmdLineStyleSheet()
+    end
+    if me.scrolling then
+      me:enableScrolling()
+    else
+      me:disableScrolling()
     end
     --print("  New in " .. self.name .. " : " .. me.name)
   end
