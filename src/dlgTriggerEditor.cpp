@@ -7938,24 +7938,38 @@ void dlgTriggerEditor::slot_addNewItem()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         addTrigger(false); //add normal trigger
+        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(false); //add normal trigger
+        addTimer(false); //add normal timer
+        mpTimersMainArea->lineEdit_timer_name->setFocus();
+        mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
         addAlias(false); //add normal alias
+        mpAliasMainArea->lineEdit_alias_name->setFocus();
+        mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(false); //add normal alias
+        addScript(false); //add normal script
+        mpScriptsMainArea->lineEdit_script_name->setFocus();
+        mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
         addAction(false); //add normal action
+        mpActionsMainArea->lineEdit_action_name->setFocus();
+        mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(false); //add normal alias
+        addKey(false); //add normal key
+        mpKeysMainArea->lineEdit_key_name->setFocus();
+        mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
         addVar(false); //add variable
+        mpVarsMainArea->lineEdit_var_name->setFocus();
+        // variables start without a default name
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
@@ -7967,24 +7981,38 @@ void dlgTriggerEditor::slot_addNewGroup()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         addTrigger(true); //add trigger group
+        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(true);
+        addTimer(true); //add timer group
+        mpTimersMainArea->lineEdit_timer_name->setFocus();
+        mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
         addAlias(true); //add alias group
+        mpAliasMainArea->lineEdit_alias_name->setFocus();
+        mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(true); //add alias group
+        addScript(true); //add script group
+        mpScriptsMainArea->lineEdit_script_name->setFocus();
+        mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
         addAction(true); //add action group
+        mpActionsMainArea->lineEdit_action_name->setFocus();
+        mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(true); //add alias group
+        addKey(true); //add keys group
+        mpKeysMainArea->lineEdit_key_name->setFocus();
+        mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
         addVar(true); // add lua table
+        mpVarsMainArea->lineEdit_var_name->setFocus();
+        // variables start without a default name
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
