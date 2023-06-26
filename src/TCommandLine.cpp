@@ -730,10 +730,10 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
     QList<QAction*> spellings_system;
     QList<QAction*> spellings_profile;
+    const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
     if (!(handle_system && codec)) {
         mSystemDictionarySuggestionsCount = 0;
     } else {
-        const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
         if (!Hunspell_spell(handle_system, encodedText.constData())) {
             // The word is NOT in the main system dictionary:
             if (handle_profile) {
