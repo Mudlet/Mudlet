@@ -467,6 +467,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
 
     mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), QString(), this);
+    mAddItem->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Add Item"), QKeySequence(QKeySequence::New).toString()));
+    mAddItem->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mAddItem->setShortcut(QKeySequence(QKeySequence::New));
+    frame_left->addAction(mAddItem);
     connect(mAddItem, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
 
     mDeleteItem = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), QString(), this);
