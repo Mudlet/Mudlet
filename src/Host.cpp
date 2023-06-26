@@ -408,6 +408,24 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"Google",     "https://www.google.com/search?q="}
     });
 
+    // These details are filled in by the dlgConnectionProfile class when that
+    // is used to select a profile however when the profile is auto-loaded or
+    // selected from a command line argument that does not happen and they need
+    // to be populated ASAP from the stored details in the profile's settings.
+    mUrl = readProfileData(qsl("url"));
+    const QString host_port = readProfileData(qsl("port"));
+    if (bool isOk = false; !host_port.isEmpty() && host_port.toInt(&isOk) && isOk) {
+        mPort = host_port.toInt();
+    }
+    mLogin = readProfileData(qsl("login"));
+
+    const QString val = readProfileData(qsl("autoreconnect"));
+    setAutoReconnect(!val.isEmpty() && val.toInt() == Qt::Checked);
+
+    // This settings also need to be configured, note that the only time not to
+    // save the setting is on profile loading:
+    mTelnet.setEncoding(readProfileData(qsl("encoding")).toUtf8(), false);
+
     auto optin = readProfileData(qsl("discordserveroptin"));
     if (!optin.isEmpty()) {
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
