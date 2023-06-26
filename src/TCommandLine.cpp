@@ -680,7 +680,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     c.select(QTextCursor::WordUnderCursor);
     mSpellCheckedWord = c.selectedText();
 
-    bool wantSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
+    const bool wantSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
     if (!wantSpellCheck) {
         return;
     }
@@ -733,12 +733,12 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     if (!(handle_system && codec)) {
         mSystemDictionarySuggestionsCount = 0;
     } else {
-        QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+        const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
         if (!Hunspell_spell(handle_system, encodedText.constData())) {
             // The word is NOT in the main system dictionary:
             if (handle_profile) {
                 // Have a user dictionary so check it:
-                if (!Hunspell_spell(handle_profile, mSpellCheckedWord.toUtf8().constData())) {
+                if (!Hunspell_spell(handle_profile, encodedText.constData())) {
                     // The word is NOT in the profile one either - so enable add option
                     haveAddOption = true;
                 } else {
@@ -761,7 +761,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     }
 
     if (handle_profile) {
-        mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, mSpellCheckedWord.toUtf8().constData());
+        mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, encodedText.constData());
     } else {
         mUserDictionarySuggestionsCount = 0;
     }
@@ -1171,9 +1171,8 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     QTextCharFormat f;
     mSpellChecking = true;
     c.select(QTextCursor::WordUnderCursor);
-    QString spellCheckedWord = c.selectedText();
-
-    bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
+    const QString spellCheckedWord = c.selectedText();
+    const bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
     if (!wantSpellCheck) {
         // We don't check when the word is too short, but may need to
         // undo any prior underline, and we need to also reset the flag:
@@ -1184,7 +1183,7 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         return;
     }
 
-    QByteArray const encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(spellCheckedWord);
+    const QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(spellCheckedWord);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
