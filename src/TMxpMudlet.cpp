@@ -65,7 +65,8 @@ void TMxpMudlet::popColor(QList<QColor>& stack)
 
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
 {
-    return getLinkStore().addLinks(links, hints, mpHost);
+    // We do not support tooltips separately from hints in the MXP protocol:
+    return getLinkStore().addLinks(links, hints, hints, mpHost);
 }
 
 bool TMxpMudlet::getLink(int id, QStringList** links, QStringList** hints)

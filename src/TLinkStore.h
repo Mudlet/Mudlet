@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -40,18 +40,20 @@ public:
     : mMaxLinks(maxLinks)
     {}
 
-    int addLinks(const QStringList& links, const QStringList& hints, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>());
+    int addLinks(const QStringList& links, const QStringList& hints, const QStringList& tooltips, Host* pH = nullptr, const QVector<int>& luaReference = QVector<int>());
 
-    QStringList& getLinks(int id);
-    QStringList& getHints(int id);
-    QStringList getLinksConst(int id) const;
-    QStringList getHintsConst(int id) const;
-    QVector<int> getReference(int id) const;
+    QStringList& getLinks(int id) { return mLinkStore[id]; }
+    QStringList& getHints(int id) { return mHintStore[id]; }
+    QStringList& getTooltips(int id)  { return mTooltipStore[id]; }
+    QStringList getLinksConst(int id) const { return mLinkStore.value(id); }
+    QStringList getHintsConst(int id) const { return mHintStore.value(id); }
+    QStringList getTooltipsConst(int id) const { return mTooltipStore.value(id); }
+    QVector<int> getReference(int id) const { return mReferenceStore.value(id); }
 
-    int getCurrentLinkID() const;
+    int getCurrentLinkID() const { return mLinkID; }
 
-    QStringList getCurrentLinks() const;
-    void setCurrentLinks(const QStringList& links);
+    QStringList getCurrentLinks() const { return mLinkStore.value(mLinkID); }
+    void setCurrentLinks(const QStringList& links) { mLinkStore[mLinkID] = links; }
 
 private:
     void freeReference(Host* pH, const QVector<int>& luaReference);
@@ -62,6 +64,7 @@ private:
 
     QMap<int, QStringList> mLinkStore;
     QMap<int, QStringList> mHintStore;
+    QMap<int, QStringList> mTooltipStore;
     QMap<int, QVector<int>> mReferenceStore;
 };
 

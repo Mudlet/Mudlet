@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,11 +19,11 @@
  ***************************************************************************/
 
 #include "TLinkStore.h"
-#if not defined(LinkStore_Test)
+#if !defined(LinkStore_Test)
 #include "Host.h"
 #endif
 
-int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Host* pH, const QVector<int>& luaReference)
+int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, const QStringList& tooltips, Host* pH, const QVector<int>& luaReference)
 {
     if (++mLinkID > mMaxLinks) {
         mLinkID = 1;
@@ -34,6 +34,7 @@ int TLinkStore::addLinks(const QStringList& links, const QStringList& hints, Hos
 
     mLinkStore[mLinkID] = links;
     mHintStore[mLinkID] = hints;
+    mTooltipStore[mLinkID] = tooltips;
     mReferenceStore[mLinkID] = luaReference;
 
     return mLinkID;
@@ -47,49 +48,9 @@ void TLinkStore::freeReference(Host* pH, const QVector<int>& oldReference)
 
     for (int i = 0, total = oldReference.size(); i < total; ++i) {
         if (oldReference.value(i, 0)) {
-            #if not defined(LinkStore_Test)
+#if !defined(LinkStore_Test)
             pH->mLuaInterpreter.freeLuaRegistryIndex(oldReference.at(i));
-            #endif
+#endif
         }
     }
-}
-
-QStringList TLinkStore::getCurrentLinks() const
-{
-    return mLinkStore.value(mLinkID);
-}
-
-void TLinkStore::setCurrentLinks(const QStringList& links)
-{
-    mLinkStore[mLinkID] = links;
-}
-
-QStringList& TLinkStore::getLinks(int id)
-{
-    return mLinkStore[id];
-}
-
-QStringList& TLinkStore::getHints(int id)
-{
-    return mHintStore[id];
-}
-
-QVector<int> TLinkStore::getReference(int id) const
-{
-    return mReferenceStore.value(id);
-}
-
-QStringList TLinkStore::getLinksConst(int id) const
-{
-    return mLinkStore.value(id);
-}
-
-QStringList TLinkStore::getHintsConst(int id) const
-{
-    return mHintStore.value(id);
-}
-
-int TLinkStore::getCurrentLinkID() const
-{
-    return mLinkID;
 }

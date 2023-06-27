@@ -1228,13 +1228,20 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
         if (tCharIndex < static_cast<int>(mpBuffer->buffer[lineIndex].size())) {
             if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
                 setCursor(Qt::PointingHandCursor);
-                QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
+                QStringList storedTooltips = mpBuffer->mLinkStore.getTooltips(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
+                QStringList allNonEmptyTooltips;
+                for (const auto toolTip : storedTooltips) {
+                    if (!toolTip.isEmpty()) {
+                        // We do not want to insert empty lines for empty entries
+                        allNonEmptyTooltips << toolTip;
+                    }
+                }
                 QStringList commands = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
                 // If a special tooltip hint was given, use that one.
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                QToolTip::showText(event->globalPos(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
+                QToolTip::showText(event->globalPos(), storedTooltips.size() > commands.size() ? storedTooltips.at(0) : allNonEmptyTooltips.join(QChar::LineFeed));
 #else
-                QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
+                QToolTip::showText(event->globalPosition().toPoint(), storedTooltips.size() > commands.size() ? storedTooltips.at(0) : allNonEmptyTooltips.join(QChar::LineFeed));
 #endif
             } else {
                 setCursor(Qt::IBeamCursor);
@@ -1341,16 +1348,18 @@ void TTextEdit::slot_popupMenu()
     if (!pA) {
         return;
     }
+    // index is set to be greater than zero for every possible sender():
+    const int index = pA->data().toInt();
     QString cmd;
-    int luaReference{0};
-    if (mPopupCommands.contains(pA->text())) {
-        cmd = mPopupCommands[pA->text()].first;
-        luaReference = mPopupCommands[pA->text()].second;
-    }
-    if (!luaReference) {
-        mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
-    } else {
-        mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoPopup"));
+    int luaReference = 0;
+    if (index && mPopupCommands.contains(index)) {
+        cmd = mPopupCommands.value(index).first;
+        luaReference = mPopupCommands.value(index).second;
+        if (!luaReference) {
+            mpHost->mLuaInterpreter.compileAndExecuteScript(cmd);
+        } else {
+            mpHost->mLuaInterpreter.callAnonymousFunction(luaReference, qsl("echoPopup"));
+        }
     }
 }
 
@@ -1854,27 +1863,110 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
         int x = convertMouseXToBufferX(eventPos.x(), y, &isOutOfbounds);
 
         if (y < static_cast<int>(mpBuffer->buffer.size())) {
-            if (x < static_cast<int>(mpBuffer->buffer[y].size()) && !isOutOfbounds) {
-                if (mpBuffer->buffer.at(y).at(x).linkIndex()) {
-                    QStringList command = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(y).at(x).linkIndex());
-                    QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
-                    QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
-                    if (command.size() > 1) {
-                        // skip a special tooltip hint, if one was given
-                        int hint_offset = hint.size() > command.size() ? 1 : 0;
+            if (x < static_cast<int>(mpBuffer->buffer.at(static_cast<size_t>(y)).size()) && !isOutOfbounds) {
+                if (mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex()) {
+                    const QStringList commands = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
+                    const QStringList hints = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
+                    const QVector<int> luaReferences = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(static_cast<size_t>(y)).at(static_cast<size_t>(x)).linkIndex());
+                    if (commands.size() > 1) {
+                        // This is a popup menu rather than a link as it has more than one item
+
+                        // Skip a special initial hint, if one was given
+                        const int hint_offset = hints.size() > commands.size() ? 1 : 0;
 
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
-                        for (int i = 0, total = command.size(); i < total; ++i) {
-                            QAction* pA;
-                            if (i + hint_offset < hint.size()) {
-                                pA = popup->addAction(hint[i + hint_offset]);
-                                mPopupCommands[hint[i + hint_offset]] = {command[i], luaReference.value(i, 0)};
+                        mPopupCommands.clear();
+                        for (int i = 0, total = commands.size(); i < total; ++i) {
+                            QAction* pA = nullptr;
+                            const QString command = commands.at(i);
+                            const int luaReference = luaReferences.value(i, 0);
+                            QString identifer;
+                            bool isEnabled = false;
+                            if (Q_LIKELY(i + hint_offset < hints.size())) {
+                                // It is safe to use (i + hint_offset) to index into hints
+                                if (!command.isEmpty() || luaReference) {
+                                    // There is a command OR a luaReference for
+                                    // this index - so there IS something to do
+                                    // for this item
+
+                                    if (!hints.at(i + hint_offset).isEmpty()) {
+                                        // There is a hint we can use to identify the command:
+                                        identifer = hints.at(i + hint_offset);
+                                        qDebug().nospace().noquote()
+                                                << "TTextEdit::mouseReleaseEvent(...) INFO - inserting a hint (context menu entry) of \"" << identifer << "\" with offset of: " << i << "(+"
+                                                << hint_offset << ") for command \"" << command << "\" or lua reference " << luaReference << " at " << i << "...";
+                                        isEnabled = true;
+                                    } else {
+                                        // There is no hint - can we use the command?
+                                        if (!command.isEmpty()) {
+                                            // Yes, so do that:
+                                            identifer = command;
+                                            qDebug().nospace().noquote() << "TTextEdit::mouseReleaseEvent(...) INFO - inserting a command as the hint (because the hint is empty), of \""
+                                                                         << command << "\" at " << i << "...";
+                                            isEnabled = true;
+                                        } else {
+                                            // No, so is there a non-zero luaReference?
+                                            if (luaReference) {
+                                                // CHECK: this is scraping the barrel and may not be useful
+                                                identifer = qsl("luaReference%1").arg(luaReference);
+                                                qDebug().nospace().noquote()
+                                                        << "TTextEdit::mouseReleaseEvent(...) INFO - inserting a luaReference as the hint (because the hint and commands are empty), of \"luaReference"
+                                                        << luaReference << "\" at " << i << "...";
+                                                isEnabled = true;
+                                            }
+                                        }
+                                    }
+
+                                } else {
+                                    // There is NOTHING to do for this entry - is there a hint though
+                                    if (!hints.at(i + hint_offset).isEmpty()) {
+                                        // There is a hint, but since there is no command insert it as
+                                        // a disabled entry
+                                        identifer = hints.at(i + hint_offset);
+                                        qDebug().nospace().noquote()
+                                                << "TTextEdit::mouseReleaseEvent(...) INFO - inserting a DISABLED hint (context menu entry) of \"" << identifer << "\" with offset of: " << i << "(+"
+                                                << hint_offset << ") as there is no command or lua reference at " << i << "...";
+                                    }
+                                }
+                                // Else there is neither a command or lua function for this entry so it is likely
+                                // to just be a tooltop
+
+                                // Anyhow if there is no identifier now then we skip adding a command so we
+                                // do not end up with an empty item in the context menu
+                                if (!identifer.isEmpty()) {
+                                    pA = popup->addAction(identifer);
+                                    // We offset the stored index (so that when i = 0 the index is 1)
+                                    // so that when we do a pA->data() we always get a non-zero
+                                    // value for a valid entry
+                                    pA->setData(1 + i);
+                                    mPopupCommands[1 + i] = {command, luaReference};
+                                } else {
+                                    qDebug().nospace().noquote() << "TTextEdit::mouseReleaseEvent(...) INFO - NOT inserting a hint (context menu entry) with offset of: " << i << "(+" << hint_offset
+                                                                 << ") as it and the command at " << i << " are empty and there is no function defined as a command for it either...";
+                                }
+
                             } else {
-                                pA = popup->addAction(command[i]);
-                                mPopupCommands[command[i]] = {command[i], luaReference.value(i, 0)};
+                                // Special (MXP use) case, where there is an extra command but no hint
+                                // CHECK: What to do if the command is an empty string here?
+                                qDebug().nospace().noquote()
+                                        << "TTextEdit::mouseReleaseEvent(...) INFO - Special MXP(?) case inserting a command with the same as a menu entry the same as the command with offset of: "
+                                        << i << " for command \"" << command << "\" or lua reference " << luaReference << " at " << i << "...";
+                                // We offset the stored index (so that when i = 0 the index is 1)
+                                // so that when we do a pA->data() we always get a non-zero
+                                // value for a valid entry
+                                pA = popup->addAction(command);
+                                isEnabled = true;
+                                pA->setData(1 + i);
+                                mPopupCommands[1 + i] = {command, luaReference};
                             }
-                            connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
+                            if (pA) {
+                                if (isEnabled) {
+                                    connect(pA, &QAction::triggered, this, &TTextEdit::slot_popupMenu);
+                                } else {
+                                    pA->setEnabled(false);
+                                }
+                            }
                         }
                         popup->popup(eventGlobalPos);
                     }

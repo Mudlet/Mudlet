@@ -238,9 +238,9 @@ int TBuffer::getLastLineNumber()
     }
 }
 
-void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, TChar format, QVector<int> luaReference)
+void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, QStringList& tooltip, TChar format, QVector<int> luaReference)
 {
-    const int id = mLinkStore.addLinks(command, hint, mpHost, luaReference);
+    const int id = mLinkStore.addLinks(command, hint, tooltip, mpHost, luaReference);
 
     if (!trigMode) {
         append(text, 0, text.length(), format.mFgColor, format.mBgColor, format.mFlags, id);
@@ -2366,7 +2366,7 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
     for (const int total = P2.x(); x < total; ++x) {
         const int linkId = buffer.at(y).at(x).linkIndex();
         if (linkId && (linkId != oldLinkId)) {
-            id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
+            id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mLinkStore.getTooltipsConst(linkId), mpHost);
             oldLinkId = linkId;
         }
 
@@ -2441,7 +2441,7 @@ void TBuffer::appendBuffer(const TBuffer& chunk)
     for (int cx = 0, total = static_cast<int>(chunk.buffer.at(0).size()); cx < total; ++cx) {
         const int linkId = chunk.buffer.at(0).at(cx).linkIndex();
         if (linkId && (oldLinkId != linkId)) {
-            id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId), mpHost);
+            id = mLinkStore.addLinks(chunk.mLinkStore.getLinksConst(linkId), chunk.mLinkStore.getHintsConst(linkId), chunk.mLinkStore.getTooltipsConst(linkId), mpHost);
             oldLinkId = linkId;
         }
         if (!linkId) {
@@ -2935,7 +2935,7 @@ bool TBuffer::deleteLines(int from, int to)
     }
 }
 
-bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint, QVector<int> luaReference)
+bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStringList& linkFunction, const QStringList& linkHint, const QStringList& linkTooltip, QVector<int> luaReference)
 {
     const int x1 = P_begin.x();
     const int x2 = P_end.x();
@@ -2967,16 +2967,15 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                         return true;
                     }
                 }
-                if (linkID == 0) {
-                    linkID = mLinkStore.addLinks(linkFunction, linkHint, mpHost, luaReference);
+                if (!linkID) {
+                    linkID = mLinkStore.addLinks(linkFunction, linkHint, linkTooltip, mpHost, luaReference);
                 }
                 buffer.at(y).at(x++).mLinkIndex = linkID;
             }
         }
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 // Replaces (bool)TBuffer::applyXxxx(QPoint& P_begin, QPoint& P_end, bool state)

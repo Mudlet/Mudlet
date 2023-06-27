@@ -286,7 +286,6 @@ QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionNam
         errorArgumentType(L, functionName, pos, publicName, "string", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
-        return QString();
     }
     return lua_tostring(L, pos);
 }
@@ -6648,28 +6647,30 @@ int TLuaInterpreter::setLink(lua_State* L)
     const QString linkHint = getVerifiedString(L, __func__, s++, "tooltip");
 
     const Host& host = getHostFromLua(L);
-    QStringList _linkFunction;
-    _linkFunction << linkFunction;
-    QStringList _linkHint;
-    _linkHint << linkHint;
-    QVector<int> _linkReference;
-    _linkReference << funcRef;
+    QStringList linkFunctions;
+    linkFunctions << linkFunction;
+    QStringList linkHints;
+    linkHints << linkHint;
+    QVector<int> linkReferences;
+    linkReferences << funcRef;
 
     auto console = CONSOLE(L, windowName);
-    console->setLink(_linkFunction, _linkHint, _linkReference);
+    console->setLink(linkFunctions, linkHints, linkHints, linkReferences);
     if (console != host.mpConsole) {
         console->mUpperPane->forceUpdate();
         console->mLowerPane->forceUpdate();
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setPopup
 int TLuaInterpreter::setPopup(lua_State* L)
 {
-    QString windowName = "";
-    QStringList _hintList;
-    QStringList _commandList;
+    QString windowName;
+    QStringList hintList;
+    QStringList commandList;
+    QStringList tooltipList;
     QVector<int> luaReference;
     int s = 1;
     const int n = lua_gettop(L);
@@ -6681,54 +6682,90 @@ int TLuaInterpreter::setPopup(lua_State* L)
 
     if (!lua_istable(L, s)) {
         lua_pushfstring(L, "setPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
     }
     lua_pushnil(L);
     while (lua_next(L, s) != 0) {
         // key at index -2 and value at index -1
         if (lua_type(L, -1) == LUA_TSTRING) {
             const QString cmd = lua_tostring(L, -1);
-            _commandList << cmd;
+            commandList << cmd;
             luaReference << 0;
         }
 
         if (lua_type(L, -1) == LUA_TFUNCTION) {
             lua_pushvalue(L, -1);
-            _commandList << QString();
+            commandList << QString();
             luaReference << luaL_ref(L, LUA_REGISTRYINDEX);
         }
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
+
     if (!lua_istable(L, ++s)) {
         lua_pushfstring(L, "setPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
     }
     lua_pushnil(L);
     while (lua_next(L, s) != 0) {
         // key at index -2 and value at index -1
         if (lua_type(L, -1) == LUA_TSTRING) {
             const QString hint = lua_tostring(L, -1);
-            _hintList << hint;
+            hintList << hint;
         }
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
 
-    const Host& host = getHostFromLua(L);
-    if (_commandList.size() != _hintList.size()) {
-        lua_pushstring(L, "setPopup: commands and hints list aren't the same size");
-        return lua_error(L);
+    if (!lua_isnil(L, ++s)) {
+        if (!lua_istable(L, s)) {
+            lua_pushfstring(L, "setPopup: bad argument #%d type (tooltip list as table is optional, got %s!)", s, luaL_typename(L, s));
+            lua_error(L);
+            Q_UNREACHABLE();
+        }
+
+        lua_pushnil(L);
+        while (lua_next(L, s) != 0) {
+            // key at index -2 and value at index -1
+            if (lua_type(L, -1) == LUA_TSTRING) {
+                const QString tooltip = lua_tostring(L, -1);
+                tooltipList << tooltip;
+            }
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+
+        if (commandList.size() != tooltipList.size()) {
+            lua_pushstring(L, "setPopup: commands and tooltips list aren't the same size");
+            lua_error(L);
+            Q_UNREACHABLE();
+        }
+
+    } else {
+        for (const auto& cmd : commandList) {
+            Q_UNUSED(cmd)
+            tooltipList << QString();
+        }
     }
 
+    if (commandList.size() != hintList.size()) {
+        lua_pushstring(L, "setPopup: commands and hints list aren't the same size");
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+
+    const Host& host = getHostFromLua(L);
     auto console = CONSOLE(L, windowName);
-    console->setLink(_commandList, _hintList, luaReference);
+    console->setLink(commandList, hintList, tooltipList, luaReference);
     if (console != host.mpConsole) {
         console->mUpperPane->forceUpdate();
         console->mLowerPane->forceUpdate();
     }
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBold
@@ -10926,76 +10963,147 @@ int TLuaInterpreter::insertLink(lua_State* L)
     luaReference << funcRef;
 
     auto console = CONSOLE(L, windowName);
-    console->insertLink(text, function, hint, useCurrentFormat, luaReference);
-    return 0;
+    console->insertLink(text, function, hint, hint, useCurrentFormat, luaReference);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertPopup
 int TLuaInterpreter::insertPopup(lua_State* L)
 {
-    QString windowName;
-    QStringList _hintList;
-    QStringList _commandList;
+    QString windowName; // optional first (string) argument
+    // (QString) text; // required next (string) argument
+    QStringList commandList; // required next (table of strings or functions) argument
+    QStringList hintList; // required next (table of strings) argument
+    bool customFormat = false; // EITHER: optional next (bool) argument
+    QStringList tooltipList; // OR/AND: optional next (table of strings) arguments
+
     QVector<int> luaReference;
-    bool customFormat = false;
     int s = 1;
     const int n = lua_gettop(L);
-
-    // console name is an optional first argument
-    if (n >= 4) {
+    // console name is an optional first argument - there needs to be at least 4
+    // arguments for it to be the first one, but it must be followed by another
+    // string
+    if (n > 3 && lua_isstring(L, s) && lua_isstring(L, s + 1)) {
         windowName = WINDOW_NAME(L, s++);
     }
-    const QString txt = getVerifiedString(L, __func__, s++, "text");
 
-    if (!lua_istable(L, s)) {
+    // required text for the popup to be achored to:
+    const QString text = getVerifiedString(L, __func__, s, "text");
+
+    // required table of comands as strings or functions:
+    if (!lua_istable(L, ++s)) {
         lua_pushfstring(L, "insertPopup: bad argument #%d type (commands as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
     }
     lua_pushnil(L);
     while (lua_next(L, s) != 0) {
         // key at index -2 and value at index -1
         if (lua_type(L, -1) == LUA_TSTRING) {
             const QString cmd = lua_tostring(L, -1);
-            _commandList << cmd;
+            commandList << cmd;
             luaReference << 0;
         }
 
         if (lua_type(L, -1) == LUA_TFUNCTION){
             lua_pushvalue(L, -1);
-            _commandList << QString();
+            commandList << QString();
             luaReference << luaL_ref(L, LUA_REGISTRYINDEX);
         }
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
 
+    // required table of hints as strings
     if (!lua_istable(L, ++s)) {
         lua_pushfstring(L, "insertPopup: bad argument #%d type (hints as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
     }
     lua_pushnil(L);
     while (lua_next(L, s) != 0) {
         // key at index -2 and value at index -1
         if (lua_type(L, -1) == LUA_TSTRING) {
             const QString hint = lua_tostring(L, -1);
-            _hintList << hint;
+            hintList << hint;
         }
         // removes value, but keeps key for next iteration
         lua_pop(L, 1);
     }
 
+    auto parseCustomFormatOrTooltips = [&](lua_State* lState, const int index, const char* functionName, bool& boolValue, QStringList& listValue) {
+        if (lua_type(lState, index) == LUA_TBOOLEAN) {
+            boolValue = lua_toboolean(lState, index);
+        } else {
+            if (lua_type(lState, index) == LUA_TTABLE) {
+                lua_pushnil(lState);
+                int entryCounter = 0;
+                while (lua_next(lState, index) != 0) {
+                    // key at index -2 and value at index -1
+                    ++entryCounter;
+                    if (lua_type(lState, -1) != LUA_TSTRING) {
+                        // Note what the wrong thing is:
+                        const auto typeName = luaL_typename(lState, -1);
+                        // Clear the stack for just the error message
+                        lua_settop(L, 0);
+                        // Can not use errorArgumentType(...) here as we have
+                        // cleared the stack of values it would use
+                        lua_pushfstring(lState, "%s: bad argument #%d type (entry #%d in table of tooltips as string is optional, got %s!)",
+                                        functionName, index, entryCounter, typeName);
+                        lua_error(lState);
+                        Q_UNREACHABLE();
+                    }
+
+                    const QString item = lua_tostring(lState, -1);
+                    listValue << item;
+
+                    // removes value, but keeps key for next iteration
+                    lua_pop(lState, 1);
+                }
+
+            } else {
+                // Clear the stack for just the error message
+                lua_settop(lState, 0);
+                errorArgumentType(lState, functionName, index, "custom format or tooltips", "boolean or table of strings", true);
+                lua_error(lState);
+                Q_UNREACHABLE();
+            }
+        }
+    };
+
+    // optional bool (for custom {true} or standard link {false}) or table of
+    // tooltips
     if (n >= ++s) {
-        customFormat = lua_toboolean(L, s);
+        parseCustomFormatOrTooltips(L, s, __func__, customFormat, tooltipList);
     }
 
-    if (_commandList.size() != _hintList.size()) {
-        lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
-        return lua_error(L);
+    // another optional bool (for custom {true} or standard link {false}) or
+    // table of tooltips:
+    if (n >= ++s) {
+        parseCustomFormatOrTooltips(L, s, __func__, customFormat, tooltipList);
+    }
+
+    if (commandList.size() != hintList.size()) {
+        lua_pushstring(L, "insertPopup: command list size and hint list size do not match, cannot create popup");
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+
+    if (!tooltipList.isEmpty() && commandList.size() != tooltipList.size()) {
+        lua_pushstring(L, "insertPopup: command list size and optional tooltip list size do not match, cannot create popup");
+        lua_error(L);
+        Q_UNREACHABLE();
     }
 
     auto console = CONSOLE(L, windowName);
-    console->insertLink(txt, _commandList, _hintList, customFormat, luaReference);
-    return 0;
+    if (tooltipList.isEmpty()) {
+        console->insertLink(text, commandList, hintList, hintList, customFormat, luaReference);
+    } else {
+        console->insertLink(text, commandList, hintList, tooltipList, customFormat, luaReference);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText
@@ -11067,22 +11175,30 @@ int TLuaInterpreter::echo(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoPopup
 int TLuaInterpreter::echoPopup(lua_State* L)
 {
-    QString windowName;
-    QStringList hintList;
-    QStringList commandList;
+    QString windowName; // optional first (string) argument
+    // (QString) text; // required next (string) argument
+    QStringList commandList; // required next (table of strings or functions) argument
+    QStringList hintList; // required next (table of strings) argument
+    bool customFormat = false; // EITHER: optional next (bool) argument
+    QStringList tooltipList; // OR/AND: optional next (table of strings) arguments
+
     QVector<int> luaReference;
-    bool customFormat = false;
     int s = 1;
     const int n = lua_gettop(L);
-    // console name is an optional first argument
-    if (n >= 4) {
+    // console name is an optional first argument - there needs to be at least 4
+    // arguments for it to be the first one, but it must be followed by another
+    // string
+    if (n > 3 && lua_isstring(L, s) && lua_isstring(L, s + 1)) {
         windowName = WINDOW_NAME(L, s++);
     }
-    const QString text = getVerifiedString(L, __func__, s++, "text as string");
 
-    if (!lua_istable(L, s)) {
+    // required text for the popup to be achored to:
+    const QString text = getVerifiedString(L, __func__, s, "text");
+
+    if (!lua_istable(L, ++s)) {
         lua_pushfstring(L, "echoPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
     }
     lua_pushnil(L);
     while (lua_next(L, s) != 0) {
@@ -11101,9 +11217,11 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         lua_pop(L, 1);
     }
 
+    // required table of hints as strings
     if (!lua_istable(L, ++s)) {
         lua_pushfstring(L, "echoPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
     }
     lua_pushnil(L);
     while (lua_next(L, s) != 0) {
@@ -11116,18 +11234,78 @@ int TLuaInterpreter::echoPopup(lua_State* L)
         lua_pop(L, 1);
     }
 
+    auto parseCustomFormatOrTooltips = [&](lua_State* lState, const int index, const char* functionName, bool& boolValue, QStringList& listValue) {
+        if (lua_type(lState, index) == LUA_TBOOLEAN) {
+            boolValue = lua_toboolean(lState, index);
+        } else {
+            if (lua_type(lState, index) == LUA_TTABLE) {
+                lua_pushnil(lState);
+                int entryCounter = 0;
+                while (lua_next(lState, index) != 0) {
+                    // key at index -2 and value at index -1
+                    ++entryCounter;
+                    if (lua_type(lState, -1) != LUA_TSTRING) {
+                        // Note what the wrong thing is:
+                        const auto typeName = luaL_typename(lState, -1);
+                        // Clear the stack for just the error message
+                        lua_settop(L, 0);
+                        // Can not use errorArgumentType(...) here as we have
+                        // cleared the stack of values it would use
+                        lua_pushfstring(lState, "%s: bad argument #%d type (entry #%d in table of tooltips as string is optional, got %s!)",
+                                        functionName, index, entryCounter, typeName);
+                        lua_error(lState);
+                        Q_UNREACHABLE();
+                    }
+
+                    const QString item = lua_tostring(lState, -1);
+                    listValue << item;
+
+                    // removes value, but keeps key for next iteration
+                    lua_pop(lState, 1);
+                }
+
+            } else {
+                // Clear the stack for just the error message
+                lua_settop(lState, 0);
+                errorArgumentType(lState, functionName, index, "custom format or tooltips", "boolean or table of strings", true);
+                lua_error(lState);
+                Q_UNREACHABLE();
+            }
+        }
+    };
+
+    // optional bool (for custom {true} or standard link {false}) or table of
+    // tooltips
     if (n >= ++s) {
-        customFormat = lua_toboolean(L, s);
+        parseCustomFormatOrTooltips(L, s, __func__, customFormat, tooltipList);
+    }
+
+    // another optional bool (for custom {true} or standard link {false}) or
+    // table of tooltips:
+    if (n >= ++s) {
+        parseCustomFormatOrTooltips(L, s, __func__, customFormat, tooltipList);
     }
 
     if (commandList.size() != hintList.size()) {
-        lua_pushfstring(L, "echoPopup: commands and hints list aren't the same size");
-        return lua_error(L);
+        lua_pushstring(L, "echoPopup: command list size and hint list size do not match, cannot create popup");
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+
+    if (!tooltipList.isEmpty() && commandList.size() != tooltipList.size()) {
+        lua_pushstring(L, "echoPopup: command list size and optional tooltip list size do not match, cannot create popup");
+        lua_error(L);
+        Q_UNREACHABLE();
     }
 
     auto console = CONSOLE(L, windowName);
-    console->echoLink(text, commandList, hintList, customFormat, luaReference);
-    return 0;
+    if (tooltipList.isEmpty()) {
+        console->echoLink(text, commandList, hintList, hintList, customFormat, luaReference);
+    } else {
+        console->echoLink(text, commandList, hintList, tooltipList, customFormat, luaReference);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoLink
@@ -11213,7 +11391,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     luaReference << funcRef;
 
     auto console = CONSOLE(L, windowName);
-    console->echoLink(text, function, hint, useCurrentFormat, luaReference);
+    console->echoLink(text, function, hint, hint, useCurrentFormat, luaReference);
     return 0;
 }
 
