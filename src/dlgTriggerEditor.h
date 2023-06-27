@@ -180,6 +180,7 @@ public:
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void changeEvent(QEvent* e) override;
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&);
@@ -224,6 +225,7 @@ public:
     void setSearchOptions(const SearchOptions);
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
+    void hideSystemMessageArea();
 
 public slots:
     void slot_toggleHiddenVariables(bool);

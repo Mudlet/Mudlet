@@ -39,11 +39,11 @@ class Host;
 
 struct TDebugMessage
 {
-    TDebugMessage(const QString& text, const QString& tag, const QColor& fg, const QColor& bg)
+    TDebugMessage(const QString& text, const QString& tag, const QColor& foreground, const QColor& background)
     : mMessage(text)
     , mTag(tag)
-    , mForeground(fg)
-    , mBackground(bg)
+    , mForeground(foreground)
+    , mBackground(background)
     {}
 
     QString mMessage;
