@@ -730,15 +730,22 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
 
     QList<QAction*> spellings_system;
     QList<QAction*> spellings_profile;
-    const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+    // We always use UTF-8 for the per profile/shared dictionary so we do not
+    // need to have a codec prepared for it and can use QString::toUtf8()
+    // directly:
+    const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
     if (!(handle_system && codec)) {
         mSystemDictionarySuggestionsCount = 0;
     } else {
+        // The dictionary used from "the system" may not be UTF-8 encoded so we
+        // will need to transform the UTF-16BE "QString" to the appropriate encoding
+        // using "codec" declared previously in this method:
+        const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
         if (!Hunspell_spell(handle_system, encodedText.constData())) {
             // The word is NOT in the main system dictionary:
             if (handle_profile) {
                 // Have a user dictionary so check it:
-                if (!Hunspell_spell(handle_profile, encodedText.constData())) {
+                if (!Hunspell_spell(handle_profile, utf8Text.constData())) {
                     // The word is NOT in the profile one either - so enable add option
                     haveAddOption = true;
                 } else {
@@ -761,7 +768,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     }
 
     if (handle_profile) {
-        mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, encodedText.constData());
+        mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, utf8Text.constData());
     } else {
         mUserDictionarySuggestionsCount = 0;
     }
@@ -1183,12 +1190,17 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
         return;
     }
 
+    // The dictionary used from "the system" may not be UTF-8 encoded so we
+    // will need to transform the UTF-16BE "QString" to the appropriate encoding
+    // using the correct "codec":
     const QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(spellCheckedWord);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
         if (userDictionaryhandle) {
-            if (Hunspell_spell(userDictionaryhandle, encodedText.constData())) {
+            // The per-profile/shared dictionary is always UTF-8 encoded - so
+            // we can use QString::toUtf8() directly to get the bytes needed:
+            if (Hunspell_spell(userDictionaryhandle, spellCheckedWord.toUtf8().constData())) {
                 // We are using a user dictionary and it does contain this word - so
                 // use a different underline, on many systems the spell-check underline is
                 // a wavy line but on macOs it is a dotted line - so use dash underline
