@@ -446,7 +446,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mpShortcutsManager->getSequence(entry)));
     }
 
-    startMapAutosave();
+    auto settings = mudlet::self()->getQSettings();
+    const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
+    startMapAutosave(interval);
 }
 
 Host::~Host()
@@ -475,10 +477,9 @@ void Host::loadMap()
     }
 }
 
-void Host::startMapAutosave()
+void Host::startMapAutosave(const int interval)
 {
-    auto settings = mudlet::self()->getQSettings();
-    if (auto interval = settings->value("autosaveIntervalMinutes", 2).toInt(); interval > 0) {
+    if (interval > 0) {
         startTimer(interval * 1min);
     }
 }
