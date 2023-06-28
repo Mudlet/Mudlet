@@ -483,7 +483,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
     mAddGroup->setToolTip(tr("Add Group (Control+Shift+N)"));
     mAddGroup->setShortcutContext(Qt::WidgetWithChildrenShortcut);
-    mAddGroup->setShortcut(QKeySequence(Qt::CTRL + Qt::SHIFT + Qt::Key_N));
+    mAddGroup->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
     frame_left->addAction(mAddGroup);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
