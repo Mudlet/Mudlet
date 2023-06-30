@@ -7764,12 +7764,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="470"/>
       <source>Add Item</source>
-      <translation type="unfinished"/>
+      <translation>Add Item</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="484"/>
       <source>Add Group (Control+Shift+N)</source>
-      <translation type="unfinished"/>
+      <translation>Add Group (Control+Shift+N)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5585"/>
