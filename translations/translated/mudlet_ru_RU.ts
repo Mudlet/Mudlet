@@ -1101,13 +1101,13 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="707"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet▼ │ предложения словаря │ Свой ▲▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="717"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <comment>This line is shown in the list of spelling suggestions on the profile&apos;s command-line context menu to clearly divide up where the suggestions for correct spellings are coming from.  The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</comment>
-      <translation type="unfinished"/>
+      <translation>▼ Система ▼ │ предложения словаря │ ▲ Свой ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="791"/>
@@ -7823,7 +7823,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="470"/>
       <source>Add Item</source>
-      <translation type="unfinished"/>
+      <translation>Добавить</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="484"/>
