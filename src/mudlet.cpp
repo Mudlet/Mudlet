@@ -1898,6 +1898,8 @@ void mudlet::readLateSettings(const QSettings& settings)
         showMaximized();
     }
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
+
+    mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2033,6 +2035,8 @@ void mudlet::writeSettings()
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
+
+    settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -2749,7 +2753,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        importer.importPackage(&file);
         if (auto [success, message] = importer.importPackage(&file); !success) {
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
                 "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
