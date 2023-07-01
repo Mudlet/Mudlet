@@ -408,15 +408,18 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     }
 
     // If we are resolving/interpolating an MXP entity, the interpolated text
-    // ends a localBuffer[endOfMXPEntity - 1]. This is used to inhibit an
+    // ends at localBuffer[endOfMXPEntity - 1]. This variable used to avoid an
     // (infinite) recursion like <!EN E "foobar&E;>&E;
-    // Interpolating a predefined entity like <!EN E "foobar&frac12;>&E;
+    // Recursively interpolating a predefined entity like <!EN E "foobar&frac12;>&E;
     // will work though.
     size_t endOfMXPEntity = 0;
 
-    // A similar index which points behind the name of an entity like
+    // A similar index which points behind the name of a literal entity name like
     // &unknown; which does not exist and will be printed literal, w/o
-    // any MXP interpretation
+    // any MXP interpretation. Again, this avoid endless recursion trying to
+    // resolve an unsolvable entity. We need the hassle in both cases, as the
+    // the resolved values may be in a character encoding that must be decoded by
+    // Mudlet.
     size_t endOfLiteralEntity = 0;
 
     while (true) {
@@ -674,7 +677,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     case HANDLER_NEXT_CHAR:
                         localBufferPosition++;
                         continue;
-                    case HANDLER_COMMIT_LINE: // BR tag
+                    case HANDLER_COMMIT_LINE: // BR tag or &newline;
                         ch = '\n';
                         goto COMMIT_LINE;
                     case HANDLER_INSERT_ENTITY_CUST:
@@ -684,17 +687,17 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                         // Unknown entity name like &unknown; push back into buffer for codeset interpretation,
                         // but no MXP parsing.
 
-                        // We need to insert the entity value into the buffer at the current position to
-                        // process it
+                        // We replace the already processed text with the entity value into the buffer and restart
+                        // processing it for charset encoding but with limited MXP handling
                         size_t valueLength = mpHost->mMxpProcessor.getEntityValue().length();
-
                         localBuffer.replace(0, localBufferPosition + 1, mpHost->mMxpProcessor.getEntityValue().toLatin1());
 
                         if (result == HANDLER_INSERT_ENTITY_LIT) {
                             if (localBufferPosition < endOfMXPEntity) {
                                 // This is a special case, our unknown entity might actually be a custom one
                                 // inside a custom one which we refused to resolve to avoid an endless recursion.
-                                // So we carefully adjust the end marker so custom entities are not reenabled to early
+                                // So we carefully adjust the end marker s.t. custom entities are not reenabled
+                                // too early
                                 endOfMXPEntity -= localBufferPosition + 1 - valueLength;
                                 endOfLiteralEntity = valueLength;
                             } else {
