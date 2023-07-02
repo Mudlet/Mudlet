@@ -2158,7 +2158,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
 std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
 {
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        return std::make_tuple(true, static_cast<int>(lua_tointeger(L, 1)));
+        return {true, static_cast<int>(lua_tointeger(L, 1))};
     }
 
     const QString name{lua_tostring(L, 1)};
@@ -2171,10 +2171,10 @@ std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
         } else {
             lua_pushfstring(L, "stopwatch with name '%s' not found", name.toUtf8().constData());
         }
-        return std::make_tuple(false, 0);
+        return {false, 0};
     }
 
-    return std::make_tuple(true, watchId);
+    return {true, watchId};
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#adjustStopWatch
