@@ -754,7 +754,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
-                mProblemCodepoints.insert(unicode, std::make_tuple(1, "Unprintable"));
+                mProblemCodepoints.insert(unicode, std::tuple{1, "Unprintable"});
             } else {
                 auto [count, reason] = mProblemCodepoints.value(unicode);
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
