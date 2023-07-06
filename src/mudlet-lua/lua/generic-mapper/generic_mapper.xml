@@ -1064,8 +1064,17 @@ map.help.onvisionfail = [[
     &lt;cyan&gt;onVisionFail Event&lt;reset&gt;
 
         This event is raised to inform the script that some or all of the room
-        information was not able to be gathered, but the character still
-        successfully moved between rooms in the intended direction.
+        information was not able to be gathered but the character still
+        successfully moved between rooms in the intended direction. For example,
+        a character without a light moving into a dark room.
+
+        generic_mapper comes with two predefined triggers for when it is dark
+        which can be found in the Script Editor/Triggers.  These triggers raise
+        the onVisionFail event, which in turn forces the mapper to move in the
+        desired direction without trying to match the room titles and 
+        descriptions.
+
+        Add to these triggers with appropriate lines your game sends.
 ]]
 map.help.onprompt = [[
     &lt;cyan&gt;onPrompt Event&lt;reset&gt;
