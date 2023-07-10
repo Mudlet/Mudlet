@@ -15,18 +15,10 @@
 <context>
     <name>MapInfoContributorManager</name>
     <message numerus="yes">
-        <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</source>
-        <comment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</comment>
-        <translation type="vanished">
-            <numerusform>{unused} Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</numerusform>
-            <numerusform>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <location filename="../../src/mapInfoContributorManager.cpp" line="218"/>
         <source>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</source>
         <extracomment>This text uses non-breaking spaces (as &apos;%1&apos;s, as Qt Creator cannot handle them literally in raw strings) and a non-breaking hyphen which are used to prevent the line being split at some places it might otherwise be; when translating please consider at which points the text may be divided to fit onto more than one line. This text is for when TWO or MORE rooms are selected; %1 is the room number for which %2-%4 are the x,y and z coordinates of the room nearest the middle of the selection. This room has the yellow cross-hairs. %n is the count of rooms selected and will ALWAYS be greater than 1 in this situation. It is provided so that non-English translations can select required plural forms as needed.</extracomment>
-        <translation type="unfinished">
+        <translation>
             <numerusform>{unused} Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</numerusform>
             <numerusform>Room%1ID:%1%2 Position%1on%1Map: (%3,%4,%5) ‑%1center of %n selected rooms</numerusform>
         </translation>
@@ -103,18 +95,10 @@ be in these areas...</numerusform>
 <context>
     <name>dlgPackageExporter</name>
     <message numerus="yes">
-        <source>Select what to export (%n item(s))</source>
-        <comment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</comment>
-        <translation type="vanished">
-            <numerusform>Select what to export (%n item)</numerusform>
-            <numerusform>Select what to export (%n items)</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <location filename="../../src/dlgPackageExporter.cpp" line="1465"/>
         <source>Select what to export (%n item(s))</source>
         <extracomment>This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.</extracomment>
-        <translation type="unfinished">
+        <translation>
             <numerusform>Select what to export (%n item)</numerusform>
             <numerusform>Select what to export (%n items)</numerusform>
         </translation>
@@ -123,18 +107,10 @@ be in these areas...</numerusform>
 <context>
     <name>dlgPackageManager</name>
     <message numerus="yes">
-        <source>Remove %n package(s)</source>
-        <comment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</comment>
-        <translation type="vanished">
-            <numerusform>Remove %n package</numerusform>
-            <numerusform>Remove %n packages</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <location filename="../../src/dlgPackageManager.cpp" line="236"/>
         <source>Remove %n package(s)</source>
         <extracomment>Message on button in package manager to remove one or more (%n is the count of) selected package(s).</extracomment>
-        <translation type="unfinished">
+        <translation>
             <numerusform>Remove %n package</numerusform>
             <numerusform>Remove %n packages</numerusform>
         </translation>
@@ -143,27 +119,11 @@ be in these areas...</numerusform>
 <context>
     <name>dlgProfilePreferences</name>
     <message numerus="yes">
-        <source>copy to %n destination(s)</source>
-        <comment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</comment>
-        <translation type="vanished">
-            <numerusform>copy to %n destination</numerusform>
-            <numerusform>copy to %n destinations</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>%n selected - change destinations...</source>
-        <comment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</comment>
-        <translation type="vanished">
-            <numerusform>%n selected - change destination...</numerusform>
-            <numerusform>%n selected - change destinations...</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <location filename="../../src/dlgProfilePreferences.cpp" line="161"/>
         <location filename="../../src/dlgProfilePreferences.cpp" line="3134"/>
         <source>copy to %n destination(s)</source>
         <extracomment>text on button to put the map from this profile into the other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will be zero or more. The button will also be disabled (greyed out) in the zero case but the text will still be visible.</extracomment>
-        <translation type="unfinished">
+        <translation>
             <numerusform>copy to %n destination</numerusform>
             <numerusform>copy to %n destinations</numerusform>
         </translation>
@@ -172,7 +132,7 @@ be in these areas...</numerusform>
         <location filename="../../src/dlgProfilePreferences.cpp" line="3141"/>
         <source>%n selected - change destinations...</source>
         <extracomment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</extracomment>
-        <translation type="unfinished">
+        <translation>
             <numerusform>%n selected - change destination...</numerusform>
             <numerusform>%n selected - change destinations...</numerusform>
         </translation>
@@ -244,35 +204,10 @@ be in these areas...</numerusform>
 <context>
     <name>mudlet</name>
     <message numerus="yes">
-        <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
-        <comment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</comment>
-        <translation type="vanished">
-            <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;An update is now available!&lt;/i&gt;&lt;p&gt;</numerusform>
-            <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n updates are now available!&lt;/i&gt;&lt;p&gt;</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Review %n update(s)...</source>
-        <comment>Review update(s) menu item, %n is the count of how many updates are available</comment>
-        <translatorcomment>Could do with the insertion of &quot;the&quot; as a second word!</translatorcomment>
-        <translation type="vanished">
-            <numerusform>Review the update...</numerusform>
-            <numerusform>Review the %n updates...</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
-        <source>Review the update(s) available...</source>
-        <comment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</comment>
-        <translation type="vanished">
-            <numerusform>Review the update available...</numerusform>
-            <numerusform>Review the updates available...</numerusform>
-        </translation>
-    </message>
-    <message numerus="yes">
         <location filename="../../src/mudlet.cpp" line="3575"/>
         <source>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n update(s) is/are now available!&lt;/i&gt;&lt;p&gt;</source>
         <extracomment>This is the tooltip text for the &apos;About&apos; Mudlet main toolbar button when it has been changed by adding a menu which now contains the original &apos;About Mudlet&apos; action and a new one to access the manual update process</extracomment>
-        <translation type="unfinished">
+        <translation>
             <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;An update is now available!&lt;/i&gt;&lt;p&gt;</numerusform>
             <numerusform>&lt;p&gt;About Mudlet&lt;/p&gt;&lt;p&gt;&lt;i&gt;%n updates are now available!&lt;/i&gt;&lt;p&gt;</numerusform>
         </translation>
@@ -281,7 +216,7 @@ be in these areas...</numerusform>
         <location filename="../../src/mudlet.cpp" line="3593"/>
         <source>Review %n update(s)...</source>
         <extracomment>Review update(s) menu item, %n is the count of how many updates are available</extracomment>
-        <translation type="unfinished">
+        <translation>
             <numerusform>Review the update...</numerusform>
             <numerusform>Review the %n updates...</numerusform>
         </translation>
@@ -290,7 +225,7 @@ be in these areas...</numerusform>
         <location filename="../../src/mudlet.cpp" line="3596"/>
         <source>Review the update(s) available...</source>
         <extracomment>Tool-tip for review update(s) menu item, given that the count of how many updates are available is already shown in the menu, the %n parameter that is that number need not be used here</extracomment>
-        <translation type="unfinished">
+        <translation>
             <numerusform>Review the update available...</numerusform>
             <numerusform>Review the updates available...</numerusform>
         </translation>
