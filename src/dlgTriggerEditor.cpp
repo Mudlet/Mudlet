@@ -228,7 +228,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the status bar on changes
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
-    simplifyEdbeeStatusBarRegex = new QRegularExpression(qsl(R"(^(?:\[\*\] )?(.+?) \|)"));
     mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
 
     // Update the editor preferences
@@ -9552,7 +9551,7 @@ void dlgTriggerEditor::slot_updateStatusBar(const QString& statusText)
 {
     // edbee adds the scope and last command which is rather technical debugging information,
     // so strip it away by removing the first pipe and everything after it
-    QRegularExpressionMatch const match = simplifyEdbeeStatusBarRegex->match(statusText, 0, QRegularExpression::PartialPreferFirstMatch);
+    const QRegularExpressionMatch match = csmSimplifyStatusBarRegex.match(statusText, 0, QRegularExpression::PartialPreferFirstMatch);
     QString stripped;
     if (match.hasPartialMatch() || match.hasMatch()) {
         stripped = match.captured(1);
