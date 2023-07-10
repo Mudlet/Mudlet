@@ -228,7 +228,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the status bar on changes
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
-    simplifyEdbeeStatusBarRegex = new QRegularExpression(qsl(R"(^(?:\[\*\] )?(.+?) \|)"));
     mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
 
     // Update the editor preferences
@@ -467,6 +466,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
 
     mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), QString(), this);
+    mAddItem->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Add Item"), QKeySequence(QKeySequence::New).toString()));
+    mAddItem->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mAddItem->setShortcut(QKeySequence(QKeySequence::New));
+    frame_left->addAction(mAddItem);
     connect(mAddItem, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
 
     mDeleteItem = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), QString(), this);
@@ -477,6 +480,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mDeleteItem, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
 
     mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
+    mAddGroup->setToolTip(tr("Add Group (Control+Shift+N)"));
+    mAddGroup->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mAddGroup->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
+    frame_left->addAction(mAddGroup);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
     // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
@@ -7930,24 +7937,38 @@ void dlgTriggerEditor::slot_addNewItem()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         addTrigger(false); //add normal trigger
+        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(false); //add normal trigger
+        addTimer(false); //add normal timer
+        mpTimersMainArea->lineEdit_timer_name->setFocus();
+        mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
         addAlias(false); //add normal alias
+        mpAliasMainArea->lineEdit_alias_name->setFocus();
+        mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(false); //add normal alias
+        addScript(false); //add normal script
+        mpScriptsMainArea->lineEdit_script_name->setFocus();
+        mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
         addAction(false); //add normal action
+        mpActionsMainArea->lineEdit_action_name->setFocus();
+        mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(false); //add normal alias
+        addKey(false); //add normal key
+        mpKeysMainArea->lineEdit_key_name->setFocus();
+        mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
         addVar(false); //add variable
+        mpVarsMainArea->lineEdit_var_name->setFocus();
+        // variables start without a default name
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
@@ -7959,24 +7980,38 @@ void dlgTriggerEditor::slot_addNewGroup()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         addTrigger(true); //add trigger group
+        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(true);
+        addTimer(true); //add timer group
+        mpTimersMainArea->lineEdit_timer_name->setFocus();
+        mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
         addAlias(true); //add alias group
+        mpAliasMainArea->lineEdit_alias_name->setFocus();
+        mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(true); //add alias group
+        addScript(true); //add script group
+        mpScriptsMainArea->lineEdit_script_name->setFocus();
+        mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
         addAction(true); //add action group
+        mpActionsMainArea->lineEdit_action_name->setFocus();
+        mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(true); //add alias group
+        addKey(true); //add keys group
+        mpKeysMainArea->lineEdit_key_name->setFocus();
+        mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
         addVar(true); // add lua table
+        mpVarsMainArea->lineEdit_var_name->setFocus();
+        // variables start without a default name
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
@@ -9516,7 +9551,7 @@ void dlgTriggerEditor::slot_updateStatusBar(const QString& statusText)
 {
     // edbee adds the scope and last command which is rather technical debugging information,
     // so strip it away by removing the first pipe and everything after it
-    QRegularExpressionMatch const match = simplifyEdbeeStatusBarRegex->match(statusText, 0, QRegularExpression::PartialPreferFirstMatch);
+    const QRegularExpressionMatch match = csmSimplifyStatusBarRegex.match(statusText, 0, QRegularExpression::PartialPreferFirstMatch);
     QString stripped;
     if (match.hasPartialMatch() || match.hasMatch()) {
         stripped = match.captured(1);
