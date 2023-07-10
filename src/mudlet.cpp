@@ -2770,20 +2770,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
         }
     }
 
-    pHost->setLogin(readProfileData(profile_name, qsl("login")));
-    pHost->setPass(readProfileData(profile_name, qsl("password")));
-
-    const QString val = readProfileData(profile_name, qsl("autoreconnect"));
-    if (!val.isEmpty() && val.toInt() == Qt::Checked) {
-        pHost->setAutoReconnect(true);
-    } else {
-        pHost->setAutoReconnect(false);
-    }
-
-    // This settings also need to be configured, note that the only time not to
-    // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
-
     if (preInstallPackages) {
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
     }
