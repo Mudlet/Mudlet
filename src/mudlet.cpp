@@ -1898,6 +1898,8 @@ void mudlet::readLateSettings(const QSettings& settings)
         showMaximized();
     }
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
+
+    mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2033,6 +2035,8 @@ void mudlet::writeSettings()
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
+
+    settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -2749,7 +2753,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        importer.importPackage(&file);
         if (auto [success, message] = importer.importPackage(&file); !success) {
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
                 "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
@@ -2766,20 +2769,6 @@ void mudlet::doAutoLogin(const QString& profile_name)
             preInstallPackages = true;
         }
     }
-
-    pHost->setLogin(readProfileData(profile_name, qsl("login")));
-    pHost->setPass(readProfileData(profile_name, qsl("password")));
-
-    const QString val = readProfileData(profile_name, qsl("autoreconnect"));
-    if (!val.isEmpty() && val.toInt() == Qt::Checked) {
-        pHost->setAutoReconnect(true);
-    } else {
-        pHost->setAutoReconnect(false);
-    }
-
-    // This settings also need to be configured, note that the only time not to
-    // save the setting is on profile loading:
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
 
     if (preInstallPackages) {
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());

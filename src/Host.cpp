@@ -408,6 +408,24 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"Google",     "https://www.google.com/search?q="}
     });
 
+    // These details are filled in by the dlgConnectionProfile class when that
+    // is used to select a profile however when the profile is auto-loaded or
+    // selected from a command line argument that does not happen and they need
+    // to be populated ASAP from the stored details in the profile's settings.
+    mUrl = readProfileData(qsl("url"));
+    const QString host_port = readProfileData(qsl("port"));
+    if (bool isOk = false; !host_port.isEmpty() && host_port.toInt(&isOk) && isOk) {
+        mPort = host_port.toInt();
+    }
+    mLogin = readProfileData(qsl("login"));
+
+    const QString val = readProfileData(qsl("autoreconnect"));
+    setAutoReconnect(!val.isEmpty() && val.toInt() == Qt::Checked);
+
+    // This settings also need to be configured, note that the only time not to
+    // save the setting is on profile loading:
+    mTelnet.setEncoding(readProfileData(qsl("encoding")).toUtf8(), false);
+
     auto optin = readProfileData(qsl("discordserveroptin"));
     if (!optin.isEmpty()) {
         mDiscordDisableServerSide = optin.toInt() == Qt::Unchecked ? true : false;
@@ -446,7 +464,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         profileShortcuts.insert(entry, new QKeySequence(*mudlet::self()->mpShortcutsManager->getSequence(entry)));
     }
 
-    startMapAutosave();
+    auto settings = mudlet::self()->getQSettings();
+    const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
+    startMapAutosave(interval);
 }
 
 Host::~Host()
@@ -475,10 +495,9 @@ void Host::loadMap()
     }
 }
 
-void Host::startMapAutosave()
+void Host::startMapAutosave(const int interval)
 {
-    auto settings = mudlet::self()->getQSettings();
-    if (auto interval = settings->value("autosaveIntervalMinutes", 2).toInt(); interval > 0) {
+    if (interval > 0) {
         startTimer(interval * 1min);
     }
 }
@@ -806,7 +825,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     if (mIsProfileLoadingSequence) {
         //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
-        return std::make_tuple(false, filename_xml, qsl("profile loading is in progress"));
+        return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
     const QDir dir_xml;
@@ -815,7 +834,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     if (currentlySavingProfile()) {
-        return std::make_tuple(false, QString(), qsl("a save is already in progress"));
+        return {false, QString(), qsl("a save is already in progress")};
     }
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
@@ -846,7 +865,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         mWritingHostAndModules = false;
     });
     watcher->setFuture(mModuleFuture);
-    return std::make_tuple(true, filename_xml, QString());
+    return {true, filename_xml, QString()};
 }
 
 // exports without the host settings for some reason
@@ -856,13 +875,13 @@ std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
     qApp->processEvents();
 
     if (currentlySavingProfile()) {
-        return std::make_tuple(false, QString(), qsl("a save is already in progress"));
+        return {false, QString(), qsl("a save is already in progress")};
     }
 
     auto writer = new XMLexport(this);
     writers.insert(qsl("profile"), writer);
     writer->exportProfile(file);
-    return std::make_tuple(true, file, QString());
+    return {true, file, QString()};
 }
 
 void Host::xmlSaved(const QString& xmlName)
@@ -3865,7 +3884,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
         } else {
             styleSheet.append(newColor);
         }
-        
+
         pL->setStyleSheet(styleSheet);
         return true;
     }

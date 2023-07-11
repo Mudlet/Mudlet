@@ -656,7 +656,7 @@ raiseEvent("sysSpeedwalkStopped")</script>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.0.26"
+local version = "2.0.27"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1064,8 +1064,17 @@ map.help.onvisionfail = [[
     &lt;cyan&gt;onVisionFail Event&lt;reset&gt;
 
         This event is raised to inform the script that some or all of the room
-        information was not able to be gathered, but the character still
-        successfully moved between rooms in the intended direction.
+        information was not able to be gathered but the character still
+        successfully moved between rooms in the intended direction. For example,
+        a character without a light moving into a dark room.
+
+        generic_mapper comes with two predefined triggers for when it is dark
+        which can be found in the Script Editor/Triggers.  These triggers raise
+        the onVisionFail event, which in turn forces the mapper to move in the
+        desired direction without trying to match the room titles and 
+        descriptions.
+
+        Add to these triggers with appropriate lines your game sends.
 ]]
 map.help.onprompt = [[
     &lt;cyan&gt;onPrompt Event&lt;reset&gt;
@@ -2871,7 +2880,7 @@ continue_walk = function(new_room)
     if not walking then return end
     -- calculate wait time until next command, with randomness
     local wait = map.configs.speedwalk_delay or 0
-    if wait &gt; 0 and map.configs.speedwalk_random then
+    if wait > 0 and map.configs.speedwalk_random then
         wait = wait * (1 + math.random(0,100)/100)
     end
     -- if no wait after new room, move immediately
@@ -2880,7 +2889,13 @@ continue_walk = function(new_room)
     end
     -- send command if we don't need to wait
     if not new_room then
-        send(table.remove(map.walkDirs,1))
+        --handle script exits
+        if string.starts(map.walkDirs[1], "script:") then
+          map.walkDirs[1] = string.gsub(map.walkDirs[1], "script:", "")
+          loadstring(table.remove(map.walkDirs,1))()
+        else
+          send(table.remove(map.walkDirs,1))
+        end
         -- check to see if we are done
         if #map.walkDirs == 0 then
             walking = false
@@ -2889,7 +2904,7 @@ continue_walk = function(new_room)
         end
     end
     -- make tempTimer to send next command if necessary
-    if walking and (not map.configs.speedwalk_wait or (map.configs.speedwalk_wait and wait &gt; 0)) then
+    if walking and (not map.configs.speedwalk_wait or (map.configs.speedwalk_wait and wait > 0)) then
         if timerID then killTimer(timerID) end
         timerID = tempTimer(wait, function() continue_walk() end)
     end
@@ -2913,7 +2928,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
         if exitmap[dir] or short[dir] then
             local door = check_doors(id, exitmap[dir] or dir)
             local status = door and door[dir]
-            if status and status &gt; 1 then
+            if status and status > 1 then
                 -- if locked, unlock door
                 if status == 3 then
                     table.insert(walkPath,k,id)
@@ -2927,7 +2942,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
             end
         end
         k = k + 1
-    until k &gt; #walkDirs
+    until k > #walkDirs
     if map.configs.use_translation then
         for k, v in ipairs(walkDirs) do
             walkDirs[k] = map.configs.lang_dirs[v] or v
@@ -2935,12 +2950,17 @@ function map.speedwalk(roomID, walkPath, walkDirs)
     end
     -- perform walk
     walking = true
-    if map.configs.speedwalk_wait or map.configs.speedwalk_delay &gt; 0 then
+    if map.configs.speedwalk_wait or map.configs.speedwalk_delay > 0 then
         map.walkDirs = walkDirs
         continue_walk()
     else
         for _,dir in ipairs(walkDirs) do
-            send(dir)
+           if string.starts(dir, "script:") then
+              dir = string.gsub(dir, "script:", "")
+              loadstring(dir)()
+            else
+              send(dir)
+           end
         end
         walking = false
         raiseEvent("sysSpeedwalkFinished")
