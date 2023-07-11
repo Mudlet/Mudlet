@@ -108,8 +108,8 @@ void TTimer::setTime(QTime time)
 
 bool TTimer::setIsActive(bool b)
 {
-    bool condition1 = Tree<TTimer>::setIsActive(b);
-    bool condition2 = canBeUnlocked();
+    const bool condition1 = Tree<TTimer>::setIsActive(b);
+    const bool condition2 = canBeUnlocked();
     if (condition1 && condition2) {
         start();
     } else {
@@ -180,10 +180,10 @@ bool TTimer::setScript(const QString& script)
 
 bool TTimer::compileScript()
 {
-    mFuncName = QString("Timer") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = qsl("Timer%1").arg(QString::number(mID));
+    const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, "Timer: " + getName())) {
+    if (mpHost->mLuaInterpreter.compile(code, error, qsl("Timer: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;

@@ -180,6 +180,7 @@ public:
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void changeEvent(QEvent* e) override;
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&);
@@ -187,6 +188,9 @@ public:
     void children_icon_triggers(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_alias(QTreeWidgetItem* pWidgetItemParent);
     void children_icon_key(QTreeWidgetItem* pWidgetItemParent);
+    void children_icon_timer(QTreeWidgetItem* pWidgetItemParent);
+    void children_icon_script(QTreeWidgetItem* pWidgetItemParent);
+    void children_icon_action(QTreeWidgetItem* pWidgetItemParent);
     void doCleanReset();
     void writeScript(int id);
     void addVar(bool);
@@ -221,6 +225,7 @@ public:
     void setSearchOptions(const SearchOptions);
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
+    void hideSystemMessageArea();
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -514,7 +519,7 @@ private:
     edbee::TextDocument* mpSourceEditorEdbeeDocument = nullptr;
     edbee::TextSearcher* mpSourceEditorSearcher = nullptr;
 
-    QRegularExpression* simplifyEdbeeStatusBarRegex = nullptr;
+    inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
     QAction* mAddItem = nullptr;
     QAction* mDeleteItem = nullptr;
@@ -573,6 +578,18 @@ private:
     QString msgInfoAddButton;
     QString msgInfoAddVar;
     QString msgInfoAddKey;
+    QString descActive;
+    QString descInactive;
+    QString descActiveFolder;
+    QString descInactiveFolder;
+    QString descError;
+    QString descInactiveParent;
+    QString descActiveFilterChain;
+    QString descInactiveFilterChain;
+    QString descActiveOffsetTimer;
+    QString descInactiveOffsetTimer;
+    QString descNewFolder;
+    QString descNewItem;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
