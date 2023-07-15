@@ -24,7 +24,7 @@ private slots:
         hints.append("Get &href;");
         hints.append("Look at &href;");
 
-        int id = store.addLinks(links, hints);
+        int id = store.addLinks(links, hints, hints);
 
         QStringList links2 = store.getLinks(id);
         QCOMPARE(links2, links);
@@ -41,19 +41,19 @@ private slots:
 
         QStringList links;
 
-        store.addLinks(links, links);
+        store.addLinks(links, links, links);
         QCOMPARE(store.getCurrentLinkID(), 1);
 
-        store.addLinks(links, links);
+        store.addLinks(links, links, links);
         QCOMPARE(store.getCurrentLinkID(), 2);
 
-        store.addLinks(links, links);
+        store.addLinks(links, links, links);
         QCOMPARE(store.getCurrentLinkID(), 3);
 
-        store.addLinks(links, links);
+        store.addLinks(links, links, links);
         QCOMPARE(store.getCurrentLinkID(), 1);
 
-        store.addLinks(links, links);
+        store.addLinks(links, links, links);
         QCOMPARE(store.getCurrentLinkID(), 2);
     }
 
@@ -64,9 +64,9 @@ private slots:
         QStringList links;
         links.append("GET &href;");
 
-        store.addLinks(links, links);
-        store.addLinks(links, links);
-        store.addLinks(links, links);
+        store.addLinks(links, links, links);
+        store.addLinks(links, links, links);
+        store.addLinks(links, links, links);
 
         QCOMPARE(store.getCurrentLinkID(), 3);
         QCOMPARE(store.getLinks(3), links);
