@@ -1430,6 +1430,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
         return;
     }
     pH->mpConsole = pConsole;
+    pConsole->mConsoleName = qsl("main");
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
     const QString tabName = pH->getName();
