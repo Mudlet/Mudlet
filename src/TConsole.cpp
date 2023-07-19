@@ -62,6 +62,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpHost(pH)
 , buffer(pH, this)
 , emergencyStop(new QToolButton)
+, mConsoleName(name)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
