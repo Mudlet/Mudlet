@@ -2691,7 +2691,7 @@ void mudlet::attachDebugArea(const QString& hostname)
 
     smpDebugArea = new QMainWindow(nullptr);
     const auto pHost = mHostManager.getHost(hostname);
-    smpDebugConsole = new TConsole(pHost, TConsole::CentralDebugConsole);
+    smpDebugConsole = new TConsole(pHost, qsl("centralDebug"), TConsole::CentralDebugConsole);
     smpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     smpDebugConsole->setWrapAt(100);
     smpDebugArea->setCentralWidget(smpDebugConsole);
