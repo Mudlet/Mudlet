@@ -51,7 +51,7 @@
 
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
-: TConsole(pH, TConsole::MainConsole, parent)
+: TConsole(pH, qsl("main"), TConsole::MainConsole, parent)
 , mClipboard(pH)
 {
     // During first use where mIsDebugConsole IS true mudlet::self() is null
@@ -428,16 +428,15 @@ QString TMainConsole::getCurrentLine(std::string& buf)
 TConsole* TMainConsole::createBuffer(const QString& name)
 {
     if (!mSubConsoleMap.contains(name)) {
-        auto pC = new TConsole(mpHost, Buffer);
+        auto pC = new TConsole(mpHost, name, Buffer);
         mSubConsoleMap[name] = pC;
-        pC->mConsoleName = name;
         pC->setContentsMargins(0, 0, 0, 0);
         pC->hide();
         pC->layerCommandLine->hide();
         return pC;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 void TMainConsole::resetMainConsole()
@@ -489,18 +488,17 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     auto pS = mScrollBoxMap.value(windowname);
     if (!pC) {
         if (pS) {
-            pC = new TConsole(mpHost, SubConsole, pS->widget());
+            pC = new TConsole(mpHost, name, SubConsole, pS->widget());
         } else if (pW) {
-            pC = new TConsole(mpHost, SubConsole, pW->widget());
+            pC = new TConsole(mpHost, name, SubConsole, pW->widget());
         } else {
-            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
+            pC = new TConsole(mpHost, name, SubConsole, mpMainFrame);
         }
         if (!pC) {
             return nullptr;
         }
         mSubConsoleMap[name] = pC;
         pC->setObjectName(name);
-        pC->mConsoleName = name;
         const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
         pC->setFocusProxy(hostCommandLine);
         pC->mUpperPane->setFocusProxy(hostCommandLine);
