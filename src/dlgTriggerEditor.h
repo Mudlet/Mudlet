@@ -226,6 +226,7 @@ public:
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
+    void showIDLabels(const bool);
 
 public slots:
     void slot_toggleHiddenVariables(bool);

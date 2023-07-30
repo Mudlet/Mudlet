@@ -943,6 +943,13 @@ void XMLimport::readHost(Host* pHost)
         pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
     }
 
+    if (attributes().hasAttribute(qsl("ShowIDsInEditor"))) {
+        pHost->setShowIdsInEditor(attributes().value(qsl("ShowIDsInEditor")) == YES);
+    } else {
+        // The default (and for profile files from before 4.18.0):
+        pHost->setShowIdsInEditor(false);
+    }
+
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
         pHost->setLargeAreaExitArrows(attributes().value(qsl("Large2DMapAreaExitArrows")) == YES);
     } else {
