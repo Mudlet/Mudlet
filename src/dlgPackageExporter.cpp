@@ -87,7 +87,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     // This button has the ApplyRole which applies current changes but does NOT
     // cause the dialog to close:
     mExportButton = ui->buttonBox->button(QDialogButtonBox::Apply);
-    mExportButton->setText(tr("Export", "Text for button to perform the package export on the items the user has selected."));
+    //: Text for button to perform the package export on the items the user has selected.
+    mExportButton->setText(tr("Export"));
 
     // reset mPackagePathFileName and mXmlPathFileName from possible previous use
     mPackagePathFileName.clear();
@@ -125,9 +126,8 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     listActions();
     listTimers();
 
-    setWindowTitle(tr("Package Exporter - %1",
-        "Title of the window. The %1 will be replaced by the current profile's name.")
-        .arg(mpHost->getName()));
+    //: Title of the window. The %1 will be replaced by the current profile's name
+    setWindowTitle(tr("Package Exporter - %1").arg(mpHost->getName()));
 }
 
 dlgPackageExporter::~dlgPackageExporter()
@@ -171,9 +171,8 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
     struct zip_source* s = zip_source_file(archive, fileSystemFileName.toUtf8().constData(), 0, -1);
     if (s == nullptr) {
         return {false,
-                tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".",
-                   // Intentional comment to separate arguments
-                   "This error message will appear when a file is to be placed into the package but the code cannot open it.")
+                //: This error message will appear when a file is to be placed into the package but the code cannot open it.
+                tr("Failed to open file \"%1\" to place into package. Error message was: \"%2\".")
                         .arg(fileSystemFileName.toHtmlEscaped(), zip_strerror(archive))};
     }
 
@@ -181,9 +180,8 @@ std::pair<bool, QString> dlgPackageExporter::writeFileToZip(const QString& archi
         zip_source_free(s);
         s = nullptr;
         return {false,
-                tr("Failed to add file \"%1\" to package. Error message was: \"%3\".",
-                   // Intentional comment to separate arguments
-                   "This error message will appear when a file is to be placed into the package but cannot be done for some reason.")
+                //: This error message will appear when a file is to be placed into the package but cannot be done for some reason.
+                tr("Failed to add file \"%1\" to package. Error message was: \"%3\".")
                         .arg(archiveFileName.toHtmlEscaped(), zip_strerror(archive))};
     }
 
@@ -782,9 +780,8 @@ void dlgPackageExporter::exportXml(bool& isOk,
     }
 
     if (!writer.exportPackage(mXmlPathFileName, false)) {
-        displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".",
-                                // Intentional comment to separate arguments
-                                "This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened.")
+        //: This error message is shown when all the Mudlet items cannot be written to the 'packageName'.xml file in the base directory of the place where all the files are staged before being compressed into the package file. The full path and filename are shown in %1 to help the user diagnose what might have happened
+        displayResultMessage(tr("Failed to export. Could not write Mudlet items to the file \"%1\".")
                              .arg(mXmlPathFileName.toHtmlEscaped()), false);
         // Although we have failed, we must not just abort here. We need to reset
         // the selected "for export or not"-flags first. So note that we have failed:
@@ -886,11 +883,12 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
     if (!archive) {
         zip_error_t zipError;
         zip_error_init_with_code(&zipError, ze);
-        const QString errMsg = tr("Failed to open package file. Error is: \"%1\".",
-                            // Intentional comment to separate arguments
-                            "This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing "
-                            "file anywhere "
-                            "in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.")
+        /*:
+        This zipError message is shown when the libzip library code is unable to open the file that was to be the end result of the export process. As this may be an existing
+        file anywhere
+        in the computer's file-system(s) it is possible that permissions on the directory or an existing file that is to be overwritten may be a source of problems here.
+        */
+        const QString errMsg = tr("Failed to open package file. Error is: \"%1\".")
                                  .arg(zip_error_strerror(&zipError));
         zip_error_fini(&zipError);
         return {false, errMsg};
@@ -959,7 +957,7 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
         // zip_dir_add(...) returns the index of the
         // added directory item in the archive or -1 on error:
         if (zip_dir_add(archive, directoryName.toStdString().c_str(), ZIP_FL_ENC_UTF_8) == -1) {
-            const QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".").arg(directoryName, zip_strerror(archive));
+            const QString errorMsg = tr("Failed to add directory \"%1\" to package. Error is: \"%2\".").arg(directoryName.toHtmlEscaped(), zip_strerror(archive));
             zip_discard(archive);
             return {false, errorMsg};
         }
@@ -1034,11 +1032,11 @@ std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDi
                 return {false, tr("Export cancelled.")};
             }
 
-            const QString errorMsg = tr("Failed to zip up the package. Error is: \"%1\".",
-                                  // Intentional comment to separate arguments
-                                  "This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be "
-                                  "the point at which something breaks because a problem was not spotted/detected in the process earlier...")
-                                       .arg(zipError);
+            /*:
+            This error message is displayed at the final stage of exporting a package when all the sourced files are finally put into the archive. Unfortunately this may be
+            the point at which something breaks because a problem was not spotted/detected in the process earlier...
+            */
+            const QString errorMsg = tr("Failed to zip up the package. Error is: \"%1\".").arg(zipError);
             zip_discard(archive);
             // In libzip 0.11 a function was added to clean up
             // (deallocate) the memory associated with an archive
@@ -1443,11 +1441,12 @@ void dlgPackageExporter::displayResultMessage(const QString& html, const bool is
     ui->infoLabel->setText(qsl("<p><b><big>%1</big><b></p>"
                                           "<p>%2</p>")
                            .arg(html,
-                                tr("Why not <a href=\"https://forums.mudlet.org/viewforum.php?f=6\">upload</a> your package for other Mudlet users?",
-                                   // Intentional comment to separate arguments
-                                   "Only the text outside of the 'a' (HTML anchor) tags PLUS the verb "
-                                   "'upload' in between them in the source text, (associated with uploading "
-                                   "the resulting package to the Mudlet forums) should be translated.")));
+                            /*:
+                            Only the text outside of the 'a' (HTML anchor) tags PLUS the verb
+                            'upload' in between them in the source text, (associated with uploading
+                            the resulting package to the Mudlet forums) should be translated.
+                            */
+                                tr("Why not <a href=\"https://forums.mudlet.org/viewforum.php?f=6\">upload</a> your package for other Mudlet users?")));
     ui->infoLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     ui->infoLabel->setOpenExternalLinks(true);
 }
@@ -1462,14 +1461,11 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
         QTimer::singleShot(0, this, [this]() {
             const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
-                mpSelectionText->setTitle(tr("Select what to export (%n item(s))",
-                                             // Intentional comment to separate arguments
-                                             "This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.",
-                                             itemsToExport));
+                //: This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.
+                mpSelectionText->setTitle(tr("Select what to export (%n item(s))", nullptr, itemsToExport));
             } else {
-                mpSelectionText->setTitle(tr("Select what to export",
-                                             // Intentional comment to separate arguments
-                                             "This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue."));
+                //: This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.
+                mpSelectionText->setTitle(tr("Select what to export"));
             }
             debounce = false;
         });

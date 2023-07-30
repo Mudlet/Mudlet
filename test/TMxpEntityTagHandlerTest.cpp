@@ -155,6 +155,12 @@ private slots:
 
         processor.handleNode(processor, stub, parseNode("<!EN entity delete>").get());
         QCOMPARE(processor.getEntityResolver().getResolution("&entity;"), "&entity;");
+
+        processor.getEntityResolver().registerEntity("&myEntity;", "v2");
+        QCOMPARE(processor.getEntityResolver().getResolution("&myEntity;"), "v2");
+
+        processor.handleNode(processor, stub, parseNode("<!EN myEntity delete>").get());
+        QCOMPARE(processor.getEntityResolver().getResolution("&myEntity;"), "&myEntity;");
     }
 
     void testEmpty() {

@@ -276,9 +276,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     btn_connect_enabled_accessDesc = tr("Click to load and connect the selected profile.");
     btn_connOrLoad_disabled_accessDesc = tr("Need to have a valid profile name, game server address and port before this button can be enabled.");
     item_profile_accessName = tr("Game name: %1");
-    item_profile_accessDesc = tr("Button to select a mud game to play, double-click it to connect and start playing it.",
-                                 // Intentional comment to separate arguments
-                                 "Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option");
+    //: Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option
+    item_profile_accessDesc = tr("Button to select a mud game to play, double-click it to connect and start playing it.");
 
     // Set up some initial black/white/greys:
     mCustomIconColors = {{QColor(0, 0, 0)}, {QColor(63, 63, 63)}, {QColor(128, 128, 128)}, {QColor(192, 192, 192)}, {QColor(255, 255, 255)}};
@@ -1229,14 +1228,17 @@ void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
-        menu.addAction(tr("Reset icon", "Reset the custom picture for this profile in the connection dialog and show the default one instead"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
+        //: Reset the custom picture for this profile in the connection dialog and show the default one instead
+        menu.addAction(tr("Reset icon"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
     } else {
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
-                       tr("Set custom icon", "Set a custom picture to show for the profile in the connection dialog"),
+                       //: Set a custom picture to show for the profile in the connection dialog
+                       tr("Set custom icon"),
                        this,
                        &dlgConnectionProfiles::slot_setCustomIcon);
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
-                       tr("Set custom color", "Set a custom color to show for the profile in the connection dialog"),
+                       //: Set a custom color to show for the profile in the connection dialog
+                       tr("Set custom color"),
                        this,
                        &dlgConnectionProfiles::slot_setCustomColor);
     }
@@ -1559,6 +1561,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     pHost->hideMudletsVariables();
     if (entries.isEmpty()) {
         preInstallPackages = true;
+        pHost->mLoadedOk = true;
     } else {
         QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
