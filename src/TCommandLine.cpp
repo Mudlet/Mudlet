@@ -704,25 +704,27 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         action_removeWord->setEnabled(false);
         // }
         if (mudlet::self()->mUsingMudletDictionaries) {
-            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
-                                                                    // Intentional separator
-                                                                    "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                    "line context menu to clearly divide up where the suggestions for correct "
-                                                                    "spellings are coming from.  The precise format might be modified as long as it "
-                                                                    "is clear that the entries below this line in the menu come from the spelling "
-                                                                    "dictionary that the user has chosen in the profile setting which we have "
-                                                                    "bundled with Mudlet; the entries about this line are the ones that the user "
-                                                                    "has personally added."));
+            /*:
+            This line is shown in the list of spelling suggestions on the profile's command
+            line context menu to clearly divide up where the suggestions for correct
+            spellings are coming from.  The precise format might be modified as long as it
+            is clear that the entries below this line in the menu come from the spelling
+            dictionary that the user has chosen in the profile setting which we have
+            bundled with Mudlet; the entries about this line are the ones that the user
+            has personally added.
+            */
+            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
         } else {
-            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
-                                                                    // Intentional separator
-                                                                    "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                    "line context menu to clearly divide up where the suggestions for correct "
-                                                                    "spellings are coming from.  The precise format might be modified as long as it "
-                                                                    "is clear that the entries below this line in the menu come from the spelling "
-                                                                    "dictionary that the user has chosen in the profile setting which is provided "
-                                                                    "as part of the OS; the entries about this line are the ones that the user has "
-                                                                    "personally added."));
+            /*:
+            This line is shown in the list of spelling suggestions on the profile's command
+            line context menu to clearly divide up where the suggestions for correct
+            spellings are coming from.  The precise format might be modified as long as it
+            is clear that the entries below this line in the menu come from the spelling
+            dictionary that the user has chosen in the profile setting which is provided
+            as part of the OS; the entries about this line are the ones that the user has
+            personally added.
+            */
+            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
         }
         action_dictionarySeparatorLine->setEnabled(false);
     }
@@ -788,9 +790,11 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         }
 
     } else {
-        auto pA = new QAction(tr("no suggestions (system)",
-                                    // Intentional comment
-                                    "used when the command spelling checker using the selected system dictionary has no words to suggest"));
+        /*:
+        Used when the command spelling checker using the selected system dictionary has
+        no words to suggest.
+        */
+        auto pA = new QAction(tr("no suggestions (system)"));
         pA->setEnabled(false);
         spellings_system << pA;
     }
@@ -815,13 +819,17 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             QAction* pA = nullptr;
             auto mainConsole = mpConsole->mpHost->mpConsole;
             if (mainConsole->isUsingSharedDictionary()) {
-                pA = new QAction(tr("no suggestions (shared)",
-                                            // Intentional comment
-                                            "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
+                /*:
+                Used when the command spelling checker using the dictionary shared between
+                profile has no words to suggest.
+                */
+                pA = new QAction(tr("no suggestions (shared)"));
             } else {
-                pA = new QAction(tr("no suggestions (profile)",
-                                            // Intentional comment
-                                            "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
+                /*:
+                Used when the command spelling checker using the profile's own dictionary has
+                no words to suggest.
+                */
+                pA = new QAction(tr("no suggestions (profile)"));
             }
             pA->setEnabled(false);
             spellings_profile << pA;
