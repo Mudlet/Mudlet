@@ -12516,7 +12516,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1389"/>
       <source>Show Items&apos; ID number</source>
-      <translation type="unfinished"/>
+      <translation>Mostra elementi&apos; numero ID</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1432"/>
