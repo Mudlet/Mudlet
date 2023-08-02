@@ -1101,31 +1101,31 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="716"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <extracomment>This line is shown in the list of spelling suggestions on the profile&apos;s command line context menu to clearly divide up where the suggestions for correct spellings are coming from. The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</extracomment>
-      <translation type="unfinished"/>
+      <translation>▼Mudlet▼ │ предложения словаря │ Свой ▲▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="727"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <extracomment>This line is shown in the list of spelling suggestions on the profile&apos;s command line context menu to clearly divide up where the suggestions for correct spellings are coming from. The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</extracomment>
-      <translation type="unfinished"/>
+      <translation>▼ Система ▼ │ предложения словаря │ ▲ Свой ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="797"/>
       <source>no suggestions (system)</source>
       <extracomment>Used when the command spelling checker using the selected system dictionary has no words to suggest.</extracomment>
-      <translation type="unfinished"/>
+      <translation>нет предложений (система)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="826"/>
       <source>no suggestions (shared)</source>
       <extracomment>Used when the command spelling checker using the dictionary shared between profile has no words to suggest.</extracomment>
-      <translation type="unfinished"/>
+      <translation>нет предложений (из профилей)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="832"/>
       <source>no suggestions (profile)</source>
       <extracomment>Used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest.</extracomment>
-      <translation type="unfinished"/>
+      <translation>нет предложений (профиль)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1371"/>
@@ -3937,7 +3937,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="100"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="165"/>
@@ -4061,7 +4061,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="85"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="126"/>
@@ -8983,7 +8983,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="61"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="90"/>
@@ -12492,7 +12492,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1386"/>
       <source>&lt;p&gt;Shows the &lt;b&gt;unique&lt;/b&gt; ID number that Mudlet uses internally to identify each instance of an item this is the same number that the Lua API functions that create aliases, key-binding, etc. return on success. This may be useful to know when there are multiple items of the same type with the same name and will be incorporated in the names of the related items&apos; Lua scripts in the Central Debug Console output.&lt;/p&gt;&lt;p&gt;Note that although the number assigned to an item is constant during a session of the profile it may be different the next time the profile is loaded if other items are added or removed.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Показываеть уникальный &lt;b&gt;ИД&lt;/b&gt;, который Mudlet использует для идентификации каждого экземпляра элемента. Это тот же номер, что и функции API Lua, создающие псевдонимы, привязку клавиш и т.д. Это может быть полезно знать, когда существует несколько элементов одного и того же типа с одинаковыми именами, и они будут включены в имена связанных элементов&apos; Lua скриптов в выходной информации консоли Central Debug Console.&lt;/p&gt;&lt;p&gt;Учтите, что, хотя число, присвоенное элементу, является константой во время сеанса профиля, оно может быть другим при следующем загрузке профиля, если другие элементы добавляются или удаляются.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1389"/>
@@ -13955,7 +13955,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="61"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="90"/>
@@ -14057,7 +14057,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="67"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="141"/>
@@ -14155,7 +14155,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="155"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="251"/>
