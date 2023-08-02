@@ -1091,31 +1091,31 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <location filename="../src/TCommandLine.cpp" line="716"/>
       <source>▼Mudlet▼ │ dictionary suggestions │ ▲User▲</source>
       <extracomment>This line is shown in the list of spelling suggestions on the profile&apos;s command line context menu to clearly divide up where the suggestions for correct spellings are coming from. The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which we have bundled with Mudlet; the entries about this line are the ones that the user has personally added.</extracomment>
-      <translation type="unfinished"/>
+      <translation>▼ Mudlet ▼ │ 字典建议 │ ▲ 用户 ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="727"/>
       <source>▼System▼ │ dictionary suggestions │ ▲User▲</source>
       <extracomment>This line is shown in the list of spelling suggestions on the profile&apos;s command line context menu to clearly divide up where the suggestions for correct spellings are coming from. The precise format might be modified as long as it is clear that the entries below this line in the menu come from the spelling dictionary that the user has chosen in the profile setting which is provided as part of the OS; the entries about this line are the ones that the user has personally added.</extracomment>
-      <translation type="unfinished"/>
+      <translation>▼ 系统 ▼ │ 字典建议 │ ▲ 用户 ▲</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="797"/>
       <source>no suggestions (system)</source>
       <extracomment>Used when the command spelling checker using the selected system dictionary has no words to suggest.</extracomment>
-      <translation type="unfinished"/>
+      <translation>没有建议 (系统)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="826"/>
       <source>no suggestions (shared)</source>
       <extracomment>Used when the command spelling checker using the dictionary shared between profile has no words to suggest.</extracomment>
-      <translation type="unfinished"/>
+      <translation>没有建议 (共享)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="832"/>
       <source>no suggestions (profile)</source>
       <extracomment>Used when the command spelling checker using the profile&apos;s own dictionary has no words to suggest.</extracomment>
-      <translation type="unfinished"/>
+      <translation>没有建议 (配置文件)</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1371"/>
@@ -3880,7 +3880,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="100"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>编号:</translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="165"/>
@@ -4004,7 +4004,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="85"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>编号:</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="126"/>
@@ -8910,7 +8910,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="61"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>编号:</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="90"/>
