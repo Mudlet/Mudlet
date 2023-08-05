@@ -139,16 +139,26 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
                        "<p>Check the manual for <a href='http://wiki.mudlet.org/w/Manual:Contents'>more information</a>.</p>");
 
     // Descriptions for screen readers, clarify to translators that the context of "activated" is current status and not confirmation of toggle.
-    descActive = tr("activated", "Item is currently on, short enough to be spoken");
-    descInactive = tr("deactivated", "Item is currently off, short enough to be spoken");
-    descActiveFolder = tr("activated folder", "Folder is currently turned on");
-    descInactiveFolder = tr("deactivated folder", "Folder is currently turned off");
-    descError = tr("deactivated due to error", "Item is currently inactive because of errors, short enough to be spoken");
-    descInactiveParent = tr("%1 in a deactivated group", "Item is currently turned on individually, but is member of an inactive group");
-    descActiveFilterChain = tr("activated filter chain", "A trigger that unlocks other triggers is currently turned on, short enough to be spoken");
-    descInactiveFilterChain = tr("deactivated filter chain", "A trigger that unlocks other triggers is currently turned off, short enough to be spoken");
-    descActiveOffsetTimer = tr("activated offset timer", "A timer that starts after another timer is currently turned on");
-    descInactiveOffsetTimer = tr("deactivated offset timer", "A timer that starts after another timer is currently turned off");
+    //: Item is currently on, short enough to be spoken
+    descActive = tr("activated");
+    //: Item is currently off, short enough to be spoken
+    descInactive = tr("deactivated");
+    //: Folder is currently turned on
+    descActiveFolder = tr("activated folder");
+    //: Folder is currently turned off
+    descInactiveFolder = tr("deactivated folder");
+    //: Item is currently inactive because of errors, short enough to be spoken
+    descError = tr("deactivated due to error");
+    //: Item is currently turned on individually, but is member of an inactive group
+    descInactiveParent = tr("%1 in a deactivated group");
+    //: A trigger that unlocks other triggers is currently turned on, short enough to be spoken
+    descActiveFilterChain = tr("activated filter chain");
+    //: A trigger that unlocks other triggers is currently turned off, short enough to be spoken
+    descInactiveFilterChain = tr("deactivated filter chain");
+    //: A timer that starts after another timer is currently turned on
+    descActiveOffsetTimer = tr("activated offset timer");
+    //: A timer that starts after another timer is currently turned off
+    descInactiveOffsetTimer = tr("deactivated offset timer");
     descNewFolder = tr("new folder");
     descNewItem = tr("new item");
 
@@ -172,7 +182,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     // set the stretch factor of the message area to 0 and everything else to 1,
     // so our errors box doesn't stretch to produce a grey area
     layoutColumn->addWidget(mpSystemMessageArea, 0);
-    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, mpSystemMessageArea, &QWidget::hide);
+    connect(mpSystemMessageArea->messageAreaCloseButton, &QAbstractButton::clicked, this, &dlgTriggerEditor::hideSystemMessageArea);
 
     // main areas
     mpTriggersMainArea = new dlgTriggersMainArea(this);
@@ -218,7 +228,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the status bar on changes
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
-    simplifyEdbeeStatusBarRegex = new QRegularExpression(qsl(R"(^(?:\[\*\] )?(.+?) \|)"));
     mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
 
     // Update the editor preferences
@@ -301,7 +310,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpSourceEditorEdbee->textEditorComponent(), &QWidget::customContextMenuRequested, this, &dlgTriggerEditor::slot_editorContextMenu);
 
     // option areas
-    mpErrorConsole = new TConsole(mpHost, TConsole::ErrorConsole, this);
+    mpErrorConsole = new TConsole(mpHost, qsl("errors_%1").arg(hostName), TConsole::ErrorConsole, this);
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
     mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);
@@ -457,6 +466,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
 
     mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), QString(), this);
+    mAddItem->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Add Item"), QKeySequence(QKeySequence::New).toString()));
+    mAddItem->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mAddItem->setShortcut(QKeySequence(QKeySequence::New));
+    frame_left->addAction(mAddItem);
     connect(mAddItem, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
 
     mDeleteItem = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), QString(), this);
@@ -467,6 +480,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mDeleteItem, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
 
     mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
+    mAddGroup->setToolTip(tr("Add Group (Control+Shift+N)"));
+    mAddGroup->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mAddGroup->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
+    frame_left->addAction(mAddGroup);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
     // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
@@ -565,10 +582,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar->setMovable(true);
     toolBar->addAction(toggleActiveAction);
     toolBar->addAction(mSaveItem);
-    toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions",
-                               // Intentional comment to separate arguments
-                               "This is the toolbar that is initially placed at the top of the editor.")
-                            .arg(hostName));
+    //: This is the toolbar that is initially placed at the top of the editor.
+    toolBar->setWindowTitle(tr("Editor Toolbar - %1 - Actions").arg(hostName));
 
     toolBar->addSeparator();
 
@@ -601,10 +616,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(showDebugAreaAction);
 
     toolBar2->setMovable(true);
-    toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items",
-                                // Intentional comment to separate arguments
-                                "This is the toolbar that is initially placed at the left side of the editor.")
-                             .arg(hostName));
+    //: This is the toolbar that is initially placed at the left side of the editor.
+    toolBar2->setWindowTitle(tr("Editor Toolbar - %1 - Items").arg(hostName));
     toolBar2->setOrientation(Qt::Vertical);
 
     // Inserting them in this order also causes the first one (the top toolbar)
@@ -762,10 +775,14 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     treeWidget_searchResults->setColumnCount(4);
     QStringList labelList;
-    labelList << tr("Type", "Heading for the first column of the search results")
-              << tr("Name", "Heading for the second column of the search results")
-              << tr("Where", "Heading for the third column of the search results")
-              << tr("What", "Heading for the fourth column of the search results");
+    //: Heading for the first column of the search results
+    labelList << tr("Type")
+              //: Heading for the second column of the search results
+              << tr("Name")
+              //: Heading for the third column of the search results
+              << tr("Where")
+              //: Heading for the fourth column of the search results
+              << tr("What");
     treeWidget_searchResults->setHeaderLabels(labelList);
 
     slot_showSearchAreaResults(false);
@@ -855,6 +872,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     widget_searchTerm->updateGeometry();
 
+    showIDLabels(mpHost->showIdsInEditor());
     if (mAutosaveInterval > 0) {
         startTimer(mAutosaveInterval * 1min);
     }
@@ -3613,7 +3631,7 @@ void dlgTriggerEditor::activeToggle_key()
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
     showInfo(
-            QString("Trying to %2 key <em>%1</em> %3.").arg(pT->getName().toHtmlEscaped(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: ") + pT->getError()));
+            QString("Trying to %2 key <em>%1</em> %3.").arg(pT->getName().toHtmlEscaped(), pT->shouldBeActive() ? "activate" : "deactivate", pT->state() ? "succeeded" : QString("failed; reason: %1").arg(pT->getError())));
     if (pItem->childCount() > 0) {
         children_icon_key(pItem);
     }
@@ -3767,6 +3785,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
         pParent->setExpanded(true);
     }
     mpTriggersMainArea->lineEdit_trigger_name->clear();
+    mpTriggersMainArea->label_idNumber->clear();
     mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(false);
 
     clearDocument(mpSourceEditorEdbee); // New Trigger
@@ -4120,11 +4139,13 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     }
 
     mpAliasMainArea->lineEdit_alias_name->clear();
+    mpAliasMainArea->label_idNumber->clear();
     mpAliasMainArea->lineEdit_alias_pattern->clear();
     mpAliasMainArea->lineEdit_alias_command->clear();
     clearDocument(mpSourceEditorEdbee); // New Alias
 
     mpAliasMainArea->lineEdit_alias_name->setText(name);
+    mpAliasMainArea->label_idNumber->setText(QString::number(childID));
 
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem(pNewItem);
@@ -4300,7 +4321,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
         pParent->setExpanded(true);
     }
     mpScriptsMainArea->lineEdit_script_name->clear();
-    //FIXME mpScriptsMainArea->pattern_textedit->clear();
+    mpScriptsMainArea->label_idNumber->clear();
 
     clearDocument(mpSourceEditorEdbee, script);
     mpCurrentScriptItem = pNewItem;
@@ -5093,7 +5114,13 @@ void dlgTriggerEditor::saveScript()
     }
 
     if (pT->state()) {
-        clearEditorNotification();
+        if (auto error = pT->getLoadingError(); error) {
+            showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
+                           "possibly by another script. The error was:%2%3")
+                                .arg(qsl("<br>"), error.value()));
+        } else {
+            clearEditorNotification();
+        }
 
         if (old_name == tr("New script") || old_name == tr("New script group")) {
             QIcon _icon;
@@ -5553,32 +5580,30 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
 
             if (textAnsiFg == TTrigger::scmIgnored) {
                 pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored",
-                                                             "Color trigger ignored foreground color button, ensure all three instances have the same text"));
+                //: Color trigger ignored foreground color button, ensure all three instances have the same text
+                pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored"));
             } else if (textAnsiFg == TTrigger::scmDefault) {
                 pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                pPatternItem->pushButton_fgColor->setText(tr("Default foreground color",
-                                                             "Color trigger default foreground color button, ensure all three instances have the same text"));
+                //: Color trigger default foreground color button, ensure all three instances have the same text
+                pPatternItem->pushButton_fgColor->setText(tr("Default foreground color"));
             } else {
                 pPatternItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiFg, false)));
-                pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]",
-                                                             "Color trigger ANSI foreground color button, ensure all three instances have the same text")
-                                                          .arg(QString::number(textAnsiFg)));
+                //: Color trigger ANSI foreground color button, ensure all three instances have the same text
+                pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]").arg(QString::number(textAnsiFg)));
             }
 
             if (textAnsiBg == TTrigger::scmIgnored) {
                 pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                pPatternItem->pushButton_bgColor->setText(tr("Background color ignored",
-                                                             "Color trigger ignored background color button, ensure all three instances have the same text"));
+                //: Color trigger ignored background color button, ensure all three instances have the same text
+                pPatternItem->pushButton_bgColor->setText(tr("Background color ignored"));
             } else if (textAnsiBg == TTrigger::scmDefault) {
                 pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                pPatternItem->pushButton_bgColor->setText(tr("Default background color",
-                                                             "Color trigger default background color button, ensure all three instances have the same text"));
+                //: Color trigger default background color button, ensure all three instances have the same text
+                pPatternItem->pushButton_bgColor->setText(tr("Default background color"));
             } else {
                 pPatternItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(mpHost->getAnsiColor(textAnsiBg, true)));
-                pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]",
-                                                             "Color trigger ANSI background color button, ensure all three instances have the same text")
-                                                          .arg(QString::number(textAnsiBg)));
+                //: Color trigger ANSI background color button, ensure all three instances have the same text
+                pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]").arg(QString::number(textAnsiBg)));
             }
 
         } /*else {
@@ -5614,7 +5639,8 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
     mpTriggersMainArea->show();
     mpSourceEditorArea->show();
     clearEditorNotification();
-    mpTriggersMainArea->lineEdit_trigger_name->setText("");
+    mpTriggersMainArea->lineEdit_trigger_name->clear();
+    mpTriggersMainArea->label_idNumber->clear();
     clearDocument(mpSourceEditorEdbee); // Trigger Select
     mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(false);
     mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(false);
@@ -5663,32 +5689,31 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
                 if (pT->mColorPatternList.at(i)) {
                     if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmIgnored) {
                         pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored",
-                                                                     "Color trigger ignored foreground color button, ensure all three instances have the same text"));
+                        //: Color trigger ignored foreground color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color ignored"));
                     } else if (pT->mColorPatternList.at(i)->ansiFg == TTrigger::scmDefault) {
                         pPatternItem->pushButton_fgColor->setStyleSheet(QString());
-                        pPatternItem->pushButton_fgColor->setText(tr("Default foreground color",
-                                                                     "Color trigger default foreground color button, ensure all three instances have the same text"));
+                        //: Color trigger default foreground color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_fgColor->setText(tr("Default foreground color"));
                     } else {
                         pPatternItem->pushButton_fgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mFgColor));
-                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]",
-                                                                     "Color trigger ANSI foreground color button, ensure all three instances have the same text")
-                                                                     .arg(QString::number(pT->mColorPatternList.at(i)->ansiFg)));
+                        //: Color trigger ANSI foreground color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_fgColor->setText(tr("Foreground color [ANSI %1]").arg(QString::number(pT->mColorPatternList.at(i)->ansiFg)));
                     }
 
                     if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmIgnored) {
                         pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                        pPatternItem->pushButton_bgColor->setText(tr("Background color ignored",
-                                                                     "Color trigger ignored background color button, ensure all three instances have the same text"));
+                        //: Color trigger ignored background color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_bgColor->setText(tr("Background color ignored"));
                     } else if (pT->mColorPatternList.at(i)->ansiBg == TTrigger::scmDefault) {
                         pPatternItem->pushButton_bgColor->setStyleSheet(QString());
-                        pPatternItem->pushButton_bgColor->setText(tr("Default background color",
-                                                                     "Color trigger default background color button, ensure all three instances have the same text"));
+                        //: Color trigger default background color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_bgColor->setText(tr("Default background color"));
                     } else {
                         pPatternItem->pushButton_bgColor->setStyleSheet(generateButtonStyleSheet(pT->mColorPatternList.at(i)->mBgColor));
-                        pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]",
-                                                                     "Color trigger ANSI background color button, ensure all three instances have the same text")
-                                                                  .arg(QString::number(pT->mColorPatternList.at(i)->ansiBg)));
+                        //: Color trigger ANSI background color button, ensure all three instances have the same text
+                        pPatternItem->pushButton_bgColor->setText(tr("Background color [ANSI %1]").arg(QString::number(pT->mColorPatternList.at(i)->ansiBg)));
+
                     }
                 } else {
                     qWarning() << "dlgTriggerEditor::slot_triggerSelected(...) ERROR: TTrigger instance has an mColorPattern of size:"
@@ -5726,6 +5751,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), 49)));
         const QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
+        mpTriggersMainArea->label_idNumber->setText(QString::number(ID));
         mpTriggersMainArea->lineEdit_trigger_command->setText(command);
         mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(pT->isMultiline());
         mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(pT->mPerlSlashGOption);
@@ -5747,12 +5773,12 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         const bool transparentBg = bgColor == QColorConstants::Transparent;
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, pT->isColorizerTrigger()));
         mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, transparentFg ? qsl("transparent") : fgColor.name());
-        mpTriggersMainArea->pushButtonFgColor->setText(transparentFg ? tr("keep",
-             "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonFgColor->setText(transparentFg ? tr("keep") : QString());
         mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(pT->getBgColor(), pT->isColorizerTrigger()));
         mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, transparentBg ? qsl("transparent") : bgColor.name());
-        mpTriggersMainArea->pushButtonBgColor->setText(transparentBg ? tr("keep",
-             "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonBgColor->setText(transparentBg ? tr("keep") : QString());
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -5785,11 +5811,12 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
     mpSourceEditorArea->show();
     clearEditorNotification();
     mpAliasMainArea->lineEdit_alias_name->clear();
+    mpAliasMainArea->label_idNumber->clear();
     mpAliasMainArea->lineEdit_alias_pattern->clear();
     mpAliasMainArea->lineEdit_alias_command->clear();
     clearDocument(mpSourceEditorEdbee); // Alias Select
 
-    mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
+    // mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TAlias* pT = mpHost->getAliasUnit()->getAlias(ID);
     if (pT) {
@@ -5800,6 +5827,7 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
         mpAliasMainArea->lineEdit_alias_pattern->setText(pattern);
         mpAliasMainArea->lineEdit_alias_command->setText(command);
         mpAliasMainArea->lineEdit_alias_name->setText(name);
+        mpAliasMainArea->label_idNumber->setText(QString::number(ID));
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -5836,6 +5864,7 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     mpKeysMainArea->lineEdit_key_command->clear();
     mpKeysMainArea->lineEdit_key_binding->clear();
     mpKeysMainArea->lineEdit_key_name->clear();
+    mpKeysMainArea->label_idNumber->clear();
     clearDocument(mpSourceEditorEdbee); // Key Select
 
     mpKeysMainArea->lineEdit_key_binding->setText(pItem->text(0));
@@ -5844,9 +5873,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     if (pT) {
         const QString command = pT->getCommand();
         const QString name = pT->getName();
-        mpKeysMainArea->lineEdit_key_command->clear();
         mpKeysMainArea->lineEdit_key_command->setText(command);
         mpKeysMainArea->lineEdit_key_name->setText(name);
+        mpKeysMainArea->label_idNumber->setText(QString::number(ID));
         const QString keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), pT->getKeyModifiers());
         mpKeysMainArea->lineEdit_key_binding->setText(keyName);
 
@@ -6176,6 +6205,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
+    mpActionsMainArea->label_idNumber->clear();
     mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(false);
     mpActionsMainArea->lineEdit_action_button_command_down->clear();
     mpActionsMainArea->lineEdit_action_button_command_up->clear();
@@ -6193,6 +6223,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
     TAction* pT = mpHost->getActionUnit()->getAction(ID);
     if (pT) {
         mpActionsMainArea->lineEdit_action_name->setText(pT->getName());
+        mpActionsMainArea->label_idNumber->setText(QString::number(ID));
         mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(pT->isPushDownButton());
         mpActionsMainArea->label_action_button_command_up->hide();
         mpActionsMainArea->label_action_button_command_down->hide();
@@ -6322,8 +6353,9 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     clearEditorNotification();
     clearDocument(mpSourceEditorEdbee); // Script Select
     mpScriptsMainArea->lineEdit_script_name->clear();
+    mpScriptsMainArea->label_idNumber->clear();
     mpScriptsMainArea->listWidget_script_registered_event_handlers->clear();
-    mpScriptsMainArea->lineEdit_script_name->setText(pItem->text(0));
+    // mpScriptsMainArea->lineEdit_script_name->setText(pItem->text(0));
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
     if (pT) {
@@ -6334,12 +6366,15 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
             pItem->setText(eventHandlerList[i]);
             mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
         }
-        mpScriptsMainArea->lineEdit_script_name->clear();
         const QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
-        if (!pT->state()) {
+        mpScriptsMainArea->label_idNumber->setText(QString::number(ID));
+        if (auto error = pT->getLoadingError(); error) {
+            showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
+                           "possibly by another script. The error was:%2%3").arg(qsl("<br>"), error.value()));
+        } else if (!pT->state()) {
             showError(pT->getError());
         }
 
@@ -6376,7 +6411,8 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
     mpTimersMainArea->timeEdit_timer_minutes->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, 0));
-    mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
+    mpTimersMainArea->label_idNumber->clear();
+    // mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
 
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(ID);
@@ -6385,6 +6421,7 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         const QString name = pT->getName();
         mpTimersMainArea->lineEdit_timer_command->setText(command);
         mpTimersMainArea->lineEdit_timer_name->setText(name);
+        mpTimersMainArea->label_idNumber->setText(QString::number(ID));
         QTime const time = pT->getTime();
         mpTimersMainArea->timeEdit_timer_hours->setTime(QTime(time.hour(), 0, 0, 0));
         mpTimersMainArea->timeEdit_timer_minutes->setTime(QTime(0, time.minute(), 0, 0));
@@ -7452,6 +7489,7 @@ void dlgTriggerEditor::enterEvent(TEnterEvent* event)
 void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
 {
     Q_UNUSED(pE)
+    qDebug() << "focusInEvent fired!!";
     if (mNeedUpdateData) {
         saveOpenChanges();
         treeWidget_triggers->clear();
@@ -7913,24 +7951,38 @@ void dlgTriggerEditor::slot_addNewItem()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         addTrigger(false); //add normal trigger
+        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(false); //add normal trigger
+        addTimer(false); //add normal timer
+        mpTimersMainArea->lineEdit_timer_name->setFocus();
+        mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
         addAlias(false); //add normal alias
+        mpAliasMainArea->lineEdit_alias_name->setFocus();
+        mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(false); //add normal alias
+        addScript(false); //add normal script
+        mpScriptsMainArea->lineEdit_script_name->setFocus();
+        mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
         addAction(false); //add normal action
+        mpActionsMainArea->lineEdit_action_name->setFocus();
+        mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(false); //add normal alias
+        addKey(false); //add normal key
+        mpKeysMainArea->lineEdit_key_name->setFocus();
+        mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
         addVar(false); //add variable
+        mpVarsMainArea->lineEdit_var_name->setFocus();
+        // variables start without a default name
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
@@ -7942,24 +7994,38 @@ void dlgTriggerEditor::slot_addNewGroup()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         addTrigger(true); //add trigger group
+        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(true);
+        addTimer(true); //add timer group
+        mpTimersMainArea->lineEdit_timer_name->setFocus();
+        mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
         addAlias(true); //add alias group
+        mpAliasMainArea->lineEdit_alias_name->setFocus();
+        mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(true); //add alias group
+        addScript(true); //add script group
+        mpScriptsMainArea->lineEdit_script_name->setFocus();
+        mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
         addAction(true); //add action group
+        mpActionsMainArea->lineEdit_action_name->setFocus();
+        mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(true); //add alias group
+        addKey(true); //add keys group
+        mpKeysMainArea->lineEdit_key_name->setFocus();
+        mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
         addVar(true); // add lua table
+        mpVarsMainArea->lineEdit_var_name->setFocus();
+        // variables start without a default name
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
@@ -8779,7 +8845,7 @@ void dlgTriggerEditor::slot_export()
 
     QFile checkWriteability(fileName);
     if (!checkWriteability.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("export package:"), tr("Cannot write file %1:\n%2.").arg(fileName, checkWriteability.errorString()));
+        QMessageBox::warning(this, tr("export package:"), tr("Cannot write file %1:\n%2.").arg(fileName.toHtmlEscaped(), checkWriteability.errorString()));
         return;
     }
     // Should close the checkWriteability that we have confirmed can be opened:
@@ -9315,7 +9381,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetFgColor()
     color = color.isValid() ? color : QColorConstants::Transparent;
     const bool keepColor = color == QColorConstants::Transparent;
     mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(color));
-    mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+    mpTriggersMainArea->pushButtonFgColor->setText(keepColor ? tr("keep") : QString());
     mpTriggersMainArea->pushButtonFgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
 }
 
@@ -9336,7 +9403,8 @@ void dlgTriggerEditor::slot_colorizeTriggerSetBgColor()
     color = color.isValid() ? color : QColorConstants::Transparent;
     const bool keepColor = color == QColorConstants::Transparent;
     mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(color));
-    mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+    //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+    mpTriggersMainArea->pushButtonBgColor->setText(keepColor ? tr("keep") : QString());
     mpTriggersMainArea->pushButtonBgColor->setProperty(cButtonBaseColor, keepColor ? qsl("transparent") : color.name());
 }
 
@@ -9349,6 +9417,7 @@ void dlgTriggerEditor::slot_soundTrigger()
                                                     mpTriggersMainArea->lineEdit_soundFile->text().isEmpty()
                                                     ? mudlet::getMudletPath(mudlet::profileHomePath, mpHost->getName())
                                                     : mpTriggersMainArea->lineEdit_soundFile->text(),
+                                                    //: This the list of file extensions that are considered for sounds from triggers, the terms inside of the '('...')' and the ";;" are used programmatically and should not be changed.
                                                     tr("Audio files(*.aac *.mp3 *.mp4a *.oga *.ogg *.pcm *.wav *.wma);;"
                                                        "Advanced Audio Coding-stream(*.aac);;"
                                                        "MPEG-2 Audio Layer 3(*.mp3);;"
@@ -9357,9 +9426,7 @@ void dlgTriggerEditor::slot_soundTrigger()
                                                        "PCM Audio(*.pcm);;"
                                                        "Wave(*.wav);;"
                                                        "Windows Media Audio(*.wma);;"
-                                                       "All files(*.*)",
-                                                       // Intentional comment
-                                                       "This the list of file extensions that are considered for sounds from triggers, the terms inside of the '('...')' and the \";;\" are used programmatically and should not be changed."));
+                                                       "All files(*.*)"));
     if (!fileName.isEmpty()) {
         // This will only be executed if the user did not press cancel
         mpTriggersMainArea->lineEdit_soundFile->setToolTip(fileName);
@@ -9421,15 +9488,14 @@ void dlgTriggerEditor::slot_colorTriggerFg()
     pPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
 
     if (pT->mColorTriggerFgAnsi == TTrigger::scmIgnored) {
-        pB->setText(tr("Foreground color ignored",
-                       "Color trigger ignored foreground color button, ensure all three instances have the same text"));
+        //: Color trigger ignored foreground color button, ensure all three instances have the same text
+        pB->setText(tr("Foreground color ignored"));
     } else if (pT->mColorTriggerFgAnsi == TTrigger::scmDefault) {
-        pB->setText(tr("Default foreground color",
-                       "Color trigger default foreground color button, ensure all three instances have the same text"));
+        //: Color trigger default foreground color button, ensure all three instances have the same text
+        pB->setText(tr("Default foreground color"));
     } else {
-        pB->setText(tr("Foreground color [ANSI %1]",
-                       "Color trigger ANSI foreground color button, ensure all three instances have the same text")
-                    .arg(QString::number(pT->mColorTriggerFgAnsi)));
+        //: Color trigger ANSI foreground color button, ensure all three instances have the same text
+        pB->setText(tr("Foreground color [ANSI %1]").arg(QString::number(pT->mColorTriggerFgAnsi)));
     }
 }
 
@@ -9484,15 +9550,14 @@ void dlgTriggerEditor::slot_colorTriggerBg()
     pPatternItem->lineEdit_pattern->setText(TTrigger::createColorPatternText(pT->mColorTriggerFgAnsi, pT->mColorTriggerBgAnsi));
 
     if (pT->mColorTriggerBgAnsi == TTrigger::scmIgnored) {
-        pB->setText(tr("Background color ignored",
-                       "Color trigger ignored background color button, ensure all three instances have the same text"));
+        //: Color trigger ignored background color button, ensure all three instances have the same text
+        pB->setText(tr("Background color ignored"));
     } else if (pT->mColorTriggerBgAnsi == TTrigger::scmDefault) {
-        pB->setText(tr("Default background color",
-                       "Color trigger default background color button, ensure all three instances have the same text"));
+        //: Color trigger default background color button, ensure all three instances have the same text
+        pB->setText(tr("Default background color"));
     } else {
-        pB->setText(tr("Background color [ANSI %1]",
-                       "Color trigger ANSI background color button, ensure all three instances have the same text")
-                    .arg(QString::number(pT->mColorTriggerBgAnsi)));
+        //: Color trigger ANSI background color button, ensure all three instances have the same text
+        pB->setText(tr("Background color [ANSI %1]").arg(QString::number(pT->mColorTriggerBgAnsi)));
     }
 }
 
@@ -9500,7 +9565,7 @@ void dlgTriggerEditor::slot_updateStatusBar(const QString& statusText)
 {
     // edbee adds the scope and last command which is rather technical debugging information,
     // so strip it away by removing the first pipe and everything after it
-    QRegularExpressionMatch const match = simplifyEdbeeStatusBarRegex->match(statusText, 0, QRegularExpression::PartialPreferFirstMatch);
+    const QRegularExpressionMatch match = csmSimplifyStatusBarRegex.match(statusText, 0, QRegularExpression::PartialPreferFirstMatch);
     QString stripped;
     if (match.hasPartialMatch() || match.hasMatch()) {
         stripped = match.captured(1);
@@ -9826,8 +9891,10 @@ void dlgTriggerEditor::slot_toggleGroupBoxColorizeTrigger(const bool state)
         const QString bgColor = mpTriggersMainArea->pushButtonBgColor->property(cButtonBaseColor).toString();
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, true));
         mpTriggersMainArea->pushButtonBgColor->setStyleSheet(generateButtonStyleSheet(bgColor, true));
-        mpTriggersMainArea->pushButtonFgColor->setText(fgColor == QLatin1String("transparent") ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
-        mpTriggersMainArea->pushButtonBgColor->setText(bgColor == QLatin1String("transparent") ? tr("keep", "Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button") : QString());
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonFgColor->setText(fgColor == QLatin1String("transparent") ? tr("keep") : QString());
+        //: Keep the existing colour on matches to highlight. Use shortest word possible so it fits on the button
+        mpTriggersMainArea->pushButtonBgColor->setText(bgColor == QLatin1String("transparent") ? tr("keep") : QString());
     } else {
         // Disabled so make buttons greyed out a bit:
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(mpTriggersMainArea->pushButtonFgColor->property(cButtonBaseColor).toString(), false));
@@ -10058,4 +10125,54 @@ void dlgTriggerEditor::setEditorShowBidi(const bool state)
     config->setRenderBidiContolCharacters(state);
     config->endChanges();
     mpSourceEditorEdbee->controller()->update();
+}
+
+void dlgTriggerEditor::hideSystemMessageArea()
+{
+    mpSystemMessageArea->hide();
+
+    if (mCurrentView != EditorViewType::cmScriptView) {
+        return;
+    }
+
+    QTreeWidgetItem* pItem = treeWidget_scripts->currentItem();
+    if (pItem) {
+        TScript* pT = mpHost->getScriptUnit()->getScript(pItem->data(0, Qt::UserRole).toInt());
+        if (pT && pT->getLoadingError()) {
+            pT->clearLoadingError();
+        }
+    }
+}
+
+// In case the profile was reset while the editor was out of focus, checks for any script loading errors and displays them
+void dlgTriggerEditor::changeEvent(QEvent* e)
+{
+    if (e->type() == QEvent::ActivationChange && this->isActiveWindow()) {
+        if (mCurrentView == EditorViewType::cmScriptView) {
+            auto scriptTreeWidgetItem = treeWidget_scripts->currentItem();
+            if (!scriptTreeWidgetItem) {
+                return;
+            }
+
+            TScript* script = mpHost->getScriptUnit()->getScript(scriptTreeWidgetItem->data(0, Qt::UserRole).toInt());
+            if (!script) {
+                return;
+            }
+            if (auto error = script->getLoadingError(); error) {
+                showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
+                               "possibly by another script. The error was:%2%3")
+                                    .arg(qsl("<br>"), error.value()));
+            }
+        }
+    }
+}
+
+void dlgTriggerEditor::showIDLabels(const bool visible)
+{
+    mpAliasMainArea->frameId->setVisible(visible);
+    mpActionsMainArea->frameId->setVisible(visible);
+    mpKeysMainArea->frameId->setVisible(visible);
+    mpScriptsMainArea->frameId->setVisible(visible);
+    mpTimersMainArea->frameId->setVisible(visible);
+    mpTriggersMainArea->frameId->setVisible(visible);
 }

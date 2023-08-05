@@ -180,6 +180,7 @@ public:
     bool eventFilter(QObject*, QEvent* event) override;
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void changeEvent(QEvent* e) override;
     void fillout_form();
     void showError(const QString&);
     void showWarning(const QString&);
@@ -224,6 +225,8 @@ public:
     void setSearchOptions(const SearchOptions);
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
+    void hideSystemMessageArea();
+    void showIDLabels(const bool);
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -517,7 +520,7 @@ private:
     edbee::TextDocument* mpSourceEditorEdbeeDocument = nullptr;
     edbee::TextSearcher* mpSourceEditorSearcher = nullptr;
 
-    QRegularExpression* simplifyEdbeeStatusBarRegex = nullptr;
+    inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
     QAction* mAddItem = nullptr;
     QAction* mDeleteItem = nullptr;

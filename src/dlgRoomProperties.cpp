@@ -238,11 +238,12 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
                 displayStrings.append(qsl("%1 {%2:%3}")
                     .arg(itSymbolUsed.key())
-                    .arg(tr("count",
-                            // Intentional comment to separate arguments
-                            "This text will be part of a list of room values shown, which will show the value "
-                            "itself, followed by the counted number of rooms with this very value like: "
-                            "grey {count:2} - so please translate like counted ammount, number of, etc."))
+                    /*:
+                    This text will be part of a list of room values shown, which will show the value
+                    itself, followed by the counted number of rooms with this very value like:
+                    grey {count:2} - so please translate like counted ammount, number of, etc.
+                    */
+                    .arg(tr("count"))
                     .arg(QString::number(itSymbolUsed.value())));
             }
         }
@@ -277,11 +278,12 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
             if (itWeightUsed.value() == weightCountsList.at(i)) {
                 displayStrings.append(qsl("%1 {%2:%3}")
                     .arg(QString::number(itWeightUsed.key()))
-                    .arg(tr("count",
-                            // Intentional comment to separate arguments
-                            "This text will be part of a list of room values shown, which will name the value "
-                            "itself, followed by the counted number of rooms with that very value like: "
-                            "grey {count: 2} - So please translate like counted amount, number of, etc."))
+                    /*:
+                    This text will be part of a list of room values shown, which will name the value
+                    itself, followed by the counted number of rooms with that very value like:
+                    grey {count: 2} - So please translate like counted amount, number of, etc.
+                    */
+                    .arg(tr("count"))
                     .arg(QString::number(itWeightUsed.value())));
             }
         }
@@ -511,7 +513,8 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
         QMenu menu;
-        menu.addAction(tr("Delete room color", "This action deletes a color from the list of all room colors"), this, [=]() {
+        //: This action deletes a color from the list of all room colors
+        menu.addAction(tr("Delete room color"), this, [=]() {
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
             auto color = selectedItem->text();
 
@@ -538,12 +541,14 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     hboxLayout->addWidget(pB_newColor);
 
     auto pB_ok = new QPushButton(pButtonBar);
-    pB_ok->setText(tr("OK", "confirm room color selection dialog"));
+    //: confirm room color selection dialog
+    pB_ok->setText(tr("OK"));
     hboxLayout->addWidget(pB_ok);
     connect(pB_ok, &QAbstractButton::clicked, dialog, &QDialog::accept);
 
     auto pB_abort = new QPushButton(pButtonBar);
-    pB_abort->setText(tr("Cancel", "cancel room color selection dialog"));
+    //: cancel room color selection dialog
+    pB_abort->setText(tr("Cancel"));
     connect(pB_abort, &QAbstractButton::clicked, dialog, &QDialog::reject);
     hboxLayout->addWidget(pB_abort);
     vboxLayout->addWidget(pButtonBar);

@@ -114,3 +114,61 @@ TLinkStore& TMxpMudlet::getLinkStore()
 {
     return mpHost->mpConsole->getLinkStore();
 }
+
+// Handle 'stacks' of attribute settings:
+void TMxpMudlet::setBold(bool bold)
+{
+    if (bold) {
+        boldCounter++;
+    } else if (boldCounter > 0) {
+        boldCounter--;
+    }
+}
+
+void TMxpMudlet::setItalic(bool italic)
+{
+    if (italic) {
+        italicCounter++;
+    } else if (italicCounter > 0) {
+        italicCounter--;
+    }
+}
+
+void TMxpMudlet::setUnderline(bool underline)
+{
+    if (underline) {
+        underlineCounter++;
+    } else if (underlineCounter > 0) {
+        underlineCounter--;
+    }
+}
+
+void TMxpMudlet::setStrikeOut(bool strikeOut)
+{
+    if (strikeOut) {
+        strikeOutCounter++;
+    } else if (strikeOutCounter > 0) {
+        strikeOutCounter--;
+    }
+}
+
+// reset text Properties (from open tags) at end of line
+void TMxpMudlet::resetTextProperties()
+{
+    boldCounter = 0;
+    italicCounter = 0;
+    underlineCounter = 0;
+    strikeOutCounter = 0;
+
+    // for the next two, we can assume both lists are usually empty (in case of properly
+    // balanced MXP tags), and if not, they'll only contain very few entries. Thus it seems
+    // sensible to check first, and then just remove all of the few nodes rather than
+    // removing the whole list first and then create a new one from scratch.
+    while (!fgColors.isEmpty()) {
+        fgColors.pop_back();
+    }
+
+    while (!bgColors.isEmpty()) {
+        bgColors.pop_back();
+    }
+}

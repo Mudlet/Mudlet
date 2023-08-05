@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2016-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -907,6 +907,13 @@ void XMLimport::readHost(Host* pHost)
     if (mudlet::self()->mpCurrentActiveHost == pHost) {
         mudlet::self()->dactionInputLine->setChecked(compactInputLine);
     }
+    if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
+        pHost->setCommandLineHistorySaveSize(attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt());
+    } else {
+        // This is the default value, though prior to the introduction of this
+        // it would have effectively been zero:
+        pHost->setCommandLineHistorySaveSize(500);
+    }
 
     if (attributes().hasAttribute(QLatin1String("NetworkPacketTimeout"))) {
         // These limits are also hard coded into the QSpinBox used to adjust
@@ -934,6 +941,13 @@ void XMLimport::readHost(Host* pHost)
     } else {
         // The default value, also used up to Mudlet 4.14.1:
         pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
+    }
+
+    if (attributes().hasAttribute(qsl("ShowIDsInEditor"))) {
+        pHost->setShowIdsInEditor(attributes().value(qsl("ShowIDsInEditor")) == YES);
+    } else {
+        // The default (and for profile files from before 4.18.0):
+        pHost->setShowIdsInEditor(false);
     }
 
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {

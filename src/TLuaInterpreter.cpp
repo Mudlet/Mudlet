@@ -2158,7 +2158,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
 std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
 {
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        return std::make_tuple(true, static_cast<int>(lua_tointeger(L, 1)));
+        return {true, static_cast<int>(lua_tointeger(L, 1))};
     }
 
     const QString name{lua_tostring(L, 1)};
@@ -2171,10 +2171,10 @@ std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
         } else {
             lua_pushfstring(L, "stopwatch with name '%s' not found", name.toUtf8().constData());
         }
-        return std::make_tuple(false, 0);
+        return {false, 0};
     }
 
-    return std::make_tuple(true, watchId);
+    return {true, watchId};
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#adjustStopWatch
@@ -2516,22 +2516,107 @@ int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrolling
+int TLuaInterpreter::enableScrolling(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    console->setScrolling(true);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrolling
+int TLuaInterpreter::disableScrolling(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    console->setScrolling(false);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollingActive
+int TLuaInterpreter::scrollingActive(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        // Handle the main console case:
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    lua_pushboolean(L, console->getScrolling());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
+// This (and the next) function originally only worked on TConsole instances
+// to show/hide a command line at the bottom (and the first would create the
+// TCommandLine if needed) but they have been extended to also work on extra
+// commandlines inserted by the createCommandLine(...) function:
 int TLuaInterpreter::enableCommandLine(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->setCmdVisible(true);
-    return 0;
+    const QString commandLineName{CMDLINE_NAME(L, 1)};
+    if (isMain(commandLineName)) {
+        return warnArgumentValue(L, __func__, "this function is not permitted on the main command line");
+    }
+    auto console = CONSOLE_NIL(L, commandLineName);
+    if (console) {
+        // This name matches a TConsole instance so we are referring to a
+        // TCommandLine at the bottom of it - so need to call the original
+        // function that creates the latter if needed:
+        console->setCmdVisible(true);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Else this might refer to an additional command line which must exist
+    // for it to be shown by this function - the following macro will fail
+    // (and return with a nil and an error message) if it doesn't:
+    auto commandLine = COMMANDLINE(L, commandLineName);
+    commandLine->setVisible(true);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableCommandLine
 int TLuaInterpreter::disableCommandLine(lua_State* L)
 {
-    const QString windowName {WINDOW_NAME(L, 1)};
-    auto console = CONSOLE(L, windowName);
-    console->setCmdVisible(false);
-    return 0;
+    const QString commandLineName{CMDLINE_NAME(L, 1)};
+    if (isMain(commandLineName)) {
+        return warnArgumentValue(L, __func__, "this function is not permitted on the main command line");
+    }
+    auto console = CONSOLE_NIL(L, commandLineName);
+    if (console) {
+        // This name matches a TConsole instance so we are referring to a
+        // TCommandLine at the bottom of it - so need to call the original
+        // function:
+        console->setCmdVisible(false);
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    // Else this might refer to an additional command line which must exist
+    // for it to be shown by this function - the following macro will fail
+    // (and return with a nil and an error message) if it doesn't:
+    auto commandLine = COMMANDLINE(L, commandLineName);
+    commandLine->setVisible(false);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#replace
@@ -2598,7 +2683,7 @@ int TLuaInterpreter::setExitStub(lua_State* L)
     }
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushstring(L, "setExitStub: RoomId doesn't exist");
+        lua_pushstring(L, "setExitStub: roomId doesn't exist");
         return lua_error(L);
     }
     if (dir > 12 || dir < 1) {
@@ -2787,7 +2872,7 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
         lua_pushnumber(L, priority);
         return 1;
     } else {
-        lua_pushstring(L, "getModulePriority: Module doesn't exist");
+        lua_pushstring(L, "getModulePriority: module doesn't exist");
         return lua_error(L);
     }
     return 0;
@@ -4172,12 +4257,12 @@ int TLuaInterpreter::startLogging(lua_State* L)
         if (host.mpConsole->mLogToLogFile) {
             host.mpConsole->logButton->setChecked(true);
             // Sets the button as checked but clicked() & pressed() signals are NOT generated
-            lua_pushfstring(L, "Main console output has started to be logged to file: %s.", host.mpConsole->mLogFileName.toUtf8().constData());
+            lua_pushfstring(L, "Main console output has started to be logged to file: %s", host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 1);
         } else {
             host.mpConsole->logButton->setChecked(false);
-            lua_pushfstring(L, "Main console output has stopped being logged to file: %s.", savedLogFileName.toUtf8().constData());
+            lua_pushfstring(L, "Main console output has stopped being logged to file: %s", savedLogFileName.toUtf8().constData());
             lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 0);
         }
@@ -4185,7 +4270,7 @@ int TLuaInterpreter::startLogging(lua_State* L)
     } else {
         lua_pushnil(L);
         if (host.mpConsole->mLogToLogFile) {
-            lua_pushfstring(L, "Main console output is already being logged to file: %s.", host.mpConsole->mLogFileName.toUtf8().constData());
+            lua_pushfstring(L, "Main console output is already being logged to file: %s", host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, -1);
         } else {
@@ -13287,7 +13372,7 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
             e.append(lua_tostring(L, 1));
         }
         errorMsg = "<b><font color='blue'>";
-        errorMsg.append(e.c_str());
+        errorMsg.append(QString::fromStdString(e).toHtmlEscaped().toUtf8());
         errorMsg.append("</font></b>");
         if (mudlet::smDebugMode) {
             auto& host = getHostFromLua(L);
@@ -14166,7 +14251,12 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
     // Log error to Editor's Errors TConsole:
     if (mpHost->mpEditorDialog) {
         mpHost->mpEditorDialog->mpErrorConsole->print(qsl("[%1:]").arg(tr("ERROR")), QColor(Qt::blue), QColor(Qt::black));
-        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" %1:<%2> %3:<%4>\n").arg(tr("object", "object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>"), name, tr("function", "function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>"), function), QColor(Qt::green), QColor(Qt::black));
+        mpHost->mpEditorDialog->mpErrorConsole->print(qsl(" %1:<%2> %3:<%4>\n").arg(
+            //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
+            tr("object"),
+            name,
+            //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
+            tr("function"), function), QColor(Qt::green), QColor(Qt::black));
         mpHost->mpEditorDialog->mpErrorConsole->print(qsl("        <%1>\n").arg(e.c_str()), QColor(Qt::red), QColor(Qt::black));
     }
 
@@ -14180,7 +14270,12 @@ void TLuaInterpreter::logError(std::string& e, const QString& name, const QStrin
             mpHost->postMessage(qsl("\n"));
         }
 
-        mpHost->postMessage(qsl("[  LUA  ] - %1: <%2> %3:<%4>\n<%5>").arg(tr("object", "object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>"), name, tr("function", "function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>"), function, e.c_str()));
+        mpHost->postMessage(qsl("[  LUA  ] - %1: <%2> %3:<%4>\n<%5>").arg(
+            //: object is the Mudlet alias/trigger/script, used in this sample message: object:<Alias1> function:<cure_me>
+            tr("object"),
+            name,
+            //: function is the Lua function, used in this sample message: object:<Alias1> function:<cure_me>
+            tr("function"), function, e.c_str()));
     }
 }
 
@@ -15097,12 +15192,13 @@ bool TLuaInterpreter::loadLuaModule(QQueue<QString>& resultMsgsQueue, const QStr
         if (lua_isstring(pGlobalLua, -1)) {
             luaErrorMsg = tr("Lua error: %1").arg(lua_tostring(pGlobalLua, -1));
         }
-        resultMsgsQueue.enqueue(tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4",
-                                   // Intentional comment to separate arguments
-                                   "%1 is the name of the module;"
-                                   "%2 will be a line-feed inserted to put the next argument on a new line;"
-                                   "%3 is the error message from the lua sub-system;"
-                                   "%4 can be an additional message about the expected effect (but may be blank).")
+        /*:
+        %1 is the name of the module;
+        %2 will be a line-feed inserted to put the next argument on a new line;
+        %3 is the error message from the lua sub-system;
+        %4 can be an additional message about the expected effect (but may be blank).
+        */
+        resultMsgsQueue.enqueue(tr("[ ERROR ] - Cannot find Lua module %1.%2%3%4")
                                 .arg((description.isEmpty() ? requirement : description),
                                      QLatin1String("\n"),
                                      luaErrorMsg,
@@ -15648,6 +15744,12 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "scrollTo", TLuaInterpreter::scrollTo);
     lua_register(pGlobalLua, "getScroll", TLuaInterpreter::getScroll);
     lua_register(pGlobalLua, "getConfig", TLuaInterpreter::getConfig);
+    lua_register(pGlobalLua, "setSaveCommandHistory", TLuaInterpreter::setSaveCommandHistory);
+    lua_register(pGlobalLua, "getSaveCommandHistory", TLuaInterpreter::getSaveCommandHistory);
+    lua_register(pGlobalLua, "enableScrolling", TLuaInterpreter::enableScrolling);
+    lua_register(pGlobalLua, "disableScrolling", TLuaInterpreter::disableScrolling);
+    lua_register(pGlobalLua, "clearMapSelection", TLuaInterpreter::clearMapSelection);
+    lua_register(pGlobalLua, "scrollingActive", TLuaInterpreter::scrollingActive);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -16678,6 +16780,25 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearMapSelection
+int TLuaInterpreter::clearMapSelection(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (pHost->mpMap->mpMapper->mp2dMap->mMultiSelection) {
+        return warnArgumentValue(L, __func__, "rooms are being selected right now and cannot be stopped at this point");
+    }
+    if (pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.isEmpty()) {
+        lua_pushboolean(L, false);
+    } else {
+        pHost->mpMap->mpMapper->mp2dMap->clearSelection();
+        lua_pushboolean(L, true);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableClickthrough
 int TLuaInterpreter::enableClickthrough(lua_State* L)
 {
@@ -17675,6 +17796,30 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
+    if (key == qsl("commandLineHistorySaveSize")) {
+        // This set of values needs to be the same as those put in the
+        // (QComboBox) dlgProfilePreferences::comboBox_commandLineHistorySaveSize
+        // widget:
+        static const QList<int> values{0, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000};
+        const auto value = getVerifiedInt(L, __func__, 2, "value");
+        if (!values.contains(value)) {
+            static QStringList valuesAsStrings;
+            if (valuesAsStrings.isEmpty()) {
+                for (const auto& potentialValue : values) {
+                    valuesAsStrings << QString::number(potentialValue);
+                }
+            }
+            lua_pushnil(L);
+            // Use the original argument as a string, not what the
+            // getVerifiedInt(...) returns in case it is not a pure integer to
+            // start with:
+            lua_pushfstring(L, "invalid commandLineHistorySaveSize value '%s', it should be one of %s",
+                            lua_tostring(L, 2), valuesAsStrings.join(qsl(", ")).toUtf8().constData());
+            return 2;
+        }
+        host.setCommandLineHistorySaveSize(value);
+        return success();
+    }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
@@ -17719,7 +17864,7 @@ int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
 
     if (commandline->contextMenuItems.remove(menuLabel) == 0) {
         lua_pushboolean(L, false);
-        lua_pushfstring(L, "removeCommandLineMenuEvent: Cannot remove '%s', menu item does not exist.", menuLabel.toUtf8().constData());
+        lua_pushfstring(L, "removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist", menuLabel.toUtf8().constData());
         return 2;
     }
     lua_pushboolean(L, true);
@@ -18028,6 +18173,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
                 lua_pushstring(L, "f6");
             }
         } },
+        { qsl("commandLineHistorySaveSize"), [&](){ lua_pushnumber(L, host.getCommandLineHistorySaveSize()); } },
     };
 
     auto it = configMap.find(key);
@@ -18037,4 +18183,70 @@ int TLuaInterpreter::getConfig(lua_State *L)
     }
 
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getSaveCommandHistory
+int TLuaInterpreter::getSaveCommandHistory(lua_State* L)
+{
+    auto& host = getHostFromLua(L);
+    auto numberOfLines = host.getCommandLineHistorySaveSize();
+    if (!numberOfLines) {
+        // We do not use warnArgumentValue(...) because it is valid to have
+        // this disabled and we do not want a message to be painted on the
+        // Central Debug Console:
+        lua_pushboolean(L, false);
+        lua_pushstring(L, "disabled by profile global preference");
+        return 2;
+    }
+    QString name = QLatin1String("main");
+    if (lua_gettop(L)) {
+        name = CMDLINE_NAME(L, 1);
+    }
+    auto pCommandline = COMMANDLINE(L, name);
+    lua_pushboolean(L, pCommandline->mSaveCommands);
+    lua_pushstring(L, (pCommandline->mSaveCommands ? qsl("enabled (%1 lines will be saved)").arg(QString::number(numberOfLines)) : qsl("disabled")).toUtf8().constData());
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setSaveCommandHistory
+int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
+{
+    auto n = lua_gettop(L);
+    auto& host = getHostFromLua(L);
+    auto numberOfLines = host.getCommandLineHistorySaveSize();
+    if (!numberOfLines) {
+        // Unlike for the getter we do want to alert on trying to set the
+        // per-commandLine option when things are disabled globally for the
+        // profile:
+        return warnArgumentValue(L, __func__, "disabled by profile global preference");
+    }
+    QString name = QLatin1String("main");
+    bool saveCommands = true;
+    // if there is no arguments we will set the "save command history" on the
+    // main  command line:
+    if (n == 1) {
+        saveCommands = getVerifiedBool(L, __func__, 1, "save command history", true);
+    } else {
+        if (lua_type(L, 1) == LUA_TSTRING) {
+            // First argument is a string so is presumably a command line name
+            name = CMDLINE_NAME(L, 1);
+            if (n > 1) {
+                saveCommands = !getVerifiedBool(L, __func__, 2, "save command history", true);
+            }
+
+        } else {
+            if (lua_type(L, 1) != LUA_TBOOLEAN) {
+                lua_pushfstring(L, "%s: bad argument #1 type (command line name as string or save history as boolean is optional, got %s!)",
+                                __func__, luaL_typename(L, 1));
+                return lua_error(L); // Dummy return!
+            }
+
+            saveCommands = !getVerifiedBool(L, __func__, 1, "save command history", true);
+        }
+    }
+
+    auto pCommandline = COMMANDLINE(L, name);
+    pCommandline->mSaveCommands = saveCommands;
+    lua_pushboolean(L, true);
+    return 1;
 }

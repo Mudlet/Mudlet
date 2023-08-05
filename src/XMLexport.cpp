@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -455,6 +455,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("playerRoomOuterDiameter") = QString::number(outerDiameterPercentage).toUtf8().constData();
     host.append_attribute("playerRoomInnerDiameter") = QString::number(innerDiameterPercentage).toUtf8().constData();
     host.append_attribute("CompactInputLine") = pHost->getCompactInputLine() ? "yes" : "no";
+    host.append_attribute("CommandLineHistorySaveSize") = QString::number(pHost->getCommandLineHistorySaveSize()).toUtf8().constData();
 
     QString ignore;
     QSetIterator<QChar> ignoreIterator(pHost->mDoubleClickIgnore);
@@ -470,6 +471,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(
             static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
+    host.append_attribute("ShowIDsInEditor") = pHost->showIdsInEditor() ? "yes" : "no";
     if (const int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
         // Don't bother to include the attribute if ignoreIterator is the default (zero)
         // value - and as ignoreIterator is an ASCII digit ignoreIterator only needs
@@ -513,10 +515,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
 
-        host.append_child("url").text().set(pHost->mUrl.toUtf8().constData());
+        host.append_child("url").text().set(pHost->getUrl().toUtf8().constData());
         host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
         host.append_child("serverPackageVersion").text().set(pHost->mServerGUI_Package_version.toUtf8().constData());
-        host.append_child("port").text().set(QString::number(pHost->mPort).toUtf8().constData());
+        host.append_child("port").text().set(QString::number(pHost->getPort()).toUtf8().constData());
         auto borders = pHost->borders();
         host.append_child("borderTopHeight").text().set(QString::number(borders.top()).toUtf8().constData());
         host.append_child("borderBottomHeight").text().set(QString::number(borders.bottom()).toUtf8().constData());
