@@ -1349,8 +1349,8 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Display options</string>
          </property>
-         <layout class="QHBoxLayout" name="hBoxLayout_groupBox_editorDisplayOptions">
-          <item>
+         <layout class="QGridLayout" name="gridLayout_groupBox_editorDisplayOptions">
+          <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_showSpacesAndTabs">
             <property name="toolTip">
              <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show tabs and spaces with visible marks instead of whitespace.&lt;/p&gt;</string>
@@ -1360,7 +1360,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item>
+          <item row="0" column="1">
            <widget class="QCheckBox" name="checkBox_showLineFeedsAndParagraphs">
             <property name="toolTip">
              <string>&lt;body&gt;&lt;p&gt;When displaying Lua contents in the main text editor area of the Editor show  line and paragraphs ends with visible marks as well as whitespace.&lt;/p&gt;</string>
@@ -1370,22 +1370,23 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="groupBox_advancedEditor">
-         <property name="title">
-          <string>Advanced</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_groupBox_advancedEditor">
-          <item>
+          <item row="1" column="0">
            <widget class="QCheckBox" name="checkBox_showBidi">
             <property name="toolTip">
              <string>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</string>
             </property>
             <property name="text">
              <string>Show invisible Unicode control characters</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkBox_showIdNumbers">
+            <property name="toolTip">
+             <string>&lt;p&gt;Shows the &lt;b&gt;unique&lt;/b&gt; ID number that Mudlet uses internally to identify each instance of an item this is the same number that the Lua API functions that create aliases, key-binding, etc. return on success. This may be useful to know when there are multiple items of the same type with the same name and will be incorporated in the names of the related items' Lua scripts in the Central Debug Console output.&lt;/p&gt;&lt;p&gt;Note that although the number assigned to an item is constant during a session of the profile it may be different the next time the profile is loaded if other items are added or removed.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show Items' ID number</string>
             </property>
            </widget>
           </item>
@@ -4182,6 +4183,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showSpacesAndTabs</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_showBidi</tabstop>
+  <tabstop>checkBox_showIdNumbers</tabstop>
   <tabstop>pushButton_foreground_color</tabstop>
   <tabstop>pushButton_command_line_foreground_color</tabstop>
   <tabstop>pushButton_command_foreground_color</tabstop>

@@ -1900,6 +1900,16 @@ void mudlet::readLateSettings(const QSettings& settings)
     mCopyAsImageTimeout = settings.value(qsl("copyAsImageTimeout"), mCopyAsImageTimeout).toInt();
 
     mMinLengthForSpellCheck = settings.value("minLengthForSpellCheck", 3).toInt();
+
+    // Make a local version of the value so that we can update the real one
+    // by calling the slot method that does that and ALSO carry out the
+    // other things needed for it:
+    bool multiView = false;
+    if (settings.contains(qsl("enableMultiViewMode"))) {
+        // We have a setting stored for this
+        multiView = settings.value(qsl("enableMultiViewMode"), QVariant(false)).toBool();
+    }
+    slot_multiView(multiView);
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2037,6 +2047,7 @@ void mudlet::writeSettings()
     settings.setValue("appearance", mAppearance);
 
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
+    settings.setValue(qsl("enableMultiViewMode"), mMultiView);
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -2691,7 +2702,7 @@ void mudlet::attachDebugArea(const QString& hostname)
 
     smpDebugArea = new QMainWindow(nullptr);
     const auto pHost = mHostManager.getHost(hostname);
-    smpDebugConsole = new TConsole(pHost, TConsole::CentralDebugConsole);
+    smpDebugConsole = new TConsole(pHost, qsl("centralDebug"), TConsole::CentralDebugConsole);
     smpDebugConsole->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     smpDebugConsole->setWrapAt(100);
     smpDebugArea->setCentralWidget(smpDebugConsole);
@@ -2737,6 +2748,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
+    // pre-install packages when loading this profile for the first time
     bool preInstallPackages = false;
     if (entries.isEmpty()) {
         preInstallPackages = true;

@@ -3034,11 +3034,8 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        console = new TConsole(this, TConsole::UserWindow, dockwidget->widget());
+        console = new TConsole(this, name, TConsole::UserWindow, dockwidget->widget());
         console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
-        // Without this the TConsole instance inside the TDockWidget will be
-        // left being called the default value of "main":
-        console->mConsoleName = name;
         console->setContentsMargins(0, 0, 0, 0);
         dockwidget->setTConsole(console);
         console->layerCommandLine->hide();
