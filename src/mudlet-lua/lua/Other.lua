@@ -1151,13 +1151,23 @@ end
 -- @param event Drag and Drop Event
 -- @param fileName name and location of the file
 -- @param suffix suffix of the file
+local ctrlKeyPressed = false
+
 function packageDrop(event, fileName, suffix)
   if not table.contains(acceptableSuffix, suffix) then
     return
   end
-  verbosePackageInstall(fileName)
+
+  if ctrlKeyPressed then
+    -- Install as a module
+    verbosePackageInstall(fileName, true)
+
+  else
+  verbosePackageInstall(fileName, false)
 end
-registerAnonymousEventHandler("sysDropEvent", "packageDrop")
+
+ctrlKeyPressed = false
+end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
 -- @param event Drag and Drop Event
@@ -1169,9 +1179,23 @@ function packageUrlDrop(event, url, schema)
     return
   end
 
-  installPackage(url)
+  if ctrlKeyPressed then
+    -- Install as a module from URL
+    verbosePackageInstall(url, true)
+  else
+    -- Install normally from URL
+    verbosePackageInstall(url, false)
+  end
+  
+  ctrlKeyPressed = false
 end
-registerAnonymousEventHandler("sysDropUrlEvent", "packageUrlDrop")
+
+
+
+-- Register event handlers
+registerAnonymousEventHandler("sysDropEvent", "packageDrop")
+registerAnonymousEventHandler("keyDownEvent", "handleKeyPress")
+registerAnonymousEventHandler("keyUpEvent", "handleKeyRelease")
 
 -- Add dummy functions for the TTS functions if Mudlet has been compiled without them
 -- This is to prevent scripts erroring if they've been written with TTS capabilities
