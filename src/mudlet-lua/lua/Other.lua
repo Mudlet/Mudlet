@@ -1087,25 +1087,42 @@ end
 
 local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
-function verbosePackageInstall(fileName)
-  local ok, err = installPackage(fileName)
+function verbosePackageInstall(fileName, isModule)
   local packageName = string.gsub(fileName, getMudletHomeDir() .. "/", "")
-  -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
-  if ok then
-    local successText = mudlet.Locale.packageInstallSuccess.message
-    successText = string.format(successText, packageName)
-    local okPrefix = mudlet.Locale.prefixOk.message
-    decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
-    -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
+  
+  if isModule then
+    local moduleFileName = fileName .. ".mpackage"
+    local ok, err = installPackage(moduleFileName)
+    
+    if ok then
+      local successText = mudlet.Locale.packageInstallSuccess.message
+      successText = string.format(successText, packageName)
+      local okPrefix = mudlet.Locale.prefixOk.message
+      decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
+    else
+      local failureText = mudlet.Locale.packageInstallFail.message
+      failureText = string.format(failureText, packageName, err)
+      local warnPrefix = mudlet.Locale.prefixWarn.message
+      decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
+    end
   else
-    local failureText = mudlet.Locale.packageInstallFail.message
-    failureText = string.format(failureText, packageName, err)
-    local warnPrefix = mudlet.Locale.prefixWarn.message
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
-    -- Cyan and Orange; see cTelnet::postMessage for color comparison
+    local ok, err = installPackage(fileName)
+    
+    if ok then
+      local successText = mudlet.Locale.packageInstallSuccess.message
+      successText = string.format(successText, packageName)
+      local okPrefix = mudlet.Locale.prefixOk.message
+      decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
+    else
+      local failureText = mudlet.Locale.packageInstallFail.message
+      failureText = string.format(failureText, packageName, err)
+      local warnPrefix = mudlet.Locale.prefixWarn.message
+      decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
+    end
   end
 end
+
 
 local oldInstallPackage = installPackage
 
