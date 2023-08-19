@@ -306,8 +306,10 @@ bool TriggerUnit::disableTrigger(const QString& name)
     bool found = false;
     auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
-        TTrigger* pT = it.value();
-        pT->setIsActive(false);
+        if (it.value()->mName != name) {
+            TTrigger* pT = it.value();
+            pT->setIsActive(false);
+        }
         ++it;
         found = true;
     }
