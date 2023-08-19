@@ -1929,6 +1929,16 @@ int TLuaInterpreter::setWindowWrapIndent(lua_State* L)
     const int luaFrom = getVerifiedInt(L, __func__, 2, "wrapTo");
     auto console = CONSOLE(L, windowName);
     console->setIndentCount(luaFrom);
+
+    if (console->isMiniConsole()) {
+        // Also indent wrapped lines in miniconsoles
+        for (int i = 0; i < console->m_lines.size(); i++) {
+            if (console->m_lines[i].m_wrapped) {
+                console->m_lines[i].m_text = QString(luaFrom, ' ') + console->m_lines[i].m_text;
+            }
+        }
+    }
+
     return 0;
 }
 
