@@ -957,6 +957,13 @@ void XMLimport::readHost(Host* pHost)
         pHost->setLargeAreaExitArrows(false);
     }
 
+    if (attributes().hasAttribute(QLatin1String("TranslateNormalExitsInSpeedWalkDirTable"))) {
+        pHost->mTranslateSpeedWalkExits = attributes().value(QLatin1String("TranslateNormalExitsInSpeedWalkDirTable")) == YES;
+    } else {
+        // The default value, but which is opposite to effective value for Mudlet up to 4.17.2:
+        pHost->mTranslateSpeedWalkExits = false;
+    }
+
     if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
         mpHost->mMapInfoContributors.clear();
     }

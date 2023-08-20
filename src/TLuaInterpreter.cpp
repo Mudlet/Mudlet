@@ -17756,6 +17756,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("translateNormalExitsInSpeedWalkDirTable")) {
+        host.mTranslateSpeedWalkExits = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("blankLinesBehaviour")) {
         static const QStringList behaviours{"show", "hide", "replacewithspace"};
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
@@ -18151,6 +18155,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
+        { qsl("translateNormalExitsInSpeedWalkDirTable"), [&]() { lua_pushboolean(L, host.mTranslateSpeedWalkExits); } },
         { qsl("blankLinesBehaviour"), [&](){
             const auto behaviour = host.mBlankLineBehaviour;
             if (behaviour == Host::BlankLineBehaviour::Show) {
