@@ -1364,7 +1364,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="922"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved.</source>
-      <translation type="unfinished"/>
+      <translation>Die Aufzeichnung der Wiedergabe wurde gestoppt, konnte jedoch nicht gespeichert werden.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="924"/>
@@ -1640,7 +1640,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16035"/>
       <source>[ ERROR ] - Cannot load code formatter, indenting functionality won&apos;t be available.</source>
-      <translation>[FEHLER] - Code-Formatierer kann nicht geladen werden.Die Einrückungungsfunktion wird nicht verfügbar sein.</translation>
+      <translation>[FEHLER] - Code-Formatierer kann nicht geladen werden. Die Einrückungungsfunktion wird nicht verfügbar sein.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="16112"/>
@@ -2900,7 +2900,14 @@ Achte auf weitere Nachrichten zu jedem betroffenen Bereich...</translation>
 Look for further messages related to the rooms that is/are supposed to
 be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ACHTUNG ] - Fehlender Bereich in der Karte entdeckt und ergänzt.
+Achte auf weitere Nachrichten zu Räumen, die in diesem Bereich
+sein sollten...</numerusform>
+        <numerusform>[ ACHTUNG ] - %n fehlende Bereiche in der Karte entdeckt und ergänzt.
+Achte auf weitere Nachrichten zu Räumen, die in diesen Bereichen
+sein sollten...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="852"/>
@@ -6479,61 +6486,61 @@ Versuche, eine ältere Version via &apos;Connect - Optionen - Profilverlauf&apos
       <location filename="../src/dlgProfilePreferences.cpp" line="801"/>
       <source>10</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="802"/>
       <source>20</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>20</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="803"/>
       <source>50</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>50</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="804"/>
       <source>100</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>100</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
       <source>200</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>200</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="806"/>
       <source>500</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>500</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="807"/>
       <source>1,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>1.000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="808"/>
       <source>2,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>2.000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="809"/>
       <source>5,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>5.000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="810"/>
       <source>10,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10.000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1759"/>
@@ -6824,7 +6831,8 @@ und dass es genug Speicherplatz gibt. Die Kopie ist fehlgeschlagen.</translation
       <location filename="../src/dlgProfilePreferences.cpp" line="2332"/>
       <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ FEHLER ] - Konnte JSON-Kartendatei nicht laden: %1
+Grund: %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2373"/>
@@ -8442,7 +8450,7 @@ Es speichert nicht auf die Festplatte, also können Änderungen bei einem Abstur
       <location filename="../src/dlgTriggerEditor.cpp" line="151"/>
       <source>deactivated due to error</source>
       <extracomment>Item is currently inactive because of errors, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>wegen Fehler deaktiviert</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="153"/>
