@@ -595,6 +595,41 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
                  "\n\n"
                  "Spiel jetzt oder nie!")},
+                 
+            {qsl("CoffeeMUD"),
+             qsl("coffeemud.net"),
+             2323,
+             false,
+             qsl("<a href='http://coffeemud.net/'>coffeemud.net</a>"),
+             qsl(":/icons/coffeemud_120_30.png"),
+             qsl("The fantasy world of CoffeeMUD hosts the latest"
+                 "and greatest features from its entirely original "
+                 "codebase and engine.\n"
+                 "\n"
+                 "Ours is a huge world which combines some classic " 
+                 "MUD areas, updated with modern features, with original areas, " 
+                 "quests and stories to explore and conquer. With 20 starting "
+                 "races and over 40 classes, each with dozens of unique abilities, "
+                 "there is plenty to do in the world.\n"
+                 "\n"
+                 "* Over a hundred playable areas.\n"
+                 "* Instanced areas including the ability to planar travel.\n"
+                 "* Thousands of character abilities.\n"
+                 "* Detailed crafting system to create thousands of items "
+                 "including armors, weapons, carts, food, wands and potions "
+                 "(and many, many other items).\n"
+                 "* Conquest system, whereby clans can take control of an area.\n"
+                 "* Clan system with clan perks and clan trophies for top "
+                 "performing clans.\n"
+                 "* Achievement system that provides bonuses, titles, and other "
+                 "rewards for certain player or account-wide actions.\n"
+                 "* Remort system with permanent account rewards.\n"
+                 "* Personal and Clan property system.\n"
+                 "* Breeding system to create characters with lineage, "
+                 "and even unique dynamically created cross-breeds.\n"
+                 "* Ship to ship combat.\n"
+                 "* Set Deities, rituals, and bonuses from worshipping them.\n\n"
+                 "Come join us today!")},
             };
     // clang-format on
 };
