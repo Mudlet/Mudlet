@@ -1071,64 +1071,7 @@ bool TMap::findPath(int from, int to)
             // the do{} loop - added a test for this so should bail out if it
             // happens - Slysven
             mWeightList.prepend(r.cost);
-            if (mpHost->mTranslateSpeedWalkExits) {
-                switch (r.direction) {
-                case DIR_NORTH:
-                    //: This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("n"));
-                    break;
-                case DIR_NORTHEAST:
-                    //: This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("ne"));
-                    break;
-                case DIR_EAST:
-                    //: This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("e"));
-                    break;
-                case DIR_SOUTHEAST:
-                    //: This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("se"));
-                    break;
-                case DIR_SOUTH:
-                    //: This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("s"));
-                    break;
-                case DIR_SOUTHWEST:
-                    //: This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("sw"));
-                    break;
-                case DIR_WEST:
-                    //: This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("w"));
-                    break;
-                case DIR_NORTHWEST:
-                    //: "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("nw"));
-                    break;
-                case DIR_UP:
-                    //: This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("up"));
-                    break;
-                case DIR_DOWN:
-                    //: This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("down"));
-                    break;
-                case DIR_IN:
-                    //: This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("in"));
-                    break;
-                case DIR_OUT:
-                    //: This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!
-                    mDirList.prepend(tr("out"));
-                    break;
-                case DIR_OTHER:
-                    mDirList.prepend(r.specialExitName);
-                    break;
-                default:
-                    qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
-                }
-            } else {
-                switch (r.direction) {
+            switch (r.direction) {
                 /*
                  * Do not translate the directions into the user's locale here,
                  * that is to be done in the profile specific doSpeedwalk()
@@ -1138,54 +1081,26 @@ bool TMap::findPath(int from, int to)
                  * accommodate all the possible languages the GUI of Mudlet was
                  * configured to support!
                  */
-                case DIR_NORTH:
-                    mDirList.prepend(qsl("n"));
-                    break;
-                case DIR_NORTHEAST:
-                    mDirList.prepend(qsl("ne"));
-                    break;
-                case DIR_EAST:
-                    mDirList.prepend(qsl("e"));
-                    break;
-                case DIR_SOUTHEAST:
-                    mDirList.prepend(qsl("se"));
-                    break;
-                case DIR_SOUTH:
-                    mDirList.prepend(qsl("s"));
-                    break;
-                case DIR_SOUTHWEST:
-                    mDirList.prepend(qsl("sw"));
-                    break;
-                case DIR_WEST:
-                    mDirList.prepend(qsl("w"));
-                    break;
-                case DIR_NORTHWEST:
-                    mDirList.prepend(qsl("nw"));
-                    break;
-                case DIR_UP:
-                    mDirList.prepend(qsl("up"));
-                    break;
-                case DIR_DOWN:
-                    mDirList.prepend(qsl("down"));
-                    break;
-                case DIR_IN:
-                    mDirList.prepend(qsl("in"));
-                    break;
-                case DIR_OUT:
-                    mDirList.prepend(qsl("out"));
-                    break;
-                case DIR_OTHER:
-                    mDirList.prepend(r.specialExitName);
-                    break;
-                default:
-                    qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
-                }
+            case DIR_NORTH:        mDirList.prepend(qsl("n"));             break;
+            case DIR_NORTHEAST:    mDirList.prepend(qsl("ne"));            break;
+            case DIR_EAST:         mDirList.prepend(qsl("e"));             break;
+            case DIR_SOUTHEAST:    mDirList.prepend(qsl("se"));            break;
+            case DIR_SOUTH:        mDirList.prepend(qsl("s"));             break;
+            case DIR_SOUTHWEST:    mDirList.prepend(qsl("sw"));            break;
+            case DIR_WEST:         mDirList.prepend(qsl("w"));             break;
+            case DIR_NORTHWEST:    mDirList.prepend(qsl("nw"));            break;
+            case DIR_UP:           mDirList.prepend(qsl("up"));            break;
+            case DIR_DOWN:         mDirList.prepend(qsl("down"));          break;
+            case DIR_IN:           mDirList.prepend(qsl("in"));            break;
+            case DIR_OUT:          mDirList.prepend(qsl("out"));           break;
+            case DIR_OTHER:        mDirList.prepend(r.specialExitName);    break;
+            default:            qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
             }
             currentVertex = previousVertex;
             currentRoomId = previousRoomId;
         } while (currentVertex != start);
 
-        qDebug().noquote().nospace() << "TMap::findPath(" << from << ", " << to << ") INFO - found path in: " << t.nsecsElapsed() * 1.0e-6 << "ms.";
+        qDebug() << "TMap::findPath(" << from << "," << to << ") INFO: found path in:" << t.nsecsElapsed() * 1.0e-6 << "ms.";
         return true;
     }
 

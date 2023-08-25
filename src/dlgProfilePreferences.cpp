@@ -516,7 +516,6 @@ void dlgProfilePreferences::disableHostDetails()
     // This acts on a label within this groupBox:
     slot_hidePasswordMigrationLabel();
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
-    checkBox_translateSpeedWalkDirTable->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
@@ -622,7 +621,6 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
-    checkBox_translateSpeedWalkDirTable->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
 }
@@ -1159,7 +1157,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
-    checkBox_translateSpeedWalkDirTable->setChecked(pHost->mTranslateSpeedWalkExits);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -3046,7 +3043,6 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
-        pHost->mTranslateSpeedWalkExits = checkBox_translateSpeedWalkDirTable->isChecked();
 
         if (widget_playerRoomStyle->isVisible()) {
             // Although the controls have been interactively modifying the

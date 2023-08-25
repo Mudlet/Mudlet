@@ -4016,16 +4016,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="4" column="1">
-           <widget class="QCheckBox" name="checkBox_translateSpeedWalkDirTable">
-            <property name="toolTip">
-             <string extracomment="The fragments of text inside tt tags represent identifiers or fixed texts in the Lua sub-system and are not to be translated, they also should be left inside those tags.">&lt;p&gt;Some previous versions of Mudlet were set to translate the exit abbreviations used for normal exits in the &lt;tt&gt;speedWalkDir&lt;/tt&gt; table into the user's GUI language. This meant that the function &lt;tt&gt;doSpeedWalk()&lt;/tt&gt; in a mapper or other package may have to retranslate them into the language the Game server uses should it be different and be able to do so for any language the user could had set. Mudlet now does not do that &lt;i&gt;unless&lt;/i&gt; this option is set, which thus only needs to be done for older mapper packages that have not been simplified to work only with untranslated normal exits of the form: &lt;tt&gt;n&lt;/tt&gt;, &lt;tt&gt;ne&lt;/tt&gt;, ...,&lt;tt&gt;in&lt;/tt&gt;, &lt;tt&gt;out&lt;/t&gt;.&lt;/p&gt;&lt;p&gt;&lt;i&gt;You probably will not need to set this unless advised otherwise.&lt;/i&gt;&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Translate normal exits in speedWalkDir table</string>
-            </property>
-           </widget>
-          </item>
           <item row="5" column="0">
            <widget class="QLabel" name="label_networkPacketTimeout">
             <property name="text">
@@ -4303,7 +4293,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_debugShowAllCodepointProblems</tabstop>
   <tabstop>checkBox_expectCSpaceIdInColonLessMColorCode</tabstop>
   <tabstop>comboBox_store_passwords_in</tabstop>
-  <tabstop>checkBox_translateSpeedWalkDirTable</tabstop>
   <tabstop>timeEdit_timerDebugOutputMinimumInterval</tabstop>
   <tabstop>doubleSpinBox_networkPacketTimeout</tabstop>
  </tabstops>

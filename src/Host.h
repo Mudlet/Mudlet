@@ -696,17 +696,6 @@ public:
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
 
-    // Backwards compatibility fix, past Mudlet versions were set to
-    // (incorrectly) translate the normal exit abbreviations into the user's
-    // GUI language - this is bogus because they may not be playing a MUD in
-    // their native language and because it means that the mapper package or
-    // whatever else provides the doSpeedWalk() function has to be written to
-    // decode whatever locale the user has chosen and retranslated the codes
-    // from that into the language/locale the Game server uses. As such if the
-    // mapper was configure to handle such translations this option should be
-    // set but otherwise it makes for a simpler mapper package to not do so:
-    bool mTranslateSpeedWalkExits = false;
-
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
