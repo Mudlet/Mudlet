@@ -1059,9 +1059,9 @@ bool TMap::findPath(int from, int to)
                 mWeightList.clear(); // Reset any partial results...
                 return false;
             }
-            unsigned const int previousRoomId = (locations.at(previousVertex)).id;
+            const unsigned int previousRoomId = (locations.at(previousVertex)).id;
             QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
-            route const r = edgeHash.value(edgeRoomIdPair);
+            const route r = edgeHash.value(edgeRoomIdPair);
             mPathList.prepend(currentRoomId);
             Q_ASSERT_X(r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
             // Above was found to be triggered by the situation described in:
@@ -1071,21 +1071,30 @@ bool TMap::findPath(int from, int to)
             // the do{} loop - added a test for this so should bail out if it
             // happens - Slysven
             mWeightList.prepend(r.cost);
-            switch (r.direction) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
-            case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!" ) );      break;
-            case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!" ) );       break;
-            case DIR_SOUTHEAST:    mDirList.prepend( tr( "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_SOUTH:        mDirList.prepend( tr( "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!" ) );      break;
-            case DIR_SOUTHWEST:    mDirList.prepend( tr( "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_WEST:         mDirList.prepend( tr( "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!" ) );       break;
-            case DIR_NORTHWEST:    mDirList.prepend( tr( "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_UP:           mDirList.prepend( tr( "up", "This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!" ) );        break;
-            case DIR_DOWN:         mDirList.prepend( tr( "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!" ) );    break;
-            case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!" ) );        break;
-            case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!" ) );      break;
-            case DIR_OTHER:        mDirList.prepend( r.specialExitName );  break;
-            default:               qWarning() << "TMap::findPath(" << from << "," << to << ") WARN: found route between rooms (from id:" << previousRoomId << ", to id:" << currentRoomId << ") with an invalid DIR_xxxx code:" << r.direction << " - the path will not be valid!" ;
+            switch (r.direction) {
+                /*
+                 * Do not translate the directions into the user's locale here,
+                 * that is to be done in the profile specific doSpeedwalk()
+                 * function of the mapper package as the language of the MUD
+                 * need not be the native language of the user - translating
+                 * them here makes the mapper harder to code as it has to
+                 * accommodate all the possible languages the GUI of Mudlet was
+                 * configured to support!
+                 */
+            case DIR_NORTH:        mDirList.prepend(qsl("n"));             break;
+            case DIR_NORTHEAST:    mDirList.prepend(qsl("ne"));            break;
+            case DIR_EAST:         mDirList.prepend(qsl("e"));             break;
+            case DIR_SOUTHEAST:    mDirList.prepend(qsl("se"));            break;
+            case DIR_SOUTH:        mDirList.prepend(qsl("s"));             break;
+            case DIR_SOUTHWEST:    mDirList.prepend(qsl("sw"));            break;
+            case DIR_WEST:         mDirList.prepend(qsl("w"));             break;
+            case DIR_NORTHWEST:    mDirList.prepend(qsl("nw"));            break;
+            case DIR_UP:           mDirList.prepend(qsl("up"));            break;
+            case DIR_DOWN:         mDirList.prepend(qsl("down"));          break;
+            case DIR_IN:           mDirList.prepend(qsl("in"));            break;
+            case DIR_OUT:          mDirList.prepend(qsl("out"));           break;
+            case DIR_OTHER:        mDirList.prepend(r.specialExitName);    break;
+            default:            qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
             }
             currentVertex = previousVertex;
             currentRoomId = previousRoomId;
