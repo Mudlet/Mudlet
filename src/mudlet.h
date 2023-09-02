@@ -621,6 +621,7 @@ private:
     QKeySequence mKeySequenceInputLine;
     QKeySequence mKeySequenceModules;
     QKeySequence mKeySequenceMultiView;
+    QKeySequence mKeySequenceMute;
     QKeySequence mKeySequenceNotepad;
     QKeySequence mKeySequenceOptions;
     QKeySequence mKeySequencePackages;
@@ -696,6 +697,7 @@ private:
     QPointer<QShortcut> mpShortcutInputLine;
     QPointer<QShortcut> mpShortcutModules;
     QPointer<QShortcut> mpShortcutMultiView;
+    QPointer<QShortcut> mpShortcutMute;
     QPointer<QShortcut> mpShortcutNotepad;
     QPointer<QShortcut> mpShortcutOptions;
     QPointer<QShortcut> mpShortcutPackages;

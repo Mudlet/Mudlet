@@ -408,12 +408,11 @@ mudlet::mudlet()
     mpButtonMute->setAutoRaise(true);
     mpMainToolBar->addWidget(mpButtonMute);
 
-    mpActionMuteMedia = new QAction(tr("Mute"), this);
+    mpActionMuteMedia = new QAction(tr("Mute All Media"), this);
     mpActionMuteMedia->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteMedia->setIconText(tr("Mute"));
+    mpActionMuteMedia->setIconText(tr("Mute All Media"));
     mpActionMuteMedia->setObjectName(qsl("muteMedia"));
-    mpActionMuteMedia->setCheckable(true); 
-    mpActionMuteMedia->setVisible(false); 
+    mpActionMuteMedia->setCheckable(true);
 
     mpActionMuteAPI = new QAction(tr("Mute Mudlet API (Triggers, Scripts, etc.)"), this);
     mpActionMuteAPI->setIcon(QIcon(qsl(":/icons/mute.png")));
@@ -555,6 +554,7 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_packageExporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_moduleManager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multiView);
+    connect(dactionMuteMedia, &QAction::triggered, this, &mudlet::slot_muteMedia);
     connect(dactionMuteAPI, &QAction::triggered, this, &mudlet::slot_muteAPI);
     connect(dactionMuteMCMP, &QAction::triggered, this, &mudlet::slot_muteMCMP);
     connect(dactionMuteMSP, &QAction::triggered, this, &mudlet::slot_muteMSP);
@@ -575,6 +575,7 @@ mudlet::mudlet()
     mKeySequencePackages = QKeySequence(Qt::CTRL | Qt::Key_O);
     mKeySequenceModules = QKeySequence(Qt::CTRL | Qt::Key_I);
     mKeySequenceMultiView = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_V);
+    mKeySequenceMute = QKeySequence(Qt::CTRL | Qt::Key_K);
     mKeySequenceConnect = QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C);
     mKeySequenceDisconnect = QKeySequence(Qt::CTRL | Qt::Key_D);
     mKeySequenceReconnect = QKeySequence(Qt::CTRL | Qt::Key_R);
@@ -588,6 +589,7 @@ mudlet::mudlet()
     mKeySequencePackages = QKeySequence(Qt::ALT | Qt::Key_O);
     mKeySequenceModules = QKeySequence(Qt::ALT | Qt::Key_I);
     mKeySequenceMultiView = QKeySequence(Qt::ALT | Qt::Key_V);
+    mKeySequenceMute = QKeySequence(Qt::ALT | Qt::Key_K);
     mKeySequenceConnect = QKeySequence(Qt::ALT | Qt::Key_C);
     mKeySequenceDisconnect = QKeySequence(Qt::ALT | Qt::Key_D);
     mKeySequenceReconnect = QKeySequence(Qt::ALT | Qt::Key_R);
@@ -606,6 +608,7 @@ mudlet::mudlet()
     mpShortcutsManager->registerShortcut(qsl("Package manager"), tr("Package manager"), &mKeySequencePackages);
     mpShortcutsManager->registerShortcut(qsl("Module manager"), tr("Module manager"), &mKeySequenceModules);
     mpShortcutsManager->registerShortcut(qsl("MultiView"), tr("MultiView"), &mKeySequenceMultiView);
+    mpShortcutsManager->registerShortcut(qsl("Mute All Media"), tr("Mute All Media"), &mKeySequenceMute);
     mpShortcutsManager->registerShortcut(qsl("Play"), tr("Play"), &mKeySequenceConnect);
     mpShortcutsManager->registerShortcut(qsl("Disconnect"), tr("Disconnect"), &mKeySequenceDisconnect);
     mpShortcutsManager->registerShortcut(qsl("Reconnect"), tr("Reconnect"), &mKeySequenceReconnect);
@@ -638,6 +641,7 @@ mudlet::mudlet()
     mpActionMuteAPI->setEnabled(true);
     mpActionMuteMCMP->setEnabled(true);
     mpActionMuteMSP->setEnabled(true);
+    dactionMuteMedia->setEnabled(true);
     dactionMuteAPI->setEnabled(true);
     dactionMuteMCMP->setEnabled(true);
     dactionMuteMSP->setEnabled(true);
@@ -2390,6 +2394,11 @@ void mudlet::assignKeySequences()
         connect(mpShortcutMultiView.data(), &QShortcut::activated, this, &mudlet::slot_toggleMultiView);
         dactionMultiView->setShortcut(QKeySequence());
 
+        delete mpShortcutMute.data();
+        mpShortcutMute = new QShortcut(mKeySequenceMute, this);
+        connect(mpShortcutMute.data(), &QShortcut::activated, this, &mudlet::slot_muteMedia);
+        dactionMuteMedia->setShortcut(QKeySequence());
+
         delete mpShortcutConnect.data();
         mpShortcutConnect = new QShortcut(mKeySequenceConnect, this);
         connect(mpShortcutConnect.data(), &QShortcut::activated, this, &mudlet::slot_showConnectionDialog);
@@ -2438,6 +2447,9 @@ void mudlet::assignKeySequences()
 
         delete mpShortcutMultiView.data();
         dactionMultiView->setShortcut(mKeySequenceMultiView);
+
+        delete mpShortcutMute.data();
+        dactionMuteMedia->setShortcut(mKeySequenceMute);
 
         delete mpShortcutConnect.data();
         dactionConnect->setShortcut(mKeySequenceConnect);
@@ -3039,6 +3051,9 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
 
     // Toolbar icon. Mute when any protocol is unmuted. Unmute only when all protocols are muted.
     mpActionMuteMedia->setIcon(QIcon(muteMedia() ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
+    mpActionMuteMedia->setText(muteMedia() ? tr("Unmute All Media") : tr("Mute All Media"));
+    mpActionMuteMedia->setChecked(muteMedia());
+    dactionMuteMedia->setChecked(muteMedia());
     mpButtonMute->setText(muteMedia() ? tr("Unmute") : tr("Mute"));
     mpButtonMute->setChecked(false);
     mpButtonMute->setEnabled(true);
