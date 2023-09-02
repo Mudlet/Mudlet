@@ -259,12 +259,12 @@ bool TMedia::purgeMediaCache()
 
 void TMedia::muteMedia(const TMediaData::MediaProtocol mediaProtocol)
 {
-    muteMediaPlayers(mediaProtocol);
+    setMediaPlayersMuted(mediaProtocol, true);
 }
 
 void TMedia::unmuteMedia(const TMediaData::MediaProtocol mediaProtocol)
 {
-    unmuteMediaPlayers(mediaProtocol);
+    setMediaPlayersMuted(mediaProtocol, false);
 }
 // End Public
 
@@ -300,16 +300,6 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
         TMediaPlayer const pPlayer = itTMediaPlayer.next();
         pPlayer.getMediaPlayer()->setMuted(state);
     }
-}
-
-void TMedia::muteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol)
-{
-    setMediaPlayersMuted(mediaProtocol, true);
-}
-
-void TMedia::unmuteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol)
-{
-    setMediaPlayersMuted(mediaProtocol, false);
 }
 
 void TMedia::transitionNonRelativeFile(TMediaData& mediaData)

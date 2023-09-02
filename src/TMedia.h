@@ -107,8 +107,6 @@ private slots:
 private:
     void stopAllMediaPlayers();
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
-    void muteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol);
-    void unmuteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol);
     void transitionNonRelativeFile(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
