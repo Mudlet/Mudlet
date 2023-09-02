@@ -98,12 +98,18 @@ public:
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
+    void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
+    void muteAllMedia();
+    void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
+    void unmuteAllMedia();
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);
 
 private:
     void stopAllMediaPlayers();
+    void muteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol);
+    void unmuteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol);
     void transitionNonRelativeFile(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);

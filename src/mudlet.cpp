@@ -400,6 +400,45 @@ mudlet::mudlet()
     mpActionMultiView->setObjectName(qsl("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
+    mpButtonMute = new QToolButton(this);
+    mpButtonMute->setText(tr("Mute"));
+    mpButtonMute->setObjectName(qsl("mute"));
+    mpButtonMute->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonMute->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonMute->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonMute);
+
+    mpActionMuteMedia = new QAction(tr("Mute"), this);
+    mpActionMuteMedia->setIcon(QIcon(qsl(":/icons/mute.png")));
+    mpActionMuteMedia->setIconText(tr("Mute"));
+    mpActionMuteMedia->setObjectName(qsl("muteMedia"));
+    mpActionMuteMedia->setCheckable(true); 
+    mpActionMuteMedia->setVisible(false); 
+
+    mpActionMuteAPI = new QAction(tr("Mute Mudlet API (Triggers, Scripts, etc.)"), this);
+    mpActionMuteAPI->setIcon(QIcon(qsl(":/icons/mute.png")));
+    mpActionMuteAPI->setIconText(tr("Mute Mudlet API (Triggers, Scripts, etc.)"));
+    mpActionMuteAPI->setObjectName(qsl("muteAPI"));
+    mpActionMuteAPI->setCheckable(true); 
+
+    mpActionMuteMCMP = new QAction(tr("Mute Game MCMP (Mud Client Media Protocol)"), this);
+    mpActionMuteMCMP->setIcon(QIcon(qsl(":/icons/mute.png")));
+    mpActionMuteMCMP->setIconText(tr("Mute Game MCMP (Mud Client Media Protocol)"));
+    mpActionMuteMCMP->setObjectName(qsl("muteMCMP"));
+    mpActionMuteMCMP->setCheckable(true); 
+
+    mpActionMuteMSP = new QAction(tr("Mute Game MSP (Mud Sound Protocol)"), this);
+    mpActionMuteMSP->setIcon(QIcon(qsl(":/icons/mute.png")));
+    mpActionMuteMSP->setIconText(tr("Mute Game MSP (Mud Sound Protocol)"));
+    mpActionMuteMSP->setObjectName(qsl("muteMSP"));
+    mpActionMuteMSP->setCheckable(true); 
+
+    mpButtonMute->addAction(mpActionMuteMedia);
+    mpButtonMute->addAction(mpActionMuteAPI);
+    mpButtonMute->addAction(mpActionMuteMCMP);
+    mpButtonMute->addAction(mpActionMuteMSP);
+    mpButtonMute->setDefaultAction(mpActionMuteMedia);
+
 #if defined(INCLUDE_UPDATER)
     if (scmIsPublicTestVersion) {
         mpActionReportIssue = new QAction(tr("Report issue"), this);
@@ -459,6 +498,10 @@ mudlet::mudlet()
     connect(mpActionPackageManager.data(), &QAction::triggered, this, &mudlet::slot_packageManager);
     connect(mpActionModuleManager.data(), &QAction::triggered, this, &mudlet::slot_moduleManager);
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_packageExporter);
+    connect(mpActionMuteMedia.data(), &QAction::triggered, this, &mudlet::slot_muteMedia);
+    connect(mpActionMuteAPI.data(), &QAction::triggered, this, &mudlet::slot_muteAPI);
+    connect(mpActionMuteMCMP.data(), &QAction::triggered, this, &mudlet::slot_muteMCMP);
+    connect(mpActionMuteMSP.data(), &QAction::triggered, this, &mudlet::slot_muteMSP);
 
     connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_showConnectionDialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
@@ -512,6 +555,9 @@ mudlet::mudlet()
     connect(dactionPackageExporter, &QAction::triggered, this, &mudlet::slot_packageExporter);
     connect(dactionModuleManager, &QAction::triggered, this, &mudlet::slot_moduleManager);
     connect(dactionMultiView, &QAction::triggered, this, &mudlet::slot_multiView);
+    connect(dactionMuteAPI, &QAction::triggered, this, &mudlet::slot_muteAPI);
+    connect(dactionMuteMCMP, &QAction::triggered, this, &mudlet::slot_muteMCMP);
+    connect(dactionMuteMSP, &QAction::triggered, this, &mudlet::slot_muteMSP);
     connect(dactionInputLine, &QAction::triggered, this, &mudlet::slot_compactInputLine);
     connect(mpActionTriggers.data(), &QAction::triggered, this, &mudlet::slot_showTriggerDialog);
     connect(dactionScriptEditor, &QAction::triggered, this, &mudlet::slot_showEditorDialog);
@@ -585,6 +631,16 @@ mudlet::mudlet()
     if (!mToolbarIconSize) {
         setToolBarIconSize(mEnableFullScreenMode ? 2 : 3);
     }
+
+    // Allow mute functionality always
+    mpButtonMute->setEnabled(true);
+    mpActionMuteMedia->setEnabled(true);
+    mpActionMuteAPI->setEnabled(true);
+    mpActionMuteMCMP->setEnabled(true);
+    mpActionMuteMSP->setEnabled(true);
+    dactionMuteAPI->setEnabled(true);
+    dactionMuteMCMP->setEnabled(true);
+    dactionMuteMSP->setEnabled(true);
 
     // Edbee has a singleton that needs some initialisation
     initEdbee();
@@ -1575,7 +1631,6 @@ void mudlet::disableToolbarButtons()
     // more texts to show {the default is to repeat the menu text which is not
     // useful} with a call to menuEditor->setToolTipsVisible(true);
     dactionReplay->setToolTip(mpActionReplay->toolTip());
-
     dactionReplay->setEnabled(false);
     mpActionReconnect->setEnabled(false);
     mpActionDisconnect->setEnabled(false);
@@ -1910,6 +1965,10 @@ void mudlet::readLateSettings(const QSettings& settings)
         multiView = settings.value(qsl("enableMultiViewMode"), QVariant(false)).toBool();
     }
     slot_multiView(multiView);
+
+    slot_muteAPI(settings.contains(qsl("enableMuteAPI")) ? settings.value(qsl("enableMuteAPI"), QVariant(false)).toBool() : false);
+    slot_muteMCMP(settings.contains(qsl("enableMuteMCMP")) ? settings.value(qsl("enableMuteMCMP"), QVariant(false)).toBool() : false);
+    slot_muteMSP(settings.contains(qsl("enableMuteMSP")) ? settings.value(qsl("enableMuteMSP"), QVariant(false)).toBool() : false);
 }
 
 void mudlet::setToolBarIconSize(const int s)
@@ -2048,6 +2107,9 @@ void mudlet::writeSettings()
 
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
+    settings.setValue(qsl("enableMuteAPI"), mMuteAPI);
+    settings.setValue(qsl("enableMuteMCMP"), mMuteMCMP);
+    settings.setValue(qsl("enableMuteMSP"), mMuteMSP);
 }
 
 void mudlet::slot_showConnectionDialog()
@@ -2941,6 +3003,68 @@ void mudlet::slot_multiView(const bool state)
         // the active one then make one (the first) the active one:
         slot_tabChanged(0);
     }
+}
+
+void mudlet::toggleMuteForProtocol(bool state, QAction* action, QAction* daction, TMediaData::MediaProtocol protocol, const QString& unmuteText, const QString& muteText)
+{
+    if (action->isChecked() != state || daction->isChecked() != state) {
+        action->setChecked(state);
+        daction->setChecked(state);
+    }
+
+    for (auto pHost : mHostManager) {
+        if (state) {
+            pHost->mpMedia->muteMedia(protocol);
+        } else {
+            pHost->mpMedia->unmuteMedia(protocol);
+        }
+    }
+
+    if (protocol == TMediaData::MediaProtocolAPI) {
+        mMuteAPI = state;
+        mpActionMuteAPI->setText(mMuteAPI ? tr(unmuteText.toStdString().c_str()) : tr(muteText.toStdString().c_str()));
+        mpActionMuteAPI->setIcon(QIcon(mMuteAPI ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
+    } else if (protocol == TMediaData::MediaProtocolGMCP) {
+        mMuteMCMP = state;
+        mpActionMuteMCMP->setText(mMuteMCMP ? tr(unmuteText.toStdString().c_str()) : tr(muteText.toStdString().c_str()));
+        mpActionMuteMCMP->setIcon(QIcon(mMuteMCMP ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
+    } else if (protocol == TMediaData::MediaProtocolMSP) {
+        mMuteMSP = state;
+        mpActionMuteMSP->setText(mMuteMSP ? tr(unmuteText.toStdString().c_str()) : tr(muteText.toStdString().c_str()));
+        mpActionMuteMSP->setIcon(QIcon(mMuteMSP ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
+    }
+}
+
+void mudlet::slot_muteAPI(const bool state)
+{
+    toggleMuteForProtocol(state, mpActionMuteAPI, dactionMuteAPI, TMediaData::MediaProtocolAPI, "Unmute Mudlet API (Triggers, Scripts, etc.)", "Mute Mudlet API (Triggers, Scripts, etc.)");
+}
+
+void mudlet::slot_muteMCMP(const bool state)
+{
+    toggleMuteForProtocol(state, mpActionMuteMCMP, dactionMuteMCMP, TMediaData::MediaProtocolGMCP, "Unmute Game MCMP (Mud Client Media Protocol)", "Mute Game MCMP (Mud Client Media Protocol)");
+}
+
+void mudlet::slot_muteMSP(const bool state)
+{
+    toggleMuteForProtocol(state, mpActionMuteMSP, dactionMuteMSP, TMediaData::MediaProtocolMSP, "Unmute Game MSP (Mud Sound Protocol)", "Mute Game MSP (Mud Sound Protocol)");
+}
+
+void mudlet::slot_muteMedia()
+{
+    if (!mMuteAPI) {
+        slot_muteAPI(true);
+    }
+
+    if (!mMuteMCMP) {
+        slot_muteMCMP(true);
+    }
+
+    if (!mMuteMSP) {
+        slot_muteMSP(true);
+    }
+
+    mpButtonMute->setEnabled(true);
 }
 
 // Called by the short-cut to the menu item that doesn't pass the checked state

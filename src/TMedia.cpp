@@ -256,6 +256,26 @@ bool TMedia::purgeMediaCache()
     mediaDir.removeRecursively();
     return true;
 }
+
+void TMedia::muteMedia(const TMediaData::MediaProtocol mediaProtocol)
+{
+    muteMediaPlayers(mediaProtocol);
+}
+
+void TMedia::muteAllMedia()
+{
+    muteMediaPlayers(TMediaData::MediaProtocolNotSet);
+}
+
+void TMedia::unmuteMedia(const TMediaData::MediaProtocol mediaProtocol)
+{
+    unmuteMediaPlayers(mediaProtocol);
+}
+
+void TMedia::unmuteAllMedia()
+{
+    unmuteMediaPlayers(TMediaData::MediaProtocolNotSet);
+}
 // End Public
 
 // Private
@@ -267,6 +287,66 @@ void TMedia::stopAllMediaPlayers()
     while (itTMediaPlayer.hasNext()) {
         TMediaPlayer const pPlayer = itTMediaPlayer.next();
         pPlayer.getMediaPlayer()->stop();
+    }
+}
+
+void TMedia::muteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol)
+{
+    QList<TMediaPlayer> mTMediaPlayerList;
+
+    switch (mediaProtocol) {
+    case TMediaData::MediaProtocolMSP:
+        mTMediaPlayerList = mMSPSoundList + mMSPMusicList;
+        break;
+
+    case TMediaData::MediaProtocolGMCP:
+        mTMediaPlayerList = mGMCPSoundList + mGMCPMusicList;
+        break;
+
+    case TMediaData::MediaProtocolAPI:
+        mTMediaPlayerList = mAPISoundList + mAPIMusicList;
+        break;
+
+    case TMediaData::MediaProtocolNotSet:
+        mTMediaPlayerList = mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList;
+        break;
+    }
+
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
+        pPlayer.getMediaPlayer()->setMuted(true);
+    }
+}
+
+void TMedia::unmuteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol)
+{
+    QList<TMediaPlayer> mTMediaPlayerList;
+
+    switch (mediaProtocol) {
+    case TMediaData::MediaProtocolMSP:
+        mTMediaPlayerList = mMSPSoundList + mMSPMusicList;
+        break;
+
+    case TMediaData::MediaProtocolGMCP:
+        mTMediaPlayerList = mGMCPSoundList + mGMCPMusicList;
+        break;
+
+    case TMediaData::MediaProtocolAPI:
+        mTMediaPlayerList = mAPISoundList + mAPIMusicList;
+        break;
+
+    case TMediaData::MediaProtocolNotSet:
+        mTMediaPlayerList = mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList;
+        break;
+    }
+
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
+        pPlayer.getMediaPlayer()->setMuted(false);
     }
 }
 
@@ -1094,6 +1174,19 @@ void TMedia::play(TMediaData& mediaData)
 
     if (mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet || mediaData.getMediaFadeOut() != TMediaData::MediaFadeNotSet) {
         pPlayer.getMediaPlayer()->setNotifyInterval(50); // Smoother volume changes with the tighter interval (default = 1000).
+    }
+
+    // Set whether or not we should be muted
+    switch (mediaData.getMediaProtocol()) {
+        case TMediaData::MediaProtocolAPI:
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteAPI());
+            break;
+        case TMediaData::MediaProtocolGMCP:
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMCMP());
+            break;
+        case TMediaData::MediaProtocolMSP:
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMSP());
+            break;
     }
 
     pPlayer.getMediaPlayer()->play();
