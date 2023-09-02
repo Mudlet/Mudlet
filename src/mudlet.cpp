@@ -3036,6 +3036,12 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
         mpActionMuteMSP->setText(mMuteMSP ? unmuteText : muteText);
         mpActionMuteMSP->setIcon(QIcon(mMuteMSP ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     }
+
+    // Toolbar icon. Mute when any protocol is unmuted. Unmute only when all protocols are muted.
+    mpActionMuteMedia->setIcon(QIcon(muteMedia() ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
+    mpButtonMute->setText(muteMedia() ? tr("Unmute") : tr("Mute"));
+    mpButtonMute->setChecked(false);
+    mpButtonMute->setEnabled(true);
 }
 
 void mudlet::slot_muteAPI(const bool state)
@@ -3055,19 +3061,23 @@ void mudlet::slot_muteMSP(const bool state)
 
 void mudlet::slot_muteMedia()
 {
-    if (!mMuteAPI) {
-        slot_muteAPI(true);
-    }
+    if (muteMedia()) {
+        slot_muteAPI(false);
+        slot_muteMCMP(false);
+        slot_muteMSP(false);
+    } else {
+        if (!mMuteAPI) {
+            slot_muteAPI(true);
+        }
 
-    if (!mMuteMCMP) {
-        slot_muteMCMP(true);
-    }
+        if (!mMuteMCMP) {
+            slot_muteMCMP(true);
+        }
 
-    if (!mMuteMSP) {
-        slot_muteMSP(true);
+        if (!mMuteMSP) {
+            slot_muteMSP(true);
+        }
     }
-
-    mpButtonMute->setEnabled(true);
 }
 
 // Called by the short-cut to the menu item that doesn't pass the checked state

@@ -400,6 +400,7 @@ public:
     bool muteAPI() const { return mMuteAPI; }
     bool muteMCMP() const { return mMuteMCMP; }
     bool muteMSP() const { return mMuteMSP; }
+    bool muteMedia() const { return mMuteAPI && mMuteMCMP && mMuteMSP; }
 
     Appearance mAppearance = Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)

@@ -262,19 +262,9 @@ void TMedia::muteMedia(const TMediaData::MediaProtocol mediaProtocol)
     muteMediaPlayers(mediaProtocol);
 }
 
-void TMedia::muteAllMedia()
-{
-    muteMediaPlayers(TMediaData::MediaProtocolNotSet);
-}
-
 void TMedia::unmuteMedia(const TMediaData::MediaProtocol mediaProtocol)
 {
     unmuteMediaPlayers(mediaProtocol);
-}
-
-void TMedia::unmuteAllMedia()
-{
-    unmuteMediaPlayers(TMediaData::MediaProtocolNotSet);
 }
 // End Public
 

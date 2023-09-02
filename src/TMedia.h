@@ -99,9 +99,7 @@ public:
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
     void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
-    void muteAllMedia();
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
-    void unmuteAllMedia();
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);
