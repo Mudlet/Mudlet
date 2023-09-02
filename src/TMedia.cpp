@@ -290,7 +290,7 @@ void TMedia::stopAllMediaPlayers()
     }
 }
 
-void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool mute)
+void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state)
 {
     QList<TMediaPlayer> mTMediaPlayerList;
 
@@ -308,7 +308,7 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
 
     while (itTMediaPlayer.hasNext()) {
         TMediaPlayer const pPlayer = itTMediaPlayer.next();
-        pPlayer.getMediaPlayer()->setMuted(mute);
+        pPlayer.getMediaPlayer()->setMuted(state);
     }
 }
 

@@ -1984,6 +1984,7 @@ void mudlet::setToolBarIconSize(const int s)
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         mpButtonConnect->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+        mpButtonMute->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         if (!mpButtonAbout.isNull()) {
             mpButtonAbout->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
         }
@@ -1992,6 +1993,7 @@ void mudlet::setToolBarIconSize(const int s)
         mpMainToolBar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         mpButtonConnect->setToolButtonStyle(Qt::ToolButtonIconOnly);
         mpButtonDiscord->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        mpButtonMute->setToolButtonStyle(Qt::ToolButtonIconOnly);
         if (!mpButtonAbout.isNull()) {
             mpButtonAbout->setToolButtonStyle(Qt::ToolButtonIconOnly);
         }
@@ -3023,32 +3025,32 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
 
     if (protocol == TMediaData::MediaProtocolAPI) {
         mMuteAPI = state;
-        mpActionMuteAPI->setText(mMuteAPI ? tr(unmuteText.toStdString().c_str()) : tr(muteText.toStdString().c_str()));
+        mpActionMuteAPI->setText(mMuteAPI ? unmuteText : muteText);
         mpActionMuteAPI->setIcon(QIcon(mMuteAPI ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     } else if (protocol == TMediaData::MediaProtocolGMCP) {
         mMuteMCMP = state;
-        mpActionMuteMCMP->setText(mMuteMCMP ? tr(unmuteText.toStdString().c_str()) : tr(muteText.toStdString().c_str()));
+        mpActionMuteMCMP->setText(mMuteMCMP ? unmuteText : muteText);
         mpActionMuteMCMP->setIcon(QIcon(mMuteMCMP ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     } else if (protocol == TMediaData::MediaProtocolMSP) {
         mMuteMSP = state;
-        mpActionMuteMSP->setText(mMuteMSP ? tr(unmuteText.toStdString().c_str()) : tr(muteText.toStdString().c_str()));
+        mpActionMuteMSP->setText(mMuteMSP ? unmuteText : muteText);
         mpActionMuteMSP->setIcon(QIcon(mMuteMSP ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     }
 }
 
 void mudlet::slot_muteAPI(const bool state)
 {
-    toggleMuteForProtocol(state, mpActionMuteAPI, dactionMuteAPI, TMediaData::MediaProtocolAPI, "Unmute Mudlet API (Triggers, Scripts, etc.)", "Mute Mudlet API (Triggers, Scripts, etc.)");
+    toggleMuteForProtocol(state, mpActionMuteAPI, dactionMuteAPI, TMediaData::MediaProtocolAPI, tr("Unmute Mudlet API (Triggers, Scripts, etc.)"), tr("Mute Mudlet API (Triggers, Scripts, etc.)"));
 }
 
 void mudlet::slot_muteMCMP(const bool state)
 {
-    toggleMuteForProtocol(state, mpActionMuteMCMP, dactionMuteMCMP, TMediaData::MediaProtocolGMCP, "Unmute Game MCMP (Mud Client Media Protocol)", "Mute Game MCMP (Mud Client Media Protocol)");
+    toggleMuteForProtocol(state, mpActionMuteMCMP, dactionMuteMCMP, TMediaData::MediaProtocolGMCP, tr("Unmute Game MCMP (Mud Client Media Protocol)"), tr("Mute Game MCMP (Mud Client Media Protocol)"));
 }
 
 void mudlet::slot_muteMSP(const bool state)
 {
-    toggleMuteForProtocol(state, mpActionMuteMSP, dactionMuteMSP, TMediaData::MediaProtocolMSP, "Unmute Game MSP (Mud Sound Protocol)", "Mute Game MSP (Mud Sound Protocol)");
+    toggleMuteForProtocol(state, mpActionMuteMSP, dactionMuteMSP, TMediaData::MediaProtocolMSP, tr("Unmute Game MSP (Mud Sound Protocol)"), tr("Mute Game MSP (Mud Sound Protocol)"));
 }
 
 void mudlet::slot_muteMedia()
