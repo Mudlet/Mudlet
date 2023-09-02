@@ -290,64 +290,36 @@ void TMedia::stopAllMediaPlayers()
     }
 }
 
-void TMedia::muteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol)
+void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool mute)
 {
     QList<TMediaPlayer> mTMediaPlayerList;
 
-    switch (mediaProtocol) {
-    case TMediaData::MediaProtocolMSP:
+    if (mediaProtocol == TMediaData::MediaProtocolMSP) {
         mTMediaPlayerList = mMSPSoundList + mMSPMusicList;
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
+    } else if (mediaProtocol == TMediaData::MediaProtocolGMCP) {
         mTMediaPlayerList = mGMCPSoundList + mGMCPMusicList;
-        break;
-
-    case TMediaData::MediaProtocolAPI:
+    } else if (mediaProtocol == TMediaData::MediaProtocolAPI) {
         mTMediaPlayerList = mAPISoundList + mAPIMusicList;
-        break;
-
-    case TMediaData::MediaProtocolNotSet:
+    } else if (mediaProtocol == TMediaData::MediaProtocolNotSet) {
         mTMediaPlayerList = mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList;
-        break;
     }
 
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
         TMediaPlayer const pPlayer = itTMediaPlayer.next();
-        pPlayer.getMediaPlayer()->setMuted(true);
+        pPlayer.getMediaPlayer()->setMuted(mute);
     }
+}
+
+void TMedia::muteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol)
+{
+    setMediaPlayersMuted(mediaProtocol, true);
 }
 
 void TMedia::unmuteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol)
 {
-    QList<TMediaPlayer> mTMediaPlayerList;
-
-    switch (mediaProtocol) {
-    case TMediaData::MediaProtocolMSP:
-        mTMediaPlayerList = mMSPSoundList + mMSPMusicList;
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
-        mTMediaPlayerList = mGMCPSoundList + mGMCPMusicList;
-        break;
-
-    case TMediaData::MediaProtocolAPI:
-        mTMediaPlayerList = mAPISoundList + mAPIMusicList;
-        break;
-
-    case TMediaData::MediaProtocolNotSet:
-        mTMediaPlayerList = mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList;
-        break;
-    }
-
-    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
-
-    while (itTMediaPlayer.hasNext()) {
-        TMediaPlayer const pPlayer = itTMediaPlayer.next();
-        pPlayer.getMediaPlayer()->setMuted(false);
-    }
+    setMediaPlayersMuted(mediaProtocol, false);
 }
 
 void TMedia::transitionNonRelativeFile(TMediaData& mediaData)

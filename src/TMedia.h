@@ -108,6 +108,7 @@ private slots:
 
 private:
     void stopAllMediaPlayers();
+    void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool mute);
     void muteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol);
     void unmuteMediaPlayers(const TMediaData::MediaProtocol mediaProtocol);
     void transitionNonRelativeFile(TMediaData& mediaData);

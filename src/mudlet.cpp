@@ -1631,6 +1631,7 @@ void mudlet::disableToolbarButtons()
     // more texts to show {the default is to repeat the menu text which is not
     // useful} with a call to menuEditor->setToolTipsVisible(true);
     dactionReplay->setToolTip(mpActionReplay->toolTip());
+
     dactionReplay->setEnabled(false);
     mpActionReconnect->setEnabled(false);
     mpActionDisconnect->setEnabled(false);
@@ -3005,11 +3006,11 @@ void mudlet::slot_multiView(const bool state)
     }
 }
 
-void mudlet::toggleMuteForProtocol(bool state, QAction* action, QAction* daction, TMediaData::MediaProtocol protocol, const QString& unmuteText, const QString& muteText)
+void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* menuAction, TMediaData::MediaProtocol protocol, const QString& unmuteText, const QString& muteText)
 {
-    if (action->isChecked() != state || daction->isChecked() != state) {
-        action->setChecked(state);
-        daction->setChecked(state);
+    if (toolbarAction->isChecked() != state || menuAction->isChecked() != state) {
+        toolbarAction->setChecked(state);
+        menuAction->setChecked(state);
     }
 
     for (auto pHost : mHostManager) {
