@@ -7852,248 +7852,248 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7595"/>
       <source>Add Trigger</source>
-      <translation type="unfinished"/>
+      <translation>添加触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7596"/>
       <source>Add new trigger</source>
-      <translation type="unfinished"/>
+      <translation>添加新的触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7597"/>
       <source>Add Trigger Group</source>
-      <translation type="unfinished"/>
+      <translation>添加触发器分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7598"/>
       <source>Add new group of triggers</source>
-      <translation type="unfinished"/>
+      <translation>添加新的触发器分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7599"/>
       <source>Delete Trigger</source>
-      <translation type="unfinished"/>
+      <translation>删除触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7600"/>
       <source>Delete the selected trigger</source>
-      <translation type="unfinished"/>
+      <translation>删除选中的触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7601"/>
       <location filename="../src/dlgTriggerEditor.h" line="452"/>
       <source>Save Trigger</source>
-      <translation type="unfinished"/>
+      <translation>保存触发器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7602"/>
       <source>Saves the selected trigger, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>保存选中的触发器，会使新的更改生效 - 但是不会保存到硬盘...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7605"/>
       <source>Add Timer</source>
-      <translation type="unfinished"/>
+      <translation>添加定时器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7606"/>
       <source>Add new timer</source>
-      <translation type="unfinished"/>
+      <translation>添加新的定时器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7607"/>
       <source>Add Timer Group</source>
-      <translation type="unfinished"/>
+      <translation>添加定时器分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7608"/>
       <source>Add new group of timers</source>
-      <translation type="unfinished"/>
+      <translation>添加新的定时器分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7609"/>
       <source>Delete Timer</source>
-      <translation type="unfinished"/>
+      <translation>删除定时器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7610"/>
       <source>Delete the selected timer</source>
-      <translation type="unfinished"/>
+      <translation>删除选中的定时器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7611"/>
       <location filename="../src/dlgTriggerEditor.h" line="453"/>
       <source>Save Timer</source>
-      <translation type="unfinished"/>
+      <translation>保存定时器</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7612"/>
       <source>Saves the selected timer, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>保存选中的定时器，会使新的更改生效 - 但是不会保存到硬盘...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7615"/>
       <source>Add Alias</source>
-      <translation type="unfinished"/>
+      <translation>添加别名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7616"/>
       <source>Add new alias</source>
-      <translation type="unfinished"/>
+      <translation>添加新的别名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7617"/>
       <source>Add Alias Group</source>
-      <translation type="unfinished"/>
+      <translation>添加别名分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7618"/>
       <source>Add new group of aliases</source>
-      <translation type="unfinished"/>
+      <translation>添加新的别名分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7619"/>
       <source>Delete Alias</source>
-      <translation type="unfinished"/>
+      <translation>删除别名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7620"/>
       <source>Delete the selected alias</source>
-      <translation type="unfinished"/>
+      <translation>删除选中的别名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7621"/>
       <location filename="../src/dlgTriggerEditor.h" line="454"/>
       <source>Save Alias</source>
-      <translation type="unfinished"/>
+      <translation>保存别名</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7622"/>
       <source>Saves the selected alias, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>保存选中的别名，会使新的更改生效 - 但是不会保存到硬盘...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7625"/>
       <source>Add Script</source>
-      <translation type="unfinished"/>
+      <translation>添加脚本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7626"/>
       <source>Add new script</source>
-      <translation type="unfinished"/>
+      <translation>添加新的脚本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7627"/>
       <source>Add Script Group</source>
-      <translation type="unfinished"/>
+      <translation>添加脚本分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7628"/>
       <source>Add new group of scripts</source>
-      <translation type="unfinished"/>
+      <translation>添加新的脚本分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7629"/>
       <source>Delete Script</source>
-      <translation type="unfinished"/>
+      <translation>删除脚本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7630"/>
       <source>Delete the selected script</source>
-      <translation type="unfinished"/>
+      <translation>删除选中的脚本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7631"/>
       <location filename="../src/dlgTriggerEditor.h" line="455"/>
       <source>Save Script</source>
-      <translation type="unfinished"/>
+      <translation>保存脚本</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7632"/>
       <source>Saves the selected script, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>保存选中的脚本，会使新的更改生效 - 但是不会保存到硬盘...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7635"/>
       <source>Add Button</source>
-      <translation type="unfinished"/>
+      <translation>添加按钮</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7636"/>
       <source>Add new button</source>
-      <translation type="unfinished"/>
+      <translation>添加新按钮</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7637"/>
       <source>Add Button Group</source>
-      <translation type="unfinished"/>
+      <translation>添加按钮分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7638"/>
       <source>Add new group of buttons</source>
-      <translation type="unfinished"/>
+      <translation>添加新的按钮分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7639"/>
       <source>Delete Button</source>
-      <translation type="unfinished"/>
+      <translation>删除按钮</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7640"/>
       <source>Delete the selected button</source>
-      <translation type="unfinished"/>
+      <translation>删除选中的按钮</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7641"/>
       <location filename="../src/dlgTriggerEditor.h" line="456"/>
       <source>Save Button</source>
-      <translation type="unfinished"/>
+      <translation>保存按钮</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7642"/>
       <source>Saves the selected button, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>保存选中的按钮，会使新的更改生效 - 但是不会保存到硬盘...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7645"/>
       <source>Add Key</source>
-      <translation type="unfinished"/>
+      <translation>添加按键</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7646"/>
       <source>Add new key</source>
-      <translation type="unfinished"/>
+      <translation>添加新按键</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7647"/>
       <source>Add Key Group</source>
-      <translation type="unfinished"/>
+      <translation>添加按键分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7648"/>
       <source>Add new group of keys</source>
-      <translation type="unfinished"/>
+      <translation>添加新的按键分组</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7649"/>
       <source>Delete Key</source>
-      <translation type="unfinished"/>
+      <translation>删除按键</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7650"/>
       <source>Delete the selected key</source>
-      <translation type="unfinished"/>
+      <translation>删除选中的按键</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7651"/>
       <location filename="../src/dlgTriggerEditor.h" line="457"/>
       <source>Save Key</source>
-      <translation type="unfinished"/>
+      <translation>保存按键</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7652"/>
       <source>Saves the selected key, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>保存选中的按键，会使新的更改生效 - 但是不会保存到硬盘...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7655"/>
@@ -10009,7 +10009,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="717"/>
       <source>Welsh</source>
-      <translation type="unfinished"/>
+      <translation>威尔士语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="718"/>
@@ -10321,7 +10321,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="803"/>
       <source>Irish</source>
-      <translation type="unfinished"/>
+      <translation>爱尔兰语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="804"/>
@@ -10522,7 +10522,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="843"/>
       <source>Latin</source>
-      <translation type="unfinished"/>
+      <translation>拉丁语</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="844"/>
@@ -12224,12 +12224,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3825"/>
       <source>Purge stored media files for the current profile:</source>
-      <translation type="unfinished"/>
+      <translation>清除当前配置文件中保存的媒体文件：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3838"/>
       <source>Clear</source>
-      <translation type="unfinished"/>
+      <translation>清空</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4002"/>
@@ -12634,17 +12634,17 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1968"/>
       <source>choose map...</source>
-      <translation type="unfinished"/>
+      <translation>选择地图...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1975"/>
       <source>Or load an older version:</source>
-      <translation type="unfinished"/>
+      <translation>或者加载旧版本：</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1992"/>
       <source>◀ load this map</source>
-      <translation type="unfinished"/>
+      <translation>◀ 加载此地图</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2019"/>
@@ -12656,13 +12656,13 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="2026"/>
       <source>enable &apos;delete&apos; button</source>
       <comment>Text for a checkbox adjacent to the delete map button, ensure the text &apos;quoted&apos; matches the word or words on the button</comment>
-      <translation type="unfinished"/>
+      <translation>启用 &apos;删除&apos; 按钮</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2049"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
-      <translation type="unfinished"/>
+      <translation>选择目的地...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2091"/>
@@ -12914,7 +12914,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1941"/>
       <source>choose location...</source>
-      <translation type="unfinished"/>
+      <translation>选择地点...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2046"/>
@@ -13754,7 +13754,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="20"/>
       <source>Room properties</source>
-      <translation type="unfinished"/>
+      <translation>房间属性</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
@@ -13764,7 +13764,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
       <source>Room name...</source>
-      <translation type="unfinished"/>
+      <translation>房间名...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="61"/>
@@ -13774,7 +13774,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="111"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>设置房间颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="127"/>
@@ -13794,7 +13794,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>设置符号颜色</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="229"/>
@@ -14135,7 +14135,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>发送到游戏的文本 (可选)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="297"/>
