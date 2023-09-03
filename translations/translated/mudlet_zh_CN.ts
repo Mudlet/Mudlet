@@ -9121,7 +9121,8 @@ less likely to be useful for normal use of this application:</source>
       <location filename="../src/main.cpp" line="359"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
-      <translation type="unfinished"/>
+      <translation>这是一个自由软件：你可以自由修改和转载此软件。
+在法律许可下，本授权不承担任何担保责任。</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="383"/>
@@ -9325,7 +9326,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="204"/>
       <source>&lt;p&gt;Opens a free form text editor window for this profile that is saved between sessions.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;在当前配置文件中打开一个独立的文本编辑窗口，该窗口会在不同会话间保存。&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="212"/>
