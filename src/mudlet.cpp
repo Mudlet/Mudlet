@@ -297,6 +297,44 @@ mudlet::mudlet()
     mpActionVariables->setObjectName(qsl("variables_action"));
     mpMainToolBar->widgetForAction(mpActionVariables)->setObjectName(mpActionVariables->objectName());
 
+    mpButtonMute = new QToolButton(this);
+    mpButtonMute->setText(tr("Mute"));
+    mpButtonMute->setObjectName(qsl("mute"));
+    mpButtonMute->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpButtonMute->setPopupMode(QToolButton::MenuButtonPopup);
+    mpButtonMute->setAutoRaise(true);
+    mpMainToolBar->addWidget(mpButtonMute);
+
+    mpActionMuteMedia = new QAction(tr("Mute All Media"), this);
+    mpActionMuteMedia->setIcon(QIcon(qsl(":/icons/mute.png")));
+    mpActionMuteMedia->setIconText(tr("Mute All Media"));
+    mpActionMuteMedia->setObjectName(qsl("muteMedia"));
+    mpActionMuteMedia->setCheckable(true);
+
+    mpActionMuteAPI = new QAction(tr("Mute Mudlet API (Triggers, Scripts, etc.)"), this);
+    mpActionMuteAPI->setIcon(QIcon(qsl(":/icons/mute.png")));
+    mpActionMuteAPI->setIconText(tr("Mute Mudlet API (Triggers, Scripts, etc.)"));
+    mpActionMuteAPI->setObjectName(qsl("muteAPI"));
+    mpActionMuteAPI->setCheckable(true); 
+
+    mpActionMuteMCMP = new QAction(tr("Mute Game MCMP (Mud Client Media Protocol)"), this);
+    mpActionMuteMCMP->setIcon(QIcon(qsl(":/icons/mute.png")));
+    mpActionMuteMCMP->setIconText(tr("Mute Game MCMP (Mud Client Media Protocol)"));
+    mpActionMuteMCMP->setObjectName(qsl("muteMCMP"));
+    mpActionMuteMCMP->setCheckable(true); 
+
+    mpActionMuteMSP = new QAction(tr("Mute Game MSP (Mud Sound Protocol)"), this);
+    mpActionMuteMSP->setIcon(QIcon(qsl(":/icons/mute.png")));
+    mpActionMuteMSP->setIconText(tr("Mute Game MSP (Mud Sound Protocol)"));
+    mpActionMuteMSP->setObjectName(qsl("muteMSP"));
+    mpActionMuteMSP->setCheckable(true); 
+
+    mpButtonMute->addAction(mpActionMuteMedia);
+    mpButtonMute->addAction(mpActionMuteAPI);
+    mpButtonMute->addAction(mpActionMuteMCMP);
+    mpButtonMute->addAction(mpActionMuteMSP);
+    mpButtonMute->setDefaultAction(mpActionMuteMedia);
+
     mpButtonDiscord = new QToolButton(this);
     mpButtonDiscord->setText(qsl("Discord"));
     mpButtonDiscord->setObjectName(qsl("discord"));
@@ -399,44 +437,6 @@ mudlet::mudlet()
     mpActionMultiView->setEnabled(false);
     mpActionMultiView->setObjectName(qsl("multiview_action"));
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
-
-    mpButtonMute = new QToolButton(this);
-    mpButtonMute->setText(tr("Mute"));
-    mpButtonMute->setObjectName(qsl("mute"));
-    mpButtonMute->setContextMenuPolicy(Qt::ActionsContextMenu);
-    mpButtonMute->setPopupMode(QToolButton::MenuButtonPopup);
-    mpButtonMute->setAutoRaise(true);
-    mpMainToolBar->addWidget(mpButtonMute);
-
-    mpActionMuteMedia = new QAction(tr("Mute All Media"), this);
-    mpActionMuteMedia->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteMedia->setIconText(tr("Mute All Media"));
-    mpActionMuteMedia->setObjectName(qsl("muteMedia"));
-    mpActionMuteMedia->setCheckable(true);
-
-    mpActionMuteAPI = new QAction(tr("Mute Mudlet API (Triggers, Scripts, etc.)"), this);
-    mpActionMuteAPI->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteAPI->setIconText(tr("Mute Mudlet API (Triggers, Scripts, etc.)"));
-    mpActionMuteAPI->setObjectName(qsl("muteAPI"));
-    mpActionMuteAPI->setCheckable(true); 
-
-    mpActionMuteMCMP = new QAction(tr("Mute Game MCMP (Mud Client Media Protocol)"), this);
-    mpActionMuteMCMP->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteMCMP->setIconText(tr("Mute Game MCMP (Mud Client Media Protocol)"));
-    mpActionMuteMCMP->setObjectName(qsl("muteMCMP"));
-    mpActionMuteMCMP->setCheckable(true); 
-
-    mpActionMuteMSP = new QAction(tr("Mute Game MSP (Mud Sound Protocol)"), this);
-    mpActionMuteMSP->setIcon(QIcon(qsl(":/icons/mute.png")));
-    mpActionMuteMSP->setIconText(tr("Mute Game MSP (Mud Sound Protocol)"));
-    mpActionMuteMSP->setObjectName(qsl("muteMSP"));
-    mpActionMuteMSP->setCheckable(true); 
-
-    mpButtonMute->addAction(mpActionMuteMedia);
-    mpButtonMute->addAction(mpActionMuteAPI);
-    mpButtonMute->addAction(mpActionMuteMCMP);
-    mpButtonMute->addAction(mpActionMuteMSP);
-    mpButtonMute->setDefaultAction(mpActionMuteMedia);
 
 #if defined(INCLUDE_UPDATER)
     if (scmIsPublicTestVersion) {
@@ -3050,13 +3050,33 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
     }
 
     // Toolbar icon. "Mute" when any protocol is unmuted. "Unmute" only when all protocols are muted.
-    mpActionMuteMedia->setIcon(QIcon(muteMedia() ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
-    mpActionMuteMedia->setText(muteMedia() ? tr("Unmute All Media") : tr("Mute All Media"));
-    mpActionMuteMedia->setChecked(muteMedia());
-    dactionMuteMedia->setChecked(muteMedia());
-    mpButtonMute->setText(muteMedia() ? tr("Unmute") : tr("Mute"));
+    const bool isMediaMuted = mediaMuted();
+    mpActionMuteMedia->setIcon(QIcon(isMediaMuted ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
+    mpActionMuteMedia->setText(isMediaMuted ? tr("Unmute All Media") : tr("Mute All Media"));
+    mpActionMuteMedia->setChecked(isMediaMuted);
+    dactionMuteMedia->setChecked(isMediaMuted);
+    mpButtonMute->setText(isMediaMuted ? tr("Unmute") : tr("Mute"));
     mpButtonMute->setChecked(false);
     mpButtonMute->setEnabled(true);
+
+    // Notify when all media is muted or all media is unmuted. Helps if the shortcut is hit accidentally.
+    if (isMediaMuted || mediaUnmuted()) {
+        for (auto pHost : mHostManager) {
+            if (isMediaMuted) {
+#if defined(Q_OS_MACOS)
+                pHost->postMessage(tr("[ INFO ]  - Mudlet is muted. Press COMMAND-K to unmute."));
+#else
+                pHost->postMessage(tr("[ INFO ]  - Mudlet is muted. Press ALT-K to unmute."));
+#endif
+            } else {
+#if defined(Q_OS_MACOS)
+                pHost->postMessage(tr("[ INFO ]  - Mudlet is unmuted. Press COMMAND-K to mute."));
+#else
+                pHost->postMessage(tr("[ INFO ]  - Mudlet is unmuted. Press ALT-K to mute."));
+#endif
+            }
+        }
+    }
 }
 
 void mudlet::slot_muteAPI(const bool state)
@@ -3076,7 +3096,7 @@ void mudlet::slot_muteMSP(const bool state)
 
 void mudlet::slot_muteMedia()
 {
-    if (muteMedia()) {
+    if (mediaMuted()) {
         slot_muteAPI(false);
         slot_muteMCMP(false);
         slot_muteMSP(false);
