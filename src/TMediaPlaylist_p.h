@@ -28,7 +28,7 @@
 
 QT_BEGIN_NAMESPACE
 
-class TMediaPlaylistControl;
+//class TMediaPlaylistControl;
 
 class TMediaPlaylistPrivate
 {

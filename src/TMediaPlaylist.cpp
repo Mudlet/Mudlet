@@ -367,7 +367,9 @@ bool TMediaPlaylist::removeMedia(int start, int end)
     end = qBound(0, end, d->playlist.size() - 1);
 
     emit mediaAboutToBeRemoved(start, end);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     d->playlist.remove(start, end - start + 1);
+#endif
     emit mediaRemoved(start, end);
     return true;
 }

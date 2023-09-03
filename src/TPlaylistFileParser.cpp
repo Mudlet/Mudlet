@@ -92,10 +92,12 @@ public:
      */
     bool parseLineImpl(int lineIndex, const QString &line, const QUrl &root) override
     {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         if (line[0] == u'#') {
             if (m_extendedFormat) {
                 if (line.startsWith(QLatin1String("#EXTINF:"))) {
                     m_extraInfo.clear();
+
                     int artistStart = line.indexOf(QLatin1String(","), 8);
                     bool ok = false;
                     QStringView lineView{ line };
@@ -138,6 +140,7 @@ public:
             newItemFound(QVariant::fromValue(m_extraInfo));
             m_extraInfo.clear();
         }
+#endif
 
         return true;
     }
@@ -160,7 +163,9 @@ public:
     }
 
 private:
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     QMediaMetaData m_extraInfo;
+#endif
     bool m_extendedFormat;
 };
 
