@@ -660,7 +660,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2692"/>
       <source>Configure room...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation>配置房间...</translation>
+      <translation>房间设置...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2694"/>
@@ -6627,7 +6627,7 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3148"/>
       <source>pick destinations...</source>
       <extracomment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</extracomment>
-      <translation type="unfinished"/>
+      <translation>选择目的地...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3389"/>
@@ -7214,7 +7214,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="517"/>
       <source>Delete room color</source>
       <extracomment>This action deletes a color from the list of all room colors</extracomment>
-      <translation type="unfinished"/>
+      <translation>删除房间颜色</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="545"/>
@@ -7231,23 +7231,23 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="442"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>设置符号颜色</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="479"/>
       <location filename="../src/dlgRoomProperties.cpp" line="536"/>
       <source>Define new room color</source>
-      <translation type="unfinished"/>
+      <translation>定义新的房间颜色</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="502"/>
       <source>Set room color</source>
-      <translation type="unfinished"/>
+      <translation>设置房间颜色</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
       <source>(Multiple values...)</source>
-      <translation type="unfinished"/>
+      <translation>(多个值……)</translation>
     </message>
   </context>
   <context>
