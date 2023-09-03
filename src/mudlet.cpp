@@ -3049,7 +3049,7 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
         mpActionMuteMSP->setIcon(QIcon(mMuteMSP ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     }
 
-    // Toolbar icon. Mute when any protocol is unmuted. Unmute only when all protocols are muted.
+    // Toolbar icon. "Mute" when any protocol is unmuted. "Unmute" only when all protocols are muted.
     mpActionMuteMedia->setIcon(QIcon(muteMedia() ? qsl(":/icons/unmute.png") : qsl(":/icons/mute.png")));
     mpActionMuteMedia->setText(muteMedia() ? tr("Unmute All Media") : tr("Mute All Media"));
     mpActionMuteMedia->setChecked(muteMedia());
