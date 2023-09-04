@@ -329,7 +329,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Mute All Media</string>
+    <string>Mute all media</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Mutes all media played.&lt;/p&gt;</string>
@@ -363,7 +363,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Mute Game MCMP (Mud Client Media Protocol)</string>
+    <string>Mute game MCMP (Mud Client Media Protocol)</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Mutes media played by the Mud Client Media Protocol (MCMP).&lt;/p&gt;</string>
@@ -380,7 +380,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Mute Game MSP (Mud Sound Protocol)</string>
+    <string>Mute game MSP (Mud Sound Protocol)</string>
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Mutes media played by the Mud Sound Protocol (MSP).&lt;/p&gt;</string>
