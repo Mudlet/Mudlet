@@ -3066,9 +3066,9 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
  
             if (sequence != nullptr && !sequence->toString().isEmpty()) {
                 if (isMediaMuted) {
-                    pHost->postMessage(tr("[ INFO ]  - Mudlet is muted. Use %1 to unmute.").arg(sequence->toString()));
+                    pHost->postMessage(tr("[ INFO ]  - Mudlet is muted.  Use %1 to unmute.").arg(sequence->toString()));
                 } else {
-                    pHost->postMessage(tr("[ INFO ]  - Mudlet is unmuted. Use %1 to mute.").arg(sequence->toString()));
+                    pHost->postMessage(tr("[ INFO ]  - Mudlet is unmuted.  Use %1 to mute.").arg(sequence->toString()));
                 }
             }
         }
