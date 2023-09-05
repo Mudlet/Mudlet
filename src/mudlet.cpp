@@ -3063,13 +3063,14 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
     if (isMediaMuted || mediaUnmuted()) {
         for (auto pHost : mHostManager) {
             QKeySequence* sequence = new QKeySequence(*pHost->profileShortcuts.value(qsl("Mute all media")));
- 
-            if (sequence != nullptr && !sequence->toString().isEmpty()) {
-                if (isMediaMuted) {
-                    pHost->postMessage(tr("[ INFO ]  - Mudlet is muted. Use %1 to unmute.").arg(sequence->toString()));
-                } else {
-                    pHost->postMessage(tr("[ INFO ]  - Mudlet is unmuted. Use %1 to mute.").arg(sequence->toString()));
-                }
+            const bool keyExists = sequence != nullptr && !sequence->toString().isEmpty();
+            
+            if (isMediaMuted) {
+                pHost->postMessage(!keyExists ? tr("[ INFO ]  - Mudlet is muted.") :
+                    tr("[ INFO ]  - Mudlet is muted. Use %1 to unmute.").arg(sequence->toString()));
+            } else {
+                pHost->postMessage(!keyExists ? tr("[ INFO ]  - Mudlet is unmuted.") :
+                    tr("[ INFO ]  - Mudlet is unmuted. Use %1 to mute.").arg(sequence->toString()));
             }
         }
     }
