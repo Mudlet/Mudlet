@@ -31,6 +31,7 @@
 #include "FontManager.h"
 #include "HostManager.h"
 #include "ShortcutsManager.h"
+#include "TMediaData.h"
 #include "utils.h"
 
 #if defined(INCLUDE_UPDATER)
@@ -396,7 +397,11 @@ public:
     void updateMultiViewControls();
     QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
     void writeSettings();
-
+    bool muteAPI() const { return mMuteAPI; }
+    bool muteMCMP() const { return mMuteMCMP; }
+    bool muteMSP() const { return mMuteMSP; }
+    bool mediaMuted() const { return mMuteAPI && mMuteMCMP && mMuteMSP; }
+    bool mediaUnmuted() const { return !mMuteAPI && !mMuteMCMP && !mMuteMSP; }
 
     Appearance mAppearance = Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
@@ -490,6 +495,10 @@ public slots:
     void slot_moduleManager();
     void slot_mudletDiscord();
     void slot_multiView(const bool);
+    void slot_muteMedia();
+    void slot_muteAPI(const bool);
+    void slot_muteMCMP(const bool);
+    void slot_muteMSP(const bool);
     void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
     void slot_notes();
     void slot_openMappingScriptsPage();
@@ -589,7 +598,7 @@ private:
     int scanWordList(QStringList&, QHash<QString, unsigned int>&);
     void setupTrayIcon();
     void reshowRequiredMainConsoles();
-
+    void toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* menuAction, TMediaData::MediaProtocol protocol, const QString& unmuteText, const QString& muteText);
 
     inline static QPointer<mudlet> smpSelf = nullptr;
 
@@ -613,6 +622,7 @@ private:
     QKeySequence mKeySequenceInputLine;
     QKeySequence mKeySequenceModules;
     QKeySequence mKeySequenceMultiView;
+    QKeySequence mKeySequenceMute;
     QKeySequence mKeySequenceNotepad;
     QKeySequence mKeySequenceOptions;
     QKeySequence mKeySequencePackages;
@@ -628,6 +638,9 @@ private:
     std::optional<bool> mMenuVisibleState;
     QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
     bool mMultiView = false;
+    bool mMuteAPI = false;
+    bool mMuteMCMP = false;
+    bool mMuteMSP = false;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
@@ -644,6 +657,10 @@ private:
     QPointer<QAction> mpActionModuleManager;
     QPointer<QAction> mpActionMudletDiscord;
     QPointer<QAction> mpActionMultiView;
+    QPointer<QAction> mpActionMuteMedia;
+    QPointer<QAction> mpActionMuteAPI;
+    QPointer<QAction> mpActionMuteMCMP;
+    QPointer<QAction> mpActionMuteMSP;
     QPointer<QAction> mpActionNotes;
     QPointer<QAction> mpActionOptions;
     QPointer<QAction> mpActionPackageExporter;
@@ -668,6 +685,7 @@ private:
     QPointer<QToolButton> mpButtonAbout;
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
+    QPointer<QToolButton> mpButtonMute;
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
     QPointer<QLabel> mpLabelReplaySpeedDisplay;
@@ -680,6 +698,7 @@ private:
     QPointer<QShortcut> mpShortcutInputLine;
     QPointer<QShortcut> mpShortcutModules;
     QPointer<QShortcut> mpShortcutMultiView;
+    QPointer<QShortcut> mpShortcutMute;
     QPointer<QShortcut> mpShortcutNotepad;
     QPointer<QShortcut> mpShortcutOptions;
     QPointer<QShortcut> mpShortcutPackages;
