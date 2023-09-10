@@ -256,6 +256,16 @@ bool TMedia::purgeMediaCache()
     mediaDir.removeRecursively();
     return true;
 }
+
+void TMedia::muteMedia(const TMediaData::MediaProtocol mediaProtocol)
+{
+    setMediaPlayersMuted(mediaProtocol, true);
+}
+
+void TMedia::unmuteMedia(const TMediaData::MediaProtocol mediaProtocol)
+{
+    setMediaPlayersMuted(mediaProtocol, false);
+}
 // End Public
 
 // Private
@@ -267,6 +277,28 @@ void TMedia::stopAllMediaPlayers()
     while (itTMediaPlayer.hasNext()) {
         TMediaPlayer const pPlayer = itTMediaPlayer.next();
         pPlayer.getMediaPlayer()->stop();
+    }
+}
+
+void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state)
+{
+    QList<TMediaPlayer> mTMediaPlayerList;
+
+    if (mediaProtocol == TMediaData::MediaProtocolMSP) {
+        mTMediaPlayerList = mMSPSoundList + mMSPMusicList;
+    } else if (mediaProtocol == TMediaData::MediaProtocolGMCP) {
+        mTMediaPlayerList = mGMCPSoundList + mGMCPMusicList;
+    } else if (mediaProtocol == TMediaData::MediaProtocolAPI) {
+        mTMediaPlayerList = mAPISoundList + mAPIMusicList;
+    } else if (mediaProtocol == TMediaData::MediaProtocolNotSet) {
+        mTMediaPlayerList = mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList;
+    }
+
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
+        pPlayer.getMediaPlayer()->setMuted(state);
     }
 }
 
@@ -1094,6 +1126,19 @@ void TMedia::play(TMediaData& mediaData)
 
     if (mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet || mediaData.getMediaFadeOut() != TMediaData::MediaFadeNotSet) {
         pPlayer.getMediaPlayer()->setNotifyInterval(50); // Smoother volume changes with the tighter interval (default = 1000).
+    }
+
+    // Set whether or not we should be muted
+    switch (mediaData.getMediaProtocol()) {
+        case TMediaData::MediaProtocolAPI:
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteAPI());
+            break;
+        case TMediaData::MediaProtocolGMCP:
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMCMP());
+            break;
+        case TMediaData::MediaProtocolMSP:
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMSP());
+            break;
     }
 
     pPlayer.getMediaPlayer()->play();
