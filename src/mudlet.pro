@@ -633,6 +633,7 @@ SOURCES += \
     TMxpVersionTagHandler.cpp \
     TMxpVarTagHandler.cpp \
     TPlaylistFileParser.cpp \
+    TPlaylistModel.cpp
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
@@ -760,6 +761,7 @@ HEADERS += \
     TMxpVarTagHandler.h \
     TMxpVersionTagHandler.h \
     TPlaylistFileParser.h \
+    TPlaylistModel.h \
     Tree.h \
     TriggerUnit.h \
     TRoom.h \

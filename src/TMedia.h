@@ -54,7 +54,7 @@ public:
     , initialized(true)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        mMediaPlayer->setAudioOutput(new QAudioOutput());
+        mMediaPlayer->setAudioOutput(new QAudioOutput(pHost));
 #endif
     }
     ~TMediaPlayer() = default;

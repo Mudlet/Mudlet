@@ -145,6 +145,7 @@ set(mudlet_SRCS
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
     TPlaylistFileParser.cpp
+    TPlaylistModel.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
@@ -309,6 +310,7 @@ set(mudlet_HDRS
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
     TPlaylistFileParser.h
+    TPlaylistModel.h
     Tree.h
     TriggerUnit.h
     TRoom.h
