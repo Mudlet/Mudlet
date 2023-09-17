@@ -3061,16 +3061,20 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
 
     // Notify when all media is muted or all media is unmuted. Helps if the shortcut is hit accidentally.
     if (isMediaMuted || mediaUnmuted()) {
+        QString message;
+
         for (auto pHost : mHostManager) {
-            QKeySequence* sequence = new QKeySequence(*pHost->profileShortcuts.value(qsl("Mute all media")));
- 
-            if (sequence != nullptr && !sequence->toString().isEmpty()) {
-                if (isMediaMuted) {
-                    pHost->postMessage(tr("[ INFO ]  - Mudlet is muted. Use %1 to unmute.").arg(sequence->toString()));
-                } else {
-                    pHost->postMessage(tr("[ INFO ]  - Mudlet is unmuted. Use %1 to mute.").arg(sequence->toString()));
-                }
+            const QKeySequence* sequence = pHost->profileShortcuts.value(qsl("Mute all media"));
+
+            if (sequence && !sequence->toString().isEmpty()) {
+                message = isMediaMuted
+                    ? tr("[ INFO ]  - Mudlet is muted. Use %1 to unmute.").arg(sequence->toString())
+                    : tr("[ INFO ]  - Mudlet is unmuted. Use %1 to mute.").arg(sequence->toString());
+            } else {
+                message = isMediaMuted ? tr("[ INFO ]  - Mudlet is muted.") : tr("[ INFO ]  - Mudlet is unmuted.");
             }
+
+            pHost->postMessage(message);
         }
     }
 }

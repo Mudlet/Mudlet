@@ -111,6 +111,13 @@
     </property>
     <addaction name="dactionOptions"/>
     <addaction name="dactionMultiView"/>
+    <addaction name="separator"/>
+    <addaction name="menuMute"/>
+   </widget>
+   <widget class="QMenu" name="menuMute">
+    <property name="title">
+     <string>Mute media</string>
+    </property>
     <addaction name="dactionMuteMedia"/>
     <addaction name="dactionMuteAPI"/>
     <addaction name="dactionMuteMCMP"/>
