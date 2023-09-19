@@ -9096,7 +9096,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="119"/>
       <source>Mute media</source>
-      <translation type="unfinished"/>
+      <translation>Mute media</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="128"/>
@@ -9201,42 +9201,42 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="339"/>
       <source>Mute all media</source>
-      <translation type="unfinished"/>
+      <translation>Mute all media</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="342"/>
       <source>&lt;p&gt;Mutes all media played.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mutes all media played.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="356"/>
       <source>Mute Mudlet API (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mute Mudlet API (Triggers, Scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="359"/>
       <source>&lt;p&gt;Mutes media played by the Lua API and scripts.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mutes media played by the Lua API and scripts.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="373"/>
       <source>Mute game MCMP (Mud Client Media Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Mute game MCMP (Mud Client Media Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="376"/>
       <source>&lt;p&gt;Mutes media played by the Mud Client Media Protocol (MCMP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mutes media played by the Mud Client Media Protocol (MCMP).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="390"/>
       <source>Mute game MSP (Mud Sound Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Mute game MSP (Mud Sound Protocol)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="393"/>
       <source>&lt;p&gt;Mutes media played by the Mud Sound Protocol (MSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mutes media played by the Mud Sound Protocol (MSP).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="407"/>
@@ -9962,7 +9962,7 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
       <location filename="../src/mudlet.cpp" line="301"/>
       <location filename="../src/mudlet.cpp" line="3058"/>
       <source>Mute</source>
-      <translation type="unfinished"/>
+      <translation>Mute</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="308"/>
@@ -9970,28 +9970,28 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
       <location filename="../src/mudlet.cpp" line="611"/>
       <location filename="../src/mudlet.cpp" line="3055"/>
       <source>Mute all media</source>
-      <translation type="unfinished"/>
+      <translation>Mute all media</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="314"/>
       <location filename="../src/mudlet.cpp" line="316"/>
       <location filename="../src/mudlet.cpp" line="3084"/>
       <source>Mute Mudlet API (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mute Mudlet API (Triggers, Scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="320"/>
       <location filename="../src/mudlet.cpp" line="322"/>
       <location filename="../src/mudlet.cpp" line="3089"/>
       <source>Mute game MCMP (Mud Client Media Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Mute game MCMP (Mud Client Media Protocol)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="326"/>
       <location filename="../src/mudlet.cpp" line="328"/>
       <location filename="../src/mudlet.cpp" line="3094"/>
       <source>Mute game MSP (Mud Sound Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Mute game MSP (Mud Sound Protocol)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="351"/>
@@ -10465,47 +10465,47 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="3055"/>
       <source>Unmute all media</source>
-      <translation type="unfinished"/>
+      <translation>Unmute all media</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3058"/>
       <source>Unmute</source>
-      <translation type="unfinished"/>
+      <translation>Unmute</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3071"/>
       <source>[ INFO ]  - Mudlet is muted. Use %1 to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet is muted. Use %1 to unmute.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3072"/>
       <source>[ INFO ]  - Mudlet is unmuted. Use %1 to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet is unmuted. Use %1 to mute.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3074"/>
       <source>[ INFO ]  - Mudlet is muted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet is muted.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3074"/>
       <source>[ INFO ]  - Mudlet is unmuted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet is unmuted.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3084"/>
       <source>Unmute Mudlet API (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Unmute Mudlet API (Triggers, Scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3089"/>
       <source>Unmute game MCMP (Mud Client Media Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Unmute game MCMP (Mud Client Media Protocol)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3094"/>
       <source>Unmute game MSP (Mud Sound Protocol)</source>
-      <translation type="unfinished"/>
+      <translation>Unmute game MSP (Mud Sound Protocol)</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3745"/>
