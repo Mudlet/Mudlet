@@ -9182,7 +9182,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="119"/>
       <source>Mute media</source>
-      <translation type="unfinished"/>
+      <translation>Заглушить медиа</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="128"/>
@@ -9287,7 +9287,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="339"/>
       <source>Mute all media</source>
-      <translation type="unfinished"/>
+      <translation>Заглушить все медиа</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="342"/>
