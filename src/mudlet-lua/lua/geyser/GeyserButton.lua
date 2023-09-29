@@ -1,7 +1,8 @@
 --- Represents a clickable button. Can be a single clickable action or a two state button
 -- which alternates between the two states when clicked.
--- @class table
--- @name Geyser.Button
+-- @author guy
+-- @author demonnic
+-- @module Geyser.Button
 -- @field twoState If true, the button will be treated as a two state button, with 'up' and 'down' states.
 -- @field state 'up' or 'down' depending on button state for two state buttons. Will always be 'up' if a single state button.
 -- @field tooltip The text to show when the button is hovered over. For two state buttons will be used for the 'up' tooltip
