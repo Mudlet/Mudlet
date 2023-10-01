@@ -1003,11 +1003,19 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     auto playlist = !sameMusicIsPlaying ? new QMediaPlaylist : (pPlayer.getMediaPlayer()->playlist() != nullptr ? pPlayer.getMediaPlayer()->playlist() : new QMediaPlaylist);
+#else
+    auto playlist = !sameMusicIsPlaying ? new TMediaPlaylist : (pPlayer.playlist() != nullptr ? pPlayer.playlist() : new TMediaPlaylist);
+#endif
     QString absolutePathFileName;
 
     if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         playlist->setPlaybackMode(QMediaPlaylist::Sequential);
+#else
+        playlist->setPlaybackMode(TMediaPlaylist::Sequential);
+#endif
 
         if (sameMusicIsPlaying) {
             if (mediaData.getMediaContinue() == TMediaData::MediaContinueRestart) {
@@ -1043,7 +1051,11 @@ void TMedia::play(TMediaData& mediaData)
         pPlayer.getMediaPlayer()->setMedia(mediaSource);
     } else {
         if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             playlist->setPlaybackMode(QMediaPlaylist::Loop);
+#else
+            playlist->setPlaybackMode(TMediaPlaylist::Loop);
+#endif
 
             if (sameMusicIsPlaying) {
                 if (mediaData.getMediaContinue() == TMediaData::MediaContinueRestart) {
@@ -1073,7 +1085,11 @@ void TMedia::play(TMediaData& mediaData)
 
             playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
         } else {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             playlist->setPlaybackMode(QMediaPlaylist::Sequential);
+#else
+            playlist->setPlaybackMode(TMediaPlaylist::Sequential);
+#endif
 
             if (sameMusicIsPlaying) {
                 if (mediaData.getMediaContinue() == TMediaData::MediaContinueRestart) {
@@ -1117,7 +1133,11 @@ void TMedia::play(TMediaData& mediaData)
         }
 
         playlist->setCurrentIndex(1);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         pPlayer.getMediaPlayer()->setPlaylist(playlist);
+#else
+        pPlayer.setPlaylist(playlist);
+#endif
     }
 
     // Set volume, start and play media

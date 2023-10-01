@@ -55,6 +55,8 @@ public:
     {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         mMediaPlayer->setAudioOutput(new QAudioOutput(pHost));
+        mMediaPlaylist = new TMediaPlaylist();
+        connect(mMediaPlaylist, &TMediaPlaylist::currentIndexChanged, this, &TMediaPlayer::playlistPositionChanged);
 #endif
     }
     ~TMediaPlayer() = default;
@@ -62,6 +64,15 @@ public:
     TMediaData getMediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
     QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    void setPlaylist(TMediaPlaylist* mediaPlaylist) {
+        disconnect(mMediaPlaylist, &TMediaPlaylist::currentIndexChanged, nullptr, nullptr);
+
+        mMediaPlaylist = mediaPlaylist;
+        connect(mMediaPlaylist, &TMediaPlaylist::currentIndexChanged, this, &TMediaPlayer::playlistPositionChanged);
+    }
+    TMediaPlaylist* playlist() const { return mMediaPlaylist; }
+#endif
     bool isInitialized() const { return initialized; }
     QMediaPlayerPlaybackState getPlaybackState() const {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -77,11 +88,19 @@ public:
         return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
 #endif
     }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    void playlistPositionChanged(int currentItem) {
+        mMediaPlayer->setSource(mMediaPlaylist->currentMedia());
+    }
+#endif
 
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer = nullptr;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    TMediaPlaylist *mMediaPlaylist = nullptr;
+#endif
     bool initialized = false;
 };
 
