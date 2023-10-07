@@ -324,7 +324,7 @@ unix:!macx {
             -lhunspell-1.6
 
         INCLUDEPATH += \
-             "C:\\Libraries\\boost_1_77_0" \
+             "C:\\Libraries\\boost_1_83_0" \
              "$${MINGW_BASE_DIR_TEST}\\include" \
              "$${MINGW_BASE_DIR_TEST}\\lib\\include"
 

@@ -121,7 +121,7 @@ This software wouldnt've been possible without these open source packages:
 - [edbee](http://www.edbee.net/)
 - [DBLSQD](https://www.dblsqd.com/)
 - [argparse](https://github.com/luarocks/argparse)
-- [Boost Graph Library](https://www.boost.org/doc/libs/1_77_0/libs/graph/doc/)
+- [Boost Graph Library](https://www.boost.org/doc/libs/1_83_0/libs/graph/doc/)
 - [Busted](https://lunarmodules.github.io/busted/)
 - [Ccache](https://ccache.dev/)
 - [Communi](https://communi.github.io/)
