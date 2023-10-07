@@ -5,6 +5,8 @@ $global:ErrorActionPreference = "Stop"
 # credit: https://stackoverflow.com/questions/41618766/powershell-invoke-webrequest-fails-with-ssl-tls-secure-channel/48030563#48030563
 [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12, tls13"
 
+iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+
 . .\appveyor.functions.ps1
 
 SetQtBaseDir "$logFile"
