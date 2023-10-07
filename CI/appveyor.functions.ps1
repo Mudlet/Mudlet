@@ -335,7 +335,7 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  DownloadFile "https://libzip.org/download/libzip-1.10.1.tar.gz" "libzip.tar.gz"
+  DownloadFile "https://github.com/nih-at/libzip/releases/download/v1.10.1/libzip-1.10.1.tar.gz" "libzip-1.10.1.tar.gz"
   ExtractTar "$workingBaseDir\libzip.tar.gz" "$workingBaseDir\libzip"
   Set-Location "$workingBaseDir\libzip\libzip-1.10.1"
   if (!(Test-Path -Path "build" -PathType Container)) {
