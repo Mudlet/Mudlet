@@ -335,9 +335,9 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  DownloadFile "https://libzip.org/download/libzip-1.7.3.tar.gz" "libzip.tar.gz"
+  DownloadFile "https://libzip.org/download/libzip-1.10.1.tar.gz" "libzip.tar.gz"
   ExtractTar "$workingBaseDir\libzip.tar.gz" "$workingBaseDir\libzip"
-  Set-Location "$workingBaseDir\libzip\libzip-1.7.3"
+  Set-Location "$workingBaseDir\libzip\libzip-1.10.1"
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating libzip build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1
