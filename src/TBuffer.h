@@ -440,12 +440,6 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
     if (attributes & TChar::FastBlink) {
         presentAttributes << QLatin1String("FastBlink (0x80)");
     }
-    if (attributes & TChar::Found) {
-        presentAttributes << QLatin1String("Found (0x100000)");
-    }
-    if (attributes & TChar::Echo) {
-        presentAttributes << QLatin1String("Echo (0x200000)");
-    }
     if (attributes & TChar::AltFont1) {
         presentAttributes << QLatin1String("AltFont1 (0x100)");
     }
@@ -462,16 +456,25 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
         presentAttributes << QLatin1String("AltFont5 (0x1000)");
     }
     if (attributes & TChar::AltFont6) {
-        presentAttributes << QLatin1String("AltFont1 (0x2000)");
+        presentAttributes << QLatin1String("AltFont6 (0x2000)");
     }
     if (attributes & TChar::AltFont7) {
-        presentAttributes << QLatin1String("AltFont1 (0x4000)");
+        presentAttributes << QLatin1String("AltFont7 (0x4000)");
     }
     if (attributes & TChar::AltFont8) {
-        presentAttributes << QLatin1String("AltFont1 (0x8000)");
+        presentAttributes << QLatin1String("AltFont8 (0x8000)");
     }
     if (attributes & TChar::AltFont9) {
-        presentAttributes << QLatin1String("AltFont1 (0x10000)");
+        presentAttributes << QLatin1String("AltFont9 (0x10000)");
+    }
+    if (attributes & TChar::Concealed) {
+        presentAttributes << QLatin1String("AltFont9 (0x20000)");
+    }
+    if (attributes & TChar::Found) {
+        presentAttributes << QLatin1String("Found (0x100000)");
+    }
+    if (attributes & TChar::Echo) {
+        presentAttributes << QLatin1String("Echo (0x200000)");
     }
     if (presentAttributes.isEmpty()) {
         result.append(QLatin1String("None (0x0))"));
