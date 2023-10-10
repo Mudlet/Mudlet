@@ -1,0 +1,62 @@
+{
+  "version": 4,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 3
+  },
+  "configurePresets": [
+    {
+      "name": "ninja-vcpkg-multi",
+      "displayName": "Vcpkg Config",
+      "description": "Configure with vcpkg dependencies and generate Ninja project files for all configurations",
+      "binaryDir": "${sourceDir}/builds/${presetName}",
+      "generator": "Ninja Multi-Config",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "type": "FILEPATH",
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        }
+      },
+      "environment": {
+        "VCPKG_ROOT": "./3rdparty/vcpkg"
+      }
+    },
+    {
+      "name": "ninja-multi",
+      "displayName": "Config",
+      "description": "Configure and generate Ninja project files for all configurations",
+      "binaryDir": "${sourceDir}/builds/${presetName}",
+      "generator": "Ninja Multi-Config"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "ninja-debug",
+      "displayName": "Debug",
+      "configurePreset": "ninja-multi",
+      "description": "Build a release version of Mudlet",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ninja-release",
+      "displayName": "Release",
+      "configurePreset": "ninja-multi",
+      "description": "Build a debug version of Mudlet",
+      "configuration": "Release"
+    },
+    {
+      "name": "ninja-vcpkg-debug",
+      "displayName": "Debug",
+      "configurePreset": "ninja-vcpkg-multi",
+      "description": "Build a release version of Mudlet using vcpkg dependencies",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ninja-vcpkg-release",
+      "displayName": "Release",
+      "configurePreset": "ninja-vcpkg-multi",
+      "description": "Build a debug version of Mudlet using vcpkg dependencies",
+      "configuration": "Release"
+    }
+  ]
+}
