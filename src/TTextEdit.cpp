@@ -703,10 +703,16 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 {
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
-    const bool isItalics = attributes & TChar::Italic;
+    // At present we cannot display flashing text - and we just make it italic
+    // (we ought to eventually add knobs for them so they can be shown in a user
+    // preferred style - which might be static for some users) - anyhow Mudlet
+    // will still detect the difference between the options:
+    const bool isItalics = attributes & (TChar::Italic | TChar::Blink | TChar::FastBlink);
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
+    // const bool isConcealed = attributes & TChar::Concealed;
+    // const int altFontIndex = charStyle.alternateFont();
     if ((painter.font().bold() != isBold)
             || (painter.font().italic() != isItalics)
             || (painter.font().overline() != isOverline)
