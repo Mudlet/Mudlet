@@ -28,6 +28,7 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TMedia.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -115,6 +116,8 @@ public slots:
     void slot_chosenProfilesChanged(QAction*);
     void slot_showMapGlyphUsage();
 
+    // Media
+    void slot_purgeMediaCache();
 
     // Log.
     void slot_setLogDir();
@@ -166,6 +169,9 @@ private slots:
     void slot_toggleMapDeleteButton(const bool);
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
+    void slot_hidePasswordMigrationLabel();
+    void slot_loadHistoryMap();
+
 
 signals:
     void signal_themeUpdateCompleted();
@@ -194,10 +200,12 @@ private:
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
     void generateDiscordTooltips();
-    void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
     void generateLoginTexts();
     QString mapSaveLoadDirectory(Host* pHost);
+    void loadMap(const QString&);
+    void fillOutMapHistory();
+
 
     int mFontSize = 10;
     QPointer<Host> mpHost;

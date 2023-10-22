@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2021, 2023 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -167,11 +168,11 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
             if (pChild->mLocation == 3) {
                 mpHost->mpConsole->mpRightToolBar->layout()->removeWidget(pChild->mpEasyButtonBar);
             }
+        }
+        if (pChild->mpToolBar) {
             if (pChild->mLocation == 4) {
-                if (pChild->mpToolBar) {
-                    pChild->mpToolBar->setFloating(false);
-                    mudlet::self()->removeDockWidget(pChild->mpToolBar);
-                }
+                pChild->mpToolBar->setFloating(false);
+                mudlet::self()->removeDockWidget(pChild->mpToolBar);
             }
         }
     }
@@ -289,6 +290,15 @@ void ActionUnit::regenerateToolBars()
 {
     for (auto& action : mActionRootNodeList) {
         if (action->mLocation != 4) {
+            // This TAction is not set to be a floating/dockable widget type toolbar
+            if (action->mpToolBar) {
+                // But it has a TToolBar type toolbar so we need to
+                // remove the ToolBar from the list of TToolBars:
+                mToolBarList.remove(action->mpToolBar);
+                // And destroy it:
+                action->mpToolBar->deleteLater();
+                action->mpToolBar = nullptr;
+            }
             continue; // skip over any root action node that is NOT going to be a TToolBar.
         }
         if (!action->mPackageName.isEmpty()) {
@@ -301,7 +311,7 @@ void ActionUnit::regenerateToolBars()
                     }
                 }
                 if (!pTB) {
-                    pTB = new TToolBar(childAction, childAction->getName(), mudlet::self());
+                    pTB = new TToolBar(mpHost, childAction, childAction->getName(), mudlet::self());
                     mToolBarList.push_back(pTB);
                 }
                 if (childAction->mOrientation == 1) {
@@ -324,7 +334,7 @@ void ActionUnit::regenerateToolBars()
             }
         }
         if (!pTB) {
-            pTB = new TToolBar(action, action->getName(), mudlet::self());
+            pTB = new TToolBar(mpHost, action, action->getName(), mudlet::self());
             mToolBarList.push_back(pTB);
         }
         if (action->mOrientation == 1) {
@@ -342,9 +352,20 @@ void ActionUnit::regenerateEasyButtonBars()
 {
     for (auto& rootAction : mActionRootNodeList) {
         if (rootAction->mLocation == 4) {
+            // This TAction is set to be a floating/dockable widget
+            if (rootAction->mpEasyButtonBar) {
+                // But it has a TEasyButtonBar type toolbar so we need to
+                // remove the TEasyButtonBar from the list of TEasyButtonBars:
+                mEasyButtonBarList.remove(rootAction->mpEasyButtonBar);
+                // And destroy it:
+                rootAction->mpEasyButtonBar->deleteLater();
+                rootAction->mpEasyButtonBar = nullptr;
+            }
             continue; // skip over any root action node that IS going to be a TToolBar.
         }
         if (!rootAction->mPackageName.isEmpty()) {
+            // It has a package name so it is actually the parent
+            // module/package item rather than the actual ToolBar
             for (auto childActionIterator = rootAction->mpMyChildrenList->begin(); childActionIterator != rootAction->mpMyChildrenList->end(); childActionIterator++) {
                 TEasyButtonBar* pTB = nullptr;
                 for (auto& easyButtonBar : mEasyButtonBarList) {
@@ -416,7 +437,9 @@ void ActionUnit::showToolBar(const QString& name)
         }
     }
     mudlet::self()->processEventLoopHack();
-    mpHost->mpConsole->mpCommandLine->setFocus();
+    // If a toolbar is clicked on for a profile that is not the "current"
+    // one, this will switch the focus to THAT profile:
+    mudlet::self()->activateProfile(mpHost);
 }
 
 void ActionUnit::hideToolBar(const QString& name)
@@ -430,56 +453,70 @@ void ActionUnit::hideToolBar(const QString& name)
     mudlet::self()->processEventLoopHack();
 }
 
-void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
+void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
 {
-    if (!pA->isDataChanged()) {
+    if (!pAction->isDataChanged()) {
         return;
     }
 
-    pTB->clear();
-    if ((pA->mLocation != 4) || (!pA->isActive())) {
-        pTB->setFloating(false);
-        mudlet::self()->removeDockWidget(pTB);
-        return;
-    }
-
-    if (pA->mLocation == 4) {
-        pA->expandToolbar(pTB);
-        pTB->setTitleBarWidget(nullptr);
-    }
-
-    pTB->finalize();
-
-    if (pA->mOrientation == 0) {
-        pTB->setHorizontalOrientation();
-    } else {
-        pTB->setVerticalOrientation();
-    }
-
-    pTB->setTitleBarWidget(nullptr);
-    pTB->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-    if (pA->mLocation == 4) {
-        if (pA->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
-            qWarning() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pA->getName() << "\"), for this toolbar forcing it to the Left one!";
+    pToolBar->clear();
+    if (pAction->mLocation != 4) {
+        // EasyButtonBars are handled differently from ToolBars, and
+        // if we get here then the TAction has just been changed to be one of
+        // those; we might still have a TToolBar associated with the
+        // (owner) TAction and if so we need to dispose of it:
+        if (pAction->mpToolBar) {
+            // We need to remove the TToolBar from the list of TToolBars
+            mToolBarList.remove(pAction->mpToolBar);
+            // before we get rid of it:
+            pAction->mpToolBar->deleteLater();
+            pAction->mpToolBar = nullptr;
         }
-        mudlet::self()->addDockWidget(((pA->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pA->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pTB);
-        if (pA->mToolbarLastFloatingState) {
-            pTB->setFloating(true);
-            QPoint pos = QPoint(pA->mPosX, pA->mPosY);
-            pTB->show();
-            pTB->move(pos);
+    }
+
+    if (!pAction->isActive()) {
+        pToolBar->setFloating(false);
+        mudlet::self()->removeDockWidget(pToolBar);
+        return;
+    }
+
+    if (pAction->mLocation == 4) {
+        pAction->expandToolbar(pToolBar);
+        pToolBar->setTitleBarWidget(nullptr);
+    }
+
+    pToolBar->finalize();
+
+    if (pAction->mOrientation == 0) {
+        pToolBar->setHorizontalOrientation();
+    } else {
+        pToolBar->setVerticalOrientation();
+    }
+
+    pToolBar->setTitleBarWidget(nullptr);
+    pToolBar->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    if (pAction->mLocation == 4) {
+        if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
+            qWarning() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName() << "\"), for this toolbar forcing it to the Left one!";
+        }
+        mudlet::self()->addDockWidget(((pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pToolBar);
+        if (pAction->mToolbarLastFloatingState) {
+            pToolBar->setFloating(true);
+            const QPoint pos = QPoint(pAction->mPosX, pAction->mPosY);
+            pToolBar->show();
+            pToolBar->move(pos);
         } else {
-            pTB->setFloating(false);
-            pTB->show();
+            pToolBar->setFloating(false);
+            pToolBar->show();
         }
-        pTB->mpTAction = pA;
-        pTB->recordMove();
+        pToolBar->mpTAction = pAction;
+        pToolBar->recordMove();
     } else {
-        pTB->show();
+        pToolBar->show();
     }
 
-    pTB->setStyleSheet(pTB->mpTAction->css);
-    pA->setDataSaved();
+    pToolBar->setStyleSheet(pToolBar->mpTAction->css);
+    pAction->setDataSaved();
 }
 
 TAction* ActionUnit::getHeadAction(TEasyButtonBar* pT)
@@ -498,9 +535,24 @@ void ActionUnit::constructToolbar(TAction* pA, TEasyButtonBar* pTB)
 {
     pTB->clear();
     if (pA->mLocation == 4) {
-        //floating toolbars are handled differently
+        // Floating toolbars are handled differently from EasyButtonBars, and
+        // if we get here then the TAction has just been changed to be one of
+        // those; we might still have a TEasyButtonBar associated with the
+        // (owner) TAction and if so we need to dispose of it:
+        if (pA->mpEasyButtonBar) {
+            // We need to remove the TEasyButtonBar from the list of TEasyButtonBars
+            mEasyButtonBarList.remove(pA->mpEasyButtonBar);
+            // before we get rid of it:
+            pA->mpEasyButtonBar->deleteLater();
+            pA->mpEasyButtonBar = nullptr;
+        }
         return;
     }
+
+    // However, just because pA->mLocation != 4 does not mean that pA is for a
+    // TEasyButtonBar - it could be a menu or a button or a package/module
+    // (container)
+
     if (!pA->isActive()) {
         pTB->hide();
         return;

@@ -97,7 +97,6 @@ public:
     void initializeCaret();
     void setCaretPosition(int line, int column);
     void updateCaret();
-    void updateWrap();
 
     QColor mBgColor;
     // position of cursor, in characters, across the entire buffer
@@ -171,6 +170,8 @@ private:
     int mFontWidth;
     bool mForceUpdate;
     const QColor mCaretColor = QColorConstants::Gray;
+    const QColor mSearchHighlightFgColor = QColorConstants::Black;
+    const QColor mSearchHighlightBgColor = QColorConstants::Yellow;
 
     // Each TConsole instance uses two instances of this class, one above the
     // other but they need to behave differently in some ways; this flag is set
@@ -193,7 +194,8 @@ private:
     // bottom-right point of the selection
     QPoint mPB;
     TBuffer* mpBuffer;
-    TConsole* mpConsole;
+    // Needs to be a QPointer as is used in a couple of lambda functions:
+    QPointer<TConsole> mpConsole;
     QPointer<Host> mpHost;
     // screen height in characters
     int mScreenHeight;

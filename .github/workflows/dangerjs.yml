@@ -1,13 +1,15 @@
 name: DangerJS
 
-on: pull_request_target
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
   danger:
     runs-on: ubuntu-latest
     #if: github.event_name  == 'pull_request' # only run pull requests, no really
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         ref: ${{github.event.pull_request.head.ref}}
         repository: ${{github.event.pull_request.head.repo.full_name}}

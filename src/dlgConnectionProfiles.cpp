@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016-2018, 2020-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2016-2018, 2020-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -27,6 +27,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "LuaInterface.h"
+#include "TGameDetails.h"
 #include "XMLimport.h"
 #include "mudlet.h"
 
@@ -129,12 +130,35 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     copy_profile_toolbutton->addAction(mpCopyProfile);
     copy_profile_toolbutton->addAction(copyProfileSettings);
     copy_profile_toolbutton->setDefaultAction(mpCopyProfile);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     auto widgetList = mpCopyProfile->associatedWidgets();
+#else
+    // QAction::associatedWidgets() has been deprecated in Qt 6
+    auto objectList = mpCopyProfile->associatedObjects();
+    QList<QWidget*> widgetList;
+    for (auto pObjectItem : objectList) {
+        auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
+        if (pWidgetItem) {
+            widgetList << pWidgetItem;
+        }
+    }
+#endif
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for mpCopyProfile QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile"));
     widgetList.first()->setAccessibleDescription(tr("copy the entire profile to new one that will require a different new name."));
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     widgetList = copyProfileSettings->associatedWidgets();
+#else
+    objectList = copyProfileSettings->associatedObjects();
+    widgetList.clear();
+    for (auto pObjectItem : objectList) {
+        auto pWidgetItem = qobject_cast<QWidget*>(pObjectItem);
+        if (pWidgetItem) {
+            widgetList << pWidgetItem;
+        }
+    }
+#endif
     Q_ASSERT_X(!widgetList.isEmpty(), "dlgConnectionProfiles::dlgConnectionProfiles(...)", "A QWidget for copyProfileSettings QAction not found.");
     widgetList.first()->setAccessibleName(tr("copy profile settings"));
     widgetList.first()->setAccessibleDescription(tr("copy the settings and some other parts of the profile to a new one that will require a different new name."));
@@ -155,8 +179,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // change it anyhow:
         abort->setIcon(QIcon::fromTheme(qsl("dialog-close"), QIcon(qsl(":/icons/dialog-close.png"))));
 
-        QIcon icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
-        QIcon icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
+        const QIcon icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
+        const QIcon icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
 
         offline_button->setIcon(QIcon(qsl(":/icons/mudlet_editor.png")));
         connect_button->setIcon(icon_connect);
@@ -174,7 +198,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // Remove the marker:
         cursor.removeSelectedText();
         // Insert the current icon image into the same place:
-        QImage image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
+        QImage const image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
         cursor.insertImage(image_new);
         cursor.clearSelection();
 
@@ -183,7 +207,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
                    "dlgConnectionProfiles::dlgConnectionProfiles(...)",
                    "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
         cursor.removeSelectedText();
-        QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
+        QImage const image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
         cursor.insertImage(image_connect);
         cursor.clearSelection();
     } else {
@@ -252,9 +276,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     btn_connect_enabled_accessDesc = tr("Click to load and connect the selected profile.");
     btn_connOrLoad_disabled_accessDesc = tr("Need to have a valid profile name, game server address and port before this button can be enabled.");
     item_profile_accessName = tr("Game name: %1");
-    item_profile_accessDesc = tr("Button to select a mud game to play, double-click it to connect and start playing it.",
-                                 // Intentional comment to separate arguments
-                                 "Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option");
+    //: Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option
+    item_profile_accessDesc = tr("Button to select a mud game to play, double-click it to connect and start playing it.");
 
     // Set up some initial black/white/greys:
     mCustomIconColors = {{QColor(0, 0, 0)}, {QColor(63, 63, 63)}, {QColor(128, 128, 128)}, {QColor(192, 192, 192)}, {QColor(255, 255, 255)}};
@@ -292,7 +315,7 @@ void dlgConnectionProfiles::slot_updateDescription()
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
     if (pItem) {
-        QString description = mud_description_textedit->toPlainText();
+        const QString description = mud_description_textedit->toPlainText();
         writeProfileData(pItem->data(csmNameRole).toString(), qsl("description"), description);
 
         // don't display custom profile descriptions as a tooltip, as passwords could be stored in there
@@ -425,7 +448,7 @@ void dlgConnectionProfiles::slot_updateDiscordOptIn(int state)
 
 void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
 {
-    QString port = port_entry->text().trimmed();
+    const QString port = port_entry->text().trimmed();
 
     if (ignoreBlank.isEmpty()) {
         validPort = false;
@@ -469,15 +492,18 @@ void dlgConnectionProfiles::slot_updateName(const QString& newName)
 void dlgConnectionProfiles::slot_saveName()
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    QString newProfileName = profile_name_entry->text().trimmed();
+    const QString newProfileName = profile_name_entry->text().trimmed();
+    const QString newProfileHost = host_name_entry->text().trimmed();
+    const QString newProfilePort = port_entry->text().trimmed();
+    const int newProfileSslTsl = port_ssl_tsl->isChecked() * 2;
 
     validateProfile();
     if (!validName || newProfileName.isEmpty() || !pItem) {
         return;
     }
 
-    QString currentProfileEditName = pItem->data(csmNameRole).toString();
-    int row = mProfileList.indexOf(currentProfileEditName);
+    const QString currentProfileEditName = pItem->data(csmNameRole).toString();
+    const int row = mProfileList.indexOf(currentProfileEditName);
     if ((row >= 0) && (row < mProfileList.size())) {
         mProfileList[row] = newProfileName;
     } else {
@@ -495,8 +521,8 @@ void dlgConnectionProfiles::slot_saveName()
 
     setItemName(pItem, newProfileName);
 
-    QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
-    QDir dir;
+    const QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
+    const QDir dir;
 
     if (currentPath.exists()) {
         // CHECKME: previous code specified a path ending in a '/'
@@ -518,6 +544,16 @@ void dlgConnectionProfiles::slot_saveName()
         notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
     }
 
+    if (!newProfileHost.isEmpty()) {
+        slot_updateUrl(newProfileHost);
+    }
+
+    if (!newProfilePort.isEmpty()) {
+        slot_updatePort(newProfilePort);
+    }
+
+    slot_updateSslTslPort(newProfileSslTsl);
+
     // if this was a previously deleted profile, restore it
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
@@ -528,8 +564,7 @@ void dlgConnectionProfiles::slot_saveName()
         fillout_form();
         // and re-select the profile since focus is lost
         auto pRestoredItems = findData(*profiles_tree_widget, newProfileName, csmNameRole);
-        Q_ASSERT_X(pRestoredItems.count() < 1, "dlgConnectionProfiles::slot_saveName", "no previously deleted Mud found with matching name when trying to restore one");
-        Q_ASSERT_X(pRestoredItems.count() > 1, "dlgConnectionProfiles::slot_saveName", "multiple deleted Muds found with matching name when trying to restore one");
+        Q_ASSERT_X(pRestoredItems.count() == 1, "dlgConnectionProfiles::slot_saveName", "Couldn't find exactly 1 restored profile to select");
 
         // As we are using QAbstractItemView::SingleSelection this will
         // automatically unselect the previous item:
@@ -552,7 +587,7 @@ void dlgConnectionProfiles::slot_addProfile()
     informationalArea->show();
     tabWidget_connectionInfo->show();
 
-    QString newname = tr("new profile name");
+    const QString newname = tr("new profile name");
 
     auto pItem = new QListWidgetItem();
     if (!pItem) {
@@ -589,7 +624,7 @@ void dlgConnectionProfiles::slot_addProfile()
 // enables the deletion button once the correct text (profile name) is entered
 void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 {
-    QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     if (profile != text) {
         delete_button->setEnabled(false);
     } else {
@@ -601,7 +636,7 @@ void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 // actually performs the deletion once the correct text has been entered
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
-    QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     reallyDeleteProfile(profile);
 }
 
@@ -630,9 +665,14 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
+    if (!onlyShownPredefinedProfiles.isEmpty() && onlyShownPredefinedProfiles.contains(profile)) {
+        // Do NOT allow deletion of the prioritised predefined MUD:
+        return;
+    }
 
-    QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
+    const QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
     if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
         // shortcut - don't show profile deletion confirmation if there is no data to delete
         reallyDeleteProfile(profile);
@@ -675,7 +715,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
-    bool success = file.open(QIODevice::ReadOnly);
+    const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
         QDataStream ifs(&file);
@@ -691,341 +731,34 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    auto f = mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item);
-    QFile file(f);
+    QSaveFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
     if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
         QDataStream ofs(&file);
         if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
         }
         ofs << what;
-        file.close();
+        if (!file.commit()) {
+            qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
+        }
     }
 
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
+    if (file.error() == QFileDevice::NoError) {
+        return {true, QString()};
     } else {
-        return qMakePair(false, file.errorString());
+        return {false, file.errorString()};
     }
 }
 
-// Use the URL so we can use the same descriptions for user generated copies of
-// predefined MUDs - but also need the port number to disambiguate the 3K ones!
-QString dlgConnectionProfiles::getDescription(const QString& hostUrl, const quint16 port, const QString& profile_name) const
+QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
 {
-    if (hostUrl == QLatin1String("realmsofdespair.com")) {
-        // clang-format off
-        // wrap before the last word on a line is here so that the source text
-        // is no more than 80 characters (excluding the indent) for readbility in
-        // an editor. Note that the text is autowrapped in the widget used to
-        // show it so ensure lines end in a space (for locales that use spaces)
-        // and use two '\n' to get a blank line between paragraphs.                          ------>|
-        // clang-format on
-        return qsl("The Realms of Despair is the original SMAUG MUD and is FREE to play. We have an "
-                   "active Roleplaying community, an active player-killing (deadly) community, and "
-                   "a very active peaceful community. Players can choose from 13 classes (including "
-                   "a deadly-only class) and 13 races. Character appearances are customizable on "
-                   "creation and we have a vast collection of equipment that is level, gender, "
-                   "class, race and alignment specific. We boast well over 150 original, exclusive "
-                   "areas, with a total of over 20,000 rooms. Mob killing, or 'running' is one of "
-                   "our most popular activities, with monster difficulties varying from easy one-"
-                   "player kills to difficult group kills. We have four deadly-only Clans, twelve "
-                   "peaceful-only Guilds, eight Orders, and fourteen Role-playing Nations that "
-                   "players can join to interact more closely with other players. We have two mortal "
-                   "councils that actively work toward helping players: The Symposium hears ideas "
-                   "for changes, and the Newbie Council assists new players. Our team of Immortals "
-                   "are always willing to answer questions and to help out however necessary. Best "
-                   "of all, playing the Realms of Despair is totally FREE!");
-    }
-    if (hostUrl == QLatin1String("zombiemud.org")) {
-        return qsl("Since 1994, ZombieMUD has been on-line and bringing orc-butchering fun to the "
-                   "masses from our home base in Oulu, Finland. We're a pretty friendly bunch, with "
-                   "players logging in from all over the globe to test their skill in our medieval "
-                   "role-playing environment. With 15 separate guilds and 41 races to choose from, "
-                   "as a player the only limitation to your achievements on the game is your own "
-                   "imagination and will to succeed.");
-    }
-    if (hostUrl == QLatin1String("carrionfields.net")) {
-        return qsl("Carrion Fields is a unique blend of high-caliber roleplay and complex, hardcore "
-                   "player-versus-player combat that has been running continuously, and 100% free, "
-                   "for over 25 years."
-                   "\n\n"
-                   "Choose from among 21 races, 17 highly customizable classes, and several cabals "
-                   "and religions to suit your playstyle and the story you want to tell. Our "
-                   "massive, original world is full of secrets and envied limited objects that take "
-                   "skill to acquire and great care to keep."
-                   "\n\n"
-                   "We like to think of ourselves as the Dark Souls of MUDs, with a community that "
-                   "is supportive of new players - unforgiving though our world may be. Join us for a "
-                   "real challenge and real rewards: adrenalin-pumping battles, memorable quests run "
-                   "by our volunteer immortal staff, and stories that will stick with you for a "
-                   "lifetime.");
-    }
-    if (hostUrl == QLatin1String("cleftofdimensions.net")) {
-        return qsl("Do you have a soft spot for an old SNES RPG? Are you a fan of retro gaming? The "
-                   "Cleft of Dimensions is an adventure-driven MUD with content inspired by a variety "
-                   "of classic video games. Do you want to jump on goombas? Maybe you'd rather "
-                   "immolate them with lava or bombard them with meteors. Then again, why fight when "
-                   "enslavement's an option? If that doesn't work out, you've got this motorcycle you "
-                   "could crash into them. The Cleft has 16 character classes, each with a "
-                   "distinctive playstyle."
-                   "\n\n"
-                   "Gameplay in the Cleft features exploration, puzzles, quests, and combat. At time "
-                   "of writing, the world contains 98 areas. Quests range from deciphering treasure "
-                   "maps and committing industrial espionage to seeking the blessings of the mana "
-                   "spirits or just going fishing. A remort system facilitates repeat playthroughs to "
-                   "find content you missed the first time around."
-                   "\n\n"
-                   "The Cleft opened in July 2000 and has been in active development ever since. We're "
-                   "always innovating. Recent features include Discord integration "
-                   "(https://discord.gg/cSqkpbu) and areas written with artificial intelligence. Check "
-                   "us out!");
-    }
-    if (hostUrl == QLatin1String("godwars2.org")) {
-        return qsl("God Wars II is a fast and furious combat mud, designed to test player skill in "
-                   "terms of pre-battle preparation and on-the-spot reflexes, as well as the ability "
-                   "to adapt quickly to new situations. Take on the role of a godlike supernatural "
-                   "being in a fight for supremacy.\n\nRoomless world. Manual combat. Endless "
-                   "possibilities.");
-    }
-    if (hostUrl == QLatin1String("3k.org")) {
-        if (port == 3200) {
-            return qsl("3Scapes is an alternative dimension to 3Kingdoms, similar in many respects, but "
-                       "unique and twisted in so many ways.  3Scapes offers a faster pace of play, along "
-                       "with an assortment of new guilds, features, and areas.");
+    auto itDetails = TGameDetails::findGame(profile_name);
+    if (itDetails != TGameDetails::scmDefaultGames.constEnd()) {
+        if (!(*itDetails).description.isEmpty()) {
+            return (*itDetails).description;
         }
-        // else port==3000
-        return qsl("Simple enough to learn, yet complex enough to challenge you for years, 3Kingdoms "
-                   "is a colossal adventure through which many years of active and continued "
-                   "development by its dedicated coding staff.  Based around the mighty town of "
-                   "Pinnacle, three main realms beckon the player to explore. These kingdoms are known "
-                   "as: Fantasy, a vast medieval realm full of orcs, elves, dragons, and a myriad of "
-                   "other creatures; Science, a post-apocalyptic, war-torn world set in the not-so-"
-                   "distant future; and Chaos, a transient realm where the enormous realities of "
-                   "Fantasy and Science collide to produce creatures so bizarre that they have yet to "
-                   "be categorized.  During their exploration of the realms, players have the "
-                   "opportunity to join any of well over a dozen different guilds, which grant "
-                   "special, unique powers to the player, furthering their abilities as they explore "
-                   "the vast expanses of each realm. Add in the comprehensive skill system that 3K "
-                   "offers and you are able to extensively customize your characters.");
     }
-    if (hostUrl == QLatin1String("slothmud.org")) {
-        return qsl("SlothMUD... the ultimate in DIKUMUD! The most active, intricate, exciting FREE MUD "
-                   "of its kind. This text based multiplayer free online rpg game and is enjoyed "
-                   "continuously by players worldwide. With over 27,500 uniquely described rooms, "
-                   "9,300 distinct creatures, 14,200 characters, and 87,100 pieces of equipment, "
-                   "charms, trinkets and other items, our online rpg world is absolutely enormous and "
-                   "ready to explore.");
-    }
-    if (hostUrl == QLatin1String("game.wotmud.org")) {
-        return qsl("WoTMUD is the most popular on-line game based on the late Robert Jordan's epic "
-                   "Wheel of Time fantasy novels."
-                   "\n\n"
-                   "Not only totally FREE to play since it started in 1993 it was officially "
-                   "sanctioned by the Author himself."
-                   "\n\n"
-                   "Explore a World very like that of Rand al'Thor's; from the Blight in the North "
-                   "down to the Isle of Madmen far, far south."
-                   "\n\n"
-                   "Wander around in any of the towns from the books such as Caemlyn, Tar Valon or "
-                   "Tear, or start your adventure in the Two Rivers area, not YET the home of the "
-                   "Dragon Reborn."
-                   "\n\n"
-                   "Will you join one of the Clans working for the triumph of the Light over the "
-                   "creatures and minions of the Dark One; or will you be one of the returning "
-                   "invaders in the South West, descendants of Artur Hawkwing's long-thought lost "
-                   "Armies; or just maybe you are skilled enough to be a hideous Trolloc, creature of "
-                   "the Dark, who like Humans - but only as a source of sustenance."
-                   "\n\n"
-                   "Very definitely a Player Verses Player (PvP) world but with strong Role Playing "
-                   "(RP) too; nowhere is totally safe but some parts are much more dangerous than "
-                   "others - once you enter you may never leave...");
-    }
-    if (hostUrl == QLatin1String("midnightsun2.org")) {
-        return qsl("Midnight Sun is a medieval fantasy LPmud that has been around since 1991. We are a "
-                   "non-PK, hack-and-slash game, cooperative rather than competitive in nature, and "
-                   "with a strong sense of community.");
-    }
-    if (hostUrl == QLatin1String("mudlet.org")) {
-        return qsl("This isn't a game profile, but a special one for testing Mudlet itself using "
-                   "Busted. You can also use it as a starting point to create automated tests for your "
-                   "own profiles!");
-    }
-    if (hostUrl == QLatin1String("luminarimud.com")) {
-        return qsl("Luminari is a deep, engaging game set in the world of the Luminari - A place where "
-                   "magic is entwined with the fabric of reality and the forces of evil and "
-                   "destruction are rising from a long slumber to again wreak havoc on the realm.  "
-                   "The gameplay of Luminari will be familiar to anyone who has played Dungeons and "
-                   "Dragons, Pathfinder or any of the many RPG systems based on the d20 ruleset.");
-    }
-    if (hostUrl == QLatin1String("stickmud.com")) {
-        return qsl("StickMUD is a free, medieval fantasy game with a graphical user interface and a "
-                   "depth of features. You are welcomed into the game world with maps and dashboards "
-                   "to complement your imagination. Newbies escape quickly into game play with minimal "
-                   "study time. Awaken under the wondrous Mallorn Tree in the center of Newbie Park "
-                   "and learn by playing. Challenge non-player characters to gain experience, advance "
-                   "level and maximize your stats. Between battles, sit on the enchanted bench under "
-                   "the Tree to rapidly heal and reduce wait time. Signs in the park present game "
-                   "features such as races, clans and guilds. Read up on teasers about the adventures "
-                   "on the path ahead like dragons, castles and sailing. Join a guild and learn the "
-                   "ways of a Bard, Fighter, Mage, Necromancer, Ninja, Thief, Healer or Priest. Train "
-                   "skills in both craft and combat aligned with your guild. Participate in frequent "
-                   "game-wide events to earn points exchanged for gold, experience or skill training. "
-                   "Heroes and villains alike are invited! Role play is optional and player vs. player "
-                   "combat is allowed in much of the game. StickMUD was born in Finland in June 1991 "
-                   "and is now hosted in Canada. Our diverse community of players and active game "
-                   "engineers are ready to welcome new players like you to one of the best text-based "
-                   "multi-player games ever!");
-    }
-    if (hostUrl == QLatin1String("reinosdeleyenda.es")) {
-/* English translation, provided by Game:
- *                   "The oldest Spanish free mud with more than 20 years of running history."
- *                   "\n\n"
- *                   "Reinos de Leyenda takes place in the ever changing world of Eirea, ravaged by the "
- *                   "mischiefs of the gods after more than a thousand years of contempt and hideous war "
- *                   "amongst their zealous mortal pawns."
- *                   "\n\n"
- *                   "History is written on a day per day basis, taking into consideration the players' "
- *                   "choices to decide the irreversible aftermath of this everlasting struggle."
- *                   "\n\n"
- *                   "This is a PvP MUD which allows the player to set how high are the stakes: the more "
- *                   "you risk losing upon death, the more glory to be earned by your heroism. RP, while "
- *                   "not enforced, is rewarded with non-PvP oriented perks and unique treasure."
- *                   "\n\n"
- *                   "A powerful character customization system allows you to choose your deity –or "
- *                   "fully disregard the gods– and join one of the player-run realms that govern the "
- *                   "land to explore a breathing world, delve into the secrets of the oceans, shape "
- *                   "your legacy, craft forgotten marvels for you –or your allies– and fight for faith, "
- *                   "glory or coin.");
- */
-        return qsl("El mud Español gratis con más de 20 años de historia."
-                   "\n\n"
-                   "Reinos de Leyenda toma lugar en el siempre cambiante mundo de Eirea, devastado por "
-                   "las intrigas de los dioses tras más de un millar de años de desprecio y cruenta "
-                   "guerra entre sus fanáticos peones mortales."
-                   "\n\n"
-                   "La historia se escribe día a día, tomando en consideración las elecciones de los "
-                   "jugadores para decidir las consecuencias irreversibles de este conflicto "
-                   "imperecedero."
-                   "\n\n"
-                   "Éste es un MUD con PvP que permite al jugador establecer cuánto quiere arriesgar "
-                   "al morir: a más riesgo, más gloria ganará por sus heroicidades. La interpretación "
-                   "(Rol) no está obligada, pero si recompensada con habilidades especiales -no "
-                   "orientadas al combate- y tesoros únicos."
-                   "\n\n"
-                   "El detallado creador del juego te permitirá elegir tu deidad -o renegar "
-                   "completamente de los dioses- y unirte a uno de los reinos que los jugadores se "
-                   "encargan de gobernar para explorar un mundo viviente, sumergirte en los misterios "
-                   "del océano, dar forma a tu legado, forjar maravillas olvidadas para ti -o tus "
-                   "aliados- y luchar por fe, gloria o dinero.");
-    }
-    if (hostUrl == QLatin1String("mud.clessidra.it")) {
-/* English translation, provided by Game:
- *                   "Clessidra is the first all italian MUD ever created! On Clessidra you may find "
- *                   "only original Areas, all in italian! Many features make Clessidra one of the best, "
- *                   "or the best MUD in Italy: Advanced travel mode, fight one to one versus your "
- *                   "friend, or enemy, The Arena and its fight, the Mortal Challenge, the intelligent "
- *                   "MOBs and their Quest and fighting style, a random automatic mission assignament "
- *                   "and for you and your friends you must try the advanced Clan system that allows "
- *                   "wars and conquest. A mercenary system to help playing when few players are online, "
- *                   "a crafting system to create special object and a graphical user interface to help "
- *                   "newbie and expert players have a better experience. A MUD that evolves with new "
- *                   "challenge, new rules, new skills!");
- */
-        return qsl("Clessidra e' il primo MUD completamente in italiano mai creato. Su Clessidra "
-                   "potrete trovare solo aree originali ed in italiano. Molte caratteristiche rendono "
-                   "Clessidra uno dei migliori, se non il migliore, MUD in Italia : Avanzati sistemi "
-                   "di spostamento, sfide uno-contro-uno contro gli amici, o i nemici, L'arena e i "
-                   "combattimenti, Le sfide all'ultimo sangue e i MOB intelligenti con le loro Quest e "
-                   "tecniche di combattimento, un sistema di assegnazione di missioni casuali e un "
-                   "avanzatissimo sistema di Clan che permettera' guerre e conquiste. Disponibilità di "
-                   "mercenari in caso di poca utenza, sistema di produzione/mercato per ottenere "
-                   "esclusivi oggetti, un interfaccia grafica per aiutarti a giocare, sia per i novizi "
-                   "che gli esperti. Un MUD che si evolve di continuo.");
-    }
-    if (hostUrl == QLatin1String("fierymud.org")) {
-        return qsl("The original vision of FieryMUD was to create a challanging MUD for advanced "
-                   "players. This new reborne Fiery is a hope to bring back the goals of the past by "
-                   "inflicting certain death on unsuspecting players. FieryMUD will continue to grow "
-                   "and change through the coming years and those players who seek challenge and "
-                   "possess imagination will come in search of what the 3D world fails to offer them.");
-    }
-    if (hostUrl == QLatin1String("coremud.org") || hostUrl == QLatin1String("core.evilmog.io")) {
-        return qsl("Welcome to Core Mud, an interactive text MUD set on the planet formal star-charts "
-                   "refer to as Hermes 571-G, but that everyone in the know refers to simply as \"Core\"."
-                   "\n\n"
-                   "Core is one of the most distant settlements known to mankind, most famous for its "
-                   "lucrative yet oppressive mines, but more than mankind can be found here..."
-                   "\n\n"
-                   "Core is a diverse group of 9 races in total, all vying for recognition or profits, "
-                   "or both, working for The Company, the megalithic entity running the colony itself."
-                   "\n\n"
-                   "To The Company, everything is secondary to profits."
-                   "\n\n"
-                   "It is up to you to determine how best to survive in this environment, whether that "
-                   "be through combat training, superior mining skills, or technical prowess."
-                   "\n\n"
-                   "Core MUD is always free to play and features a fun and supportive atmosphere. "
-                   "Roleplaying is encouraged but not mandatory."
-                   "\n\n"
-                   "Mining is your primary source of income, but there are multiple ways to scrape "
-                   "together a few credits... or a few million."
-                   "\n\n"
-                   "Core Mud also features an economy which is player-driven.  Players own "
-                   "merchandise shops featuring energy weaponry or useful tools, pubs featuring "
-                   "assorted alcoholic (of course) and non-alcoholic beverages, and clinics for "
-                   "healing, to name a few."
-                   "\n\n"
-                   "Come join us today!");
-    }
-    if (hostUrl == QLatin1String("legendsofthejedi.com")) {
-        return qsl("Legends of the Jedi is a text-based roleplaying experience that immerses players "
-                   "in a multiplayer world where they can rewrite classic Star Wars stories with their "
-                   "own heroes, villains, battles, and endings. Over the course of each two-year "
-                   "timeline, the game explores all the key eras of the Star Wars Expanded Universe."
-                   "\n\n"
-                   "Take and hold planets as an Imperial Stormtrooper, command the Rebel navy and "
-                   "liberate the galaxy, pursue targets as a bounty hunter, or shape things on a "
-                   "larger scale as a member of the Galactic Senate. Maybe you'll even be one of the "
-                   "few born with force sensitivity, destined to be trained by Jedi or Sith."
-                   "\n\n"
-                   "The game offers an extensive crafting system for engineers to supply weapons, "
-                   "armor, and ships to the galaxy. Develop new, cutting-edge armaments to give your "
-                   "side an edge, or open a shop in a bustling commercial district and become wealthy "
-                   "as part of a powerful engineering conglomerate."
-                   "\n\nL"
-                   "OTJ offers full PVP in both ground and space combat, governed by a set of rules to "
-                   "minimize griefing and ensure that all kills have sufficient in-character cause."
-                   "\n\n"
-                   "What role will you play? The legend awaits!");
-    }
-    if (hostUrl == QLatin1String("mume.org")) {
-        return qsl("Multi-Users in Middle-earth (MUME) is a highly competitive world PvP DikuMUD, set "
-                   "in J. R. R. Tolkien’s fictional world of Middle-earth, as described in The Hobbit "
-                   "and The Lord of the Rings, where players may choose to join the epic war between "
-                   "the forces of Sauron and the armies of the Free peoples. In MUME players can "
-                   "explore, role-play, acquire achievements, and complete quests across many "
-                   "challenging locations across Middle-earth such as Lothlórien, the Shire, Bree, "
-                   "Rivendell, Goblin-town, Mirkwood, Dol Guldur, and the Mines of Moria. The game is "
-                   "completely at no cost to play and has been continually enhanced since its "
-                   "inception in the fall of 1991.");
-    }
-    if (hostUrl == QLatin1String("mud.ren")) {
-        return qsl("天下风云出我辈，一入江湖岁月催。\n"
-/* English translation (courtesy of Google NOT the originator):
- *                   "The world is out of my generation."
- *                   "Emperor Tu Baye talked about laughter, it was drunk in life."
- *                   "The sword rides on the ride, and the white bone is like a mountain bird to fly."
- *                   "The dust is like a tide, and only a few people in the rivers and lakes."
- *                   "\n\n"
- *                   "Chinese open source martial arts MUD Yan Huang Qunxia biography, the game includes 25 masters and 5 major families. Laughing, grudge."
- */
-                   "皇图霸业谈笑中，不胜人生一场醉。\n"
-                   "提剑跨骑挥鬼雨，白骨如山鸟惊飞。\n"
-                   "尘事如潮人如水，只叹江湖几人回。"
-                   "\n\n"
-                   "中文开源武侠MUD炎黄群侠传，游戏包括25大门派和5大世家，正邪只在一念间；近千门武学等你学习，上百种任务随你体验；让自己成为一代宗师，江湖笑，恩怨了。");
-    }
+
     // Else, if there isn't a predefined text, return whatever the user might
     // have stored:
     return readProfileData(profile_name, qsl("description"));
@@ -1046,9 +779,9 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     QString host_url = readProfileData(profile_name, qsl("url"));
     if (host_url.isEmpty()) {
         // Host to connect to, see below for port
-        const auto it = mudlet::scmDefaultGames.find(profile_name);
-        if (it != mudlet::scmDefaultGames.end()) {
-            host_url = it.value().hostUrl;
+        auto it = TGameDetails::findGame(profile_name);
+        if (it != TGameDetails::scmDefaultGames.end()) {
+            host_url = (*it).hostUrl;
         }
     }
     host_name_entry->setText(host_url);
@@ -1062,10 +795,10 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     }
 
     if (host_port.isEmpty()) {
-        const auto it = mudlet::scmDefaultGames.find(profile_name);
-        if (it != mudlet::scmDefaultGames.end()) {
-            host_port = QString::number(it.value().port);
-            port_ssl_tsl->setChecked(it.value().tlsEnabled);
+        auto it = TGameDetails::findGame(profile_name);
+        if (it != TGameDetails::scmDefaultGames.end()) {
+            host_port = QString::number((*it).port);
+            port_ssl_tsl->setChecked((*it).tlsEnabled);
         }
     }
 
@@ -1123,13 +856,13 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     updateDiscordStatus();
 
-    mud_description_textedit->setPlainText(getDescription(host_url, host_port.toUInt(), profile_name));
+    mud_description_textedit->setPlainText(getDescription(profile_name));
 
     val = readProfileData(profile_name, qsl("website"));
     if (val.isEmpty()) {
-        const auto it = mudlet::scmDefaultGames.find(profile_name);
-        if (it != mudlet::scmDefaultGames.end()) {
-            val = it.value().websiteInfo;
+        auto it = TGameDetails::findGame(profile_name);
+        if (it != TGameDetails::scmDefaultGames.end()) {
+            val = (*it).websiteInfo;
         }
         website_entry->setVisible(!val.isEmpty());
     } else {
@@ -1141,19 +874,19 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     QDir dir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
     dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    const QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
     for (const auto& entry : entries) {
-        QRegularExpression rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
-        QRegularExpressionMatch match = rx.match(entry);
+        QRegularExpression const rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
+        QRegularExpressionMatch const match = rx.match(entry);
 
         if (match.capturedStart() != -1) {
             QString day;
-            QString month = match.captured(2);
+            const QString month = match.captured(2);
             QString year;
-            QString hour = match.captured(4);
-            QString minute = match.captured(5);
-            QString second = match.captured(6);
+            const QString hour = match.captured(4);
+            const QString minute = match.captured(5);
+            const QString second = match.captured(6);
             if (match.captured(1).toInt() > 31 && match.captured(3).toInt() >= 1 && match.captured(3).toInt() <= 31) {
                 // I have been experimenting with code that puts the year first
                 // which is actually quite useful - this accommodates such cases
@@ -1171,7 +904,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
             profile_history->addItem(mudlet::self()->getUserLocale().toString(datetime, mDateTimeFormat), QVariant(entry));
         } else if (entry == QLatin1String("autosave.xml")) {
-            QFileInfo fileInfo(dir, entry);
+            const QFileInfo fileInfo(dir, entry);
             auto lastModified = fileInfo.lastModified();
             profile_history->addItem(QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))),
                                      mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat),
@@ -1279,30 +1012,39 @@ void dlgConnectionProfiles::fillout_form()
 
     auto& settings = *mudlet::self()->mpSettings;
     auto deletedDefaultMuds = settings.value(qsl("deletedDefaultMuds"), QStringList()).toStringList();
-    const auto defaultGames = mudlet::scmDefaultGames.keys();
-
-    for (auto& game : defaultGames) {
-        if (!deletedDefaultMuds.contains(game)) {
-            pItem = new QListWidgetItem();
-            setupMudProfile(pItem, game, getDescription(mudlet::scmDefaultGames[game].hostUrl, mudlet::scmDefaultGames[game].port, game), mudlet::scmDefaultGames[game].icon);
+    const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
+    if (onlyShownPredefinedProfiles.isEmpty()) {
+        const auto defaultGames = TGameDetails::keys();
+        for (auto& game : defaultGames) {
+            if (!deletedDefaultMuds.contains(game)) {
+                pItem = new QListWidgetItem();
+                auto details = TGameDetails::findGame(game);
+                setupMudProfile(pItem, game, (*details).description, (*details).icon);
+            }
         }
-    }
 
 #if defined(QT_DEBUG)
-    QString mudServer = qsl("Mudlet self-test");
-    if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
-        mProfileList.append(mudServer);
-        pItem = new QListWidgetItem();
-        // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
-        setItemName(pItem, mudServer);
+        const QString mudServer = qsl("Mudlet self-test");
+        if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
+            mProfileList.append(mudServer);
+            pItem = new QListWidgetItem();
+            // Can't use setupMudProfile(...) here as we do not set the icon in the same way:
+            setItemName(pItem, mudServer);
 
-        profiles_tree_widget->addItem(pItem);
-        description = getDescription(qsl("mudlet.org"), 0, mudServer);
-        if (!description.isEmpty()) {
-            pItem->setToolTip(utils::richText(description));
+            profiles_tree_widget->addItem(pItem);
+            description = getDescription(qsl("mudlet.org"));
+            if (!description.isEmpty()) {
+                pItem->setToolTip(utils::richText(description));
+            }
+        }
+#endif
+    } else {
+        pItem = new QListWidgetItem();
+        for (const QString& onlyShownPredefinedProfile : onlyShownPredefinedProfiles) {
+            auto details = TGameDetails::findGame(onlyShownPredefinedProfile);
+            setupMudProfile(pItem, onlyShownPredefinedProfile, (*details).description, (*details).icon);
         }
     }
-#endif
 
     setProfileIcon();
 
@@ -1310,6 +1052,7 @@ void dlgConnectionProfiles::fillout_form()
     QString toselectProfileName;
     int toselectRow = -1;
     int test_profile_row = -1;
+    int predefined_profile_row = -1;
     bool firstMudletLaunch = true;
 
     for (int i = 0; i < profiles_tree_widget->count(); i++) {
@@ -1318,12 +1061,10 @@ void dlgConnectionProfiles::fillout_form()
         if (profileName == qsl("Mudlet self-test")) {
             test_profile_row = i;
         }
-
         const auto fileinfo = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
-
         if (fileinfo.exists()) {
             firstMudletLaunch = false;
-            QDateTime profile_lastRead = fileinfo.lastModified();
+            QDateTime const profile_lastRead = fileinfo.lastModified();
             // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
             // work as expected - so test for validity of the test_date value as well
             if ((!test_date.isValid()) || profile_lastRead > test_date) {
@@ -1332,15 +1073,24 @@ void dlgConnectionProfiles::fillout_form()
                 toselectRow = i;
             }
         }
+        if (!onlyShownPredefinedProfiles.isEmpty() && profileName == onlyShownPredefinedProfiles.first()) {
+            predefined_profile_row = i;
+        }
     }
 
     if (firstMudletLaunch) {
-        // Select a random pre-defined profile to give all MUDs a fair go first time
-        // make sure not to select the test_profile though
-        if (profiles_tree_widget->count() > 1) {
-            while (toselectRow == -1 || toselectRow == test_profile_row) {
-                toselectRow = QRandomGenerator::global()->bounded(profiles_tree_widget->count());
+        if (onlyShownPredefinedProfiles.isEmpty()) {
+            // Select a random pre-defined profile to give all MUDs a fair go first time
+            // make sure not to select the test_profile though
+            if (profiles_tree_widget->count() > 1) {
+                while (toselectRow == -1 || toselectRow == test_profile_row) {
+                    toselectRow = QRandomGenerator::global()->bounded(profiles_tree_widget->count());
+                }
             }
+        } else if (predefined_profile_row >= 0) {
+            // If the user is starting one of a MUD's "dedicated" Mudlet versions then
+            // select the first of THAT/THOSE predefined one(s) on first launch:
+            toselectRow = predefined_profile_row;
         }
     }
 
@@ -1353,7 +1103,7 @@ void dlgConnectionProfiles::fillout_form()
 
 void dlgConnectionProfiles::setProfileIcon() const
 {
-    const QStringList defaultGames = mudlet::scmDefaultGames.keys();
+    const QStringList defaultGames = TGameDetails::keys();
 
     for (int i = 0; i < mProfileList.size(); i++) {
         const QString& profileName = mProfileList.at(i);
@@ -1389,7 +1139,7 @@ void dlgConnectionProfiles::loadCustomProfile(const QString& profileName) const
     setItemName(pItem, profileName);
 
     setCustomIcon(profileName, pItem);
-    auto description = getDescription(profileName, 0, profileName);
+    auto description = getDescription(profileName);
     if (!description.isEmpty()) {
         pItem->setToolTip(utils::richText(description));
     }
@@ -1423,19 +1173,19 @@ void dlgConnectionProfiles::loadSecuredPassword(const QString& profile, L callba
 
     job->setKey(profile);
 
-    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* job) {
-        if (job->error()) {
-            const auto error = job->errorString();
+    connect(job, &QKeychain::ReadPasswordJob::finished, this, [=](QKeychain::Job* task) {
+        if (task->error()) {
+            const auto error = task->errorString();
             if (error != qsl("Entry not found") && error != qsl("No match")) {
                 qDebug().nospace().noquote() << "dlgConnectionProfiles::loadSecuredPassword() ERROR - could not retrieve secure password for \"" << profile << "\", error is: " << error << ".";
             }
 
         }
 
-        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
+        auto readJob = static_cast<QKeychain::ReadPasswordJob*>(task);
         callback(readJob->textData());
 
-        job->deleteLater();
+        task->deleteLater();
     });
 
     job->start();
@@ -1451,7 +1201,7 @@ std::optional<QColor> getCustomColor(const QString& profileName)
         }
 
         QTextStream in(&file);
-        QString colorString = in.readLine();
+        const QString colorString = in.readLine();
         QColor color(colorString);
         if (color.isValid()) {
             return {color};
@@ -1470,19 +1220,22 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
 
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
-    QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
+    const QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
-        menu.addAction(tr("Reset icon", "Reset the custom picture for this profile in the connection dialog and show the default one instead"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
+        //: Reset the custom picture for this profile in the connection dialog and show the default one instead
+        menu.addAction(tr("Reset icon"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
     } else {
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
-                       tr("Set custom icon", "Set a custom picture to show for the profile in the connection dialog"),
+                       //: Set a custom picture to show for the profile in the connection dialog
+                       tr("Set custom icon"),
                        this,
                        &dlgConnectionProfiles::slot_setCustomIcon);
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
-                       tr("Set custom color", "Set a custom color to show for the profile in the connection dialog"),
+                       //: Set a custom color to show for the profile in the connection dialog
+                       tr("Set custom color"),
                        this,
                        &dlgConnectionProfiles::slot_setCustomColor);
     }
@@ -1494,13 +1247,13 @@ void dlgConnectionProfiles::slot_setCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
-    QString imageLocation = QFileDialog::getOpenFileName(
+    const QString imageLocation = QFileDialog::getOpenFileName(
             this, tr("Select custom image for profile (should be 120x30)"), QStandardPaths::writableLocation(QStandardPaths::HomeLocation), tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
     if (imageLocation.isEmpty()) {
         return;
     }
 
-    bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
+    const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
     if (!success) {
         return;
     }
@@ -1514,11 +1267,13 @@ void dlgConnectionProfiles::slot_setCustomColor()
     QColor color = QColorDialog::getColor(getCustomColor(profileName).value_or(QColor(255, 255, 255)));
     if (color.isValid()) {
         auto profileColorPath = mudlet::getMudletPath(mudlet::profileDataItemPath, profileName, qsl("profilecolor"));
-        QFile file(profileColorPath);
+        QSaveFile file(profileColorPath);
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         auto colorName = color.name();
         file.write(colorName.toUtf8(), colorName.length());
-        file.close();
+        if (!file.commit()) {
+            qDebug() << "dlgConnectionProfiles::slot_setCustomColor: error saving custom icon color: " << file.errorString();
+        }
         profiles_tree_widget->currentItem()->setIcon(customIcon(profileName, {color}));
     }
 }
@@ -1526,7 +1281,7 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
-    bool success = mudlet::self()->resetProfileIcon(profileName).first;
+    const bool success = mudlet::self()->resetProfileIcon(profileName).first;
     if (!success) {
         return;
     }
@@ -1576,7 +1331,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     }
 
     // copy the folder on-disk
-    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
+    const QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
     if (!dir.exists()) {
         mCopyingProfile = false;
         return;
@@ -1587,7 +1342,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, mudlet::getMudletPath(mudlet::profileHomePath, oldname), mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>;
-    QObject::connect(watcher, &QFutureWatcher<bool>::finished, [=]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [=]() {
         mProfileList << profile_name;
         slot_itemClicked(pItem);
         // Clear the Discord optin on the copied profile - just because the source
@@ -1618,14 +1373,14 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
         return;
     }
 
-    QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    const QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
         return;
     }
 
     // copy relevant profile files
-    for (QString file : {"url", "port", "password", "login", "description"}) {
+    for (const QString file : {"url", "port", "password", "login", "description"}) {
         auto filePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, oldname), file);
         auto newFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
@@ -1687,8 +1442,8 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
 
 void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, const QString& newname)
 {
-    QDir oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
-    QDir newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
+    const QDir oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
+    const QDir newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
     newProfiledir.mkpath(newProfiledir.absolutePath());
     QStringList entries = oldProfiledir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     if (entries.empty()) {
@@ -1706,7 +1461,7 @@ void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, cons
 bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom)
 {
     pugi::xml_document oldProfile;
-    pugi::xml_parse_result result = oldProfile.load_file(copySettingsFrom.toUtf8().constData());
+    pugi::xml_parse_result const result = oldProfile.load_file(copySettingsFrom.toUtf8().constData());
     if (!result) {
         qWarning() << "dlgConnectionProfiles::copyProfileSettingsOnly() ERROR: couldn't parse" << copySettingsFrom;
         qWarning() << "Parse error: " << result.description() << ", character pos= " << result.offset;
@@ -1729,7 +1484,7 @@ bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newPr
 
     // remove installed packages/modules
     const auto hostPackageResults = oldProfile.select_nodes("/MudletPackage/HostPackage");
-    pugi::xml_node hostPackage = hostPackageResults.first().node();
+    pugi::xml_node const hostPackage = hostPackageResults.first().node();
     auto host = hostPackage.child("Host");
     host.remove_child("mInstalledPackages");
     host.remove_child("mInstalledModules");
@@ -1742,7 +1497,7 @@ bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newPr
 // save profile using Qt's API's which handle non-ASCII characters in Windows paths fine
 void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const
 {
-    QFile file(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")));
+    QSaveFile file(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")));
     if (!file.open(QFile::WriteOnly)) {
         qDebug() << "dlgConnectionProfiles::copyProfileSettingsOnly ERROR - couldn't create new profile file:" << file.fileName() << "-" << file.errorString();
         return;
@@ -1752,7 +1507,9 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
     newProfileXml.save(saveStringStream);
     std::string output(saveStringStream.str());
     file.write(output.data());
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "dlgConnectionProfiles::saveProfileCopy: error copying profile: " << file.errorString();
+    }
 }
 
 void dlgConnectionProfiles::slot_load()
@@ -1768,7 +1525,7 @@ void dlgConnectionProfiles::connectToServer()
 
 void dlgConnectionProfiles::loadProfile(bool alsoConnect, const QString& playerName, const QString& playerPassword)
 {
-    QString profile_name = profile_name_entry->text().trimmed();
+    const QString profile_name = profile_name_entry->text().trimmed();
 
     if (profile_name.isEmpty()) {
         return;
@@ -1794,26 +1551,37 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect, const QString& playerN
         return;
     }
 
-    QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
+    const QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    // loading this profile for the first time
-    bool firstTimeLoad = false;
+    // pre-install packages when loading this profile for the first time
+    bool preInstallPackages = false;
     pHost->hideMudletsVariables();
     if (entries.isEmpty()) {
-        firstTimeLoad = true;
+        preInstallPackages = true;
+        pHost->mLoadedOk = true;
     } else {
         QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
+
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        importer.importPackage(&file, nullptr); // TODO: Missing false return value handler
+        if (auto [success, message] = importer.importPackage(&file, nullptr); !success) {
+            //: %1 is the path and file name (i.e. the location) of the problem fil
+            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
+                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
+
+            qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << alsoConnect << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
+        } else {
+            pHost->mLoadedOk = true;
+        }
+
         pHost->refreshPackageFonts();
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
         if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            firstTimeLoad = true;
+            preInstallPackages = true;
         }
     }
 
@@ -1846,7 +1614,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect, const QString& playerN
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
-    if (firstTimeLoad) {
+    if (preInstallPackages) {
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
         pHost->setupIreDriverBugfix();
     }
@@ -1854,6 +1622,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect, const QString& playerN
     mudlet::self()->updateMultiViewControls();
 
     emit mudlet::self()->signal_hostCreated(pHost, hostManager.getHostCount());
+    emit mudlet::self()->signal_adjustAccessibleNames();
     emit signal_load_profile(profile_name, alsoConnect);
 }
 
@@ -1897,7 +1666,7 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        QString port = port_entry->text().trimmed();
+        const QString port = port_entry->text().trimmed();
         if (!port.isEmpty() && (port.indexOf(QRegularExpression(qsl("^\\d+$")), 0) == -1)) {
             QString val = port;
             val.chop(1);
@@ -1910,7 +1679,7 @@ bool dlgConnectionProfiles::validateProfile()
         }
 
         bool ok;
-        int num = port.trimmed().toInt(&ok);
+        const int num = port.trimmed().toInt(&ok);
         if (!port.isEmpty() && (num > 65536 && ok)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2\n\n").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.")));
@@ -1944,7 +1713,7 @@ bool dlgConnectionProfiles::validateProfile()
 #endif
 
         QUrl check;
-        QString url = host_name_entry->text().trimmed();
+        const QString url = host_name_entry->text().trimmed();
         check.setHost(url);
 
         if (url.isEmpty()) {
@@ -2026,26 +1795,26 @@ bool dlgConnectionProfiles::validateProfile()
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
 bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
 {
-    QDir sourceDir(sourceFolder);
+    const QDir sourceDir(sourceFolder);
     if (!sourceDir.exists()) {
         return false;
     }
 
-    QDir destDir(destFolder);
+    const QDir destDir(destFolder);
     if (!destDir.exists()) {
         destDir.mkdir(destFolder);
     }
     QStringList files = sourceDir.entryList(QDir::Files);
     for (int i = 0; i < files.count(); i++) {
-        QString srcName = sourceFolder + QDir::separator() + files[i];
-        QString destName = destFolder + QDir::separator() + files[i];
+        const QString srcName = sourceFolder + QDir::separator() + files[i];
+        const QString destName = destFolder + QDir::separator() + files[i];
         QFile::copy(srcName, destName);
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
     for (int i = 0; i < files.count(); i++) {
-        QString srcName = sourceFolder + QDir::separator() + files[i];
-        QString destName = destFolder + QDir::separator() + files[i];
+        const QString srcName = sourceFolder + QDir::separator() + files[i];
+        const QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
     }
     return true;
@@ -2117,13 +1886,13 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
 
     profiles_tree_widget->addItem(pItem);
     if (!hasCustomIcon(mudServer)) {
-        QPixmap p(iconFileName);
-        if (p.isNull()) {
+        QPixmap const pixmap(iconFileName);
+        if (pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";
             return;
         }
-        if (p.width() != 120) {
-            pItem->setIcon(p.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        if (pixmap.width() != 120) {
+            pItem->setIcon(pixmap.scaled(QSize(120, 30), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         } else {
             pItem->setIcon(QIcon(iconFileName));
         }
@@ -2139,34 +1908,34 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional
 {
     QPixmap background(120, 30);
 
-    QColor color = backgroundColor.value_or(mCustomIconColors.at(static_cast<int>((qHash(text) * 8131) % mCustomIconColors.count())));
+    QColor const color = backgroundColor.value_or(mCustomIconColors.at(static_cast<int>((qHash(text) * 8131) % mCustomIconColors.count())));
     background.fill(color);
 
     // Set to one larger than wanted so that do loop can contain the decrementor
     int fontSize = 30;
     QFont font(qsl("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
     // For an icon of size 120x30 allow 89x29 for the text:
-    QRect textRectangle(0, 0, 89, 29);
+    QRect const textRectangle(0, 0, 89, 29);
     QRect testRect;
     // Really long names will be drawn very small (font size 6) with the ends clipped off:
     do {
         font.setPointSize(--fontSize);
-        QFontMetrics fm(font);
-        testRect = fm.boundingRect(textRectangle, Qt::AlignCenter | Qt::TextWordWrap, text);
+        QFontMetrics const metrics(font);
+        testRect = metrics.boundingRect(textRectangle, Qt::AlignCenter | Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
-        QPainter pt(&background);
-        pt.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        QPixmap pg(qsl(":/icons/mudlet_main_32px.png"));
-        pt.drawPixmap(QRect(5, 5, 20, 20), pg);
+        QPainter painter(&background);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+        QPixmap const pixmap(qsl(":/icons/mudlet_main_32px.png"));
+        painter.drawPixmap(QRect(5, 5, 20, 20), pixmap);
         if (color.lightness() > 127) {
-            pt.setPen(Qt::black);
+            painter.setPen(Qt::black);
         } else {
-            pt.setPen(Qt::white);
+            painter.setPen(Qt::white);
         }
-        pt.setFont(font);
-        pt.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter | Qt::TextWordWrap, text);
+        painter.setFont(font);
+        painter.drawText(QRect(30, 0, 90, 30), Qt::AlignCenter | Qt::TextWordWrap, text);
     }
     return QIcon(background);
 }

@@ -2,7 +2,7 @@
 #define TTABBAR_H
 
 /***************************************************************************
- *   Copyright (C) 2018, 2020-2021 by Stephen Lyons                        *
+ *   Copyright (C) 2018, 2020-2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -36,7 +36,10 @@ class TTabBar : public QTabBar
     Q_OBJECT
 
 public:
-    explicit TTabBar(QWidget* parent) : QTabBar(parent) {}
+    explicit TTabBar(QWidget* parent)
+    : QTabBar(parent)
+    {}
+
     ~TTabBar() = default;
     TTabBar() = delete;
     QSize tabSizeHint(int index) const override;

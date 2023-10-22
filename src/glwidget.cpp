@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016, 2019-2021 by Stephen Lyons                  *
+ *   Copyright (C) 2014, 2016, 2019-2021, 2023 by Stephen Lyons            *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -223,7 +223,7 @@ void GLWidget::slot_setCameraPositionZ(int angle)
 
 void GLWidget::initializeGL()
 {
-    QColor color(QColorConstants::Black);
+    QColor const color(QColorConstants::Black);
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;
     yRot = 5;
@@ -463,7 +463,7 @@ void GLWidget::paintGL()
             exitList.push_back(pR->getNorthwest());
             exitList.push_back(pR->getUp());
             exitList.push_back(pR->getDown());
-            int e = pR->z;
+            const int e = pR->z;
             const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 1);
@@ -486,7 +486,7 @@ void GLWidget::paintGL()
                               planeColor[ef][2],
                               planeColor[ef][3]);*/
                 }
-                for (int k : exitList) {
+                for (const int k : exitList) {
                     bool areaExit = false;
                     if (k == -1) {
                         continue;
@@ -503,8 +503,8 @@ void GLWidget::paintGL()
                     auto ex = static_cast<float>(pExit->x);
                     auto ey = static_cast<float>(pExit->y);
                     auto ez = static_cast<float>(pExit->z);
-                    QVector3D p1(ex, ey, ez);
-                    QVector3D p2(rx, ry, rz);
+                    QVector3D const p1(ex, ey, ez);
+                    QVector3D const p2(rx, ry, rz);
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
@@ -781,7 +781,7 @@ void GLWidget::paintGL()
                             if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
-                                    quint8 base = env - 16;
+                                    quint8 const base = env - 16;
                                     quint8 r = base / 36;
                                     quint8 g = (base - (r * 36)) / 6;
                                     quint8 b = (base - (r * 36)) - (g * 6);
@@ -795,7 +795,7 @@ void GLWidget::paintGL()
                                     mc3[2] = b / 255.0;
                                     mc3[3] = 0.2;
                                 } else if (231 < env && env < 256) {
-                                    quint8 k = ((env - 232) * 10) + 8;
+                                    quint8 const k = ((env - 232) * 10) + 8;
                                     glColor4ub(k, k, k, 200);
                                     mc3[0] = k / 255.0;
                                     mc3[1] = k / 255.0;
@@ -804,7 +804,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->mCustomEnvColors[env];
+                            QColor const& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 25);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -897,7 +897,7 @@ void GLWidget::paintGL()
                     }
                 }
             } else {
-                for (int k : exitList) {
+                for (const int k : exitList) {
                     bool areaExit = false;
                     if (k == -1) {
                         continue;
@@ -915,8 +915,8 @@ void GLWidget::paintGL()
                     auto ex = static_cast<float>(pExit->x);
                     auto ey = static_cast<float>(pExit->y);
                     auto ez = static_cast<float>(pExit->z);
-                    QVector3D p1(ex, ey, ez);
-                    QVector3D p2(rx, ry, rz);
+                    QVector3D const p1(ex, ey, ez);
+                    QVector3D const p2(rx, ry, rz);
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
@@ -1191,7 +1191,7 @@ void GLWidget::paintGL()
                             if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
-                                    quint8 base = env - 16;
+                                    quint8 const base = env - 16;
                                     quint8 r = base / 36;
                                     quint8 g = (base - (r * 36)) / 6;
                                     quint8 b = (base - (r * 36)) - (g * 6);
@@ -1205,7 +1205,7 @@ void GLWidget::paintGL()
                                     mc3[2] = b / 255.0;
                                     mc3[3] = 0.2;
                                 } else if (231 < env && env < 256) {
-                                    quint8 k = ((env - 232) * 10) + 8;
+                                    quint8 const k = ((env - 232) * 10) + 8;
                                     glColor4ub(k, k, k, 200);
                                     mc3[0] = k / 255.0;
                                     mc3[1] = k / 255.0;
@@ -1214,7 +1214,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->mCustomEnvColors[env];
+                            QColor const& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -1330,7 +1330,7 @@ void GLWidget::paintGL()
         QSetIterator<int> itRoom(pArea->getAreaRooms());
         while (itRoom.hasNext()) {
             glDisable(GL_LIGHT1);
-            int currentRoomId = itRoom.next();
+            const int currentRoomId = itRoom.next();
             TRoom* pR = mpMap->mpRoomDB->getRoom(currentRoomId);
             if (!pR) {
                 continue;
@@ -1353,7 +1353,7 @@ void GLWidget::paintGL()
                 }
             }
 
-            int e = pR->z;
+            const int e = pR->z;
             const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 36); //gut:96
@@ -1585,7 +1585,7 @@ void GLWidget::paintGL()
                     if (!mpMap->mCustomEnvColors.contains(env)) {
                         if (16 < env && env < 232)
                         {
-                            quint8 base = env - 16;
+                            quint8 const base = env - 16;
                             quint8 r = base / 36;
                             quint8 g = (base - (r * 36)) / 6;
                             quint8 b = (base - (r * 36)) - (g * 6);
@@ -1599,7 +1599,7 @@ void GLWidget::paintGL()
                             mc3[2] = b / 255.0;
                             mc3[3] = 0.2;
                         } else if (231 < env && env < 256) {
-                            quint8 k = ((env - 232) * 10) + 8;
+                            quint8 const k = ((env - 232) * 10) + 8;
                             glColor4ub(k, k, k, 200);
                             mc3[0] = k / 255.0;
                             mc3[1] = k / 255.0;
@@ -1608,7 +1608,7 @@ void GLWidget::paintGL()
                         }
                         break;
                     }
-                    QColor& _c = mpMap->mCustomEnvColors[env];
+                    QColor const& _c = mpMap->mCustomEnvColors[env];
                     glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                     mc3[0] = _c.redF();
                     mc3[1] = _c.greenF();
@@ -1888,7 +1888,7 @@ void GLWidget::paintGL()
                 if (!mpMap->mCustomEnvColors.contains(env)) {
                     if (16 < env && env < 232)
                     {
-                        quint8 base = env - 16;
+                        quint8 const base = env - 16;
                         quint8 r = base / 36;
                         quint8 g = (base - (r * 36)) / 6;
                         quint8 b = (base - (r * 36)) - (g * 6);
@@ -1902,7 +1902,7 @@ void GLWidget::paintGL()
                         mc3[2] = b / 255.0;
                         mc3[3] = 0.2;
                     } else if (231 < env && env < 256) {
-                        quint8 k = ((env - 232) * 10) + 8;
+                        quint8 const k = ((env - 232) * 10) + 8;
                         glColor4ub(k, k, k, 200);
                         mc3[0] = k / 255.0;
                         mc3[1] = k / 255.0;
@@ -1911,7 +1911,7 @@ void GLWidget::paintGL()
                     }
                     break;
                 }
-                QColor& _c = mpMap->mCustomEnvColors[env];
+                QColor const& _c = mpMap->mCustomEnvColors[env];
                 glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                 mc3[0] = _c.redF();
                 mc3[1] = _c.greenF();
@@ -2055,8 +2055,13 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         return;
     }
     if (event->buttons() & Qt::LeftButton) {
-        int x = event->x();
-        int y = height() - event->y(); // the opengl origin is at bottom left
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        auto eventPos = event->pos();
+#else
+        auto eventPos = event->position().toPoint();
+#endif
+        const int x = eventPos.x();
+        const int y = height() - eventPos.y(); // the opengl origin is at bottom left
         GLuint buff[16] = {0};
         GLint hits;
         GLint view[4];
@@ -2097,8 +2102,14 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         update();
         if (mpMap->mpRoomDB->getRoom(mTarget)) {
             mpMap->mTargetID = mTarget;
-            if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
+            if (mpMap->mpHost->checkForCustomSpeedwalk()) {
+                mpMap->mpHost->startSpeedWalk(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID);
+            } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                 mpMap->mpHost->startSpeedWalk();
+            } else {
+                mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.")
+                                                          .arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)),
+                                                               QString::number(mpMap->mTargetID))));
             }
             //            else
             //            {
@@ -2126,19 +2137,24 @@ void GLWidget::mouseMoveEvent(QMouseEvent* event)
         return;
     }
     if (mPanMode) {
-        int x = event->x();
-        int y = height() - event->y(); // the opengl origin is at bottom left
-        if ((mPanXStart - x) > 1) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        auto eventPos = event->localPos();
+#else
+        auto eventPos = event->position();
+#endif
+        auto x = static_cast<float>(eventPos.x());
+        auto y = static_cast<float>(height()) - static_cast<float>(eventPos.y()); // the opengl origin is at bottom left
+        if ((mPanXStart - x) > 1.0f) {
             slot_shiftRight();
             mPanXStart = x;
-        } else if ((mPanXStart - x) < -1) {
+        } else if ((mPanXStart - x) < -1.0f) {
             slot_shiftLeft();
             mPanXStart = x;
         }
-        if ((mPanYStart - y) > 1) {
+        if ((mPanYStart - y) > 1.0f) {
             slot_shiftUp();
             mPanYStart = y;
-        } else if ((mPanYStart - y) < -1) {
+        } else if ((mPanYStart - y) < -1.0f) {
             slot_shiftDown();
             mPanYStart = y;
         }
@@ -2153,8 +2169,8 @@ void GLWidget::mouseReleaseEvent(QMouseEvent* event)
 
 void GLWidget::wheelEvent(QWheelEvent* e)
 {
-    int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
-    int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
+    const int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
+    const int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
     bool used = false;
     if (yDelta) {
         if (abs(mScale) < 0.3) {

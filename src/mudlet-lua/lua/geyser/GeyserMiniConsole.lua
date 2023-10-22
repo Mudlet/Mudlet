@@ -10,6 +10,7 @@
 -- @field wrapAt Where line wrapping occurs. Default is 300 characters.
 Geyser.MiniConsole = Geyser.Window:new({
   name = "MiniConsoleClass",
+  scrolling = true,
   wrapAt = 300, })
 
 --- Override reposition to reset autowrap
@@ -111,21 +112,27 @@ end
 --- Enables the scroll bar for this window
 function Geyser.MiniConsole:enableScrollBar()
   enableScrollBar(self.name)
+  self.scrollBar = true
+  self:resetAutoWrap()
 end
 
 --- Disables the scroll bar for this window
 function Geyser.MiniConsole:disableScrollBar()
   disableScrollBar(self.name)
+  self.scrollBar = false
+  self:resetAutoWrap()
 end
 
 --- Enables the horizontal scroll bar for this window
 function Geyser.MiniConsole:enableHorizontalScrollBar()
   enableHorizontalScrollBar(self.name)
+  self.horizontalScrollBar = true
 end
 
 --- Disables the horizontal scroll bar for this window
 function Geyser.MiniConsole:disableHorizontalScrollBar()
   disableHorizontalScrollBar(self.name)
+  self.horizontalScrollBar = false
 end
 
 -- Start commandLine functions
@@ -399,8 +406,14 @@ end
 
 --- Set the wrap based on how wide the console is
 function Geyser.MiniConsole:resetAutoWrap()
+  if not self.autoWrap then
+    return nil, "Autowrap is not enabled for " .. self.name
+  end
   local fontWidth, fontHeight = calcFontSize(self.name)
   local consoleWidth = self.get_width()
+  if self.scrollBar then
+    consoleWidth = consoleWidth - 15
+  end
   local charactersWidth = math.floor(consoleWidth / fontWidth)
 
   self.wrapAt = charactersWidth
@@ -537,6 +550,18 @@ function Geyser.MiniConsole:getWindowWrap()
   return getWindowWrap(self.name)
 end
 
+--- Disables scrolling for the miniconsole
+function Geyser.MiniConsole:disableScrolling()
+  self.scrolling = false
+  disableScrolling(self.name)
+end
+
+--- Enables scrolling for the miniconsole
+function Geyser.MiniConsole:enableScrolling()
+  self.scrolling = true
+  enableScrolling(self.name)
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 
@@ -554,7 +579,7 @@ function Geyser.MiniConsole:new (cons, container)
   self.__index = self
   -----------------------------------------------------------
   -- Now create the MiniConsole using primitives
-  if not string.find(me.name, ".*Class") then
+  if not string.find(me.name, ".+Class$") then
     me.windowname = me.windowname or me.container.windowname or "main"
     createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
     me:get_width(), me:get_height())
@@ -594,6 +619,9 @@ function Geyser.MiniConsole:new (cons, container)
     elseif cons.wrapAt then
       me:setWrap(cons.wrapAt)
     end
+    if cons.autoWrap then
+      me:enableAutoWrap()
+    end
     if me.commandLine then
       me:enableCommandLine()
     else
@@ -601,6 +629,11 @@ function Geyser.MiniConsole:new (cons, container)
     end
     if me.cmdLineStylesheet and me.commandLine then
       me:setCmdLineStyleSheet()
+    end
+    if me.scrolling then
+      me:enableScrolling()
+    else
+      me:disableScrolling()
     end
     --print("  New in " .. self.name .. " : " .. me.name)
   end

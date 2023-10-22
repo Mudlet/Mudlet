@@ -382,6 +382,18 @@ end</script>
 				<packageName></packageName>
 				<regex>^map ignore(?: (.*))?$</regex>
 			</Alias>
+                        <Alias isActive="yes" isFolder="no">
+				<name>Set Move Method Alias</name>
+				<script>
+if matches[2] then
+  map.make_move_method(matches[2])
+else
+  display(map.save.move_methods)
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map movemethod(?: (.*))?$</regex>
+			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Debug Alias</name>
 				<script>map.configs.debug = not map.configs.debug
@@ -644,7 +656,7 @@ raiseEvent("sysSpeedwalkStopped")</script>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.0.25"
+local version = "2.0.27"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -686,6 +698,7 @@ map.help = {[[
             your prompt, uses Lua string-library patterns
         &lt;link: ignore&gt;map ignore&lt;/link&gt; - Provides a specific pattern for the script to ignore,
             uses Lua string-library patterns
+        &lt;link: movemethod&gt;map movemethod&lt;/link&gt; - Adds a movement method for the script to look for when mapping.
         &lt;link: debug&gt;map debug&lt;/link&gt; - Toggles on debug mode, in which extra messages are shown
             with the intent of assisting in troubleshooting getting the
             script setup
@@ -899,6 +912,18 @@ map.help.ignore = [[
         If the given pattern is already in the list of ignore patterns, that
         pattern will be removed from the list.
 ]]
+map.help.movemethod = [[
+    &lt;cyan&gt;Move Method&lt;reset&gt;
+        syntax: &lt;yellow&gt;map movemethod &lt;movement word&gt;&lt;reset&gt;
+
+        This command will add a movement method for the script to look for
+        when moving between rooms. If your game has methods such as "walk north",
+        "swim south" or similar, add "walk" or "swim" as necessary. For single
+        room movement only.
+
+        If the given method is already in the list of movement methods, that
+        method will be removed from the list.
+]]
 map.help.areas = [[
     &lt;cyan&gt;Map Areas&lt;reset&gt;
         syntax: &lt;yellow&gt;map areas&lt;reset&gt;
@@ -1039,8 +1064,17 @@ map.help.onvisionfail = [[
     &lt;cyan&gt;onVisionFail Event&lt;reset&gt;
 
         This event is raised to inform the script that some or all of the room
-        information was not able to be gathered, but the character still
-        successfully moved between rooms in the intended direction.
+        information was not able to be gathered but the character still
+        successfully moved between rooms in the intended direction. For example,
+        a character without a light moving into a dark room.
+
+        generic_mapper comes with two predefined triggers for when it is dark
+        which can be found in the Script Editor/Triggers.  These triggers raise
+        the onVisionFail event, which in turn forces the mapper to move in the
+        desired direction without trying to match the room titles and 
+        descriptions.
+
+        Add to these triggers with appropriate lines your game sends.
 ]]
 map.help.onprompt = [[
     &lt;cyan&gt;onPrompt Event&lt;reset&gt;
@@ -1250,6 +1284,7 @@ map.save = map.save or {}
 map.save.recall = map.save.recall or {}
 map.save.prompt_pattern = map.save.prompt_pattern or {}
 map.save.ignore_patterns = map.save.ignore_patterns or {}
+map.save.move_methods = map.save.move_methods or {}
 
 local oldstring = string
 local string = utf8
@@ -1408,6 +1443,7 @@ local function config()
     end
     saves.prompt_pattern = saves.prompt_pattern or {}
     saves.ignore_patterns = saves.ignore_patterns or {}
+    saves.move_methods = saves.move_methods or {}
     saves.recall = saves.recall or {}
     map.save = saves
 
@@ -1993,6 +2029,13 @@ local function capture_move_cmd(dir,priority)
             map.set_door(door,"","")
         end
     end
+    for i,v in ipairs(map.save.move_methods) do
+    	local str = string.match(dir, v .. " (%a+)")
+    	if str then 
+    		dir = str
+    		break
+    	end
+    end
     local portal = string.match(dir,"enter (%a+)")
     if map.mapping and portal then
         local portals = getSpecialExitsSwap(map.currentRoom)
@@ -2001,13 +2044,17 @@ local function capture_move_cmd(dir,priority)
         end
     end
     if table.contains(exitmap,dir) or string.starts(dir,"enter ") or dir == "recall" then
+      if dir ~= configs.lang_dirs['look'] then
         if priority then
             table.insert(move_queue,1,exitmap[dir] or dir)
         else
             table.insert(move_queue,exitmap[dir] or dir)
         end
-    elseif configs.search_on_look and dir == configs.lang_dirs['look'] then
-        table.insert(move_queue, dir)
+      else
+        if configs.search_on_look == true then
+          table.insert(move_queue, dir)
+        end
+    end				
     elseif map.currentRoom then
         local special = getSpecialExitsSwap(map.currentRoom) or {}
         if special[dir] then
@@ -2739,6 +2786,18 @@ function map.make_ignore_pattern(str)
     table.save(profilePath .. "/map downloads/map_save.dat",map.save)
 end
 
+function map.make_move_method(str)
+    map.save.move_methods = map.save.move_methods or {}
+    if not table.contains(map.save.move_methods,str) then
+        table.insert(map.save.move_methods,str)
+        map.echo("Move method added: " .. str)
+    else
+        table.remove(map.save.move_methods, table.index_of(map.save.move_methods, str))
+        map.echo("Move method removed: " .. str)
+    end
+    table.save(profilePath .. "/map downloads/map_save.dat",map.save)
+end
+
 local function grab_line()
     table.insert(lines,line)
     if map.save.prompt_pattern[map.character] and string.match(line, map.save.prompt_pattern[map.character]) then
@@ -2821,7 +2880,7 @@ continue_walk = function(new_room)
     if not walking then return end
     -- calculate wait time until next command, with randomness
     local wait = map.configs.speedwalk_delay or 0
-    if wait &gt; 0 and map.configs.speedwalk_random then
+    if wait > 0 and map.configs.speedwalk_random then
         wait = wait * (1 + math.random(0,100)/100)
     end
     -- if no wait after new room, move immediately
@@ -2830,7 +2889,13 @@ continue_walk = function(new_room)
     end
     -- send command if we don't need to wait
     if not new_room then
-        send(table.remove(map.walkDirs,1))
+        --handle script exits
+        if string.starts(map.walkDirs[1], "script:") then
+          map.walkDirs[1] = string.gsub(map.walkDirs[1], "script:", "")
+          loadstring(table.remove(map.walkDirs,1))()
+        else
+          send(table.remove(map.walkDirs,1))
+        end
         -- check to see if we are done
         if #map.walkDirs == 0 then
             walking = false
@@ -2839,7 +2904,7 @@ continue_walk = function(new_room)
         end
     end
     -- make tempTimer to send next command if necessary
-    if walking and (not map.configs.speedwalk_wait or (map.configs.speedwalk_wait and wait &gt; 0)) then
+    if walking and (not map.configs.speedwalk_wait or (map.configs.speedwalk_wait and wait > 0)) then
         if timerID then killTimer(timerID) end
         timerID = tempTimer(wait, function() continue_walk() end)
     end
@@ -2863,7 +2928,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
         if exitmap[dir] or short[dir] then
             local door = check_doors(id, exitmap[dir] or dir)
             local status = door and door[dir]
-            if status and status &gt; 1 then
+            if status and status > 1 then
                 -- if locked, unlock door
                 if status == 3 then
                     table.insert(walkPath,k,id)
@@ -2877,7 +2942,7 @@ function map.speedwalk(roomID, walkPath, walkDirs)
             end
         end
         k = k + 1
-    until k &gt; #walkDirs
+    until k > #walkDirs
     if map.configs.use_translation then
         for k, v in ipairs(walkDirs) do
             walkDirs[k] = map.configs.lang_dirs[v] or v
@@ -2885,12 +2950,17 @@ function map.speedwalk(roomID, walkPath, walkDirs)
     end
     -- perform walk
     walking = true
-    if map.configs.speedwalk_wait or map.configs.speedwalk_delay &gt; 0 then
+    if map.configs.speedwalk_wait or map.configs.speedwalk_delay > 0 then
         map.walkDirs = walkDirs
         continue_walk()
     else
         for _,dir in ipairs(walkDirs) do
-            send(dir)
+           if string.starts(dir, "script:") then
+              dir = string.gsub(dir, "script:", "")
+              loadstring(dir)()
+            else
+              send(dir)
+           end
         end
         walking = false
         raiseEvent("sysSpeedwalkFinished")

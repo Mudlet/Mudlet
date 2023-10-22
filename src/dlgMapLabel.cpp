@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,21 +17,21 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #include "dlgMapLabel.h"
 
-#include "pre_guard.h"
-#include <QColorDialog>
-#include <QFontDialog>
-#include "post_guard.h"
+#include "utils.h"
 
-static QString BUTTON_STYLESHEET = QStringLiteral("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
+static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
 
-dlgMapLabel::dlgMapLabel(QWidget* pF) : QDialog(pF), fgColor(QColor(255, 255, 50, 255)), bgColor(QColor(50, 50, 150, 100))
+dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
+: QDialog(pParentWidget)
 {
     setupUi(this);
 
     setAttribute(Qt::WA_DeleteOnClose);
-    setWindowTitle(tr("Create label", "Create label dialog title"));
+    //: Create label dialog title
+    setWindowTitle(tr("Create label"));
 
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::slot_updateControlsVisibility);
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
@@ -56,8 +57,6 @@ dlgMapLabel::dlgMapLabel(QWidget* pF) : QDialog(pF), fgColor(QColor(255, 255, 50
     slot_updateControlsVisibility();
 }
 
-dlgMapLabel::~dlgMapLabel() {}
-
 bool dlgMapLabel::isTextLabel()
 {
     return comboBox_type->currentIndex() == 0;
@@ -72,7 +71,8 @@ void dlgMapLabel::slot_pickFgColor()
 {
     fgColorDialog = new QColorDialog(this);
     fgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
-    fgColorDialog->setWindowTitle(tr("Foreground color", "2D mapper create label color dialog title"));
+    //: 2D mapper create label color dialog title
+    fgColorDialog->setWindowTitle(tr("Foreground color"));
     fgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
         fgColor = color;
@@ -92,7 +92,8 @@ void dlgMapLabel::slot_pickBgColor()
     auto originalColor = QColor(bgColor);
     bgColorDialog = new QColorDialog(this);
     bgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
-    bgColorDialog->setWindowTitle(tr("Background color", "2D mapper create label color dialog title"));
+    //: 2D mapper create label color dialog title
+    bgColorDialog->setWindowTitle(tr("Background color"));
     bgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
         bgColor = color;
@@ -111,7 +112,8 @@ void dlgMapLabel::slot_pickFont()
     auto originalFont = QFont(font);
     fontDialog = new QFontDialog(font, this);
     fontDialog->setAttribute(Qt::WA_DeleteOnClose);
-    fontDialog->setWindowTitle(tr("Label font", "2D mapper create label font dialog title"));
+    //: 2D mapper create label font dialog title
+    fontDialog->setWindowTitle(tr("Label font"));
     connect(fontDialog, &QFontDialog::currentFontChanged, this, [&](const QFont& pFont) {
         font = pFont;
         emit updated();
@@ -128,7 +130,8 @@ void dlgMapLabel::slot_pickFont()
 
 void dlgMapLabel::slot_pickFile()
 {
-    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image", "2D Mapper create label file dialog title"));
+    //: 2D Mapper create label file dialog title
+    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"));
     emit updated();
 }
 
@@ -182,7 +185,7 @@ void dlgMapLabel::slot_updateControls()
 
 void dlgMapLabel::slot_updateControlsVisibility()
 {
-    bool isText = isTextLabel();
+    const bool isText = isTextLabel();
     label_image->setVisible(!isText);
     lineEdit_image->setVisible(!isText);
     checkBox_stretchImage->setVisible(!isText);

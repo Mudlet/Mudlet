@@ -46,10 +46,6 @@ else
     fi
   }
 
-  if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-    sudo apt-get install pcregrep
-  fi
-
   validate_qmake
   validate_cmake
   validate_updater_environment_variable

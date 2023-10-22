@@ -52,7 +52,7 @@ bool TEntityResolver::registerEntity(const QString& entity, const QString& str)
 }
 
 bool TEntityResolver::unregisterEntity(const QString & entity){
-    return mEntititesMap.remove(entity) > 0;
+    return mEntititesMap.remove(entity.toLower()) > 0;
 }
 
 QString TEntityResolver::resolveCode(const QString& entityValue)
@@ -63,7 +63,7 @@ QString TEntityResolver::resolveCode(const QString& entityValue)
 QString TEntityResolver::resolveCode(const QString& entityValue, int base)
 {
     bool isNum = false;
-    ushort code = entityValue.toUShort(&isNum, base);
+    ushort const code = entityValue.toUShort(&isNum, base);
     return isNum ? resolveCode(code) : entityValue;
 }
 
