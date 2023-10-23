@@ -297,8 +297,14 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
-        TMediaPlayer const pPlayer = itTMediaPlayer.next();
-        pPlayer.getMediaPlayer()->setMuted(state);
+        const TMediaPlayer player = itTMediaPlayer.next();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        player.getMediaPlayer()->setMuted(state);
+#else
+        if (player.getMediaPlayer()->audioOutput()) {
+            player.getMediaPlayer()->audioOutput()->setMuted(state);
+        }
+#endif
     }
 }
 
