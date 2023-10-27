@@ -37,7 +37,9 @@ cmake_minimum_required(VERSION 3.3)
 
 if(APPLE)
   # needed for fetching Sparkle
-  cmake_minimum_required(VERSION 3.18)
+  # We did have cmake_minimum_required(VERSION 3.18), but
+  # https://doc.qt.io/qt-6/macos-deployment.html says for Qt6 we need:
+  cmake_minimum_required(VERSION 3.21.2)
   # minimum supported version by Apple
   set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
 endif()

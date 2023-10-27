@@ -135,6 +135,8 @@ jobs:
         HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
+        # these are installed but they don't seem to be includable in our application nowadays
+        brew reinstall libzip zstd
         # these aren't available or don't work well in vcpkg
         brew install libzzip libzip zstd ccache luarocks expect mitchellh/gon/gon
 
