@@ -104,9 +104,9 @@ jobs:
     - name: (macOS) Test homebrew setup
       if: runner.os == 'macOS'
       env:
-      HOMEBREW_NO_ANALYTICS: "ON"
-      HOMEBREW_NO_AUTO_UPDATE: "ON"
-      HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+        HOMEBREW_NO_ANALYTICS: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       # Temporary 2 extra things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
       run: |
         echo "Temporary checks - start..."
