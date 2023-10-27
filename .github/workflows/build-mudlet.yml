@@ -101,6 +101,19 @@ jobs:
     - name: Use CMake 3.20.1
       uses: lukka/get-cmake@v3.20.1
 
+    - name: (macOS) Test homebrew setup
+      if: runner.os == 'macOS'
+      env:
+      HOMEBREW_NO_ANALYTICS: "ON"
+      HOMEBREW_NO_AUTO_UPDATE: "ON"
+      HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      # Temporary 2 extra things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
+      run: |
+        echo "Temporary checks - start..."
+        brew doctor
+        brew config
+        echo "... Temporary checks - end."
+
     - name: (macOS) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'macOS'
       env:
@@ -137,15 +150,10 @@ jobs:
         # HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # Temporary 2 extra things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
-        echo "Temporary checks - start..."
-        brew doctor
-        brew config
-        echo "... Temporary checks - end."
         # these are installed but they don't seem to be includable in our application nowadays
-        brew reinstall libzip zstd
+        brew reinstall
         # these aren't available or don't work well in vcpkg
-        brew install libzzip ccache luarocks expect mitchellh/gon/gon
+        brew install libzzip zstd libzip ccache luarocks expect mitchellh/gon/gon
 
         echo "/usr/local/opt/ccache/libexec" >> $GITHUB_PATH
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
