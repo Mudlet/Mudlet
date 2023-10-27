@@ -112,9 +112,6 @@ jobs:
       run: |
         # dependencies needed for vcpkg specifically
         brew install automake autoconf pkg-config
-        # Temporary 2 extra things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
-        brew doctor
-        brew config
 
     - name: (Linux) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'Linux'
@@ -140,6 +137,11 @@ jobs:
         # HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
+        # Temporary 2 extra things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
+        echo "Temporary checks - start..."
+        brew doctor
+        brew config
+        echo "... Temporary checks - end."
         # these are installed but they don't seem to be includable in our application nowadays
         brew reinstall libzip zstd
         # these aren't available or don't work well in vcpkg
