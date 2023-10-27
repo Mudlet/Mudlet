@@ -286,6 +286,17 @@ end
 
 
 
+-- clear all map data
+function clearAllMapData()
+  for id, name in pairs(getAreaTableSwap()) do
+    if id > 0 then
+      deleteArea(id)
+    end
+  end
+end
+
+
+
 --- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load
 --- them again at a later time e.g. make a database, collect statistical information etc.
 --- These functions are also used by Mudlet to load & save the entire Lua session variables. <br/><br/>
