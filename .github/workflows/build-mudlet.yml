@@ -101,39 +101,10 @@ jobs:
     - name: Use CMake 3.20.1
       uses: lukka/get-cmake@v3.20.1
 
-    - name: (macOS) Test homebrew setup
-      if: runner.os == 'macOS'
-      env:
-        HOMEBREW_NO_ANALYTICS: "ON"
-        # Comented out to allow updates
-        # HOMEBREW_NO_AUTO_UPDATE: "ON"
-        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
-        # Temporary 2 extra things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
-      run: |
-        echo "Temporary workaround - removing cask tap..."
-        brew untap homebrew/cask
-        echo "Temporary workaround - removing core tap..."
-        brew untap homebrew/core
-        echo "Temporary workaround - upgrading specific brews - node..."
-        brew upgrade node
-        echo "Temporary workaround - upgrading specific brews - ruby 2.x..."
-        brew upgrade ruby@2
-        echo "Temporary workaround - upgrading brews generally - try 1 of 2..."
-        brew upgrade
-        echo "Temporary workaround - upgrading brews generally - try 2 of 2..."
-        brew upgrade
-        echo "Temporary checks - running brew doctor..."
-        brew doctor
-        echo "Temporary checks - running brew config..."
-        brew config
-        echo "... Temporary checks - end."
-
     - name: (macOS) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'macOS'
       env:
-        HOMEBREW_NO_ANALYTICS: "ON"
-        # Comented out to allow updates
-        # HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
         # Now default since https://github.com/Homebrew/brew/pull/10640
         # HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
@@ -159,15 +130,11 @@ jobs:
     - name: (macOS) Install non-vcpkg dependencies (2/2)
       if: runner.os == 'macOS'
       env:
-        HOMEBREW_NO_ANALYTICS: "ON"
-        # Comented out to allow updates
-        # HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
         # Now default since https://github.com/Homebrew/brew/pull/10640
         # HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        # these are installed but they don't seem to be includable in our application nowadays
-        brew reinstall
         # these aren't available or don't work well in vcpkg
         brew install libzzip zstd libzip ccache luarocks expect mitchellh/gon/gon
 
@@ -193,6 +160,19 @@ jobs:
 
         # Use latest available XCode
         echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
+
+      # Temporary things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
+    - name: (macOS) Test homebrew setup
+      if: runner.os == 'macOS'
+      env:
+        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
+      run: |
+        echo "Temporary - try and locate all instances of libzstd.dylib ..."
+        mdfind 'kMDItemFSName == "libzstd"c' | grep dylib
+        echo "Temporary - try and locate all instances of libzip.dylib ..."
+        mdfind 'kMDItemFSName == "libzip"c' | grep dylib
+        echo "... Temporary checks - end."
 
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
