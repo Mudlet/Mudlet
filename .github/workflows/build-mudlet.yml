@@ -118,8 +118,10 @@ jobs:
         brew upgrade node
         echo "Temporary workaround - upgrading specific brews - ruby 2.x..."
         brew upgrade ruby@2
-        echo "Temporary workaround - updating brews generally..."
-        brew update
+        echo "Temporary workaround - upgrading brews generally - try 1 of 2..."
+        brew upgrade
+        echo "Temporary workaround - upgrading brews generally - try 2 of 2..."
+        brew upgrade
         echo "Temporary checks - running brew doctor..."
         brew doctor
         echo "Temporary checks - running brew config..."
