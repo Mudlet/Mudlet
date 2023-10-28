@@ -105,12 +105,14 @@ jobs:
       if: runner.os == 'macOS'
       env:
         HOMEBREW_NO_ANALYTICS: "ON"
-        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        # Comented out to allow updates
+        # HOMEBREW_NO_AUTO_UPDATE: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
-      # Temporary 2 extra things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
+        # Temporary 2 extra things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
       run: |
-        echo "Temporary checks - start..."
+        echo "Temporary checks - running brew doctor..."
         brew doctor
+        echo "Temporary checks - running brew config..."
         brew config
         echo "... Temporary checks - end."
 
@@ -118,7 +120,8 @@ jobs:
       if: runner.os == 'macOS'
       env:
         HOMEBREW_NO_ANALYTICS: "ON"
-        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        # Comented out to allow updates
+        # HOMEBREW_NO_AUTO_UPDATE: "ON"
         # Now default since https://github.com/Homebrew/brew/pull/10640
         # HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
@@ -145,7 +148,8 @@ jobs:
       if: runner.os == 'macOS'
       env:
         HOMEBREW_NO_ANALYTICS: "ON"
-        HOMEBREW_NO_AUTO_UPDATE: "ON"
+        # Comented out to allow updates
+        # HOMEBREW_NO_AUTO_UPDATE: "ON"
         # Now default since https://github.com/Homebrew/brew/pull/10640
         # HOMEBREW_NO_BOTTLE_SOURCE_FALLBACK: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
