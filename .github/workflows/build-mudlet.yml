@@ -114,10 +114,10 @@ jobs:
         brew untap homebrew/cask
         echo "Temporary workaround - removing core tap..."
         brew untap homebrew/core
-        echo "Temporary workaround - updating specific brews - node..."
-        brew update node
-        echo "Temporary workaround - updating specific brews - ruby..."
-        brew update ruby
+        echo "Temporary workaround - upgrading specific brews - node..."
+        brew upgrade node
+        echo "Temporary workaround - upgrading specific brews - ruby..."
+        brew upgrade ruby
         echo "Temporary workaround - updating brews generally..."
         brew update
         echo "Temporary checks - running brew doctor..."
