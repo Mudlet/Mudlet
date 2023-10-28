@@ -114,8 +114,12 @@ jobs:
         brew untap homebrew/cask
         echo "Temporary workaround - removing core tap..."
         brew untap homebrew/core
-        echo "Temporary workaround - stashing Homebrew/homebrew-core modifications..."
-        cd /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core && git stash -u && git clean -d -f
+        echo "Temporary workaround - updating specific brews - node..."
+        brew update node
+        echo "Temporary workaround - updating specific brews - ruby..."
+        brew update ruby
+        echo "Temporary workaround - updating brews generally..."
+        brew update
         echo "Temporary checks - running brew doctor..."
         brew doctor
         echo "Temporary checks - running brew config..."
