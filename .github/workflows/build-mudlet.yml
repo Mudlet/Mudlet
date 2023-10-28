@@ -110,6 +110,12 @@ jobs:
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
         # Temporary 2 extra things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
       run: |
+        echo "Temporary workaround - removing cask tap..."
+        brew untap homebrew/cask
+        echo "Temporary workaround - removing core tap..."
+        brew untap homebrew/core
+        echo "Temporary workaround - stashing Homebrew/homebrew-core modifications..."
+        cd /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core && git stash -u && git clean -d -f
         echo "Temporary checks - running brew doctor..."
         brew doctor
         echo "Temporary checks - running brew config..."
