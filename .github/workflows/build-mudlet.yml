@@ -116,8 +116,8 @@ jobs:
         brew untap homebrew/core
         echo "Temporary workaround - upgrading specific brews - node..."
         brew upgrade node
-        echo "Temporary workaround - upgrading specific brews - ruby..."
-        brew upgrade ruby
+        echo "Temporary workaround - upgrading specific brews - ruby 2.x..."
+        brew upgrade ruby@2
         echo "Temporary workaround - updating brews generally..."
         brew update
         echo "Temporary checks - running brew doctor..."
