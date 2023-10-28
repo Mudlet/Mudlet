@@ -168,10 +168,10 @@ jobs:
         HOMEBREW_NO_AUTO_UPDATE: "ON"
         HOMEBREW_NO_INSTALL_CLEANUP: "ON"
       run: |
-        echo "Temporary - try and locate all instances of libzstd.dylib ..."
-        mdfind 'kMDItemFSName == "libzstd"c' | grep dylib
-        echo "Temporary - try and locate all instances of libzip.dylib ..."
-        mdfind 'kMDItemFSName == "libzip"c' | grep dylib
+        echo "Temporary - try and locate all instances of libzstd ..."
+        mdfind -name "libzstd"
+        echo "Temporary - try and locate all instances of libzip ..."
+        mdfind -name "libzip"
         echo "... Temporary checks - end."
 
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
