@@ -736,11 +736,14 @@
          <property name="title">
           <string>Font</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_font">
+         <layout class="QGridLayout" name="gridLayout_groupBox_font" rowstretch="1,1,1,1,2">
           <item row="0" column="0">
            <widget class="QLabel" name="label_30">
             <property name="text">
              <string>Font:</string>
+            </property>
+            <property name="buddy">
+             <cstring>fontComboBox</cstring>
             </property>
            </widget>
           </item>
@@ -765,12 +768,25 @@
             <property name="text">
              <string>Size:</string>
             </property>
+            <property name="buddy">
+             <cstring>fontSize</cstring>
+            </property>
            </widget>
           </item>
           <item row="0" column="3">
            <widget class="QComboBox" name="fontSize"/>
           </item>
-          <item row="1" column="0" colspan="2">
+          <item row="0" column="4">
+           <widget class="QCheckBox" name="checkBox_antiAlias">
+            <property name="toolTip">
+             <string>&lt;p&gt;Anti-aliasing use on the font for the &lt;b&gt;Main&lt;/b&gt; console. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. &lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable anti-aliasing</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="5">
            <widget class="QLabel" name="label_invalidFontError">
             <property name="font">
              <font>
@@ -782,7 +798,7 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="4">
+          <item row="2" column="0" colspan="5">
            <widget class="QLabel" name="label_variableWidthFontWarning">
             <property name="font">
              <font>
@@ -795,14 +811,140 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="mNoAntiAlias">
-            <property name="toolTip">
-             <string>Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. </string>
+          <item row="3" column="0" colspan="5">
+           <widget class="QGroupBox" name="groupBox_fontSamples">
+            <property name="title">
+             <string>Font sample:</string>
             </property>
-            <property name="text">
-             <string>Enable anti-aliasing</string>
-            </property>
+            <layout class="QGridLayout" name="gridLayout_fontSamples">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_fontSample_normal">
+               <property name="text">
+                <string>Normal:</string>
+               </property>
+               <property name="buddy">
+                <cstring>lineEdit_fontSample_normal</cstring>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QLineEdit" name="lineEdit_fontSample_normal">
+               <property name="font">
+                <font>
+                 <kerning>false</kerning>
+                </font>
+               </property>
+               <property name="placeholderText">
+                <string>Enter some text here to see how it is rendered in all four supported &quot;weights&quot;.</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="2">
+              <widget class="QLabel" name="label_fontSample_bold">
+               <property name="text">
+                <string>Bold:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QLineEdit" name="lineEdit_fontSample_bold">
+               <property name="font">
+                <font>
+                 <kerning>false</kerning>
+                </font>
+               </property>
+               <property name="cursor">
+                <cursorShape>ForbiddenCursor</cursorShape>
+               </property>
+               <property name="focusPolicy">
+                <enum>Qt::NoFocus</enum>
+               </property>
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="placeholderText">
+                <string>Enter some text in the &quot;Normal&quot; box to see how it looks when it is &quot;Bold&quot;. </string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_fontSample_faint">
+               <property name="text">
+                <string>Faint:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QLineEdit" name="lineEdit_fontSample_faint">
+               <property name="font">
+                <font>
+                 <kerning>false</kerning>
+                </font>
+               </property>
+               <property name="cursor">
+                <cursorShape>ForbiddenCursor</cursorShape>
+               </property>
+               <property name="focusPolicy">
+                <enum>Qt::NoFocus</enum>
+               </property>
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="placeholderText">
+                <string>Enter some text in the &quot;Normal&quot; box to see how it looks when it is &quot;Faint&quot;. </string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="label_fontSample_boldAndFaint">
+               <property name="text">
+                <string>Bold + Faint:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QLineEdit" name="lineEdit_fontSample_boldAndFaint">
+               <property name="font">
+                <font>
+                 <kerning>false</kerning>
+                </font>
+               </property>
+               <property name="cursor">
+                <cursorShape>ForbiddenCursor</cursorShape>
+               </property>
+               <property name="focusPolicy">
+                <enum>Qt::NoFocus</enum>
+               </property>
+               <property name="acceptDrops">
+                <bool>false</bool>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="placeholderText">
+                <string>Enter some text in the &quot;Normal&quot; box to see how it looks when it is &quot;Bold&quot; and &quot;Faint&quot;. </string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
          </layout>
@@ -4162,8 +4304,9 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>radioButton_userDictionary_profile</tabstop>
   <tabstop>radioButton_userDictionary_common</tabstop>
   <tabstop>fontComboBox</tabstop>
-  <tabstop>mNoAntiAlias</tabstop>
   <tabstop>fontSize</tabstop>
+  <tabstop>checkBox_antiAlias</tabstop>
+  <tabstop>lineEdit_fontSample_normal</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>

@@ -789,7 +789,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         // has a font size larger than the preset range offers?
         fontSize->setCurrentIndex(9); // default font is size 10, index 9.
     }
-
+    updateFontSampleDisplays(pHost->getDisplayFont());
     wrap_at_spinBox->setValue(pHost->mWrapAt);
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
 
@@ -892,7 +892,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
-    mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
+    checkBox_antiAlias->setChecked(!pHost->mNoAntiAlias);
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
@@ -1198,6 +1198,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     connect(fontComboBox, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setDisplayFont);
     connect(fontSize, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_setFontSize);
+    connect(lineEdit_fontSample_normal, &QLineEdit::textChanged, this, &dlgProfilePreferences::slot_updateFontSamplesText);
 
     connect(pushButton_black_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorBlack);
     connect(pushButton_Lblack_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapColorLightBlack);
@@ -1423,7 +1424,7 @@ void dlgProfilePreferences::clearHostDetails()
     mIsToLogInHtml->setChecked(false);
     mIsLoggingTimestamps->setChecked(false);
     commandLineMinimumHeight->clear();
-    mNoAntiAlias->setChecked(false);
+    checkBox_antiAlias->setChecked(false);
     mFORCE_MCCP_OFF->setChecked(false);
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
@@ -1855,6 +1856,7 @@ void dlgProfilePreferences::slot_setDisplayFont()
     }
     QFont newFont = fontComboBox->currentFont();
     newFont.setPointSize(mFontSize);
+    newFont.setWeight(TBuffer::csmFontWeight_normal);
 
     if (pHost->getDisplayFont() == newFont) {
         return;
@@ -1865,20 +1867,25 @@ void dlgProfilePreferences::slot_setDisplayFont()
     if (auto [validFont, errorMessage] = pHost->setDisplayFont(newFont); !validFont) {
         label_invalidFontError->show();
         return;
-    } else if (!QFontInfo(newFont).fixedPitch()) {
+    }
+
+    if (!QFontInfo(newFont).fixedPitch()) {
         label_variableWidthFontWarning->show();
     }
 
 #if defined(Q_OS_LINUX)
     // On Linux ensure that emojis are displayed in colour even if this font
     // doesn't support it:
-    QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
+    QFont::insertSubstitution(newFont.family(), qsl("Noto Color Emoji"));
 #endif
 
     auto mainConsole = pHost->mpConsole;
     if (!mainConsole) {
         return;
     }
+
+    // update the font samples when the font or size selections change
+    updateFontSampleDisplays(newFont);
 
     // update the display properly when font or size selections change.
     mainConsole->changeColors();
@@ -2849,7 +2856,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mLogDir = mLogDirPath;
         pHost->mLogFileName = lineEdit_logFileName->text();
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
-        pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
+        pHost->mNoAntiAlias = !checkBox_antiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
         pHost->mUseProxy = groupBox_proxy->isChecked();
@@ -4446,4 +4453,29 @@ void dlgProfilePreferences::slot_changeLargeAreaExitArrows(const bool state)
     }
 
     pHost->setLargeAreaExitArrows(state);
+}
+
+void dlgProfilePreferences::slot_updateFontSamplesText(const QString& newText)
+{
+    lineEdit_fontSample_bold->setText(newText);
+    lineEdit_fontSample_faint->setText(newText);
+    lineEdit_fontSample_boldAndFaint->setText(newText);
+}
+
+// The weights used need to match those in TTextEdit::drawGraphemeForeground(...)
+void dlgProfilePreferences::updateFontSampleDisplays(const QFont& newFont)
+{
+    lineEdit_fontSample_normal->setFont(newFont);
+
+    QFont faintFont = newFont;
+    faintFont.setWeight(TBuffer::csmFontWeight_faint);
+    lineEdit_fontSample_faint->setFont(faintFont);
+
+    QFont boldFont = newFont;
+    boldFont.setWeight(TBuffer::csmFontWeight_bold);
+    lineEdit_fontSample_bold->setFont(boldFont);
+
+    QFont boldAndFaintFont = newFont;
+    boldAndFaintFont.setWeight(TBuffer::csmFontWeight_boldAndFaint);
+    lineEdit_fontSample_boldAndFaint->setFont(boldAndFaintFont);
 }
