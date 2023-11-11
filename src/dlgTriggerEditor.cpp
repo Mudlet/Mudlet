@@ -345,7 +345,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_triggers->setHost(mpHost);
     treeWidget_triggers->header()->hide();
     treeWidget_triggers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_aliases->hide();
     treeWidget_aliases->setHost(mpHost);
@@ -354,7 +353,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_aliases->header()->hide();
     treeWidget_aliases->setRootIsDecorated(false);
     treeWidget_aliases->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_actions->hide();
     treeWidget_actions->setHost(mpHost);
@@ -363,7 +361,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->header()->hide();
     treeWidget_actions->setRootIsDecorated(false);
     treeWidget_actions->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_timers->hide();
     treeWidget_timers->setHost(mpHost);
@@ -372,7 +369,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_timers->header()->hide();
     treeWidget_timers->setRootIsDecorated(false);
     treeWidget_timers->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_variables->hide();
     treeWidget_variables->setHost(mpHost);
@@ -382,7 +378,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_variables->header()->hide();
     treeWidget_variables->setRootIsDecorated(false);
     treeWidget_variables->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_keys->hide();
     treeWidget_keys->setHost(mpHost);
@@ -391,7 +386,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_keys->header()->hide();
     treeWidget_keys->setRootIsDecorated(false);
     treeWidget_keys->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     treeWidget_scripts->hide();
     treeWidget_scripts->setHost(mpHost);
@@ -400,7 +394,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->header()->hide();
     treeWidget_scripts->setRootIsDecorated(false);
     treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
-    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
 
     QAction* viewTriggerAction = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
@@ -457,13 +450,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QAction* toggleActiveAction = new QAction(QIcon(qsl(":/icons/document-encrypt.png")), tr("Activate"), this);
     toggleActiveAction->setStatusTip(tr("Toggle Active or Non-Active Mode for Triggers, Scripts etc."));
     connect(toggleActiveAction, &QAction::triggered, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_triggers, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_aliases, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_timers, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_scripts, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_actions, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-    connect(treeWidget_keys, &QTreeWidget::itemActivated, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
-
 
     mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), QString(), this);
     mAddItem->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Add Item"), QKeySequence(QKeySequence::New).toString()));
@@ -674,18 +660,48 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     config->endChanges();
 
     connect(comboBox_searchTerms, qOverload<int>(&QComboBox::activated), this, &dlgTriggerEditor::slot_searchMudletItems);
+
+    // These have been grouped together so that the order in which the slots are
+    // called from the same signal is clearer - and for the
+    // QTreeWidget::itemClicked ones so that where the mInItemDoubleClick flag
+    // is cleared makes sense (in the last slot that uses that signal):
+    connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
+    connect(treeWidget_triggers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_triggers, &TTreeWidget::enterOrReturnPressed, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
     connect(treeWidget_triggers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_triggerSelected);
     connect(treeWidget_triggers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+
+    connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
+    connect(treeWidget_keys, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_keys, &TTreeWidget::enterOrReturnPressed, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
     connect(treeWidget_keys, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_keySelected);
     connect(treeWidget_keys, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+
+    connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
+    connect(treeWidget_timers, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_timers, &TTreeWidget::enterOrReturnPressed, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
     connect(treeWidget_timers, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_timerSelected);
     connect(treeWidget_timers, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+
+    connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
+    connect(treeWidget_scripts, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_scripts, &TTreeWidget::enterOrReturnPressed, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
     connect(treeWidget_scripts, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_scriptsSelected);
     connect(treeWidget_scripts, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+
+    connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
+    connect(treeWidget_aliases, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_aliases, &TTreeWidget::enterOrReturnPressed, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
     connect(treeWidget_aliases, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_aliasSelected);
     connect(treeWidget_aliases, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+
+    connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
+    connect(treeWidget_actions, &QTreeWidget::itemDoubleClicked, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
+    connect(treeWidget_actions, &TTreeWidget::enterOrReturnPressed, this, &dlgTriggerEditor::slot_toggleItemOrGroupActiveFlag);
     connect(treeWidget_actions, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_actionSelected);
     connect(treeWidget_actions, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
+
+    connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_saveSelectedItem);
     connect(treeWidget_variables, &QTreeWidget::itemClicked, this, &dlgTriggerEditor::slot_variableSelected);
     connect(treeWidget_variables, &QTreeWidget::itemChanged, this, &dlgTriggerEditor::slot_variableChanged);
     connect(treeWidget_variables, &QTreeWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_treeSelectionChanged);
@@ -5626,6 +5642,14 @@ void dlgTriggerEditor::slot_setupPatternControls(int type)
 
 void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
 {
+    if (mInItemDoubleClick) {
+        // Don't run the slot a second time if signalled by the second
+        // QTreeWidget::itemClicked that occurs after a
+        // QTreeWidget::itemDoubleClicked signal
+        mInItemDoubleClick = false;
+        return;
+    }
+
     if (!pItem) {
         return;
     }
@@ -5795,6 +5819,14 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
 
 void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
 {
+    if (mInItemDoubleClick) {
+        // Don't run the slot a second time if signalled by the second
+        // QTreeWidget::itemClicked that occurs after a
+        // QTreeWidget::itemDoubleClicked signal
+        mInItemDoubleClick = false;
+        return;
+    }
+
     if (!pItem) {
         // No details to show - so show the help message:
         clearAliasForm();
@@ -5846,6 +5878,14 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
 
 void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
 {
+    if (mInItemDoubleClick) {
+        // Don't run the slot a second time if signalled by the second
+        // QTreeWidget::itemClicked that occurs after a
+        // QTreeWidget::itemDoubleClicked signal
+        mInItemDoubleClick = false;
+        return;
+    }
+
     if (!pItem) {
         // No details to show - so show the help message:
         clearKeyForm();
@@ -5988,6 +6028,14 @@ void dlgTriggerEditor::slot_variableChanged(QTreeWidgetItem* pItem)
 
 void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
 {
+    if (mInItemDoubleClick) {
+        // Don't run the slot a second time if signalled by the second
+        // QTreeWidget::itemClicked that occurs after a
+        // QTreeWidget::itemDoubleClicked signal
+        mInItemDoubleClick = false;
+        return;
+    }
+
     if (!pItem ||treeWidget_variables->indexOfTopLevelItem(pItem) == 0) {
         // Null item or it is for the first row of the tree
         clearVarForm();
@@ -6184,6 +6232,14 @@ void dlgTriggerEditor::slot_variableSelected(QTreeWidgetItem* pItem)
 
 void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
 {
+    if (mInItemDoubleClick) {
+        // Don't run the slot a second time if signalled by the second
+        // QTreeWidget::itemClicked that occurs after a
+        // QTreeWidget::itemDoubleClicked signal
+        mInItemDoubleClick = false;
+        return;
+    }
+
     if (!pItem) {
         // No details to show - so show the help message:
         mpActionsMainArea->hide();
@@ -6334,6 +6390,14 @@ void dlgTriggerEditor::slot_treeSelectionChanged()
 
 void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
 {
+    if (mInItemDoubleClick) {
+        // Don't run the slot a second time if signalled by the second
+        // QTreeWidget::itemClicked that occurs after a
+        // QTreeWidget::itemDoubleClicked signal
+        mInItemDoubleClick = false;
+        return;
+    }
+
     if (!pItem) {
         // No details to show - so show the help message:
         mpScriptsMainArea->hide();
@@ -6389,6 +6453,14 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
 
 void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
 {
+    if (mInItemDoubleClick) {
+        // Don't run the slot a second time if signalled by the second
+        // QTreeWidget::itemClicked that occurs after a
+        // QTreeWidget::itemDoubleClicked signal
+        mInItemDoubleClick = false;
+        return;
+    }
+
     if (!pItem) {
         // No details to show - so show the help message:
         clearTimerForm();
@@ -8181,6 +8253,12 @@ void dlgTriggerEditor::slot_deleteItemOrGroup()
 
 void dlgTriggerEditor::slot_saveSelectedItem(QTreeWidgetItem* pItem)
 {
+    if (mInItemDoubleClick) {
+        // Don't run the slot a second time if signalled by the second
+        // QTreeWidget::itemClicked that occurs after a
+        // QTreeWidget::itemDoubleClicked signal
+        return;
+    }
     if (!pItem) {
         return;
     }

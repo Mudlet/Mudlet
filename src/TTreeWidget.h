@@ -42,6 +42,7 @@ public:
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
     void dropEvent(QDropEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
     void startDrag(Qt::DropActions supportedActions) override;
     bool dropMimeData(QTreeWidgetItem* parent, int index, const QMimeData* data, Qt::DropAction action) override;
     void rowsAboutToBeRemoved(const QModelIndex& parent, int start, int end) override;
@@ -60,6 +61,9 @@ public:
     void setIsKeyTree();
     void beginInsertRows(const QModelIndex& parent, int first, int last);
     void getAllChildren(QTreeWidgetItem*, QList<QTreeWidgetItem*>&);
+
+signals:
+    void enterOrReturnPressed();
 
 private:
     bool mIsDropAction;

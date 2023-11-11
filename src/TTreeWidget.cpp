@@ -387,3 +387,30 @@ bool TTreeWidget::dropMimeData(QTreeWidgetItem* parent, int index, const QMimeDa
 {
     return QTreeWidget::dropMimeData(parent, index, data, action);
 }
+
+// We want to override pressing the enter key so that we can emit a signal to
+// toggle the item's activation state if it is a TTreeWidget instance for one
+// of the Mudlet item types - but not the search result one:
+void TTreeWidget::keyPressEvent(QKeyEvent* event)
+{
+    int key = event->key();
+    Qt::KeyboardModifiers modifiers = event->modifiers();
+
+    if (   (!mIsActionTree && !mIsAliasTree && !mIsKeyTree && !mIsScriptTree && !mIsTimerTree && !mIsTriggerTree && !mIsVarTree)
+        || (modifiers &~Qt::KeypadModifier)
+        || (key != Qt::Key_Enter && key != Qt::Key_Return)) {
+
+        // This is not a Mudlet item tree (it is the search results one),
+        // or we have modifiers other than the keypad one
+        // or the key is not one of enter keys
+        // so do not handle the event ourselves, pass it to the original handler:
+        QTreeWidget::keyPressEvent(event);
+        return;
+    }
+
+    // Else we do have just the return or enter key being pressed on a Mudlet
+    // item tree - so raise that signal...
+    emit enterOrReturnPressed();
+    // ... and say that we are done with it:
+    event->setAccepted(true);
+}

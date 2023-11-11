@@ -591,6 +591,8 @@ private:
     QString descInactiveOffsetTimer;
     QString descNewFolder;
     QString descNewItem;
+
+    bool mInItemDoubleClick = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(dlgTriggerEditor::SearchOptions)
