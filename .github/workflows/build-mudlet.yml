@@ -178,7 +178,6 @@ jobs:
       # so install it in a format that works
 
     - name: (macOS) Stop for up to 10 minutes to allow SSH login to CB host
-      uses: actions/checkout@v4
       if: runner.os == 'macOS'
       uses: mxschmitt/action-tmate@v3
       timeout-minutes: 10
