@@ -177,10 +177,9 @@ jobs:
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
 
-    - name: (macOS) Stop for up to 10 minutes to allow SSH login to CB host
+    - name: (macOS) Stop for SSH login to CB host, login and logout to continue
       if: runner.os == 'macOS'
       uses: mxschmitt/action-tmate@v3
-      timeout-minutes: 10
 
     - name: (Linux) Install Lua
       uses: leafo/gh-actions-lua@v10
