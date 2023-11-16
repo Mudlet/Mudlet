@@ -358,6 +358,10 @@ jobs:
         AC_USERNAME: ${{secrets.APPLE_USERNAME}}
         AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
+    - name: (macOS) Stop for SSH login to CB host after building installer
+      if: runner.os == 'macOS'
+      uses: mxschmitt/action-tmate@v3
+
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v3
       if: env.UPLOAD_FILENAME
