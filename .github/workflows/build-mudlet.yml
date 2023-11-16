@@ -161,26 +161,6 @@ jobs:
         # Use latest available XCode
         echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
 
-      # Temporary things to debug an issue, see https://github.com/Mudlet/Mudlet/pull/6998
-    - name: (macOS) Test homebrew setup
-      if: runner.os == 'macOS'
-      env:
-        HOMEBREW_NO_AUTO_UPDATE: "ON"
-        HOMEBREW_NO_INSTALL_CLEANUP: "ON"
-      run: |
-        echo "Temporary - try and locate all instances of libzstd ..."
-        mdfind -name "libzstd"
-        echo "Temporary - try and locate all instances of libzip ..."
-        mdfind -name "libzip"
-        echo "... Temporary checks - end."
-
-      # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
-      # so install it in a format that works
-
-    - name: (macOS) Stop for SSH login to CB host, login and logout to continue
-      if: runner.os == 'macOS'
-      uses: mxschmitt/action-tmate@v3
-
     - name: (Linux) Install Lua
       uses: leafo/gh-actions-lua@v10
       if: runner.os == 'Linux'
