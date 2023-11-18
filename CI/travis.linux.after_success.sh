@@ -7,7 +7,7 @@ BUILD_DIR="${BUILD_FOLDER}"
 SOURCE_DIR="${GITHUB_WORKSPACE}"
 
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
-  public_test_build="true"
+  PUBLIC_TEST_BUILD="true"
 fi
 
 # we deploy only if told to deploy or we run a cron+clang+cmake job (for PTB)
@@ -51,7 +51,7 @@ then
   # unset LD_LIBRARY_PATH as it upsets linuxdeployqt
   export LD_LIBRARY_PATH=
 
-  if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
+  if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${PUBLIC_TEST_BUILD}" != "true" ]; then
     echo "== Creating a snapshot build =="
     ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
     cd "${BUILD_DIR}/../installers/generic-linux"
@@ -71,7 +71,7 @@ then
     DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
 
   else # ptb/release build
-    if [ "${public_test_build}" == "true" ]; then
+    if [ "${PUBLIC_TEST_BUILD}" == "true" ]; then
 
       if [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
         echo "== No new commits, aborting public test build generation =="
@@ -83,25 +83,25 @@ then
       echo "== Creating a release build =="
     fi
 
-    if [ "${public_test_build}" == "true" ]; then
+    if [ "${PUBLIC_TEST_BUILD}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
     else
       ./make-installer.sh -r "${VERSION}"
     fi
 
-    if [ "${public_test_build}" == "true" ]; then
+    if [ "${PUBLIC_TEST_BUILD}" == "true" ]; then
       chmod +x "Mudlet PTB.AppImage"
     else
       chmod +x "Mudlet.AppImage"
     fi
 
-    if [ "${public_test_build}" == "true" ]; then
+    if [ "${PUBLIC_TEST_BUILD}" == "true" ]; then
       tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "Mudlet PTB.AppImage"
     else
       tar -cvf "Mudlet-${VERSION}-linux-x64.AppImage.tar" "Mudlet.AppImage"
     fi
 
-    if [ "${public_test_build}" == "true" ]; then
+    if [ "${PUBLIC_TEST_BUILD}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir "upload/"
       mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "upload/"
@@ -122,7 +122,7 @@ then
     sudo npm install -g dblsqd-cli
     dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
-    if [ "${public_test_build}" == "true" ]; then
+    if [ "${PUBLIC_TEST_BUILD}" == "true" ]; then
       echo "=== Downloading release feed ==="
       downloadedfeed=$(mktemp)
       wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/linux/x86_64" --output-document="$downloadedfeed"
@@ -139,7 +139,7 @@ then
       dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach linux:x86_64 "${DEPLOY_URL}"
     fi
 
-    if [ "${public_test_build}" != "true" ]; then
+    if [ "${PUBLIC_TEST_BUILD}" != "true" ]; then
       # generate and deploy source tarball
       cd "${HOME}" || exit
       # get the archive script

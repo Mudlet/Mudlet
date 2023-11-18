@@ -344,13 +344,37 @@ jobs:
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
-    - name: (Linux/macOS) package Mudlet
+    - name: (Linux) package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
+        AC_USERNAME: ${{secrets.APPLE_USERNAME}}
+        AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
+
+    - name: (MacOS) package Mudlet (Part 1)
+      if: runner.os == 'macOS' && matrix.deploy == 'deploy'
+      run: ${{github.workspace}}/CI/travis.after_success.sh
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+        DEPLOY_PART: 1
+
+    - name: (MacOS) package Mudlet (Part 2)
+      if: runner.os == 'macOS' && matrix.deploy == 'deploy'
+      run: ${{github.workspace}}/CI/travis.after_success.sh
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        DEPLOY: ${{matrix.deploy}}
+        DEPLOY_PART: 2
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}

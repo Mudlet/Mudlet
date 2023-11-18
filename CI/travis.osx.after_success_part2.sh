@@ -31,15 +31,11 @@ BUILD_DIR="${BUILD_FOLDER}"
 SOURCE_DIR="${GITHUB_WORKSPACE}"
 
 if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
-  public_test_build="true"
+  PUBLIC_TEST_BUILD="true"
 fi
 
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
-
-  # get commit date now before we check out an change into another git repository
-  COMMIT_DATE=$(git show -s --pretty="tformat:%cI" | cut -d'T' -f1 | tr -d '-')
-  YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
   git clone https://github.com/SlySven/installers.git -b infrastructure_fix_MacOS_libzstd_1_dylib_crashes "${BUILD_DIR}/../installers"
 
@@ -61,54 +57,46 @@ if [ "${DEPLOY}" = "deploy" ]; then
     echo "----"
   fi
 
-  if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
-    echo "== Creating a snapshot build =="
-    appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
-    if [ -n "${GITHUB_REPOSITORY}" ]; then
-      mv "${BUILD_DIR}/src/mudlet.app" "${BUILD_DIR}/${appBaseName}.app"
-    else
-      mv "${BUILD_DIR}/Mudlet.app" "${BUILD_DIR}/${appBaseName}.app"
-    fi
-
-    ./make-installer.sh "${appBaseName}.app"
+  if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${PUBLIC_TEST_BUILD}" != "true" ]; then
+    # No need to repeat this
+    # echo "== Creating a snapshot build =="
+    APP_BASE_NAME="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
 
     if [ -n "$MACOS_SIGNING_PASS" ]; then
-      sign_and_notarize "${HOME}/Desktop/${appBaseName}.dmg"
+      sign_and_notarize "${HOME}/Desktop/${APP_BASE_NAME}.dmg"
     fi
 
     echo "=== ... later, via Github ==="
     # Move the finished file into a folder of its own, because we ask Github to upload contents of a folder
     mkdir "upload/"
-    mv "${HOME}/Desktop/${appBaseName}.dmg" "upload/"
+    mv "${HOME}/Desktop/${APP_BASE_NAME}.dmg" "upload/"
     {
       echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
-      echo "UPLOAD_FILENAME=${appBaseName}"
+      echo "UPLOAD_FILENAME=${APP_BASE_NAME}"
     } >> "$GITHUB_ENV"
-    DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
-  else # ptb/release build
-    app="${BUILD_DIR}/build/Mudlet.app"
-    if [ "${public_test_build}" == "true" ]; then
+    DEPLOY_URL="Github artifact, see https://github.com/${GITHUB_REPOSITORY}/runs/${GITHUB_RUN_ID}"
 
-      if [[ "${COMMIT_DATE}" -lt "${YESTERDAY_DATE}" ]]; then
-        echo "== No new commits, aborting public test build generation =="
+  else # ptb/release build
+    if [ "${PUBLIC_TEST_BUILD}" == "true" ]; then
+      if [ -f ${BUILD_DIR}/ptb_unchanged.txt ]; then
+        # No need to repeat this
+        # echo "== No new commits, aborting public test build generation =="
         exit 0
       fi
 
-      echo "== Creating a public test build =="
-      if [ -n "${GITHUB_REPOSITORY}" ]; then
-        mv "${BUILD_DIR}/src/mudlet.app" "${BUILD_DIR}/Mudlet PTB.app"
-      else
-        mv "$app" "source/build/Mudlet PTB.app"
+      if [ ! -f ${BUILD_DIR}/ptb_changed.txt ]; then
+        echo "== Error, PTB build is missing a ${BUILD_DIR}/ptb_changed.txt or ${BUILD_DIR}/ptb_unchanged.txt file, aborting public test build generation =="
+        exit 0
       fi
 
-      app="${BUILD_DIR}/Mudlet PTB.app"
-
-      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
+      # No need to repeat this
+      #echo "== Creating a public test build =="
 
       if [ ! -z "$MACOS_SIGNING_PASS" ]; then
         sign_and_notarize "${HOME}/Desktop/Mudlet PTB.dmg"
       fi
 
+      # Give the PTB a unique name
       mv "${HOME}/Desktop/Mudlet PTB.dmg" "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"
 
       echo "=== Setting up for Github upload ==="
@@ -136,13 +124,14 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
       # release registration and uploading will be manual for the time being
     else
-      echo "== Creating a release build =="
+      # No need to repeat this
+      # echo "== Creating a release build =="
 
-      ./make-installer.sh -r "${VERSION}" "$app"
       if [ ! -z "$MACOS_SIGNING_PASS" ]; then
         sign_and_notarize "${HOME}/Desktop/Mudlet.dmg"
       fi
 
+      # Give the release a unique name
       mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
 
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="

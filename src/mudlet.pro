@@ -1603,7 +1603,8 @@ OTHER_FILES += \
     ../CI/travis.linux.after_success.sh \
     ../CI/travis.linux.before_install.sh \
     ../CI/travis.linux.install.sh \
-    ../CI/travis.osx.after_success.sh \
+    ../CI/travis.osx.after_success_part1.sh \
+    ../CI/travis.osx.after_success_part2.sh \
     ../CI/travis.osx.before_install.sh \
     ../CI/travis.osx.install.sh \
     ../CI/travis.set-build-info.sh \
