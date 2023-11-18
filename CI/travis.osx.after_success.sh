@@ -102,31 +102,15 @@ if [ "${DEPLOY}" = "deploy" ]; then
       fi
 
       app="${BUILD_DIR}/Mudlet PTB.app"
-    else
-      echo "== Creating a release build =="
-    fi
 
-    if [ "${public_test_build}" == "true" ]; then
       ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
-    else
-      ./make-installer.sh -r "${VERSION}" "$app"
-    fi
 
-    if [ ! -z "$MACOS_SIGNING_PASS" ]; then
-      if [ "${public_test_build}" == "true" ]; then
+      if [ ! -z "$MACOS_SIGNING_PASS" ]; then
         sign_and_notarize "${HOME}/Desktop/Mudlet PTB.dmg"
-      else
-        sign_and_notarize "${HOME}/Desktop/Mudlet.dmg"
       fi
-    fi
 
-    if [ "${public_test_build}" == "true" ]; then
       mv "${HOME}/Desktop/Mudlet PTB.dmg" "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"
-    else
-      mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
-    fi
 
-    if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir "upload/"
       mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" "upload/"
@@ -135,17 +119,11 @@ if [ "${DEPLOY}" = "deploy" ]; then
         echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-macos"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
-    else
-      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
-    fi
 
-    # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
-    npm install -g dblsqd-cli
-    dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
+      # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
+      npm install -g dblsqd-cli
+      dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
 
-    if [ "${public_test_build}" == "true" ]; then
       echo "=== Downloading release feed ==="
       downloadedfeed=$(mktemp)
       wget "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/mac/x86_64" --output-document="$downloadedfeed"
@@ -158,6 +136,23 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
       # release registration and uploading will be manual for the time being
     else
+      echo "== Creating a release build =="
+
+      ./make-installer.sh -r "${VERSION}" "$app"
+      if [ ! -z "$MACOS_SIGNING_PASS" ]; then
+        sign_and_notarize "${HOME}/Desktop/Mudlet.dmg"
+      fi
+
+      mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
+
+      echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+      scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+
+      # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
+      npm install -g dblsqd-cli
+      dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "${DBLSQD_USER}" -p "${DBLSQD_PASS}"
+
       echo "=== Registering release with Dblsqd ==="
       dblsqd push -a mudlet -c release -r "${VERSION}" -s mudlet --type "standalone" --attach mac:x86_64 "${DEPLOY_URL}"
     fi
