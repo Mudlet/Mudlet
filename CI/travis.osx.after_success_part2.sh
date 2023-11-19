@@ -37,8 +37,7 @@ fi
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
 
-  git clone https://github.com/SlySven/installers.git -b infrastructure_fix_MacOS_libzstd_1_dylib_crashes "${BUILD_DIR}/../installers"
-
+  # The following was retrieved by a git clone in part1:
   cd "${BUILD_DIR}/../installers/osx"
 
   # setup macOS keychain for code signing on development builds only,
