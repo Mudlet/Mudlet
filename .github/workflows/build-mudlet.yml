@@ -345,7 +345,7 @@ jobs:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
     - name: (Linux) package Mudlet
-      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      if: runner.os == 'Linux' && matrix.deploy == 'deploy'
       run: ${{github.workspace}}/CI/travis.after_success.sh
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
