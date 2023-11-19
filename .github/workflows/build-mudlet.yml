@@ -367,6 +367,10 @@ jobs:
         DEPLOY: ${{matrix.deploy}}
         DEPLOY_PART: 1
 
+    - name: (MacOS) Stop for SSH login to CB host, login and logout to continue
+      uses: mxschmitt/action-tmate@v3
+      if: runner.os == 'macOS' && matrix.deploy == 'deploy'
+
     - name: (MacOS) package Mudlet (Part 2)
       if: runner.os == 'macOS' && matrix.deploy == 'deploy'
       run: ${{github.workspace}}/CI/travis.after_success.sh
