@@ -37,7 +37,7 @@ fi
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
 
-  # The following was retrieved by a git clone in part1:
+  # The following was retrieved by a git clone in part 1:
   cd "${BUILD_DIR}/../installers/osx"
 
   # setup macOS keychain for code signing on development builds only,
