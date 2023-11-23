@@ -16,7 +16,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
   COMMIT_DATE=$(git show -s --pretty="tformat:%cI" | cut -d'T' -f1 | tr -d '-')
   YESTERDAY_DATE=$(date -v-1d '+%F' | tr -d '-')
 
-  git clone https://github.com/SlySven/installers.git -b infrastructure_fix_MacOS_libzstd_1_dylib_crashes "${BUILD_DIR}/../installers"
+  git clone https://github.com/SlySven/installers.git -b Infrastructure_update_liblzma_version "${BUILD_DIR}/../installers"
 
   cd "${BUILD_DIR}/../installers/osx"
 
