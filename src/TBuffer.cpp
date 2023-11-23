@@ -888,7 +888,10 @@ COMMIT_LINE:
                  | (TChar::alternateFontFlag(mAltFont))
                  | (mConcealed ? TChar::Concealed : TChar::None));
 
-        TChar c(mForeGroundColor, mBackGroundColor, attributeFlags);
+        TChar c((mpHost && mpHost->getBoldIsBright() && mMayShift8ColorSet && mBold) ? mForeGroundColorLight
+                                                                                     : mForeGroundColor,
+                mBackGroundColor,
+                attributeFlags);
 
         if (mpHost->mMxpClient.isInLinkMode()) {
             c.mLinkIndex = mLinkStore.getCurrentLinkID();
@@ -1468,6 +1471,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 0:
                     mForeGroundColor = pHost->mFgColor;
                     mBackGroundColor = pHost->mBgColor;
+                    mMayShift8ColorSet = false;
                     mBold = false;
                     mFaint = false;
                     mItalics = false;
@@ -1581,29 +1585,49 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 30:
                     mForeGroundColor = mBlack;
+                    mForeGroundColorLight = mLightBlack;
+                    mMayShift8ColorSet = true;
                     break;
                 case 31:
                     mForeGroundColor = mRed;
+                    mForeGroundColorLight = mLightRed;
+                    mMayShift8ColorSet = true;
                     break;
                 case 32:
                     mForeGroundColor = mGreen;
+                    mForeGroundColorLight = mLightGreen;
+                    mMayShift8ColorSet = true;
                     break;
                 case 33:
                     mForeGroundColor = mYellow;
+                    mForeGroundColorLight = mLightYellow;
+                    mMayShift8ColorSet = true;
                     break;
                 case 34:
                     mForeGroundColor = mBlue;
+                    mForeGroundColorLight = mLightBlue;
+                    mMayShift8ColorSet = true;
                     break;
                 case 35:
                     mForeGroundColor = mMagenta;
+                    mForeGroundColorLight = mLightMagenta;
+                    mMayShift8ColorSet = true;
                     break;
                 case 36:
                     mForeGroundColor = mCyan;
+                    mForeGroundColorLight = mLightCyan;
+                    mMayShift8ColorSet = true;
                     break;
                 case 37:
                     mForeGroundColor = mWhite;
+                    mForeGroundColorLight = mLightWhite;
+                    mMayShift8ColorSet = true;
                     break;
                 case 38: {
+                    // We are not now using the basic 8 colors so we won't
+                    // attempt to use the Bold attribute to shift those to the
+                    // next 8 out of the first 16:
+                    mMayShift8ColorSet = false;
                     // We only have single elements so we will need to steal the
                     // needed number from the remainder:
                     if (paraIndex + 1 >= total) {
@@ -1697,6 +1721,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 39: //default foreground color
                     mForeGroundColor = pHost->mFgColor;
+                    mMayShift8ColorSet = false;
                     break;
                 case 40:
                     mBackGroundColor = mBlack;
@@ -1842,27 +1867,35 @@ void TBuffer::decodeSGR(const QString& sequence)
                 //    break;
                 case 90:
                     mForeGroundColor = mLightBlack;
+                    mMayShift8ColorSet = false;
                     break;
                 case 91:
                     mForeGroundColor = mLightRed;
+                    mMayShift8ColorSet = false;
                     break;
                 case 92:
                     mForeGroundColor = mLightGreen;
+                    mMayShift8ColorSet = false;
                     break;
                 case 93:
                     mForeGroundColor = mLightYellow;
+                    mMayShift8ColorSet = false;
                     break;
                 case 94:
                     mForeGroundColor = mLightBlue;
+                    mMayShift8ColorSet = false;
                     break;
                 case 95:
                     mForeGroundColor = mLightMagenta;
+                    mMayShift8ColorSet = false;
                     break;
                 case 96:
                     mForeGroundColor = mLightCyan;
+                    mMayShift8ColorSet = false;
                     break;
                 case 97:
                     mForeGroundColor = mLightWhite;
+                    mMayShift8ColorSet = false;
                     break;
                 case 100:
                     mBackGroundColor = mLightBlack;

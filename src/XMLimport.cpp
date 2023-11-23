@@ -957,6 +957,13 @@ void XMLimport::readHost(Host* pHost)
         pHost->setLargeAreaExitArrows(false);
     }
 
+    if (attributes().hasAttribute(qsl("BoldIsBright"))) {
+        pHost->mBoldIsBright = (attributes().value(qsl("BoldIsBright")) == YES);
+    } else {
+        // The default, backwards compatible, option is true, though false would be "better":
+        pHost->mBoldIsBright = true;
+    }
+
     if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
         mpHost->mMapInfoContributors.clear();
     }

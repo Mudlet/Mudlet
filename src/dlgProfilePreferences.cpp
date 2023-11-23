@@ -1158,6 +1158,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
+    checkBox_boldIsBright->setChecked(pHost->getBoldIsBright());
+
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
     // groupBox_iconsAndToolbars is NOT dependent on pHost - leave it alone
@@ -3048,6 +3050,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
+        pHost->mBoldIsBright = checkBox_boldIsBright->isChecked();
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
 

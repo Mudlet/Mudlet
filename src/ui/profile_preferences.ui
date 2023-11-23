@@ -736,7 +736,7 @@
          <property name="title">
           <string>Font</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_font" rowstretch="1,1,1,1,2">
+         <layout class="QGridLayout" name="gridLayout_groupBox_font" rowstretch="1,1,1,1">
           <item row="0" column="0">
            <widget class="QLabel" name="label_30">
             <property name="text">
@@ -2035,6 +2035,16 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QPushButton" name="pushButton_resetColors">
             <property name="text">
              <string>Reset all colors to default</string>
+            </property>
+           </widget>
+          </item>
+          <item row="14" column="0" colspan="4">
+           <widget class="QCheckBox" name="checkBox_boldIsBright">
+            <property name="toolTip">
+             <string>&lt;p&gt;Server uses BOLD to make Light 8 colors (only for some 16 Color MUDs)&lt;/p&gt;&lt;p&gt;Some older Game Servers support eight different colors which are selected by using the original eight &quot;Set Graphic Rendition&quot; &lt;tt&gt; &amp;lt;SGR&amp;gt; 30&lt;/tt&gt; (black) to &lt;tt&gt;37&lt;/tt&gt; (white)&lt;/tt&gt; ANSI ESC color codes and combining those with the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; (bold or more intense) code to provide a second set of eight codes for sixteen in total. This checkbox causes this use of the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; code however it should not be used if the Game Server only uses eight colors or selects the &quot;brighter&quot; eight colors with &lt;tt&gt;&amp;lt;SGR&amp;gt; 90&lt;/tt&gt; (light black) to &lt;tt&gt;&amp;lt;SGR&amp;gt; 97&lt;/tt&gt; (light white) {and &lt;tt&gt;100&lt;/tt&gt; to &lt;tt&gt;107&lt;/tt&gt; for the same as a background} uses sixteeen selects the second set of eight colors with alternate &lt;/p&gt;&lt;p&gt;&lt;i&gt;Older versions of Mudlet had code that effectively had this option permanently enabled. However nowadays it interferes with using the BOLD attribute to provide &lt;b&gt;bold&lt;/b&gt; text alongside the less often used FAINT attribute to provide &lt;span style=&quot; font-weight: 200&quot;&gt;faint&lt;/span&gt; and &lt;span style=&quot; font-weight: 600&quot;&gt;demi-bold&lt;/span&gt; text effects.&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>BOLD is Bright</string>
             </property>
            </widget>
           </item>
