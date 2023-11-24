@@ -2043,10 +2043,10 @@ mmp.echo("We're connected to Ashyria.")</script>
 						<integer>2</integer>
 					</regexCodePropertyList>
 				</Trigger>
-				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="yes" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 					<name>Auto Pause on vehicles</name>
 					<script>if mmp.autowalking then
-  mmp.pause()
+  tempTimer(1, function() mmp.pause() end)
 end
 </script>
 					<triggerType>0</triggerType>
@@ -5926,7 +5926,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "23.10.1"
+local newversion = "23.10.2"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -12169,8 +12169,12 @@ end</script>
     local f, s, changelog = io.open(filename)
     if f then changelog = f:read("*a"); io.close(f) end
 
+    echo("\n")
+    mmp.echon("------------------[ Mapper Script Update ]------------------")
+    mmp.echon(" The mapper script was updated from &lt;orange&gt;"..tostring(mmp.version).."&lt;reset&gt; -&gt; &lt;green&gt;"..tostring(mmp.newmapperversion).."&lt;reset&gt;!")
     mmp.echon("")
-    echoLink("The mapper script was updated! Would you like to install the update? Click here if so.", "mmp.downloadmapperscript()", "Changelog for the latest ("..tostring(mmp.version).." -&gt; "..tostring(mmp.newmapperversion)..") update:\n"..changelog, true)
+    cechoLink(" Would you like to install the update? &lt;u&gt;&lt;ForestGreen&gt;Click here if so&lt;/u&gt;&lt;reset&gt;.", "mmp.downloadmapperscript()", "Changelog for the latest ("..tostring(mmp.version).." -&gt; "..tostring(mmp.newmapperversion)..") update:\n"..changelog, true)
+    echo("\n\n")
 
   elseif filename == mmp.crowdchangelogfile then   -- changelog for the crowdmap
     local f, s = io.open(filename)
@@ -12192,16 +12196,14 @@ end</script>
 
 	mmp.crowdchangelog = env.changelog
 
-    mmp.echon("The crowdmap map was ")
-    setUnderline(true)
-    echoLink("updated", '', "New version: "..tostring(mmp.newversion)..", previous version: "..(mmp.oldversion or "(none)"), true)
-    setUnderline(false)
-    echo(" (")
-    setUnderline(true)
-    echoLink("see full changelog", "mmp.showcrowdchangelog()", 'View the full changelog for mappers', true)
-    setUnderline(false)
-    echo("). Latest improvement is: "..tostring(mmp.crowdchangelog and mmp.crowdchangelog[#mmp.crowdchangelog] or '?')..".\n")
-
+    echo("\n")
+    mmp.echon("------------------[ Map Update ]------------------")
+    mmp.echon(" The crowdmap map was updated from &lt;orange&gt;"..(mmp.oldversion or "(none)").." &lt;reset&gt;-&gt; &lt;green&gt;"..tostring(mmp.newversion).."&lt;reset&gt;!")
+    mmp.echon(" Want to see the full changelog?")
+    cechoLink(" &lt;ForestGreen&gt;Click here&lt;reset&gt;.", "mmp.showcrowdchangelog()", 'View the full changelog for mappers', true)
+    mmp.echon(" Latest changes were: &lt;LightSkyBlue&gt;"..tostring(mmp.crowdchangelog and mmp.crowdchangelog[#mmp.crowdchangelog] or '?')..".\n")
+    echo("\n\n")
+    
     mmp.downloadcrowdmap(mmp.newversion)
 
   elseif filename == mmp.crowdmapfile then    -- crowdmap map
