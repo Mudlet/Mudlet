@@ -1518,7 +1518,7 @@ function map.setConfigs(key, val, sub_key)
     if tonumber(val) then val = tonumber(val) end
     if not toggle then
         if key == "map_window" then
-            if map.configs.map_window[sub_key] then
+            if map.configs.map_window[sub_key] ~= nil then
                 map.configs.map_window[sub_key] = val
                 map.echo(string.format("Map config %s set to: %s", sub_key, tostring(val)))
             else
