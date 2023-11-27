@@ -2571,8 +2571,8 @@ void dlgProfilePreferences::slot_copyMap()
 
         // Most of these we'll just get for debugging!
         QString otherProfileFileUsed;
-        int otherProfileRoomCount;
-        int otherProfileAreaCount;
+        qsizetype otherProfileRoomCount;
+        qsizetype otherProfileAreaCount;
         int otherProfileVersion;
         int otherProfileCurrentRoomId; // What we are looking for!
         if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(),

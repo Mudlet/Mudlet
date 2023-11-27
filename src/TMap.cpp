@@ -1115,7 +1115,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-         const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
+        const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
                              "for this version of Mudlet. Supported are only formats up to version %2.")
                                  .arg(QString::number(saveVersion), QString::number(mMaxVersion));
         appendErrorMsgWithNoLf(errMsg, false);
@@ -1168,7 +1168,11 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mIsOnlyMapSymbolFontToBeUsed;
     }
 
-    ofs << mpRoomDB->getAreaMap().size();
+    // Qt 6 changed the return type of QMap<T1, T2>::size() to qsizetype which
+    // is an int64 rather than the int32 of Qt5 - but we need to use the latter
+    // to retain compatibility:
+    ofs << static_cast<qint32>(mpRoomDB->getAreaMap().size());
+
     // serialize area table
     QMapIterator<int, TArea*> itAreaList(mpRoomDB->getAreaMap());
     while (itAreaList.hasNext()) {
@@ -1212,7 +1216,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             // Also we now have temporary labels, so we need to count the
             // permanent ones first to use as the count for ones to store:
             const auto permanentLabelsList{pA->getPermanentLabelIds()};
-            ofs << permanentLabelsList.size();
+            ofs << static_cast<qint32>(permanentLabelsList.size());
             QListIterator<int> itMapLabelId(permanentLabelsList);
             while (itMapLabelId.hasNext()) {
                 const auto labelID = itMapLabelId.next();
@@ -1255,14 +1259,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 areasWithPermanentLabels.insert(itArea.key(), itArea.value());
             }
         }
-        ofs << areasWithPermanentLabels.count();
+        ofs << static_cast<qint32>(areasWithPermanentLabels.count());
         QMapIterator<int, TArea*> itAreaWithLabels(areasWithPermanentLabels);
         while (itAreaWithLabels.hasNext()) {
             itAreaWithLabels.next();
             auto pArea = itAreaWithLabels.value();
             auto permanentLabelIdsList = pArea->getPermanentLabelIds();
             // number of (permanent) labels in this area:
-            ofs << permanentLabelIdsList.size();
+            ofs << static_cast<qint32>(permanentLabelIdsList.size());
+
             // only used to assign labels to the area:
             ofs << itAreaWithLabels.key();
             QListIterator<int> itPerminentMapLabelIds(permanentLabelIdsList);
@@ -1902,12 +1907,12 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 // Reads the newest map file from the profile and retrieves some stats and data,
 // including the current player room - was mRoomId in 12 to pre-18 map files and
 // is in mRoomIdHash since then so that it can be reinserted into a map that is
-// copied across (if the room STILL exists!  This is to avoid a replacement map
+// copied across (if the room STILL exists)!  This is to avoid a replacement map
 // (copied/shared) from one profile to another from repositioning the other
 // player location. Though this is written as a member function it is intended
 // also for use to retrieve details from maps from OTHER profiles, importantly
 // it does (or should) NOT interact with this TMap instance...!
-bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullptr, int* fileVersion = nullptr, int* roomId = nullptr, int* areaCount = nullptr, int* roomCount = nullptr)
+bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullptr, int* fileVersion = nullptr, int* roomId = nullptr, qsizetype* areaCount = nullptr, qsizetype* roomCount = nullptr)
 {
     if (profile.isEmpty()) {
         return false;
@@ -2008,13 +2013,14 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion >= 14) {
-        int areaSize;
-        ifs >> areaSize;
+        int readAreaSize;
+        ifs >> readAreaSize;
+        qsizetype areaSize = static_cast<qsizetype>(readAreaSize);
         if (areaCount) {
             *areaCount = areaSize;
         }
         // read each area
-        for (int i = 0; i < areaSize; i++) {
+        for (qsizetype i = 0; i < areaSize; ++i) {
             TArea pA(nullptr, nullptr);
             int areaID;
             ifs >> areaID;
