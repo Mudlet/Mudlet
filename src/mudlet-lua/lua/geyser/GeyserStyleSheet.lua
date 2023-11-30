@@ -1,7 +1,11 @@
---- Represents a stylesheet used for styling Labels
--- Based primarily off the work of Vadi on CSSMan (https://forums.mudlet.org/viewtopic.php?f=6&t=3502)
+--- Represents a stylesheet used for styling labels.
+-- Based primarily off the work of Vadi on CSSMan <a href="https://forums.mudlet.org/viewtopic.php?f=6&t=3502">CSSMan</a>.
 -- This version extends it with recursive inheritance of properties, storing the target of the stylesheet (QLabel, QPlainTextEdit, etc), and parsing string stylesheets for them.
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Geyser.StyleSheet">Mudlet Manual</a>
+-- @author guy
+-- @author Vadi
 -- @module Geyser.StyleSheet
+
 Geyser.StyleSheet = {}
 Geyser.StyleSheet.__index = Geyser.StyleSheet
 
@@ -149,7 +153,7 @@ function Geyser.StyleSheet:setParent(parent)
 end
 
 --- Allows you to set a target for this stylesheet to effect, such as "QPlainTextEdit" etc.
--- @param The target to apply this stylesheet to. if not provided will clear the target.
+-- @param target the target to apply this stylesheet to. if not provided will clear the target
 function Geyser.StyleSheet:setTarget(target)
   if target == nil then
     self.target = nil

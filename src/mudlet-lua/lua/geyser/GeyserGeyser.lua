@@ -1,12 +1,6 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
-
---==================================================
--- Create the Geyser Root Container
---==================================================
+--- Geyser namespace.
+-- @author guy
+-- @module Geyser.Geyser
 
 --- Create the Geyser namespace.
 -- Geyser is considered to be a "container window" for the purposes
@@ -57,7 +51,8 @@ end
 
 --- Add a window to the list that this container manages.
 -- this is the basis for the 2 add functions
--- @param window The window to add this container
+-- @param window the window to add this container
+-- @param cons table of Geyser window options such as name, width, and height
 function Geyser:base_add (window, cons)
   cons = cons or window -- 'cons' is optional
 
@@ -84,8 +79,7 @@ end
 --- Add a window to the list that this container manages.
 -- The window will be shown after added to the container
 -- @param window The window to add this container
--- @param cons
--- @param passOn manages the inheritance of this add function
+-- @param cons table of Geyser window options such as name, width, and height
 function Geyser:add (window, cons)
   self:base_add(window, cons)
   window:show()
@@ -96,8 +90,8 @@ end
 -- container is hidden already
 -- used by Adjustable.Container and changeContainer but can be used by any container using the new2 constructor
 -- @param window The window to add this container
--- @param cons
--- @param passOn manages the inheritance of this add function. If set to true this add function will be inherited by all children.
+-- @param cons table of Geyser window options such as name, width, and height
+-- @param passAdd2 manages the inheritance of this add function. If set to true this add function will be inherited by all children.
 -- @param exclude manages types which have to be excluded from overwriting their add function as they have their own
 function Geyser:add2 (window, cons, passAdd2, exclude)
   cons = cons or window -- 'cons' is optional
@@ -158,7 +152,8 @@ end
 
 --- Removes a window from the parent it is in and puts it in a new one
 -- This is only used internally.
--- @param window The new parents windowname
+-- @param self
+-- @param windowname The new parents windowname
 local function setMyWindow(self, windowname)
   windowname = windowname or "main"
   local name
@@ -184,7 +179,8 @@ end
 
 --- Removes all containers windows from the parent they are in and puts them in a new one
 -- This is only used internally
--- @param window The new parents windowname
+-- @param self
+-- @param windowname The new parents windowname
 local function setContainerWindow(self, windowname)
   self.windowname = windowname
   --Iterate through windows has a given order and prevents problems with z-coordinate

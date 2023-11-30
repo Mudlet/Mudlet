@@ -1,22 +1,24 @@
 --- Represents a clickable button. Can be a single clickable action or a two state button
 -- which alternates between the two states when clicked.
--- @class table
--- @name Geyser.Button
--- @field twoState If true, the button will be treated as a two state button, with 'up' and 'down' states.
--- @field state 'up' or 'down' depending on button state for two state buttons. Will always be 'up' if a single state button.
--- @field tooltip The text to show when the button is hovered over. For two state buttons will be used for the 'up' tooltip
--- @field downTooltip The text to show when the button is hovered over while in the 'down' state.
--- @field toolTipDuration The amount of time for the tooltip to show. Used for both 'up' and 'down' states.
--- @field clickCommand The command to send when the button is clicked. For two state buttons, used when clicking in the 'up' state. Will be skipped if clickFunction is defined.
--- @field clickFunction Optional function to run when button clicked. For two state buttons, used when clicking in the 'up' state. If defined takes precedence over clickCommand.
--- @field downCommand The command to send when the two state button is clicked while in the 'down' state.
--- @field downFunction The function to run when the two state button is clicked while in the 'down' state.
--- @field downColor The color to make the button while it is in the 'down' state. Superceded by downStyle
--- @field downStyle The stylesheet to use for the button while it is in the 'down' state. Supercedes downColor
--- @field color The color to make the button. If a two state button, will be used for the 'up' state. Superceded by style
--- @field style The stylesheet to use for the button. If a two state button, will be used for the 'up' state. Supercedes color
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Geyser.Button">Mudlet Manual</a>
+-- @author demonnic
+-- @module Geyser.Button
+
+--- A clickable button.
+-- @field name The name of the button.
+-- @field height The height of the button in pixels.
+-- @field width The height of the button in pixels.
+-- @field color The color to make the button. If a two state button, will be used for the 'up' state. Superceded by 'style' which is valid and optional stylesheet to use for the button. If a two state button, will be used for the 'up' state.
+-- @field downColor The color to make the button while it is in the 'down' state. Superceded by 'downStyle' which is valid and optional stylesheet to use for the button while it is in the 'down' state.
 -- @field msg The text to put on the button. If a two state button, will be used for the 'up' state.
 -- @field downMsg The text to put on the button in the 'down' state.
+-- @field tooltip The text to show when the button is hovered over. For two state buttons will be used for the 'up' tooltip
+-- @field downTooltip The text to show when the button is hovered over while in the 'down' state.
+-- @field downCommand The command to send when the two state button is clicked while in the 'down' state. 'downFunction' is also valid and optional function to run when the two state button is clicked while in the 'down' state.
+-- @field clickCommand The command to send when the button is clicked. For two state buttons, used when clicking in the 'up' state. Will be skipped if 'clickFunction' is defined.  'clickFunction' is also valid and optional function to run when button clicked. For two state buttons, used when clicking in the 'up' state. If defined takes precedence over clickCommand.
+-- @field twoState If true, the button will be treated as a two state button, with 'up' and 'down' states.
+-- @field state 'up' or 'down' depending on button state for two state buttons. Will always be 'up' if a single state button.
+-- @field toolTipDuration The amount of time for the tooltip to show. Used for both 'up' and 'down' states.
 Geyser.Button = {
   name            = "GeyserButtonClass",
   height          = 50,

@@ -1,15 +1,12 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
+--- Represents an abstract window class designed to be subclassed for windows
+-- that are built on Mudlet primitives, like labels.
+-- @author guy
+-- @module Geyser.Window
 
 local cparse = Geyser.Color.parse
 
 --- Represents an abstract window class designed to be subclassed for windows
 -- that are built on Mudlet primitives, like labels.
--- @class table
--- @name Geyser.Window
 -- @field message The message last *echo()'d to this window. Default is “”.
 -- @field bgColor Text background color, default "white"
 -- @field fgColor Text foreground color, default "black"
@@ -110,8 +107,8 @@ end
 -- @param bold The bolded status. 1 is bold, 0 is normal.
 -- @param underline The underlined status. 1 is underlined, 0 is normal.
 -- @param italics The italicized status. 1 is italicized, 0 is normal.
-function Geyser.Window:setTextFormat(r1, g1, b1, r1, g2, b2, bold, underline, italics)
-  setTextFormat(self.name, r1, g1, b1, r1, g2, b2, bold, underline, italics)
+function Geyser.Window:setTextFormat(r1, g1, b1, r2, g2, b2, bold, underline, italics)
+  setTextFormat(self.name, r1, g1, b1, r2, g2, b2, bold, underline, italics)
 end
 
 --- Sets bolded text.
