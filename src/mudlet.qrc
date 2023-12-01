@@ -152,6 +152,7 @@
         <file>icons/mudlet_room_exits.png</file>
         <file>icons/mume.png</file>
         <file>icons/mudren.png</file>
+        <file>icons/mute.png</file>
         <file>icons/offsettimer-off.png</file>
         <file>icons/offsettimer-off-grey.png</file>
         <file>icons/offsettimer-on.png</file>
@@ -186,6 +187,7 @@
         <file>icons/tag_checkbox_checked_grey.png</file>
         <file>icons/tools-report-bug.png</file>
         <file>icons/tools-wizard.png</file>
+        <file>icons/unmute.png</file>
         <file>icons/utilities-file-archiver.png</file>
         <file>icons/variable.png</file>
         <file>icons/variables.png</file>

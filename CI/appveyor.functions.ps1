@@ -212,14 +212,14 @@ function InstallMsys() {
 }
 
 function InstallBoost([string] $outputLocation = "C:\Libraries\") {
-  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.gz/download" "boost.tar.gz" $true
+  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
   ExtractTar "$workingBaseDir\boost.tar.gz" "$workingBaseDir"
   Step "Copying folder"
-  Move-Item "$workingBaseDir\boost_1_77_0" "$outputLocation" >> "$logFile" 2>&1
+  Move-Item "$workingBaseDir\boost_1_83_0" "$outputLocation" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
@@ -335,9 +335,9 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  DownloadFile "https://libzip.org/download/libzip-1.7.3.tar.gz" "libzip.tar.gz"
+  DownloadFile "https://github.com/nih-at/libzip/releases/download/v1.10.1/libzip-1.10.1.tar.gz" "libzip.tar.gz"
   ExtractTar "$workingBaseDir\libzip.tar.gz" "$workingBaseDir\libzip"
-  Set-Location "$workingBaseDir\libzip\libzip-1.7.3"
+  Set-Location "$workingBaseDir\libzip\libzip-1.10.1"
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating libzip build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1
@@ -487,7 +487,7 @@ function CheckAndInstallMsys(){
 }
 
 function CheckAndInstallBoost(){
-    CheckAndInstall "Boost" "C:\Libraries\boost_1_77_0\bootstrap.bat" { InstallBoost }
+    CheckAndInstall "Boost" "C:\Libraries\boost_1_83_0\bootstrap.bat" { InstallBoost }
 }
 
 function CheckAndInstallQt(){

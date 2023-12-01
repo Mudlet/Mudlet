@@ -1059,9 +1059,9 @@ bool TMap::findPath(int from, int to)
                 mWeightList.clear(); // Reset any partial results...
                 return false;
             }
-            unsigned const int previousRoomId = (locations.at(previousVertex)).id;
+            const unsigned int previousRoomId = (locations.at(previousVertex)).id;
             QPair<unsigned int, unsigned int> const edgeRoomIdPair = qMakePair(previousRoomId, currentRoomId);
-            route const r = edgeHash.value(edgeRoomIdPair);
+            const route r = edgeHash.value(edgeRoomIdPair);
             mPathList.prepend(currentRoomId);
             Q_ASSERT_X(r.cost > 0, "TMap::findPath()", "broken path {QPair made from source and target roomIds for a path step NOT found in QHash table of all possible steps.}");
             // Above was found to be triggered by the situation described in:
@@ -1071,21 +1071,30 @@ bool TMap::findPath(int from, int to)
             // the do{} loop - added a test for this so should bail out if it
             // happens - Slysven
             mWeightList.prepend(r.cost);
-            switch (r.direction) {  // TODO: Eventually this can instead drop in I18ned values set by country or user preference!
-            case DIR_NORTH:        mDirList.prepend( tr( "n", "This translation converts the direction that DIR_NORTH codes for to a direction string that the game server will accept!" ) );      break;
-            case DIR_NORTHEAST:    mDirList.prepend( tr( "ne", "This translation converts the direction that DIR_NORTHEAST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_EAST:         mDirList.prepend( tr( "e", "This translation converts the direction that DIR_EAST codes for to a direction string that the game server will accept!" ) );       break;
-            case DIR_SOUTHEAST:    mDirList.prepend( tr( "se", "This translation converts the direction that DIR_SOUTHEAST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_SOUTH:        mDirList.prepend( tr( "s", "This translation converts the direction that DIR_SOUTH codes for to a direction string that the game server will accept!" ) );      break;
-            case DIR_SOUTHWEST:    mDirList.prepend( tr( "sw", "This translation converts the direction that DIR_SOUTHWEST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_WEST:         mDirList.prepend( tr( "w", "This translation converts the direction that DIR_WEST codes for to a direction string that the game server will accept!" ) );       break;
-            case DIR_NORTHWEST:    mDirList.prepend( tr( "nw", "This translation converts the direction that DIR_NORTHWEST codes for to a direction string that the game server will accept!" ) ); break;
-            case DIR_UP:           mDirList.prepend( tr( "up", "This translation converts the direction that DIR_UP codes for to a direction string that the game server will accept!" ) );        break;
-            case DIR_DOWN:         mDirList.prepend( tr( "down", "This translation converts the direction that DIR_DOWN codes for to a direction string that the game server will accept!" ) );    break;
-            case DIR_IN:           mDirList.prepend( tr( "in", "This translation converts the direction that DIR_IN codes for to a direction string that the game server will accept!" ) );        break;
-            case DIR_OUT:          mDirList.prepend( tr( "out", "This translation converts the direction that DIR_OUT codes for to a direction string that the game server will accept!" ) );      break;
-            case DIR_OTHER:        mDirList.prepend( r.specialExitName );  break;
-            default:               qWarning() << "TMap::findPath(" << from << "," << to << ") WARN: found route between rooms (from id:" << previousRoomId << ", to id:" << currentRoomId << ") with an invalid DIR_xxxx code:" << r.direction << " - the path will not be valid!" ;
+            switch (r.direction) {
+                /*
+                 * Do not translate the directions into the user's locale here,
+                 * that is to be done in the profile specific doSpeedwalk()
+                 * function of the mapper package as the language of the MUD
+                 * need not be the native language of the user - translating
+                 * them here makes the mapper harder to code as it has to
+                 * accommodate all the possible languages the GUI of Mudlet was
+                 * configured to support!
+                 */
+            case DIR_NORTH:        mDirList.prepend(qsl("n"));             break;
+            case DIR_NORTHEAST:    mDirList.prepend(qsl("ne"));            break;
+            case DIR_EAST:         mDirList.prepend(qsl("e"));             break;
+            case DIR_SOUTHEAST:    mDirList.prepend(qsl("se"));            break;
+            case DIR_SOUTH:        mDirList.prepend(qsl("s"));             break;
+            case DIR_SOUTHWEST:    mDirList.prepend(qsl("sw"));            break;
+            case DIR_WEST:         mDirList.prepend(qsl("w"));             break;
+            case DIR_NORTHWEST:    mDirList.prepend(qsl("nw"));            break;
+            case DIR_UP:           mDirList.prepend(qsl("up"));            break;
+            case DIR_DOWN:         mDirList.prepend(qsl("down"));          break;
+            case DIR_IN:           mDirList.prepend(qsl("in"));            break;
+            case DIR_OUT:          mDirList.prepend(qsl("out"));           break;
+            case DIR_OTHER:        mDirList.prepend(r.specialExitName);    break;
+            default:            qWarning().nospace().noquote() << "TMap::findPath(" << from << ", " << to << ") WARNING - found route between rooms (from id: " << previousRoomId << ", to id: " << currentRoomId << ") with an invalid DIR_xxxx code: " << r.direction << " - the path will not be valid!";
             }
             currentVertex = previousVertex;
             currentRoomId = previousRoomId;
@@ -1106,7 +1115,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         saveVersion = 0;
     } else if (saveVersion > mMaxVersion) {
         saveVersion = mMaxVersion;
-         const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
+        const QString errMsg = tr("[ ERROR ] - The format version \"%1\" you are trying to save the map with is too new\n"
                              "for this version of Mudlet. Supported are only formats up to version %2.")
                                  .arg(QString::number(saveVersion), QString::number(mMaxVersion));
         appendErrorMsgWithNoLf(errMsg, false);
@@ -1159,7 +1168,11 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << mIsOnlyMapSymbolFontToBeUsed;
     }
 
-    ofs << mpRoomDB->getAreaMap().size();
+    // Qt 6 changed the return type of QMap<T1, T2>::size() to qsizetype which
+    // is an int64 rather than the int32 of Qt5 - but we need to use the latter
+    // to retain compatibility:
+    ofs << static_cast<qint32>(mpRoomDB->getAreaMap().size());
+
     // serialize area table
     QMapIterator<int, TArea*> itAreaList(mpRoomDB->getAreaMap());
     while (itAreaList.hasNext()) {
@@ -1203,7 +1216,7 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             // Also we now have temporary labels, so we need to count the
             // permanent ones first to use as the count for ones to store:
             const auto permanentLabelsList{pA->getPermanentLabelIds()};
-            ofs << permanentLabelsList.size();
+            ofs << static_cast<qint32>(permanentLabelsList.size());
             QListIterator<int> itMapLabelId(permanentLabelsList);
             while (itMapLabelId.hasNext()) {
                 const auto labelID = itMapLabelId.next();
@@ -1246,14 +1259,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 areasWithPermanentLabels.insert(itArea.key(), itArea.value());
             }
         }
-        ofs << areasWithPermanentLabels.count();
+        ofs << static_cast<qint32>(areasWithPermanentLabels.count());
         QMapIterator<int, TArea*> itAreaWithLabels(areasWithPermanentLabels);
         while (itAreaWithLabels.hasNext()) {
             itAreaWithLabels.next();
             auto pArea = itAreaWithLabels.value();
             auto permanentLabelIdsList = pArea->getPermanentLabelIds();
             // number of (permanent) labels in this area:
-            ofs << permanentLabelIdsList.size();
+            ofs << static_cast<qint32>(permanentLabelIdsList.size());
+
             // only used to assign labels to the area:
             ofs << itAreaWithLabels.key();
             QListIterator<int> itPerminentMapLabelIds(permanentLabelIdsList);
@@ -1893,12 +1907,12 @@ bool TMap::restore(QString location, bool downloadIfNotFound)
 // Reads the newest map file from the profile and retrieves some stats and data,
 // including the current player room - was mRoomId in 12 to pre-18 map files and
 // is in mRoomIdHash since then so that it can be reinserted into a map that is
-// copied across (if the room STILL exists!  This is to avoid a replacement map
+// copied across (if the room STILL exists)!  This is to avoid a replacement map
 // (copied/shared) from one profile to another from repositioning the other
 // player location. Though this is written as a member function it is intended
 // also for use to retrieve details from maps from OTHER profiles, importantly
 // it does (or should) NOT interact with this TMap instance...!
-bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullptr, int* fileVersion = nullptr, int* roomId = nullptr, int* areaCount = nullptr, int* roomCount = nullptr)
+bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullptr, int* fileVersion = nullptr, int* roomId = nullptr, qsizetype* areaCount = nullptr, qsizetype* roomCount = nullptr)
 {
     if (profile.isEmpty()) {
         return false;
@@ -1999,13 +2013,14 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion >= 14) {
-        int areaSize;
-        ifs >> areaSize;
+        int readAreaSize;
+        ifs >> readAreaSize;
+        qsizetype areaSize = static_cast<qsizetype>(readAreaSize);
         if (areaCount) {
             *areaCount = areaSize;
         }
         // read each area
-        for (int i = 0; i < areaSize; i++) {
+        for (qsizetype i = 0; i < areaSize; ++i) {
             TArea pA(nullptr, nullptr);
             int areaID;
             ifs >> areaID;
