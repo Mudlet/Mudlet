@@ -345,6 +345,9 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
             comboBox_guiLanguage->addItem(qsl("No translations available!"));
         }
     }
+    groupBox_sgrCodesSeen->setChecked(false);
+    slot_toggleSgrCodesSeenVisibilty(false);
+    connect(groupBox_sgrCodesSeen, &QGroupBox::toggled, this, &dlgProfilePreferences::slot_toggleSgrCodesSeenVisibilty);
 
     setupPasswordsMigration();
 
@@ -446,6 +449,7 @@ void dlgProfilePreferences::disableHostDetails()
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(false);
+    groupBox_sgrCodesSeen->setEnabled(false);
 
     // ===== tab_mapper =====
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
@@ -568,6 +572,7 @@ void dlgProfilePreferences::enableHostDetails()
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(true);
+    groupBox_sgrCodesSeen->setEnabled(true);
 
     // ===== tab_mapper =====
     // most of groupBox_mapFiles is disabled but there is ONE checkBox that
@@ -1168,6 +1173,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Identify which Profile we are showing the settings for:
     setWindowTitle(tr("Profile preferences - %1").arg(pHost->getName()));
 
+    // Populate the SGR codes seen checkBoxes in that groupBox
+    slot_updateSgrCodeFlags();
+
     // CHECKME: Have moved ALL the connects, where possible, to the end so that
     // none are triggered by the setup operations...
     connect(pushButton_command_line_foreground_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setCommandLineFgColor);
@@ -1196,6 +1204,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(pushButton_command_background_color, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setCommandBgColor);
 
     connect(pushButton_resetColors, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetColors);
+    connect(pHost->mpConsole, &TMainConsole::signal_sgrFlagsChanged, this, &dlgProfilePreferences::slot_updateSgrCodeFlags);
+    connect(toolButton_resetSgrCodeDetection, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetSgrCodeFlags);
     connect(reset_colors_button_2, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_resetMapColors);
 
     connect(fontComboBox, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setDisplayFont);
@@ -1313,6 +1323,12 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(pushButton_lWhite, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(pushButton_resetColors, &QAbstractButton::clicked, nullptr, nullptr);
+    if (!mpHost.isNull() && !mpHost->mpConsole.isNull()) {
+        // They are still around and not null - if they were nulled prior to this
+        // then this connection would automatically have gone away:
+        disconnect(mpHost->mpConsole, &TMainConsole::signal_sgrFlagsChanged, this, &dlgProfilePreferences::slot_updateSgrCodeFlags);
+    }
+    disconnect(toolButton_resetSgrCodeDetection, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(reset_colors_button_2, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(fontComboBox, qOverload<const QFont&>(&QFontComboBox::currentFontChanged), nullptr, nullptr);
@@ -1406,6 +1422,9 @@ void dlgProfilePreferences::clearHostDetails()
     fontSize->clear();
 
     setColors();
+    // The absence of a valid host will cause this to clear all the checkBoxes
+    // in the groupBox_sgrCodesSeen:
+    slot_updateSgrCodeFlags();
     setColors2();
 
     wrap_at_spinBox->clear();
@@ -4481,4 +4500,71 @@ void dlgProfilePreferences::updateFontSampleDisplays(const QFont& newFont)
     QFont boldAndFaintFont = newFont;
     boldAndFaintFont.setWeight(TBuffer::csmFontWeight_boldAndFaint);
     lineEdit_fontSample_boldAndFaint->setFont(boldAndFaintFont);
+}
+
+void dlgProfilePreferences::slot_resetSgrCodeFlags()
+{
+    if (!mpHost.isNull() && !mpHost.data()->mpConsole.isNull()) {
+        auto& buffer = mpHost.data()->mpConsole.data()->buffer;
+        buffer.resetSgrCodesSeen();
+    }
+
+    slot_updateSgrCodeFlags();
+}
+
+void dlgProfilePreferences::slot_toggleSgrCodesSeenVisibilty(const bool statusCheckBoxesVisible)
+{
+    checkBox_16MBgColors->setVisible(statusCheckBoxesVisible);
+    checkBox_16MFgColors->setVisible(statusCheckBoxesVisible);
+    checkBox_256BgColors->setVisible(statusCheckBoxesVisible);
+    checkBox_256FgColors->setVisible(statusCheckBoxesVisible);
+    checkBox_additional8BgColors->setVisible(statusCheckBoxesVisible);
+    checkBox_additional8FgColors->setVisible(statusCheckBoxesVisible);
+    checkBox_altFont->setVisible(statusCheckBoxesVisible);
+    checkBox_bold->setVisible(statusCheckBoxesVisible);
+    checkBox_basic8BgColors->setVisible(statusCheckBoxesVisible);
+    checkBox_basic8FgColors->setVisible(statusCheckBoxesVisible);
+    checkBox_blinking->setVisible(statusCheckBoxesVisible);
+    checkBox_concealed->setVisible(statusCheckBoxesVisible);
+    checkBox_faint->setVisible(statusCheckBoxesVisible);
+}
+
+void dlgProfilePreferences::slot_updateSgrCodeFlags()
+{
+    if (mpHost.isNull() || mpHost.data()->mpConsole.isNull()) {
+        // No Host pointer so no data to show
+        groupBox_sgrCodesSeen->setChecked(false);
+        groupBox_sgrCodesSeen->setVisible(false);
+
+        checkBox_16MBgColors->setChecked(false);
+        checkBox_16MFgColors->setChecked(false);
+        checkBox_256BgColors->setChecked(false);
+        checkBox_256FgColors->setChecked(false);
+        checkBox_additional8BgColors->setChecked(false);
+        checkBox_additional8FgColors->setChecked(false);
+        checkBox_altFont->setChecked(false);
+        checkBox_bold->setChecked(false);
+        checkBox_basic8BgColors->setChecked(false);
+        checkBox_basic8FgColors->setChecked(false);
+        checkBox_blinking->setChecked(false);
+        checkBox_concealed->setChecked(false);
+        checkBox_faint->setChecked(false);
+        return;
+    }
+
+    auto& buffer = mpHost.data()->mpConsole.data()->buffer;
+    const auto sgrFlagsState = buffer.getSgrCodesSeen();
+    checkBox_16MBgColors->setChecked(sgrFlagsState & TBuffer::Sgr_48_2);
+    checkBox_16MFgColors->setChecked(sgrFlagsState & TBuffer::Sgr_38_2);
+    checkBox_256BgColors->setChecked(sgrFlagsState & TBuffer::Sgr_48_5);
+    checkBox_256FgColors->setChecked(sgrFlagsState & TBuffer::Sgr_38_5);
+    checkBox_additional8BgColors->setChecked(sgrFlagsState & TBuffer::Sgr_100_107);
+    checkBox_additional8FgColors->setChecked(sgrFlagsState & TBuffer::Sgr_90_97);
+    checkBox_altFont->setChecked(sgrFlagsState & TBuffer::Sgr_AltFont);
+    checkBox_bold->setChecked(sgrFlagsState & TBuffer::Sgr_Bold);
+    checkBox_basic8BgColors->setChecked(sgrFlagsState & TBuffer::Sgr_40_47);
+    checkBox_basic8FgColors->setChecked(sgrFlagsState & TBuffer::Sgr_30_37);
+    checkBox_blinking->setChecked(sgrFlagsState & TBuffer::Sgr_Blinking);
+    checkBox_concealed->setChecked(sgrFlagsState & TBuffer::Sgr_Conceal);
+    checkBox_faint->setChecked(sgrFlagsState & TBuffer::Sgr_Faint);
 }

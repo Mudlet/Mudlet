@@ -172,6 +172,13 @@ private slots:
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
     void slot_updateFontSamplesText(const QString&);
+    // Used by the preference dialog to reset the TBuffer::mSgrCodesSeen flags
+    // for the Main Console:
+    void slot_resetSgrCodeFlags();
+    // Used by the TMainConsole::buffer to update the status display of the
+    // above mentioned flags:
+    void slot_updateSgrCodeFlags();
+    void slot_toggleSgrCodesSeenVisibilty(const bool);
 
 
 signals:

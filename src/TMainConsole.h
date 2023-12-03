@@ -132,6 +132,9 @@ signals:
     // class, second argument is true for a lower priority indication when
     // locally produced information is painted into main console
     void signal_newDataAlert(const QString&, bool isLowerPriorityChange = false);
+    // Signal to update the status display of these flags if the preferences
+    // dialog is open - actaully emitted from the TBuffer class:
+    void signal_sgrFlagsChanged();
 
 
 private:
