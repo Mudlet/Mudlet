@@ -1,8 +1,6 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
+--- Assorted Geyser utilities.
+-- @author guy
+-- @module Geyser.Util
 
 --- Generate a window name unique to this session.
 function Geyser.nameGen (type)

@@ -167,47 +167,7 @@
              <number>0</number>
             </property>
             <item>
-             <widget class="QPushButton" name="pushButton_shiftLeft">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>20</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>30</width>
-                <height>20</height>
-               </size>
-              </property>
-              <property name="baseSize">
-               <size>
-                <width>0</width>
-                <height>0</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <weight>50</weight>
-                <bold>false</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string notr="true">⯇</string>
-              </property>
-              <property name="autoRepeat">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButton_shiftUp">
+             <widget class="QToolButton" name="toolButton_shiftLeft">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -233,15 +193,18 @@
                </size>
               </property>
               <property name="text">
-               <string notr="true">⯆</string>
+               <string />
               </property>
               <property name="autoRepeat">
                <bool>true</bool>
               </property>
+              <property name="arrowType">
+               <enum>Qt::LeftArrow</enum>
+              </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_shiftDown">
+             <widget class="QToolButton" name="toolButton_shiftUp">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -267,15 +230,55 @@
                </size>
               </property>
               <property name="text">
-               <string notr="true">⯅</string>
+               <string />
               </property>
               <property name="autoRepeat">
                <bool>true</bool>
               </property>
+              <property name="arrowType">
+               <enum>Qt::DownArrow</enum>
+              </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_shiftRight">
+             <widget class="QToolButton" name="toolButton_shiftDown">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="baseSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string />
+              </property>
+              <property name="autoRepeat">
+               <bool>true</bool>
+              </property>
+              <property name="arrowType">
+               <enum>Qt::UpArrow</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="toolButton_shiftRight">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -301,15 +304,18 @@
                </size>
               </property>
               <property name="text">
-               <string notr="true">⯈</string>
+               <string />
               </property>
               <property name="autoRepeat">
                <bool>true</bool>
               </property>
+              <property name="arrowType">
+               <enum>Qt::RightArrow</enum>
+              </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_shiftZup">
+             <widget class="QToolButton" name="toolButton_shiftZup">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>25</horstretch>
@@ -336,7 +342,6 @@
               </property>
               <property name="font">
                <font>
-                <weight>75</weight>
                 <bold>true</bold>
                </font>
               </property>
@@ -346,7 +351,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="pushButton_shiftZdown">
+             <widget class="QToolButton" name="toolButton_shiftZdown">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                 <horstretch>0</horstretch>
@@ -373,7 +378,6 @@
               </property>
               <property name="font">
                <font>
-                <weight>75</weight>
                 <bold>true</bold>
                </font>
               </property>
