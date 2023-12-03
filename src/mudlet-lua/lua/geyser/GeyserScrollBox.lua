@@ -1,13 +1,11 @@
---------------------------------------
--- --
--- The Geyser Layout Manager by guy --
---  ScrollBox support by Edru     --
--- --
---------------------------------------
+--- Represents a ScrollBox primitive.
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Add_a_scrollable_box">Mudlet Manual</a>
+
+-- @author guy
+-- @author Edru
+-- @module Geyser.ScrollBox
 
 --- Represents a ScrollBox primitive
--- @class table
--- @name Geyser.ScrollBox
 Geyser.ScrollBox = Geyser.Window:new({
     name = "ScrollBoxClass"
 })
