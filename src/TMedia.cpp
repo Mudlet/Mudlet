@@ -200,7 +200,21 @@ void TMedia::stopMedia(TMediaData& mediaData)
                 && pPlayer.getMediaData().getMediaPriority() >= mediaData.getMediaPriority()) {
                 continue;
             }
-        }
+
+            if ((mediaData.getMediaFadeAway() == TMediaData::MediaFadeAwayEnabled || mediaData.getMediaFadeOut() != TMediaData::MediaFadeNotSet)
+                && pPlayer.getMediaData().getMediaFinish() == TMediaData::MediaFinishNotSet) {
+                const int endPosition = pPlayer.getMediaData().getMediaEnd();
+                const int duration = pPlayer.getMediaPlayer()->duration();
+                const int currentPosition = pPlayer.getMediaPlayer()->position();
+                const int fadeOut = pPlayer.getMediaData().getMediaFadeOut();
+                const int remainingDuration = (endPosition != TMediaData::MediaEndNotSet ? endPosition : duration) - currentPosition;
+
+                int finishDuration = fadeOut != TMediaData::MediaFadeNotSet ? fadeOut : std::min(remainingDuration, 5000);
+
+                pPlayer.getMediaData().setMediaFinish(finishDuration);
+                continue;
+            }
+       }
 
         pPlayer.getMediaPlayer()->stop();
     }
@@ -826,38 +840,54 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
     disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
     connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, this, [=](qint64 progress) {
         const int volume = pPlayer.getMediaData().getMediaVolume();
-        const int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
-        const int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
+        const int duration = pPlayer.getMediaPlayer()->duration();
+        const int fadeInDuration = pPlayer.getMediaData().getMediaFadeIn();
+        const int fadeOutDuration = pPlayer.getMediaData().getMediaFadeOut();
         const int startPosition = pPlayer.getMediaData().getMediaStart();
-        const bool fadeInUsed = fadeInPosition != TMediaData::MediaFadeNotSet;
-        const bool fadeOutUsed = fadeOutPosition != TMediaData::MediaFadeNotSet;
+        const int endPosition = pPlayer.getMediaData().getMediaEnd();
+        const int finishPosition = pPlayer.getMediaData().getMediaFinish();
+        const bool fadeInUsed = fadeInDuration != TMediaData::MediaFadeNotSet;
+        const bool fadeOutUsed = fadeOutDuration != TMediaData::MediaFadeNotSet;
+        const bool endUsed = endPosition != TMediaData::MediaEndNotSet;
+        const bool finishUsed = finishPosition != TMediaData::MediaFinishNotSet;
+        const int relativeDuration = finishUsed ? finishPosition : endUsed ? endPosition : duration;
+        const int relativeFadeInPosition = fadeInUsed ? startPosition + fadeInDuration : TMediaData::MediaFadeNotSet;
+        const int relativeFadeOutPosition = fadeOutUsed ? relativeDuration - fadeOutDuration : TMediaData::MediaFadeNotSet;
         bool actionTaken = false;
 
-        if (fadeInUsed) {
-            if (progress < fadeInPosition) {
-                double const fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((fadeInPosition - startPosition) * 1.0);
+        qWarning() << "progress = " << progress << "volume = " << volume << " duration = " << duration << " fadeInDuration = " << fadeInDuration << " fadeOutDuration = " << fadeOutDuration << " startPosition = " << startPosition << " endPosition = " << endPosition << " finishPosition = " << finishPosition << " fadeInUsed = " << fadeInUsed << " fadeOutUsed = " << fadeOutUsed << " endUsed = " << endUsed << " finishUsed = " << finishUsed << " relativeDuration = " << relativeDuration << " relativeFadeInPosition = " << relativeFadeInPosition << " relativeFadeOutPosition = " << relativeFadeOutPosition;
 
-                pPlayer.setVolume(qRound(fadeInVolume));
-                actionTaken = true;
-            } else if (progress == fadeInPosition) {
-                pPlayer.setVolume(volume);
-                actionTaken = true;
+        if (progress > relativeDuration && (finishUsed || endUsed)) {
+            pPlayer.getMediaPlayer()->stop();
+        } else {
+            if (fadeInUsed) {
+                if (progress < relativeFadeInPosition) {
+                    double const fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((relativeFadeInPosition - startPosition) * 1.0);
+
+                    pPlayer.setVolume(qRound(fadeInVolume));
+                    qWarning() << "progress = " << "new volume = " << qRound(fadeInVolume);
+                    actionTaken = true;
+                } else if (progress == relativeFadeInPosition) {
+                    pPlayer.setVolume(volume);
+                    qWarning() << "progress = " << "new volume = " << volume;
+                    actionTaken = true;
+                }
             }
-        }
 
-        if (!actionTaken && fadeOutUsed && progress > 0) {
-            const int duration = pPlayer.getMediaPlayer()->duration();
+            if (!actionTaken && fadeOutUsed && progress > 0) {
+                if (progress > relativeFadeOutPosition) {
+                    double const fadeOutVolume = static_cast<double>(volume * (relativeDuration - progress)) / static_cast<double>(fadeOutDuration * 1.0);
 
-            if (progress > duration - fadeOutPosition) {
-                double const fadeOutVolume = static_cast<double>(volume * (duration - progress)) / static_cast<double>(fadeOutPosition * 1.0);
-
-                pPlayer.setVolume(qRound(fadeOutVolume));
-                actionTaken = true;
+                    pPlayer.setVolume(qRound(fadeOutVolume));
+                    qWarning() << "progress = " << "new volume = " << qRound(fadeOutVolume);
+                    actionTaken = true;
+                }
             }
-        }
 
-        if (!actionTaken && ((fadeInUsed && progress > fadeInPosition) || (fadeOutUsed && progress < fadeOutPosition))) {
-            pPlayer.setVolume(volume); // Added to support multiple continue = true calls of same music
+            if (!actionTaken && ((fadeInUsed && progress > relativeFadeInPosition) || (fadeOutUsed && progress < relativeFadeOutPosition))) {
+                pPlayer.setVolume(volume); // Added to support multiple continue = true calls of same music
+                qWarning() << "progress = " << "new volume = " << volume;
+            }
         }
     });
 
@@ -1252,6 +1282,22 @@ int TMedia::parseJSONByMediaStart(QJsonObject& json)
     return mediaStart;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#end
+int TMedia::parseJSONByMediaEnd(QJsonObject& json)
+{
+    int mediaEnd = TMediaData::MediaEndNotSet;
+
+    auto mediaEndJSON = json.value(qsl("end"));
+
+    if (mediaEndJSON != QJsonValue::Undefined && mediaEndJSON.isString() && !mediaEndJSON.toString().isEmpty()) {
+        mediaEnd = mediaEndJSON.toString().toInt();
+    } else if (mediaEndJSON != QJsonValue::Undefined && mediaEndJSON.toInt()) {
+        mediaEnd = mediaEndJSON.toInt();
+    }
+
+    return mediaEnd;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
 int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 {
@@ -1345,6 +1391,27 @@ QString TMedia::parseJSONByMediaKey(QJsonObject& json)
 
     return mediaKey;
 }
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadeaway
+TMediaData::MediaFadeAway TMedia::parseJSONByMediaFadeAway(QJsonObject& json)
+{
+    TMediaData::MediaFadeAway mediaFadeAway = TMediaData::MediaFadeAwayDefault;
+
+    auto mediaFadeAwayJSON = json.value(qsl("fadeaway"));
+
+    if (mediaFadeAwayJSON != QJsonValue::Undefined && mediaFadeAwayJSON.isString() && !mediaFadeAwayJSON.toString().isEmpty()) {
+        if (mediaFadeAwayJSON.toString() == "true") {
+            mediaFadeAway = TMediaData::MediaFadeAwayEnabled;
+        } else {
+            mediaFadeAway = TMediaData::MediaFadeAwayDefault;
+        }
+    } else if (mediaFadeAwayJSON != QJsonValue::Undefined && mediaFadeAwayJSON.toBool(true)) {
+        mediaFadeAway = TMediaData::MediaFadeAwayEnabled;
+    }
+
+    return mediaFadeAway;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
 void TMedia::parseJSONForMediaDefault(QJsonObject& json)
 {
@@ -1406,6 +1473,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaFadeIn(TMedia::parseJSONByMediaFadeIn(json));
     mediaData.setMediaFadeOut(TMedia::parseJSONByMediaFadeOut(json));
     mediaData.setMediaStart(TMedia::parseJSONByMediaStart(json));
+    mediaData.setMediaEnd(TMedia::parseJSONByMediaEnd(json));
     mediaData.setMediaLoops(TMedia::parseJSONByMediaLoops(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
@@ -1424,6 +1492,8 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
+    mediaData.setMediaFadeAway(TMedia::parseJSONByMediaFadeAway(json));
+    mediaData.setMediaFadeOut(TMedia::parseJSONByMediaFadeOut(json));
 
     TMedia::stopMedia(mediaData);
 }

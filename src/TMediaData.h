@@ -64,8 +64,14 @@ public:
         MediaContinueRestart = false,
         MediaContinueDefault = true};
 
+    enum MediaFadeAway {
+        MediaFadeAwayEnabled = true,
+        MediaFadeAwayDefault = false};
+
     static const int MediaFadeNotSet = 0;
     static const int MediaStartDefault = 0;
+    static const int MediaEndNotSet = 0;
+    static const int MediaFinishNotSet = 0;
 
     int getMediaProtocol() const { return mMediaProtocol; }
     void setMediaProtocol(int mediaProtocol) { mMediaProtocol = mediaProtocol; }
@@ -136,6 +142,26 @@ public:
             mMediaStart = mediaStart;
         }
     }
+    int getMediaEnd() const { return mMediaEnd; }
+    void setMediaEnd(int mediaEnd)
+    {
+        if (mediaEnd < TMediaData::MediaEndNotSet) {
+            mMediaEnd = TMediaData::MediaEndNotSet;
+        } else {
+            mMediaEnd = mediaEnd;
+        }
+    }
+    bool getMediaFadeAway() const { return mMediaFadeAway; }
+    void setMediaFadeAway(bool mediaFadeAway) { mMediaFadeAway = mediaFadeAway; }
+    int getMediaFinish() const { return mMediaFinish; }
+    void setMediaFinish(int mediaFinish)
+    {
+        if (mediaFinish < TMediaData::MediaFinishNotSet) {
+            mMediaFinish = TMediaData::MediaFinishNotSet;
+        } else {
+            mMediaFinish = mediaFinish;
+        }
+    }
     QString getMediaAbsolutePathFileName() const { return mMediaAbsolutePathFileName; }
     void setMediaAbsolutePathFileName(QString mediaAbsolutePathFileName) { mMediaAbsolutePathFileName = mediaAbsolutePathFileName; }
 
@@ -147,9 +173,12 @@ private:
     int mMediaFadeIn = MediaFadeNotSet;
     int mMediaFadeOut = MediaFadeNotSet;
     int mMediaStart = MediaStartDefault;
+    int mMediaEnd = MediaEndNotSet;
     int mMediaLoops = MediaLoopsDefault;
     int mMediaPriority = MediaPriorityNotSet;
     bool mMediaContinue = MediaContinueDefault;
+    bool mMediaFadeAway = MediaFadeAwayDefault;
+    int mMediaFinish = MediaFinishNotSet;
     QString mMediaTag;
     QString mMediaUrl;
     QString mMediaKey;
