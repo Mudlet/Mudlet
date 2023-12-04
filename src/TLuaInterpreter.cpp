@@ -13926,6 +13926,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             script.append('\\');
             break;
         case '\"':
+            script.append('\\');
             script.append('\"');
             break;
         default:
