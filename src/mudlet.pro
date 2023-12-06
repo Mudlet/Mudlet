@@ -572,6 +572,7 @@ SOURCES += \
     EAction.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
+    GifTracker.cpp \
     Host.cpp \
     HostManager.cpp \
     ircmessageformatter.cpp \
@@ -687,6 +688,7 @@ HEADERS += \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
+    GifTracker.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
