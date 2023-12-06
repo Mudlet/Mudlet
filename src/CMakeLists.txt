@@ -84,6 +84,7 @@ set(mudlet_SRCS
     EAction.cpp
     exitstreewidget.cpp
     FontManager.cpp
+    GifTracker.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -237,6 +238,7 @@ set(mudlet_HDRS
     EAction.h
     exitstreewidget.h
     FontManager.h
+    GifTracker.h
     Host.h
     HostManager.h
     ircmessageformatter.h
