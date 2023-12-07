@@ -269,6 +269,7 @@
     "highlightRoom": "highlightRoom( roomID, color1Red, color1Green, color1Blue, color2Red, color2Green, color2Blue, highlightRadius, color1Alpha, color2Alpha)",
     "hinsertLink": "hinsertLink([windowName], text, command, hint, true)",
     "hinsertPopup": "hinsertPopup([windowName], text, {commands}, {hints}, [useCurrentFormatElseDefault])",
+    "holdingCtrl": "holdingCtrl()",
     "hreplace": "hreplace([window, ]text)",
     "hreplaceLine": "hreplaceLine ([window], text)",
     "insertLink": "insertLink([windowName], text, command, hint, [useCurrentLinkFormat])",
