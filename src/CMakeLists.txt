@@ -85,6 +85,7 @@ set(mudlet_SRCS
     exitstreewidget.cpp
     FontManager.cpp
     GifTracker.cpp
+    TrailingWhitespaceMarker.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -239,6 +240,7 @@ set(mudlet_HDRS
     exitstreewidget.h
     FontManager.h
     GifTracker.h
+    TrailingWhitespaceMarker.h
     Host.h
     HostManager.h
     ircmessageformatter.h

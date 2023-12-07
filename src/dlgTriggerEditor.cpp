@@ -41,6 +41,7 @@
 #include "dlgKeysMainArea.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTriggerPatternEdit.h"
+#include "TrailingWhitespaceMarker.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -852,6 +853,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
         connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
         connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
+        connect(pItem->lineEdit_pattern,&QLineEdit::textChanged,this,&dlgTriggerEditor::slot_changedPattern);
         HpatternList->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
@@ -861,6 +863,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->spinBox_lineSpacer->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
+
+
+        // Populate default of false
+        lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = false;
+
         if (i == 0) {
             pItem->lineEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
         }
@@ -4443,6 +4450,10 @@ void dlgTriggerEditor::saveTrigger()
     QList<int> patternKinds;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
+
+        // Spaces in the pattern may be marked with middle dots, convert them back
+        unmarkQString(&pattern);
+
         const int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
         if (pattern.isEmpty() && patternType != REGEX_PROMPT && patternType != REGEX_LINE_SPACER) {
             continue;
@@ -4731,7 +4742,10 @@ void dlgTriggerEditor::saveAlias()
 
     mpAliasMainArea->trimName();
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
-    const QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
+    QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
+    unmarkQString(&regex);
+
+
     if (!regex.isEmpty() && ((name.isEmpty()) || (name == tr("New alias")))) {
         name = regex;
     }
@@ -5492,8 +5506,18 @@ void dlgTriggerEditor::saveKey()
     }
 }
 
+
 void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdit* pItem)
 {
+    // Display middle dots for potentially unwanted spaces in perl regex
+    if (type == REGEX_PERL) {
+        markQLineEdit(pItem->lineEdit_pattern);
+        lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = true;
+    } else {
+        unmarkQLineEdit(pItem->lineEdit_pattern);
+        lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = false;
+    }
+
     switch (type) {
     case REGEX_SUBSTRING:
     case REGEX_PERL:
@@ -5535,6 +5559,14 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
         pItem->pushButton_prompt->show();
         pItem->spinBox_lineSpacer->hide();
         break;
+    }
+}
+
+void dlgTriggerEditor::slot_changedPattern()
+{
+    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(sender());
+    if (lineEditShouldMarkSpaces[lineEdit]) {
+        markQLineEdit(lineEdit);
     }
 }
 
@@ -5729,6 +5761,10 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             } else if (pType == REGEX_LINE_SPACER) {
                 pPatternItem->spinBox_lineSpacer->setValue(patternList.at(i).toInt());
             } else {
+                // Keep track of lineEdits that should have trailing spaces marked
+                if (pType == REGEX_PERL) {
+                    lineEditShouldMarkSpaces[pPatternItem->lineEdit_pattern] = true;
+                }
                 pPatternItem->lineEdit_pattern->setText(patternList.at(i));
             }
         }

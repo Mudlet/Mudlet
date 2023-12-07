@@ -300,6 +300,7 @@ private slots:
     void slot_toggleSearchCaseSensitivity(bool);
     void slot_toggleSearchIncludeVariables(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
+    void slot_changedPattern();
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
@@ -468,6 +469,8 @@ private:
         {tr("Statistics"), tr("Ctrl+9")},
         {tr("Debug"),      tr("Ctrl+0")}
     };
+
+    std::unordered_map<QLineEdit*,bool> lineEditShouldMarkSpaces;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
