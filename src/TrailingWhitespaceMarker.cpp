@@ -22,7 +22,7 @@
 #include <QDebug>
 void unmarkQString(QString* text) {
     QChar middleDot(0x00B7);
-    text->replace(middleDot,' ');
+    text->replace(middleDot, ' ');
 }
 void markQString(QString* text) {
     QChar middleDot(0x00B7);
@@ -35,11 +35,10 @@ void markQString(QString* text) {
 
     // Mark leading spaces before ^ with a middle dot
     if (trimmedText.at(0) == '^') {
-        for(int i=0;i<text->length();i++){
-            if(text->at(i) == ' '){
-                text->replace(i,1,middleDot);
-            }
-            else {
+        for (int i = 0; i < text->length(); i++){
+            if (text->at(i) == ' '){
+                text->replace(i, 1, middleDot);
+            } else {
                 break;
             }
         }
@@ -47,11 +46,10 @@ void markQString(QString* text) {
 
     // Mark trailing spaces after $ with a middle dot
     if (trimmedText.at(trimmedText.length()-1) == '$') {
-        for(int i=text->length()-1;i>-1;i--){
-            if(text->at(i) == ' '){
-                text->replace(i,1,middleDot);
-            }
-            else {
+        for (int i = text->length() - 1; i > -1; i--){
+            if (text->at(i) == ' '){
+                text->replace(i, 1, middleDot);
+            } else {
                 break;
             }
         }

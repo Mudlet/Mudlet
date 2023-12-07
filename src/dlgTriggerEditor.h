@@ -470,7 +470,7 @@ private:
         {tr("Debug"),      tr("Ctrl+0")}
     };
 
-    std::unordered_map<QLineEdit*,bool> lineEditShouldMarkSpaces;
+    std::unordered_map<QLineEdit*, bool> lineEditShouldMarkSpaces;
 
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
