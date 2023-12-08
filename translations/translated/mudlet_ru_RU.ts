@@ -10062,7 +10062,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="611"/>
       <location filename="../src/mudlet.cpp" line="3055"/>
       <source>Mute all media</source>
-      <translation type="unfinished"/>
+      <translation>Заглушить все медиа</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="314"/>
