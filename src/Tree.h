@@ -68,7 +68,13 @@ public:
     void setModuleName(const QString& n) { mModuleName = n; }
     QString getModuleName() const { return mModuleName; }
     bool isFolder() { return mFolder; }
-    void setIsFolder(bool b) { mFolder = b; }
+    void setIsFolder(bool b) {
+        mFolder = b;
+        // Allow the folder to be enabled
+        if (b) {
+            mOK_init = true;
+        }
+    }
 
     T* mpParent;
     std::list<T*>* mpMyChildrenList;
