@@ -1902,7 +1902,7 @@ Percorsi analizzati:
       <location filename="../src/TMainConsole.cpp" line="1523"/>
       <source>Gif Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Report Gif:</translation>
     </message>
   </context>
   <context>
