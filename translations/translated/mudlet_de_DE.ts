@@ -1884,7 +1884,7 @@ Diese Orte wurden ausprobiert:
       <location filename="../src/TMainConsole.cpp" line="1508"/>
       <source>Alias Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation>Alias-Report:</translation>
+      <translation>Alias-Bericht:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1513"/>
@@ -1902,7 +1902,7 @@ Diese Orte wurden ausprobiert:
       <location filename="../src/TMainConsole.cpp" line="1523"/>
       <source>Gif Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>GIF-Bericht:</translation>
     </message>
   </context>
   <context>
