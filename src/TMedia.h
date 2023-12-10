@@ -118,6 +118,7 @@ private:
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
+    void connectMediaPlayer(TMediaPlayer& player);
     void updateMediaPlayerList(TMediaPlayer& player);
     TMediaPlayer getMediaPlayer(TMediaData& mediaData);
     TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
@@ -133,7 +134,7 @@ private:
     static int parseJSONByMediaFadeIn(QJsonObject& json);
     static int parseJSONByMediaFadeOut(QJsonObject& json);
     static int parseJSONByMediaStart(QJsonObject& json);
-    static int parseJSONByMediaEnd(QJsonObject& json);
+    static int parseJSONByMediaFinish(QJsonObject& json);
     static int parseJSONByMediaPriority(QJsonObject& json);
     static int parseJSONByMediaLoops(QJsonObject& json);
     static TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);

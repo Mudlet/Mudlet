@@ -5939,7 +5939,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
                 return lua_error(L);
             }
 
-            mediaData.setMediaEnd(intValue);
+            mediaData.setMediaFinish(intValue);
             break;
         }
     }
@@ -5991,7 +5991,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("end") || key == QLatin1String("loops")) {
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")) {
             int value = getVerifiedInt(L,
                                        __func__,
                                        -1,
@@ -5999,7 +5999,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                                        : key == QLatin1String("fadein")  ? "value for fadein"
                                        : key == QLatin1String("fadeout") ? "value for fadeout"
                                        : key == QLatin1String("start")   ? "value for start"
-                                       : key == QLatin1String("end")     ? "value for end"
+                                       : key == QLatin1String("finish")  ? "value for finish"
                                                                          : "value for loops");
 
             if (key == QLatin1String("volume")) {
@@ -6034,13 +6034,13 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaStart(value);
-            } else if (key == QLatin1String("end")) {
+            } else if (key == QLatin1String("finish")) {
                 if (value < 0) {
-                    lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "end", value);
+                    lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", value);
                     return lua_error(L);
                 }
 
-                mediaData.setMediaEnd(value);
+                mediaData.setMediaFinish(value);
             } else if (key == QLatin1String("loops")) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
@@ -6093,7 +6093,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
     QString stringValue;
     int intValue = 0;
 
-    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,priority][,url][,end]
+    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,priority][,url][,finish]
     for (int i = 1; i <= numArgs; i++) {
         if (lua_isnil(L, i)) {
             continue;
@@ -6188,14 +6188,14 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
             mediaData.setMediaUrl(stringValue);
             break;
         case 11:
-            intValue = getVerifiedInt(L, __func__, i, "end");
+            intValue = getVerifiedInt(L, __func__, i, "finish");
 
             if (intValue < 0) {
-                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "end", intValue);
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "finish", intValue);
                 return lua_error(L);
             }
 
-            mediaData.setMediaEnd(intValue);
+            mediaData.setMediaFinish(intValue);
             break;
         }
     }
@@ -6248,7 +6248,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("end") || key == QLatin1String("loops")
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")
                    || key == QLatin1String("priority")) {
             int value = getVerifiedInt(L,
                                        __func__,
@@ -6257,7 +6257,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
                                        : key == QLatin1String("fadein")  ? "value for fadein"
                                        : key == QLatin1String("fadeout") ? "value for fadeout"
                                        : key == QLatin1String("start")   ? "value for start"
-                                       : key == QLatin1String("end")     ? "value for end"
+                                       : key == QLatin1String("finish")  ? "value for finish"
                                        : key == QLatin1String("loops")   ? "value for loops"
                                                                          : "value for priority");
 
@@ -6293,13 +6293,13 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaStart(value);
-            } else if (key == QLatin1String("end")) {
+            } else if (key == QLatin1String("finish")) {
                 if (value < 0) {
-                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "end", value);
+                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", value);
                     return lua_error(L);
                 }
 
-                mediaData.setMediaEnd(value);
+                mediaData.setMediaFinish(value);
             } else if (key == QLatin1String("loops")) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
