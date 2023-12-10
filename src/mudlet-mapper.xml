@@ -5926,7 +5926,7 @@ mmp.lagtable =
     [4] = {description = "Bad. Terrible. Terribad.", time = 5},
     [5] = {description = "Carrier Pigeon", time = 10},
   }
-local newversion = "23.10.2"
+local newversion = "23.11.1"
 if mmp.version and mmp.version ~= newversion then
   if not mmp.game then
     mmp.echo("Mapper script updated - Thanks! I don't know what game are you connected to, though - so please reconnect, if you could.")
@@ -12474,26 +12474,23 @@ end
 -- downloads the public crowdsources map!
 
 function mmp.downloadmapperscript()
-	
-  local file = getMudletHomeDir().."/map downloads/mudlet-mapper.xml"
-  
-  local exists = lfs.attributes
-  
+  local file =
+    getModulePath("mudlet-mapper") or getMudletHomeDir() .. "/map downloads/mudlet-mapper.xml"
   if io.exists(file) then
-    local s,m = os.remove(file)
-	if not s then mmp.echo("Couldn't delete the old xml (located at %s), because of: %s. This might be a problem.", file, m) end
+    local s, m = os.remove(file)
+    if not s then
+      mmp.echo(
+        "Couldn't delete the old xml (located at %s), because of: %s. This might be a problem.",
+        file,
+        m
+      )
+    end
   end
   mmp.downloadedscript = file
   downloadFile(
     mmp.downloadedscript,
     "http://ire-mudlet-mapping.github.io/ire-mapping-script/downloads/mudlet-mapper.xml"
   )
-  local f, err = io.open(downloadlocationfile, "w")
-  if not f then
-    return mmp.echo("Couldn't write to the location file, because: " .. err)
-  end
-  f:write(downloadlocation)
-  f:close()
   mmp.echo("Okay, downloading the mapper script...")
 end
 
@@ -12537,8 +12534,13 @@ function mmp.showcrowdchangelog()
 end
 
 function mmp.installMapperScript()
-  uninstallPackage("mudlet-mapper")
-  installPackage(mmp.downloadedscript)		
+  local path = getModulePath("mudlet-mapper")
+  if not path then
+    uninstallPackage("mudlet-mapper")
+    installPackage(mmp.downloadedscript)
+  else
+    reloadModule("mudlet-mapper")
+  end
 end
 
 </script>
