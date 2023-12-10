@@ -471,6 +471,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(
             static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
+    host.append_attribute("ShowIDsInEditor") = pHost->showIdsInEditor() ? "yes" : "no";
     if (const int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
         // Don't bother to include the attribute if ignoreIterator is the default (zero)
         // value - and as ignoreIterator is an ASCII digit ignoreIterator only needs
@@ -514,10 +515,10 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
 
-        host.append_child("url").text().set(pHost->mUrl.toUtf8().constData());
+        host.append_child("url").text().set(pHost->getUrl().toUtf8().constData());
         host.append_child("serverPackageName").text().set(pHost->mServerGUI_Package_name.toUtf8().constData());
         host.append_child("serverPackageVersion").text().set(pHost->mServerGUI_Package_version.toUtf8().constData());
-        host.append_child("port").text().set(QString::number(pHost->mPort).toUtf8().constData());
+        host.append_child("port").text().set(QString::number(pHost->getPort()).toUtf8().constData());
         auto borders = pHost->borders();
         host.append_child("borderTopHeight").text().set(QString::number(borders.top()).toUtf8().constData());
         host.append_child("borderBottomHeight").text().set(QString::number(borders.bottom()).toUtf8().constData());

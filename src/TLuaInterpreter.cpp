@@ -2158,7 +2158,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
 std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
 {
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        return std::make_tuple(true, static_cast<int>(lua_tointeger(L, 1)));
+        return {true, static_cast<int>(lua_tointeger(L, 1))};
     }
 
     const QString name{lua_tostring(L, 1)};
@@ -2171,10 +2171,10 @@ std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
         } else {
             lua_pushfstring(L, "stopwatch with name '%s' not found", name.toUtf8().constData());
         }
-        return std::make_tuple(false, 0);
+        return {false, 0};
     }
 
-    return std::make_tuple(true, watchId);
+    return {true, watchId};
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#adjustStopWatch
@@ -13981,6 +13981,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             script.append('\\');
             break;
         case '\"':
+            script.append('\\');
             script.append('\"');
             break;
         default:
@@ -17900,6 +17901,7 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
     auto [_5, scriptsTotal, tempScripts, activeScripts] = host.getScriptUnit()->assembleReport();
+    auto [_6, gifsTotal, activeGifs] = host.getGifTracker()->assembleReport();
 
     lua_newtable(L);
 
@@ -18000,6 +18002,19 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_pushnumber(L, activeScripts);
     lua_settable(L, -3);
     lua_settable(L, -3);
+
+    // Gifs
+    lua_pushstring(L,"gifs");
+    lua_newtable(L);
+
+    lua_pushstring(L,"total");
+    lua_pushnumber(L,gifsTotal);
+    lua_settable(L,-3);
+
+    lua_pushstring(L,"active");
+    lua_pushnumber(L,activeGifs);
+    lua_settable(L,-3);
+    lua_settable(L,-3);
 
     return 1;
 }

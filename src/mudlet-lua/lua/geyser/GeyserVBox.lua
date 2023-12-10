@@ -1,10 +1,9 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---        VBox by Beliar            --
---                                  --
---------------------------------------
+--- A vertical box container.
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#HBox.2FVBox">Mudlet Manual</a>
+-- @author guy
+-- @author Beliar
+-- @module Geyser.VBox
+
 Geyser.VBox = Geyser.Container:new({
   name = "VBoxClass"
 })

@@ -443,7 +443,6 @@ void dlgProfilePreferences::disableHostDetails()
 
     groupBox_autoComplete->setEnabled(false);
     groupBox_editorDisplayOptions->setEnabled(false);
-    groupBox_advancedEditor->setEnabled(false);
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(false);
@@ -566,7 +565,6 @@ void dlgProfilePreferences::enableHostDetails()
 
     groupBox_autoComplete->setEnabled(true);
     groupBox_editorDisplayOptions->setEnabled(true);
-    groupBox_advancedEditor->setEnabled(true);
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(true);
@@ -1541,6 +1539,7 @@ void dlgProfilePreferences::loadEditorTab()
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
+    checkBox_showIdNumbers->setChecked(pHost->showIdsInEditor());
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_themeSelected);
@@ -2572,8 +2571,8 @@ void dlgProfilePreferences::slot_copyMap()
 
         // Most of these we'll just get for debugging!
         QString otherProfileFileUsed;
-        int otherProfileRoomCount;
-        int otherProfileAreaCount;
+        qsizetype otherProfileRoomCount;
+        qsizetype otherProfileAreaCount;
         int otherProfileVersion;
         int otherProfileCurrentRoomId; // What we are looking for!
         if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(),
@@ -2980,6 +2979,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
         pHost->setEditorShowBidi(checkBox_showBidi->isChecked());
+        pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }

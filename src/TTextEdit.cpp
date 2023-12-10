@@ -703,10 +703,16 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 {
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
-    const bool isItalics = attributes & TChar::Italic;
+    // At present we cannot display flashing text - and we just make it italic
+    // (we ought to eventually add knobs for them so they can be shown in a user
+    // preferred style - which might be static for some users) - anyhow Mudlet
+    // will still detect the difference between the options:
+    const bool isItalics = attributes & (TChar::Italic | TChar::Blink | TChar::FastBlink);
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
+    // const bool isConcealed = attributes & TChar::Concealed;
+    // const int altFontIndex = charStyle.alternateFont();
     if ((painter.font().bold() != isBold)
             || (painter.font().italic() != isItalics)
             || (painter.font().overline() != isOverline)
@@ -754,7 +760,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
-                mProblemCodepoints.insert(unicode, std::make_tuple(1, "Unprintable"));
+                mProblemCodepoints.insert(unicode, std::tuple{1, "Unprintable"});
             } else {
                 auto [count, reason] = mProblemCodepoints.value(unicode);
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});

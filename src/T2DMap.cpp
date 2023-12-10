@@ -3648,7 +3648,11 @@ void T2DMap::slot_movePosition()
 
     auto dialog = new QDialog(this);
     auto gridLayout = new QGridLayout;
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    // Do NOT try to set the Qt::WA_DeleteOnClose attribute on the dialogue,
+    // because we want to read the details from the QLineEdits on it after the
+    // user has clicked "OK" on the dialog - and setting that flag will cause
+    // it (and those QLineEdits) to be destroyed by the time the QDialog:exec()
+    // call returns which is before we've got those details!
     dialog->setLayout(gridLayout);
     dialog->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     dialog->setContentsMargins(0, 0, 0, 0);
@@ -3718,6 +3722,7 @@ void T2DMap::slot_movePosition()
             room->z += dz;
         }
     }
+    dialog->deleteLater();
     repaint();
     mpMap->setUnsaved(__func__);
 }
@@ -4199,7 +4204,7 @@ void T2DMap::slot_setArea()
                         }
                     }
                 }
-                auto &targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
+                const auto &targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
                 mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
                 switchArea(targetAreaName);

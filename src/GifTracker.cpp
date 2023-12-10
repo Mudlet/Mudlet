@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,46 +17,51 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPELEMENTREGISTRY_H
-#define MUDLET_TMXPELEMENTREGISTRY_H
 
-#include "MxpTag.h"
-#include "pre_guard.h"
-#include <QHash>
-#include <QMap>
-#include <QStringList>
-#include <QList>
-#include <QSharedPointer>
-#include "post_guard.h"
+#include "GifTracker.h"
 
-struct TMxpElement
+#include "Host.h"
+
+
+bool GifTracker::registerGif(QMovie* pT)
 {
-    QString name;
-    QString definition;
-    QStringList attrs;
-    QString tag;
-    QString flags;
-    // if a custom element definition specified a default for an attribute, it's in defaultValues[attribute]
-    QHash<QString, QString> defaultValues;
-    bool open;
-    bool empty;
+    if (!pT) {
+        return false;
+    }
 
-    QString href;
-    QString hint;
+    mMovieList.push_back(pT);
+    return true;
 
-    QList<QSharedPointer<MxpNode>> parsedDefinition;
-};
+}
 
-class TMxpElementRegistry
+void GifTracker::unregisterGif(QMovie* pT)
 {
-    QMap<QString, TMxpElement> mMXP_Elements;
+    if (!pT) {
+        return;
+    }
 
-public:
-    void registerElement(const TMxpElement& element);
-    void unregisterElement(const QString& name);
+    mMovieList.remove(pT);
+    return;
 
-    bool containsElement(const QString& name) const;
-    TMxpElement getElement(const QString& name) const;
-};
+}
 
-#endif //MUDLET_TMXPELEMENTREGISTRY_H
+std::tuple<QString, int, int> GifTracker::assembleReport()
+{
+    int statsItemsTotal = 0;
+    int statsActiveItems = 0;
+    for (auto pItem : mMovieList) {
+        ++statsItemsTotal;
+        if (pItem->state() == QMovie::Running) {
+            ++statsActiveItems;
+        }
+    }
+    QStringList msg;
+    msg << QLatin1String("Gifs current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
+        << QLatin1String("active Gifs: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    return {
+        msg.join(QString()),
+        statsItemsTotal,
+        statsActiveItems
+    };
+}
+

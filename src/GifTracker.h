@@ -1,5 +1,8 @@
+#ifndef MUDLET_GIFUNIT_H
+#define MUDLET_GIFUNIT_H
+
 /***************************************************************************
- *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
+ *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,46 +20,37 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_TMXPELEMENTREGISTRY_H
-#define MUDLET_TMXPELEMENTREGISTRY_H
 
-#include "MxpTag.h"
 #include "pre_guard.h"
-#include <QHash>
-#include <QMap>
-#include <QStringList>
-#include <QList>
-#include <QSharedPointer>
+#include <QMovie>
+#include <QPointer>
+#include <QString>
 #include "post_guard.h"
 
-struct TMxpElement
+#include <list>
+
+class Host;
+class TLabel;
+
+
+class GifTracker
 {
-    QString name;
-    QString definition;
-    QStringList attrs;
-    QString tag;
-    QString flags;
-    // if a custom element definition specified a default for an attribute, it's in defaultValues[attribute]
-    QHash<QString, QString> defaultValues;
-    bool open;
-    bool empty;
-
-    QString href;
-    QString hint;
-
-    QList<QSharedPointer<MxpNode>> parsedDefinition;
-};
-
-class TMxpElementRegistry
-{
-    QMap<QString, TMxpElement> mMXP_Elements;
 
 public:
-    void registerElement(const TMxpElement& element);
-    void unregisterElement(const QString& name);
+    GifTracker() = default;
+    explicit GifTracker(Host* pHost)
+    : mpHost(pHost)
+    {}
 
-    bool containsElement(const QString& name) const;
-    TMxpElement getElement(const QString& name) const;
+    bool registerGif(QMovie* pT);
+    void unregisterGif(QMovie* pT);
+    std::tuple<QString, int, int> assembleReport();
+
+
+private:
+    //GifTracker() = default;
+    QPointer<Host> mpHost;
+    std::list<QMovie*> mMovieList;
 };
 
-#endif //MUDLET_TMXPELEMENTREGISTRY_H
+#endif // MUDLET_GIFUNIT_H

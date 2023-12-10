@@ -1,13 +1,10 @@
---------------------------------------
--- --
--- The Geyser Layout Manager by guy --
---  CommandLine support by Edru     --
--- --
---------------------------------------
+--- Represents a (sub)commandLine primitive.
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Geyser.CommandLine">Mudlet Manual</a>
+-- @author guy
+-- @author Edru
+-- @module Geyser.CommandLine
 
---- Represents a (sub)commandLine primitive
--- @class table
--- @name Geyser.CommandLine
+--- Represents a (sub)commandLine primitive.
 Geyser.CommandLine = Geyser.Window:new({
   name = "CommandLineClass"
 })
@@ -46,19 +43,18 @@ function Geyser.CommandLine:getText()
 end
 
 --- Sets the style sheet of the command-line
--- @param css The style sheet string
+-- @param css the style sheet string
 function Geyser.CommandLine:setStyleSheet(css)
   css = css or self.stylesheet
   setCmdLineStyleSheet(self.name, css)
   self.stylesheet = css
 end
 
---- Sets an action to be used when text is send in this commandline. When this
+--- Sets an action to be used when text is sent in this commandline. When this
 -- function is called by the event system, text the commandline sends will be 
--- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
--- the setClickCallback events
--- @param func The function to use.
--- @param ... Parameters to pass to the function.
+-- appended as the final argument.
+-- @param func the function to use
+-- @param ... parameters to pass to the function
 function Geyser.CommandLine:setAction(func, ...)
   setCmdLineAction(self.name, func, ...)
   self.actionFunc = func

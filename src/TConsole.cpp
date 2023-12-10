@@ -56,12 +56,13 @@
 const QString TConsole::cmLuaLineVariable("line");
 
 // A high-performance text widget with split screen ability for scrolling back
-// Contains two TTextEdits, each backed by a TBuffer
-TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
+// Contains two TTextEdits, and is backed by a TBuffer
+TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
 , buffer(pH, this)
 , emergencyStop(new QToolButton)
+, mConsoleName(name)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
@@ -1633,18 +1634,18 @@ bool TConsole::selectSection(int from, int to)
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return std::make_tuple(false, qsl("the selection is no longer valid"), 0, 0);
+        return {false, qsl("the selection is no longer valid"), 0, 0};
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
     const auto line = buffer.line(mUserCursor.y());
     if (line.size() < start) {
-        return std::make_tuple(false, qsl("the selection is no longer valid"), 0, 0);
+        return {false, qsl("the selection is no longer valid"), 0, 0};
     }
 
     const auto text = line.mid(start, length);
-    return std::make_tuple(true, text, start, length);
+    return {true, text, start, length};
 }
 
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference)
