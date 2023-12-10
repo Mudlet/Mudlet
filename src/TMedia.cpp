@@ -206,9 +206,9 @@ void TMedia::stopMedia(TMediaData& mediaData)
                 const int finishPosition = pPlayer.getMediaData().getMediaFinish();
                 const int duration = pPlayer.getMediaPlayer()->duration();
                 const int currentPosition = pPlayer.getMediaPlayer()->position();
-                const int fadeOut = pPlayer.getMediaData().getMediaFadeOut();
+                const int fadeOut = pPlayer.getMediaData().getMediaFadeOut() ? pPlayer.getMediaData().getMediaFadeOut() : mediaData.getMediaFadeOut();
                 const int remainingDuration = (finishPosition != TMediaData::MediaFinishNotSet ? finishPosition : duration) - currentPosition;
-                const int endDuration = fadeOut != TMediaData::MediaFadeNotSet ? fadeOut : std::min(remainingDuration, 5000);
+                const int endDuration = fadeOut != TMediaData::MediaFadeNotSet ? std::min(remainingDuration, fadeOut) : std::min(remainingDuration, 5000);
                 const int endPosition = currentPosition + endDuration;
                 TMediaPlayer pUpdatePlayer = pPlayer;
                 TMediaData updateMediaData = pUpdatePlayer.getMediaData();
@@ -755,10 +755,6 @@ void TMedia::connectMediaPlayer(TMediaPlayer& player)
         const int relativeFadeOutPosition = fadeOutUsed ? relativeDuration - fadeOutDuration : TMediaData::MediaFadeNotSet;
         bool actionTaken = false;
 
-        qWarning() << "***********" << player.getMediaData().getMediaEnd() <<  "***********";
-
-        qWarning() << "progress = " << progress << "volume = " << volume << " duration = " << duration << " fadeInDuration = " << fadeInDuration << " fadeOutDuration = " << fadeOutDuration << " startPosition = " << startPosition << " finishPosition = " << finishPosition << " endPosition = " << endPosition << " fadeInUsed = " << fadeInUsed << " fadeOutUsed = " << fadeOutUsed << " endUsed = " << endUsed << " finishUsed = " << finishUsed << " relativeDuration = " << relativeDuration << " relativeFadeInPosition = " << relativeFadeInPosition << " relativeFadeOutPosition = " << relativeFadeOutPosition;
-
         if (progress > relativeDuration && (endUsed || finishUsed)) {
             player.getMediaPlayer()->stop();
         } else {
@@ -767,11 +763,9 @@ void TMedia::connectMediaPlayer(TMediaPlayer& player)
                     double const fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((relativeFadeInPosition - startPosition) * 1.0);
 
                     player.setVolume(qRound(fadeInVolume));
-                    qWarning() << "progress = " << "new volume = " << qRound(fadeInVolume);
                     actionTaken = true;
                 } else if (progress == relativeFadeInPosition) {
                     player.setVolume(volume);
-                    qWarning() << "progress = " << "new volume = " << volume;
                     actionTaken = true;
                 }
             }
@@ -781,14 +775,12 @@ void TMedia::connectMediaPlayer(TMediaPlayer& player)
                     double const fadeOutVolume = static_cast<double>(volume * (relativeDuration - progress)) / static_cast<double>(fadeOutDuration * 1.0);
 
                     player.setVolume(qRound(fadeOutVolume));
-                    qWarning() << "progress = " << "new volume = " << qRound(fadeOutVolume);
                     actionTaken = true;
                 }
             }
 
             if (!actionTaken && ((fadeInUsed && progress > relativeFadeInPosition) || (fadeOutUsed && progress < relativeFadeOutPosition))) {
                 player.setVolume(volume); // Added to support multiple continue = true calls of same music
-                qWarning() << "progress = " << "new volume = " << volume;
             }
         }
     });
