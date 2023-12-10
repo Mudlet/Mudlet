@@ -5844,7 +5844,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
     int intValue = 0;
     bool boolValue = 0;
 
-    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,end]
+    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,finish]
     for (int i = 1; i <= numArgs; i++) {
         if (lua_isnil(L, i)) {
             continue;
@@ -5932,10 +5932,10 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
             mediaData.setMediaUrl(stringValue);
             break;
         case 11:
-            intValue = getVerifiedInt(L, __func__, i, "end");
+            intValue = getVerifiedInt(L, __func__, i, "finish");
 
             if (intValue < 0) {
-                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "end", intValue);
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", intValue);
                 return lua_error(L);
             }
 
