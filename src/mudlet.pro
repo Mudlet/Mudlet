@@ -573,6 +573,7 @@ SOURCES += \
     exitstreewidget.cpp \
     FontManager.cpp \
     GifTracker.cpp \
+    TrailingWhitespaceMarker.cpp \
     Host.cpp \
     HostManager.cpp \
     ircmessageformatter.cpp \
@@ -689,6 +690,7 @@ HEADERS += \
     EAction.h \
     exitstreewidget.h \
     GifTracker.h \
+    TrailingWhitespaceMarker.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
