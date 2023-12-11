@@ -1175,7 +1175,7 @@ function packageDrop(event, fileName, suffix)
   if not table.contains(acceptableSuffix, suffix) then
     return
   end
-  if holdingCtrl() then
+  if holdingModifiers(mudlet.keymodifier.Control) then
     verboseModuleInstall(fileName)
   else
     verbosePackageInstall(fileName)
