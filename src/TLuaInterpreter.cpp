@@ -2571,7 +2571,6 @@ int TLuaInterpreter::holdingModifiers(lua_State* L)
         getVerifiedInt(L, __func__, 1, "key modifier", true)
     );
     Qt::KeyboardModifiers modifiersHeld = QGuiApplication::queryKeyboardModifiers();
-    qDebug() << "held: " << modifiersHeld << " - Searching: " << keyModifiers;
     lua_pushboolean(L, modifiersHeld == keyModifiers);
     return 1;
 }
