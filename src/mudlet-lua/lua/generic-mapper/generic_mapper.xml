@@ -2,34 +2,14 @@
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
 	<TriggerPackage>
-		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-			<name>onNewLine Trigger</name>
-			<script></script>
-			<triggerType>0</triggerType>
-			<conditonLineDelta>0</conditonLineDelta>
-			<mStayOpen>0</mStayOpen>
-			<mCommand></mCommand>
-			<packageName></packageName>
-			<mFgColor>#ff0000</mFgColor>
-			<mBgColor>#ffff00</mBgColor>
-			<mSoundFile></mSoundFile>
-			<colorTriggerFgColor>#000000</colorTriggerFgColor>
-			<colorTriggerBgColor>#000000</colorTriggerBgColor>
-			<regexCodeList>
-				<string>raiseEvent("onNewLine")</string>
-			</regexCodeList>
-			<regexCodePropertyList>
-				<integer>4</integer>
-			</regexCodePropertyList>
-		</Trigger>
 		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-			<name>English Trigger Group</name>
+			<name>generic_mapper</name>
 			<script></script>
 			<triggerType>0</triggerType>
 			<conditonLineDelta>0</conditonLineDelta>
 			<mStayOpen>0</mStayOpen>
 			<mCommand></mCommand>
-			<packageName></packageName>
+			<packageName>generic_mapper</packageName>
 			<mFgColor>#ff0000</mFgColor>
 			<mBgColor>#ffff00</mBgColor>
 			<mSoundFile></mSoundFile>
@@ -38,8 +18,8 @@
 			<regexCodeList />
 			<regexCodePropertyList />
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>English Exits Trigger</name>
-				<script>raiseEvent("onNewRoom",matches[2] or "")</script>
+				<name>onNewLine Trigger</name>
+				<script></script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
 				<mStayOpen>0</mStayOpen>
@@ -51,27 +31,15 @@
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
-					<string>(?i)^\s*\[\s*Exits:\s*(.*)\]</string>
-					<string>^\s*There (?:is|are) \w+ (?:visible|obvious) exit[s]?:\s*(.*)</string>
-					<string>^\[?[\s\w]*(?:[Vv]isible|[Oo]bvious) (?:[Pp]ath|[Ee]xit)[s]?(?: is| are)?:?\s*(.*)\]?</string>
-					<string>^\s*You see[\w\s]* exit[s]? leading (.*)</string>
-					<string>Exits:\s*(.*)</string>
-					<string>There are no obvious exits.</string>
-					<string>^\s*The (?:only )?obvious exit[s]? (?:is|are):? (.*)</string>
+					<string>raiseEvent("onNewLine")</string>
 				</regexCodeList>
 				<regexCodePropertyList>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>2</integer>
-					<integer>1</integer>
+					<integer>4</integer>
 				</regexCodePropertyList>
 			</Trigger>
-			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>English Failed Move Trigger</name>
-				<script>raiseEvent("onMoveFail")</script>
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>English Trigger Group</name>
+				<script></script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
 				<mStayOpen>0</mStayOpen>
@@ -82,92 +50,11 @@
 				<mSoundFile></mSoundFile>
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>^(?:Alas, )?[Yy]ou can(?:no|')t (?:go|move) .*$</string>
-					<string>^The .+ (?:is|seems to be) closed.$</string>
-					<string>.+ (?:is not going to|will not) let you pass.$</string>
-					<string>^That exit is blocked.$</string>
-					<string>^You are blocked by .*$</string>
-					<string>^There is no exit in that direction.$</string>
-					<string>^The .* is locked.$</string>
-					<string>^Alas, you cannot go that way\.\.\.$</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-				</regexCodePropertyList>
-			</Trigger>
-			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>English Vision Fail Trigger</name>
-				<script>raiseEvent("onVisionFail")</script>
-				<triggerType>0</triggerType>
-				<conditonLineDelta>0</conditonLineDelta>
-				<mStayOpen>0</mStayOpen>
-				<mCommand></mCommand>
-				<packageName></packageName>
-				<mFgColor>#ff0000</mFgColor>
-				<mBgColor>#ffff00</mBgColor>
-				<mSoundFile></mSoundFile>
-				<colorTriggerFgColor>#000000</colorTriggerFgColor>
-				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>^It is pitch black...</string>
-					<string>^It(?:'s| is) too dark</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>1</integer>
-					<integer>1</integer>
-				</regexCodePropertyList>
-			</Trigger>
-			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>English Forced Move Trigger</name>
-				<script>raiseEvent("onForcedMove",matches[2])</script>
-				<triggerType>0</triggerType>
-				<conditonLineDelta>0</conditonLineDelta>
-				<mStayOpen>0</mStayOpen>
-				<mCommand></mCommand>
-				<packageName></packageName>
-				<mFgColor>#ff0000</mFgColor>
-				<mBgColor>#ffff00</mBgColor>
-				<mSoundFile></mSoundFile>
-				<colorTriggerFgColor>#000000</colorTriggerFgColor>
-				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>^Carefully getting your bearings, you set off (\w+) toward your goal.</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>1</integer>
-				</regexCodePropertyList>
-			</Trigger>
-			<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>English Multi-Line Exits Trigger</name>
-				<script>map.prompt.exits = ""</script>
-				<triggerType>0</triggerType>
-				<conditonLineDelta>0</conditonLineDelta>
-				<mStayOpen>1</mStayOpen>
-				<mCommand></mCommand>
-				<packageName></packageName>
-				<mFgColor>#ff0000</mFgColor>
-				<mBgColor>#ffff00</mBgColor>
-				<mSoundFile></mSoundFile>
-				<colorTriggerFgColor>#000000</colorTriggerFgColor>
-				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>(?i:^(obvious|visible) exits:)</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>1</integer>
-				</regexCodePropertyList>
+				<regexCodeList />
+				<regexCodePropertyList />
 				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-					<name>Exit Line Trigger</name>
-					<script>map.prompt.exits = map.prompt.exits .. ", " .. string.trim(matches[2])
-setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
+					<name>English Exits Trigger</name>
+					<script>raiseEvent("onNewRoom",matches[2] or "")</script>
 					<triggerType>0</triggerType>
 					<conditonLineDelta>0</conditonLineDelta>
 					<mStayOpen>0</mStayOpen>
@@ -179,32 +66,145 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 					<colorTriggerFgColor>#000000</colorTriggerFgColor>
 					<colorTriggerBgColor>#000000</colorTriggerBgColor>
 					<regexCodeList>
-						<string>^([\w\s]+)\s*: [\w\s]+</string>
+						<string>(?i)^\s*\[\s*Exits:\s*(.*)\]</string>
+						<string>^\s*There (?:is|are) \w+ (?:visible|obvious) exit[s]?:\s*(.*)</string>
+						<string>^\[?[\s\w]*(?:[Vv]isible|[Oo]bvious) (?:[Pp]ath|[Ee]xit)[s]?(?: is| are)?:?\s*(.*)\]?</string>
+						<string>^\s*You see[\w\s]* exit[s]? leading (.*)</string>
+						<string>Exits:\s*(.*)</string>
+						<string>There are no obvious exits.</string>
+						<string>^\s*The (?:only )?obvious exit[s]? (?:is|are):? (.*)</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>2</integer>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>English Failed Move Trigger</name>
+					<script>raiseEvent("onMoveFail")</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^(?:Alas, )?[Yy]ou can(?:no|')t (?:go|move) .*$</string>
+						<string>^The .+ (?:is|seems to be) closed.$</string>
+						<string>.+ (?:is not going to|will not) let you pass.$</string>
+						<string>^That exit is blocked.$</string>
+						<string>^You are blocked by .*$</string>
+						<string>^There is no exit in that direction.$</string>
+						<string>^The .* is locked.$</string>
+						<string>^Alas, you cannot go that way\.\.\.$</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>English Vision Fail Trigger</name>
+					<script>raiseEvent("onVisionFail")</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^It is pitch black...</string>
+						<string>^It(?:'s| is) too dark</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>English Forced Move Trigger</name>
+					<script>raiseEvent("onForcedMove",matches[2])</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^Carefully getting your bearings, you set off (\w+) toward your goal.</string>
 					</regexCodeList>
 					<regexCodePropertyList>
 						<integer>1</integer>
 					</regexCodePropertyList>
 				</Trigger>
-			</Trigger>
-		</TriggerGroup>
-		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-			<name>Russian Trigger Group</name>
-			<script></script>
-			<triggerType>0</triggerType>
-			<conditonLineDelta>0</conditonLineDelta>
-			<mStayOpen>0</mStayOpen>
-			<mCommand></mCommand>
-			<packageName></packageName>
-			<mFgColor>#ff0000</mFgColor>
-			<mBgColor>#ffff00</mBgColor>
-			<mSoundFile></mSoundFile>
-			<colorTriggerFgColor>#000000</colorTriggerFgColor>
-			<colorTriggerBgColor>#000000</colorTriggerBgColor>
-			<regexCodeList />
-			<regexCodePropertyList />
-			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>Russian Exits Trigger</name>
-				<script>raiseEvent("onNewRoom",matches[2] or "")</script>
+				<Trigger isActive="no" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>English Multi-Line Exits Trigger</name>
+					<script>map.prompt.exits = ""</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>1</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>(?i:^(obvious|visible) exits:)</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+					<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+						<name>Exit Line Trigger</name>
+						<script>map.prompt.exits = map.prompt.exits .. ", " .. string.trim(matches[2])
+setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
+						<triggerType>0</triggerType>
+						<conditonLineDelta>0</conditonLineDelta>
+						<mStayOpen>0</mStayOpen>
+						<mCommand></mCommand>
+						<packageName></packageName>
+						<mFgColor>#ff0000</mFgColor>
+						<mBgColor>#ffff00</mBgColor>
+						<mSoundFile></mSoundFile>
+						<colorTriggerFgColor>#000000</colorTriggerFgColor>
+						<colorTriggerBgColor>#000000</colorTriggerBgColor>
+						<regexCodeList>
+							<string>^([\w\s]+)\s*: [\w\s]+</string>
+						</regexCodeList>
+						<regexCodePropertyList>
+							<integer>1</integer>
+						</regexCodePropertyList>
+					</Trigger>
+				</Trigger>
+			</TriggerGroup>
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Russian Trigger Group</name>
+				<script></script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
 				<mStayOpen>0</mStayOpen>
@@ -215,16 +215,72 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				<mSoundFile></mSoundFile>
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>^\s*\[\s*Выходы:\s*(.*)\]</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>1</integer>
-				</regexCodePropertyList>
-			</Trigger>
-			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>Russian Failed Move Trigger</name>
-				<script>raiseEvent("onMoveFail")</script>
+				<regexCodeList />
+				<regexCodePropertyList />
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Russian Exits Trigger</name>
+					<script>raiseEvent("onNewRoom",matches[2] or "")</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\s*\[\s*Выходы:\s*(.*)\]</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Russian Failed Move Trigger</name>
+					<script>raiseEvent("onMoveFail")</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>Извини, но ты не можешь туда идти.</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>0</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Russian Vision Fail Trigger</name>
+					<script>raiseEvent("onVisionFail")</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>Здесь слишком темно ...</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>0</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</TriggerGroup>
+			<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Chinese Trigger Group</name>
+				<script></script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
 				<mStayOpen>0</mStayOpen>
@@ -235,183 +291,149 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				<mSoundFile></mSoundFile>
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>Извини, но ты не можешь туда идти.</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>0</integer>
-				</regexCodePropertyList>
-			</Trigger>
-			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>Russian Vision Fail Trigger</name>
-				<script>raiseEvent("onVisionFail")</script>
-				<triggerType>0</triggerType>
-				<conditonLineDelta>0</conditonLineDelta>
-				<mStayOpen>0</mStayOpen>
-				<mCommand></mCommand>
-				<packageName></packageName>
-				<mFgColor>#ff0000</mFgColor>
-				<mBgColor>#ffff00</mBgColor>
-				<mSoundFile></mSoundFile>
-				<colorTriggerFgColor>#000000</colorTriggerFgColor>
-				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>Здесь слишком темно ...</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>0</integer>
-				</regexCodePropertyList>
-			</Trigger>
-		</TriggerGroup>
-		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-			<name>Chinese Trigger Group</name>
-			<script></script>
-			<triggerType>0</triggerType>
-			<conditonLineDelta>0</conditonLineDelta>
-			<mStayOpen>0</mStayOpen>
-			<mCommand></mCommand>
-			<packageName></packageName>
-			<mFgColor>#ff0000</mFgColor>
-			<mBgColor>#ffff00</mBgColor>
-			<mSoundFile></mSoundFile>
-			<colorTriggerFgColor>#000000</colorTriggerFgColor>
-			<colorTriggerBgColor>#000000</colorTriggerBgColor>
-			<regexCodeList />
-			<regexCodePropertyList />
-			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>Chinese Exits Trigger</name>
-				<script>raiseEvent("onNewRoom",matches[2] or "")</script>
-				<triggerType>0</triggerType>
-				<conditonLineDelta>0</conditonLineDelta>
-				<mStayOpen>0</mStayOpen>
-				<mCommand></mCommand>
-				<packageName></packageName>
-				<mFgColor>#ff0000</mFgColor>
-				<mBgColor>#ffff00</mBgColor>
-				<mSoundFile></mSoundFile>
-				<colorTriggerFgColor>#000000</colorTriggerFgColor>
-				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>^\s*这里明显的方向有 (.*)。</string>
-					<string>^\s*这里明显的出口有 (.*)。</string>
-					<string>^\s*这里明显的出口是 (.*)。</string>
-					<string>^\s*这里唯一的出口是 (.*)。</string>
-					<string>^\s*這裏明顯的出口是 (.*)。</string>
-					<string>^\s*這裏唯一的出口是 (.*)。</string>
-					<string>^\s*這裏明顯的方向有 (.*)。</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-					<integer>1</integer>
-				</regexCodePropertyList>
-			</Trigger>
-			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
-				<name>Chinese Failed Movement Trigger</name>
-				<script>raiseEvent("onMoveFail")</script>
-				<triggerType>0</triggerType>
-				<conditonLineDelta>0</conditonLineDelta>
-				<mStayOpen>0</mStayOpen>
-				<mCommand></mCommand>
-				<packageName></packageName>
-				<mFgColor>#ff0000</mFgColor>
-				<mBgColor>#ffff00</mBgColor>
-				<mSoundFile></mSoundFile>
-				<colorTriggerFgColor>#000000</colorTriggerFgColor>
-				<colorTriggerBgColor>#000000</colorTriggerBgColor>
-				<regexCodeList>
-					<string>你又渴又饿，浑身无力，根本就走不动路。</string>
-					<string>这个方向没有出路。</string>
-					<string>^看来(\w+)不打算让你过去。</string>
-				</regexCodeList>
-				<regexCodePropertyList>
-					<integer>0</integer>
-					<integer>0</integer>
-					<integer>1</integer>
-				</regexCodePropertyList>
-			</Trigger>
+				<regexCodeList />
+				<regexCodePropertyList />
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Chinese Exits Trigger</name>
+					<script>raiseEvent("onNewRoom",matches[2] or "")</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>^\s*这里明显的方向有 (.*)。</string>
+						<string>^\s*这里明显的出口有 (.*)。</string>
+						<string>^\s*这里明显的出口是 (.*)。</string>
+						<string>^\s*这里唯一的出口是 (.*)。</string>
+						<string>^\s*這裏明顯的出口是 (.*)。</string>
+						<string>^\s*這裏唯一的出口是 (.*)。</string>
+						<string>^\s*這裏明顯的方向有 (.*)。</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+				<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+					<name>Chinese Failed Movement Trigger</name>
+					<script>raiseEvent("onMoveFail")</script>
+					<triggerType>0</triggerType>
+					<conditonLineDelta>0</conditonLineDelta>
+					<mStayOpen>0</mStayOpen>
+					<mCommand></mCommand>
+					<packageName></packageName>
+					<mFgColor>#ff0000</mFgColor>
+					<mBgColor>#ffff00</mBgColor>
+					<mSoundFile></mSoundFile>
+					<colorTriggerFgColor>#000000</colorTriggerFgColor>
+					<colorTriggerBgColor>#000000</colorTriggerBgColor>
+					<regexCodeList>
+						<string>你又渴又饿，浑身无力，根本就走不动路。</string>
+						<string>这个方向没有出路。</string>
+						<string>^看来(\w+)不打算让你过去。</string>
+					</regexCodeList>
+					<regexCodePropertyList>
+						<integer>0</integer>
+						<integer>0</integer>
+						<integer>1</integer>
+					</regexCodePropertyList>
+				</Trigger>
+			</TriggerGroup>
 		</TriggerGroup>
 	</TriggerPackage>
 	<TimerPackage />
 	<AliasPackage>
 		<AliasGroup isActive="yes" isFolder="yes">
-			<name>Setup Aliases</name>
+			<name>generic_mapper</name>
 			<script></script>
 			<command></command>
-			<packageName></packageName>
+			<packageName>generic_mapper</packageName>
 			<regex></regex>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Show Alias</name>
-				<script>map.showMap()</script>
+			<AliasGroup isActive="yes" isFolder="yes">
+				<name>Setup Aliases</name>
+				<script></script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^map show$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Find Map Prompt Alias</name>
-				<script>map.find_prompt()</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^find prompt$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Map Prompt Alias</name>
-				<script>-- USE PATTERNS FOR STRING.GSUB
+				<regex></regex>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Show Alias</name>
+					<script>map.showMap()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map show$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Find Map Prompt Alias</name>
+					<script>map.find_prompt()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^find prompt$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Map Prompt Alias</name>
+					<script>-- USE PATTERNS FOR STRING.GSUB
 if matches[2] then
   map.make_prompt_pattern(matches[2])
 else
   display(map.save.prompt_pattern)
 end</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map prompt(?: (.*))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Map Ignore Alias</name>
-				<script>-- USE PATTERNS FOR STRING.GSUB
+					<command></command>
+					<packageName></packageName>
+					<regex>^map prompt(?: (.*))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Map Ignore Alias</name>
+					<script>-- USE PATTERNS FOR STRING.GSUB
 if matches[2] then
   map.make_ignore_pattern(matches[2])
 else
   display(map.save.ignore_patterns)
 end</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map ignore(?: (.*))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Move Method Alias</name>
-				<script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map ignore(?: (.*))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Move Method Alias</name>
+					<script>
 if matches[2] then
   map.make_move_method(matches[2])
 else
   display(map.save.move_methods)
 end</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map movemethod(?: (.*))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Debug Alias</name>
-				<script>map.configs.debug = not map.configs.debug
+					<command></command>
+					<packageName></packageName>
+					<regex>^map movemethod(?: (.*))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Debug Alias</name>
+					<script>map.configs.debug = not map.configs.debug
 map.echo("Map debug set to: " .. (map.configs.debug and "on" or "off"))</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map debug$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Update Alias</name>
-				<script>map.updateVersion()</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map update$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Config Alias</name>
-				<script>-- adjust pattern to allow no argument, if no argument show general help about configs
+					<command></command>
+					<packageName></packageName>
+					<regex>^map debug$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Update Alias</name>
+					<script>map.updateVersion()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map update$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Config Alias</name>
+					<script>-- adjust pattern to allow no argument, if no argument show general help about configs
 if not matches[2] then
 	cecho(map.help.config)
 else
@@ -424,77 +446,86 @@ else
   	map.setConfigs(matches[2])
   end
 end</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map config(?: ([\w\s\.]+))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Window Config Alias</name>
+					<script>map.setConfigs("map_window",matches[3],matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map window (x|y|w|h|origin|shown)(?: ([\w%]+))?</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Translate Config Alias</name>
+					<script>map.setConfigs("lang_dirs", {matches[3], matches[4]}, matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map translate (\w+) (\w+) (\w+)$</regex>
+				</Alias>
+			</AliasGroup>
+			<AliasGroup isActive="yes" isFolder="yes">
+				<name>Information Aliases</name>
+				<script></script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^map config(?: ([\w\s\.]+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Window Config Alias</name>
-				<script>map.setConfigs("map_window",matches[3],matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map window (x|y|w|h|origin|shown)(?: ([\w%]+))?</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Translate Config Alias</name>
-				<script>map.setConfigs("lang_dirs", {matches[3], matches[4]}, matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map translate (\w+) (\w+) (\w+)$</regex>
-			</Alias>
-		</AliasGroup>
-		<AliasGroup isActive="yes" isFolder="yes">
-			<name>Information Aliases</name>
-			<script></script>
-			<command></command>
-			<packageName></packageName>
-			<regex></regex>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Quick Start Alias</name>
-				<script>map.show_help("quick_start")</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map basics$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Help Alias</name>
-				<script>map.show_help(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map help(?: (.*))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Rooms Alias</name>
-				<script>-- map rooms &lt;area&gt; - shows the list of rooms in an area
+				<regex></regex>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Quick Start Alias</name>
+					<script>map.show_help("quick_start")</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map basics$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Help Alias</name>
+					<script>map.show_help(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map help(?: (.*))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Rooms Alias</name>
+					<script>-- map rooms &lt;area&gt; - shows the list of rooms in an area
 map.echoRoomList(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map rooms(?: (.+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Areas Alias</name>
-				<script>-- area list - shows the known area list
+					<command></command>
+					<packageName></packageName>
+					<regex>^map rooms(?: (.+))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Areas Alias</name>
+					<script>-- area list - shows the known area list
 -- functionality already exists in generic_mapper alias 'map areas'
 
 map.echoAreaList()</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map areas$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Room Look Alias</name>
-				<script>-- rl or room look - displays information about the room you're in
+					<command></command>
+					<packageName></packageName>
+					<regex>^map areas$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Room Find Alias</name>
+					<script>-- rf &lt;name&gt;, room find &lt;name&gt; - searches for a room of a given name
+
+map.roomFind(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:rf|room find) (.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Room Look Alias</name>
+					<script>-- rl or room look - displays information about the room you're in
 -- rl roomID - displays information on a given room ID (ie, rl 34)
 -- rl room name  - displays information on a given room, by it's 
 --    name (ie, rl tavern of blah)
 map.roomLook(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:rl|room look)(?: (.+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Show Path Alias</name>
-				<script>-- showpath roomID - shows you a path from where you are to another room (by it's ID)
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:rl|room look)(?: (.+))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Show Path Alias</name>
+					<script>-- showpath roomID - shows you a path from where you are to another room (by it's ID)
 -- showpath fromID toID - shows you a path from a given room to another given to 
 --                        another room
 if not matches[2] and not matches[3] then
@@ -504,187 +535,178 @@ elseif matches[2] and not matches[3] then
 else
   map.echoPath(matches[2], matches[3])
 end</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^showpath(?: (\d+))?(?: (\d+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>List Special Exits Alias</name>
-				<script>-- spe list - shows you the list of all known special exists
+					<command></command>
+					<packageName></packageName>
+					<regex>^showpath(?: (\d+))?(?: (\d+))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>List Special Exits Alias</name>
+					<script>-- spe list - shows you the list of all known special exists
 -- spe list filter - shows you a list of all known special exits, 
 --                   filtered by a command (ie. spe list worm warp)
 map.listSpecialExits(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^spe list(?: (.+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>List Map Features Alias</name>
-				<script>-- feature list - lists all map features created via feature create and the
+					<command></command>
+					<packageName></packageName>
+					<regex>^spe list(?: (.+))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>List Map Features Alias</name>
+					<script>-- feature list - lists all map features created via feature create and the
 -- associated room characters
 
 map.listMapFeatures()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^feature list$</regex>
+				</Alias>
+			</AliasGroup>
+			<AliasGroup isActive="yes" isFolder="yes">
+				<name>Regular Use Aliases</name>
+				<script></script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^feature list$</regex>
-			</Alias>
-		</AliasGroup>
-		<AliasGroup isActive="yes" isFolder="yes">
-			<name>Regular Use Aliases</name>
-			<script></script>
-			<command></command>
-			<packageName></packageName>
-			<regex></regex>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Me Alias</name>
-				<script>map.find_me(nil, nil, nil, true)</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map me$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Path Alias</name>
-				<script>map.find_path(matches[2],matches[3])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map path ([^;]+)(?:\s*;\s*(.+))?</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Recall Alias</name>
-				<script>map.set_recall()</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map recall$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Character Alias</name>
-				<script>map.character = matches[2]</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map character (.*)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Map Stop Alias</name>
-				<script>raiseEvent("mapStop")
+				<regex></regex>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Me Alias</name>
+					<script>map.find_me(nil, nil, nil, true)</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map me$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Path Alias</name>
+					<script>map.find_path(matches[2],matches[3])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map path ([^;]+)(?:\s*;\s*(.+))?</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Recall Alias</name>
+					<script>map.set_recall()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map recall$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Character Alias</name>
+					<script>map.character = matches[2]</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map character (.*)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Map Stop Alias</name>
+					<script>raiseEvent("mapStop")
 raiseEvent("sysSpeedwalkStopped")</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map stop$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Toggle Speedwalk Alias</name>
-				<script>map.toggleSpeedwalk(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^mpp(?:\s?(on|off))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Area Lock Alias</name>
-				<script>-- arealock, arealock &lt;area&gt; - displays a list of areas you can
+					<command></command>
+					<packageName></packageName>
+					<regex>^map stop$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Toggle Speedwalk Alias</name>
+					<script>map.toggleSpeedwalk(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^mpp(?:\s?(on|off))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Area Lock Alias</name>
+					<script>-- arealock, arealock &lt;area&gt; - displays a list of areas you can
 -- lock/unlock, can also give it an area name to filter by. If
 -- an area is locked the mapper will not attempt to walk through
 -- or go through any of the rooms in the area
 map.doLockArea(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^arealock(?: (.*))?$</regex>
+				</Alias>
+			</AliasGroup>
+			<AliasGroup isActive="yes" isFolder="yes">
+				<name>Map Creation Aliases</name>
+				<script></script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^arealock(?: (.*))?$</regex>
-			</Alias>
-		</AliasGroup>
-		<AliasGroup isActive="yes" isFolder="yes">
-			<name>Map Creation Aliases</name>
-			<script></script>
-			<command></command>
-			<packageName></packageName>
-			<regex></regex>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Room Area Alias</name>
-				<script>map.set_area(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^set area (.*)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Start Mapping Alias</name>
-				<script>map.start_mapping(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^start mapping(?: (.*))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Stop Mapping Alias</name>
-				<script>map.stop_mapping()</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^stop mapping$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Shift Room Alias</name>
-				<script>map.shift_room(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^shift (.*)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Add Portal Alias</name>
-				<script>map.set_portal(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^add portal (.*)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Show Moves Alias</name>
-				<script>map.show_moves()</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^show moves$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Clear Moves Alias</name>
-				<script>map.clear_moves()</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^clear moves$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Add Door Alias</name>
-				<script>map.set_door(matches[2],matches[3],matches[4])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^add door (\w+)(?: (none|open|closed|locked))?(?: (yes|no))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Merge Rooms Alias</name>
-				<script>map.merge_rooms()</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^merge rooms$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Map Mode Alias</name>
-				<script>map.set_mode(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map mode (\w+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Room Exit Alias</name>
-				<script>map.set_exit(matches[2],matches[3])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^set exit (.+) (\d+)</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Room Find Alias</name>
-				<script>-- rf &lt;name&gt;, room find &lt;name&gt; - searches for a room of a given name
-
-map.roomFind(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:rf|room find) (.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Move A Room Alias</name>
-				<script>-- rc or room coords [v&lt;id&gt;] &lt;option&gt;, where option will specify the new
+				<regex></regex>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Room Area Alias</name>
+					<script>map.set_area(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^set area (.*)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Start Mapping Alias</name>
+					<script>map.start_mapping(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^start mapping(?: (.*))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Stop Mapping Alias</name>
+					<script>map.stop_mapping()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^stop mapping$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Shift Room Alias</name>
+					<script>map.shift_room(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^shift (.*)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Add Portal Alias</name>
+					<script>map.set_portal(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^add portal (.*)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Show Moves Alias</name>
+					<script>map.show_moves()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^show moves$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Clear Moves Alias</name>
+					<script>map.clear_moves()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^clear moves$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Add Door Alias</name>
+					<script>map.set_door(matches[2],matches[3],matches[4])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^add door (\w+)(?: (none|open|closed|locked))?(?: (yes|no))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Merge Rooms Alias</name>
+					<script>map.merge_rooms()</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^merge rooms$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Map Mode Alias</name>
+					<script>map.set_mode(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map mode (\w+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Room Exit Alias</name>
+					<script>map.set_exit(matches[2],matches[3])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^set exit (.+) (\d+)</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Move A Room Alias</name>
+					<script>-- rc or room coords [v&lt;id&gt;] &lt;option&gt;, where option will specify the new
 -- location of the room. The room ID is optional, it'll move the current
 -- room if you don't provide one.
 
@@ -753,13 +775,13 @@ if x then set(); return end
 
 map.echo([[Where do you want to move the room to?
   You can use direct coordinates or relative directions.]])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:rc|room coords) (?:v(\d+) )?(.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Delete A Room Alias</name>
-				<script>-- rld or room delete &lt;option&gt; - where option is the location or ID of the room
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:rc|room coords) (?:v(\d+) )?(.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Delete A Room Alias</name>
+					<script>-- rld or room delete &lt;option&gt; - where option is the location or ID of the room
 -- you'd like to delete
 
 -- want the current room, but we're lost
@@ -777,13 +799,13 @@ local n = getRoomName(rid)
 deleteRoom(rid)
 map.echo(string.format("Deleted the %s (%d) room.\n", (n ~= "" and n or "''"), rid))
 centerview(map.currentRoom)</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:rld|room delete) ?(\w+)?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Room Weight Alias</name>
-				<script>-- rw &lt;optional room ID or direction&gt; &lt;weight&gt;, where option is the location
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:rld|room delete) ?(\w+)?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Room Weight Alias</name>
+					<script>-- rw &lt;optional room ID or direction&gt; &lt;weight&gt;, where option is the location
 -- or ID of the room whose weight you'd like to change.
 
 local weight = tonumber(matches[3]), room
@@ -811,13 +833,13 @@ elseif weight &lt; oldweight then
 else
   map.echo("The room weight on #"..room.." ("..getRoomName(room)..") is already "..weight..".")
 end</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^rw(?: (\w+))? (\d+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set Exit Weight Alias</name>
-				<script>-- rwe &lt;optional room ID, otherwise current&gt; &lt;weight&gt; &lt;exit&gt;, where the weight
+					<command></command>
+					<packageName></packageName>
+					<regex>^rw(?: (\w+))? (\d+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set Exit Weight Alias</name>
+					<script>-- rwe &lt;optional room ID, otherwise current&gt; &lt;weight&gt; &lt;exit&gt;, where the weight
 -- is a positive number (default for exits is 0). Setting a higher weight will
 -- make the exit be less likely to be used.
 
@@ -830,13 +852,13 @@ if not roomExists(room) then map.echo("Room "..room.." doesn't exist. It has to 
 setExitWeight(room, exit, weight)
 
 map.echo(string.format("Set the weight on the %d room going %s to %s. If it's a two-way exit, please set the reverse exit as well.", room, exit, weight))</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^rwe(?: (\d+))? (\d+) (.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Create a Link Between Two Rooms Alias</name>
-				<script>-- rlk or room link &lt;option&gt; - where option will specify the room and exit
+					<command></command>
+					<packageName></packageName>
+					<regex>^rwe(?: (\d+))? (\d+) (.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Create a Link Between Two Rooms Alias</name>
+					<script>-- rlk or room link &lt;option&gt; [one] - where option will specify the room and exit
 -- to link with. You can also tack on 'one' at the end to make it be a one-way link
 
 
@@ -901,13 +923,13 @@ else
   map.echo("Couldn't create an exit.")
 end
 centerview(map.currentRoom)</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:rlk|room link) ?(\d+)? (\w+)( one)?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Delete a Link Alias</name>
-				<script>-- urlk or room unlink &lt;direction&gt; - where direction will specify the direction
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:rlk|room link) ?(\d+)? (\w+)( one)?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Delete a Link Alias</name>
+					<script>-- urlk or room unlink &lt;direction&gt; - where direction will specify the direction
 -- of the exit to unlink. This function will unlink exits both ways, or one way
 -- if there is no incoming exit. 
 
@@ -942,13 +964,13 @@ else
   map.echo("Couldn't delete the outgoing exit.")
 end
 centerview(map.currentRoom)</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:urlk|room unlink) (\w+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Add/delete Doors Alias</name>
-				<script>-- rd &lt;optional room ID, or current if none&gt; &lt;direction&gt; &lt;door status&gt;
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:urlk|room unlink) (\w+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Add/delete Doors Alias</name>
+					<script>-- rd &lt;optional room ID, or current if none&gt; &lt;direction&gt; &lt;door status&gt;
 -- Direction can be one of the following: e,s,w,n,ne,se,sw,ne. 
 -- Door status can be open or o, closed or c, locked or l, clear or gone.
 -- To delete a room, use clear or gone. Setting doors is one-way - to set
@@ -988,13 +1010,13 @@ if statusnum == 0 then
 else
   map.echo("OK, door added/adjusted.")
 end</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^rd(?: (\d+))? (\w+)(?: (\w+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Set a Room Character Alias</name>
-				<script>-- rcc &lt;character&gt; or rcc &lt;character&gt; &lt;room ID&gt; - where the character is one 
+					<command></command>
+					<packageName></packageName>
+					<regex>^rd(?: (\d+))? (\w+)(?: (\w+))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Set a Room Character Alias</name>
+					<script>-- rcc &lt;character&gt; or rcc &lt;character&gt; &lt;room ID&gt; - where the character is one 
 -- letter/number/symbol.
 
 local room = matches[3] or map.currentRoom
@@ -1014,13 +1036,13 @@ else
   map.echo("Set the "..char:sub(1,1).." character on "..room.." ("..getRoomName(room)..")")
 end
 centerview(map.currentRoom)</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^rcc ([^ ]+)(?: (\w+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Add a Special Exit Alias</name>
-				<script>-- spe &lt;other room&gt; &lt;command&gt; or exit special &lt;other room&gt; &lt;command&gt;, where other
+					<command></command>
+					<packageName></packageName>
+					<regex>^rcc ([^ ]+)(?: (\w+))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Add a Special Exit Alias</name>
+					<script>-- spe &lt;other room&gt; &lt;command&gt; or exit special &lt;other room&gt; &lt;command&gt;, where other
 -- room will specify the room to link with, and command the command to us to get
 -- to that room.
 
@@ -1039,13 +1061,13 @@ addSpecialExit(map.currentRoom, tonumber(otherroom), matches[3])
 addSpecialExit(map.currentRoom, tonumber(otherroom), matches[3])
 map.echo(string.format("Added special exit with command '%s' to %s (%d).", matches[3], getRoomName(otherroom), otherroom))
 centerview(map.currentRoom)</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:spe|exit special) (\w+) (.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Add a Special Exit From One Remote Room To Another Alias</name>
-				<script>-- spev &lt;from room&gt; &lt;to room&gt; &lt;command&gt; - This different than spe, which allows
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:spe|exit special) (\w+) (.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Add a Special Exit From One Remote Room To Another Alias</name>
+					<script>-- spev &lt;from room&gt; &lt;to room&gt; &lt;command&gt; - This different than spe, which allows
 -- you to link only the current room to another room - this command doesn't
 -- require you to be in the starting room. 
 
@@ -1063,13 +1085,13 @@ end
 
 addSpecialExit(room1, room2, matches[4])
 map.echo(string.format("Added special exit with command '%s' to from %s (%d) to %s (%d).", matches[4], getRoomName(room1), room1, getRoomName(room2), room2))</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^spev (\d+) (\d+) (.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Clear All Special Exits Alias</name>
-				<script>-- spe clear &lt;option&gt; or exit special clear &lt;option&gt; - where option is the
+					<command></command>
+					<packageName></packageName>
+					<regex>^spev (\d+) (\d+) (.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Clear All Special Exits Alias</name>
+					<script>-- spe clear &lt;option&gt; or exit special clear &lt;option&gt; - where option is the
 -- location or the ID of the room you'd like to clear all special exits in. 
 
 -- want the current room, but we're lost
@@ -1085,39 +1107,39 @@ local rid = (not matches[2] and map.currentRoom or (tonumber(matches[2]) or map.
 
 clearSpecialExits(rid)
 map.echo(string.format("Cleared all special exits in %s (%d).\n", getRoomName(rid), rid))</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:spe clear|exit special clear) ?(\w+)?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Move Room To Another Area Alias</name>
-				<script>-- room area &lt;different area&gt; - will move the current room to another area you're in
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:spe clear|exit special clear) ?(\w+)?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Move Room To Another Area Alias</name>
+					<script>-- room area &lt;different area&gt; - will move the current room to another area you're in
 
 map.roomArea(matches[2], matches[3])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^room area (?:v(\d+) )?(.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Add a Room Label Alias</name>
-				<script>-- room label &lt;optional another room ID&gt; &lt;optional foreground color&gt; &lt;optional background color&gt; my message
+					<command></command>
+					<packageName></packageName>
+					<regex>^room area (?:v(\d+) )?(.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Add a Room Label Alias</name>
+					<script>-- room label &lt;optional another room ID&gt; &lt;optional foreground color&gt; &lt;optional background color&gt; my message
 
 map.roomLabel(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^room label (.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>View/delete Area Labels Alias</name>
-				<script>-- area labels &lt;area name&gt;* will show the labels in the given area
+					<command></command>
+					<packageName></packageName>
+					<regex>^room label (.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>View/delete Area Labels Alias</name>
+					<script>-- area labels &lt;area name&gt; - will show the labels in the given area
 map.areaLabels(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^area labels ?(.+)?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Create An Area Alias</name>
-				<script>-- area add &lt;area name&gt; - will create a new area and automatically give it an ID.
+					<command></command>
+					<packageName></packageName>
+					<regex>^area labels ?(.+)?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Create An Area Alias</name>
+					<script>-- area add &lt;area name&gt; - will create a new area and automatically give it an ID.
 
 local t = getAreaTable(); local tr = {}; for k,v in pairs(t) do tr[v] = k end
 local newid = table.maxn(tr) + 1
@@ -1125,22 +1147,22 @@ local newid = table.maxn(tr) + 1
 setAreaName( newid, matches[2] )
 map.echo(string.format("Created new area %s (%d)", matches[2], newid))
 centerview(map.currentRoom)</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^area add (.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Delete An Area Alias</name>
-				<script>-- area delete &lt;area name&gt; - will delete the given area
+					<command></command>
+					<packageName></packageName>
+					<regex>^area add (.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Delete An Area Alias</name>
+					<script>-- area delete &lt;area name&gt; - will delete the given area
 
 map.deleteArea(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^area delete (.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Cancel Area Deletion Alias</name>
-				<script>-- cancel area deletion - stop area deletion. This will not restore deleted rooms,
+					<command></command>
+					<packageName></packageName>
+					<regex>^area delete (.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Cancel Area Deletion Alias</name>
+					<script>-- cancel area deletion - stop area deletion. This will not restore deleted rooms,
 -- merely pauses the process.
 
 if not map.deletingarea then map.echo("I wasn't deleting any areas already.") return end
@@ -1149,46 +1171,46 @@ local areaname = map.deletingarea.areaname
 map.deletingarea = nil
 
 map.echo("Stopped deleting rooms in the '"..areaname.."'. The area is partially missing its rooms now, you'll want to restart the process to finish it.")</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^cancel area deletion$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Rename An Area Alias</name>
-				<script>-- area rename &lt;new area name&gt; - will rename the current area you're in to the new name
+					<command></command>
+					<packageName></packageName>
+					<regex>^cancel area deletion$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Rename An Area Alias</name>
+					<script>-- area rename &lt;new area name&gt; - will rename the current area you're in to the new name
 map.renameArea(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^area rename (.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Create Map Feature Alias</name>
-				<script>-- feature create &lt;feature&gt; [char &lt;room character&gt;] - will create a new map
+					<command></command>
+					<packageName></packageName>
+					<regex>^area rename (.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Create Map Feature Alias</name>
+					<script>-- feature create &lt;feature&gt; [char &lt;room character&gt;] - will create a new map
 -- feature for use on rooms. You can also optionally add a character mark to
 -- the feature, which will be set when a map feature is added to a room. 
 -- Note: Map feature names are not allowed to contain numbers. 
 
 map.createMapFeature(matches[2]:trim(), (matches[3] and matches[3]:trim()))</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^feature create (.+?)(?: char (.+))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Add Map Feature To Room Alias</name>
-				<script>-- room create feature [v&lt;room id&gt;] &lt;feature&gt;* or *rcf [v&lt;room id&gt;] &lt;feature&gt;
+					<command></command>
+					<packageName></packageName>
+					<regex>^feature create (.+?)(?: char (.+))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Add Map Feature To Room Alias</name>
+					<script>-- room create feature [v&lt;room id&gt;] &lt;feature&gt;* or *rcf [v&lt;room id&gt;] &lt;feature&gt;
 -- adds a created map feature to the room. If the map feature is associated with
 -- a character mark, it will be set on the room and existing marks get overwritten.
 -- The room number to add the feature to can be given with the optional argument
 -- (note that there is no space between the v and the ID). 
 
 map.roomCreateMapFeature(matches[3], matches[2] == "" and map.currentRoom or tonumber(matches[2]))</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:room create feature|rcf) (?:v(\d+) )?(.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Delete Map Feature From Room Alias</name>
-				<script>-- room delete feature [v&lt;room id&gt;] &lt;feature&gt;* or *rdf [v&lt;room id&gt;] &lt;feature&gt;
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:room create feature|rcf) (?:v(\d+) )?(.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Delete Map Feature From Room Alias</name>
+					<script>-- room delete feature [v&lt;room id&gt;] &lt;feature&gt;* or *rdf [v&lt;room id&gt;] &lt;feature&gt;
 -- removes a map feature from the room. If the map feature is associated with
 -- a character mark and its set on the room, a random character mark from the
 -- other map features on the room is chosen to replace it. The room number to
@@ -1196,65 +1218,71 @@ map.roomCreateMapFeature(matches[3], matches[2] == "" and map.currentRoom or ton
 -- there is no space between the v and the ID). 
 
 map.roomDeleteMapFeature(matches[3], matches[2] == "" and map.currentRoom or tonumber(matches[2]))</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:room delete feature|rdf) (?:v(\d+) )?(.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Delete Map Feature Alias</name>
-				<script>-- feature delete &lt;feature&gt;* deletes a map feature and removes it from all rooms
+					<command></command>
+					<packageName></packageName>
+					<regex>^(?:room delete feature|rdf) (?:v(\d+) )?(.+)$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Delete Map Feature Alias</name>
+					<script>-- feature delete &lt;feature&gt;* deletes a map feature and removes it from all rooms
 
 map.deleteMapFeature(matches[2]:trim())</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^feature delete (.+)$</regex>
+				</Alias>
+			</AliasGroup>
+			<AliasGroup isActive="yes" isFolder="yes">
+				<name>Map Sharing Aliases</name>
+				<script></script>
 				<command></command>
 				<packageName></packageName>
-				<regex>^feature delete (.+)$</regex>
-			</Alias>
-		</AliasGroup>
-		<AliasGroup isActive="yes" isFolder="yes">
-			<name>Map Sharing Aliases</name>
-			<script></script>
-			<command></command>
-			<packageName></packageName>
-			<regex></regex>
-			<Alias isActive="yes" isFolder="no">
-				<name>Save Map Alias</name>
-				<script>saveMap(getMudletHomeDir() .. "/map.dat")</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map save$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Load Map Alias</name>
-				<script>map.load_map(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map load(?: (.*))?$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Import Map Area Alias</name>
-				<script>map.import_area(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map import (.*)</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
-				<name>Export Map Area Alias</name>
-				<script>map.export_area(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^map export (.*)</regex>
-			</Alias>
+				<regex></regex>
+				<Alias isActive="yes" isFolder="no">
+					<name>Save Map Alias</name>
+					<script>saveMap(getMudletHomeDir() .. "/map.dat")</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map save$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Load Map Alias</name>
+					<script>map.load_map(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map load(?: (.*))?$</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Import Map Area Alias</name>
+					<script>map.import_area(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map import (.*)</regex>
+				</Alias>
+				<Alias isActive="yes" isFolder="no">
+					<name>Export Map Area Alias</name>
+					<script>map.export_area(matches[2])</script>
+					<command></command>
+					<packageName></packageName>
+					<regex>^map export (.*)</regex>
+				</Alias>
+			</AliasGroup>
 		</AliasGroup>
 	</AliasPackage>
 	<ActionPackage />
 	<ScriptPackage>
-		<Script isActive="yes" isFolder="no">
-			<name>Map Script</name>
-			<packageName></packageName>
-			<script>-- Jor'Mox's Generic Map Script
+		<ScriptGroup isActive="yes" isFolder="yes">
+			<name>generic_mapper</name>
+			<packageName>generic_mapper</packageName>
+			<script></script>
+			<eventHandlerList />
+			<Script isActive="yes" isFolder="no">
+				<name>Map Script</name>
+				<packageName></packageName>
+				<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.0"
+local version = "2.1.1"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1283,117 +1311,161 @@ map.help = {[[
     available in individual help files.
 
     &lt;cyan&gt;Fundamental Commands:&lt;reset&gt;
-        These are commands used to get the mapper functional on a basic level
+        These are commands used to get the mapper functional on a basic level.
 
-        &lt;link: show&gt;map show&lt;/link&gt; - Displays or hides a map window
+        &lt;link: show&gt;map show&lt;/link&gt; - Displays or hides a map window.
         &lt;link: quick start&gt;map basics&lt;/link&gt; - Shows a quick-start guide with some basic information to
-            help get the script working
-        &lt;link: 1&gt;map help &lt;optional command name&gt;&lt;/link&gt; - Shows either this help file or the
-            help file for the command given
+            help get the script working.
+        &lt;link: 1&gt;map help [command name]&lt;/link&gt; - Shows either this help file or the help file for the
+            command given.
         &lt;link: find prompt&gt;find prompt&lt;/link&gt; - Instructs the script to look for a prompt that matches
-            a known pattern
-        &lt;link: prompt&gt;map prompt&lt;/link&gt; - Provides a specific pattern to the script that matches
-            your prompt, uses Lua string-library patterns
-        &lt;link: ignore&gt;map ignore&lt;/link&gt; - Provides a specific pattern for the script to ignore,
-            uses Lua string-library patterns
-        &lt;link: movemethod&gt;map movemethod&lt;/link&gt; - Adds a movement method for the script to look for when mapping.
-        &lt;link: debug&gt;map debug&lt;/link&gt; - Toggles on debug mode, in which extra messages are shown
-            with the intent of assisting in troubleshooting getting the
-            script setup
-        &lt;link: me&gt;map me&lt;/link&gt; - Locates the user on the map, if possible
-        &lt;link: path&gt;map path &lt;room name&gt; &lt;; optional area name&gt;&lt;/link&gt; - Finds a walking path to
-            the named room, in the named area if specified
+            a known pattern.
+        &lt;link: prompt&gt;map prompt &lt;pattern&gt;&lt;/link&gt; - Provides a specific pattern to the script that
+            matches your prompt, uses Lua string-library patterns.
+        &lt;link: ignore&gt;map ignore &lt;pattern&gt;&lt;/link&gt; - Provides a specific pattern for the script to
+            ignore, uses Lua string-library patterns.
+        &lt;link: movemethod&gt;map movemethod &lt;word&gt;&lt;/link&gt; - Adds a movement method for the script to
+            look for when mapping.
+        &lt;link: debug&gt;map debug&lt;/link&gt; - Toggles on debug mode, in which extra messages are shown with
+            the intent of assisting in troubleshooting getting the script setup.
+        &lt;link: me&gt;map me&lt;/link&gt; - Locates the user on the map, if possible.
+        &lt;link: path&gt;map path &lt;room name&gt; [; area name]&lt;/link&gt; - Finds a walking path to the named
+            room, in the named area if specified.
         &lt;link: character&gt;map character &lt;name&gt;&lt;/link&gt; - Sets a given name as the current character for
-            the purposes of the script, used for different prompt patterns
-            and recall locations
+            the purposes of the script, used for different prompt patterns and
+            recall locations.
         &lt;link: recall&gt;map recall&lt;/link&gt; - Sets the current room as the recall location of the
             current character
-        &lt;link: config&gt;map config &lt;configuration&gt; &lt;optional value&gt;&lt;/link&gt; - Sets or toggles the
-            given configuration either turning it on or off, if no value is
-            given, or sets it to the given value
-        &lt;link: window&gt;map window &lt;configuration&gt; &lt;value&gt;&lt;/link&gt; - Sets the given configuration for
-            the map window to the given value
+        &lt;link: config&gt;map config &lt;configuration&gt; [value]&lt;/link&gt; - Sets or toggles the given
+            configuration either turning it on or off, if no value is given, or sets it to the given
+            value.
+        &lt;link: window&gt;map window &lt;configuration&gt; [value]&lt;/link&gt; - Sets the given configuration for the
+            map window to the given value.
         &lt;link: translate&gt;map translate &lt;english direction&gt; &lt;translated long direction&gt;&lt;/link&gt;
-            &lt;link: translate&gt;&lt;translated short direction&gt;&lt;/link&gt; - Sets the provided translations for
-            the given english direction word.
+        &lt;link: translate&gt;&lt;translated short direction&gt;&lt;/link&gt; - Sets the provided translations for the
+            given english direction word.
 
-    &lt;cyan&gt;Mapping Commands:&lt;reset&gt;
-        These are commands used in the process of actually creating a map
+    &lt;cyan&gt;Map Information Commands:&lt;reset&gt;
+        These commands show detailed information about your current map.
 
-        &lt;link: start mapping&gt;start mapping &lt;optional area name&gt;&lt;/link&gt; - Starts adding content to the
-            map, using either the area of the room the user is currently in,
-            or the area name provided
-        &lt;link: stop mapping&gt;stop mapping&lt;/link&gt; - Stops adding content to the map
-        &lt;link: set area&gt;set area &lt;area name&gt;&lt;/link&gt; - Moves the current room to the named area
+        &lt;link: areas&gt;map areas&lt;/link&gt; - Shows a list of all areas, with links to show a list of
+            rooms in the area.
+        &lt;link: rooms&gt;map rooms &lt;area name&gt;&lt;/link&gt; - Shows a list of rooms in the named area.
+        &lt;link: room_find&gt;room find|rf &lt;room name&gt;&lt;/link&gt; - Searches for a room of a given name.
+        &lt;link: room_look&gt;room look|rl [roomID]&lt;/link&gt; - Displays detailed information about a room.
+        &lt;link: showpath&gt;showpath &lt;roomID&gt;&lt;/link&gt; - Shows you a path from your current location to the
+            roomID.
+        &lt;link: showpath&gt;showpath &lt;fromID&gt; &lt;toID&gt;&lt;/link&gt; - Shows you a path from a given location to
+            another location.
+        &lt;link: spe_list&gt;spe list [filter]&lt;/link&gt; - Display a list of all known special exits.
+        &lt;link: feature_list&gt;feature list&lt;/link&gt; - Lists all map features created via feature create and
+            the associated room characters.
+
+    &lt;cyan&gt;Map Creation Commands:&lt;reset&gt;
+        These are commands used in the process of actually creating a map.
+
+        &lt;link: start mapping&gt;start mapping [area name]&lt;/link&gt; - Starts adding content to the map, using
+            either the area of the room the user is currently in or the area
+            name provided.
+        &lt;link: stop mapping&gt;stop mapping&lt;/link&gt; - Stops adding content to the map.
+        &lt;link: area_add&gt;area add &lt;area name&gt;&lt;/link&gt; - Creates a new area.
+        &lt;link: area_delete&gt;area delete &lt;area name&gt;&lt;/link&gt; - Deletes a given area and all rooms within.
+        &lt;link: area_cancel&gt;cancel area deletion&lt;/link&gt; - Pauses deletion of an area.  This will NOT
+            restore delete rooms.
+        &lt;link: area_rename&gt;area rename &lt;new area name&gt;&lt;/link&gt; - Renames the current area you're in.
+        &lt;link: set area&gt;set area &lt;area name&gt;&lt;/link&gt; - Moves the current room to the named area.
         &lt;link: mode&gt;map mode &lt;lazy, simple, normal or complex&gt;&lt;/link&gt; - Sets the mapping mode, which
             defines how new rooms are added to the map.
-        &lt;link: add door&gt;add door &lt;direction&gt; &lt;optional door status&gt; &lt;optional one way&gt;&lt;/link&gt; -
-            Creates a door in the given direction, with the given status
-            (default closed), in both directions, unless a one-direction door
-            is specified
-        &lt;link: add portal&gt;add portal &lt;entry command&gt;&lt;/link&gt; - Creates a portal in the current room,
-            using the given command for entry
-        &lt;link: shift&gt;shift &lt;direction&gt;&lt;/link&gt; - Moves the current room on the map in the given
-            direction
+        &lt;link: add door&gt;add door &lt;direction&gt; [door status] [one way]&lt;/link&gt; - Creates a door in
+            the given direction, with the given status(default closed), in both
+            directions, unless a one-direction door is specified.
+        &lt;link: add portal&gt;add portal [-f] &lt;entry command&gt;&lt;/link&gt; - Creates a portal in the current room,
+            using the given command for entry.
+        &lt;link: shift&gt;shift &lt;direction&gt;&lt;/link&gt; - Moves the current room on the map in the given direction.
         &lt;link: merge rooms&gt;merge rooms&lt;/link&gt; - Combines overlapping rooms that have the same name into
-            a single room
+            a single room.
         &lt;link: clear moves&gt;clear moves&lt;/link&gt; - Clears the list of movement commands maintained by the
-            script
+            script.
         &lt;link: set exit&gt;set exit &lt;direction&gt; &lt;roomID&gt;&lt;/link&gt; - Creates a one-way exit in the given
-            direction to the room with the specified roomID, can also be used
-            with portals
-        &lt;link: areas&gt;map areas&lt;/link&gt; - Shows a list of all area, with links to show a list of
-            rooms in the area
-        &lt;link: rooms&gt;map rooms &lt;area name&gt;&lt;/link&gt; - Shows a list of rooms in the named area
+            direction to the room with the specified roomID, can also be used with portals.
+        &lt;link: arealock&gt;arealock [area name]&lt;/link&gt; - Displays a list of areas you can lock/unlock.
+        &lt;link: room_coords&gt;room coords|rc [v&lt;roomID&gt;] &lt;x&gt; &lt;y&gt; &lt;z&gt;&lt;/link&gt; - Move a room to new map coordinates.
+        &lt;link: room_delete&gt;room delete|rld &lt;direction|roomID&gt;&lt;/link&gt; - Delete a room given a direction or roomID.
+        &lt;link: room_weight&gt;rw [direction|roomID] &lt;weight&gt;&lt;/link&gt; - Set a room weight given a direction or roomID.
+        &lt;link: room_weight_exit&gt;rwe [roomID] &lt;weight&gt; &lt;exit&gt;&lt;/link&gt; - Set the weight of a given exit in
+            the current room, or optional roomID.
+        &lt;link: room_link&gt;room link|rlk &lt;direction&gt; [one]&lt;/link&gt; - Create a link to a room given a direction.
+            Optional 'one' to create a one-way link.
+        &lt;link: room_unlink&gt;room unlink|urlk &lt;direction&gt;&lt;/link&gt; - Delete a link in the specified direction.
+        &lt;link: room_door&gt;rd [roomID] &lt;direction&gt; &lt;open|closed|locked|clear&gt;&lt;/link&gt; - Create or delete a door
+            from the current room, or optional location.
+        &lt;link: room_character&gt;rcc &lt;character&gt; [roomID]&lt;/link&gt; - Assign a single character, letter or
+            number to the current room, or optional location.
+        &lt;link: exit_special&gt;exit special|spe &lt;direction|roomID&gt; &lt;command&gt;&lt;/link&gt; - Add a special exit
+            to a room.
+        &lt;link: spev&gt;spev &lt;fromID&gt; &lt;toID&gt; &lt;command&gt;&lt;/link&gt; - Add a special exit to two remote rooms.
+        &lt;link: spe_clear&gt;exit special clear|spe clear &lt;direction|roomID&gt;&lt;/link&gt; - Delete a special exit.
+        &lt;link: room_area&gt;room area [v&lt;roomID&gt;] &lt;area name&gt;&lt;/link&gt; - Moves a room to the given area.
+        &lt;link: room_label&gt;room label [roomID] [fgColor] [bgColor] &lt;message&gt;&lt;/link&gt; - Adds a label to a room.
+        &lt;link: area_labels&gt;area labels &lt;area name&gt;&lt;/link&gt; - Display all labels in a given area with an
+            option to delete.
+        &lt;link: feature_create&gt;feature create &lt;feature&gt; [char &lt;room character&gt;]&lt;/link&gt; - Create a new
+            global map feature.
+        &lt;link: room_feature_create&gt;room create feature|rcf [v&lt;room id&gt;] &lt;feature&gt;&lt;/link&gt; - Adds a map
+            feature to the current room, or optional location.
+        &lt;link: room_feature_delete&gt;room delete feature|rdf [v&lt;room id&gt;] &lt;feature&gt;&lt;/link&gt; - Removes a
+            map feature from the current room or optional location.
+        &lt;link: feature_delete&gt;feature delete &lt;feature&gt;&lt;/link&gt; - Deletes a global map feature and
+            removes it from all rooms.
 
     &lt;cyan&gt;Sharing and Backup Commands:&lt;reset&gt;
 
-        &lt;link: save&gt;map save&lt;/link&gt; - Creates a backup of the map
+        &lt;link: save&gt;map save&lt;/link&gt; - Creates a backup of the map.
         &lt;link: load&gt;map load &lt;remote address&gt;&lt;/link&gt; - Loads a map backup, or a map file from a
-            remote address
+            remote address.
         &lt;link: export&gt;map export &lt;area name&gt;&lt;/link&gt; - Creates a file from the named area that can
-            be shared
-        &lt;link: import&gt;map import &lt;area name&gt;&lt;/link&gt; - Loads an area from a file
+            be shared.
+        &lt;link: import&gt;map import &lt;area name&gt;&lt;/link&gt; - Loads an area from a file.
 
     &lt;cyan&gt;Mapping Events:&lt;reset&gt;
-        These events are used by triggers to direct the script's behavior
+        These events are used by triggers to direct the script's behavior.
 
         &lt;link: onNewRoom&gt;onNewRoom&lt;/link&gt; - Signals that a room has been detected, optional exits
-            argument
-        &lt;link: onMoveFail&gt;onMoveFail&lt;/link&gt; - Signals that an attempted move failed
+            argument.
+        &lt;link: onMoveFail&gt;onMoveFail&lt;/link&gt; - Signals that an attempted move failed.
         &lt;link: onForcedMove&gt;onForcedMove&lt;/link&gt; - Signals that the character moved without a command
-            being entered, required direction argument
+            being entered, required direction argument.
         &lt;link: onRandomMove&gt;onRandomMove&lt;/link&gt; - Signals that the character moved in an unknown
-            direction without a command being entered
+            direction without a command being entered.
         &lt;link: onVisionFail&gt;onVisionFail&lt;/link&gt; - Signals that the character moved but some or all of
-            the room information was not able to be gathered
+            the room information was not able to be gathered.
 
     &lt;cyan&gt;Key Variables:&lt;reset&gt;
         These variables are used by the script to keep track of important
-            information
+            information.
 
-        &lt;yellow&gt;map.prompt.room&lt;reset&gt; - Can be set to specify the room name
-        &lt;yellow&gt;map.prompt.exits&lt;reset&gt; - Can be set to specify the room exits
-        &lt;yellow&gt;map.prompt.hash&lt;reset&gt; - Can be set to specify the room hash
+        &lt;yellow&gt;map.prompt.room&lt;reset&gt; - Can be set to specify the room name.
+        &lt;yellow&gt;map.prompt.exits&lt;reset&gt; - Can be set to specify the room exits.
+        &lt;yellow&gt;map.prompt.hash&lt;reset&gt; - Can be set to specify the room hash.
             Notice: if you set this, mapper will only find room by
             getRoomIDbyHash(hash)
-        &lt;yellow&gt;map.character&lt;reset&gt; - Contains the current character name
+        &lt;yellow&gt;map.character&lt;reset&gt; - Contains the current character name.
         &lt;yellow&gt;map.save.recall&lt;reset&gt; - Contains a table of recall roomIDs for all
-            characters
+            characters.
         &lt;yellow&gt;map.save.prompt_pattern&lt;reset&gt; - Contains a table of prompt patterns for all
-            characters
+            characters.
         &lt;yellow&gt;map.save.ignore_patterns&lt;reset&gt; - Contains a table of patterns of text the
-            script ignores
+            script ignores.
         &lt;yellow&gt;map.configs&lt;reset&gt; - Contains a number of different options that can be set
-            to modify script behavior
+            to modify script behavior.
         &lt;yellow&gt;map.currentRoom&lt;reset&gt; - Contains the roomID of the room your character is
-            in, according to the script
+            in, according to the script.
         &lt;yellow&gt;map.currentName&lt;reset&gt; - Contains the name of the room your character is in,
-            according to the script
+            according to the script.
         &lt;yellow&gt;map.currentExits&lt;reset&gt; - Contains a table of the exits of the room your
-            character is in, according to the script
+            character is in, according to the script.
         &lt;yellow&gt;map.currentArea&lt;reset&gt; - Contains the areaID of the area your character is
-            in, according to the script
+            in, according to the script.
 ]]}
 map.help.save = [[
     &lt;cyan&gt;Map Save&lt;reset&gt;
@@ -1445,7 +1517,7 @@ map.help.import = [[
 ]]
 map.help.start_mapping = [[
     &lt;cyan&gt;Start Mapping&lt;reset&gt;
-        syntax: &lt;yellow&gt;start mapping &lt;optional area name&gt;&lt;reset&gt;
+        syntax: &lt;yellow&gt;start mapping [area name]&lt;reset&gt;
 
         This command instructs the script to add new content to the map when it
         is seen. When first used, an area name is mandatory, so that an area is
@@ -1567,8 +1639,7 @@ map.help.mode = [[
 ]]
 map.help.add_door = [[
     &lt;cyan&gt;Add Door&lt;reset&gt;
-        syntax: &lt;yellow&gt;add door &lt;direction&gt; &lt;optional none, open, closed, or locked&gt;
-        &lt;optional yes or no&gt;&lt;reset&gt;
+        syntax: &lt;yellow&gt;add door &lt;direction&gt; [none|open|closed|locked] [yes|no]&lt;reset&gt;
 
         This command places a door on the exit in the given direction, or
         removes it if "none" is given as the second argument. The door status is
@@ -1577,7 +1648,7 @@ map.help.add_door = [[
 ]]
 map.help.add_portal = [[
     &lt;cyan&gt;Add Portal&lt;reset&gt;
-        syntax: &lt;yellow&gt;add portal &lt;optional -f&gt; &lt;entry command&gt;&lt;reset&gt;
+        syntax: &lt;yellow&gt;add portal [-f] &lt;entry command&gt;&lt;reset&gt;
 
         This command creates a special exit in the current room that is entered
         by using the given entry command. The given entry command is then sent,
@@ -1688,7 +1759,7 @@ map.help.me = [[
 ]]
 map.help.path = [[
     &lt;cyan&gt;Map Path&lt;reset&gt;
-        syntax: &lt;yellow&gt;map path &lt;room name&gt; &lt;; optional area name&gt;&lt;reset&gt;
+        syntax: &lt;yellow&gt;map path &lt;room name&gt; [; area name]&lt;reset&gt;
 
         This command tries to find a walking path from the current room to the
         named room. If an area name is given, only rooms within that area that
@@ -1866,6 +1937,338 @@ map.help.quick_start = [[
        This will bring up a more detailed help file, starting with the available
        help topics.
 ]]
+map.help.room_find = [[
+    &lt;cyan&gt;Room Find&lt;reset&gt;
+        syntax: &lt;yellow&gt;room find &lt;room name&gt;&lt;reset&gt;
+                &lt;yellow&gt;rf &lt;room name&gt;&lt;reset&gt;
+
+        This command will search all rooms and return a list of matches.
+]]
+map.help.room_look = [[
+    &lt;cyan&gt;Room Look&lt;reset&gt;
+        syntax: &lt;yellow&gt;room look [roomID]&lt;reset&gt;
+                &lt;yellow&gt;rl [roomID]&lt;reset&gt;
+
+        This command will display detailed information about the current room.
+        Optionally a roomID can be provided.
+]]
+map.help.showpath = [[
+    &lt;cyan&gt;Showpath&lt;reset&gt;
+        syntax: &lt;yellow&gt;showpath &lt;roomID&gt;&lt;reset&gt;
+                &lt;yellow&gt;showpath &lt;fromID&gt; &lt;toID&gt;&lt;reset&gt;
+
+        This command displays a path from your current room to the roomID specified.
+        If two roomID's are specifed it will display a path from a remote room to another room.
+]]
+map.help.spe_list = [[
+    &lt;cyan&gt;Special Exits List&lt;reset&gt;
+        syntax: &lt;yellow&gt;spe list [filter]&lt;reset&gt;
+
+        This command displays a list of all known special exits.  You can alternatively provide an
+        optional filter to return a list containing those words.
+
+        Example: &lt;yellow&gt;spe list worm warp&lt;reset&gt;
+]]
+map.help.feature_list = [[
+    &lt;cyan&gt;Feature List&lt;reset&gt;
+        syntax: &lt;yellow&gt;feature list&lt;reset&gt;
+
+        This command displays a list of all map features created via feature create and the associated room characters.
+]]
+map.help.area_add = [[
+    &lt;cyan&gt;Area Add&lt;reset&gt;
+        syntax: &lt;yellow&gt;area add &lt;area name&gt;&lt;reset&gt;
+
+        This command will create a new area and automatically give it an ID.
+
+        Example: &lt;yellow&gt;area add My City&lt;reset&gt; - create a new area called My City
+]]
+map.help.area_delete = [[
+    &lt;cyan&gt;Area Delete&lt;reset&gt;
+        syntax: &lt;yellow&gt;area delete &lt;area name&gt;&lt;reset&gt;
+
+        This command will delete the given area. If the area is really big
+        (thousands of rooms), deleting it at once would take a really long
+        while and freeze your Mudlet while doing so. To combat the unpleasant
+        experience, the script breaks up area deletion into batches of rooms
+        (100 by default). While this still heavily impacts Mudlets performance,
+        it allows you to see a progress meter of how far it has gotten and gives
+        you an ability to pause it at any time by doing 'cancel area deletion'.
+
+        Example: &lt;yellow&gt;area delete My City&lt;reset&gt; - create a new area called My City
+]]
+map.help.area_cancel = [[
+    &lt;cyan&gt;Cancel Area Deletion&lt;reset&gt;
+        syntax: &lt;yellow&gt;cancel area deletion&lt;reset&gt;
+
+        This comand will stop an area deletion that has started. This will NOT
+        restore deleted rooms - it merely pauses the process, so you can resume
+        it with 'area delete' later on. You can type this in while Mudlet is
+        deleting an area - it'll take a short while for letters to show up, but
+        they will eventually.
+]]
+map.help.area_rename = [[
+    &lt;cyan&gt;Area Rename&lt;reset&gt;
+        syntax: &lt;yellow&gt;area rename &lt;name&gt;&lt;reset&gt;
+
+        This command will rename the current area you're in to the new name.
+
+        Example: &lt;yellow&gt;area rename My City&lt;reset&gt; - call the area you're in My City from now on
+
+]]
+map.help.arealock = [[
+    &lt;cyan&gt;Arealock&lt;reset&gt;
+        syntax: &lt;yellow&gt;arealock [filter]&lt;reset&gt;
+
+        This command displays a list of areas you can lock/unlock, you can also
+        give it an area name to filter by. If an area is locked the mapper will
+        not attempt to speedwalk or go through any of the rooms in the area.
+
+        Example: &lt;yellow&gt;arealock City&lt;reset&gt;
+]]
+map.help.room_coords = [[
+    &lt;cyan&gt;Room Coordinates&lt;reset&gt;
+        syntax: &lt;yellow&gt;room coords [v&lt;roomID&gt;] &lt;x&gt; &lt;y&gt; &lt;z&gt;&lt;reset&gt;
+                &lt;yellow&gt;rc [v&lt;roomID&gt;] &lt;x&gt; &lt;y&gt; &lt;z&gt;&lt;reset&gt;
+
+        This command will move a room to the new map coordinates. x,y and z will
+        specify the new location of the room. The room ID is optional, it'll move
+        the current room if you don't provide one.
+
+        Example: &lt;yellow&gt;rc nw&lt;reset&gt; - move the room to be nw of the current location
+                 &lt;yellow&gt;rc v34 w&lt;reset&gt; - move the room ID 34 west, note the letter 'v' in the command
+                 &lt;yellow&gt;rc 1 -5 10&lt;reset&gt; - move the current room to those exact coordinates
+                 &lt;yellow&gt;rc v12 8 3 -8&lt;reset&gt; - move the room #12 to 8x, 3y and -8z
+                 &lt;yellow&gt;rc 14x 5y&lt;reset&gt; - move the current room to be at 14x and 5y, but the
+                    same z-level you're on. You can include all three of x, y, z coordinates
+                    or only one as you wish
+]]
+map.help.room_delete = [[
+    &lt;cyan&gt;Room Delete&lt;reset&gt;
+        syntax: &lt;yellow&gt;room delete &lt;direction|roomID&gt;&lt;reset&gt;
+                &lt;yellow&gt;rld &lt;direction|roomID&gt;&lt;reset&gt;
+
+        This command will delete a room given a relative direction or roomID.
+
+        Example: &lt;yellow&gt;rld&lt;reset&gt; - current room, will delete the room you're currently in
+                 &lt;yellow&gt;rld n&lt;reset&gt; - relative direction, will delete the room that's north of you
+                 &lt;yellow&gt;rld 513&lt;reset&gt; - using roomID, will delete the room with ID 513
+]]
+map.help.room_weight = [[
+    &lt;cyan&gt;Room Weight&lt;reset&gt;
+        syntax: &lt;yellow&gt;room weight [direction|roomID] &lt;weight&gt;&lt;reset&gt;
+                &lt;yellow&gt;rw [direction|roomID] &lt;weight&gt;&lt;reset&gt;
+
+        This command updates the weight of a room, making it more or less
+        desirable to travel through.  Direction or roomID is optional and
+        defaults to the current room.
+
+        Example: &lt;yellow&gt;rw 10&lt;reset&gt; - will set the room weight of the room you're standing in to 10
+                 &lt;yellow&gt;rw n 4&lt;reset&gt; - relative direction, will set the room weight of the room that's
+                    to the north of you to four
+                 &lt;yellow&gt;rw 2343 2&lt;reset&gt; - using roomID, will set the room weight of room 2343 to 2
+]]
+map.help.room_weight_exit = [[
+    &lt;cyan&gt;Room Weight Exit&lt;reset&gt;
+        syntax: &lt;yellow&gt;rwe [roomID] &lt;weight&gt; &lt;exit&gt;&lt;reset&gt;
+
+        This command updates the weight of a room exit, where weight is a
+        positive number (default for exits is 0). Setting a higher weight will
+        make the exit be less likely to be used. The exit can be a cardinal
+        direction of either n,e,s,w,ne,se,sw,ne,up,down,in,out or the exact
+        special exit text (including the script: part). This alias sets a weight
+        one way only, so if you want to set it both ways, use it on the opposite
+        side as well. Use 'rl' to check exit weights.
+
+        Example: &lt;yellow&gt;rwe 1 n&lt;reset&gt; -  will set the weight of the exit north to 1
+                 &lt;yellow&gt;rwe 2434 0 e&lt;reset&gt; - will reset the exit weight of an east exit that
+                    leads out from the 2434 room
+]]
+map.help.room_link = [[
+    &lt;cyan&gt;Room Link&lt;reset&gt;
+        syntax: &lt;yellow&gt;room link [roomID] &lt;direction&gt; [one]&lt;reset&gt;
+                &lt;yellow&gt;rlk [roomID] &lt;direction&gt; [one]&lt;reset&gt;
+
+        This command will link a room given a direction and optional roomID.
+        You can also add 'one' at the end of the command to make it be a one-way
+        link.
+
+        Example: &lt;yellow&gt;rlk n&lt;reset&gt; - relative direction, will link if exists
+                    a room to the north of this one to your current location
+                 &lt;yellow&gt;rlk 351 n&lt;reset&gt; - exact roomID and direction, will
+                    link the current room to room #351 via a north exit
+                 &lt;yellow&gt;rlk n one&lt;reset&gt; - will make an exit north one-way
+]]
+map.help.room_unlink = [[
+    &lt;cyan&gt;Room Unlink&lt;reset&gt;
+        syntax: &lt;yellow&gt;room unlink &lt;direction&gt;&lt;reset&gt;
+                &lt;yellow&gt;urlk &lt;direction&gt;&lt;reset&gt;
+
+                Unlink a room given a direction.  This function will unlink
+                exits both ways, or one way if there is no incoming exit.
+
+        Example: &lt;yellow&gt;urlk nw&lt;reset&gt; - relative direction, will unlink to the
+                    northwest, and from the northwest room to the southeast
+]]
+map.help.room_door = [[
+    &lt;cyan&gt;Room Door&lt;reset&gt;
+        syntax: &lt;yellow&gt;rd [roomID] &lt;direction&gt; &lt;open|closed|locked|clear&gt;&lt;reset&gt;
+
+                Will create a door from the current room to a direction
+                specified.  Door status can be open or o, closed or c, locked or
+                l, clear or gone. To delete a room, use clear or gone. Setting
+                doors is one-way - to set two-way doors, use the alias from the
+                opposite direction.
+
+
+        Example: &lt;yellow&gt;rd n&lt;reset&gt; - add a one-way door north from the current room
+                 &lt;yellow&gt;rd 23 w closed&lt;reset&gt; - add a closed door leading west in room 23
+                 &lt;yellow&gt;rd n clear&lt;reset&gt; - remove the door to the north from the current
+                    room on this side only
+]]
+map.help.room_character = [[
+    &lt;cyan&gt;Room Character&lt;reset&gt;
+        syntax: &lt;yellow&gt;rcc &lt;character|clear&gt; [roomID]&lt;reset&gt;
+
+        This command will assign a single character, letter or number to the
+        current room, or an optional given room.  Using clear will remove any
+        characters.
+
+        Example: &lt;yellow&gt;rcc $&lt;reset&gt; - put the dollar sign in the current room 
+                    (e.g. to indicate a shop or bank)
+                 &lt;yellow&gt;rcc C 234&lt;reset&gt; - put the letter C onto room 234
+                 &lt;yellow&gt;rcc clear&lt;reset&gt; - remove any letter from the current
+                 room
+]]
+map.help.exit_special = [[
+    &lt;cyan&gt;Special Exits&lt;reset&gt;
+        syntax: &lt;yellow&gt;exit special &lt;direction|roomID&gt; &lt;command&gt;&lt;reset&gt;
+                &lt;yellow&gt;spe &lt;direction|roomID&gt; &lt;command&gt;&lt;reset&gt;
+
+        This command will link two rooms via custom or special exit/script.
+
+        Example: &lt;yellow&gt;spe n push rock&lt;reset&gt; - relative direction, will go to
+                    the room that's north of you by doing 'push rock'
+                 &lt;yellow&gt;spe 125 pull lever&lt;reset&gt; - will go to room 125 from the
+                    current one by pulling a lever
+
+        You can also specify a script to do code for you, by starting the exit
+        command with script.
+
+        Example: &lt;yellow&gt;spe 125 script: sendAll("pull lever", "enter gate")&lt;reset&gt;
+
+
+]]
+map.help.spev = [[
+    &lt;cyan&gt;Remote Special Exits&lt;reset&gt;
+        syntax: &lt;yellow&gt;spev &lt;fromID&gt; &lt;toID&gt; &lt;command&gt;&lt;reset&gt;
+
+        This command will add a special exit between two remote rooms.
+
+        Example: &lt;yellow&gt;spe 125 560 push rock&lt;reset&gt; - will link room 125 to room 560 with
+                    the command 'push rock'
+]]
+map.help.spe_clear = [[
+    &lt;cyan&gt;Clear Special Exits&lt;reset&gt;
+        syntax: &lt;yellow&gt;exit special clear &lt;direction|roomID&gt;&lt;reset&gt;
+                &lt;yellow&gt;spe clear &lt;direction|roomID&gt;&lt;reset&gt;
+
+        This command will clear all special exits from the current, relative or
+        given roomID.
+
+        Example: &lt;yellow&gt;spe clear&lt;reset&gt; - delete all special exits in the room you're currently in
+                 &lt;yellow&gt;spe clear n&lt;reset&gt; - delete all special exits in the room that's north of you
+                 &lt;yellow&gt;spe clear 513&lt;reset&gt; - delete all special exits in room #513
+]]
+map.help.room_area = [[
+    &lt;cyan&gt;Room Area&lt;reset&gt;
+        syntax: &lt;yellow&gt;room area [v&lt;roomID&gt;] &lt;area name|areaID&gt;&lt;reset&gt;
+
+        This command moves the current room to another area or a given optional
+        room.
+
+        Example: &lt;yellow&gt;room area My New Area&lt;reset&gt; - move the room you're in to 'My New Area'.
+                 &lt;yellow&gt;room area v123 My New Area&lt;reset&gt; - move room 123 to My New Area
+                 &lt;yellow&gt;room area 44&lt;reset&gt; - move the current room to the area ID 44
+]]
+map.help.room_label = [[
+    &lt;cyan&gt;Room Label&lt;reset&gt;
+        syntax: &lt;yellow&gt;room label [roomID] [fgColor] [bgColor] &lt;message&gt;&lt;reset&gt;
+
+        This command adds a label to the current or specified room.  Foreground
+        and background color are optional.
+
+        Example: &lt;yellow&gt;room label My Label&lt;reset&gt; - adds a 'My Label' label to the current room
+                 &lt;yellow&gt;room label 342 My Label&lt;reset&gt; - adds a label to room #342
+                 &lt;yellow&gt;room label green My Label&lt;reset&gt; - adds a green label with a transparent
+                    background to the current room
+                 &lt;yellow&gt;room label green black My Label&lt;reset&gt; - adds a label with a green
+                    foreground and black background to the current room
+                 &lt;yellow&gt;room label 34 green black My Label&lt;reset&gt; - adds a label with a green
+                    foreground and black background to room #34
+]]
+map.help.area_labels = [[
+    &lt;cyan&gt;Area Labels&lt;reset&gt;
+        syntax: &lt;yellow&gt;area labels &lt;area name&gt;&lt;reset&gt;
+
+        This command displays all labels in a given area, with a link to delete.
+
+        Example: &lt;yellow&gt;area label My Area&lt;reset&gt;
+]]
+map.help.feature_create = [[
+    &lt;cyan&gt;Feature Create&lt;reset&gt;
+        syntax: &lt;yellow&gt;feature create &lt;feature&gt; [char &lt;room character&gt;]&lt;reset&gt;
+
+        This command will create a new map feature for use on rooms. You can
+        also optionally add a character mark to the feature, which will be set
+        when a map feature is added to a room. Note: Map feature names are not
+        allowed to contain numbers.
+
+        Example: &lt;yellow&gt;feature create A Nexus Point char N&lt;reset&gt; - creates a new feature
+                    'A Nexus Point' with an assigned room character 'N'
+]]
+map.help.room_feature_create = [[
+    &lt;cyan&gt;Room Create Feature&lt;reset&gt;
+        syntax: &lt;yellow&gt;room create feature [v&lt;room id&gt;] &lt;feature&gt;&lt;reset&gt;
+                &lt;yellow&gt;rcf [v&lt;room id&gt;] &lt;feature&gt;&lt;reset&gt;
+
+        This command will add a created map feature to the room. If the map
+        feature is associated with a character mark, it will be set on the room
+        and existing marks get overwritten. The room number to add the feature
+        to can be given with the optional argument (note: there is no space
+        between the v and the ID).
+
+        Example: &lt;yellow&gt;rcf A Nexus Point&lt;reset&gt; - add the feature 'A Nexus Point' to
+                    the current room
+                 &lt;yellow&gt;rcf v123 A Nexus Point&lt;reset&gt; - add the feature 'A Nexus Point'
+                    to room #123
+]]
+map.help.room_feature_delete = [[
+    &lt;cyan&gt;Room Delete Feature&lt;reset&gt;
+        syntax: &lt;yellow&gt;room delete feature [v&lt;room id&gt;] &lt;feature&gt;&lt;reset&gt;
+                &lt;yellow&gt;rdf [v&lt;room id&gt;] &lt;feature&gt;&lt;reset&gt;
+
+        This command removes a map feature from the room. If the map feature is
+        associated with a character mark and its set on the room, a random
+        character mark from the other map features on the room is chosen to
+        replace it. The room number to delete the feature from can be given with
+        the optional argument (note: there is no space between the v and the
+        ID).
+
+        Example: &lt;yellow&gt;rdf v123 A Nexus Point&lt;reset&gt; - removes the feature 'A Nexus Point'
+                    from the room #123
+]]
+map.help.feature_delete = [[
+    &lt;cyan&gt;Feature Delete&lt;reset&gt;
+        syntax: &lt;yellow&gt;feature delete &lt;feature&gt;&lt;reset&gt;
+
+        This command deletes a global map feature and removes it from all rooms.
+
+        Example: &lt;yellow&gt;feature delete A Nexus Point&lt;reset&gt; - removes the global feature
+                    'A Nexus Point' and removes it from all rooms
+]]
+
+
 
 map.character = map.character or ""
 map.prompt = map.prompt or {}
@@ -4953,8 +5356,9 @@ function map.areaLabels(where, exact)
 end
 
 </script>
-			<eventHandlerList />
-		</Script>
+				<eventHandlerList />
+			</Script>
+		</ScriptGroup>
 	</ScriptPackage>
 	<KeyPackage />
 	<VariablePackage>
