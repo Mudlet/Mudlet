@@ -5844,7 +5844,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
     int intValue = 0;
     bool boolValue = 0;
 
-    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url])
+    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,finish]
     for (int i = 1; i <= numArgs; i++) {
         if (lua_isnil(L, i)) {
             continue;
@@ -5931,6 +5931,16 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
             stringValue = getVerifiedString(L, __func__, i, "url");
             mediaData.setMediaUrl(stringValue);
             break;
+        case 11:
+            intValue = getVerifiedInt(L, __func__, i, "finish");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFinish(intValue);
+            break;
         }
     }
 
@@ -5981,7 +5991,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("loops")) {
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")) {
             int value = getVerifiedInt(L,
                                        __func__,
                                        -1,
@@ -5989,6 +5999,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                                        : key == QLatin1String("fadein")  ? "value for fadein"
                                        : key == QLatin1String("fadeout") ? "value for fadeout"
                                        : key == QLatin1String("start")   ? "value for start"
+                                       : key == QLatin1String("finish")  ? "value for finish"
                                                                          : "value for loops");
 
             if (key == QLatin1String("volume")) {
@@ -6023,6 +6034,13 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaStart(value);
+            } else if (key == QLatin1String("finish")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaFinish(value);
             } else if (key == QLatin1String("loops")) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
@@ -6075,7 +6093,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
     QString stringValue;
     int intValue = 0;
 
-    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,priority][,url])
+    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,priority][,url][,finish]
     for (int i = 1; i <= numArgs; i++) {
         if (lua_isnil(L, i)) {
             continue;
@@ -6169,6 +6187,16 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
             stringValue = getVerifiedString(L, __func__, i, "url");
             mediaData.setMediaUrl(stringValue);
             break;
+        case 11:
+            intValue = getVerifiedInt(L, __func__, i, "finish");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "finish", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFinish(intValue);
+            break;
         }
     }
 
@@ -6220,7 +6248,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("loops")
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")
                    || key == QLatin1String("priority")) {
             int value = getVerifiedInt(L,
                                        __func__,
@@ -6229,6 +6257,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
                                        : key == QLatin1String("fadein")  ? "value for fadein"
                                        : key == QLatin1String("fadeout") ? "value for fadeout"
                                        : key == QLatin1String("start")   ? "value for start"
+                                       : key == QLatin1String("finish")  ? "value for finish"
                                        : key == QLatin1String("loops")   ? "value for loops"
                                                                          : "value for priority");
 
@@ -6264,6 +6293,13 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaStart(value);
+            } else if (key == QLatin1String("finish")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaFinish(value);
             } else if (key == QLatin1String("loops")) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
@@ -6320,8 +6356,10 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
     TMediaData mediaData{};
     const int numArgs = lua_gettop(L);
     QString stringValue;
+    bool boolValue;
+    int intValue;
 
-    // values as ordered args: name[,key][,tag])
+    // values as ordered args: name[,key][,tag][,fadeaway][,fadeout]
     for (int i = 1; i <= numArgs; i++) {
         if (lua_isnil(L, i)) {
             continue;
@@ -6346,6 +6384,20 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
         case 3:
             stringValue = getVerifiedString(L, __func__, i, "tag");
             mediaData.setMediaTag(stringValue);
+            break;
+        case 4:
+            boolValue = getVerifiedBool(L, __func__, i, "fadeaway");
+            mediaData.setMediaFadeAway(boolValue);
+            break;
+        case 5:
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "stopMusic: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(intValue);
             break;
         }
     }
@@ -6386,6 +6438,18 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L)
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
+        } else if (key == QLatin1String("fadeaway")) {
+            const bool value = getVerifiedBool(L, __func__, -1, "value for fadeaway must be boolean");
+            mediaData.setMediaFadeAway(value);
+        } else if (key == QLatin1String("fadeout")) {
+            int value = getVerifiedInt(L, __func__, -1, "value for fadeout");
+
+            if (value < 0) {
+                lua_pushfstring(L, "stopMusic: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(value);
         }
 
         // removes value, but keeps key for next iteration
@@ -6430,6 +6494,7 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
     TMediaData mediaData{};
     const int numArgs = lua_gettop(L);
     QString stringValue;
+    bool boolValue;
     int intValue = 0;
 
     // values as ordered args: name[,key][,tag][,priority])
@@ -6468,6 +6533,20 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
             }
 
             mediaData.setMediaPriority(intValue);
+            break;
+        case 5:
+            boolValue = getVerifiedBool(L, __func__, i, "fadeaway");
+            mediaData.setMediaFadeAway(boolValue);
+            break;
+        case 6:
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "stopSounds: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(intValue);
             break;
         }
     }
@@ -6520,6 +6599,18 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L)
 
                 mediaData.setMediaPriority(value);
             }
+        } else if (key == QLatin1String("fadeaway")) {
+            const bool value = getVerifiedBool(L, __func__, -1, "value for fadeaway must be boolean");
+            mediaData.setMediaFadeAway(value);
+        } else if (key == QLatin1String("fadeout")) {
+            int value = getVerifiedInt(L, __func__, -1, "value for fadeout");
+
+            if (value < 0) {
+                lua_pushfstring(L, "stopSounds: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(value);
         }
 
         // removes value, but keeps key for next iteration
