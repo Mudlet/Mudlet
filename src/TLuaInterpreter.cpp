@@ -2158,7 +2158,7 @@ int TLuaInterpreter::resetStopWatch(lua_State* L)
 std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
 {
     if (lua_type(L, 1) == LUA_TNUMBER) {
-        return std::make_tuple(true, static_cast<int>(lua_tointeger(L, 1)));
+        return {true, static_cast<int>(lua_tointeger(L, 1))};
     }
 
     const QString name{lua_tostring(L, 1)};
@@ -2171,10 +2171,10 @@ std::tuple<bool, int> TLuaInterpreter::getWatchId(lua_State* L, Host& h)
         } else {
             lua_pushfstring(L, "stopwatch with name '%s' not found", name.toUtf8().constData());
         }
-        return std::make_tuple(false, 0);
+        return {false, 0};
     }
 
-    return std::make_tuple(true, watchId);
+    return {true, watchId};
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#adjustStopWatch
@@ -2516,6 +2516,53 @@ int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrolling
+int TLuaInterpreter::enableScrolling(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    console->setScrolling(true);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrolling
+int TLuaInterpreter::disableScrolling(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
+        return 2;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    console->setScrolling(false);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollingActive
+int TLuaInterpreter::scrollingActive(lua_State* L)
+{
+    QString const windowName {WINDOW_NAME(L, 1)};
+    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+        // Handle the main console case:
+        lua_pushboolean(L, true);
+        return 1;
+    }
+
+    auto console = CONSOLE(L, windowName);
+    lua_pushboolean(L, console->getScrolling());
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
 // This (and the next) function originally only worked on TConsole instances
 // to show/hide a command line at the bottom (and the first would create the
@@ -2636,7 +2683,7 @@ int TLuaInterpreter::setExitStub(lua_State* L)
     }
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
     if (!pR) {
-        lua_pushstring(L, "setExitStub: RoomId doesn't exist");
+        lua_pushstring(L, "setExitStub: roomId doesn't exist");
         return lua_error(L);
     }
     if (dir > 12 || dir < 1) {
@@ -2825,7 +2872,7 @@ int TLuaInterpreter::getModulePriority(lua_State* L)
         lua_pushnumber(L, priority);
         return 1;
     } else {
-        lua_pushstring(L, "getModulePriority: Module doesn't exist");
+        lua_pushstring(L, "getModulePriority: module doesn't exist");
         return lua_error(L);
     }
     return 0;
@@ -4210,12 +4257,12 @@ int TLuaInterpreter::startLogging(lua_State* L)
         if (host.mpConsole->mLogToLogFile) {
             host.mpConsole->logButton->setChecked(true);
             // Sets the button as checked but clicked() & pressed() signals are NOT generated
-            lua_pushfstring(L, "Main console output has started to be logged to file: %s.", host.mpConsole->mLogFileName.toUtf8().constData());
+            lua_pushfstring(L, "Main console output has started to be logged to file: %s", host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 1);
         } else {
             host.mpConsole->logButton->setChecked(false);
-            lua_pushfstring(L, "Main console output has stopped being logged to file: %s.", savedLogFileName.toUtf8().constData());
+            lua_pushfstring(L, "Main console output has stopped being logged to file: %s", savedLogFileName.toUtf8().constData());
             lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, 0);
         }
@@ -4223,7 +4270,7 @@ int TLuaInterpreter::startLogging(lua_State* L)
     } else {
         lua_pushnil(L);
         if (host.mpConsole->mLogToLogFile) {
-            lua_pushfstring(L, "Main console output is already being logged to file: %s.", host.mpConsole->mLogFileName.toUtf8().constData());
+            lua_pushfstring(L, "Main console output is already being logged to file: %s", host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushstring(L, host.mpConsole->mLogFileName.toUtf8().constData());
             lua_pushnumber(L, -1);
         } else {
@@ -13934,6 +13981,7 @@ void TLuaInterpreter::msdp2Lua(const char* src)
             script.append('\\');
             break;
         case '\"':
+            script.append('\\');
             script.append('\"');
             break;
         default:
@@ -15699,6 +15747,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getConfig", TLuaInterpreter::getConfig);
     lua_register(pGlobalLua, "setSaveCommandHistory", TLuaInterpreter::setSaveCommandHistory);
     lua_register(pGlobalLua, "getSaveCommandHistory", TLuaInterpreter::getSaveCommandHistory);
+    lua_register(pGlobalLua, "enableScrolling", TLuaInterpreter::enableScrolling);
+    lua_register(pGlobalLua, "disableScrolling", TLuaInterpreter::disableScrolling);
+    lua_register(pGlobalLua, "clearMapSelection", TLuaInterpreter::clearMapSelection);
+    lua_register(pGlobalLua, "scrollingActive", TLuaInterpreter::scrollingActive);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -16726,6 +16778,25 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
 
     }
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearMapSelection
+int TLuaInterpreter::clearMapSelection(lua_State* L)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (pHost->mpMap->mpMapper->mp2dMap->mMultiSelection) {
+        return warnArgumentValue(L, __func__, "rooms are being selected right now and cannot be stopped at this point");
+    }
+    if (pHost->mpMap->mpMapper->mp2dMap->mMultiSelectionSet.isEmpty()) {
+        lua_pushboolean(L, false);
+    } else {
+        pHost->mpMap->mpMapper->mp2dMap->clearSelection();
+        lua_pushboolean(L, true);
+    }
     return 1;
 }
 
@@ -17794,7 +17865,7 @@ int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
 
     if (commandline->contextMenuItems.remove(menuLabel) == 0) {
         lua_pushboolean(L, false);
-        lua_pushfstring(L, "removeCommandLineMenuEvent: Cannot remove '%s', menu item does not exist.", menuLabel.toUtf8().constData());
+        lua_pushfstring(L, "removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist", menuLabel.toUtf8().constData());
         return 2;
     }
     lua_pushboolean(L, true);
@@ -17830,6 +17901,7 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
     auto [_5, scriptsTotal, tempScripts, activeScripts] = host.getScriptUnit()->assembleReport();
+    auto [_6, gifsTotal, activeGifs] = host.getGifTracker()->assembleReport();
 
     lua_newtable(L);
 
@@ -17930,6 +18002,19 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_pushnumber(L, activeScripts);
     lua_settable(L, -3);
     lua_settable(L, -3);
+
+    // Gifs
+    lua_pushstring(L,"gifs");
+    lua_newtable(L);
+
+    lua_pushstring(L,"total");
+    lua_pushnumber(L,gifsTotal);
+    lua_settable(L,-3);
+
+    lua_pushstring(L,"active");
+    lua_pushnumber(L,activeGifs);
+    lua_settable(L,-3);
+    lua_settable(L,-3);
 
     return 1;
 }

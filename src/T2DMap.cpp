@@ -2998,7 +2998,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             if (pA) {
                 const float mx = (event->pos().x() / mRoomWidth) + mOx - (xspan / 2.0);
                 const float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
-                QPointF const pc = QPointF(mx, my);
+                const QPointF clickPoint = QPointF(mx, my);
                 QSetIterator<int> itRoom = pA->rooms;
                 while (itRoom.hasNext()) {
                     const int currentRoomId = itRoom.next();
@@ -3006,61 +3006,62 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                     if (!room) {
                         continue;
                     }
-                    QMapIterator<QString, QList<QPointF>> it(room->customLines);
-                    while (it.hasNext()) {
-                        it.next();
-                        const QList<QPointF>& _pL = it.value();
-                        if (!_pL.empty()) {
+                    QMapIterator<QString, QList<QPointF>> lineIterator(room->customLines);
+                    while (lineIterator.hasNext()) {
+                        lineIterator.next();
+                        const QList<QPointF>& linePoints = lineIterator.value();
+                        if (!linePoints.empty()) {
                             // The way this code is structured means that EARLIER
                             // points are selected in preference to later ones!
                             // This might not be intuitive to the users...
-                            float olx, oly, lx, ly;
-                            for (int j = 0; j < _pL.size(); j++) {
-                                if (j == 0) {
+                            float oldX, oldY, newX, newY;
+                            for (int pointIndex = 0; pointIndex < linePoints.size(); pointIndex++) {
+                                if (pointIndex == 0) {
                                     // First segment of a custom line
                                     // start it at the centre of the room
-                                    olx = room->x;
-                                    oly = room->y;
+                                    oldX = room->x;
+                                    oldY = room->y;
                                     //FIXME: use exit direction to calculate start of line
-                                    lx = _pL[0].x();
-                                    ly = _pL[0].y();
+                                    newX = linePoints[0].x();
+                                    newY = linePoints[0].y();
                                 } else {
                                     // Not the first segment of a custom line
                                     // so start it at the end of the previous one
-                                    olx = lx;
-                                    oly = ly;
-                                    lx = _pL[j].x();
-                                    ly = _pL[j].y();
+                                    oldX = newX;
+                                    oldY = newY;
+                                    newX = linePoints[pointIndex].x();
+                                    newY = linePoints[pointIndex].y();
                                 }
                                 // End of each custom line segment is given
 
                                 // click auf einen edit - punkt
                                 if (mCustomLineSelectedRoom != 0) {
                                     // We have already chosen a line to edit
-                                    if (fabs(mx - lx) <= 0.25 && fabs(my - ly) <= 0.25) {
+                                    if (fabs(mx - newX) <= 0.25 && fabs(my - newY) <= 0.25) {
                                         // And this looks close enough to a point that we should edit it
-                                        mCustomLineSelectedPoint = j;
+                                        mCustomLineSelectedPoint = pointIndex;
                                         return;
                                     }
                                 }
 
                                 // We have not previously chosen a line to edit
-                                QLineF const line = QLineF(olx, oly, lx, ly);
-                                QLineF const normal = line.normalVector();
-                                QLineF tl;
-                                tl.setP1(pc);
-                                tl.setAngle(normal.angle());
-                                tl.setLength(0.1);
-                                QLineF tl2;
-                                tl2.setP1(pc);
-                                tl2.setAngle(normal.angle());
-                                tl2.setLength(-0.1);
-                                QPointF pi;
-                                if ((line.intersects(tl, &pi) == QLineF::BoundedIntersection) || (line.intersects(tl2, &pi) == QLineF::BoundedIntersection)) {
+                                const QLineF lineSegment = QLineF(oldX, oldY, newX, newY);
+                                const QLineF normalVector = lineSegment.normalVector();
+                                QLineF testLine1;
+                                testLine1.setP1(clickPoint);
+                                testLine1.setAngle(normalVector.angle());
+                                testLine1.setLength(0.1);
+                                QLineF testLine2;
+                                testLine2.setP1(clickPoint);
+                                testLine2.setAngle(normalVector.angle());
+                                testLine2.setLength(-0.1);
+                                QPointF intersectionPoint;
+                                if ((lineSegment.intersects(testLine1, &intersectionPoint) == QLineF::BoundedIntersection)
+                                    || (lineSegment.intersects(testLine2, &intersectionPoint) == QLineF::BoundedIntersection)) {
                                     // Choose THIS line to edit as we have
                                     // clicked close enough to it...
                                     mCustomLineSelectedRoom = room->getId();
-                                    mCustomLineSelectedExit = it.key();
+                                    mCustomLineSelectedExit = lineIterator.key();
                                     repaint();
                                     return;
                                 }
@@ -3647,7 +3648,11 @@ void T2DMap::slot_movePosition()
 
     auto dialog = new QDialog(this);
     auto gridLayout = new QGridLayout;
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    // Do NOT try to set the Qt::WA_DeleteOnClose attribute on the dialogue,
+    // because we want to read the details from the QLineEdits on it after the
+    // user has clicked "OK" on the dialog - and setting that flag will cause
+    // it (and those QLineEdits) to be destroyed by the time the QDialog:exec()
+    // call returns which is before we've got those details!
     dialog->setLayout(gridLayout);
     dialog->setSizePolicy(QSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding));
     dialog->setContentsMargins(0, 0, 0, 0);
@@ -3717,6 +3722,7 @@ void T2DMap::slot_movePosition()
             room->z += dz;
         }
     }
+    dialog->deleteLater();
     repaint();
     mpMap->setUnsaved(__func__);
 }
@@ -4198,7 +4204,7 @@ void T2DMap::slot_setArea()
                         }
                     }
                 }
-                auto &targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
+                const auto &targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
                 mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
                 switchArea(targetAreaName);
@@ -5205,4 +5211,15 @@ void T2DMap::setPlayerRoomStyle(const int type)
         mPlayerRoomColorGradentStops[3] = QGradientStop(0.80, QColor(150, 100, 100, 150));
         mPlayerRoomColorGradentStops[4] = QGradientStop(0.95, QColor(255, 0, 0, 150));
     } // End of switch ()
+}
+
+void T2DMap::clearSelection()
+{
+    if (!mMultiSelection && !mMultiSelectionSet.isEmpty()) {
+        mMultiSelectionSet.clear();
+        mMultiSelectionHighlightRoomId = 0;
+        mMultiSelectionListWidget.hide();
+        mMultiSelectionListWidget.clear();
+        update();
+    }
 }

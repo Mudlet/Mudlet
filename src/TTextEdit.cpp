@@ -703,10 +703,16 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
 {
     TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
-    const bool isItalics = attributes & TChar::Italic;
+    // At present we cannot display flashing text - and we just make it italic
+    // (we ought to eventually add knobs for them so they can be shown in a user
+    // preferred style - which might be static for some users) - anyhow Mudlet
+    // will still detect the difference between the options:
+    const bool isItalics = attributes & (TChar::Italic | TChar::Blink | TChar::FastBlink);
     const bool isOverline = attributes & TChar::Overline;
     const bool isStrikeOut = attributes & TChar::StrikeOut;
     const bool isUnderline = attributes & TChar::Underline;
+    // const bool isConcealed = attributes & TChar::Concealed;
+    // const int altFontIndex = charStyle.alternateFont();
     if ((painter.font().bold() != isBold)
             || (painter.font().italic() != isItalics)
             || (painter.font().overline() != isOverline)
@@ -754,7 +760,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
             if (Q_UNLIKELY(newCodePointToWarnAbout)) {
-                mProblemCodepoints.insert(unicode, std::make_tuple(1, "Unprintable"));
+                mProblemCodepoints.insert(unicode, std::tuple{1, "Unprintable"});
             } else {
                 auto [count, reason] = mProblemCodepoints.value(unicode);
                 mProblemCodepoints.insert(unicode, std::tuple{++count, reason});
@@ -1229,10 +1235,12 @@ void TTextEdit::updateTextCursor(const QMouseEvent* event, int lineIndex, int tC
             if (mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex() && !isOutOfbounds) {
                 setCursor(Qt::PointingHandCursor);
                 QStringList tooltip = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
+                QStringList commands = mpBuffer->mLinkStore.getLinks(mpBuffer->buffer.at(lineIndex).at(tCharIndex).linkIndex());
+                // If a special tooltip hint was given, use that one.
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-                QToolTip::showText(event->globalPos(), tooltip.join(QChar::LineFeed));
+                QToolTip::showText(event->globalPos(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
 #else
-                QToolTip::showText(event->globalPosition().toPoint(), tooltip.join(QChar::LineFeed));
+                QToolTip::showText(event->globalPosition().toPoint(), tooltip.size() > commands.size() ? tooltip[0] : tooltip.join(QChar::LineFeed));
 #endif
             } else {
                 setCursor(Qt::IBeamCursor);
@@ -1485,14 +1493,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
 
 
     if (event->button() == Qt::MiddleButton) {
-        mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size(); //
-        mpConsole->mLowerPane->hide();
-        mpBuffer->mCursorY = mpBuffer->size();
-        mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size(); //
-        mpConsole->mUpperPane->mCursorX = 0;
-        mpConsole->mUpperPane->mIsTailMode = true;
-        mpConsole->mUpperPane->updateScreenView();
-        mpConsole->mUpperPane->forceUpdate();
+        mpConsole->clearSplit();
         event->accept();
         return;
     }
@@ -1865,13 +1866,16 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
                     QStringList hint = mpBuffer->mLinkStore.getHints(mpBuffer->buffer.at(y).at(x).linkIndex());
                     QVector<int> luaReference = mpBuffer->mLinkStore.getReference(mpBuffer->buffer.at(y).at(x).linkIndex());
                     if (command.size() > 1) {
+                        // skip a special tooltip hint, if one was given
+                        int hint_offset = hint.size() > command.size() ? 1 : 0;
+
                         auto popup = new QMenu(this);
                         popup->setAttribute(Qt::WA_DeleteOnClose);
                         for (int i = 0, total = command.size(); i < total; ++i) {
                             QAction* pA;
-                            if (i < hint.size()) {
-                                pA = popup->addAction(hint[i]);
-                                mPopupCommands[hint[i]] = {command[i], luaReference.value(i, 0)};
+                            if (i + hint_offset < hint.size()) {
+                                pA = popup->addAction(hint[i + hint_offset]);
+                                mPopupCommands[hint[i + hint_offset]] = {command[i], luaReference.value(i, 0)};
                             } else {
                                 pA = popup->addAction(command[i]);
                                 mPopupCommands[command[i]] = {command[i], luaReference.value(i, 0)};

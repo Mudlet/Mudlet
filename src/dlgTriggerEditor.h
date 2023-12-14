@@ -226,6 +226,7 @@ public:
     void setEditorShowBidi(const bool);
     void showCurrentTriggerItem();
     void hideSystemMessageArea();
+    void showIDLabels(const bool);
 
 public slots:
     void slot_toggleHiddenVariables(bool);
@@ -299,6 +300,7 @@ private slots:
     void slot_toggleSearchCaseSensitivity(bool);
     void slot_toggleSearchIncludeVariables(bool);
     void slot_toggleGroupBoxColorizeTrigger(const bool);
+    void slot_changedPattern();
     void slot_clearSearchResults();
     void slot_clearSoundFile();
     void slot_editorContextMenu();
@@ -468,6 +470,8 @@ private:
         {tr("Debug"),      tr("Ctrl+0")}
     };
 
+    std::unordered_map<QLineEdit*, bool> lineEditShouldMarkSpaces;
+
     QToolBar* toolBar = nullptr;
     QToolBar* toolBar2 = nullptr;
     bool showHiddenVars = false;
@@ -519,7 +523,7 @@ private:
     edbee::TextDocument* mpSourceEditorEdbeeDocument = nullptr;
     edbee::TextSearcher* mpSourceEditorSearcher = nullptr;
 
-    QRegularExpression* simplifyEdbeeStatusBarRegex = nullptr;
+    inline static const QRegularExpression csmSimplifyStatusBarRegex{qsl(R"(^(?:\[\*\] )?(.+?) \|)")};
 
     QAction* mAddItem = nullptr;
     QAction* mDeleteItem = nullptr;

@@ -1,15 +1,13 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
+--- Represents a miniconsole primitive.
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Geyser.MiniConsole">Mudlet Manual</a>
+-- @author guy
+-- @module Geyser.MiniConsole
 
---- Represents a miniconsole primitive
--- @class table
--- @name Geyser.MiniConsole
+--- Represents a miniconsole primitive.
 -- @field wrapAt Where line wrapping occurs. Default is 300 characters.
 Geyser.MiniConsole = Geyser.Window:new({
   name = "MiniConsoleClass",
+  scrolling = true,
   wrapAt = 300, })
 
 --- Override reposition to reset autowrap
@@ -178,10 +176,9 @@ function Geyser.MiniConsole:disableCommandLine()
   disableCommandLine(self.name)
 end
 
---- Sets an action to be used when text is send in this commandline. When this
+--- Sets an action to be used when text is sent in this commandline. When this
 -- function is called by the event system, text the commandline sends will be
--- appended as the final argument (see @{sysCmdLineEvent}) and also in Geyser.Label
--- the setClickCallback events
+-- appended as the final argument.
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function.
 function Geyser.MiniConsole:setCmdAction(func, ...)
@@ -581,6 +578,18 @@ function Geyser.MiniConsole:getWindowWrap()
   return getWindowWrap(self.name)
 end
 
+--- Disables scrolling for the miniconsole
+function Geyser.MiniConsole:disableScrolling()
+  self.scrolling = false
+  disableScrolling(self.name)
+end
+
+--- Enables scrolling for the miniconsole
+function Geyser.MiniConsole:enableScrolling()
+  self.scrolling = true
+  enableScrolling(self.name)
+end
+
 -- Save a reference to our parent constructor
 Geyser.MiniConsole.parent = Geyser.Window
 
@@ -596,7 +605,7 @@ function Geyser.MiniConsole:new (cons, container)
   -- Set the metatable.
   setmetatable(me, self)
   self.__index = self
-  -----------------------------------------------------------
+
   -- Now create the MiniConsole using primitives
   if not string.find(me.name, ".+Class$") then
     me.windowname = me.windowname or me.container.windowname or "main"
@@ -648,6 +657,11 @@ function Geyser.MiniConsole:new (cons, container)
     end
     if me.cmdLineStylesheet and me.commandLine then
       me:setCmdLineStyleSheet()
+    end
+    if me.scrolling then
+      me:enableScrolling()
+    else
+      me:disableScrolling()
     end
     --print("  New in " .. self.name .. " : " .. me.name)
   end

@@ -105,8 +105,8 @@ private slots:
         QCOMPARE(stub.mHrefs[1], "send([[drop inv##10]])");
 
         QCOMPARE(stub.mHints.size(), 2);
-        QCOMPARE(stub.mHints[0], "EXAMINE");
-        QCOMPARE(stub.mHints[1], "DROP");
+        QCOMPARE(stub.mHints[0], "examine");
+        QCOMPARE(stub.mHints[1], "drop");
     }
 
     void testCustomElementDynamicEntity() {
@@ -144,7 +144,7 @@ private slots:
         QCOMPARE(stub.mHrefs[0], "send([[follow map of the newbie jungle to P8x7]])");
 
         QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "GO HERE");
+        QCOMPARE(stub.mHints[0], "go here");
 
         // Now player looks at another map and gets an MXP button to go to another place.
         // Note the MAP element is NOT redefined, only the entity.
@@ -160,7 +160,7 @@ private slots:
         QCOMPARE(stub.mHrefs[0], "send([[follow map of the south forest to P42]])");
 
         QCOMPARE(stub.mHints.size(), 1);
-        QCOMPARE(stub.mHints[0], "GO HERE");
+        QCOMPARE(stub.mHints[0], "go here");
     }
 
     void testCustomElementDefaultAttributes() {
@@ -192,37 +192,36 @@ private slots:
         tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("This is bold red");
         // is it?
-        // QCOMPARE(stub.isBold(), true); // This test cannot be used b4 the MXPFormatting Tags PR is merged
+        QCOMPARE(stub.bold(), true);
         QCOMPARE(stub.fgColor, "red");
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         // back to defaults:
-        // QCOMPARE(stub.isBold(), false);
+        QCOMPARE(stub.bold(), false);
         QCOMPARE(stub.fgColor, "");
 
         startTag = parseNode("<boldtext COL=blue>)");
         tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("This is bold blue text");
         // is it?
-        // QCOMPARE(stub.isBold(), true);
+        QCOMPARE(stub.bold(), true);
         QCOMPARE(stub.fgColor, "blue");
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         // back to defaults:
-        // QCOMPARE(stub.isBold(), false);
+        QCOMPARE(stub.bold(), false);
         QCOMPARE(stub.fgColor, "");
 
         startTag = parseNode("<boldtext blue>)");
         tagHandler.handleTag(ctx, stub, startTag->asStartTag());
         tagHandler.handleContent("This is also bold blue text");
         // is it?
-
-        // QCOMPARE(stub.isBold(), true);
-        // QCOMPARE(stub.fgColor, "blue");
+        QCOMPARE(stub.bold(), true);
+        QCOMPARE(stub.fgColor, "blue");
         tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
         // back to defaults:
-        // QCOMPARE(stub.isBold(), false);
+        QCOMPARE(stub.bold(), false);
         QCOMPARE(stub.fgColor, "");
     }
 
@@ -261,9 +260,9 @@ private slots:
         QCOMPARE(stub.mHrefs[2], "printCmdLine([[tell playerid ]])");
 
         QCOMPARE(stub.mHints.size(), 3);
-        QCOMPARE(stub.mHints[0], "WHISPER playerid");
-        QCOMPARE(stub.mHints[1], "FINGER playerid");
-        QCOMPARE(stub.mHints[2], "TELL playerid");
+        QCOMPARE(stub.mHints[0], "whisper playerid");
+        QCOMPARE(stub.mHints[1], "finger playerid");
+        QCOMPARE(stub.mHints[2], "tell playerid");
 
         // Now w/o a NAME parameter given:
         startTag = parseNode("<WH>");
@@ -277,9 +276,9 @@ private slots:
         QCOMPARE(stub.mHrefs[2], "printCmdLine([[tell someone ]])");
 
         QCOMPARE(stub.mHints.size(), 3);
-        QCOMPARE(stub.mHints[0], "WHISPER someone");
-        QCOMPARE(stub.mHints[1], "FINGER someone");
-        QCOMPARE(stub.mHints[2], "TELL someone");
+        QCOMPARE(stub.mHints[0], "whisper someone");
+        QCOMPARE(stub.mHints[1], "finger someone");
+        QCOMPARE(stub.mHints[2], "tell someone");
     }
 };
 

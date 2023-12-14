@@ -41,6 +41,7 @@
 #include "dlgKeysMainArea.h"
 #include "dlgScriptsMainArea.h"
 #include "dlgTriggerPatternEdit.h"
+#include "TrailingWhitespaceMarker.h"
 #include "mudlet.h"
 
 #include "pre_guard.h"
@@ -228,7 +229,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     // Update the status bar on changes
     connect(mpSourceEditorEdbee->controller(), &edbee::TextEditorController::updateStatusTextSignal, this, &dlgTriggerEditor::slot_updateStatusBar);
-    simplifyEdbeeStatusBarRegex = new QRegularExpression(qsl(R"(^(?:\[\*\] )?(.+?) \|)"));
     mpSourceEditorEdbee->controller()->setAutoScrollToCaret(edbee::TextEditorController::AutoScrollWhenFocus);
 
     // Update the editor preferences
@@ -311,7 +311,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpSourceEditorEdbee->textEditorComponent(), &QWidget::customContextMenuRequested, this, &dlgTriggerEditor::slot_editorContextMenu);
 
     // option areas
-    mpErrorConsole = new TConsole(mpHost, TConsole::ErrorConsole, this);
+    mpErrorConsole = new TConsole(mpHost, qsl("errors_%1").arg(hostName), TConsole::ErrorConsole, this);
     mpErrorConsole->setWrapAt(100);
     mpErrorConsole->mUpperPane->slot_toggleTimeStamps(true);
     mpErrorConsole->mLowerPane->slot_toggleTimeStamps(true);
@@ -467,6 +467,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
 
     mAddItem = new QAction(QIcon(qsl(":/icons/document-new.png")), QString(), this);
+    mAddItem->setToolTip(qsl("<p>%1 (%2)</p>").arg(tr("Add Item"), QKeySequence(QKeySequence::New).toString()));
+    mAddItem->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mAddItem->setShortcut(QKeySequence(QKeySequence::New));
+    frame_left->addAction(mAddItem);
     connect(mAddItem, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewItem);
 
     mDeleteItem = new QAction(QIcon::fromTheme(qsl(":/icons/edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))), QString(), this);
@@ -477,6 +481,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mDeleteItem, &QAction::triggered, this, &dlgTriggerEditor::slot_deleteItemOrGroup);
 
     mAddGroup = new QAction(QIcon(qsl(":/icons/folder-new.png")), QString(), this);
+    mAddGroup->setToolTip(tr("Add Group (Control+Shift+N)"));
+    mAddGroup->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    mAddGroup->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N));
+    frame_left->addAction(mAddGroup);
     connect(mAddGroup, &QAction::triggered, this, &dlgTriggerEditor::slot_addNewGroup);
 
     // 'Save Item' does not see to be translated as it is only ever used programmatically and not visible to the player
@@ -845,6 +853,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgTriggerEditor::slot_setupPatternControls);
         connect(pItem->pushButton_fgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerFg);
         connect(pItem->pushButton_bgColor, &QAbstractButton::clicked, this, &dlgTriggerEditor::slot_colorTriggerBg);
+        connect(pItem->lineEdit_pattern, &QLineEdit::textChanged, this, &dlgTriggerEditor::slot_changedPattern);
         HpatternList->layout()->addWidget(pItem);
         mTriggerPatternEdit.push_back(pItem);
         pItem->mRow = i;
@@ -854,6 +863,11 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         pItem->spinBox_lineSpacer->hide();
         pItem->label_patternNumber->setText(QString::number(i+1));
         pItem->label_patternNumber->show();
+
+
+        // Populate default of false
+        lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = false;
+
         if (i == 0) {
             pItem->lineEdit_pattern->setPlaceholderText(tr("Text to find (trigger pattern)"));
         }
@@ -865,6 +879,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
 
     widget_searchTerm->updateGeometry();
 
+    showIDLabels(mpHost->showIdsInEditor());
     if (mAutosaveInterval > 0) {
         startTimer(mAutosaveInterval * 1min);
     }
@@ -3777,6 +3792,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
         pParent->setExpanded(true);
     }
     mpTriggersMainArea->lineEdit_trigger_name->clear();
+    mpTriggersMainArea->label_idNumber->clear();
     mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(false);
 
     clearDocument(mpSourceEditorEdbee); // New Trigger
@@ -4130,11 +4146,13 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     }
 
     mpAliasMainArea->lineEdit_alias_name->clear();
+    mpAliasMainArea->label_idNumber->clear();
     mpAliasMainArea->lineEdit_alias_pattern->clear();
     mpAliasMainArea->lineEdit_alias_command->clear();
     clearDocument(mpSourceEditorEdbee); // New Alias
 
     mpAliasMainArea->lineEdit_alias_name->setText(name);
+    mpAliasMainArea->label_idNumber->setText(QString::number(childID));
 
     mpCurrentAliasItem = pNewItem;
     treeWidget_aliases->setCurrentItem(pNewItem);
@@ -4310,7 +4328,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
         pParent->setExpanded(true);
     }
     mpScriptsMainArea->lineEdit_script_name->clear();
-    //FIXME mpScriptsMainArea->pattern_textedit->clear();
+    mpScriptsMainArea->label_idNumber->clear();
 
     clearDocument(mpSourceEditorEdbee, script);
     mpCurrentScriptItem = pNewItem;
@@ -4432,6 +4450,10 @@ void dlgTriggerEditor::saveTrigger()
     QList<int> patternKinds;
     for (int i = 0; i < 50; i++) {
         QString pattern = mTriggerPatternEdit.at(i)->lineEdit_pattern->text();
+
+        // Spaces in the pattern may be marked with middle dots, convert them back
+        unmarkQString(&pattern);
+
         const int patternType = mTriggerPatternEdit.at(i)->comboBox_patternType->currentIndex();
         if (pattern.isEmpty() && patternType != REGEX_PROMPT && patternType != REGEX_LINE_SPACER) {
             continue;
@@ -4720,7 +4742,10 @@ void dlgTriggerEditor::saveAlias()
 
     mpAliasMainArea->trimName();
     QString name = mpAliasMainArea->lineEdit_alias_name->text();
-    const QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
+    QString regex = mpAliasMainArea->lineEdit_alias_pattern->text();
+    unmarkQString(&regex);
+
+
     if (!regex.isEmpty() && ((name.isEmpty()) || (name == tr("New alias")))) {
         name = regex;
     }
@@ -5481,8 +5506,18 @@ void dlgTriggerEditor::saveKey()
     }
 }
 
+
 void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdit* pItem)
 {
+    // Display middle dots for potentially unwanted spaces in perl regex
+    if (type == REGEX_PERL) {
+        markQLineEdit(pItem->lineEdit_pattern);
+        lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = true;
+    } else {
+        unmarkQLineEdit(pItem->lineEdit_pattern);
+        lineEditShouldMarkSpaces[pItem->lineEdit_pattern] = false;
+    }
+
     switch (type) {
     case REGEX_SUBSTRING:
     case REGEX_PERL:
@@ -5524,6 +5559,14 @@ void dlgTriggerEditor::setupPatternControls(const int type, dlgTriggerPatternEdi
         pItem->pushButton_prompt->show();
         pItem->spinBox_lineSpacer->hide();
         break;
+    }
+}
+
+void dlgTriggerEditor::slot_changedPattern()
+{
+    QLineEdit* lineEdit = qobject_cast<QLineEdit*>(sender());
+    if (lineEditShouldMarkSpaces[lineEdit]) {
+        markQLineEdit(lineEdit);
     }
 }
 
@@ -5628,7 +5671,8 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
     mpTriggersMainArea->show();
     mpSourceEditorArea->show();
     clearEditorNotification();
-    mpTriggersMainArea->lineEdit_trigger_name->setText("");
+    mpTriggersMainArea->lineEdit_trigger_name->clear();
+    mpTriggersMainArea->label_idNumber->clear();
     clearDocument(mpSourceEditorEdbee); // Trigger Select
     mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(false);
     mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(false);
@@ -5717,6 +5761,10 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
             } else if (pType == REGEX_LINE_SPACER) {
                 pPatternItem->spinBox_lineSpacer->setValue(patternList.at(i).toInt());
             } else {
+                // Keep track of lineEdits that should have trailing spaces marked
+                if (pType == REGEX_PERL) {
+                    lineEditShouldMarkSpaces[pPatternItem->lineEdit_pattern] = true;
+                }
                 pPatternItem->lineEdit_pattern->setText(patternList.at(i));
             }
         }
@@ -5739,6 +5787,7 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         mpScrollArea->ensureWidgetVisible(mTriggerPatternEdit.at(qBound(0, patternList.size(), 49)));
         const QString command = pT->getCommand();
         mpTriggersMainArea->lineEdit_trigger_name->setText(pItem->text(0));
+        mpTriggersMainArea->label_idNumber->setText(QString::number(ID));
         mpTriggersMainArea->lineEdit_trigger_command->setText(command);
         mpTriggersMainArea->groupBox_multiLineTrigger->setChecked(pT->isMultiline());
         mpTriggersMainArea->groupBox_perlSlashGOption->setChecked(pT->mPerlSlashGOption);
@@ -5798,11 +5847,12 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
     mpSourceEditorArea->show();
     clearEditorNotification();
     mpAliasMainArea->lineEdit_alias_name->clear();
+    mpAliasMainArea->label_idNumber->clear();
     mpAliasMainArea->lineEdit_alias_pattern->clear();
     mpAliasMainArea->lineEdit_alias_command->clear();
     clearDocument(mpSourceEditorEdbee); // Alias Select
 
-    mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
+    // mpAliasMainArea->lineEdit_alias_name->setText(pItem->text(0));
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TAlias* pT = mpHost->getAliasUnit()->getAlias(ID);
     if (pT) {
@@ -5813,6 +5863,7 @@ void dlgTriggerEditor::slot_aliasSelected(QTreeWidgetItem* pItem)
         mpAliasMainArea->lineEdit_alias_pattern->setText(pattern);
         mpAliasMainArea->lineEdit_alias_command->setText(command);
         mpAliasMainArea->lineEdit_alias_name->setText(name);
+        mpAliasMainArea->label_idNumber->setText(QString::number(ID));
 
         clearDocument(mpSourceEditorEdbee, pT->getScript());
 
@@ -5849,6 +5900,7 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     mpKeysMainArea->lineEdit_key_command->clear();
     mpKeysMainArea->lineEdit_key_binding->clear();
     mpKeysMainArea->lineEdit_key_name->clear();
+    mpKeysMainArea->label_idNumber->clear();
     clearDocument(mpSourceEditorEdbee); // Key Select
 
     mpKeysMainArea->lineEdit_key_binding->setText(pItem->text(0));
@@ -5857,9 +5909,9 @@ void dlgTriggerEditor::slot_keySelected(QTreeWidgetItem* pItem)
     if (pT) {
         const QString command = pT->getCommand();
         const QString name = pT->getName();
-        mpKeysMainArea->lineEdit_key_command->clear();
         mpKeysMainArea->lineEdit_key_command->setText(command);
         mpKeysMainArea->lineEdit_key_name->setText(name);
+        mpKeysMainArea->label_idNumber->setText(QString::number(ID));
         const QString keyName = mpHost->getKeyUnit()->getKeyName(pT->getKeyCode(), pT->getKeyModifiers());
         mpKeysMainArea->lineEdit_key_binding->setText(keyName);
 
@@ -6189,6 +6241,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
 
     mpActionsMainArea->lineEdit_action_icon->clear();
     mpActionsMainArea->lineEdit_action_name->clear();
+    mpActionsMainArea->label_idNumber->clear();
     mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(false);
     mpActionsMainArea->lineEdit_action_button_command_down->clear();
     mpActionsMainArea->lineEdit_action_button_command_up->clear();
@@ -6206,6 +6259,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
     TAction* pT = mpHost->getActionUnit()->getAction(ID);
     if (pT) {
         mpActionsMainArea->lineEdit_action_name->setText(pT->getName());
+        mpActionsMainArea->label_idNumber->setText(QString::number(ID));
         mpActionsMainArea->checkBox_action_button_isPushDown->setChecked(pT->isPushDownButton());
         mpActionsMainArea->label_action_button_command_up->hide();
         mpActionsMainArea->label_action_button_command_down->hide();
@@ -6335,8 +6389,9 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
     clearEditorNotification();
     clearDocument(mpSourceEditorEdbee); // Script Select
     mpScriptsMainArea->lineEdit_script_name->clear();
+    mpScriptsMainArea->label_idNumber->clear();
     mpScriptsMainArea->listWidget_script_registered_event_handlers->clear();
-    mpScriptsMainArea->lineEdit_script_name->setText(pItem->text(0));
+    // mpScriptsMainArea->lineEdit_script_name->setText(pItem->text(0));
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TScript* pT = mpHost->getScriptUnit()->getScript(ID);
     if (pT) {
@@ -6347,11 +6402,11 @@ void dlgTriggerEditor::slot_scriptsSelected(QTreeWidgetItem* pItem)
             pItem->setText(eventHandlerList[i]);
             mpScriptsMainArea->listWidget_script_registered_event_handlers->addItem(pItem);
         }
-        mpScriptsMainArea->lineEdit_script_name->clear();
         const QString script = pT->getScript();
         clearDocument(mpSourceEditorEdbee, script);
 
         mpScriptsMainArea->lineEdit_script_name->setText(name);
+        mpScriptsMainArea->label_idNumber->setText(QString::number(ID));
         if (auto error = pT->getLoadingError(); error) {
             showWarning(tr("While loading the profile, this script had an error that has since been fixed, "
                            "possibly by another script. The error was:%2%3").arg(qsl("<br>"), error.value()));
@@ -6392,7 +6447,8 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
     mpTimersMainArea->timeEdit_timer_minutes->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, 0, 0));
     mpTimersMainArea->timeEdit_timer_msecs->setTime(QTime(0, 0, 0, 0));
-    mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
+    mpTimersMainArea->label_idNumber->clear();
+    // mpTimersMainArea->lineEdit_timer_name->setText(pItem->text(0));
 
     const int ID = pItem->data(0, Qt::UserRole).toInt();
     TTimer* pT = mpHost->getTimerUnit()->getTimer(ID);
@@ -6401,6 +6457,7 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         const QString name = pT->getName();
         mpTimersMainArea->lineEdit_timer_command->setText(command);
         mpTimersMainArea->lineEdit_timer_name->setText(name);
+        mpTimersMainArea->label_idNumber->setText(QString::number(ID));
         QTime const time = pT->getTime();
         mpTimersMainArea->timeEdit_timer_hours->setTime(QTime(time.hour(), 0, 0, 0));
         mpTimersMainArea->timeEdit_timer_minutes->setTime(QTime(0, time.minute(), 0, 0));
@@ -7930,24 +7987,38 @@ void dlgTriggerEditor::slot_addNewItem()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         addTrigger(false); //add normal trigger
+        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(false); //add normal trigger
+        addTimer(false); //add normal timer
+        mpTimersMainArea->lineEdit_timer_name->setFocus();
+        mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
         addAlias(false); //add normal alias
+        mpAliasMainArea->lineEdit_alias_name->setFocus();
+        mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(false); //add normal alias
+        addScript(false); //add normal script
+        mpScriptsMainArea->lineEdit_script_name->setFocus();
+        mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
         addAction(false); //add normal action
+        mpActionsMainArea->lineEdit_action_name->setFocus();
+        mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(false); //add normal alias
+        addKey(false); //add normal key
+        mpKeysMainArea->lineEdit_key_name->setFocus();
+        mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
         addVar(false); //add variable
+        mpVarsMainArea->lineEdit_var_name->setFocus();
+        // variables start without a default name
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
@@ -7959,24 +8030,38 @@ void dlgTriggerEditor::slot_addNewGroup()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         addTrigger(true); //add trigger group
+        mpTriggersMainArea->lineEdit_trigger_name->setFocus();
+        mpTriggersMainArea->lineEdit_trigger_name->selectAll();
         break;
     case EditorViewType::cmTimerView:
-        addTimer(true);
+        addTimer(true); //add timer group
+        mpTimersMainArea->lineEdit_timer_name->setFocus();
+        mpTimersMainArea->lineEdit_timer_name->selectAll();
         break;
     case EditorViewType::cmAliasView:
         addAlias(true); //add alias group
+        mpAliasMainArea->lineEdit_alias_name->setFocus();
+        mpAliasMainArea->lineEdit_alias_name->selectAll();
         break;
     case EditorViewType::cmScriptView:
-        addScript(true); //add alias group
+        addScript(true); //add script group
+        mpScriptsMainArea->lineEdit_script_name->setFocus();
+        mpScriptsMainArea->lineEdit_script_name->selectAll();
         break;
     case EditorViewType::cmActionView:
         addAction(true); //add action group
+        mpActionsMainArea->lineEdit_action_name->setFocus();
+        mpActionsMainArea->lineEdit_action_name->selectAll();
         break;
     case EditorViewType::cmKeysView:
-        addKey(true); //add alias group
+        addKey(true); //add keys group
+        mpKeysMainArea->lineEdit_key_name->setFocus();
+        mpKeysMainArea->lineEdit_key_name->selectAll();
         break;
     case EditorViewType::cmVarsView:
         addVar(true); // add lua table
+        mpVarsMainArea->lineEdit_var_name->setFocus();
+        // variables start without a default name
         break;
     default:
         qDebug() << "ERROR: dlgTriggerEditor::slot_saveEdits() undefined view";
@@ -9516,7 +9601,7 @@ void dlgTriggerEditor::slot_updateStatusBar(const QString& statusText)
 {
     // edbee adds the scope and last command which is rather technical debugging information,
     // so strip it away by removing the first pipe and everything after it
-    QRegularExpressionMatch const match = simplifyEdbeeStatusBarRegex->match(statusText, 0, QRegularExpression::PartialPreferFirstMatch);
+    const QRegularExpressionMatch match = csmSimplifyStatusBarRegex.match(statusText, 0, QRegularExpression::PartialPreferFirstMatch);
     QString stripped;
     if (match.hasPartialMatch() || match.hasMatch()) {
         stripped = match.captured(1);
@@ -10116,4 +10201,14 @@ void dlgTriggerEditor::changeEvent(QEvent* e)
             }
         }
     }
+}
+
+void dlgTriggerEditor::showIDLabels(const bool visible)
+{
+    mpAliasMainArea->frameId->setVisible(visible);
+    mpActionsMainArea->frameId->setVisible(visible);
+    mpKeysMainArea->frameId->setVisible(visible);
+    mpScriptsMainArea->frameId->setVisible(visible);
+    mpTimersMainArea->frameId->setVisible(visible);
+    mpTriggersMainArea->frameId->setVisible(visible);
 }

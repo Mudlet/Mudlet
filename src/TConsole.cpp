@@ -56,12 +56,13 @@
 const QString TConsole::cmLuaLineVariable("line");
 
 // A high-performance text widget with split screen ability for scrolling back
-// Contains two TTextEdits, each backed by a TBuffer
-TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
+// Contains two TTextEdits, and is backed by a TBuffer
+TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
 , buffer(pH, this)
 , emergencyStop(new QToolButton)
+, mConsoleName(name)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
@@ -1071,6 +1072,10 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
 
 void TConsole::scrollDown(int lines)
 {
+    if ((mType & (UserWindow|SubConsole)) && !mScrollingEnabled) {
+        return;
+    }
+
     mUpperPane->scrollDown(lines);
     if (!mUpperPane->mIsTailMode &&
         (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
@@ -1090,6 +1095,10 @@ void TConsole::scrollDown(int lines)
 
 void TConsole::scrollUp(int lines)
 {
+    if ((mType & (UserWindow|SubConsole)) && !mScrollingEnabled) {
+        return;
+    }
+
     const bool lowerAppears = mLowerPane->isHidden();
     mLowerPane->mCursorY = buffer.size();
     mLowerPane->show();
@@ -1625,18 +1634,18 @@ bool TConsole::selectSection(int from, int to)
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return std::make_tuple(false, qsl("the selection is no longer valid"), 0, 0);
+        return {false, qsl("the selection is no longer valid"), 0, 0};
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
     const auto line = buffer.line(mUserCursor.y());
     if (line.size() < start) {
-        return std::make_tuple(false, qsl("the selection is no longer valid"), 0, 0);
+        return {false, qsl("the selection is no longer valid"), 0, 0};
     }
 
     const auto text = line.mid(start, length);
-    return std::make_tuple(true, text, start, length);
+    return {true, text, start, length};
 }
 
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference)
@@ -1713,6 +1722,16 @@ void TConsole::setHorizontalScrollBar(bool isEnabled)
     if (mpHScrollBar) {
         mHScrollBarEnabled = isEnabled;
         mpHScrollBar->setVisible(isEnabled);
+    }
+}
+
+void TConsole::setScrolling(const bool state)
+{
+    if (mType & (UserWindow | SubConsole)) {
+        mScrollingEnabled = state;
+        if (!mScrollingEnabled) {
+            clearSplit();
+        }
     }
 }
 
@@ -2366,4 +2385,46 @@ void TConsole::slot_clearSearchResults()
     buffer.clearSearchHighlights();
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
+}
+
+void TConsole::handleLinesOverflowEvent(const int lineCount)
+{
+    if (mType & ~(UserWindow | SubConsole)) {
+        // It isn't a type that we need to worry about the number of lines of
+        // text in it:
+        return;
+    }
+
+    if (mScrollingEnabled) {
+        // It is capable of scrolling so a "text overflow" is not a concern:
+        return;
+    }
+
+    const int linesSpare = mUpperPane->getRowCount() - lineCount;
+    if (linesSpare >= 0) {
+        // There IS space for all the lines
+        return;
+    }
+
+    // Else we do have an overflow situation so let's raise an event for it:
+    TEvent sysWindowOverflow {};
+    sysWindowOverflow.mArgumentList.append(QLatin1String("sysWindowOverflowEvent"));
+    sysWindowOverflow.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    sysWindowOverflow.mArgumentList.append(mConsoleName);
+    sysWindowOverflow.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    sysWindowOverflow.mArgumentList.append(QString::number(-linesSpare));
+    sysWindowOverflow.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(sysWindowOverflow);
+}
+
+void TConsole::clearSplit()
+{
+    mLowerPane->mCursorY = buffer.size();
+    mLowerPane->hide();
+    buffer.mCursorY = buffer.size();
+    mUpperPane->mCursorY = buffer.size();
+    mUpperPane->mCursorX = 0;
+    mUpperPane->mIsTailMode = true;
+    mUpperPane->updateScreenView();
+    mUpperPane->forceUpdate();
 }

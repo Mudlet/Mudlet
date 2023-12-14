@@ -89,6 +89,8 @@ public:
     // This is NOT used as a slot in newer versions
     void switchArea(const QString& newAreaName);
 #endif
+    void clearSelection();
+
 
 
     // default 2D zoom level
