@@ -122,7 +122,12 @@ public:
     // to be related to the file monitoring feature in the *nix tail command.
     // See, e.g.: https://en.wikipedia.org/wiki/Tail_(Unix)#File_monitoring
     bool mIsTailMode;
-    QMap<QString, std::pair<QString, int>> mPopupCommands;
+    // The content to use for the current popup (link)
+    // Key: is an index stored when the popup is created - this has been
+    // changed from the previous "text to show for each popup" to avoid
+    // problems with duplicate texts:
+    // Value: is the lua code as a string (first) or the lua function reference number (second)
+    QMap<int, std::pair<QString, int>> mPopupCommands;
     // How many lines the screen scrolled since it was last rendered.
     int mScrollVector;
     QRegion mSelectedRegion;
