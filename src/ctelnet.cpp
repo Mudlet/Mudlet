@@ -1841,7 +1841,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             if (mpHost->mAdvertiseScreenReader) {
                                 terminal_standards |= MTTS_STD_SCREEN_READER;
                             }
-
+#if !defined(QT_NO_SSL)
+                            terminal_standards |= MTTS_STD_SSL;
+#endif
                             cmd += qsl("MTTS %1").arg(terminal_standards).toUtf8().constData();
 
                             if (mCycleCountMTTS == 2) {

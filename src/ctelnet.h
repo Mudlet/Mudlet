@@ -149,6 +149,9 @@ const int MTTS_STD_OSC_COLOR_PALETTE = 32; // Client supports the OSC color pale
 const int MTTS_STD_SCREEN_READER = 64; // Client is using a screen reader.
 const int MTTS_STD_PROXY = 128; // Client is a proxy allowing different users to connect from the same IP address.
 const int MTTS_STD_TRUE_COLOR = 256; // Client supports truecolor codes using semicolon notation.
+const int MTTS_STD_MNES = 512; // Client supports the Mud New Environment Standard for information exchange.
+const int MTTS_STD_MSLP = 1024; // Client supports the Mud Server Link Protocol for clickable link handling.
+const int MTTS_STD_SSL = 2048; // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
 
 class cTelnet : public QObject
 {
