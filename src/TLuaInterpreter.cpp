@@ -8169,6 +8169,10 @@ int TLuaInterpreter::isActive(lua_State* L)
         // show what was entered:
         return warnArgumentValue(L, __func__, csmInvalidItemID.arg(lua_tostring(L, 1)));
     }
+    bool checkAncestors = false;
+    if (lua_gettop(L) > 2) {
+        checkAncestors = getVerifiedBool(L, __func__, 3, "also check ancestors", true);
+    }
 
     Host& host = getHostFromLua(L);
     int cnt = 0;
@@ -8176,14 +8180,20 @@ int TLuaInterpreter::isActive(lua_State* L)
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getTimerUnit()->getTimer(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (static_cast<bool>(pT)
+                   && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive())
+                   && (!checkAncestors || pT->shouldAncestorsBeActive())) ? 1 : 0;
         } else {
-            auto it1 = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getTimerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                // Offset timer have their active state recorded differently
+                if ((pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive())
+                    && (!checkAncestors || pT->shouldAncestorsBeActive())) {
+
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8192,12 +8202,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getTriggerUnit()->getTrigger(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto it1 = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getTriggerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8206,12 +8217,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getAliasUnit()->getAlias(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto it1 = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getAliasUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8220,12 +8232,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getKeyUnit()->getKey(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto it1 = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getKeyUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8236,7 +8249,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         } else {
             QMap<int, TAction*> const actions = host.getActionUnit()->getActionList();
             for (auto action : actions) {
-                if (action->getName() == nameOrId && action->isActive()) {
+                if (action->getName() == nameOrId && action->isActive() && (!checkAncestors || action->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -8249,7 +8262,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         } else {
             QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
             for (auto script : scripts) {
-                if (script->getName() == nameOrId && script->isActive()) {
+                if (script->getName() == nameOrId && script->isActive() && (!checkAncestors || script->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -8261,6 +8274,415 @@ int TLuaInterpreter::isActive(lua_State* L)
     }
     lua_pushnumber(L, cnt);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isAncestorsActive
+int TLuaInterpreter::isAncestorsActive(lua_State* L)
+{
+    auto id = getVerifiedInt(L, __func__, 1, "item ID");
+    // Although we only use ASCII strings for the type the user may not enter a
+    // purely ASCII value which we might have to report...
+    QString type = getVerifiedString(L, __func__, 2, "item type");
+    if (id < 0) {
+        // Must be zero or more but doesn't seem to be:
+        return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
+    }
+
+    Host& host = getHostFromLua(L);
+    // Remember, QString::compare(...) returns zero for a match:
+    QString typeCheck{QLatin1String("timer")};
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getTimerUnit()->getTimer(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+
+        // Offset timer have their active state recorded differently
+        lua_pushboolean(L, pT->isOffsetTimer() ? pT->shouldAncestorsBeActive() : pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("trigger");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getTriggerUnit()->getTrigger(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("alias");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getAliasUnit()->getAlias(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("keybind");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getKeyUnit()->getKey(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("button");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getActionUnit()->getAction(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("script");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getScriptUnit()->getScript(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ancestors
+int TLuaInterpreter::ancestors(lua_State* L)
+{
+    auto id = getVerifiedInt(L, __func__, 1, "item ID");
+    // Although we only use ASCII strings for the type the user may not enter a
+    // purely ASCII value which we might have to report...
+    QString type = getVerifiedString(L, __func__, 2, "item type");
+    if (id < 0) {
+        // Must be zero or more but doesn't seem to be:
+        return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
+    }
+
+    Host& host = getHostFromLua(L);
+    // Remember, QString::compare(...) returns zero for a match:
+    QString typeCheck{QLatin1String("timer")};
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getTimerUnit()->getTimer(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                // We are confining ourselves to a small set of details here
+                // enough to help to build a table of the items perhaps but
+                // something to provide more details about each of the diffent
+                // item types (once the user knows which IDs/names to use to
+                // get them) would probably be a good idea as well:
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    // offset timers have a parent node that is NOT a group!
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                // Offset timer have their active state recorded differently
+                lua_pushboolean(L, pAncestor->isOffsetTimer() ? pAncestor->shouldBeActive() : pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("trigger");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getTriggerUnit()->getTrigger(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("alias");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getAliasUnit()->getAlias(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("keybind");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getKeyUnit()->getKey(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("button");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getActionUnit()->getAction(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("script");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getScriptUnit()->getScript(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permAlias
@@ -15483,6 +15905,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "tempKey", TLuaInterpreter::tempKey);
     lua_register(pGlobalLua, "exists", TLuaInterpreter::exists);
     lua_register(pGlobalLua, "isActive", TLuaInterpreter::isActive);
+    lua_register(pGlobalLua, "isAncestorsActive", TLuaInterpreter::isAncestorsActive);
+    lua_register(pGlobalLua, "ancestors", TLuaInterpreter::ancestors);
     lua_register(pGlobalLua, "enableAlias", TLuaInterpreter::enableAlias);
     lua_register(pGlobalLua, "tempAlias", TLuaInterpreter::tempAlias);
     lua_register(pGlobalLua, "disableAlias", TLuaInterpreter::disableAlias);
