@@ -658,6 +658,7 @@ public:
     static int setSaveCommandHistory(lua_State*);
     static int clearMapSelection(lua_State*);
     static int findItems(lua_State*);
+    static int holdingModifiers(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 

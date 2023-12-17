@@ -2558,6 +2558,18 @@ int TLuaInterpreter::scrollingActive(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#holdingModifiers
+int TLuaInterpreter::holdingModifiers(lua_State* L)
+{
+    Qt::KeyboardModifiers keyModifiers;
+    keyModifiers = static_cast<Qt::KeyboardModifiers>(
+        getVerifiedInt(L, __func__, 1, "key modifier", true)
+    );
+    Qt::KeyboardModifiers modifiersHeld = QGuiApplication::queryKeyboardModifiers();
+    lua_pushboolean(L, modifiersHeld == keyModifiers);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableCommandLine
 // This (and the next) function originally only worked on TConsole instances
 // to show/hide a command line at the bottom (and the first would create the
@@ -16273,6 +16285,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "clearMapSelection", TLuaInterpreter::clearMapSelection);
     lua_register(pGlobalLua, "scrollingActive", TLuaInterpreter::scrollingActive);
     lua_register(pGlobalLua, "findItems", TLuaInterpreter::findItems);
+    lua_register(pGlobalLua, "holdingModifiers", TLuaInterpreter::holdingModifiers);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
