@@ -43,7 +43,7 @@ class TTimer : public Tree<TTimer>
     friend class XMLimport;
 
 public:
-    ~TTimer();
+    ~TTimer() override;
     TTimer(TTimer* parent, Host* pHost);
     TTimer(const QString& name, QTime time, Host* pHost, bool repeating = false);
     void compileAll();
@@ -71,8 +71,28 @@ public:
     void disableTimer(int);
     void killTimer();
     int remainingTime();
+    // children of folder = regular timers
+    // children of timers = offset timers
+    //     offset timers: -> their time interval is interpreted as an offset to their parent timer
+    bool isOffsetTimer()
+    {
+        if (mpParent) {
+            return !mpParent->isFolder();
+        }
+        return false;
+    }
+    // Offset timers do not work correctly with the isAncestorsActive() base method
+    bool shouldAncestorsBeActive() const {
+        TTimer* node(mpParent);
+        while (node) {
+            if (node->isOffsetTimer() ? !node->shouldBeActive() : !node->isActive()) {
+                return false;
+            }
+            node = node->mpParent;
+        }
+        return true;
+    }
 
-    bool isOffsetTimer();
     QPointer<Host> getHost() { return mpHost; }
     QTimer* getQTimer() { return mpQTimer; }
     // Override the Tree version as we need to insert the id number as a
