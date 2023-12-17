@@ -774,9 +774,20 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->mProxyUsername = attributes().value(qsl("mProxyUsername")).toString();
     pHost->mProxyPassword = attributes().value(qsl("mProxyPassword")).toString();
-
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);
     pHost->mHighlightHistory = readDefaultTrueBool(qsl("HighlightHistory"));
+    pHost->mLogDir = attributes().value(qsl("logDirectory")).toString();
+    pHost->mFORCE_SAVE_ON_EXIT = readDefaultTrueBool(qsl("mFORCE_SAVE_ON_EXIT"));
+    const bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
+    const bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
+    pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
+    pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
+    pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
+    pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
+    pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
+    pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
+    pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
+    pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
 
     if (attributes().hasAttribute("AmbigousWidthGlyphsToBeWide")) {
         const QStringView ambiguousWidthSetting(attributes().value(qsl("AmbigousWidthGlyphsToBeWide")));
@@ -796,8 +807,6 @@ void XMLimport::readHost(Host* pHost)
         pHost->setWideAmbiguousEAsianGlyphs(Qt::PartiallyChecked);
     }
 
-    pHost->mLogDir = attributes().value(qsl("logDirectory")).toString();
-
     if (attributes().hasAttribute("logFileNameFormat")) {
         // We previously mixed "yyyy-MM-dd{#|T}hh-MM-ss" with "yyyy-MM-dd{#|T}HH-MM-ss"
         // which is slightly different {always use 24-hour clock even if AM/PM is
@@ -806,12 +815,6 @@ void XMLimport::readHost(Host* pHost)
         pHost->mLogFileNameFormat = attributes().value(qsl("logFileNameFormat")).toString().replace(QLatin1String("hh"), QLatin1String("HH"), Qt::CaseSensitive);
         pHost->mLogFileName = attributes().value(qsl("logFileName")).toString();
     }
-
-    pHost->mFORCE_SAVE_ON_EXIT = readDefaultTrueBool(qsl("mFORCE_SAVE_ON_EXIT"));
-    const bool enableUserDictionary = attributes().value(qsl("mEnableUserDictionary")) == YES;
-    const bool useSharedDictionary = attributes().value(qsl("mUseSharedDictionary")) == YES;
-    pHost->setUserDictionaryOptions(enableUserDictionary, useSharedDictionary);
-    pHost->mMapperShowRoomBorders = readDefaultTrueBool(qsl("mMapperShowRoomBorders"));
 
     if (attributes().hasAttribute("mEditorShowBidi")) {
         pHost->setEditorShowBidi(attributes().value(qsl("mEditorShowBidi")) == YES);
@@ -843,11 +846,6 @@ void XMLimport::readHost(Host* pHost)
         }
     }
 
-    pHost->mEditorTheme = attributes().value(QLatin1String("mEditorTheme")).toString();
-    pHost->mEditorThemeFile = attributes().value(QLatin1String("mEditorThemeFile")).toString();
-    pHost->mThemePreviewItemID = attributes().value(QLatin1String("mThemePreviewItemID")).toInt();
-    pHost->mThemePreviewType = attributes().value(QLatin1String("mThemePreviewType")).toString();
-
     if (attributes().hasAttribute(QLatin1String("mSearchEngineName"))) {
         pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();
     } else {
@@ -875,9 +873,6 @@ void XMLimport::readHost(Host* pHost)
     } else {
         pHost->mRequiredDiscordUserDiscriminator.clear();
     }
-
-    pHost->setHaveColorSpaceId(attributes().value(QLatin1String("mSGRCodeHasColSpaceId")).toString() == QLatin1String("yes"));
-    pHost->setMayRedefineColors(attributes().value(QLatin1String("mServerMayRedefineColors")).toString() == QLatin1String("yes"));
 
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
         quint8 styleCode = 0;
