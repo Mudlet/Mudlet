@@ -12570,7 +12570,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1386"/>
       <source>&lt;p&gt;Shows the &lt;b&gt;unique&lt;/b&gt; ID number that Mudlet uses internally to identify each instance of an item this is the same number that the Lua API functions that create aliases, key-binding, etc. return on success. This may be useful to know when there are multiple items of the same type with the same name and will be incorporated in the names of the related items&apos; Lua scripts in the Central Debug Console output.&lt;/p&gt;&lt;p&gt;Note that although the number assigned to an item is constant during a session of the profile it may be different the next time the profile is loaded if other items are added or removed.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mostra l'ID &lt;b&gt;univoco&lt;/b&gt; che Mudlet utilizza internamente per identificare ogni elemento, è lo stesso numero che le API di Lua che creano alias, tasti, ecc. restituiscono se non vi sono errori. Può essere utile per sapere quando ci sono più elementi dello stesso tipo con lo stesso nome ed è utilizzato nei nomi mostrati&apos; nella console principale di debug. &lt;/p&gt;&lt;p&gt;Sebbene il numero assegnato ad un elemento sia il medesimo durante una sessione del profilo, potrebbe essere differente la prossima volta che il profilo viene caricato se altri elementi vengono creati o rimossi.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1389"/>
