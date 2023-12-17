@@ -2805,7 +2805,7 @@ function map.export_area(name)
     tbl.rooms = {}
     tbl.exits = {}
     tbl.special = {}
-    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords
+    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment
     for k,v in pairs(rooms) do
         rname = getRoomName(v)
         exits = getRoomExits(v)
@@ -2813,9 +2813,10 @@ function map.export_area(name)
         doors = getDoors(v)
         special = getSpecialExitsSwap(v)
         portals = getRoomUserData(v,"portals") or ""
+	environment = getRoomEnv(v)
         coords = {getRoomCoordinates(v)}
         tbl.rooms[v] = {name = rname, coords = coords, exits = exits, stubs = stubs, doors = doors, door_up = door_up,
-            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals}
+            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment}
         tmp = {}
         for k1,v1 in pairs(exits) do
             if not table.contains(rooms,v1) then
@@ -2867,6 +2868,7 @@ function map.import_area(name)
             setDoor(ID,i,j)
         end
         setRoomUserData(ID,"portals",v.portals)
+	setRoomEnv(ID,v.environment)
     end
     for k,v in pairs(tbl.rooms) do
         for i,j in pairs(v.exits) do
