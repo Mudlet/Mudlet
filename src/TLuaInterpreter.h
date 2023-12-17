@@ -491,6 +491,8 @@ public:
     static int permAlias(lua_State*);
     static int exists(lua_State*);
     static int isActive(lua_State*);
+    static int isAncestorsActive(lua_State*);
+    static int ancestors(lua_State*);
     static int tempAlias(lua_State*);
     static int enableAlias(lua_State*);
     static int disableAlias(lua_State*);
@@ -755,6 +757,9 @@ private:
     static int stopMusicAsTableArgument(lua_State*);
     static int stopSoundsAsOrderedArguments(lua_State*);
     static int stopSoundsAsTableArgument(lua_State*);
+    static void parseCommandOrFunction(lua_State*, const char*, int&, QString&, int&);
+    static void parseCommandsOrFunctionsTable(lua_State*, const char*, int&, QStringList&, QVector<int>&);
+    static void parseHintsTable(lua_State*, const char*, int&, QStringList&);
     struct lua_state_deleter {
         void operator()(lua_State* ptr) const noexcept {
             lua_close(ptr);

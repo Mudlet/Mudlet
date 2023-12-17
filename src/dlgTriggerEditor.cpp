@@ -3430,20 +3430,23 @@ void dlgTriggerEditor::activeToggle_action()
     if (pT->isFolder()) {
         itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
         if (!pT->ancestorsActive()) {
+            // It is okay to test for being inactiveed by an ancestor before testing whether
+            // the item is a package/module as those are not expected to have any parents to
+            // be inactive.
             if (itemActive) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-grey.png")), QIcon::Normal, QIcon::Off);
                 itemDescription = descInactiveParent.arg(itemDescription);
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
             }
-        } else if (!pT->getPackageName().isEmpty()) {
-            // Has a package name - is a module master folder
+        } else if (!pT->mPackageName.isEmpty()) {
+            // Has a package name - is a module or package master folder
             if (itemActive) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
             } else {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-brown-locked.png")), QIcon::Normal, QIcon::Off);
             }
-        } else if (!pT->getParent() || !pT->getParent()->getPackageName().isEmpty()) {
+        } else if (!pT->getParent() || !pT->getParent()->mPackageName.isEmpty()) {
             // Does not have a parent or the parent has a package name - is a toolbar
             if (itemActive) {
                 icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
@@ -3514,8 +3517,9 @@ void dlgTriggerEditor::children_icon_action(QTreeWidgetItem* pWidgetItemParent)
         if (pT->state()) {
             if (pT->isFolder()) {
                 itemDescription = (itemActive ? descActiveFolder : descInactiveFolder);
-                if (!pT->getPackageName().isEmpty()) {
-                    // Has a package name - is a module master folder
+                if (!pT->mPackageName.isEmpty()) {
+                    // Has a package name - is a module or package master
+                    // folder
                     if (pT->isActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-brown.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -3528,8 +3532,10 @@ void dlgTriggerEditor::children_icon_action(QTreeWidgetItem* pWidgetItemParent)
                     } else {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-grey-locked.png")), QIcon::Normal, QIcon::Off);
                     }
-                } else if (!pT->getParent() || !pT->getParent()->getPackageName().isEmpty()) {
-                    // Does not have a parent or the parent has a package name - is a toolbar
+                } else if (!pT->getParent() || !pT->getParent()->mPackageName.isEmpty()) {
+                    // Does not have a parent or the parent has a package name
+                    // so the parent is a module or package master folder - so
+                    // this is a toolbar:
                     if (pT->isActive()) {
                         icon.addPixmap(QPixmap(qsl(":/icons/folder-yellow.png")), QIcon::Normal, QIcon::Off);
                     } else {
@@ -6283,7 +6289,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
         mpActionsMainArea->spinBox_action_bar_columns->setValue(pT->getButtonColumns());
         mpActionsMainArea->plainTextEdit_action_css->setPlainText(pT->css);
         if (pT->isFolder()) {
-            if (!pT->getPackageName().isEmpty()) {
+            if (!pT->mPackageName.isEmpty()) {
                 // We have a non-empty package name (Tree<T>::mModuleName
                 // is NEVER used but Tree<T>::mPackageName is for both!)
                 // THUS: We are a module master folder
@@ -6292,7 +6298,7 @@ void dlgTriggerEditor::slot_actionSelected(QTreeWidgetItem* pItem)
                 mpActionsMainArea->groupBox_action_button_appearance->hide();
                 mpActionsMainArea->widget_top->hide();
                 mpSourceEditorArea->hide();
-            } else if (!pT->getParent() || (pT->getParent() && !pT->getParent()->getPackageName().isEmpty())) {
+            } else if (!pT->getParent() || (pT->getParent() && !pT->getParent()->mPackageName.isEmpty())) {
                 // We are a top-level folder with no parent
                 // OR: We have a parent and that IS a module master folder
                 // THUS: We are a toolbar
