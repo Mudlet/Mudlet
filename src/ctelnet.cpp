@@ -1842,7 +1842,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                 terminal_standards |= MTTS_STD_SCREEN_READER;
                             }
 
-                            if (mConnectViaProxy) {
+                            if (mpHost->mUseProxy) {
                                 terminal_standards |= MTTS_STD_PROXY;
                             }
 #if !defined(QT_NO_SSL)
