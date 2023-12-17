@@ -4296,6 +4296,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyPassword</tabstop>
   <tabstop>toolButton_resetMainWindowShortcuts</tabstop>
   <tabstop>checkBox_announceIncomingText</tabstop>
+  <tabstop>checkBox_advertiseScreenReader</tabstop>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
