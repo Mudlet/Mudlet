@@ -406,7 +406,7 @@ void TimerUnit::assembleReport(TTimer* pItem)
     std::list<TTimer*>* childrenList = pItem->mpMyChildrenList;
     for (auto pChild : *childrenList) {
         ++statsItemsTotal;
-        if (pChild->isActive()) {
+        if (pChild->isOffsetTimer() ? pChild->shouldBeActive() : pChild->isActive()) {
             ++statsActiveItems;
         }
         if (pChild->isTemporary()) {
@@ -421,7 +421,7 @@ std::tuple<QString, int, int, int> TimerUnit::assembleReport()
     resetStats();
     for (auto pItem : mTimerRootNodeList) {
         ++statsItemsTotal;
-        if (pItem->isActive()) {
+        if (pItem->isOffsetTimer() ? pItem->shouldBeActive() : pItem->isActive()) {
             ++statsActiveItems;
         }
         if (pItem->isTemporary()) {
