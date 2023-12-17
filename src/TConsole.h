@@ -318,6 +318,7 @@ public slots:
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
+    void dragMoveEvent(QDragMoveEvent*) override;
     void dropEvent(QDropEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
