@@ -779,6 +779,11 @@ void XMLimport::readHost(Host* pHost)
     } else {
         pHost->mAnnounceIncomingText = true;
     }
+    if (attributes().hasAttribute("advertiseScreenReader")) {
+        pHost->mAdvertiseScreenReader = attributes().value(qsl("advertiseScreenReader")) == YES;
+    } else {
+        pHost->mAdvertiseScreenReader = false;
+    }
     if (attributes().hasAttribute("caretShortcut")) {
         const QStringView caretShortcut(attributes().value(qsl("caretShortcut")));
         if (caretShortcut == qsl("None")) {
@@ -863,6 +868,7 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->mFORCE_MXP_NEGOTIATION_OFF = attributes().value(qsl("mFORCE_MXP_NEGOTIATION_OFF")) == YES;
     pHost->mFORCE_CHARSET_NEGOTIATION_OFF = attributes().value(qsl("mFORCE_CHARSET_NEGOTIATION_OFF")) == YES;
+    pHost->mFORCE_MTTS_NEGOTIATION_OFF = attributes().value(qsl("mFORCE_MTTS_NEGOTIATION_OFF")) == YES;
     pHost->mEnableTextAnalyzer = attributes().value(qsl("enableTextAnalyzer")) == YES;
     pHost->mRoomSize = attributes().value(qsl("mRoomSize")).toString().toDouble();
     if (qFuzzyCompare(1.0 + pHost->mRoomSize, 1.0)) {

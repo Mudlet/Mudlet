@@ -1804,18 +1804,55 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     cmd += TN_SB;
                     cmd += OPT_TERMINAL_TYPE;
                     cmd += TNSB_IS;
-                    /*
-                     * The valid characters for termTerm are more restricted
-                     * than being ASCII - from:
-                     * https://tools.ietf.org/html/rfc1010 (page 29):
-                     * "A terminal names may be up to 40 characters taken from
-                     * the set of uppercase letters, digits, and the two
-                     * punctuation characters hyphen and slash.  It must start
-                     * with a letter, and end with a letter or digit."
-                     * Once we comply with that we can be certain that Mud
-                     * Server encoding will NOT be an issue!
-                     */
-                    cmd += termType.toUtf8().constData();
+
+                    switch (mCycleCountMTTS) {
+                        case 0:
+                            /*
+                            * The valid characters for termTerm are more restricted
+                            * than being ASCII - from:
+                            * https://tools.ietf.org/html/rfc1010 (page 29):
+                            * "A terminal names may be up to 40 characters taken from
+                            * the set of uppercase letters, digits, and the two
+                            * punctuation characters hyphen and slash.  It must start
+                            * with a letter, and end with a letter or digit."
+                            * Once we comply with that we can be certain that Mud
+                            * Server encoding will NOT be an issue!
+                            */
+                            cmd += termType.toUtf8().constData();
+
+                            if (!mpHost->mFORCE_MTTS_NEGOTIATION_OFF) { // If we don't MTTS, remainder of the cases do not execute.
+                                mCycleCountMTTS++;
+                            }
+
+                            break;
+                        case 1:
+                            qDebug() << "MTTS enabled";
+                            cmd += qsl("XTERM").toUtf8().constData(); // DUMB, ANSI, VT100, XTERM
+                            mCycleCountMTTS++;
+                            qDebug() << "WE send MTTS terminal type is XTERM";
+                            break;
+                        default:
+                            int terminal_standards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
+
+                            if (getEncoding() == "UTF-8") {
+                                terminal_standards |= MTTS_STD_UTF_8;
+                            }
+
+                            if (mpHost->mAdvertiseScreenReader) {
+                                terminal_standards |= MTTS_STD_SCREEN_READER;
+                            }
+
+                            cmd += qsl("MTTS %1").arg(terminal_standards).toUtf8().constData();
+
+                            if (mCycleCountMTTS == 2) {
+                                mCycleCountMTTS++;
+                                qDebug() << "WE send MTTS bitvector is" << terminal_standards;
+                            } else {
+                                mCycleCountMTTS = 0; // Send the bitvector twice, then reset (0) to finish MTTS negotiation
+                                qDebug() << "WE send MTTS bitvector is" << terminal_standards << "(repeated)";
+                            }
+                    }
+
                     cmd += TN_IAC;
                     cmd += TN_SE;
                     socketOutRaw(cmd);
