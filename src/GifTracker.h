@@ -1,10 +1,8 @@
-#ifndef MUDLET_DLGALIASESMAINAREA_H
-#define MUDLET_DLGALIASESMAINAREA_H
+#ifndef MUDLET_GIFUNIT_H
+#define MUDLET_GIFUNIT_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,28 +20,37 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TrailingWhitespaceMarker.h"
 
 #include "pre_guard.h"
-#include "ui_aliases_main_area.h"
+#include <QMovie>
+#include <QPointer>
+#include <QString>
 #include "post_guard.h"
 
+#include <list>
 
-class dlgAliasMainArea : public QWidget, public Ui::aliases_main_area
+class Host;
+class TLabel;
+
+
+class GifTracker
 {
-    Q_OBJECT
 
 public:
-    Q_DISABLE_COPY(dlgAliasMainArea)
-    explicit dlgAliasMainArea(QWidget*);
+    GifTracker() = default;
+    explicit GifTracker(Host* pHost)
+    : mpHost(pHost)
+    {}
 
-    // public function allow to trim even when QLineEdit::editingFinished()
-    // is not raised. Example: When the user saves without leaving the LineEdit
-    void trimName();
+    bool registerGif(QMovie* pT);
+    void unregisterGif(QMovie* pT);
+    std::tuple<QString, int, int> assembleReport();
 
-private slots:
-    void slot_editingNameFinished();
-    void slot_changedPattern();
+
+private:
+    //GifTracker() = default;
+    QPointer<Host> mpHost;
+    std::list<QMovie*> mMovieList;
 };
 
-#endif // MUDLET_DLGALIASESMAINAREA_H
+#endif // MUDLET_GIFUNIT_H
