@@ -1963,6 +1963,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
         QString version;
         QString url;
+        bool rawTelnet = false;
 
         auto document = QJsonDocument::fromJson(data.toUtf8());
 
@@ -1982,6 +1983,8 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             if (url.isEmpty()) {
                 return;
             }
+
+            rawTelnet = true;
         } else {
             // This is JSON
             auto json = document.object();
@@ -2046,6 +2049,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
             mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
             mpProgressDialog->show();
+        }
+
+        if (rawTelnet) {
+            return; // Do not add to the GMCP table
         }
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
         mpHost->setMmpMapLocation(data);

@@ -1,10 +1,5 @@
-#ifndef MUDLET_DLGALIASESMAINAREA_H
-#define MUDLET_DLGALIASESMAINAREA_H
-
 /***************************************************************************
- *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2023-2023 by Adam Robinson - seldon1951@hotmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,28 +17,51 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "TrailingWhitespaceMarker.h"
 
-#include "pre_guard.h"
-#include "ui_aliases_main_area.h"
-#include "post_guard.h"
+#include "GifTracker.h"
+
+#include "Host.h"
 
 
-class dlgAliasMainArea : public QWidget, public Ui::aliases_main_area
+bool GifTracker::registerGif(QMovie* pT)
 {
-    Q_OBJECT
+    if (!pT) {
+        return false;
+    }
 
-public:
-    Q_DISABLE_COPY(dlgAliasMainArea)
-    explicit dlgAliasMainArea(QWidget*);
+    mMovieList.push_back(pT);
+    return true;
 
-    // public function allow to trim even when QLineEdit::editingFinished()
-    // is not raised. Example: When the user saves without leaving the LineEdit
-    void trimName();
+}
 
-private slots:
-    void slot_editingNameFinished();
-    void slot_changedPattern();
-};
+void GifTracker::unregisterGif(QMovie* pT)
+{
+    if (!pT) {
+        return;
+    }
 
-#endif // MUDLET_DLGALIASESMAINAREA_H
+    mMovieList.remove(pT);
+    return;
+
+}
+
+std::tuple<QString, int, int> GifTracker::assembleReport()
+{
+    int statsItemsTotal = 0;
+    int statsActiveItems = 0;
+    for (auto pItem : mMovieList) {
+        ++statsItemsTotal;
+        if (pItem->state() == QMovie::Running) {
+            ++statsActiveItems;
+        }
+    }
+    QStringList msg;
+    msg << QLatin1String("Gifs current total: ") << QString::number(statsItemsTotal) << QLatin1String("\n")
+        << QLatin1String("active Gifs: ") << QString::number(statsActiveItems) << QLatin1String("\n");
+    return {
+        msg.join(QString()),
+        statsItemsTotal,
+        statsActiveItems
+    };
+}
+

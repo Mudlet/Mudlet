@@ -1980,7 +1980,30 @@ void TConsole::setProfileName(const QString& newName)
 void TConsole::dragEnterEvent(QDragEnterEvent* e)
 {
     if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
-        e->acceptProposedAction();
+        // Use ctrl key to decide if action is link or copy
+        // CopyAction corresponds to installing dropped file as a package
+        // LinkAction corresponds to installing dropped file as a module
+        Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+        if (modifiers & Qt::ControlModifier) {
+            e->setDropAction(Qt::LinkAction);
+        } else {
+            e->setDropAction(Qt::CopyAction);
+        }
+        e->accept();
+    }
+}
+void TConsole::dragMoveEvent(QDragMoveEvent* e) {
+    if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
+        // Use ctrl key to decide if action is link or copy
+        // CopyAction corresponds to installing dropped file as a package
+        // LinkAction corresponds to installing dropped file as a module
+        Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+        if (modifiers & Qt::ControlModifier) {
+            e->setDropAction(Qt::LinkAction);
+        } else {
+            e->setDropAction(Qt::CopyAction);
+        }
+        e->accept();
     }
 }
 

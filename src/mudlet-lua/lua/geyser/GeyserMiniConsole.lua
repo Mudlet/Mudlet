@@ -132,6 +132,53 @@ function Geyser.MiniConsole:disableHorizontalScrollBar()
   self.horizontalScrollBar = false
 end
 
+--- Enables scrolling in the miniconsole
+function Geyser.MiniConsole:enableScrolling()
+  enableScrolling(self.name)
+end
+
+--- Disables scrolling in the miniconsole
+function Geyser.MiniConsole:disableScrolling()
+  disableScrolling(self.name)
+end
+
+--- Check if scrolling is enabled in the miniconsole
+function Geyser.MiniConsole:scrollingActive()
+  return scrollingActive(self.name)
+end
+
+--- Returns the line the miniconsole is currently scrolled to.
+function Geyser.MiniConsole:getScroll()
+  return getScroll(self.name)
+end
+
+--- Scrolls up in the window by lines number of lines
+-- @number lines the number of lines to scroll up by
+function Geyser.MiniConsole:scrollUp(lines)
+  if lines then
+    return scrollUp(self.name, lines)
+  end
+  return scrollUp(self.name)
+end
+
+--- Scrolls down in the window by lines number of lines
+-- @number lines the number of lines to scroll down by
+function Geyser.MiniConsole:scrollDown(lines)
+  if lines then
+    return scrollDown(self.name, lines)
+  end
+  return scrollDown(self.name)
+end
+
+--- Scrolls to a specified line. If ommitted will scroll to the end (ends scrolling)
+-- @number lineNum the line number to scroll to. Will scroll to the end of the window if ommitted. 
+function Geyser.MiniConsole:scrollTo(lineNum)
+  if lineNum then
+    return scrollTo(self.name, lineNum)
+  end
+  return scrollTo(self.name)
+end
+
 -- Start commandLine functions
 
 --- Enables the command-line for this window

@@ -36,6 +36,7 @@
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "GifTracker.h"
 
 #include "pre_guard.h"
 #include <QLineEdit>
@@ -581,6 +582,11 @@ std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
 
     auto pL = mLabelMap.take(name);
     if (pL) {
+
+        if (pL->mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(pL->mpMovie);
+        }
+
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -1511,6 +1517,11 @@ void TMainConsole::showStatistics()
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Script Report:")));
     itemMsg = std::get<0>(mpHost->getScriptUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
+
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Gif Report:")));
+    itemMsg = std::get<0>(mpHost->getGifTracker()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
     // Footer for the system's statistics information displayed in the console, it should be 64 'narrow' characters wide
