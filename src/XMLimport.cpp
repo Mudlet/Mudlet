@@ -830,7 +830,7 @@ void XMLimport::readHost(Host* pHost)
                 // We have a user name that contains characters that do not
                 // match the post 2023/05 Discord user-name changes
                 QString warningMessage{tr("[ WARN ]  - A Discord-RPC username has been specified in the preferences for\n"
-                                          "this profile of: \"%1\" however, from May 2023, Discord is\n""
+                                          "this profile of: \"%1\" however, from May 2023, Discord is\n"
                                           "changing the user name format to be a unique string for each user that contains\n"
                                           "only lower case ASCII alphabet ('a' to 'z'), digits ('0' to '9'), '_' and '.'.\n"
                                           "This name does not meet that requirement and will need to be changed when your\n"
