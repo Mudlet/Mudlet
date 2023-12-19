@@ -2253,6 +2253,64 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     }
 }
 
+// Wraps text to max line length of mWrapAt
+// Applies indentation of mWrapIndent to wrapped lines
+QString TBuffer::wrapText(const QString& text){
+
+    if(mWrapAt <= mWrapIndent){
+        qWarning() << "mWrapAt (" << mWrapAt << ") is too small to accommodate mWrapIndent (" << mWrapIndent << ")";
+    }
+
+    const QString wordBreaks = qsl(",.- ");
+    QString wrappedText;
+    QString currentWord;
+    QString currentLine;
+    int wordsInCurrentLine = 0;
+
+    for(int i=0; i<text.size(); i++){
+        bool at_newline = text.at(i) == '\n';
+        if(at_newline){
+            currentLine += currentWord;
+            wrappedText += '\n' + currentLine;
+            currentLine.clear();
+            currentWord.clear();
+            wordsInCurrentLine = 0;
+            continue;
+        }
+
+        currentWord += text.at(i);
+
+        bool atWordBreak = wordBreaks.indexOf(text.at(i)) > -1;
+        if(atWordBreak) {
+            // Reached break in word
+            // Add current word to the line and reset for next word
+            currentLine += currentWord;
+            currentWord.clear();
+            wordsInCurrentLine++;
+        }
+
+        int lineLengthWithWord = currentLine.size() + currentWord.size();
+        bool needNewLine = lineLengthWithWord >= mWrapAt;
+
+        if(needNewLine){
+            // Current word would cause an overflow, so wrap the text.
+            if(wordsInCurrentLine == 0 ){
+                // If a word is too long to fit on a line,
+                // the word will be split between lines
+                int splitIndex = mWrapAt - currentLine.size();
+                currentLine += currentWord.left(splitIndex);
+                currentWord = currentWord.mid(splitIndex);
+            }
+            wrappedText += '\n' + currentLine;
+            currentLine = QString(' ').repeated(mWrapIndent);
+            wordsInCurrentLine = 0;
+        }
+    }
+    currentLine += currentWord;
+    wrappedText += '\n' + currentLine;
+    return wrappedText;
+}
+
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
     // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
