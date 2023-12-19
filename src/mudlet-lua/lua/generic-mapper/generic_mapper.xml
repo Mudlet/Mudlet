@@ -466,7 +466,7 @@ end</script>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Rooms Alias</name>
 				<script>-- map rooms &lt;area&gt; - shows the list of rooms in an area
-map.echoRoomList(matches[2])</script>
+map.echoRoomList(matches[2] or getRoomArea(map.currentRoom))</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map rooms(?: (.+))?$</regex>
