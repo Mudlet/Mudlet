@@ -1818,7 +1818,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             * Once we comply with that we can be certain that Mud
                             * Server encoding will NOT be an issue!
                             */
-                            cmd += termType.toUtf8().constData();
+                            cmd += termType.replace(QChar::Space, "-").replace(".", "-").toUtf8().constData();
 
                             if (!mpHost->mFORCE_MTTS_NEGOTIATION_OFF) { // If we don't MTTS, remainder of the cases do not execute.
                                 mCycleCountMTTS++;
