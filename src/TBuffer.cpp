@@ -2255,9 +2255,9 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
 
 // Wraps text to max line length of mWrapAt
 // Applies indentation of mWrapIndent to wrapped lines
-QString TBuffer::wrapText(const QString& text){
-
-    if ( mWrapAt <= mWrapIndent ){
+QString TBuffer::wrapText(const QString& text)
+{
+    if ( mWrapAt <= mWrapIndent ) {
         qWarning() << "mWrapAt (" << mWrapAt << ") is too small to accommodate mWrapIndent (" << mWrapIndent << ")";
     }
 
@@ -2267,7 +2267,7 @@ QString TBuffer::wrapText(const QString& text){
     QString currentLine;
     int wordsInCurrentLine = 0;
 
-    for ( int i = 0; i < text.size(); i++ ){
+    for ( int i = 0; i < text.size(); i++ ) {
         bool at_newline = text.at(i) == '\n';
         if ( at_newline ){
             currentLine += currentWord;
@@ -2292,9 +2292,9 @@ QString TBuffer::wrapText(const QString& text){
         int lineLengthWithWord = currentLine.size() + currentWord.size();
         bool needNewLine = lineLengthWithWord >= mWrapAt;
 
-        if ( needNewLine ){
+        if ( needNewLine ) {
             // Current word would cause an overflow, so wrap the text.
-            if ( wordsInCurrentLine == 0 ){
+            if ( wordsInCurrentLine == 0 ) {
                 // If a word is too long to fit on a line,
                 // the word will be split between lines
                 int splitIndex = mWrapAt - currentLine.size();
