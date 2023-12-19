@@ -1218,7 +1218,12 @@ map.deleteMapFeature(matches[2]:trim())</script>
 			<regex></regex>
 			<Alias isActive="yes" isFolder="no">
 				<name>Save Map Alias</name>
-				<script>saveMap(getMudletHomeDir() .. "/map.dat")</script>
+				<script>if saveMap(getMudletHomeDir() .. "/map.dat") then
+  map.echo("Map saved.\n")
+else
+  map.echo("Error.  Map NOT saved.\n")
+end
+				</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map save$</regex>
