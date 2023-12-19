@@ -2255,7 +2255,7 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
 
 // Wraps text to max line length of mWrapAt
 // Applies indentation of mWrapIndent to wrapped lines
-QString TBuffer::wrapText(const QString& text)
+QString TBuffer::wrapText(const QString& text) const
 {
     if ( mWrapAt <= mWrapIndent ) {
         qWarning() << "mWrapAt (" << mWrapAt << ") is too small to accommodate mWrapIndent (" << mWrapIndent << ")";
@@ -2268,7 +2268,7 @@ QString TBuffer::wrapText(const QString& text)
     int wordsInCurrentLine = 0;
 
     for ( int i = 0; i < text.size(); i++ ) {
-        bool at_newline = text.at(i) == '\n';
+        bool const at_newline = text.at(i) == '\n';
         if ( at_newline ){
             currentLine += currentWord;
             wrappedText += '\n' + currentLine;
@@ -2280,7 +2280,7 @@ QString TBuffer::wrapText(const QString& text)
 
         currentWord += text.at(i);
 
-        bool atWordBreak = wordBreaks.indexOf(text.at(i)) > -1;
+        bool const atWordBreak = wordBreaks.indexOf(text.at(i)) > -1;
         if ( atWordBreak ) {
             // Reached break in word
             // Add current word to the line and reset for next word
@@ -2289,15 +2289,15 @@ QString TBuffer::wrapText(const QString& text)
             wordsInCurrentLine++;
         }
 
-        int lineLengthWithWord = currentLine.size() + currentWord.size();
-        bool needNewLine = lineLengthWithWord >= mWrapAt;
+        int const lineLengthWithWord = currentLine.size() + currentWord.size();
+        bool const needNewLine = lineLengthWithWord >= mWrapAt;
 
         if ( needNewLine ) {
             // Current word would cause an overflow, so wrap the text.
             if ( wordsInCurrentLine == 0 ) {
                 // If a word is too long to fit on a line,
                 // the word will be split between lines
-                int splitIndex = mWrapAt - currentLine.size();
+                int const splitIndex = mWrapAt - currentLine.size();
                 currentLine += currentWord.left(splitIndex);
                 currentWord = currentWord.mid(splitIndex);
             }
