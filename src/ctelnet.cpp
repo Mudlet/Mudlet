@@ -1818,7 +1818,22 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             * Once we comply with that we can be certain that Mud
                             * Server encoding will NOT be an issue!
                             */
-                            cmd += termType.replace(QChar::Space, "-").replace(".", "-").toUtf8().constData();
+                            static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
+                            static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
+                            QString sanitisedTermType = termType.toUpper()
+                                                                .replace(QChar('.'), QChar('/'))
+                                                                .replace(QChar::Space, QChar('-'))
+                                                                .replace(allInvalidCharacters, QChar('-'))
+                                                                .replace(multipleHyphens, QChar('-'))
+                                                                .left(40)
+                                                            .toLatin1().constData();
+                            while (!sanitisedTermType.isEmpty() && !sanitisedTermType.back().isLetterOrNumber()) {
+                                sanitisedTermType.chop(1);
+                            }
+                            Q_ASSERT_X(!sanitisedTermType.isEmpty(),
+                                       "cTelnet::processTelnetCommand(...)",
+                                       "ended up with an empty version string whilst trying to sanitise the Mudlet one");
+                            cmd += sanitisedTermType.toLatin1().constData();
 
                             if (!mpHost->mFORCE_MTTS_NEGOTIATION_OFF) { // If we don't MTTS, remainder of the cases do not execute.
                                 mCycleCountMTTS++;
