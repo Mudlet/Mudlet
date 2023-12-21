@@ -1806,7 +1806,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     cmd += TNSB_IS;
 
                     switch (mCycleCountMTTS) {
-                        case 0:
+                        case 0: {
                             /*
                             * The valid characters for termTerm are more restricted
                             * than being ASCII - from:
@@ -1840,6 +1840,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                             }
 
                             break;
+                        }
                         case 1:
                             qDebug() << "MTTS enabled";
                             cmd += qsl("XTERM-256COLOR").toUtf8().constData(); // DUMB, ANSI, VT100, XTERM

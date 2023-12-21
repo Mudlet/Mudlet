@@ -964,7 +964,6 @@ void XMLimport::readHost(Host* pHost)
         default:
             pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
         }
-
     } else {
         // The default value, also used up to Mudlet 4.14.1:
         pHost->setControlCharacterMode(ControlCharacterMode::AsIs);
