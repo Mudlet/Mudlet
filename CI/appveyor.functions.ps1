@@ -67,7 +67,7 @@ function script:exec {
   param(
     [Parameter(Position=0,Mandatory=1)][string]$cmd,
     [Parameter(Position=1,Mandatory=0)][string[]]$parameter = @(),
-    [Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
+    [Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command '{0}' with {1} parameters: {2}" -f $cmd, $parameter.Length, ($parameter -join ', '))
   )
   # ignore standard error for external programs
   $global:ErrorActionPreference = "Continue"
