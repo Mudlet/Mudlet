@@ -1827,12 +1827,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                                                 .replace(multipleHyphens, QChar('-'))
                                                                 .left(40)
                                                             .toLatin1().constData();
-                            while (!sanitisedTermType.isEmpty() && !sanitisedTermType.back().isLetterOrNumber()) {
-                                sanitisedTermType.chop(1);
+
+                            for (int i = sanitisedTermType.size() - 1; i >= 0; --i) {
+                                if (sanitisedTermType[i].isLetterOrNumber()) {
+                                    sanitisedTermType = sanitisedTermType.left(i + 1);
+                                    break;
+                                }
                             }
+
                             Q_ASSERT_X(!sanitisedTermType.isEmpty(),
                                        "cTelnet::processTelnetCommand(...)",
                                        "ended up with an empty version string whilst trying to sanitise the Mudlet one");
+
                             cmd += sanitisedTermType.toLatin1().constData();
 
                             if (!mpHost->mFORCE_MTTS_NEGOTIATION_OFF) { // If we don't MTTS, remainder of the cases do not execute.
