@@ -1008,7 +1008,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_AYT: {
         // Select a random text to return - technically all the other end
         // expects is "something" - so let's keep 'em guessing 8-) - SlySven
-        const static QByteArrayList randomStrings = {
+        static const QByteArrayList randomStrings = {
             {"Yep."},
             {"You bet your sweet arse I am!"},
             {"42"},
