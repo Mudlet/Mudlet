@@ -1829,7 +1829,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                                             .toLatin1().constData();
 
                             for (int i = sanitisedTermType.size() - 1; i >= 0; --i) {
-                                if (sanitisedTermType[i].isLetterOrNumber()) {
+                                if (sanitisedTermType.at(i).isLetterOrNumber()) {
                                     sanitisedTermType = sanitisedTermType.left(i + 1);
                                     break;
                                 }
