@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -35,23 +36,11 @@ enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COM
 // handles the MXP protocol
 class TMxpProcessor
 {
-    // State of MXP system:
-    bool mMXP;
-    TMXPMode mMXP_MODE;
-    TMXPMode mMXP_DEFAULT;
-
-    // MXP delegated handlers
-    TMxpNodeBuilder mMxpTagBuilder;
-    TMxpTagProcessor mMxpTagProcessor;
-    TEntityHandler mEntityHandler;
-
-    TMxpClient* mpMxpClient;
-
 public:
     explicit TMxpProcessor(TMxpClient* pMxpClient)
-    : mMXP(false)
-    , mMXP_MODE(MXP_MODE_OPEN), mMXP_DEFAULT(MXP_MODE_OPEN)
-    , mMxpTagBuilder(true), mEntityHandler(mMxpTagProcessor.getEntityResolver()), mpMxpClient(pMxpClient)
+    : mMxpTagBuilder(true)
+    , mEntityHandler(mMxpTagProcessor.getEntityResolver())
+    , mpMxpClient(pMxpClient)
     {
         mpMxpClient->initialize(&mMxpTagProcessor);
     }
@@ -66,6 +55,21 @@ public:
 
     TMxpProcessingResult processMxpInput(char& ch);
     void processRawInput(char ch);
+
+
+private:
+    // State of MXP system:
+    bool mMXP = false;
+    TMXPMode mMXP_MODE = MXP_MODE_OPEN;
+    TMXPMode mMXP_DEFAULT = MXP_MODE_OPEN;
+
+    // MXP delegated handlers
+    TMxpNodeBuilder mMxpTagBuilder;
+    TMxpTagProcessor mMxpTagProcessor;
+    // The creation of this element requires the preceding one:
+    TEntityHandler mEntityHandler;
+
+    TMxpClient* mpMxpClient = nullptr;
 };
 
 #endif //MUDLET_TMXPPROCESSOR_H

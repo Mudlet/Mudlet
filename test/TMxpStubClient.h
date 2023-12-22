@@ -63,7 +63,7 @@ public:
 
 class TMxpStubClient : public TMxpClient {
 public:
-    QString version;
+    QString version = "Stub-1.0";
     bool linkMode;
 
     QString sentToServer;
@@ -73,6 +73,14 @@ public:
     QStringList mHrefs, mHints;
 
     QString mPublishedEntityName, mPublishedEntityValue;
+
+    QString style;
+
+    // Count how many of this format have been stacked/applied on top of each other
+    unsigned int boldCounter = 0;
+    unsigned int italicCounter = 0;
+    unsigned int underlineCounter = 0;
+    unsigned int strikeOutCounter = 0;
 
     QString getVersion() override
     {
@@ -110,24 +118,75 @@ public:
 
     }
 
-    bool isBold, isItalic, isUnderline;
-
     void setBold(bool bold) override
     {
-        isBold = bold;
+        if (bold) {
+            boldCounter++;
+        } else if (boldCounter > 0) {
+            boldCounter--;
+        }
     }
+
     void setItalic(bool italic) override
     {
-        isItalic = italic;
+        if (italic) {
+            italicCounter++;
+        } else if (italicCounter > 0) {
+            italicCounter--;
+        }
     }
+
     void setUnderline(bool underline) override
     {
-        isUnderline = underline;
+        if (underline) {
+            underlineCounter++;
+        } else if (underlineCounter > 0) {
+            underlineCounter--;
+        }
+    }
+
+    void setStrikeOut(bool strikeOut) override
+    {
+        if (strikeOut) {
+            strikeOutCounter++;
+        } else if (strikeOutCounter > 0) {
+            strikeOutCounter--;
+        }
+    }
+
+    bool bold() override
+    {
+        return boldCounter > 0;
+    }
+    bool italic() override
+    {
+        return italicCounter > 0;
+    }
+    bool underline() override
+    {
+        return underlineCounter > 0;
+    }
+    bool strikeOut() override
+    {
+        return strikeOutCounter > 0;
+    }
+
+    void resetTextProperties() override
+    {
+    }
+
+    void setStyle(const QString& val) override
+    {
+        style = val;
+    }
+    QString getStyle() override
+    {
+        return style;
     }
 
     int setLink(const QStringList& hrefs, const QStringList& hints) override
     {
-        qDebug().noquote() << qsl("setLink([%1], [%2])").arg(hrefs.join(", "),hints.join(", "));
+        qDebug().noquote() << qsl("setLink([%1], [%2])").arg(hrefs.join(", "), hints.join(", "));
         mHrefs = hrefs;
         mHints = hints;
 

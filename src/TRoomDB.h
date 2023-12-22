@@ -87,6 +87,8 @@ public:
     void restoreAreaMap(QDataStream&);
     void restoreSingleArea(int, TArea*);
     void restoreSingleRoom(int, TRoom*);
+    qreal get2DMapZoom(const int areaId) const;
+    bool set2DMapZoom(const int areaId, const qreal zoom) const;
 
     // This is for muds that provide hashes to rooms instead of IDs.
     // If it exists, we delete the info when deleting a room.

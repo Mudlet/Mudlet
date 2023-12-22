@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2020-2021 by Stephen Lyons                        *
+ *   Copyright (C) 2017, 2020-2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -29,6 +29,7 @@
 #include "pre_guard.h"
 #include <QColor>
 #include <QIcon>
+#include <QObject>
 #include <QPointer>
 #include "post_guard.h"
 
@@ -55,18 +56,16 @@ public:
     void compileAll();
     QString getName() { return mName; }
     void setName(const QString& name);
-    void setButtonColor(QColor c) { if(c != mButtonColor) { setDataChanged(); mButtonColor = c; } }
-    QColor getButtonColor() { return mButtonColor; }
-    void setButtonRotation(int r) { if(r != mButtonRotation) { setDataChanged(); mButtonRotation = r; } }
+    void setButtonRotation(int rotation) { if (rotation != mButtonRotation) { setDataChanged(); mButtonRotation = rotation; } }
     int getButtonRotation() { return mButtonRotation; }
-    void setButtonColumns(int c) { if(c != mButtonColumns) { setDataChanged(); mButtonColumns = c; } }
+    void setButtonColumns(int columns) { if (columns != mButtonColumns) { setDataChanged(); mButtonColumns = columns; } }
     int getButtonColumns() { return mButtonColumns; }
     bool getButtonFlat() { return mButtonFlat; }
-    void setButtonFlat(bool flat) { if(flat != mButtonFlat) { setDataChanged(); mButtonFlat = flat; } }
+    void setButtonFlat(bool flat) { if (flat != mButtonFlat) { setDataChanged(); mButtonFlat = flat; } }
 
-    void setSizeX(int s) { if(s != mSizeX) { setDataChanged(); mSizeX = s; } }
+    void setSizeX(int size) { if (size != mSizeX) { setDataChanged(); mSizeX = size; } }
     int getSizeX() { return mSizeX; }
-    void setSizeY(int s) { if(s != mSizeY) { setDataChanged(); mSizeY = s; } }
+    void setSizeY(int size) { if (size != mSizeY) { setDataChanged(); mSizeY = size; } }
     int getSizeY() { return mSizeY; }
 
     void fillMenu(TEasyButtonBar* pT, QMenu* menu);
@@ -74,25 +73,25 @@ public:
     bool compileScript();
     void execute();
     QString getIcon() { return mIcon; }
-    void setIcon(const QString& icon) { if(icon != mIcon) { mIcon = icon; } }
+    void setIcon(const QString& icon) { if (icon != mIcon) { mIcon = icon; } }
     QString getScript() { return mScript; }
     bool setScript(const QString& script);
     QString getCommandButtonUp() { return mCommandButtonUp; }
-    void setCommandButtonUp(const QString& cmd) { if(cmd != mCommandButtonUp) { setDataChanged(); mCommandButtonUp = cmd; } }
-    void setCommandButtonDown(const QString& cmd) { if(cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
+    void setCommandButtonUp(const QString& cmd) { if (cmd != mCommandButtonUp) { setDataChanged(); mCommandButtonUp = cmd; } }
+    void setCommandButtonDown(const QString& cmd) { if (cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
     QString getCommandButtonDown() { return mCommandButtonDown; }
     bool isPushDownButton() { return mIsPushDownButton; }
-    void setIsPushDownButton(bool b) { if(b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
+    void setIsPushDownButton(bool b) { if (b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
 
-    void setIsFolder(bool b) { if(b != isFolder()) { setDataChanged(); this->Tree::setIsFolder(b);} }
+    void setIsFolder(bool b) { if (b != isFolder()) { setDataChanged(); this->Tree::setIsFolder(b);} }
 
     bool registerAction();
     void insertActions(TToolBar* pT, QMenu* menu);
     void expandToolbar(TToolBar* pT);
     void insertActions(TEasyButtonBar* pT, QMenu* menu);
     void expandToolbar(TEasyButtonBar* pT);
-    void setDataSaved() { if(mpParent) { mpParent->setDataSaved(); } mDataChanged = false; }
-    void setDataChanged() { if(mpParent) { mpParent->setDataChanged(); } mDataChanged = true; }
+    void setDataSaved() { if (mpParent) { mpParent->setDataSaved(); } mDataChanged = false; }
+    void setDataChanged() { if (mpParent) { mpParent->setDataChanged(); } mDataChanged = true; }
     bool isDataChanged() { return mDataChanged; }
 
     QPointer<TToolBar> mpToolBar;
@@ -106,31 +105,44 @@ public:
     // in some places.
     // Now uses a boolean:
     // "true" = pressed/clicked/down & "false" = released/unclicked/up
-    bool mButtonState;
-    int mPosX;
-    int mPosY;
-    int mOrientation;
-    int mLocation;
-    bool mIsPushDownButton;
+    bool mButtonState = false;
+    int mPosX = 0;
+    int mPosY = 0;
+    // THIS class uses 0 = horizontal, 1 = vertical; c.f. TFlipButton class
+    // which uses Qt::Orientation enum for the same thing:
+    int mOrientation = 0;
+    // 0 to 3 are only applicable to the Easy Button Bar buttons/menus (around
+    // edge of main console:
+    // 0 = Top "Toolbar" (Easy Button Bar)
+    // 2 = Left "Toolbar" (Easy Button Bar)
+    // 3 = Left "Toolbar" (Easy Button Bar)
+    // 4 = Dockable/floating Toolbar
+    int mLocation = 0;
+    bool mIsPushDownButton = false;
 
-    bool mNeedsToBeCompiled;
+    bool mNeedsToBeCompiled = true;
     QString mIcon;
     QIcon mIconPix;
 
-    int mButtonRotation;
-    int mButtonColumns;
-    bool mButtonFlat;
-    int mSizeX;
-    int mSizeY;
-    bool mIsLabel;
-    bool mUseCustomLayout;
+    // 0 = Horizontal
+    // 1 = Vertical
+    // 2 = Vertical + Mirrored
+    int mButtonRotation = 0;
+    int mButtonColumns = 1;
+    // Not currently user accessible but was previously and maintained in game
+    // saves - and applied to buttons when drawn:
+    bool mButtonFlat = false;
+    int mSizeX = 0;
+    int mSizeY = 0;
+    // Not currently user accessible but was previously and maintained in game
+    // saves - and applied to buttons when drawn:
+    bool mUseCustomLayout = false;
     QString css;
-    QColor mButtonColor;
     QPointer<Host> mpHost;
-    bool exportItem;
-    bool mModuleMasterFolder;
-    Qt::DockWidgetArea mToolbarLastDockArea;
-    bool mToolbarLastFloatingState;
+    bool exportItem = true;
+    bool mModuleMasterFolder = false;
+    Qt::DockWidgetArea mToolbarLastDockArea = Qt::LeftDockWidgetArea;
+    bool mToolbarLastFloatingState = true;
 
 private:
     TAction() = default;
@@ -140,8 +152,8 @@ private:
     QString mCommandButtonDown;
     QString mScript;
     QString mFuncName;
-    bool mModuleMember;
-    bool mDataChanged;
+    bool mModuleMember = false;
+    bool mDataChanged = true;
 };
 
 #endif // MUDLET_TACTION_H

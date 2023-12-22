@@ -3,6 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,7 +37,6 @@ class dlgMapLabel : public QDialog, public Ui::map_label
 public:
     Q_DISABLE_COPY(dlgMapLabel)
     explicit dlgMapLabel(QWidget*);
-    ~dlgMapLabel();
 
     bool isTextLabel();
     QString getImagePath();
@@ -57,18 +57,18 @@ private:
     QColorDialog* fgColorDialog = nullptr;
     QString imagePath;
     QString text;
-    QColor bgColor;
-    QColor fgColor;
+    QColor fgColor = QColor(255, 255, 50, 255);
+    QColor bgColor = QColor(50, 50, 150, 100);
     QFont font;
 
 private slots:
-    void save();
-    void pickFgColor();
-    void pickBgColor();
-    void pickFont();
-    void pickFile();
-    void updateControls();
-    void updateControlsVisibility();
+    void slot_save();
+    void slot_pickFgColor();
+    void slot_pickBgColor();
+    void slot_pickFont();
+    void slot_pickFile();
+    void slot_updateControls();
+    void slot_updateControlsVisibility();
 };
 
 #endif //MUDLET_DLGMAPLABEL_H

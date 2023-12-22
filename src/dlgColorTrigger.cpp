@@ -31,8 +31,8 @@
 #include "mudlet.h"
 
 
-dlgColorTrigger::dlgColorTrigger(QWidget* pF, TTrigger* pT, const bool isBackGround, const QString& title)
-: QDialog(pF)
+dlgColorTrigger::dlgColorTrigger(QWidget* pParentWidget, TTrigger* pT, const bool isBackGround, const QString& title)
+: QDialog(pParentWidget)
 , mpTrigger(pT)
 , mIsBackground(isBackGround)
 {
@@ -215,10 +215,8 @@ void dlgColorTrigger::setupBasicButton(QPushButton* pButton, const int ansiColor
         pButton->setFocus();
     }
 
-    pButton->setText(tr("%1 [%2]",
-                        // Intentional comment to separate arguments
-                        "Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places")
-                     .arg(colorText, QString::number(ansiColor)));
+    //: Color Trigger dialog button in basic 16-color set, the first value is the name of the color, the second is the ANSI color number - for most languages modification is not likely to be needed - this text is used in two places
+    pButton->setText(tr("%1 [%2]").arg(colorText, QString::number(ansiColor)));
     pButton->setStyleSheet(dlgTriggerEditor::generateButtonStyleSheet(color));
 }
 
@@ -242,7 +240,7 @@ void dlgColorTrigger::slot_setRBGButtonFocus()
 void dlgColorTrigger::slot_grayColorChanged(int sliderValue)
 {
     mGrayAnsiColorNumber = 232 + sliderValue;
-    int value = (sliderValue - 232) * 10 + 8;
+    const int value = sliderValue * 10 + 8;
 
     mGrayAnsiColor = QColor(value, value, value);
     label_grayValue->setText(qsl("[%1]").arg(QString::number(mGrayAnsiColorNumber)));

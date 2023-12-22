@@ -20,17 +20,21 @@
 
 
 #include "dlgAliasMainArea.h"
+#include "TrailingWhitespaceMarker.h"
 #include "mudlet.h"
 
-dlgAliasMainArea::dlgAliasMainArea(QWidget* pF) : QWidget(pF)
+dlgAliasMainArea::dlgAliasMainArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);
 
-    connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editing_name_finished);
+    connect(lineEdit_alias_name, &QLineEdit::editingFinished, this, &dlgAliasMainArea::slot_editingNameFinished);
+    connect(lineEdit_alias_pattern, &QLineEdit::textChanged, this, &dlgAliasMainArea::slot_changedPattern);
 
-    if (mudlet::self()->firstLaunch) {
-        lineEdit_alias_pattern->setPlaceholderText("for example, ^myalias$ to match 'myalias'");
+    if (mudlet::self()->smFirstLaunch) {
+        //: This text is shown as placeholder in the pattern box when no real pattern was entered, yet.
+        lineEdit_alias_pattern->setPlaceholderText(tr("for example, ^myalias$ to match 'myalias'"));
     }
 }
 
@@ -39,7 +43,11 @@ void dlgAliasMainArea::trimName()
     lineEdit_alias_name->setText(lineEdit_alias_name->text().trimmed());
 }
 
-void dlgAliasMainArea::slot_editing_name_finished()
+void dlgAliasMainArea::slot_editingNameFinished()
 {
     trimName();
+}
+void dlgAliasMainArea::slot_changedPattern()
+{
+    markQLineEdit(lineEdit_alias_pattern);
 }

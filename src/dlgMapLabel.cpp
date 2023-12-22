@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            *
+ *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,47 +17,45 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
 #include "dlgMapLabel.h"
 
-#include "pre_guard.h"
-#include <QColorDialog>
-#include <QFontDialog>
-#include "post_guard.h"
+#include "utils.h"
 
-static QString BUTTON_STYLESHEET = QStringLiteral("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
+static QString BUTTON_STYLESHEET = qsl("QPushButton { background-color: rgba(%1, %2, %3, %4); }");
 
-dlgMapLabel::dlgMapLabel(QWidget* pF) : QDialog(pF), fgColor(QColor(255, 255, 50, 255)), bgColor(QColor(50, 50, 150, 100))
+dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
+: QDialog(pParentWidget)
 {
     setupUi(this);
 
     setAttribute(Qt::WA_DeleteOnClose);
-    setWindowTitle(tr("Create label", "Create label dialog title"));
+    //: Create label dialog title
+    setWindowTitle(tr("Create label"));
 
-    connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updateControlsVisibility);
+    connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::slot_updateControlsVisibility);
     connect(comboBox_type, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgMapLabel::updated);
-    connect(toolButton_imagePick, &QToolButton::released, this, &dlgMapLabel::pickFile);
+    connect(toolButton_imagePick, &QToolButton::released, this, &dlgMapLabel::slot_pickFile);
     connect(checkBox_stretchImage, &QCheckBox::stateChanged, this, &dlgMapLabel::updated);
     connect(lineEdit_text, &QLineEdit::textChanged, this, [&](const QString& pText) {
         text = pText;
         emit updated();
     });
-    connect(pushButton_bgColor, &QPushButton::released, this, &dlgMapLabel::pickBgColor);
-    connect(pushButton_fgColor, &QPushButton::released, this, &dlgMapLabel::pickFgColor);
-    connect(toolButton_fontPick, &QToolButton::released, this, &dlgMapLabel::pickFont);
-    connect(pushButton_save, &QPushButton::released, this, &dlgMapLabel::save);
+    connect(pushButton_bgColor, &QPushButton::released, this, &dlgMapLabel::slot_pickBgColor);
+    connect(pushButton_fgColor, &QPushButton::released, this, &dlgMapLabel::slot_pickFgColor);
+    connect(toolButton_fontPick, &QToolButton::released, this, &dlgMapLabel::slot_pickFont);
+    connect(pushButton_save, &QPushButton::released, this, &dlgMapLabel::slot_save);
     connect(pushButton_cancel, &QPushButton::released, this, &dlgMapLabel::close);
     connect(comboBox_position, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=]() { emit updated(); });
     connect(checkBox_scaling, &QCheckBox::stateChanged, this, [=]() { emit updated(); });
-    connect(this, &dlgMapLabel::updated, this, &dlgMapLabel::updateControls);
+    connect(this, &dlgMapLabel::updated, this, &dlgMapLabel::slot_updateControls);
 
     font = QApplication::font();
     font.setStyle(QFont::StyleNormal);
     text = lineEdit_text->placeholderText();
-    updateControls();
-    updateControlsVisibility();
+    slot_updateControls();
+    slot_updateControlsVisibility();
 }
-
-dlgMapLabel::~dlgMapLabel() {}
 
 bool dlgMapLabel::isTextLabel()
 {
@@ -68,11 +67,12 @@ QString dlgMapLabel::getImagePath()
     return imagePath;
 }
 
-void dlgMapLabel::pickFgColor()
+void dlgMapLabel::slot_pickFgColor()
 {
     fgColorDialog = new QColorDialog(this);
     fgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
-    fgColorDialog->setWindowTitle(tr("Foreground color", "2D mapper create label color dialog title"));
+    //: 2D mapper create label color dialog title
+    fgColorDialog->setWindowTitle(tr("Foreground color"));
     fgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(fgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
         fgColor = color;
@@ -87,12 +87,13 @@ void dlgMapLabel::pickFgColor()
     fgColorDialog->raise();
 }
 
-void dlgMapLabel::pickBgColor()
+void dlgMapLabel::slot_pickBgColor()
 {
     auto originalColor = QColor(bgColor);
     bgColorDialog = new QColorDialog(this);
     bgColorDialog->setAttribute(Qt::WA_DeleteOnClose);
-    bgColorDialog->setWindowTitle(tr("Background color", "2D mapper create label color dialog title"));
+    //: 2D mapper create label color dialog title
+    bgColorDialog->setWindowTitle(tr("Background color"));
     bgColorDialog->setOption(QColorDialog::ShowAlphaChannel);
     connect(bgColorDialog, &QColorDialog::currentColorChanged, this, [&](const QColor& color) {
         bgColor = color;
@@ -106,12 +107,13 @@ void dlgMapLabel::pickBgColor()
     bgColorDialog->raise();
 }
 
-void dlgMapLabel::pickFont()
+void dlgMapLabel::slot_pickFont()
 {
     auto originalFont = QFont(font);
     fontDialog = new QFontDialog(font, this);
     fontDialog->setAttribute(Qt::WA_DeleteOnClose);
-    fontDialog->setWindowTitle(tr("Label font", "2D mapper create label font dialog title"));
+    //: 2D mapper create label font dialog title
+    fontDialog->setWindowTitle(tr("Label font"));
     connect(fontDialog, &QFontDialog::currentFontChanged, this, [&](const QFont& pFont) {
         font = pFont;
         emit updated();
@@ -126,13 +128,14 @@ void dlgMapLabel::pickFont()
     fontDialog->raise();
 }
 
-void dlgMapLabel::pickFile()
+void dlgMapLabel::slot_pickFile()
 {
-    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image", "2D Mapper create label file dialog title"));
+    //: 2D Mapper create label file dialog title
+    imagePath = QFileDialog::getOpenFileName(nullptr, tr("Select image"));
     emit updated();
 }
 
-void dlgMapLabel::save()
+void dlgMapLabel::slot_save()
 {
     accept();
 }
@@ -172,7 +175,7 @@ bool dlgMapLabel::stretchImage()
     return checkBox_stretchImage->isChecked();
 }
 
-void dlgMapLabel::updateControls()
+void dlgMapLabel::slot_updateControls()
 {
     lineEdit_font->setText(QString("%1, %2pt %3").arg(font.family(), QString::number(font.pointSize()), font.styleName()));
     pushButton_fgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(fgColor.red()), QString::number(fgColor.green()), QString::number(fgColor.blue()), QString::number(fgColor.alpha())));
@@ -180,9 +183,9 @@ void dlgMapLabel::updateControls()
     lineEdit_image->setText(imagePath);
 }
 
-void dlgMapLabel::updateControlsVisibility()
+void dlgMapLabel::slot_updateControlsVisibility()
 {
-    bool isText = isTextLabel();
+    const bool isText = isTextLabel();
     label_image->setVisible(!isText);
     lineEdit_image->setVisible(!isText);
     checkBox_stretchImage->setVisible(!isText);

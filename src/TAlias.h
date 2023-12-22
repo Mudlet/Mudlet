@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2017-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -72,12 +72,14 @@ public:
     QSharedPointer<pcre> mpRegex;
     QString mScript;
     QPointer<Host> mpHost;
-    bool mNeedsToBeCompiled;
-    bool mModuleMember;
-    bool mModuleMasterFolder;
+    bool mModuleMember = false;
+    bool mModuleMasterFolder = false;
     QString mFuncName;
-    bool exportItem;
-    bool mRegisteredAnonymousLuaFunction;
+    bool exportItem = true;
+    bool mRegisteredAnonymousLuaFunction = false;
+
+private:
+    bool mNeedsToBeCompiled = true;
 };
 
 #endif // MUDLET_TALIAS_H

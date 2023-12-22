@@ -18,4 +18,4 @@
 	url = https://github.com/microsoft/vcpkg
 [submodule "3rdparty/qt-ordered-map"]
 	path = 3rdparty/qt-ordered-map
-	url = https://github.com/mandeepsandhu/qt-ordered-map
+	url = https://github.com/Mudlet/qt-ordered-map

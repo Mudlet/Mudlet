@@ -34,19 +34,14 @@
 #include <QDebug>
 #include "post_guard.h"
 
-dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
+
+dlgAboutDialog::dlgAboutDialog(QWidget* parent)
+: QDialog(parent)
 {
     setupUi(this);
 
     // Copied from main():
-
-#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
-    QImage splashImage(mudlet::scmIsReleaseVersion ? qsl(":/Mudlet_splashscreen_main.png")
-                                                   : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
-                                                                                    : qsl(":/Mudlet_splashscreen_development.png"));
-#else
-    QImage splashImage(qsl(":/Mudlet_splashscreen_main.png"));
-#endif
+    QImage splashImage = mudlet::getSplashScreen();
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
@@ -56,7 +51,7 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont font(qsl("DejaVu Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont font(qsl("Bitstream Vera Serif"), fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -90,8 +85,8 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2022");
-        QFont font(qsl("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
+        QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
@@ -122,11 +117,11 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent) : QDialog(parent)
     // clang-format off
     QString htmlHead(qsl(R"(
         <head><style type="text/css">
-        h1 { font-family: "DejaVu Serif"; text-align: center; }
-        h2 { font-family: "DejaVu Serif"; text-align: center; }
-        h3 { font-family: "DejaVu Serif"; text-align: center; white-space: pre-wrap; }
-        h4 { font-family: "DejaVu Serif"; white-space: pre-wrap; }
-        p { font-family: "DejaVu Serif" }
+        h1 { font-family: "Bitstream Vera Serif"; text-align: center; }
+        h2 { font-family: "Bitstream Vera Serif"; text-align: center; }
+        h3 { font-family: "Bitstream Vera Serif"; text-align: center; white-space: pre-wrap; }
+        h4 { font-family: "Bitstream Vera Serif"; white-space: pre-wrap; }
+        p { font-family: "Bitstream Vera Serif" }
         tt { font-family: "Monospace"; white-space: pre-wrap; }
         .container { text-align: center; }
         </style></head>
@@ -152,94 +147,94 @@ void dlgAboutDialog::setAboutTab(const QString& htmlHead) const
 
     QVector<aboutMaker> aboutMakers; // [big?, name, discord, github, email, description]
     aboutMakers.append({true, qsl("Heiko Köhn"), QString(), QString(), qsl("KoehnHeiko@googlemail.com"),
-                        tr("Original author, original project lead, Mudlet core coding, retired.",
-                           "about:Heiko")});
+                        //: about:Heiko
+                        tr("Original author, original project lead, Mudlet core coding, retired.")});
     aboutMakers.append({true, qsl("Vadim Peretokin"), qsl("Vadi#3695"), qsl("vadi2"), qsl("vadim.peretokin@mudlet.org"),
+                        //: about:Vadi
                         tr("GUI design and initial feature planning. He is responsible for the project homepage and the user manual. "
                            "Maintainer of the Windows, macOS, Ubuntu and generic Linux installers. "
                            "Maintains the Mudlet wiki, Lua API, and handles project management, public relations &amp; user help. "
                            "With the project from the very beginning and is an official spokesman of the project. "
-                           "Since the retirement of Heiko, he has become the head of the Mudlet project.",
-                           "about:Vadi")});
+                           "Since the retirement of Heiko, he has become the head of the Mudlet project.")});
     aboutMakers.append({true, qsl("Stephen Lyons"), qsl("SlySven#2703"), qsl("SlySven"), qsl("slysven@virginmedia.com"),
+                        //: about:SlySven
                         tr("After joining in 2013, he has been poking various bits of the C++ code and GUI with a pointy stick; "
                            "subsequently trying to patch over some of the holes made/found. "
                            "Most recently he has been working on I18n and L10n for Mudlet 4.0.0 so if you are playing Mudlet in a language "
                            "other than American English you will be seeing the results of him getting fed up with the spelling differences "
-                           "between what was being used and the British English his brain wanted to see.",
-                           "about:SlySven")});
+                           "between what was being used and the British English his brain wanted to see.")});
     aboutMakers.append({true, qsl("Damian Monogue"), qsl("demonnic#4307"), qsl("demonnic"), qsl("demonnic@gmail.com"),
+                        //: about:demonnic
                         tr("Former maintainer of the early Windows and Apple OSX packages. "
-                           "He also administers our server and helps the project in many ways.",
-                           "about:demonnic")});
+                           "He also administers our server and helps the project in many ways.")});
     aboutMakers.append({true, qsl("Florian Scheel"), qsl("keneanung#2803"), qsl("keneanung"), qsl("keneanung@googlemail.com"),
+                        //: about:keneanung
                         tr("Contributed many improvements to Mudlet's db: interface, event system, "
-                           "and has been around the project for a very long while assisting users.",
-                           "about:keneanung")});
+                           "and has been around the project for a very long while assisting users.")});
     aboutMakers.append({true, qsl("Leris"), qsl("Leris#5152"), qsl("Kebap"), qsl("kebap_spam@gmx.net"),
+                        //: about:Leris
                         tr("Does a ton of work in making Mudlet, the website and the wiki accessible to you "
-                           "regardless of the language you speak - and promoting our genre!",
-                           "about:Leris")});
+                           "regardless of the language you speak - and promoting our genre!")});
     aboutMakers.append({false, qsl("Ahmed Charles"), QString(), qsl("ahmedcharles"), qsl("acharles@outlook.com"),
+                        //: about:ahmedcharles
                         tr("Contributions to the Travis integration, CMake and Visual C++ build, "
-                           "a lot of code quality and memory management improvements.",
-                           "about:ahmedcharles")});
+                           "a lot of code quality and memory management improvements.")});
     aboutMakers.append({false, qsl("Chris Mitchell"), QString("Chris7#6113"), qsl("Chris7"), qsl("chris.mit7@gmail.com"),
+                        //: about:Chris7
                         tr("Developed a shared module system that allows script packages to be shared among profiles, "
-                           "a UI for viewing Lua variables, improvements in the mapper and all around.",
-                           "about:Chris7")});
+                           "a UI for viewing Lua variables, improvements in the mapper and all around.")});
     aboutMakers.append({false, qsl("Ben Carlsen"), QString(), QString(), qsl("arkholt@gmail.com"),
+                        //: about:Ben Carlsen
                         tr("Developed the first version of our Mac OSX installer. "
-                           "He is the former maintainer of the Mac version of Mudlet.",
-                           "about:Ben Carlsen")});
+                           "He is the former maintainer of the Mac version of Mudlet.")});
     aboutMakers.append({false, qsl("Ben Smith"), QString(), QString(), QString(),
+                        //: about:Ben Smith
                         tr("Joined in December 2009 though he's been around much longer. "
-                           "Contributed to the Lua API and is the former maintainer of the Lua API.",
-                           "about:Ben Smith")});
+                           "Contributed to the Lua API and is the former maintainer of the Lua API.")});
     aboutMakers.append({false, qsl("Blaine von Roeder"), QString(), QString(), QString(),
+                        //: about:Blaine von Roeder
                         tr("Joined in December 2009. He has contributed to the Lua API, submitted small bugfix patches "
-                           "and has helped with release management of 1.0.5.",
-                           "about:Blaine von Roeder")});
+                           "and has helped with release management of 1.0.5.")});
     aboutMakers.append({false, qsl("Bruno Bigras"), QString(), QString(), qsl("bruno@burnbox.net"),
-                        tr("Developed the original cmake build script and he has committed a number of patches.",
-                           "about:Bruno Bigras")});
+                        //: about:Bruno Bigras
+                        tr("Developed the original cmake build script and he has committed a number of patches.")});
     aboutMakers.append({false, qsl("Carter Dewey"), QString(), QString(), qsl("eldarerathis@gmail.com"),
-                        tr("Contributed to the Lua API.",
-                           "about:Carter Dewey")});
+                        //: about:Carter Dewey
+                        tr("Contributed to the Lua API.")});
     aboutMakers.append({false, qsl("Erik Pettis"), qsl("Etomyutikos#9266"), qsl("Oneymus"), QString(),
-                        tr("Developed the Vyzor GUI Manager for Mudlet.",
-                           "about:Oneymus")});
+                        //: about:Oneymus
+                        tr("Developed the Vyzor GUI Manager for Mudlet.")});
     aboutMakers.append({false, qsl("ItsTheFae"), qsl("TheFae#9971"), qsl("Kae"), QString(),
+                        //: about:TheFae
                         tr("Worked wonders in rejuvenating our Website in 2017 but who prefers a little anonymity - "
                            "if you are a <i>SpamBot</i> you will not get onto our Fora now. They have also made some useful "
-                           "C++ core code contributions and we look forward to future reviews on and work in that area.",
-                           "about:TheFae")});
+                           "C++ core code contributions and we look forward to future reviews on and work in that area.")});
     aboutMakers.append({false, qsl("Ian Adkins"), qsl("Dicene#1533"), qsl("dicene"), qsl("ieadkins@gmail.com"),
-                        tr("Joining us 2017 they have given us some useful C++ and Lua contributions.",
-                           "about:Dicene")});
+                        //: about:Dicene
+                        tr("Joining us 2017 they have given us some useful C++ and Lua contributions.")});
     aboutMakers.append({false, qsl("James Younquist"), QString(), QString(), qsl("daemacles@yahoo.com"),
+                        //: about:James Younquist
                         tr("Contributed the Geyser layout manager for Mudlet in March 2010. "
-                           "It is written in Lua and aims at simplifying user GUI scripting.",
-                           "about:James Younquist")});
+                           "It is written in Lua and aims at simplifying user GUI scripting.")});
     aboutMakers.append({false, qsl("John Dahlström"), QString(), QString(), qsl("email@johndahlstrom.se"),
-                        tr("Helped develop and debug the Lua API.",
-                           "about:John Dahlström")});
+                        //: about:John Dahlström
+                        tr("Helped develop and debug the Lua API.")});
     aboutMakers.append({false, qsl("Karsten Bock"), QString(), qsl("Beliaar"), QString(),
-                        tr("Contributed several improvements and new features for Geyser.",
-                           "about:Beliaar")});
+                        //: about:Beliaar
+                        tr("Contributed several improvements and new features for Geyser.")});
     aboutMakers.append({false, qsl("Leigh Stillard"), QString(), QString(), qsl("leigh.stillard@gmail.com"),
-                        tr("The original author of our Windows installer.",
-                           "about:Leigh Stillard")});
+                        //: about:Leigh Stillard
+                        tr("The original author of our Windows installer.")});
     aboutMakers.append({false, qsl("Maksym Grinenko"), QString(), QString(), qsl("maksym.grinenko@gmail.com"),
-                        tr("Worked on the manual, forum help and helps with GUI design and documentation.",
-                           "about:Maksym Grinenko")});
+                        //: about:Maksym Grinenko
+                        tr("Worked on the manual, forum help and helps with GUI design and documentation.")});
     aboutMakers.append({false, qsl("Stephen Hansen"), QString(), QString(), qsl("me+mudlet@ixokai.io"),
-                        tr("Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.",
-                           "about:Stephen Hansen")});
+                        //: about:Stephen Hansen
+                        tr("Developed a database Lua API that allows for far easier use of databases and one of the original OSX installers.")});
     aboutMakers.append({false, qsl("Thorsten Wilms"), QString(), QString(), qsl("t_w_@freenet.de"),
+                        //: about:Thorsten Wilms
                         tr("Designed our beautiful logo, our splash screen, the about dialog, our website, several icons and badges. "
-                           "Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.",
-                           "about:Thorsten Wilms")});
+                           "Visit his homepage at <a href=\"http://thorwil.wordpress.com/\">thorwil.wordpress.com</a>.")});
 
     QString aboutMudletBody("<p align=\"center\"><big><b>Credits:</b></big></p>");
     QVectorIterator<aboutMaker> iterateMakers(aboutMakers);
@@ -1042,7 +1037,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
 {
     // see https://www.patreon.com/mudlet if you'd like to be added!
     QStringList mightier_than_swords = {"Joshua C. Burt", "Maiyannah Bishop", "Qwindor Rousseau", "Stick In the MUD 🎙"};
-    QStringList on_a_plaque = {"Vadim Peretokin"};
+    QStringList on_a_plaque = {"demonnic", "Henry Hsiao"};
     int image_counter{1};
 
     if (!supportersDocument) {
@@ -1096,11 +1091,19 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     textBrowser_supporters->setOpenExternalLinks(true);
 }
 
-QString dlgAboutDialog::createBuildInfo() const {
-    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n")
-        .append(qsl("<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>").arg(tr("Technical information:")))
-        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1<td>%2</td></tr>").arg(tr("Version"), mudlet::self()->version))
-        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("OS"), QSysInfo::prettyProductName()))
-        .append(qsl("<tr><td style=\"padding-right: 10px;\">%1</td><td>%2</td></tr>").arg(tr("CPU"), QSysInfo::currentCpuArchitecture()))
-        .append(qsl("</table>"));
+QString dlgAboutDialog::createBuildInfo() const
+{
+    return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
+               "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
+               "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
+               "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
+               "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
+               "</table>")
+            .arg(tr("Technical information:"), // %1
+                 tr("Version"), // %2
+                 mudlet::self()->scmVersion, // %3
+                 tr("OS"), // %4
+                 QSysInfo::prettyProductName(), // %5
+                 tr("CPU"), // %6
+                 QSysInfo::currentCpuArchitecture()); // %7
 }
