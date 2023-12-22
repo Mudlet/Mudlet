@@ -1849,9 +1849,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
                         case 1:
                             qDebug() << "MTTS enabled";
-                            cmd += qsl("XTERM-256COLOR").toUtf8().constData(); // DUMB, ANSI, VT100, XTERM
+                            cmd += qsl("ANSI-TRUECOLOR").toLatin1().constData(); // DUMB, ANSI, VT100, XTERM
                             mCycleCountMTTS++;
-                            qDebug() << "WE send MTTS terminal type is XTERM-256COLOR";
+                            qDebug() << "WE send MTTS terminal type is ANSI-TRUECOLOR";
                             break;
                         default:
                             int terminal_standards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
