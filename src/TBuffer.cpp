@@ -2268,10 +2268,10 @@ QString TBuffer::wrapText(const QString& text) const
     int wordsInCurrentLine = 0;
 
     for (int i = 0; i < text.size(); i++) {
-        const bool at_newline = text.at(i) == '\n';
+        const bool at_newline = (text.at(i) == QChar::LineFeed);
         if (at_newline) {
             currentLine += currentWord;
-            wrappedText += '\n' + currentLine;
+            wrappedText += QChar::LineFeed % currentLine;
             currentLine.clear();
             currentWord.clear();
             wordsInCurrentLine = 0;
@@ -2301,13 +2301,13 @@ QString TBuffer::wrapText(const QString& text) const
                 currentLine += currentWord.left(splitIndex);
                 currentWord = currentWord.mid(splitIndex);
             }
-            wrappedText += '\n' + currentLine;
+            wrappedText += QChar::LineFeed % currentLine;
             currentLine = QString(' ').repeated(mWrapIndent);
             wordsInCurrentLine = 0;
         }
     }
     currentLine += currentWord;
-    wrappedText += '\n' + currentLine;
+    wrappedText += QChar::LineFeed % currentLine;
     return wrappedText;
 }
 
