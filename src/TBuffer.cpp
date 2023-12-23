@@ -1530,6 +1530,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 2:
                     mFaint = true;
+                    setSgrCodeSeenFlag(Sgr_Faint);
                     break;
                 case 3:
                     // There is a proposal by the "VTE" terminal
