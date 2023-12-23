@@ -2267,7 +2267,7 @@ QString TBuffer::wrapText(const QString& text) const
     QString currentLine;
     int wordsInCurrentLine = 0;
 
-    for (int i = 0; i < text.size(); i++) {
+    for (qsizetype i = 0; i < text.size(); i++) {
         const bool at_newline = (text.at(i) == QChar::LineFeed);
         if (at_newline) {
             currentLine += currentWord;
@@ -2289,7 +2289,7 @@ QString TBuffer::wrapText(const QString& text) const
             wordsInCurrentLine++;
         }
 
-        const int lineLengthWithWord = currentLine.size() + currentWord.size();
+        const qsizetype lineLengthWithWord = currentLine.size() + currentWord.size();
         const bool needNewLine = (lineLengthWithWord >= mWrapAt);
 
         if (needNewLine) {
@@ -2297,7 +2297,7 @@ QString TBuffer::wrapText(const QString& text) const
             if (wordsInCurrentLine == 0) {
                 // If a word is too long to fit on a line,
                 // the word will be split between lines
-                const int splitIndex = mWrapAt - currentLine.size();
+                const qsizetype splitIndex = mWrapAt - currentLine.size();
                 currentLine += currentWord.left(splitIndex);
                 currentWord = currentWord.mid(splitIndex);
             }
