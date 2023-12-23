@@ -2291,8 +2291,9 @@ QString TBuffer::wrapText(const QString& text) const
 
         const qsizetype lineLengthWithWord = currentLine.size() + currentWord.size();
         const bool needNewLine = (lineLengthWithWord >= mWrapAt);
+        const bool atFinalCharacter = (i == text.size()-1);
 
-        if (needNewLine) {
+        if (needNewLine || atFinalCharacter) {
             // Current word would cause an overflow, so wrap the text.
             if (!wordsInCurrentLine) {
                 // If a word is too long to fit on a line,
@@ -2306,8 +2307,6 @@ QString TBuffer::wrapText(const QString& text) const
             wordsInCurrentLine = 0;
         }
     }
-    currentLine += currentWord;
-    wrappedText += QChar::LineFeed % currentLine;
     return wrappedText;
 }
 
