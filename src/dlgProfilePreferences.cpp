@@ -640,7 +640,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
-    mFORCE_MTTS_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MTTS_NEGOTIATION_OFF);
+    mForceMTTSNegotiationOff->setChecked(pHost->mForceMTTSNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
@@ -1377,7 +1377,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
-    mFORCE_MTTS_NEGOTIATION_OFF->setChecked(false);
+    mForceMTTSNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
     acceptServerGUI->setChecked(false);
@@ -2850,7 +2850,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
-        pHost->mFORCE_MTTS_NEGOTIATION_OFF = mFORCE_MTTS_NEGOTIATION_OFF->isChecked();
+        pHost->mForceMTTSNegotiationOff = mForceMTTSNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;

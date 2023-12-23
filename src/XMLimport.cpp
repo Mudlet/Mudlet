@@ -750,7 +750,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
     setBoolAttribute(qsl("mFORCE_MXP_NEGOTIATION_OFF"), pHost->mFORCE_MXP_NEGOTIATION_OFF);
     setBoolAttribute(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
-    setBoolAttribute(qsl("mFORCE_MTTS_NEGOTIATION_OFF"), pHost->mFORCE_MTTS_NEGOTIATION_OFF);
+    setBoolAttribute(qsl("forceMTTSNegotiationOff"), pHost->mForceMTTSNegotiationOff);
     setBoolAttribute(qsl("enableTextAnalyzer"), pHost->mEnableTextAnalyzer);
     setBoolAttribute(qsl("mBubbleMode"), pHost->mBubbleMode);
     setBoolAttribute(qsl("mMapViewOnly"), pHost->mMapViewOnly);

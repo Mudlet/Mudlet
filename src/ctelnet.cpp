@@ -1841,7 +1841,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                             cmd += sanitisedTermType.toLatin1().constData();
 
-                            if (!mpHost->mFORCE_MTTS_NEGOTIATION_OFF) { // If we don't MTTS, remainder of the cases do not execute.
+                            if (!mpHost->mForceMTTSNegotiationOff) { // If we don't MTTS, remainder of the cases do not execute.
                                 mCycleCountMTTS++;
                             }
 
@@ -1862,10 +1862,6 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                             if (mpHost->mAdvertiseScreenReader) {
                                 terminal_standards |= MTTS_STD_SCREEN_READER;
-                            }
-
-                            if (mpHost->mUseProxy) {
-                                terminal_standards |= MTTS_STD_PROXY;
                             }
 #if !defined(QT_NO_SSL)
                             terminal_standards |= MTTS_STD_SSL;

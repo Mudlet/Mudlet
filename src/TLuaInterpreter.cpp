@@ -18218,7 +18218,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("specialForceMTTSNegotiationOff")) {
-        host.mFORCE_MTTS_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
+        host.mForceMTTSNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("compactInputLine")) {

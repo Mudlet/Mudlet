@@ -3794,7 +3794,7 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QCheckBox" name="mFORCE_MTTS_NEGOTIATION_OFF">
+           <widget class="QCheckBox" name="mForceMTTSNegotiationOff">
             <property name="text">
              <string>Force MTTS negotiation off</string>
             </property>
@@ -4304,7 +4304,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
-  <tabstop>mFORCE_MTTS_NEGOTIATION_OFF</tabstop>
+  <tabstop>mForceMTTSNegotiationOff</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>
