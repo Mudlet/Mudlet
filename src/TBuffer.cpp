@@ -2280,7 +2280,7 @@ QString TBuffer::wrapText(const QString& text) const
 
         currentWord += text.at(i);
 
-        const bool atWordBreak = wordBreaks.indexOf(text.at(i)) > -1;
+        const bool atWordBreak = (wordBreaks.indexOf(text.at(i)) > -1);
         if (atWordBreak) {
             // Reached break in word
             // Add current word to the line and reset for next word
@@ -2290,7 +2290,7 @@ QString TBuffer::wrapText(const QString& text) const
         }
 
         const int lineLengthWithWord = currentLine.size() + currentWord.size();
-        const bool needNewLine = lineLengthWithWord >= mWrapAt;
+        const bool needNewLine = (lineLengthWithWord >= mWrapAt);
 
         if (needNewLine) {
             // Current word would cause an overflow, so wrap the text.
