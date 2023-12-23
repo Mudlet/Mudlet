@@ -321,7 +321,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMapperUseAntiAlias(true)
 , mMapperShowRoomBorders(true)
 , mFORCE_MXP_NEGOTIATION_OFF(false)
-, mForceMTTSNegotiationOff(false)
+, mFORCE_CHARSET_NEGOTIATION_OFF(false)
 , mpDockableMapWidget()
 , mEnableTextAnalyzer(false)
 , mTimerDebugOutputSuppressionInterval(QTime())
