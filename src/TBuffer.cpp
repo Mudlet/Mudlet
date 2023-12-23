@@ -2268,7 +2268,7 @@ QString TBuffer::wrapText(const QString& text) const
     int wordsInCurrentLine = 0;
 
     for (int i = 0; i < text.size(); i++) {
-        bool const at_newline = text.at(i) == '\n';
+        const bool at_newline = text.at(i) == '\n';
         if (at_newline) {
             currentLine += currentWord;
             wrappedText += '\n' + currentLine;
@@ -2280,7 +2280,7 @@ QString TBuffer::wrapText(const QString& text) const
 
         currentWord += text.at(i);
 
-        bool const atWordBreak = wordBreaks.indexOf(text.at(i)) > -1;
+        const bool atWordBreak = wordBreaks.indexOf(text.at(i)) > -1;
         if (atWordBreak) {
             // Reached break in word
             // Add current word to the line and reset for next word
@@ -2289,15 +2289,15 @@ QString TBuffer::wrapText(const QString& text) const
             wordsInCurrentLine++;
         }
 
-        int const lineLengthWithWord = currentLine.size() + currentWord.size();
-        bool const needNewLine = lineLengthWithWord >= mWrapAt;
+        const int lineLengthWithWord = currentLine.size() + currentWord.size();
+        const bool needNewLine = lineLengthWithWord >= mWrapAt;
 
         if (needNewLine) {
             // Current word would cause an overflow, so wrap the text.
             if (wordsInCurrentLine == 0) {
                 // If a word is too long to fit on a line,
                 // the word will be split between lines
-                int const splitIndex = mWrapAt - currentLine.size();
+                const int splitIndex = mWrapAt - currentLine.size();
                 currentLine += currentWord.left(splitIndex);
                 currentWord = currentWord.mid(splitIndex);
             }
