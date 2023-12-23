@@ -2268,8 +2268,8 @@ QString TBuffer::wrapText(const QString& text) const
     int wordsInCurrentLine = 0;
 
     for (qsizetype i = 0; i < text.size(); i++) {
-        const bool at_newline = (text.at(i) == QChar::LineFeed);
-        if (at_newline) {
+        const bool atNewline = (text.at(i) == QChar::LineFeed);
+        if (atNewline) {
             currentLine += currentWord;
             wrappedText += QChar::LineFeed % currentLine;
             currentLine.clear();
