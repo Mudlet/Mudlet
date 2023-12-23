@@ -2294,7 +2294,7 @@ QString TBuffer::wrapText(const QString& text) const
 
         if (needNewLine) {
             // Current word would cause an overflow, so wrap the text.
-            if (wordsInCurrentLine == 0) {
+            if (!wordsInCurrentLine) {
                 // If a word is too long to fit on a line,
                 // the word will be split between lines
                 const qsizetype splitIndex = mWrapAt - currentLine.size();
