@@ -18645,7 +18645,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
         { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
-        { qsl("forceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceMTTSNegotiationOff); } },
+        { qsl("forceMTTSNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceMTTSNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
         { qsl("blankLinesBehaviour"), [&](){
