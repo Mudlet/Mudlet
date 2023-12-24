@@ -106,7 +106,7 @@ public:
     int mRY = 0;
     QPoint mPHighlight;
     bool mPick = false;
-    int mTarget = 0;
+    int mTargetRoomId = 0;
     bool mStartSpeedWalk = false;
 
 

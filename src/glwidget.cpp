@@ -1366,7 +1366,7 @@ void GLWidget::paintGL()
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                 glMateriali(GL_FRONT, GL_SHININESS, 36);
                 glColor4f(1.0, 0.0, 0.0, 1.0);
-            } else if (currentRoomId == mTarget) {
+            } else if (currentRoomId == mTargetRoomId) {
                 glDisable(GL_BLEND);
                 glEnable(GL_LIGHTING);
                 glDisable(GL_LIGHT1);
@@ -2078,7 +2078,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
         glMatrixMode(GL_MODELVIEW);
         doneCurrent();
-        mTarget = -22;
+        mTargetRoomId = -22;
         makeCurrent();
         paintGL();
         doneCurrent();
@@ -2088,7 +2088,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         hits = glRenderMode(GL_RENDER);
 
         for (int i = 0; i < hits; i++) {
-            mTarget = buff[i * 4 + 3];
+            mTargetRoomId = buff[i * 4 + 3];
             //TODO: multiple assignments
             //            unsigned int minZ = buff[i * 4 + 1];
             //            unsigned int maxZ = buff[i * 4 + 2];
@@ -2100,8 +2100,8 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         glMatrixMode(GL_MODELVIEW);
         doneCurrent();
         update();
-        if (mpMap->mpRoomDB->getRoom(mTarget)) {
-            mpMap->mTargetID = mTarget;
+        if (mpMap->mpRoomDB->getRoom(mTargetRoomId)) {
+            mpMap->mTargetID = mTargetRoomId;
             if (mpMap->mpHost->checkForCustomSpeedwalk()) {
                 mpMap->mpHost->startSpeedWalk(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID);
             } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
