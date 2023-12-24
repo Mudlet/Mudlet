@@ -4619,22 +4619,23 @@ void mudlet::refreshTabBar()
     }
 }
 
-//NOLINT(readability-convert-member-functions-to-static)
-// doesn't make sense to make it static since it modifies a class variable
-void mudlet::setupPreInstallPackages(const QString& gameUrl)
+// returns the list of default packages that should be preinstalled
+// gameUrl: game that default packages are suited for
+const QStringList getDefaultPackages(const QString& gameUrl)
 {
+    QStringList packages;
     const QHash<QString, QStringList> defaultScripts = {
         // clang-format off
         // scripts to pre-install for a profile      games this applies to, * means all games
-        {qsl(":/run-lua-code-v4.xml"),    {qsl("*")}},
-        {qsl(":/echo.xml"),               {qsl("*")}},
-        {qsl(":/deleteOldProfiles.xml"),  {qsl("*")}},
+        {qsl(":/run-lua-code-v4.xml"),               {qsl("*")}},
+        {qsl(":/echo.xml"),                          {qsl("*")}},
+        {qsl(":/deleteOldProfiles.xml"),             {qsl("*")}},
         {qsl(":/mudlet-lua/lua/enable-accessibility/enable-accessibility.xml"), {qsl("*")}},
-        {qsl(":/CF-loader.xml"),          {qsl("carrionfields.net")}},
-        {qsl(":/mg-loader.xml"),          {qsl("mg.mud.de")}},
-        {qsl(":/run-tests.xml"),          {qsl("mudlet.org")}},
+        {qsl(":/CF-loader.xml"),                     {qsl("carrionfields.net")}},
+        {qsl(":/mg-loader.xml"),                     {qsl("mg.mud.de")}},
+        {qsl(":/run-tests.xml"),                     {qsl("mudlet.org")}},
         {qsl(":/mudlet-lua/lua/stressinator/StressinatorDisplayBench.xml"), {qsl("mudlet.org")}},
-        {qsl(":/mudlet-mapper.xml"),      {qsl("aetolia.com"),
+        {qsl(":/mudlet-mapper.xml"),                 {qsl("aetolia.com"),
                                                       qsl("achaea.com"),
                                                       qsl("lusternia.com"),
                                                       qsl("imperian.com"),
@@ -4647,13 +4648,24 @@ void mudlet::setupPreInstallPackages(const QString& gameUrl)
     while (i.hasNext()) {
         i.next();
         if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
-            mudlet::self()->mPackagesToInstallList.append(i.key());
+            packages.append(i.key());
         }
     }
 
-    if (!mudlet::self()->mPackagesToInstallList.contains(qsl(":/mudlet-mapper.xml"))) {
-        mudlet::self()->mPackagesToInstallList.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
+    if (!packages.contains(qsl(":/mudlet-mapper.xml"))) {
+        packages.append(qsl(":/mudlet-lua/lua/generic-mapper/generic_mapper.xml"));
     }
+
+    return packages;
+}
+
+//NOLINT(readability-convert-member-functions-to-static)
+// doesn't make sense to make it static since it modifies a class variable
+void mudlet::setupPreInstallPackages(const QString& gameUrl)
+{
+
+    mudlet::self()->mPackagesToInstallList {};
+    mudlet::self()->mPackagesToInstallList.append(getDefaultPackages(gameUrl));
 }
 
 // Referenced from github.com/keepassxreboot/keepassxc. Licensed under GPL2/3.

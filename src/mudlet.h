@@ -381,7 +381,8 @@ public:
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
-    void setupPreInstallPackages(const QString&);
+    void setupPreInstallPackages(const QString& gameUrl);
+    QStringList getDefaultPackages(const QString& gameUrl);
     void setToolBarIconSize(int);
     void setToolBarVisibility(controlsVisibility);
     void showChangelogIfUpdated();
