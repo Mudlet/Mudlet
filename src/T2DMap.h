@@ -153,7 +153,7 @@ public:
     // in/out mechanism was adopted that meant non-integral coordinates were
     // needed, OTOH a "snap to a fractional (power of 2?) value" might help to
     // keep the decimal numbers reasonable:
-    qreal mOx = 0.0;
+    qreal mMapCenterX = 0.0;
     qreal mOy = 0.0;
     int mOz = 0;
     // Gets set when pan controls are used to move the map away from being
