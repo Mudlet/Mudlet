@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2019, 2022-2023 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -322,14 +323,24 @@ TTimer* TimerUnit::findFirstTimer(const QString& name) const
     return mLookupTable.value(name);
 }
 
-// Not currently used but left for future code that will be looking for multiple
-// timers that all have the same name:
-QList<TTimer*> TimerUnit::findTimers(const QString& name)
+std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
 {
-    // This does rather assume an empty QList will be returned if the name is
-    // not used for ANY TTimers - but it does not actually say so in the
-    // documentation!
-    return mLookupTable.values(name);
+    std::vector<int> ids;
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : qAsConst(mTimerMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    } else {
+        for (auto& item : qAsConst(mTimerMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    }
+    return ids;
 }
 
 bool TimerUnit::killTimer(const QString& name)
