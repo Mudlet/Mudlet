@@ -172,14 +172,14 @@ void T2DMap::slot_shiftRight()
 void T2DMap::slot_shiftZup()
 {
     mShiftMode = true;
-    mOz++;
+    mMapCenterZ++;
     update();
 }
 
 void T2DMap::slot_shiftZdown()
 {
     mShiftMode = true;
-    mOz--;
+    mMapCenterZ--;
     update();
 }
 
@@ -236,12 +236,12 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                 mMapCenterX = pPlayerRoom->x;
                 // Map y coordinates are reversed on 2D map!
                 mMapCenterY = -pPlayerRoom->y;
-                mOz = pPlayerRoom->z;
+                mMapCenterZ = pPlayerRoom->z;
                 xyzoom = mpMap->mpRoomDB->get2DMapZoom(mAreaID);
                 repaint();
                 // Pass the coordinates to the TMap instance to pass to the 3D
                 // mapper
-                mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mOz);
+                mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
                 if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
                     mpHost->raiseEvent(areaViewedChangedEvent);
                 }
@@ -250,7 +250,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
             }
 
             bool validRoomFound = false;
-            if (!area->zLevels.contains(mOz)) {
+            if (!area->zLevels.contains(mMapCenterZ)) {
                 // If the current map z-coordinate value is NOT one that is used
                 // for this then get the FIRST room in the area and goto the
                 // mathematical midpoint of all the rooms on the same
@@ -340,9 +340,9 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                         mMapCenterX = closestCenterRoom->x;
                         // Map y coordinates are reversed on 2D map!
                         mMapCenterY = -closestCenterRoom->y;
-                        mOz = closestCenterRoom->z;
+                        mMapCenterZ = closestCenterRoom->z;
                     } else {
-                        mMapCenterX = mMapCenterY = mOz = 0;
+                        mMapCenterX = mMapCenterY = mMapCenterZ = 0;
                     }
                 }
 
@@ -350,7 +350,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                     //no rooms, go to 0,0,0
                     mMapCenterX = 0;
                     mMapCenterY = 0;
-                    mOz = 0;
+                    mMapCenterZ = 0;
                 }
             } else {
                 // Else the selected area DOES have rooms on the same
@@ -365,7 +365,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                 QSetIterator<int> itRoom(area->getAreaRooms());
                 while (itRoom.hasNext()) {
                     TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
-                    if (!room || room->z != mOz) {
+                    if (!room || room->z != mMapCenterZ) {
                         continue;
                     }
 
@@ -408,7 +408,7 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
             xyzoom = mpMap->mpRoomDB->get2DMapZoom(mAreaID);
             repaint();
             // Pass the coordinates to the TMap instance to pass to the 3D mapper
-            mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mOz);
+            mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mMapCenterZ);
             if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
                 mpHost->raiseEvent(areaViewedChangedEvent);
             }
@@ -1267,7 +1267,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
         mMapCenterX = pPlayerRoom->x;
         mMapCenterY = pPlayerRoom->y * -1;
-        mOz = pPlayerRoom->z;
+        mMapCenterZ = pPlayerRoom->z;
     }
 
     TArea* pDrawnArea = mpMap->mpRoomDB->getArea(mAreaID);
@@ -1338,7 +1338,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         showRoomNames = (mapNameFont.pointSizeF() > 3.0);
     }
 
-    const int zLevel = mOz;
+    const int zLevel = mMapCenterZ;
 
     const float exitWidth = 1 / eSize * mRoomWidth * rSize;
 
@@ -1355,7 +1355,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
         auto mapLabel = itMapLabel.value();
-        if (mapLabel.pos.z() != mOz) {
+        if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
         }
         if (mapLabel.text.isEmpty()) {
@@ -1477,7 +1477,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         itMapLabel.next();
         auto mapLabel = itMapLabel.value();
 
-        if (mapLabel.pos.z() != mOz) {
+        if (mapLabel.pos.z() != mMapCenterZ) {
             continue;
         }
         if (mapLabel.text.isEmpty()) {
@@ -2387,7 +2387,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
                               "ones as it represents the real coordinate system for this widget which has "
                               "y increasing in a downward direction!)")
                                   .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
-                                  .arg(QString::number(mMapCenterX), QString::number(mMapCenterY), QString::number(mOz))),
+                                  .arg(QString::number(mMapCenterX), QString::number(mMapCenterY), QString::number(mMapCenterZ))),
                           infoColor});
 #endif
 
@@ -2515,7 +2515,7 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
 
     const float mx2 = (normalizedLabelRectangle.bottomRight().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
     const float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mMapCenterY;
-    label.pos = QVector3D(mx, my, mOz);
+    label.pos = QVector3D(mx, my, mMapCenterZ);
     label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
 
     if (Q_LIKELY(labelId >= 0)) {
@@ -2623,7 +2623,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
 
                     const int mx = event->pos().x();
                     const int my = event->pos().y();
-                    const int mz = mOz;
+                    const int mz = mMapCenterZ;
                     if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
                         if (mMultiSelectionSet.contains(currentAreaRoom) && event->modifiers().testFlag(Qt::ControlModifier)) {
                             mMultiSelectionSet.remove(currentAreaRoom);
@@ -3116,7 +3116,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
 
                 const int mx = event->pos().x();
                 const int my = event->pos().y();
-                const int mz = mOz;
+                const int mz = mMapCenterZ;
                 if ((abs(mx - rx) < qRound(mRoomWidth * rSize / 2.0)) && (abs(my - ry) < qRound(mRoomHeight * rSize / 2.0)) && (mz == rz)) {
                     if (mMultiSelectionSet.contains(currentAreaRoom) && event->modifiers().testFlag(Qt::ControlModifier)) {
                         mMultiSelectionSet.remove(currentAreaRoom);
@@ -3150,7 +3150,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 while (itMapLabel.hasNext()) {
                     itMapLabel.next();
                     auto mapLabel = itMapLabel.value();
-                    if (mapLabel.pos.z() != mOz) {
+                    if (mapLabel.pos.z() != mMapCenterZ) {
                         continue;
                     }
 
@@ -3270,7 +3270,7 @@ void T2DMap::slot_createRoom()
     }
 
     mpMap->setRoomArea(roomID, mAreaID, false);
-    mpMap->setRoomCoordinates(roomID, mContextMenuClickPosition.x, mContextMenuClickPosition.y, mOz);
+    mpMap->setRoomCoordinates(roomID, mContextMenuClickPosition.x, mContextMenuClickPosition.y, mMapCenterZ);
 
     mpMap->mMapGraphNeedsUpdate = true;
 #if defined(INCLUDE_3DMAPPER)
@@ -3548,7 +3548,7 @@ void T2DMap::slot_deleteLabel()
     while (itMapLabel.hasNext()) {
         itMapLabel.next();
         auto label = itMapLabel.value();
-        if (qRound(label.pos.z()) != mOz) {
+        if (qRound(label.pos.z()) != mMapCenterZ) {
             continue;
         }
         if (label.highlight) {
@@ -4286,7 +4286,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 itMapLabel.next();
                 auto mapLabel = itMapLabel.value();
 
-                if (qRound(mapLabel.pos.z()) != mOz) {
+                if (qRound(mapLabel.pos.z()) != mMapCenterZ) {
                     continue;
                 }
                 if (!mapLabel.highlight) {
@@ -4294,7 +4294,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                 }
                 const float mx = (static_cast<float>(event->pos().x()) / mRoomWidth) + static_cast<float>(mMapCenterX) -(xspan / 2.0f);
                 const float my = (yspan / 2.0f) - (static_cast<float>(event->pos().y()) / mRoomHeight) - static_cast<float>(mMapCenterY);
-                mapLabel.pos = QVector3D(mx, my, static_cast<float>(mOz));
+                mapLabel.pos = QVector3D(mx, my, static_cast<float>(mMapCenterZ));
                 pA->mMapLabels[itMapLabel.key()] = mapLabel;
                 needUpdate = true;
                 if (!mapLabel.temporary) {
@@ -4344,7 +4344,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
 
                 // copy rooms on all z-levels if the shift key is being pressed
                 // CHECK: Consider adding z-level to multi-selection Widget?
-                if ((room->z != mOz) && !(event->modifiers().testFlag(Qt::ShiftModifier))) {
+                if ((room->z != mMapCenterZ) && !(event->modifiers().testFlag(Qt::ShiftModifier))) {
                     continue;
                 }
 
@@ -4445,7 +4445,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             if (room) {
                 room->x += dx;
                 room->y += dy;
-                room->z = mOz; // allow groups to be moved to a different z-level with the map editor
+                room->z = mMapCenterZ; // allow groups to be moved to a different z-level with the map editor
 
                 QMapIterator<QString, QList<QPointF>> itk(room->customLines);
                 QMap<QString, QList<QPointF>> newMap;

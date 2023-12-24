@@ -155,7 +155,7 @@ public:
     // keep the decimal numbers reasonable:
     qreal mMapCenterX = 0.0;
     qreal mMapCenterY = 0.0;
-    int mOz = 0;
+    int mMapCenterZ = 0;
     // Gets set when pan controls are used to move the map away from being
     // centered on mRoomID - it seems to be needed if the room concerned
     // is being moved by the mouse as part of a selection:
