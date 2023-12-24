@@ -32,6 +32,7 @@
 #if defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QMessageBox>
 #endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
+#include <QCommandLineOption>
 #include <QPainter>
 #include <QPointer>
 #include <QScreen>
@@ -257,6 +258,10 @@ int main(int argc, char* argv[])
 
     const QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), qsl("Mirror output of all consoles to STDOUT"));
     parser.addOption(mirrorToStdout);
+
+    QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Depricated option, previously used to disable showing the splash screen"));
+    beQuiet.setFlags(QCommandLineOption::HiddenFromHelp);
+    parser.addOption(beQuiet);
 
     const QCommandLineOption onlyPredefinedProfileToShow(QStringList() << qsl("o") << qsl("only"),
                                                    qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."),
