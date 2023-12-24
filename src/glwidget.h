@@ -113,7 +113,7 @@ private:
     int mShowBottomLevels = 999999;
 
     float mScale = 1.0;
-    int mTarget = 0;
+    int mTargetRoomId = 0;
 };
 
 #endif // MUDLET_GLWIDGET_H
