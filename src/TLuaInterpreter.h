@@ -152,7 +152,7 @@ public:
     std::pair<int, QString> startPermPromptTrigger(const QString& name, const QString& parent, const QString& function);
     std::pair<int, QString> startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function);
     std::pair<int, QString> createPermScript(const QString& name, const QString& parent, const QString& luaCode);
-    std::pair<int, QString> setScriptCode(QString& name, const QString& luaCode, int pos);
+    std::pair<int, QString> setScriptCode(const QString& name, const QString& luaCode, const int pos);
     std::pair<int, QString> startPermAlias(const QString& name, const QString& parent, const QString& regex, const QString& function);
     std::pair<int, QString> startPermKey(QString&, QString&, int&, int&, QString&);
 
@@ -491,6 +491,8 @@ public:
     static int permAlias(lua_State*);
     static int exists(lua_State*);
     static int isActive(lua_State*);
+    static int isAncestorsActive(lua_State*);
+    static int ancestors(lua_State*);
     static int tempAlias(lua_State*);
     static int enableAlias(lua_State*);
     static int disableAlias(lua_State*);
@@ -655,6 +657,8 @@ public:
     static int getSaveCommandHistory(lua_State*);
     static int setSaveCommandHistory(lua_State*);
     static int clearMapSelection(lua_State*);
+    static int findItems(lua_State*);
+    static int holdingModifiers(lua_State*);
     // PLACEMARKER: End of Lua functions declarations
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -755,6 +759,9 @@ private:
     static int stopMusicAsTableArgument(lua_State*);
     static int stopSoundsAsOrderedArguments(lua_State*);
     static int stopSoundsAsTableArgument(lua_State*);
+    static void parseCommandOrFunction(lua_State*, const char*, int&, QString&, int&);
+    static void parseCommandsOrFunctionsTable(lua_State*, const char*, int&, QStringList&, QVector<int>&);
+    static void parseHintsTable(lua_State*, const char*, int&, QStringList&);
     struct lua_state_deleter {
         void operator()(lua_State* ptr) const noexcept {
             lua_close(ptr);

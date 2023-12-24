@@ -3638,7 +3638,7 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>Accessibility</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout">
+         <layout class="QGridLayout" name="gridLayout_groupBox_accessibility">
           <item row="0" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_announceIncomingText">
             <property name="toolTip">
@@ -3649,7 +3649,17 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="1" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_advertiseScreenReader">
+            <property name="toolTip">
+             <string></string>
+            </property>
+            <property name="text">
+             <string>Advertise screen reader use to games supporting MTTS (Mud Terminal Type Standard)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
            <widget class="QLabel" name="label_blankLinesBehaviour">
             <property name="text">
              <string>When the game sends blank lines:</string>
@@ -3659,7 +3669,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="2" column="1">
            <widget class="QComboBox" name="comboBox_blankLinesBehaviour">
             <item>
              <property name="text">
@@ -3678,7 +3688,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="3" column="0">
            <widget class="QLabel" name="label_caretModeKey">
             <property name="text">
              <string>Switch between input line and main window using:</string>
@@ -3688,7 +3698,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="3" column="1">
            <widget class="QComboBox" name="comboBox_caretModeKey">
             <item>
              <property name="text">
@@ -3780,6 +3790,13 @@ you can use it but there could be issues with aligning columns of text</string>
            <widget class="QCheckBox" name="mFORCE_CHARSET_NEGOTIATION_OFF">
             <property name="text">
              <string>Force CHARSET negotiation off</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="mForceMTTSNegotiationOff">
+            <property name="text">
+             <string>Force MTTS negotiation off</string>
             </property>
            </widget>
           </item>
@@ -4026,7 +4043,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="6" column="1">
+          <item row="5" column="1">
            <widget class="QDoubleSpinBox" name="doubleSpinBox_networkPacketTimeout">
             <property name="toolTip">
              <string>&lt;p&gt;&lt;i&gt;Go-Ahead&lt;/i&gt; (&lt;tt&gt;GA&lt;/tt&gt;) and &lt;i&gt;End-of-record&lt;/i&gt; (&lt;tt&gt;EOR&lt;/tt&gt;) signalling tells Mudlet when the game server is done sending text. On games that do not provide &lt;tt&gt;GA&lt;/tt&gt; or &lt;tt&gt;EOR&lt;/tt&gt;, this option controls how long Mudlet will wait for more text to arrive. Greater values will help reduce the risk that Mudlet will split a large piece of text (with unintended line-breaks in the middle) which can stop some triggers from working. Lesser values increases the risk of text getting broken up, but may make the game feel more responsive.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The default value, which was what Mudlet used before this control was added, is 0.300 Seconds.&lt;/i&gt;&lt;/p&gt;</string>
@@ -4279,6 +4296,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyPassword</tabstop>
   <tabstop>toolButton_resetMainWindowShortcuts</tabstop>
   <tabstop>checkBox_announceIncomingText</tabstop>
+  <tabstop>checkBox_advertiseScreenReader</tabstop>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
@@ -4286,6 +4304,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
+  <tabstop>mForceMTTSNegotiationOff</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>

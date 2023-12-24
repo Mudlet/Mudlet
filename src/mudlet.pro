@@ -324,7 +324,7 @@ unix:!macx {
             -lhunspell-1.6
 
         INCLUDEPATH += \
-             "C:\\Libraries\\boost_1_77_0" \
+             "C:\\Libraries\\boost_1_83_0" \
              "$${MINGW_BASE_DIR_TEST}\\include" \
              "$${MINGW_BASE_DIR_TEST}\\lib\\include"
 
@@ -572,6 +572,8 @@ SOURCES += \
     EAction.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
+    GifTracker.cpp \
+    TrailingWhitespaceMarker.cpp \
     Host.cpp \
     HostManager.cpp \
     ircmessageformatter.cpp \
@@ -687,6 +689,8 @@ HEADERS += \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
+    GifTracker.h \
+    TrailingWhitespaceMarker.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
@@ -1550,7 +1554,7 @@ win32 {
 }
 
 # This is a list of files that we want to show up in the Qt Creator IDE that are
-# not otherwise used by the project:
+# not otherwise used by the main project:
 OTHER_FILES += \
     ../.appveyor.yml \
     ../.crowdin.yml \
@@ -1614,6 +1618,19 @@ OTHER_FILES += \
     ../docker/docker-compose.override.linux.yml \
     ../docker/docker-compose.yml \
     ../docker/Dockerfile \
+    ../test/CMakeLists.txt \
+    ../test/GUIConsoleTests.mpackage \
+    ../test/TEntityHandlerTest.cpp \
+    ../test/TEntityResolverTest.cpp \
+    ../test/TLinkStoreTest.cpp \
+    ../test/TLuaInterfaceTest.cpp \
+    ../test/TMxpCustomElementTagHandlerTest.cpp \
+    ../test/TMxpEntityTagHandlerTest.cpp \
+    ../test/TMxpFormattingTagsTest.cpp \
+    ../test/TMxpSendTagHandlerTest.cpp \
+    ../test/TMxpStubClient.h \
+    ../test/TMxpTagParserTest.cpp \
+    ../test/TMxpVersionTagTest.cpp \
     mac-deploy.sh \
     mudlet-lua/genDoc.sh \
     mudlet-lua/lua/ldoc.css
