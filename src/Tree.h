@@ -73,10 +73,6 @@ public:
     void setModuleName(const QString& n) { mModuleName = n; }
     QString getModuleName() const { return mModuleName; }
 */
-<<<<<<< HEAD
-    bool isFolder() const { return mFolder; }
-    void setIsFolder(bool b) { mFolder = b; }
-=======
     bool isFolder() { return mFolder; }
     void setIsFolder(bool b) {
         mFolder = b;
@@ -85,7 +81,6 @@ public:
             mOK_init = true;
         }
     }
->>>>>>> a16c2d6e (Fix: enableTrigger() does not work always on groups (#7024))
 
     T* mpParent;
     std::list<T*>* mpMyChildrenList;
