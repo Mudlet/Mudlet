@@ -99,7 +99,7 @@ private:
     int mAID = 0;
     int mMapCenterX = 0;
     int mMapCenterY = 0;
-    int mOz = 0;
+    int mMapCenterZ = 0;
     bool mShiftMode = false;
 
     float xRot = 1.0;
