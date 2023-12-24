@@ -93,14 +93,14 @@ void GLWidget::slot_shiftUp()
 void GLWidget::slot_shiftLeft()
 {
     mShiftMode = true;
-    mOx--;
+    mMapCenterX--;
     update();
 }
 
 void GLWidget::slot_shiftRight()
 {
     mShiftMode = true;
-    mOx++;
+    mMapCenterX++;
     update();
 }
 
@@ -243,7 +243,7 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 {
     mAID = areaId;
     mShiftMode = true;
-    mOx = xPos;
+    mMapCenterX = xPos;
     mOy = yPos;
     mOz = zPos;
     update();
@@ -295,12 +295,12 @@ void GLWidget::paintGL()
         ox = pRID->x;
         oy = pRID->y;
         oz = pRID->z;
-        mOx = ox;
+        mMapCenterX = ox;
         mOy = oy;
         mOz = oz;
 
     } else {
-        ox = mOx;
+        ox = mMapCenterX;
         oy = mOy;
         oz = mOz;
     }
