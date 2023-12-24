@@ -98,7 +98,7 @@ private:
     int mRID = 0;
     int mAID = 0;
     int mMapCenterX = 0;
-    int mOy = 0;
+    int mMapCenterY = 0;
     int mOz = 0;
     bool mShiftMode = false;
 

@@ -79,14 +79,14 @@ void GLWidget::slot_showAllLevels()
 void GLWidget::slot_shiftDown()
 {
     mShiftMode = true;
-    mOy--;
+    mMapCenterY--;
     update();
 }
 
 void GLWidget::slot_shiftUp()
 {
     mShiftMode = true;
-    mOy++;
+    mMapCenterY++;
     update();
 }
 
@@ -244,7 +244,7 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
     mAID = areaId;
     mShiftMode = true;
     mMapCenterX = xPos;
-    mOy = yPos;
+    mMapCenterY = yPos;
     mOz = zPos;
     update();
 }
@@ -296,12 +296,12 @@ void GLWidget::paintGL()
         oy = pRID->y;
         oz = pRID->z;
         mMapCenterX = ox;
-        mOy = oy;
+        mMapCenterY = oy;
         mOz = oz;
 
     } else {
         ox = mMapCenterX;
-        oy = mOy;
+        oy = mMapCenterY;
         oz = mOz;
     }
     px = static_cast<float>(ox); //mpMap->rooms[mpMap->mRoomId]->x);

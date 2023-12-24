@@ -138,7 +138,7 @@ void T2DMap::init()
 void T2DMap::slot_shiftDown()
 {
     mShiftMode = true;
-    mOy--;
+    mMapCenterY--;
     update();
 }
 
@@ -152,7 +152,7 @@ void T2DMap::slot_shiftDown()
 void T2DMap::slot_shiftUp()
 {
     mShiftMode = true;
-    mOy++;
+    mMapCenterY++;
     update();
 }
 
@@ -235,13 +235,13 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                 // recenter view on that room!
                 mMapCenterX = pPlayerRoom->x;
                 // Map y coordinates are reversed on 2D map!
-                mOy = -pPlayerRoom->y;
+                mMapCenterY = -pPlayerRoom->y;
                 mOz = pPlayerRoom->z;
                 xyzoom = mpMap->mpRoomDB->get2DMapZoom(mAreaID);
                 repaint();
                 // Pass the coordinates to the TMap instance to pass to the 3D
                 // mapper
-                mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mOy, mOz);
+                mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mOz);
                 if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
                     mpHost->raiseEvent(areaViewedChangedEvent);
                 }
@@ -339,17 +339,17 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                     if (closestCenterRoom) {
                         mMapCenterX = closestCenterRoom->x;
                         // Map y coordinates are reversed on 2D map!
-                        mOy = -closestCenterRoom->y;
+                        mMapCenterY = -closestCenterRoom->y;
                         mOz = closestCenterRoom->z;
                     } else {
-                        mMapCenterX = mOy = mOz = 0;
+                        mMapCenterX = mMapCenterY = mOz = 0;
                     }
                 }
 
                 if (!validRoomFound) {
                     //no rooms, go to 0,0,0
                     mMapCenterX = 0;
-                    mOy = 0;
+                    mMapCenterY = 0;
                     mOz = 0;
                 }
             } else {
@@ -402,13 +402,13 @@ void T2DMap::slot_switchArea(const QString& newAreaName)
                 if (closestCenterRoom) {
                     mMapCenterX = closestCenterRoom->x;
                     // Map y coordinates are reversed on 2D map!
-                    mOy = -closestCenterRoom->y;
+                    mMapCenterY = -closestCenterRoom->y;
                 }
             }
             xyzoom = mpMap->mpRoomDB->get2DMapZoom(mAreaID);
             repaint();
             // Pass the coordinates to the TMap instance to pass to the 3D mapper
-            mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mOy, mOz);
+            mpMap->set3DViewCenter(mAreaID, mMapCenterX, -mMapCenterY, mOz);
             if (!areaViewedChangedEvent.mArgumentList.isEmpty()) {
                 mpHost->raiseEvent(areaViewedChangedEvent);
             }
@@ -1266,7 +1266,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         }
 
         mMapCenterX = pPlayerRoom->x;
-        mOy = pPlayerRoom->y * -1;
+        mMapCenterY = pPlayerRoom->y * -1;
         mOz = pPlayerRoom->z;
     }
 
@@ -1287,7 +1287,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     mRoomWidth = widgetWidth / xspan;
     mRoomHeight = widgetHeight / yspan;
     mRX = qRound(mRoomWidth * ((xspan / 2.0) - mMapCenterX));
-    mRY = qRound(mRoomHeight * ((yspan / 2.0) - mOy));
+    mRY = qRound(mRoomHeight * ((yspan / 2.0) - mMapCenterY));
     QFont roomVNumFont = mpMap->mMapSymbolFont;
 
     bool isFontBigEnoughToShowRoomVnum = false;
@@ -2387,7 +2387,7 @@ void T2DMap::paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, c
                               "ones as it represents the real coordinate system for this widget which has "
                               "y increasing in a downward direction!)")
                                   .arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3)
-                                  .arg(QString::number(mMapCenterX), QString::number(mOy), QString::number(mOz))),
+                                  .arg(QString::number(mMapCenterX), QString::number(mMapCenterY), QString::number(mOz))),
                           infoColor});
 #endif
 
@@ -2511,10 +2511,10 @@ void T2DMap::updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea)
     label.pix = pixmap.copy(drawRectangle);
     auto normalizedLabelRectangle = labelRectangle.normalized();
     const float mx = (normalizedLabelRectangle.topLeft().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my = (yspan / 2.0) - (labelRectangle.topLeft().y() / mRoomHeight) - mOy;
+    const float my = (yspan / 2.0) - (labelRectangle.topLeft().y() / mRoomHeight) - mMapCenterY;
 
     const float mx2 = (normalizedLabelRectangle.bottomRight().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mOy;
+    const float my2 = (yspan / 2.0) - (labelRectangle.bottomRight().y() / mRoomHeight) - mMapCenterY;
     label.pos = QVector3D(mx, my, mOz);
     label.size = QRectF(QPointF(mx, my), QPointF(mx2, my2)).normalized().size();
 
@@ -2607,7 +2607,7 @@ void T2DMap::mouseReleaseEvent(QMouseEvent* event)
         if (!mLabelHighlighted && mCustomLineSelectedRoom == 0) {
             mMultiRect = QRect(event->pos(), event->pos());
             const float fx = ((xspan / 2.0) - mMapCenterX) * mRoomWidth;
-            const float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
+            const float fy = ((yspan / 2.0) - mMapCenterY) * mRoomHeight;
 
             if (pArea) {
                 QSetIterator<int> itRoom(pArea->getAreaRooms());
@@ -2982,7 +2982,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             TRoom* room = mpMap->mpRoomDB->getRoom(mCustomLinesRoomFrom);
             if (room) {
                 const float mx = (event->pos().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-                const float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
+                const float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mMapCenterY;
                 // might be useful to have a snap to grid type option
                 room->customLines[mCustomLinesRoomExit].push_back(QPointF(mx, my));
                 room->calcRoomDimensions();
@@ -2997,7 +2997,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
             TArea* pA = mpMap->mpRoomDB->getArea(mAreaID);
             if (pA) {
                 const float mx = (event->pos().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-                const float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy;
+                const float my = (yspan / 2.0) - (event->pos().y() / mRoomHeight) - mMapCenterY;
                 const QPointF clickPoint = QPointF(mx, my);
                 QSetIterator<int> itRoom = pA->rooms;
                 while (itRoom.hasNext()) {
@@ -3092,7 +3092,7 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
                 return;
             }
             const float fx = ((xspan / 2.0) - mMapCenterX) * mRoomWidth;
-            const float fy = ((yspan / 2.0) - mOy) * mRoomHeight;
+            const float fy = ((yspan / 2.0) - mMapCenterY) * mRoomHeight;
 
             if (!event->modifiers().testFlag(Qt::ControlModifier)) {
                 if (!mMapViewOnly) {
@@ -3253,7 +3253,7 @@ std::pair<int, int> T2DMap::getMousePosition()
     const QPoint mousePosition = this->mapFromGlobal(QCursor::pos());
 
     const float mx = (mousePosition.x() / mRoomWidth) + mMapCenterX - (xspan / 2.0);
-    const float my = (yspan / 2.0) - (mousePosition.y() / mRoomHeight) - mOy;
+    const float my = (yspan / 2.0) - (mousePosition.y() / mRoomHeight) - mMapCenterY;
 
     return {std::round(mx), std::round(my)};
 }
@@ -4249,7 +4249,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         mShiftMode = true;
         QPointF const movement = mpMap->m2DPanStart - panNewPosition;
         mMapCenterX += movement.x() / mRoomWidth;
-        mOy += movement.y() / mRoomHeight;
+        mMapCenterY += movement.y() / mRoomHeight;
         mpMap->m2DPanStart = panNewPosition;
         update();
         return;
@@ -4261,7 +4261,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
             if (room->customLines.contains(mCustomLineSelectedExit)) {
                 if (room->customLines[mCustomLineSelectedExit].size() > mCustomLineSelectedPoint) {
                     qreal const mx = static_cast<qreal>(event->pos().x()) / static_cast<qreal>(mRoomWidth) + mMapCenterX - static_cast<qreal>(xspan / 2.0f);
-                    qreal const my = static_cast<qreal>(yspan / 2.0f) - static_cast<qreal>(event->pos().y()) / static_cast<qreal>(mRoomHeight) - mOy;
+                    qreal const my = static_cast<qreal>(yspan / 2.0f) - static_cast<qreal>(event->pos().y()) / static_cast<qreal>(mRoomHeight) - mMapCenterY;
                     QPointF const pc = QPointF(mx, my);
                     room->customLines[mCustomLineSelectedExit][mCustomLineSelectedPoint] = pc;
                     room->calcRoomDimensions();
@@ -4293,7 +4293,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
                     continue;
                 }
                 const float mx = (static_cast<float>(event->pos().x()) / mRoomWidth) + static_cast<float>(mMapCenterX) -(xspan / 2.0f);
-                const float my = (yspan / 2.0f) - (static_cast<float>(event->pos().y()) / mRoomHeight) - static_cast<float>(mOy);
+                const float my = (yspan / 2.0f) - (static_cast<float>(event->pos().y()) / mRoomHeight) - static_cast<float>(mMapCenterY);
                 mapLabel.pos = QVector3D(mx, my, static_cast<float>(mOz));
                 pA->mMapLabels[itMapLabel.key()] = mapLabel;
                 needUpdate = true;
@@ -4333,7 +4333,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         if (!mSizeLabel) { // NOT sizing a label
             mMultiSelectionSet.clear();
             const float fx = xspan / 2.0f * mRoomWidth - mRoomWidth * static_cast<float>(mMapCenterX);
-            const float fy = yspan / 2.0f * mRoomHeight - mRoomHeight * static_cast<float>(mOy);
+            const float fy = yspan / 2.0f * mRoomHeight - mRoomHeight * static_cast<float>(mMapCenterY);
             QSetIterator<int> itSelectedRoom(pArea->getAreaRooms());
             while (itSelectedRoom.hasNext()) {
                 const int currentRoomId = itSelectedRoom.next();
@@ -4438,7 +4438,7 @@ void T2DMap::mouseMoveEvent(QMouseEvent* event)
         }
 
         const int dx = qRound((event->pos().x() / mRoomWidth) + mMapCenterX - (xspan / 2.0)) - room->x;
-        const int dy = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mOy) - room->y;
+        const int dy = qRound((yspan / 2.0) - (event->pos().y() / mRoomHeight) - mMapCenterY) - room->y;
         QSetIterator<int> itRoom = mMultiSelectionSet;
         while (itRoom.hasNext()) {
             room = mpMap->mpRoomDB->getRoom(itRoom.next());
@@ -4583,7 +4583,7 @@ void T2DMap::wheelEvent(QWheelEvent* e)
             // now shift the origin by that, scaled by the difference in
             // zoom factors. Thus the point under the mouse stays in place.
             mMapCenterX += dx * (oldZoom - xyzoom) / 2.0 * xs;
-            mOy += dy * (oldZoom - xyzoom) / 2.0 * ys;
+            mMapCenterY += dy * (oldZoom - xyzoom) / 2.0 * ys;
 
             flushSymbolPixmapCache();
             update();
