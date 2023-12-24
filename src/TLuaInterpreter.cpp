@@ -18217,6 +18217,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("forceMTTSNegotiationOff")) {
+        host.mForceMTTSNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("compactInputLine")) {
         const bool value = getVerifiedBool(L, __func__, 2, "value");
         host.setCompactInputLine(value);
@@ -18228,6 +18232,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("announceIncomingText")) {
         host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("advertiseScreenReader")) {
+        host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("blankLinesBehaviour")) {
@@ -18637,6 +18645,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
         { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
+        { qsl("forceMTTSNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceMTTSNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
         { qsl("blankLinesBehaviour"), [&](){
