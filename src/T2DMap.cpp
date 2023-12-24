@@ -3190,7 +3190,12 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         }
 
     }
-
+    
+    TEvent sysMapWindowMousePressEvent{};
+    sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
+    sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(sysMapWindowMousePressEvent);  
+    
     updateSelectionWidget();
     update();
 }
