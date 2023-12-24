@@ -501,6 +501,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_blankLinesBehaviour->setEnabled(false);
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
+    checkBox_advertiseScreenReader->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -610,6 +611,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_blankLinesBehaviour->setEnabled(true);
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
+    checkBox_advertiseScreenReader->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -638,6 +640,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
+    mForceMTTSNegotiationOff->setChecked(pHost->mForceMTTSNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
@@ -769,6 +772,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     need_reconnect_for_data_protocol->hide();
 
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
+    checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
@@ -1373,6 +1377,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
+    mForceMTTSNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
     acceptServerGUI->setChecked(false);
@@ -1471,6 +1476,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
+    checkBox_advertiseScreenReader->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
@@ -2844,6 +2850,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
+        pHost->mForceMTTSNegotiationOff = mForceMTTSNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;
@@ -3038,6 +3045,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
+        pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
