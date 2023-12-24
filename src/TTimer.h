@@ -55,9 +55,9 @@ public:
     bool compileScript();
     void execute();
     void setTime(QTime time);
-    const QString getCommand() const { return mCommand; }
+    const QString& getCommand() const { return mCommand; }
     void setCommand(const QString& cmd) { mCommand = cmd; }
-    const QString getScript() const { return mScript; }
+    const QString& getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool canBeUnlocked();
     bool setIsActive(bool);
@@ -131,12 +131,12 @@ inline QDebug& operator<<(QDebug& debug, const TTimer* timer)
     QDebugStateSaver saver(debug);
     Q_UNUSED(saver);
     debug.nospace() << "TTimer("
-                    << "name: " << timer->getName()
-                    << " time: " << timer->getTime()
-                    << " command: " << timer->getCommand()
-                    << " script is in: " << (timer->mRegisteredAnonymousLuaFunction ? "string": "Lua function")
-                    << " script: " << timer->getScript()
-                    << " repeating: " << timer->mRepeating
+                    << "name= " << timer->getName()
+                    << " time= " << timer->getTime()
+                    << " command= " << timer->getCommand()
+                    << " script is in= " << (timer->mRegisteredAnonymousLuaFunction ? "string"= "Lua function")
+                    << " script= " << timer->getScript()
+                    << " repeating= " << timer->mRepeating
                     << ")";
     return debug;
 }
