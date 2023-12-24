@@ -567,7 +567,7 @@ bool T2DMap::sizeFontToFitTextInRect( QFont & font, const QRectF & boundaryRect,
 // Helper that refactors out code to start a speedwalk:
 void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId)
 {
-    mTarget = speedWalkTargetRoomId;
+    mTargetRoomId = speedWalkTargetRoomId;
     if (mpMap->mpRoomDB->getRoom(speedWalkTargetRoomId)) {
         mpMap->mTargetID = speedWalkTargetRoomId;
 
@@ -3190,12 +3190,12 @@ void T2DMap::mousePressEvent(QMouseEvent* event)
         }
 
     }
-    
+
     TEvent sysMapWindowMousePressEvent{};
     sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
     sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(sysMapWindowMousePressEvent);  
-    
+    mpHost->raiseEvent(sysMapWindowMousePressEvent);
+
     updateSelectionWidget();
     update();
 }
