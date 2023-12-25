@@ -244,11 +244,11 @@ public:
 
     QString mAppBuild;
     // final, official release
-    bool scmIsReleaseVersion;
+    bool releaseVersion;
     // unofficial "nightly" build - still a type of a release
-    bool scmIsPublicTestVersion;
+    bool publicTestVersion;
     // used by developers in everyday coding:
-    bool scmIsDevelopmentVersion;
+    bool developmentVersion;
     // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
     // (1000ths, range 0 to 999) that is used as a "version" attribute number when
     // writing the <MudletPackage ...> element of all (but maps if I ever get around

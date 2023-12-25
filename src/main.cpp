@@ -230,9 +230,20 @@ int main(int argc, char* argv[])
     QString appBuild = QString::fromUtf8(gitShaFile.readAll());
 
     qDebug() << "Git SHA 1:" << appBuild;
-    bool releaseVersion = appBuild.isEmpty();
-    bool publicTestVersion = appBuild.startsWith("-ptb");
-    bool developmentVersion = !releaseVersion && !publicTestVersion;
+    const bool releaseVersion = appBuild.isEmpty();
+    const bool publicTestVersion = appBuild.startsWith("-ptb");
+    const bool developmentVersion = !releaseVersion && !publicTestVersion;
+
+    if (publicTestVersion) {
+        app->setApplicationName(qsl("Mudlet Public Test Build"));
+    } else {
+        app->setApplicationName(qsl("Mudlet"));
+    }
+    if (releaseVersion) {
+        app->setApplicationVersion(APP_VERSION);
+    } else {
+        app->setApplicationVersion(QString(APP_VERSION) + appBuild);
+    }
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;

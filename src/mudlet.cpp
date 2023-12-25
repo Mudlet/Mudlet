@@ -139,22 +139,15 @@ mudlet::mudlet()
     qDebug() << "Git SHA:" << gitSha;
 
     mAppBuild = gitSha;
-    scmIsReleaseVersion = mAppBuild.isEmpty();
-    scmIsPublicTestVersion = mAppBuild.startsWith("-ptb");
-    scmIsDevelopmentVersion = !scmIsReleaseVersion && !scmIsPublicTestVersion;
+    releaseVersion = mAppBuild.isEmpty();
+    publicTestVersion = mAppBuild.startsWith("-ptb");
+    developmentVersion = !releaseVersion && !publicTestVersion;
 
     scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
 
-    if (scmIsPublicTestVersion) {
-        qApp->setApplicationName(qsl("Mudlet Public Test Build"));
-    } else {
-        qApp->setApplicationName(qsl("Mudlet"));
-    }
-    if (scmIsReleaseVersion) {
-        qApp->setApplicationVersion(APP_VERSION);
-    } else {
-        qApp->setApplicationVersion(qsl(APP_VERSION) + mAppBuild);
-    }
+    mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
+    mpSettings = getQSettings();
+    readEarlySettings(*mpSettings);
 
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
         // If the setting is not the "tri-state" one then force the setting,
@@ -203,11 +196,11 @@ mudlet::mudlet()
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(scmVersion);
-    if (scmIsReleaseVersion) {
+    if (releaseVersion) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet.png")));
-    } else if (scmIsPublicTestVersion) {
+    } else if (publicTestVersion) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet_ptb_256px.png")));
-    } else { // scmIsDevelopmentVersion
+    } else { // developmentVersion
         setWindowIcon(QIcon(qsl(":/icons/mudlet_dev_256px.png")));
     }
     mpMainToolBar = new QToolBar(this);
@@ -460,7 +453,7 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
 #if defined(INCLUDE_UPDATER)
-    if (scmIsPublicTestVersion) {
+    if (publicTestVersion) {
         mpActionReportIssue = new QAction(tr("Report issue"), this);
         const QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
@@ -552,13 +545,13 @@ mudlet::mudlet()
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
     // release OR a public test version:
-    dactionUpdate->setVisible(scmIsReleaseVersion || scmIsPublicTestVersion);
+    dactionUpdate->setVisible(releaseVersion || publicTestVersion);
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
     // going to want the updater to change things for them) AND only for a
     // public test version:
-    if (scmIsPublicTestVersion) {
+    if (publicTestVersion) {
         dactionReportIssue->setVisible(true);
         connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_reportIssue);
         connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_reportIssue);
@@ -641,7 +634,7 @@ mudlet::mudlet()
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings, scmIsPublicTestVersion);
+    pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
 #if defined(Q_OS_MACOS)
@@ -3713,7 +3706,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (scmIsReleaseVersion || scmIsPublicTestVersion) {
+    if (releaseVersion || publicTestVersion) {
         // Only try and create an updater (which checks for updates online) if
         // this is a release/public test version:
         pUpdater->checkUpdatesOnStart();
