@@ -2269,44 +2269,44 @@ QString TBuffer::wrapText(const QString& text) const
     const QString indentText = QChar::LineFeed + QString(" ").repeated(mWrapIndent);
 
     for (qsizetype curLineStart = 0; curLineStart < text.size(); curLineStart++) {
-        // 1. Find where the next line break is.
-        //    The end of the input text also counts as a line break.
+        // Find where the next line break is.
+        // The end of the input text also counts as a line break.
         qsizetype nextLineBreak = text.indexOf(QChar::LineFeed, curLineStart);
         if (nextLineBreak == -1) {
             nextLineBreak = text.size();
         }
 
-        // 2. Find where the wrap window ends
-        qsizetype wrapWindowEnd = curLineStart + mWrapAt - curIndent;
+        // Find where the wrap window ends
+        const qsizetype wrapWindowEnd = curLineStart + mWrapAt - curIndent;
 
-        // 3. If linebreak happens within wrap window:
-        //    Clear indentation, write the line, and skip the rest of the steps
-        if (nextLineBreak >= 0 && nextLineBreak < wrapWindowEnd) {
+        // If linebreak happens within wrap window:
+        // Clear indentation, write the line, and skip the rest of the steps
+        if (nextLineBreak < wrapWindowEnd) {
             curIndent = 0;
-            qsizetype lineWidth = nextLineBreak - curLineStart + 1;
+            const qsizetype lineWidth = nextLineBreak - curLineStart + 1;
             wrappedText += text.midRef(curLineStart, lineWidth);
             curLineStart = nextLineBreak;
             continue;
         }
 
-        // 4. Find a good place to break up this line
+        // Find a good place to break up this line
         lineFinder.setPosition(wrapWindowEnd + 1);
         lineFinder.toPreviousBoundary();
         qsizetype safeLineEnd = lineFinder.position();
 
-        // 5. If a single word is too long to fit in the wrap window,
-        //    write as much of it as possible
+        // If a single word is too long to fit in the wrap window:
+        // Write as much of it as possible
         if (safeLineEnd <= curLineStart) {
             safeLineEnd = wrapWindowEnd;
         }
 
-        // 6. Move start point forward, set indention level
-        qsizetype lineWidth = safeLineEnd - curLineStart;
+        // Move start point forward, set indention level
+        const qsizetype lineWidth = safeLineEnd - curLineStart;
         wrappedText += text.midRef(curLineStart, lineWidth);
         curIndent = mWrapIndent;
         curLineStart = safeLineEnd - 1;
 
-        // 7. Apply indentation, unless we've reached the end of the text
+        // Apply indentation, unless we've reached the end of the text
         if (curLineStart < text.size()) {
             wrappedText += indentText;
         }
