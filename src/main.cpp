@@ -378,7 +378,7 @@ int main(int argc, char* argv[])
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
     const bool showSplash = parser.isSet(showSplashscreen);
-    QImage splashImage = mudlet::getSplashScreen();
+    QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
     if (showSplash) {
         QPainter painter(&splashImage);
