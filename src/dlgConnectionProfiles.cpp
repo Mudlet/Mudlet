@@ -179,8 +179,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // change it anyhow:
         abort->setIcon(QIcon::fromTheme(qsl("dialog-close"), QIcon(qsl(":/icons/dialog-close.png"))));
 
-        QIcon icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
-        QIcon icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
+        const QIcon icon_new(QIcon::fromTheme(qsl("document-new"), QIcon(qsl(":/icons/document-new.png"))));
+        const QIcon icon_connect(QIcon::fromTheme(qsl("dialog-ok-apply"), QIcon(qsl(":/icons/preferences-web-browser-cache.png"))));
 
         offline_button->setIcon(QIcon(qsl(":/icons/mudlet_editor.png")));
         connect_button->setIcon(icon_connect);
@@ -198,7 +198,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // Remove the marker:
         cursor.removeSelectedText();
         // Insert the current icon image into the same place:
-        QImage image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
+        QImage const image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
         cursor.insertImage(image_new);
         cursor.clearSelection();
 
@@ -207,7 +207,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
                    "dlgConnectionProfiles::dlgConnectionProfiles(...)",
                    "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
         cursor.removeSelectedText();
-        QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
+        QImage const image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
         cursor.insertImage(image_connect);
         cursor.clearSelection();
     } else {
@@ -276,9 +276,8 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     btn_connect_enabled_accessDesc = tr("Click to load and connect the selected profile.");
     btn_connOrLoad_disabled_accessDesc = tr("Need to have a valid profile name, game server address and port before this button can be enabled.");
     item_profile_accessName = tr("Game name: %1");
-    item_profile_accessDesc = tr("Button to select a mud game to play, double-click it to connect and start playing it.",
-                                 // Intentional comment to separate arguments
-                                 "Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option");
+    //: Some text to speech engines will spell out initials like MUD so stick to lower case if that is a better option
+    item_profile_accessDesc = tr("Button to select a mud game to play, double-click it to connect and start playing it.");
 
     // Set up some initial black/white/greys:
     mCustomIconColors = {{QColor(0, 0, 0)}, {QColor(63, 63, 63)}, {QColor(128, 128, 128)}, {QColor(192, 192, 192)}, {QColor(255, 255, 255)}};
@@ -319,7 +318,7 @@ void dlgConnectionProfiles::slot_updateDescription()
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
 
     if (pItem) {
-        QString description = mud_description_textedit->toPlainText();
+        const QString description = mud_description_textedit->toPlainText();
         writeProfileData(pItem->data(csmNameRole).toString(), qsl("description"), description);
 
         // don't display custom profile descriptions as a tooltip, as passwords could be stored in there
@@ -452,7 +451,7 @@ void dlgConnectionProfiles::slot_updateDiscordOptIn(int state)
 
 void dlgConnectionProfiles::slot_updatePort(const QString& ignoreBlank)
 {
-    QString port = port_entry->text().trimmed();
+    const QString port = port_entry->text().trimmed();
 
     if (ignoreBlank.isEmpty()) {
         validPort = false;
@@ -496,15 +495,18 @@ void dlgConnectionProfiles::slot_updateName(const QString& newName)
 void dlgConnectionProfiles::slot_saveName()
 {
     QListWidgetItem* pItem = profiles_tree_widget->currentItem();
-    QString newProfileName = profile_name_entry->text().trimmed();
+    const QString newProfileName = profile_name_entry->text().trimmed();
+    const QString newProfileHost = host_name_entry->text().trimmed();
+    const QString newProfilePort = port_entry->text().trimmed();
+    const int newProfileSslTsl = port_ssl_tsl->isChecked() * 2;
 
     validateProfile();
     if (!validName || newProfileName.isEmpty() || !pItem) {
         return;
     }
 
-    QString currentProfileEditName = pItem->data(csmNameRole).toString();
-    int row = mProfileList.indexOf(currentProfileEditName);
+    const QString currentProfileEditName = pItem->data(csmNameRole).toString();
+    const int row = mProfileList.indexOf(currentProfileEditName);
     if ((row >= 0) && (row < mProfileList.size())) {
         mProfileList[row] = newProfileName;
     } else {
@@ -522,8 +524,8 @@ void dlgConnectionProfiles::slot_saveName()
 
     setItemName(pItem, newProfileName);
 
-    QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
-    QDir dir;
+    const QDir currentPath(mudlet::getMudletPath(mudlet::profileHomePath, currentProfileEditName));
+    const QDir dir;
 
     if (currentPath.exists()) {
         // CHECKME: previous code specified a path ending in a '/'
@@ -544,6 +546,16 @@ void dlgConnectionProfiles::slot_saveName()
         notificationAreaMessageBox->show();
         notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
     }
+
+    if (!newProfileHost.isEmpty()) {
+        slot_updateUrl(newProfileHost);
+    }
+
+    if (!newProfilePort.isEmpty()) {
+        slot_updatePort(newProfilePort);
+    }
+
+    slot_updateSslTslPort(newProfileSslTsl);
 
     // if this was a previously deleted profile, restore it
     auto& settings = *mudlet::self()->mpSettings;
@@ -578,7 +590,7 @@ void dlgConnectionProfiles::slot_addProfile()
     informationalArea->show();
     tabWidget_connectionInfo->show();
 
-    QString newname = tr("new profile name");
+    const QString newname = tr("new profile name");
 
     auto pItem = new QListWidgetItem();
     if (!pItem) {
@@ -615,7 +627,7 @@ void dlgConnectionProfiles::slot_addProfile()
 // enables the deletion button once the correct text (profile name) is entered
 void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 {
-    QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     if (profile != text) {
         delete_button->setEnabled(false);
     } else {
@@ -627,7 +639,7 @@ void dlgConnectionProfiles::slot_deleteProfileCheck(const QString& text)
 // actually performs the deletion once the correct text has been entered
 void dlgConnectionProfiles::slot_reallyDeleteProfile()
 {
-    QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     reallyDeleteProfile(profile);
 }
 
@@ -656,14 +668,14 @@ void dlgConnectionProfiles::slot_deleteProfile()
         return;
     }
 
-    QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
+    const QString profile = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
     const QStringList& onlyShownPredefinedProfiles{mudlet::self()->mOnlyShownPredefinedProfiles};
     if (!onlyShownPredefinedProfiles.isEmpty() && onlyShownPredefinedProfiles.contains(profile)) {
         // Do NOT allow deletion of the prioritised predefined MUD:
         return;
     }
 
-    QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
+    const QDir profileDirContents(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile));
     if (!profileDirContents.exists() || profileDirContents.isEmpty()) {
         // shortcut - don't show profile deletion confirmation if there is no data to delete
         reallyDeleteProfile(profile);
@@ -706,7 +718,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
-    bool success = file.open(QIODevice::ReadOnly);
+    const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
     if (success) {
         QDataStream ifs(&file);
@@ -865,19 +877,19 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     QDir dir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
     dir.setSorting(QDir::Time);
-    QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
+    const QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
     for (const auto& entry : entries) {
-        QRegularExpression rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
-        QRegularExpressionMatch match = rx.match(entry);
+        QRegularExpression const rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
+        QRegularExpressionMatch const match = rx.match(entry);
 
         if (match.capturedStart() != -1) {
             QString day;
-            QString month = match.captured(2);
+            const QString month = match.captured(2);
             QString year;
-            QString hour = match.captured(4);
-            QString minute = match.captured(5);
-            QString second = match.captured(6);
+            const QString hour = match.captured(4);
+            const QString minute = match.captured(5);
+            const QString second = match.captured(6);
             if (match.captured(1).toInt() > 31 && match.captured(3).toInt() >= 1 && match.captured(3).toInt() <= 31) {
                 // I have been experimenting with code that puts the year first
                 // which is actually quite useful - this accommodates such cases
@@ -895,7 +907,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             datetime.setDate(QDate(year.toInt(), month.toInt(), day.toInt()));
             profile_history->addItem(mudlet::self()->getUserLocale().toString(datetime, mDateTimeFormat), QVariant(entry));
         } else if (entry == QLatin1String("autosave.xml")) {
-            QFileInfo fileInfo(dir, entry);
+            const QFileInfo fileInfo(dir, entry);
             auto lastModified = fileInfo.lastModified();
             profile_history->addItem(QIcon::fromTheme(qsl("document-save"), QIcon(qsl(":/icons/document-save.png"))),
                                      mudlet::self()->getUserLocale().toString(lastModified, mDateTimeFormat),
@@ -1015,7 +1027,7 @@ void dlgConnectionProfiles::fillout_form()
         }
 
 #if defined(QT_DEBUG)
-        QString mudServer = qsl("Mudlet self-test");
+        const QString mudServer = qsl("Mudlet self-test");
         if (!deletedDefaultMuds.contains(mudServer) && !mProfileList.contains(mudServer)) {
             mProfileList.append(mudServer);
             pItem = new QListWidgetItem();
@@ -1055,7 +1067,7 @@ void dlgConnectionProfiles::fillout_form()
         const auto fileinfo = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
         if (fileinfo.exists()) {
             firstMudletLaunch = false;
-            QDateTime profile_lastRead = fileinfo.lastModified();
+            QDateTime const profile_lastRead = fileinfo.lastModified();
             // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
             // work as expected - so test for validity of the test_date value as well
             if ((!test_date.isValid()) || profile_lastRead > test_date) {
@@ -1192,7 +1204,7 @@ std::optional<QColor> getCustomColor(const QString& profileName)
         }
 
         QTextStream in(&file);
-        QString colorString = in.readLine();
+        const QString colorString = in.readLine();
         QColor color(colorString);
         if (color.isValid()) {
             return {color};
@@ -1211,19 +1223,22 @@ void dlgConnectionProfiles::generateCustomProfile(const QString& profileName) co
 
 void dlgConnectionProfiles::slot_profileContextMenu(QPoint pos)
 {
-    QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
+    const QPoint globalPos = profiles_tree_widget->mapToGlobal(pos);
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
     QMenu menu;
     if (hasCustomIcon(profileName)) {
-        menu.addAction(tr("Reset icon", "Reset the custom picture for this profile in the connection dialog and show the default one instead"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
+        //: Reset the custom picture for this profile in the connection dialog and show the default one instead
+        menu.addAction(tr("Reset icon"), this, &dlgConnectionProfiles::slot_resetCustomIcon);
     } else {
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
-                       tr("Set custom icon", "Set a custom picture to show for the profile in the connection dialog"),
+                       //: Set a custom picture to show for the profile in the connection dialog
+                       tr("Set custom icon"),
                        this,
                        &dlgConnectionProfiles::slot_setCustomIcon);
         menu.addAction(QIcon(":/icons/mudlet_main_16px.png"),
-                       tr("Set custom color", "Set a custom color to show for the profile in the connection dialog"),
+                       //: Set a custom color to show for the profile in the connection dialog
+                       tr("Set custom color"),
                        this,
                        &dlgConnectionProfiles::slot_setCustomColor);
     }
@@ -1235,13 +1250,13 @@ void dlgConnectionProfiles::slot_setCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
-    QString imageLocation = QFileDialog::getOpenFileName(
+    const QString imageLocation = QFileDialog::getOpenFileName(
             this, tr("Select custom image for profile (should be 120x30)"), QStandardPaths::writableLocation(QStandardPaths::HomeLocation), tr("Images (%1)").arg(qsl("*.png *.gif *.jpg")));
     if (imageLocation.isEmpty()) {
         return;
     }
 
-    bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
+    const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
     if (!success) {
         return;
     }
@@ -1269,7 +1284,7 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
 {
     auto profileName = profiles_tree_widget->currentItem()->data(csmNameRole).toString();
 
-    bool success = mudlet::self()->resetProfileIcon(profileName).first;
+    const bool success = mudlet::self()->resetProfileIcon(profileName).first;
     if (!success) {
         return;
     }
@@ -1319,7 +1334,7 @@ void dlgConnectionProfiles::slot_copyProfile()
     }
 
     // copy the folder on-disk
-    QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
+    const QDir dir(mudlet::getMudletPath(mudlet::profileHomePath, oldname));
     if (!dir.exists()) {
         mCopyingProfile = false;
         return;
@@ -1361,14 +1376,14 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
         return;
     }
 
-    QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
+    const QDir newProfileDir(mudlet::getMudletPath(mudlet::profileHomePath, profile_name));
     newProfileDir.mkpath(newProfileDir.path());
     if (!newProfileDir.exists()) {
         return;
     }
 
     // copy relevant profile files
-    for (QString file : {"url", "port", "password", "login", "description"}) {
+    for (const QString file : {"url", "port", "password", "login", "description"}) {
         auto filePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, oldname), file);
         auto newFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
@@ -1430,8 +1445,8 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
 
 void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, const QString& newname)
 {
-    QDir oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
-    QDir newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
+    const QDir oldProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, oldname));
+    const QDir newProfiledir(mudlet::getMudletPath(mudlet::profileXmlFilesPath, newname));
     newProfiledir.mkpath(newProfiledir.absolutePath());
     QStringList entries = oldProfiledir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     if (entries.empty()) {
@@ -1449,7 +1464,7 @@ void dlgConnectionProfiles::copyProfileSettingsOnly(const QString& oldname, cons
 bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newProfile, const QString& copySettingsFrom)
 {
     pugi::xml_document oldProfile;
-    pugi::xml_parse_result result = oldProfile.load_file(copySettingsFrom.toUtf8().constData());
+    pugi::xml_parse_result const result = oldProfile.load_file(copySettingsFrom.toUtf8().constData());
     if (!result) {
         qWarning() << "dlgConnectionProfiles::copyProfileSettingsOnly() ERROR: couldn't parse" << copySettingsFrom;
         qWarning() << "Parse error: " << result.description() << ", character pos= " << result.offset;
@@ -1472,7 +1487,7 @@ bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newPr
 
     // remove installed packages/modules
     const auto hostPackageResults = oldProfile.select_nodes("/MudletPackage/HostPackage");
-    pugi::xml_node hostPackage = hostPackageResults.first().node();
+    pugi::xml_node const hostPackage = hostPackageResults.first().node();
     auto host = hostPackage.child("Host");
     host.remove_child("mInstalledPackages");
     host.remove_child("mInstalledModules");
@@ -1511,7 +1526,7 @@ void dlgConnectionProfiles::slot_load()
 
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
 {
-    QString profile_name = profile_name_entry->text().trimmed();
+    const QString profile_name = profile_name_entry->text().trimmed();
 
     if (profile_name.isEmpty()) {
         return;
@@ -1537,34 +1552,37 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         return;
     }
 
-    QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
+    const QString folder(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profile_name));
     QDir dir(folder);
     dir.setSorting(QDir::Time);
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
-    // loading this profile for the first time
-    bool firstTimeLoad = false;
+    // pre-install packages when loading this profile for the first time
+    bool preInstallPackages = false;
     pHost->hideMudletsVariables();
     if (entries.isEmpty()) {
-        firstTimeLoad = true;
+        preInstallPackages = true;
+        pHost->mLoadedOk = true;
     } else {
-        QString fileName{qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString())};
-        QFile file(fileName);
+        QFile file(qsl("%1%2").arg(folder, profile_history->itemData(profile_history->currentIndex()).toString()));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
 
         qDebug() << "[LOADING PROFILE]:" << file.fileName();
         if (auto [success, message] = importer.importPackage(&file, nullptr); !success) {
+            //: %1 is the path and file name (i.e. the location) of the problem fil
             pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
-                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.", "%1 is the filename").arg(fileName));
-        
-            qDebug() << "dlgConnectionProfiles::loadProfile: ERROR loading" << fileName << "due to:" << message;
+                "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.").arg(file.fileName()));
+
+            qDebug().nospace().noquote() << "dlgConnectionProfiles::loadProfile(" << alsoConnect << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
+        } else {
+            pHost->mLoadedOk = true;
         }
 
         pHost->refreshPackageFonts();
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
         if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            firstTimeLoad = true;
+            preInstallPackages = true;
         }
     }
 
@@ -1609,7 +1627,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         mudlet::self()->mDiscord.setApplicationID(pHost, mDiscordApplicationId);
     }
 
-    if (firstTimeLoad) {
+    if (preInstallPackages) {
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
         pHost->setupIreDriverBugfix();
     }
@@ -1661,7 +1679,7 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        QString port = port_entry->text().trimmed();
+        const QString port = port_entry->text().trimmed();
         if (!port.isEmpty() && (port.indexOf(QRegularExpression(qsl("^\\d+$")), 0) == -1)) {
             QString val = port;
             val.chop(1);
@@ -1674,7 +1692,7 @@ bool dlgConnectionProfiles::validateProfile()
         }
 
         bool ok;
-        int num = port.trimmed().toInt(&ok);
+        const int num = port.trimmed().toInt(&ok);
         if (!port.isEmpty() && (num > 65536 && ok)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2\n\n").arg(notificationAreaMessageBox->text(), tr("Port number must be above zero and below 65535.")));
@@ -1708,7 +1726,7 @@ bool dlgConnectionProfiles::validateProfile()
 #endif
 
         QUrl check;
-        QString url = host_name_entry->text().trimmed();
+        const QString url = host_name_entry->text().trimmed();
         check.setHost(url);
 
         if (url.isEmpty()) {
@@ -1790,26 +1808,26 @@ bool dlgConnectionProfiles::validateProfile()
 // credit: http://www.qtcentre.org/archive/index.php/t-23469.html
 bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QString& destFolder)
 {
-    QDir sourceDir(sourceFolder);
+    const QDir sourceDir(sourceFolder);
     if (!sourceDir.exists()) {
         return false;
     }
 
-    QDir destDir(destFolder);
+    const QDir destDir(destFolder);
     if (!destDir.exists()) {
         destDir.mkdir(destFolder);
     }
     QStringList files = sourceDir.entryList(QDir::Files);
     for (int i = 0; i < files.count(); i++) {
-        QString srcName = sourceFolder + QDir::separator() + files[i];
-        QString destName = destFolder + QDir::separator() + files[i];
+        const QString srcName = sourceFolder + QDir::separator() + files[i];
+        const QString destName = destFolder + QDir::separator() + files[i];
         QFile::copy(srcName, destName);
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
     for (int i = 0; i < files.count(); i++) {
-        QString srcName = sourceFolder + QDir::separator() + files[i];
-        QString destName = destFolder + QDir::separator() + files[i];
+        const QString srcName = sourceFolder + QDir::separator() + files[i];
+        const QString destName = destFolder + QDir::separator() + files[i];
         copyFolder(srcName, destName);
     }
     return true;
@@ -1881,7 +1899,7 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
 
     profiles_tree_widget->addItem(pItem);
     if (!hasCustomIcon(mudServer)) {
-        QPixmap pixmap(iconFileName);
+        QPixmap const pixmap(iconFileName);
         if (pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";
             return;
@@ -1903,26 +1921,26 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional
 {
     QPixmap background(120, 30);
 
-    QColor color = backgroundColor.value_or(mCustomIconColors.at(static_cast<int>((qHash(text) * 8131) % mCustomIconColors.count())));
+    QColor const color = backgroundColor.value_or(mCustomIconColors.at(static_cast<int>((qHash(text) * 8131) % mCustomIconColors.count())));
     background.fill(color);
 
     // Set to one larger than wanted so that do loop can contain the decrementor
     int fontSize = 30;
     QFont font(qsl("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
     // For an icon of size 120x30 allow 89x29 for the text:
-    QRect textRectangle(0, 0, 89, 29);
+    QRect const textRectangle(0, 0, 89, 29);
     QRect testRect;
     // Really long names will be drawn very small (font size 6) with the ends clipped off:
     do {
         font.setPointSize(--fontSize);
-        QFontMetrics metrics(font);
+        QFontMetrics const metrics(font);
         testRect = metrics.boundingRect(textRectangle, Qt::AlignCenter | Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
         QPainter painter(&background);
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        QPixmap pixmap(qsl(":/icons/mudlet_main_32px.png"));
+        QPixmap const pixmap(qsl(":/icons/mudlet_main_32px.png"));
         painter.drawPixmap(QRect(5, 5, 20, 20), pixmap);
         if (color.lightness() > 127) {
             painter.setPen(Qt::black);

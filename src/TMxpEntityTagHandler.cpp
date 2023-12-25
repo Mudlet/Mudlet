@@ -21,7 +21,7 @@
 
 TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
-    if (tag->getAttributesCount() < 2) {
+    if (tag->getAttributesCount() < 1) {
         return MXP_TAG_NOT_HANDLED;
     }
 
@@ -33,15 +33,16 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
 
     if (tag->hasAttribute("DELETE")) {
         resolver.unregisterEntity(entity);
-    } else if (!boolOptions.contains(tag->getAttrName(1), Qt::CaseInsensitive)) { // 2nd attribute is actually the value
+    } else if (tag->getAttributesCount() > 1 && !boolOptions.contains(tag->getAttrName(1), Qt::CaseInsensitive)) {
+        // 2nd attribute is actually the value
         const QString& value = tag->getAttrName(1);
         if (tag->hasAttribute("ADD")) {
-            QString prevDefinition = resolver.getResolution(entity);
+            const QString prevDefinition = resolver.getResolution(entity);
             QStringList definitionList = prevDefinition.split('|');
             definitionList.push_back(value);
             resolver.registerEntity(entity, definitionList.join('|'));
         } else if (tag->hasAttribute("REMOVE")) {
-            QString prevDefinition = resolver.getResolution(entity);
+            const QString prevDefinition = resolver.getResolution(entity);
             QStringList definitionList = prevDefinition.split('|');
             definitionList.removeOne(value);
             resolver.registerEntity(entity, definitionList.join('|'));
@@ -52,7 +53,17 @@ TMxpTagHandlerResult TMxpEntityTagHandler::handleStartTag(TMxpContext& ctx, TMxp
         if (tag->hasAttribute("PUBLISH")) {
             client.publishEntity(entity, value);
         }
-    }
+    } else if (!tag->hasAttribute("ADD") && !tag->hasAttribute("REMOVE")) {
+        // Apparently there is no (or an empty) value, so set us to empty string.
+        // Adding or removing an empty string to the value has no effect, that's why we skipped those.
+        // Note that the TagParser will parse a '' argument as a non existent argument, so
+        // so both <!EN name> and <!EN name ''> will come here.
+        const QString value;
+        resolver.registerEntity(entity, value);
 
+        if (tag->hasAttribute("PUBLISH")) {
+            client.publishEntity(entity, value);
+        }
+    }
     return MXP_TAG_HANDLED;
 }

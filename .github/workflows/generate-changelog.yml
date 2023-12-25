@@ -1,8 +1,6 @@
 name: Generate a changelog
 
 on:
-  schedule:
-    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
       from:
@@ -25,7 +23,7 @@ jobs:
 
     steps:
     - name: Checkout Mudlet repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
@@ -71,7 +69,7 @@ jobs:
         echo $changelog
 
     - name: Upload changelog as ${{matrix.format}}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: changelog.${{matrix.format}}
         path: changelog.${{matrix.format}}

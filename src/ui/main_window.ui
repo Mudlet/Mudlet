@@ -111,6 +111,17 @@
     </property>
     <addaction name="dactionOptions"/>
     <addaction name="dactionMultiView"/>
+    <addaction name="separator"/>
+    <addaction name="menuMute"/>
+   </widget>
+   <widget class="QMenu" name="menuMute">
+    <property name="title">
+     <string>Mute media</string>
+    </property>
+    <addaction name="dactionMuteMedia"/>
+    <addaction name="dactionMuteAPI"/>
+    <addaction name="dactionMuteMCMP"/>
+    <addaction name="dactionMuteMSP"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -312,6 +323,74 @@
    </property>
    <property name="toolTip">
     <string comment="Same text is used in 2 places.">&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionMuteMedia">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Mute all media</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Mutes all media played.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionMuteAPI">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Mute Mudlet API (Triggers, Scripts, etc.)</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Mutes media played by the Lua API and scripts.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionMuteMCMP">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Mute game MCMP (Mud Client Media Protocol)</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Mutes media played by the Mud Client Media Protocol (MCMP).&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionMuteMSP">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Mute game MSP (Mud Sound Protocol)</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;p&gt;Mutes media played by the Mud Sound Protocol (MSP).&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionInputLine">

@@ -1113,6 +1113,8 @@ function getLabelFormat(win)
   return reset
 end
 
+local processedEchoToHTML
+
 if rex then
   _Echos = {
     Patterns = {
@@ -1252,6 +1254,72 @@ if rex then
     end,
   }
 
+-- internal function which takes a processed echo table and a table of 'default'
+-- formatting options and returns it as an html string. used by xEcho for Label
+-- outputs and the html output for c/d/hecho2html functions.
+processedEchoToHTML = function(t, reset)
+  reset = reset or {
+    background = { 0, 0, 0 },
+    bold = false,
+    foreground = { 255, 255, 255 },
+    italic = false,
+    overline = false,
+    reverse = false,
+    strikeout = false,
+    underline = false
+  }
+  local format = table.deepcopy(reset)
+  local result = getHTMLformat(format)
+  for _,v in ipairs(t) do
+    local formatChanged = false
+    if type(v) == "table" then
+      if v.fg then
+        format.foreground = {v.fg[1], v.fg[2], v.fg[3]}
+        formatChanged = true
+      end
+      if v.bg then
+        format.background = {v.bg[1], v.bg[2], v.bg[3]}
+        formatChanged = true
+      end
+    elseif v == "\27bold" then
+      format.bold = true
+      formatChanged = true
+    elseif v == "\27boldoff" then
+      format.bold = false
+      formatChanged = true
+    elseif v == "\27italics" then
+      format.italic = true
+      formatChanged = true
+    elseif v == "\27italicsoff" then
+      format.italic = false
+      formatChanged = true
+    elseif v == "\27underline" then
+      format.underline = true
+      formatChanged = true
+    elseif v == "\27underlineoff" then
+      format.underline = false
+      formatChanged = true
+    elseif v == "\27strikethrough" then
+      format.strikeout = true
+      formatChanged = true
+    elseif v == "\27strikethroughoff" then
+      format.strikeout = false
+      formatChanged = true
+    elseif v == "\27overline" then
+      format.overline = true
+      formatChanged = true
+    elseif v == "\27overlineoff" then
+      format.overline = false
+      formatChanged = true
+    elseif v == "\27reset" then
+      format = table.deepcopy(reset)
+      formatChanged = true
+    end
+    v = formatChanged and getHTMLformat(format) or v
+    result = result .. v
+  end
+  return result
+end
 
   --- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).
   ---
@@ -1320,60 +1388,8 @@ if rex then
       if func ~= "echo" then
         return nil, "you cannot use echoLink, echoPopup, or insertText with Labels"
       end
-      local result = ""
       local reset = getLabelFormat(win)
-      local format = table.deepcopy(reset)
-      if format.bold or format.italic or format.overline or format.strikeout or format.underline then
-        result = getHTMLformat(format)
-      end
-      for _,v in ipairs(t) do
-        local formatChanged = false
-        if type(v) == "table" then
-          if v.fg then
-            format.foreground = {v.fg[1], v.fg[2], v.fg[3]}
-            formatChanged = true
-          end
-          if v.bg then
-            format.background = {v.bg[1], v.bg[2], v.bg[3]}
-            formatChanged = true
-          end
-        elseif v == "\27bold" then
-          format.bold = true
-          formatChanged = true
-        elseif v == "\27boldoff" then
-          format.bold = false
-          formatChanged = true
-        elseif v == "\27italics" then
-          format.italic = true
-          formatChanged = true
-        elseif v == "\27italicsoff" then
-          format.italic = false
-          formatChanged = true
-        elseif v == "\27underline" then
-          format.underline = true
-          formatChanged = true
-        elseif v == "\27underlineoff" then
-          format.underline = false
-          formatChanged = true
-        elseif v == "\27strikethrough" then
-          format.strikeout = true
-          formatChanged = true
-        elseif v == "\27strikethroughoff" then
-          format.strikeout = false
-          formatChanged = true
-        elseif v == "\27overline" then
-          format.overline = true
-          formatChanged = true
-        elseif v == "\27overlineoff" then
-          format.overline = false
-          formatChanged = true
-        elseif v == "\27reset" then
-          format = table.deepcopy(reset)
-          formatChanged = true
-        end
-        v = formatChanged and getHTMLformat(format) or v
-        result = result .. v
-      end
+      local result = processedEchoToHTML(t, reset)
       echo(win, result)
     else
       local t = _Echos.Process(str, style)
@@ -2695,4 +2711,215 @@ function scrollDown(window, lines)
   if not numLines then return nil, "window does not exist" end
   local curScroll = getScroll(window)
   scrollTo(window, math.min(curScroll + lines, numLines))
+end
+
+--[[ 
+The following functions are to allow easily and efficiently converting from
+one color echo type to another. So from cecho to decho. decho to hecho.
+Also includes an html output option to make html logging of c/d/hecho strings
+easy.
+--]]
+
+-- lookup tables for formatting strings in c/d/hecho formats
+-- table keys chosen to match the ones in _Echos.Patterns
+local echoOutputs = {
+  Color = {
+    ["\27reset"] = "<reset>",
+    ["\27bold"] = "<b>",
+    ["\27boldoff"] = "</b>",
+    ["\27italics"] = "<i>",
+    ["\27italicsoff"] = "</i>",
+    ["\27underline"] = "<u>",
+    ["\27underlineoff"] = "</u>",
+    ["\27strikethrough"] = "<s>",
+    ["\27strikethroughoff"] = "</s>",
+    ["\27overline"] = "<o>",
+    ["\27overlineoff"] = "</o>",
+  },
+  Decimal = {
+    ["\27reset"] = "<r>",
+    ["\27bold"] = "<b>",
+    ["\27boldoff"] = "</b>",
+    ["\27italics"] = "<i>",
+    ["\27italicsoff"] = "</i>",
+    ["\27underline"] = "<u>",
+    ["\27underlineoff"] = "</u>",
+    ["\27strikethrough"] = "<s>",
+    ["\27strikethroughoff"] = "</s>",
+    ["\27overline"] = "<o>",
+    ["\27overlineoff"] = "</o>",
+  },
+  Hex = {
+    ["\27reset"] = "#r",
+    ["\27bold"] = "#b",
+    ["\27boldoff"] = "#/b",
+    ["\27italics"] = "#i",
+    ["\27italicsoff"] = "#/i",
+    ["\27underline"] = "#u",
+    ["\27underlineoff"] = "#/u",
+    ["\27strikethrough"] = "#s",
+    ["\27strikethroughoff"] = "#/s",
+    ["\27overline"] = "#o",
+    ["\27overlineoff"] = "#/o",
+  }
+}
+
+-- make these items local for easier and swifter use
+local echoPatterns = _Echos.Patterns
+local echoProcess = _Echos.Process
+
+--- internal function responsible for taking the color information
+-- returned as part of the table by _Echos.Process and outputting
+-- it for a specific Xecho formatting type.
+local function processedColorsToEchoString(colorType, colors)
+  colorType = colorType:lower()
+  local result
+  if colorType == "hex" then
+    local fg,bg = "", ""
+    if colors.fg then
+      fg = string.format("%02x%02x%02x", unpack(colors.fg))
+    end
+    if colors.bg then
+      bg = string.format(",%02x%02x%02x", unpack(colors.bg))
+    end
+    result = string.format("#%s%s", fg, bg)
+  elseif colorType == "color" then
+    local fg,bg = "",""
+    if colors.fg then
+      fg = closestColor(colors.fg)
+    end
+    if colors.bg then
+      -- closestColor chokes if you provide an alpha channel for the background
+      bg = ":" .. closestColor(colors.bg[1], colors.bg[2], colors.bg[3])
+    end
+    result = string.format("<%s%s>", fg, bg)
+  elseif colorType == "decimal" then
+    local fg,bg = "", ""
+    if colors.fg then
+      fg = string.format("%d,%d,%d", unpack(colors.fg))
+    end
+    if colors.bg then
+      bg = string.format(":%d,%d,%d", colors.bg[1], colors.bg[2], colors.bg[3])
+    end
+    result = string.format("<%s%s>", fg, bg)
+  end
+  return result
+end
+
+-- internal function that powers the c/d/hecho2c/d/hecho/html functions below
+-- @tparam string str the formatted color string to transform
+-- @tparam string from the type of color formatting that str uses. What you're converting from. 'Color', 'Hex', or 'Decimal'
+-- @tparam string to the type of color formatting to output. 'Color', 'Hex', 'Decimal', or 'html'
+-- @tparam table resetFormat optional table of default formatting options to use when outputting as html.
+local function echoConverter(str, from, to, resetFormat)
+  local strType, fromType, toType, resetType = type(str), type(from), type(to), type(resetFormat)
+  local errTemplate = "bad argument #{argNum} type ({argName} as string expected, got {argType})"
+  local argNum, argName, argType
+  local err = false
+  if strType ~= "string" then
+    argNum = 1
+    argName = "str"
+    argType = strType
+    err = true
+  elseif fromType ~= "string" then
+    argNum = 2
+    argName = "from"
+    argType = fromType
+    err = true
+  elseif toType ~= "string" then
+    argNum = 3
+    argName = "to"
+    argType = toType
+    err = true
+  elseif resetFormat and resetType ~= "table" then
+    argType = resetType
+    errTemplate = "bad argument #4 type (optional resetFormat as table of formatting options expected, got {argType})"
+    err = true
+  end
+  if err then
+    printError(f(errTemplate), true, true)
+  end
+  from = from:title()
+  if not echoPatterns[from] then
+    local msg = "argument #4 (from) must be a valid echo type. Valid types are: " .. table.concat(table.keys(echoPatterns), ",")
+    printError(msg, true, true)
+  end
+  local processed = echoProcess(str, from)
+  if to:lower() == "html" then
+    return processedEchoToHTML(processed, resetFormat)
+  end
+  local outputs = echoOutputs[to]
+  if not outputs then
+    local msg = "argument #3 (to) must be a valid echo type. Valid types are: " .. table.concat(table.keys(echoOutputs), ",")
+    printError(msg, true, true)
+  end
+  local result = ""
+  for _, token in ipairs(processed) do
+    local formatter = outputs[token]
+    if formatter and token:find("\27") then
+      result = result .. formatter
+    elseif type(token) == "table" then
+      result = result .. processedColorsToEchoString(to, token)
+    else
+      result = result .. token
+    end
+  end
+  return result
+end
+
+-- converts cecho formatted string to html
+-- @tparam string str the string you're converting
+-- @tparam table resetFormat optional table of default formatting options, as returned by getTextFormat or getLabelFormat
+function cecho2html(str, resetFormat)
+  return echoConverter(str, "Color", "html", resetFormat)
+end
+
+-- converts cecho formatted string to decho
+-- @tparam string str the string you're converting
+function cecho2decho(str)
+  return echoConverter(str, "Color", "Decimal")
+end
+
+-- converts cecho formatted string to hecho
+-- @tparam string str the string you're converting
+function cecho2hecho(str)
+  return echoConverter(str, "Color", "Hex")
+end
+
+-- converts decho formatted string to hecho
+-- @tparam string str the string you're converting
+function decho2hecho(str)
+  return echoConverter(str, "Decimal", "Hex")
+end
+
+-- converts decho formatted string to cecho
+-- @tparam string str the string you're converting
+function decho2cecho(str)
+  return echoConverter(str, "Decimal", "Color")
+end
+
+-- converts decho formatted string to html
+-- @tparam string str the string you're converting
+-- @tparam table resetFormat optional table of default formatting options, as returned by getTextFormat or getLabelFormat
+function decho2html(str, resetFormat)
+  return echoConverter(str, "Decimal", "html", resetFormat)
+end
+
+-- converts hecho formatted string to decho
+-- @tparam string str the string you're converting
+function hecho2decho(str)
+  return echoConverter(str, "Hex", "Decimal")
+end
+
+-- converts hecho formatted string to cecho
+-- @tparam string str the string you're converting
+function hecho2cecho(str)
+  return echoConverter(str, "Hex", "Color")
+end
+
+-- converts hecho formatted string to html
+-- @tparam string str the string you're converting
+-- @tparam table resetFormat optional table of default formatting options, as returned by getTextFormat or getLabelFormat
+function hecho2html(str, resetFormat)
+  return echoConverter(str, "Hex", "html", resetFormat)
 end
