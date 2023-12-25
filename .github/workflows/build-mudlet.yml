@@ -373,6 +373,9 @@ jobs:
       run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
 
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+
     # we need to be in the right place for LuaGlobals.lua to load
     - name: Prep binary for running tests
       if: matrix.run_tests == 'true'
