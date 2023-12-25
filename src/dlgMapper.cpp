@@ -61,7 +61,7 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
     QMap<QString, QString> areaNames;
     while (it.hasNext()) {
         it.next();
-        QString name = it.value();
+        const QString name = it.value();
         areaNames.insert(name.toLower(), name);
     }
     //areaNames.sort();
@@ -84,12 +84,12 @@ dlgMapper::dlgMapper( QWidget * parent, Host * pH, TMap * pM )
 
     widget_panel->setVisible(mpHost->mShowPanel);
     connect(checkBox_roundRooms, &QAbstractButton::clicked, this, &dlgMapper::slot_toggleRoundRooms);
-    connect(pushButton_shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
-    connect(pushButton_shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZdown);
-    connect(pushButton_shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftLeft);
-    connect(pushButton_shiftRight, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftRight);
-    connect(pushButton_shiftUp, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftUp);
-    connect(pushButton_shiftDown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftDown);
+    connect(toolButton_shiftZup, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
+    connect(toolButton_shiftZdown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZdown);
+    connect(toolButton_shiftLeft, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftLeft);
+    connect(toolButton_shiftRight, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftRight);
+    connect(toolButton_shiftUp, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftUp);
+    connect(toolButton_shiftDown, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftDown);
     connect(spinBox_exitSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_exitSize);
     connect(spinBox_roomSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgMapper::slot_roomSize);
     connect(toolButton_togglePanel, &QAbstractButton::clicked, this, &dlgMapper::slot_togglePanel);
@@ -144,7 +144,7 @@ void dlgMapper::updateAreaComboBox()
         return;
     }
 
-    QString oldValue = comboBox_showArea->currentText(); // Remember where we were
+    const QString oldValue = comboBox_showArea->currentText(); // Remember where we were
     QMapIterator<int, QString> itAreaNamesA(mpMap->mpRoomDB->getAreaNamesMap());
     //insert sort them alphabetically (case INsensitive)
     QMap<QString, QString> areaNames;
@@ -250,12 +250,12 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         connect(pushButton_increaseBottom, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showMoreLowerLevels);
         connect(pushButton_reduceTop, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showLessUpperLevels);
         connect(pushButton_reduceBottom, &QAbstractButton::clicked, glWidget, &GLWidget::slot_showLessLowerLevels);
-        connect(pushButton_shiftZup, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftZup);
-        connect(pushButton_shiftZdown, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftZdown);
-        connect(pushButton_shiftLeft, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftLeft);
-        connect(pushButton_shiftRight, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftRight);
-        connect(pushButton_shiftUp, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftUp);
-        connect(pushButton_shiftDown, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftDown);
+        connect(toolButton_shiftZup, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftZup);
+        connect(toolButton_shiftZdown, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftZdown);
+        connect(toolButton_shiftLeft, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftLeft);
+        connect(toolButton_shiftRight, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftRight);
+        connect(toolButton_shiftUp, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftUp);
+        connect(toolButton_shiftDown, &QAbstractButton::clicked, glWidget, &GLWidget::slot_shiftDown);
         connect(pushButton_defaultView, &QAbstractButton::clicked, glWidget, &GLWidget::slot_defaultView);
         connect(pushButton_sideView, &QAbstractButton::clicked, glWidget, &GLWidget::slot_sideView);
         connect(pushButton_topView, &QAbstractButton::clicked, glWidget, &GLWidget::slot_topView);
@@ -289,7 +289,7 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
 
 void dlgMapper::slot_roomSize(int size)
 {
-    float floatSize = static_cast<float>(size / 10.0);
+    const float floatSize = static_cast<float>(size / 10.0);
     mp2dMap->setRoomSize(floatSize);
     mp2dMap->update();
 }
@@ -341,10 +341,10 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
 
     TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
     if (pR) {
-        int playerRoomArea = pR->getArea();
+        const int playerRoomArea = pR->getArea();
         TArea* pA = mpMap->mpRoomDB->getArea(playerRoomArea);
         if (pA) {
-            QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(playerRoomArea);
+            const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(playerRoomArea);
             if (!areaName.isEmpty()) {
                 comboBox_showArea->setCurrentText(areaName);
             } else {
@@ -371,7 +371,8 @@ void dlgMapper::slot_switchArea(const int index)
 void dlgMapper::slot_updateInfoContributors()
 {
     pushButton_info->menu()->clear();
-    auto* clearAction = new QAction(tr("None", "Don't show the map overlay, 'none' meaning no map overlay styled are enabled"), pushButton_info);
+    //: Don't show the map overlay, 'none' meaning no map overlay styled are enabled
+    auto* clearAction = new QAction(tr("None"), pushButton_info);
     pushButton_info->menu()->addAction(clearAction);
     connect(clearAction, &QAction::triggered, this, [=]() {
         for (auto action : pushButton_info->menu()->actions()) {

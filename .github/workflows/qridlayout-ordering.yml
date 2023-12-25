@@ -8,20 +8,20 @@ jobs:
   qgrid-ordering:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{github.event.pull_request.head.ref}}
           repository: ${{github.event.pull_request.head.repo.full_name}}
           fetch-depth: 0
           token: ${{secrets.GH_PAT_SORT_UIFILES}}
       - name: Use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
       - name: Install yarn dependencies
         run: |
           yarn add xml-js --dev
           node CI/fix.grid.ui.ordering.js
       - name: Add & Commit
-        uses: EndBug/add-and-commit@v9.1.2
+        uses: EndBug/add-and-commit@v9.1.3
         with:
           message: "Standarize UI files"
           add: "src/ui"

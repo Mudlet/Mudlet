@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2019, 2022-2023 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -41,6 +42,7 @@ public:
 
     T* getParent() const { return mpParent; }
     std::list<T*>* getChildrenList() const;
+    std::list<T*> getAncestorList() const;
     bool hasChildren() const { return (!mpMyChildrenList->empty()); }
     int getChildCount() const { return mpMyChildrenList->size(); }
     int getID() const { return mID; }
@@ -63,18 +65,28 @@ public:
     QString& getError();
     void setError(QString);
     bool state() const;
+/* No longer used - most cases were accessing the member directly
     QString getPackageName() const { return mPackageName; }
     void setPackageName(const QString& n) { mPackageName = n; }
+*/
+/* Not used, the member was not either
     void setModuleName(const QString& n) { mModuleName = n; }
     QString getModuleName() const { return mModuleName; }
+*/
     bool isFolder() { return mFolder; }
-    void setIsFolder(bool b) { mFolder = b; }
+    void setIsFolder(bool b) {
+        mFolder = b;
+        // Allow the folder to be enabled
+        if (b) {
+            mOK_init = true;
+        }
+    }
 
     T* mpParent;
     std::list<T*>* mpMyChildrenList;
     int mID;
     QString mPackageName;
-    QString mModuleName;
+// Not used:    QString mModuleName;
 
 protected:
     virtual bool canBeActivated() const;
@@ -280,6 +292,18 @@ template <class T>
 std::list<T*>* Tree<T>::getChildrenList() const
 {
     return mpMyChildrenList;
+}
+
+template <class T>
+std::list<T*> Tree<T>::getAncestorList() const
+{
+    std::list<T*> ancestorList;
+    auto node = mpParent;
+    while (node) {
+        ancestorList.push_back(node);
+        node = node->mpParent;
+    }
+    return ancestorList;
 }
 
 template <class T>

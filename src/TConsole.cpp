@@ -56,12 +56,13 @@
 const QString TConsole::cmLuaLineVariable("line");
 
 // A high-performance text widget with split screen ability for scrolling back
-// Contains two TTextEdits, each backed by a TBuffer
-TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
+// Contains two TTextEdits, and is backed by a TBuffer
+TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidget* parent)
 : QWidget(parent)
 , mpHost(pH)
 , buffer(pH, this)
 , emergencyStop(new QToolButton)
+, mConsoleName(name)
 , mpBaseVFrame(new QWidget(this))
 , mpTopToolBar(new QWidget(mpBaseVFrame))
 , mpBaseHFrame(new QWidget(mpBaseVFrame))
@@ -78,9 +79,9 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 {
-    auto ps = new QShortcut(this);
-    ps->setKey(Qt::CTRL | Qt::Key_W);
-    ps->setContext(Qt::WidgetShortcut);
+    auto quitShortcut = new QShortcut(this);
+    quitShortcut->setKey(Qt::CTRL | Qt::Key_W);
+    quitShortcut->setContext(Qt::WidgetShortcut);
 
     if (mType == CentralDebugConsole) {
         // Probably will not show up as this is used inside a QMainWindow widget
@@ -96,11 +97,11 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
 
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    QSizePolicy sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Expanding);
-    QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy const sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy const sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    QSizePolicy const sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    QSizePolicy const sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
 
@@ -348,17 +349,19 @@ TConsole::TConsole(Host* pH, ConsoleType type, QWidget* parent)
         int latencyFontPointSize = 21;
         QFont latencyFont = QFont(qsl("Bitstream Vera Sans Mono"), latencyFontPointSize, QFont::Normal);
         const int latencyFontSizeMargin = 10;
-        QString dummyTextA = tr("N:%1 S:%2",
-                                // intentional comment to separate arguments
-                                "The first argument 'N' represents the 'N'etwork latency; the second 'S' the "
-                                "'S'ystem (processing) time")
+        /*:
+        The first argument 'N' represents the 'N'etwork latency; the second 'S' the
+        'S'ystem (processing) time
+        */
+        const QString dummyTextA = tr("N:%1 S:%2")
                                      .arg(0.0, 0, 'f', 3)
                                      .arg(0.0, 0, 'f', 3);
-        QString dummyTextB = tr("<no GA> S:%1",
-                                // intentional comment to separate arguments
-                                "The argument 'S' represents the 'S'ystem (processing) time, in this situation "
-                                "the Game Server is not sending \"GoAhead\" signals so we cannot deduce the "
-                                "network latency...")
+        /*:
+        The argument 'S' represents the 'S'ystem (processing) time, in this situation
+        the Game Server is not sending "GoAhead" signals so we cannot deduce the
+        network latency...
+        */
+        const QString dummyTextB = tr("<no GA> S:%1")
                                      .arg(0.0, 0, 'f', 3);
         do {
             latencyFont.setPointSize(--latencyFontPointSize);
@@ -563,8 +566,8 @@ Host* TConsole::getHost()
 
 void TConsole::resizeConsole()
 {
-    QSize s = QSize(width(), height());
-    QResizeEvent event(s, s);
+    QSize const size = QSize(width(), height());
+    QResizeEvent event(size, size);
     QApplication::sendEvent(this, &event);
 }
 
@@ -629,15 +632,15 @@ void TConsole::resizeEvent(QResizeEvent* event)
 
     if (mType & MainConsole) {
         // don't call event in lua if size didn't change
-        bool preventLuaEvent = (getMainWindowSize() == mOldSize);
+        const bool preventLuaEvent = (getMainWindowSize() == mOldSize);
         mOldSize = getMainWindowSize();
         if (preventLuaEvent) {
             return;
         }
         if (!mpHost.isNull()) {
             TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-            QString func = "handleWindowResizeEvent";
-            QString n = "WindowResizeEvent";
+            const QString func = "handleWindowResizeEvent";
+            const QString n = "WindowResizeEvent";
             pLua->call(func, n);
 
             raiseMudletSysWindowResizeEvent(x, y);
@@ -646,8 +649,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
 //create the sysUserWindowResize Event for automatic resizing with Geyser
     if (mType & (UserWindow) && !mpHost.isNull()) {
         TLuaInterpreter* pLua = mpHost->getLuaInterpreter();
-        QString func = "handleWindowResizeEvent";
-        QString n = "WindowResizeEvent";
+        const QString func = "handleWindowResizeEvent";
+        const QString n = "WindowResizeEvent";
         pLua->call(func, n);
 
         TEvent mudletEvent {};
@@ -697,7 +700,7 @@ void TConsole::refresh()
     mpMainDisplay->move(mBorders.left(), mBorders.top());
     x = width();
     y = height();
-    QSize s = QSize(x, y);
+    QSize const s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(this, &event);
 }
@@ -785,9 +788,9 @@ void TConsole::closeEvent(QCloseEvent* event)
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
-            QDir dir_map;
-            QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-            QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
+            const QDir dir_map;
+            const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+            const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
             if (!dir_map.exists(directory_map)) {
                 dir_map.mkpath(directory_map);
             }
@@ -811,7 +814,7 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (!mUserAgreedToCloseConsole) {
     ASK:
-        int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+        const int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
         if (choice == QMessageBox::Cancel) {
             event->setAccepted(false);
             event->ignore();
@@ -828,9 +831,9 @@ void TConsole::closeEvent(QCloseEvent* event)
                 goto ASK;
             } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!
-                QDir dir_map;
-                QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-                QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+                const QDir dir_map;
+                const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
+                const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
                 if (!dir_map.exists(directory_map)) {
                     dir_map.mkpath(directory_map);
                 }
@@ -899,9 +902,9 @@ void TConsole::slot_toggleReplayRecording()
     }
     mRecordReplay = !mRecordReplay;
     if (mRecordReplay) {
-        QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
-        QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-        QDir dirLogFile;
+        const QString directoryLogFile = mudlet::getMudletPath(mudlet::profileReplayAndLogFilesPath, mProfileName);
+        const QString mLogFileName = qsl("%1/%2.dat").arg(directoryLogFile, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
+        const QDir dirLogFile;
         if (!dirLogFile.exists(directoryLogFile)) {
             dirLogFile.mkpath(directoryLogFile);
         }
@@ -1069,6 +1072,10 @@ void TConsole::setConsoleBgColor(int r, int g, int b, int a)
 
 void TConsole::scrollDown(int lines)
 {
+    if ((mType & (UserWindow|SubConsole)) && !mScrollingEnabled) {
+        return;
+    }
+
     mUpperPane->scrollDown(lines);
     if (!mUpperPane->mIsTailMode &&
         (mUpperPane->imageTopLine() + mUpperPane->getScreenHeight() >= buffer.lineBuffer.size() - mLowerPane->getRowCount())) {
@@ -1088,7 +1095,11 @@ void TConsole::scrollDown(int lines)
 
 void TConsole::scrollUp(int lines)
 {
-    bool lowerAppears = mLowerPane->isHidden();
+    if ((mType & (UserWindow|SubConsole)) && !mScrollingEnabled) {
+        return;
+    }
+
+    const bool lowerAppears = mLowerPane->isHidden();
     mLowerPane->mCursorY = buffer.size();
     mLowerPane->show();
     mLowerPane->updateScreenView();
@@ -1097,7 +1108,7 @@ void TConsole::scrollUp(int lines)
     if (lowerAppears) {
         QTimer::singleShot(0, this, [this]() {  mUpperPane->scrollUp(mLowerPane->getRowCount()); });
         if (!mpHost->mTutorialForSplitscreenScrollbackAlreadyShown) {
-            QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.");
+            const QString infoMsg = tr("[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.");
             mpHost->postMessage(infoMsg);
             mpHost->mTutorialForSplitscreenScrollbackAlreadyShown = true;
         }
@@ -1148,12 +1159,12 @@ void TConsole::reset()
 
 void TConsole::insertLink(const QString& text, QStringList& func, QStringList& hint, QPoint P, bool customFormat, QVector<int> luaReference)
 {
-    int x = P.x();
-    int y = P.y();
+    const int x = P.x();
+    const int y = P.y();
     QPoint P2 = P;
     P2.setX(x + text.size());
 
-    TChar standardLinkFormat = TChar(Qt::blue, mBgColor, TChar::Underline);
+    const TChar standardLinkFormat = TChar(Qt::blue, mBgColor, TChar::Underline);
     if (mTriggerEngineMode) {
         mpHost->getLuaInterpreter()->adjustCaptureGroups(x, text.size());
 
@@ -1190,11 +1201,11 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
 
             buffer.applyLink(P, P2, func, hint, luaReference);
             if (text.indexOf("\n") != -1) {
-                int y_tmp = mUserCursor.y();
-                int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                const int y_tmp = mUserCursor.y();
+                const int down = buffer.wrapLine(mUserCursor.y(), mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
-                int y_neu = y_tmp + down;
-                int x_adjust = text.lastIndexOf("\n");
+                const int y_neu = y_tmp + down;
+                const int x_adjust = text.lastIndexOf("\n");
                 int x_neu = 0;
                 if (x_adjust != -1) {
                     x_neu = text.size() - x_adjust - 1 > 0 ? text.size() - x_adjust - 1 : 0;
@@ -1210,8 +1221,8 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
 
 void TConsole::insertText(const QString& text, QPoint P)
 {
-    int x = P.x();
-    int y = P.y();
+    const int x = P.x();
+    const int y = P.y();
     if (mTriggerEngineMode) {
         mpHost->getLuaInterpreter()->adjustCaptureGroups(x, text.size());
         buffer.insertInLine(P, text, mFormatCurrent);
@@ -1226,9 +1237,9 @@ void TConsole::insertText(const QString& text, QPoint P)
             mLowerPane->showNewLines();
         } else {
             buffer.insertInLine(mUserCursor, text, mFormatCurrent);
-            int y_tmp = mUserCursor.y();
+            const int y_tmp = mUserCursor.y();
             if (text.indexOf(QChar::LineFeed) != -1) {
-                int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                const int down = buffer.wrapLine(y_tmp, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
                 mUpperPane->needUpdate(y_tmp, y_tmp + down + 1);
             } else {
                 mUpperPane->needUpdate(y_tmp, y_tmp + 1);
@@ -1241,18 +1252,18 @@ void TConsole::insertText(const QString& text, QPoint P)
 
 void TConsole::replace(const QString& text)
 {
-    int x = P_begin.x();
-    int o = P_end.x() - P_begin.x();
-    int r = text.size();
+    const int x = P_begin.x();
+    const int o = P_end.x() - P_begin.x();
+    const int r = text.size();
 
     if (mTriggerEngineMode) {
         if (hasSelection()) {
             if (r < o) {
-                int a = -1 * (o - r);
+                const int a = -1 * (o - r);
                 mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
             }
             if (r > o) {
-                int a = r - o;
+                const int a = r - o;
                 mpHost->getLuaInterpreter()->adjustCaptureGroups(x, a);
             }
         } else {
@@ -1320,7 +1331,7 @@ int TConsole::getLineCount()
 QStringList TConsole::getLines(int from, int to)
 {
     QStringList ret;
-    int delta = abs(from - to);
+    const int delta = abs(from - to);
     for (int i = 0; i < delta; i++) {
         ret << buffer.line(from + i);
     }
@@ -1335,8 +1346,8 @@ void TConsole::selectCurrentLine()
 std::list<int> TConsole::getFgColor()
 {
     std::list<int> result;
-    int x = P_begin.x();
-    int y = P_begin.y();
+    const int x = P_begin.x();
+    const int y = P_begin.y();
     if (y < 0) {
         return result;
     }
@@ -1348,9 +1359,9 @@ std::list<int> TConsole::getFgColor()
     }
 
     auto line = buffer.buffer.at(y);
-    int len = static_cast<int>(line.size());
+    const int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        QColor color(line.at(x).foreground());
+        QColor const color(line.at(x).foreground());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
@@ -1362,8 +1373,8 @@ std::list<int> TConsole::getFgColor()
 std::list<int> TConsole::getBgColor()
 {
     std::list<int> result;
-    int x = P_begin.x();
-    int y = P_begin.y();
+    const int x = P_begin.x();
+    const int y = P_begin.y();
     if (y < 0) {
         return result;
     }
@@ -1375,9 +1386,9 @@ std::list<int> TConsole::getBgColor()
     }
 
     auto line = buffer.buffer.at(y);
-    int len = static_cast<int>(line.size());
+    const int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        QColor color(line.at(x).background());
+        QColor const color(line.at(x).background());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
@@ -1388,8 +1399,8 @@ std::list<int> TConsole::getBgColor()
 
 QPair<quint8, TChar> TConsole::getTextAttributes() const
 {
-    int x = P_begin.x();
-    int y = P_begin.y();
+    const int x = P_begin.x();
+    const int y = P_begin.y();
     if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size()) || x >= (static_cast<int>(buffer.buffer.at(y).size()) - 1)) {
         return qMakePair(2, TChar());
     }
@@ -1453,9 +1464,14 @@ bool TConsole::resetConsoleBackgroundImage()
 
 void TConsole::setCmdVisible(bool isVisible)
 {
-    QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // create MiniConsole commandline if it's not existing
     if (!mpCommandLine) {
+        if (!isVisible) {
+            // If we don't have one and we are being told to hide it then
+            // really there is nothing to do - so lets do nothing:
+            return;
+        }
         mpCommandLine = new TCommandLine(mpHost, mConsoleName, TCommandLine::ConsoleCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
@@ -1521,7 +1537,7 @@ int TConsole::getLastLineNumber()
 
 void TConsole::moveCursorEnd()
 {
-    int y = buffer.getLastLineNumber();
+    const int y = buffer.getLastLineNumber();
     int x = buffer.line(y).size() - 1;
     x = x >= 0 ? x : 0;
     moveCursor(x, y);
@@ -1556,7 +1572,7 @@ int TConsole::select(const QString& text, int numOfMatch)
 
     int begin = -1;
     for (int i = 0; i < numOfMatch; i++) {
-        QString li = buffer.line(mUserCursor.y());
+        const QString li = buffer.line(mUserCursor.y());
         if (li.isEmpty()) {
             continue;
         }
@@ -1571,7 +1587,7 @@ int TConsole::select(const QString& text, int numOfMatch)
         }
     }
 
-    int end = begin + text.size();
+    const int end = begin + text.size();
     P_begin.setX(begin);
     P_begin.setY(mUserCursor.y());
     P_end.setX(end);
@@ -1596,7 +1612,7 @@ bool TConsole::selectSection(int from, int to)
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
         return false;
     }
-    int s = buffer.buffer[mUserCursor.y()].size();
+    const int s = buffer.buffer[mUserCursor.y()].size();
     if (from > s || from + to > s) {
         return false;
     }
@@ -1618,18 +1634,18 @@ bool TConsole::selectSection(int from, int to)
 std::tuple<bool, QString, int, int> TConsole::getSelection()
 {
     if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
-        return std::make_tuple(false, qsl("the selection is no longer valid"), 0, 0);
+        return {false, qsl("the selection is no longer valid"), 0, 0};
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
     const auto line = buffer.line(mUserCursor.y());
     if (line.size() < start) {
-        return std::make_tuple(false, qsl("the selection is no longer valid"), 0, 0);
+        return {false, qsl("the selection is no longer valid"), 0, 0};
     }
 
     const auto text = line.mid(start, length);
-    return std::make_tuple(true, text, start, length);
+    return {true, text, start, length};
 }
 
 void TConsole::setLink(const QStringList& linkFunction, const QStringList& linkHint, const QVector<int> linkReference)
@@ -1709,11 +1725,21 @@ void TConsole::setHorizontalScrollBar(bool isEnabled)
     }
 }
 
+void TConsole::setScrolling(const bool state)
+{
+    if (mType & (UserWindow | SubConsole)) {
+        mScrollingEnabled = state;
+        if (!mScrollingEnabled) {
+            clearSplit();
+        }
+    }
+}
+
 void TConsole::printCommand(QString& msg)
 {
     if (mTriggerEngineMode) {
         msg.append(QChar::LineFeed);
-        int lineBeforeNewContent = buffer.getLastLineNumber();
+        const int lineBeforeNewContent = buffer.getLastLineNumber();
         if (lineBeforeNewContent >= 0) {
             if (buffer.lineBuffer.at(lineBeforeNewContent).right(1) != QChar(QChar::LineFeed)) {
                 msg.prepend(QChar::LineFeed);
@@ -1721,7 +1747,7 @@ void TConsole::printCommand(QString& msg)
         }
         buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
     } else {
-        int lineBeforeNewContent = buffer.size() - 2;
+        const int lineBeforeNewContent = buffer.size() - 2;
         if (lineBeforeNewContent >= 0) {
             int promptEnd = buffer.buffer.at(lineBeforeNewContent).size();
             if (promptEnd < 0) {
@@ -1729,9 +1755,9 @@ void TConsole::printCommand(QString& msg)
             }
             if (buffer.promptBuffer[lineBeforeNewContent]) {
                 QPoint P(promptEnd, lineBeforeNewContent);
-                TChar format(mCommandFgColor, mCommandBgColor);
+                const TChar format(mCommandFgColor, mCommandBgColor);
                 buffer.insertInLine(P, msg, format);
-                int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
+                const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mFormatCurrent);
 
                 mUpperPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
                 mLowerPane->needUpdate(lineBeforeNewContent, lineBeforeNewContent + 1 + down);
@@ -1749,7 +1775,7 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
     if (customFormat) {
         buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
     } else {
-        TChar f = TChar(Qt::blue, (mType == MainConsole ? mpHost->mBgColor : mBgColor), TChar::Underline);
+        const TChar f = TChar(Qt::blue, (mType == MainConsole ? mpHost->mBgColor : mBgColor), TChar::Underline);
         buffer.addLink(mTriggerEngineMode, text, func, hint, f, luaReference);
     }
     mUpperPane->showNewLines();
@@ -1759,7 +1785,7 @@ void TConsole::echoLink(const QString& text, QStringList& func, QStringList& hin
 // An overload of print(const QString& msg):
 void TConsole::print(const char* txt)
 {
-    QString msg(txt);
+    const QString msg(txt);
     print(msg);
 }
 
@@ -1790,7 +1816,7 @@ void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgCo
 
 void TConsole::printSystemMessage(const QString& msg)
 {
-    QString txt = tr("System Message: %1").arg(msg);
+    const QString txt = tr("System Message: %1").arg(msg);
     print(txt, mSystemMessageFgColor, mSystemMessageBgColor);
 }
 
@@ -1937,10 +1963,10 @@ QSize TConsole::getMainWindowSize() const
     if (isHidden()) {
         return mOldSize;
     }
-    QSize consoleSize = size();
-    int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
-    int toolbarHeight = mpTopToolBar->height();
-    int commandLineHeight = mpCommandLine->height();
+    QSize const consoleSize = size();
+    const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
+    const int toolbarHeight = mpTopToolBar->height();
+    const int commandLineHeight = mpCommandLine->height();
     QSize mainWindowSize(consoleSize.width() - toolbarWidth, consoleSize.height() - (commandLineHeight + toolbarHeight));
     return mainWindowSize;
 }
@@ -1954,7 +1980,30 @@ void TConsole::setProfileName(const QString& newName)
 void TConsole::dragEnterEvent(QDragEnterEvent* e)
 {
     if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
-        e->acceptProposedAction();
+        // Use ctrl key to decide if action is link or copy
+        // CopyAction corresponds to installing dropped file as a package
+        // LinkAction corresponds to installing dropped file as a module
+        Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+        if (modifiers & Qt::ControlModifier) {
+            e->setDropAction(Qt::LinkAction);
+        } else {
+            e->setDropAction(Qt::CopyAction);
+        }
+        e->accept();
+    }
+}
+void TConsole::dragMoveEvent(QDragMoveEvent* e) {
+    if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
+        // Use ctrl key to decide if action is link or copy
+        // CopyAction corresponds to installing dropped file as a package
+        // LinkAction corresponds to installing dropped file as a module
+        Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+        if (modifiers & Qt::ControlModifier) {
+            e->setDropAction(Qt::LinkAction);
+        } else {
+            e->setDropAction(Qt::CopyAction);
+        }
+        e->accept();
     }
 }
 
@@ -1962,11 +2011,11 @@ void TConsole::dragEnterEvent(QDragEnterEvent* e)
 void TConsole::dropEvent(QDropEvent* e)
 {
     for (const auto& url : e->mimeData()->urls()) {
-        QString fname = url.toLocalFile();
-        QFileInfo info(fname);
+        const QString fname = url.toLocalFile();
+        const QFileInfo info(fname);
         if (info.exists()) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            QPoint pos = e->pos();
+            const QPoint pos = e->pos();
 #else
             QPoint pos = e->position().toPoint();
 #endif
@@ -1987,9 +2036,9 @@ void TConsole::dropEvent(QDropEvent* e)
         }
     }
     if (e->mimeData()->hasText()) {
-        if (QUrl url(e->mimeData()->text()); url.isValid()) {
+        if (QUrl const url(e->mimeData()->text()); url.isValid()) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            QPoint pos = e->pos();
+            const QPoint pos = e->pos();
 #else
             QPoint pos = e->position().toPoint();
 #endif
@@ -2053,7 +2102,7 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     default:                mudletEvent.mArgumentList.append(QString::number(0));
     }
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    QPoint pos = event->pos();
+    const QPoint pos = event->pos();
 #else
     QPoint pos = event->position().toPoint();
 #endif
@@ -2077,16 +2126,19 @@ void TConsole::mousePressEvent(QMouseEvent* event)
 
 void TConsole::slot_adjustAccessibleNames()
 {
-    bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    const bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
     switch (mType) {
     case CentralDebugConsole:
         setAccessibleName(tr("Debug Console."));
         setAccessibleDescription(tr("Debug messages from all profiles are shown here."));
         if (mLowerPane->isVisible()) {
-            mUpperPane->setAccessibleName(tr("Central debug console past content.", "accessibility-friendly name to describe the upper half of the Mudlet central debug window when you've scrolled up"));
-            mLowerPane->setAccessibleName(tr("Central debug console live content.", "accessibility-friendly name to describe the lower half of the Mudlet central debug when you've scrolled up"));
+            //: accessibility-friendly name to describe the upper half of the Mudlet central debug window when you've scrolled up
+            mUpperPane->setAccessibleName(tr("Central debug console past content."));
+            //: accessibility-friendly name to describe the lower half of the Mudlet central debug when you've scrolled up
+            mLowerPane->setAccessibleName(tr("Central debug console live content."));
         } else {
-            mUpperPane->setAccessibleName(tr("Central debug console.", "accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up"));
+            //: accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up
+            mUpperPane->setAccessibleName(tr("Central debug console."));
             mLowerPane->setAccessibleName(QString());
         }
         return;
@@ -2094,18 +2146,24 @@ void TConsole::slot_adjustAccessibleNames()
         setAccessibleName(tr("Error Console in editor."));
         if (mLowerPane->isVisible()) {
             if (multipleProfilesActive) {
-                mUpperPane->setAccessibleName(tr("Editor's error window for profile \"%1\", past content.", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when you've scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
-                mLowerPane->setAccessibleName(tr("Editor's error window for profile \"%1\", live content.", "accessibility-friendly name to describe the lower half of the Mudlet profile's editor error window when you've scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+                //: accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when you've scrolled up, %1 is the name of the profile when more than one is loaded.
+                mUpperPane->setAccessibleName(tr("Editor's error window for profile \"%1\", past content.").arg(mProfileName));
+                //: accessibility-friendly name to describe the lower half of the Mudlet profile's editor error window when you've scrolled up, %1 is the name of the profile when more than one is loaded.
+                mLowerPane->setAccessibleName(tr("Editor's error window for profile \"%1\", live content.").arg(mProfileName));
             } else {
-                mUpperPane->setAccessibleName(tr("Editor's error window past content.", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when you've scrolled up and only one profile is loaded."));
-                mLowerPane->setAccessibleName(tr("Editor's error window live content.", "accessibility-friendly name to describe the lower half of the Mudlet profile's editor error window when you've scrolled up and only one profile is loaded."));
+                //: accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when you've scrolled up and only one profile is loaded.
+                mUpperPane->setAccessibleName(tr("Editor's error window past content."));
+                //: accessibility-friendly name to describe the lower half of the Mudlet profile's editor error window when you've scrolled up and only one profile is loaded.
+                mLowerPane->setAccessibleName(tr("Editor's error window live content."));
             }
             setAccessibleDescription(tr("Error messages for the \"%1\" profile are shown here in the editor.").arg(mProfileName));
         } else {
             if (multipleProfilesActive) {
-                mUpperPane->setAccessibleName(tr("Editor's error window for profile \"%1\".", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+                //: accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.
+                mUpperPane->setAccessibleName(tr("Editor's error window for profile \"%1\".").arg(mProfileName));
             } else {
-                mUpperPane->setAccessibleName(tr("Editor's error window", "accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when it is not scrolled up and only one profile is loaded."));
+                //: accessibility-friendly name to describe the upper half of the Mudlet profile's editor error window when it is not scrolled up and only one profile is loaded.
+                mUpperPane->setAccessibleName(tr("Editor's error window"));
             }
             mLowerPane->setAccessibleName(QString());
             setAccessibleDescription(tr("Error messages are shown here in the editor."));
@@ -2120,17 +2178,23 @@ void TConsole::slot_adjustAccessibleNames()
         }
         if (mLowerPane->isVisible()) {
             if (multipleProfilesActive) {
-                mUpperPane->setAccessibleName(tr("Profile \"%1\" main window past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when you've scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
-                mLowerPane->setAccessibleName(tr("Profile \"%1\" main window live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's main window when you've scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's main window when you've scrolled up, %1 is the name of the profile when more than one is loaded.
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" main window past content.").arg(mProfileName));
+                //: accessibility-friendly name to describe the lower half of a Mudlet profile's main window when you've scrolled up, %1 is the name of the profile when more than one is loaded.
+                mLowerPane->setAccessibleName(tr("Profile \"%1\" main window live content.").arg(mProfileName));
             } else {
-                mUpperPane->setAccessibleName(tr("Profile main window past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when you've scrolled up and only one profile is loaded."));
-                mLowerPane->setAccessibleName(tr("Profile main window live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's main window when you've scrolled up and only one profile is loaded."));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's main window when you've scrolled up and only one profile is loaded.
+                mUpperPane->setAccessibleName(tr("Profile main window past content."));
+                //: accessibility-friendly name to describe the lower half of a Mudlet profile's main window when you've scrolled up and only one profile is loaded.
+                mLowerPane->setAccessibleName(tr("Profile main window live content."));
             }
         } else {
             if (multipleProfilesActive) {
-                mUpperPane->setAccessibleName(tr("Profile \"%1\" main window.", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.").arg(mProfileName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" main window.").arg(mProfileName));
             } else {
-                mUpperPane->setAccessibleName(tr("Profile main window.", "accessibility-friendly name to describe the upper half of a Mudlet profile's main window when it is not scrolled up and only one profile is loaded."));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's main window when it is not scrolled up and only one profile is loaded.
+                mUpperPane->setAccessibleName(tr("Profile main window."));
             }
             mLowerPane->setAccessibleName(QString());
         }
@@ -2144,17 +2208,23 @@ void TConsole::slot_adjustAccessibleNames()
         setAccessibleDescription(tr("Game content or locally generated text may be sent here."));
         if (mLowerPane->isVisible()) {
             if (multipleProfilesActive) {
-                mUpperPane->setAccessibleName(tr("Profile \"%1\" embedded window \"%2\" past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
-                mLowerPane->setAccessibleName(tr("Profile \"%1\" embedded window \"%2\" live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" embedded window \"%2\" past content.").arg(mProfileName, mConsoleName));
+                //: accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.
+                mLowerPane->setAccessibleName(tr("Profile \"%1\" embedded window \"%2\" live content.").arg(mProfileName, mConsoleName));
             } else {
-                mUpperPane->setAccessibleName(tr("Profile embedded window \"%1\" past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.").arg(mConsoleName));
-                mLowerPane->setAccessibleName(tr("Profile embedded window \"%1\" live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.").arg(mConsoleName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.
+                mUpperPane->setAccessibleName(tr("Profile embedded window \"%1\" past content.").arg(mConsoleName));
+                //: accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.
+                mLowerPane->setAccessibleName(tr("Profile embedded window \"%1\" live content.").arg(mConsoleName));
             }
         } else {
             if (multipleProfilesActive) {
-                mUpperPane->setAccessibleName(tr("Profile \"%1\" embedded window \"%2\".", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" embedded window \"%2\".").arg(mProfileName, mConsoleName));
             } else {
-                mUpperPane->setAccessibleName(tr("Profile embedded window \"%1\".", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when it is not scrolled up, %1 is the name of the window.").arg(mConsoleName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when it is not scrolled up, %1 is the name of the window.
+                mUpperPane->setAccessibleName(tr("Profile embedded window \"%1\".").arg(mConsoleName));
             }
             mLowerPane->setAccessibleName(QString());
         }
@@ -2168,17 +2238,23 @@ void TConsole::slot_adjustAccessibleNames()
         setAccessibleDescription(tr("Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window."));
         if (mLowerPane->isVisible()) {
             if (multipleProfilesActive) {
-                mUpperPane->setAccessibleName(tr("Profile \"%1\" user window \"%2\" past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
-                mLowerPane->setAccessibleName(tr("Profile \"%1\" user window \"%2\" live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's floating/dockable user window window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" user window \"%2\" past content.").arg(mProfileName, mConsoleName));
+                //: accessibility-friendly name to describe the lower half of a Mudlet profile's floating/dockable user window window when you've scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.
+                mLowerPane->setAccessibleName(tr("Profile \"%1\" user window \"%2\" live content.").arg(mProfileName, mConsoleName));
             } else {
-                mUpperPane->setAccessibleName(tr("Profile user window \"%1\" past content.", "accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.").arg(mConsoleName));
-                mLowerPane->setAccessibleName(tr("Profile user window \"%1\" live content.", "accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.").arg(mConsoleName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.
+                mUpperPane->setAccessibleName(tr("Profile user window \"%1\" past content.").arg(mConsoleName));
+                //: accessibility-friendly name to describe the lower half of a Mudlet profile's sub-console window when you've scrolled up, %1 is the name of the window.
+                mLowerPane->setAccessibleName(tr("Profile user window \"%1\" live content.").arg(mConsoleName));
             }
         } else {
             if (multipleProfilesActive) {
-                mUpperPane->setAccessibleName(tr("Profile \"%1\" user window \"%2\".", "accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.").arg(mProfileName, mConsoleName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.
+                mUpperPane->setAccessibleName(tr("Profile \"%1\" user window \"%2\".").arg(mProfileName, mConsoleName));
             } else {
-                mUpperPane->setAccessibleName(tr("Profile user window \"%1\".", "accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window window when it is not scrolled up, %1 is the name of the window.").arg(mConsoleName));
+                //: accessibility-friendly name to describe the upper half of a Mudlet profile's floating/dockable user window window when it is not scrolled up, %1 is the name of the window.
+                mUpperPane->setAccessibleName(tr("Profile user window \"%1\".").arg(mConsoleName));
             }
             mLowerPane->setAccessibleName(QString());
         }
@@ -2332,4 +2408,46 @@ void TConsole::slot_clearSearchResults()
     buffer.clearSearchHighlights();
     mUpperPane->forceUpdate();
     mLowerPane->forceUpdate();
+}
+
+void TConsole::handleLinesOverflowEvent(const int lineCount)
+{
+    if (mType & ~(UserWindow | SubConsole)) {
+        // It isn't a type that we need to worry about the number of lines of
+        // text in it:
+        return;
+    }
+
+    if (mScrollingEnabled) {
+        // It is capable of scrolling so a "text overflow" is not a concern:
+        return;
+    }
+
+    const int linesSpare = mUpperPane->getRowCount() - lineCount;
+    if (linesSpare >= 0) {
+        // There IS space for all the lines
+        return;
+    }
+
+    // Else we do have an overflow situation so let's raise an event for it:
+    TEvent sysWindowOverflow {};
+    sysWindowOverflow.mArgumentList.append(QLatin1String("sysWindowOverflowEvent"));
+    sysWindowOverflow.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    sysWindowOverflow.mArgumentList.append(mConsoleName);
+    sysWindowOverflow.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    sysWindowOverflow.mArgumentList.append(QString::number(-linesSpare));
+    sysWindowOverflow.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(sysWindowOverflow);
+}
+
+void TConsole::clearSplit()
+{
+    mLowerPane->mCursorY = buffer.size();
+    mLowerPane->hide();
+    buffer.mCursorY = buffer.size();
+    mUpperPane->mCursorY = buffer.size();
+    mUpperPane->mCursorX = 0;
+    mUpperPane->mIsTailMode = true;
+    mUpperPane->updateScreenView();
+    mUpperPane->forceUpdate();
 }
