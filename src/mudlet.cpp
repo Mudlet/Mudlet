@@ -143,7 +143,7 @@ mudlet::mudlet()
     scmIsPublicTestVersion = mAppBuild.startsWith("-ptb");
     scmIsDevelopmentVersion = !scmIsReleaseVersion && !scmIsPublicTestVersion;
 
-    scmVersion = qsl("Mudlet " APP_VERSION + gitSha);
+    scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
 
     if (scmIsPublicTestVersion) {
         qApp->setApplicationName(qsl("Mudlet Public Test Build"));
@@ -336,19 +336,19 @@ mudlet::mudlet()
     mpActionMuteAPI->setIcon(QIcon(qsl(":/icons/mute.png")));
     mpActionMuteAPI->setIconText(tr("Mute Mudlet API (Triggers, Scripts, etc.)"));
     mpActionMuteAPI->setObjectName(qsl("muteAPI"));
-    mpActionMuteAPI->setCheckable(true); 
+    mpActionMuteAPI->setCheckable(true);
 
     mpActionMuteMCMP = new QAction(tr("Mute game MCMP (Mud Client Media Protocol)"), this);
     mpActionMuteMCMP->setIcon(QIcon(qsl(":/icons/mute.png")));
     mpActionMuteMCMP->setIconText(tr("Mute game MCMP (Mud Client Media Protocol)"));
     mpActionMuteMCMP->setObjectName(qsl("muteMCMP"));
-    mpActionMuteMCMP->setCheckable(true); 
+    mpActionMuteMCMP->setCheckable(true);
 
     mpActionMuteMSP = new QAction(tr("Mute game MSP (Mud Sound Protocol)"), this);
     mpActionMuteMSP->setIcon(QIcon(qsl(":/icons/mute.png")));
     mpActionMuteMSP->setIconText(tr("Mute game MSP (Mud Sound Protocol)"));
     mpActionMuteMSP->setObjectName(qsl("muteMSP"));
-    mpActionMuteMSP->setCheckable(true); 
+    mpActionMuteMSP->setCheckable(true);
 
     mpButtonMute->addAction(mpActionMuteMedia);
     mpButtonMute->addAction(mpActionMuteAPI);
