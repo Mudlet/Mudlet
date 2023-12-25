@@ -672,7 +672,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="2694"/>
       <source>Set room&apos;s name and color of icon, weight and lock for speed walks, and a symbol to mark special rooms</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Установить звание комнаты, цвет иконы, вес и замок для скоростных прогулок, а также символ для обозначения специальных комнат</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2701"/>
@@ -1049,7 +1049,8 @@ factor of:</source>
 See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <comment>The &apos;[MAP ERROR:]&apos; text should be the same as that used for the translation of &quot;[MAP ERROR:]%1
 &quot; in the &apos;TMAP::logerror(...)&apos; function.</comment>
-      <translation type="unfinished"/>
+      <translation>[ ОШИБКА ] - Невозможно добавить &quot;%1&quot; в качестве области карты.
+Смотрите сообщение &quot;[ MAP ERROR:]&quot;.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4177"/>
@@ -1534,7 +1535,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2185"/>
       <source>Game content or locally generated text may be sent here.</source>
-      <translation type="unfinished"/>
+      <translation>Сюда может быть отправлен игровой контент или локально сгенерированный текст.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2211"/>
@@ -1903,7 +1904,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1523"/>
       <source>Gif Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Отчет Gif:</translation>
     </message>
   </context>
   <context>
@@ -4164,7 +4165,7 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="2227"/>
       <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
-      <translation type="unfinished"/>
+      <translation>[ ИНФО ] - Доступно более безопасное соединение на порту %1.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="2232"/>
@@ -6473,43 +6474,43 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/dlgProfilePreferences.cpp" line="804"/>
       <source>100</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>100</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
       <source>200</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>200</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="806"/>
       <source>500</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>500</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="807"/>
       <source>1,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>1,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="808"/>
       <source>2,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>2,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="809"/>
       <source>5,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>5,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="810"/>
       <source>10,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1759"/>
