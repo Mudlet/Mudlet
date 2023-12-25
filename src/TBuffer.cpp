@@ -2255,56 +2255,60 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
 
 // Wraps text to max line length of mWrapAt
 // Applies indentation of mWrapIndent to wrapped lines
+// If wrapLength <= indentWidth, emits a warning and returns unmodified text
 QString TBuffer::wrapText(const QString& text) const
 {
     if (mWrapAt <= mWrapIndent) {
-        qWarning() << "mWrapAt (" << mWrapAt << ") is too small to accommodate mWrapIndent (" << mWrapIndent << ")";
+        qWarning() << "Wrap (" << mWrapAt << ") is too small to accommodate Indent (" << mWrapIndent << ")";
+        return text;
     }
 
-    const QString wordBreaks = qsl(",.- ");
     QString wrappedText;
-    QString currentWord;
-    QString currentLine;
-    int wordsInCurrentLine = 0;
+    qsizetype curIndent = 0;
+    QTextBoundaryFinder lineFinder(QTextBoundaryFinder::Line, text);
+    const QString indentText = QChar::LineFeed + QString(" ").repeated(mWrapIndent);
 
-    for (qsizetype i = 0; i < text.size(); i++) {
-        const bool atNewline = (text.at(i) == QChar::LineFeed);
-        if (atNewline) {
-            currentLine += currentWord;
-            wrappedText += QChar::LineFeed % currentLine;
-            currentLine.clear();
-            currentWord.clear();
-            wordsInCurrentLine = 0;
+    for (qsizetype curLineStart = 0; curLineStart < text.size(); curLineStart++) {
+        // 1. Find where the next line break is.
+        //    The end of the input text also counts as a line break.
+        qsizetype nextLineBreak = text.indexOf(QChar::LineFeed, curLineStart);
+        if (nextLineBreak == -1) {
+            nextLineBreak = text.size();
+        }
+
+        // 2. Find where the wrap window ends
+        qsizetype wrapWindowEnd = curLineStart + mWrapAt - curIndent;
+
+        // 3. If linebreak happens within wrap window:
+        //    Clear indentation, write the line, and skip the rest of the steps
+        if (nextLineBreak >= 0 && nextLineBreak < wrapWindowEnd) {
+            curIndent = 0;
+            qsizetype lineWidth = nextLineBreak - curLineStart + 1;
+            wrappedText += text.midRef(curLineStart, lineWidth);
+            curLineStart = nextLineBreak;
             continue;
         }
 
-        currentWord += text.at(i);
+        // 4. Find a good place to break up this line
+        lineFinder.setPosition(wrapWindowEnd + 1);
+        lineFinder.toPreviousBoundary();
+        qsizetype safeLineEnd = lineFinder.position();
 
-        const bool atWordBreak = (wordBreaks.indexOf(text.at(i)) > -1);
-        if (atWordBreak) {
-            // Reached break in word
-            // Add current word to the line and reset for next word
-            currentLine += currentWord;
-            currentWord.clear();
-            wordsInCurrentLine++;
+        // 5. If a single word is too long to fit in the wrap window,
+        //    write as much of it as possible
+        if (safeLineEnd <= curLineStart) {
+            safeLineEnd = wrapWindowEnd;
         }
 
-        const qsizetype lineLengthWithWord = currentLine.size() + currentWord.size();
-        const bool needNewLine = (lineLengthWithWord >= mWrapAt);
-        const bool atFinalCharacter = (i == text.size()-1);
+        // 6. Move start point forward, set indention level
+        qsizetype lineWidth = safeLineEnd - curLineStart;
+        wrappedText += text.midRef(curLineStart, lineWidth);
+        curIndent = mWrapIndent;
+        curLineStart = safeLineEnd - 1;
 
-        if (needNewLine || atFinalCharacter) {
-            // Current word would cause an overflow, so wrap the text.
-            if (!wordsInCurrentLine) {
-                // If a word is too long to fit on a line,
-                // the word will be split between lines
-                const qsizetype splitIndex = mWrapAt - currentLine.size();
-                currentLine += currentWord.left(splitIndex);
-                currentWord = currentWord.mid(splitIndex);
-            }
-            wrappedText += QChar::LineFeed % currentLine;
-            currentLine = QString(' ').repeated(mWrapIndent);
-            wordsInCurrentLine = 0;
+        // 7. Apply indentation, unless we've reached the end of the text
+        if (curLineStart < text.size()) {
+            wrappedText += indentText;
         }
     }
     return wrappedText;
