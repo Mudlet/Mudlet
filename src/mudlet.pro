@@ -95,6 +95,15 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 
 TEMPLATE = app
 
+# Define a variable for the Git executable
+GIT_EXECUTABLE = git
+
+# Run the command to get the short SHA1 hash of the current HEAD
+GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
+
+# Use the result in your QMake project
+message("Git SHA1: " $$GIT_SHA1)
+
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
