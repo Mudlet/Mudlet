@@ -386,7 +386,7 @@ jobs:
     - name: (macOS) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       run: |
-        cp ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop
+        cp -r ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop
         cd ~/Desktop
         sudo codesign --remove-signature ${{env.UPLOAD_FILENAME}}.app
       shell: bash
