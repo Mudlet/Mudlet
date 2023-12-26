@@ -33,7 +33,7 @@ jobs:
             # We still need a gcc for some sub-stages - and it ain't always the same one:
             gcc_compiler_version: 9
             qt: '5.14.2'
-          - os: macos-11
+          - os: macos-12
             buildname: 'macos / c++ tests'
             triplet: x64-osx
             compiler: clang_64
