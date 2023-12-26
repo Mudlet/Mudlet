@@ -18527,11 +18527,8 @@ int TLuaInterpreter::moveMapLabel(lua_State* L)
                                  .arg(areaId));
     }
     if (pA->mMapLabels.isEmpty()) {
-        // Return an empty table:
         return warnArgumentValue(L, __func__, qsl("areaID %1 does not have any labels")
                                  .arg(QString::number(areaId)));
-        lua_newtable(L);
-        return 1;
     }
 
     TMapLabel label;
@@ -18559,16 +18556,17 @@ int TLuaInterpreter::moveMapLabel(lua_State* L)
     }
 
     int n = lua_gettop(L);
-    auto z  = 0.0f;
-    bool absoluteMove = false;
+    // z-coordinate or delta:
+    std::optional<float> z;
+    bool absoluteMove = true;
     switch (n) {
-    case 4: // areaId/Name, labelId/Text, x, y - relative movement
+    case 4: // areaId/Name, labelId/Text, x, y - absolute movement
         break;
     case 5:
-        if (lua_type(L, 5) == LUA_TNUMBER) { // areaId/Name, labelId/Text, x, y, z - relative movement
+        if (lua_type(L, 5) == LUA_TNUMBER) { // areaId/Name, labelId/Text, x, y, z - absolute movement
             z = lua_tonumber(L, 5);
             break;
-        } else if (lua_type(L, 5) == LUA_TBOOLEAN ) { //areaId/Name, labelId/Text, x, y, absoluteMove
+        } else if (lua_type(L, 5) == LUA_TBOOLEAN ) { //areaId/Name, labelId/Text, x, y, absolute or relative movement
             absoluteMove = lua_toboolean(L, 5);
             if (absoluteMove) { // areaId/Name, labelId/Text, x, y, true - absoluteMove in xy plane
                 z = label.pos.z();
@@ -18583,7 +18581,7 @@ int TLuaInterpreter::moveMapLabel(lua_State* L)
 
     default:
         if (n > 5) {
-            if (lua_type(L, 6) != LUA_TBOOLEAN ) { // areaId/Name, labelId/Text, x, y, z, absoluteMove
+            if (lua_type(L, 6) != LUA_TBOOLEAN ) { // areaId/Name, labelId/Text, x, y, z, absolute or relative move
                 lua_pushfstring(L, "moveMapLabel: bad argument #6 type (absolute (true) / relative (false) movement in xyz-space as boolean is optional, got %S!", lua_typename(L, 5));
                 return lua_error(L);
             }
@@ -18600,12 +18598,16 @@ int TLuaInterpreter::moveMapLabel(lua_State* L)
     if (absoluteMove) {
         label.pos.setX(x);
         label.pos.setY(y);
-        label.pos.setZ(static_cast<float>(qRound(static_cast<float>(z))));
+        if (z.has_value()) {
+            label.pos.setZ(static_cast<float>(qRound(z.value())));
+        }
 
     } else {
         label.pos.setX(label.pos.x() + x);
         label.pos.setY(label.pos.y() + y);
-        label.pos.setZ(qRound(label.pos.z() + z));
+        if (z.has_value()) {
+            label.pos.setZ(qRound(label.pos.z() + z.value()));
+        }
 
     }
 
