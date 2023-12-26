@@ -34,7 +34,7 @@ jobs:
             gcc_compiler_version: 9
             qt: '5.14.2'
           - os: macos-11
-            buildname: 'macos / c++ tests'
+            buildname: 'macos / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.2'
