@@ -379,6 +379,7 @@ jobs:
     # we need to be in the right place for LuaGlobals.lua to load
     - name: Prep binary for running tests
       if: matrix.run_tests == 'true'
+      # macOS binary is in ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}/Contents/MacOS
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
       shell: bash
 
