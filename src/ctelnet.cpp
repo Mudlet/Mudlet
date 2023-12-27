@@ -51,7 +51,6 @@
 #include <QJsonObject>
 #include <QMessageBox>
 #include <QNetworkProxy>
-#include <QRandomGenerator>
 #include <QProgressDialog>
 #include <QSslError>
 #include "post_guard.h"
@@ -1006,22 +1005,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         break;
     }
     case TN_AYT: {
-        // Select a random text to return - technically all the other end
-        // expects is "something" - so let's keep 'em guessing 8-) - SlySven
-        static const QByteArrayList randomStrings = {
-            {"Yep."},
-            {"You bet your sweet cheeks I am!"},
-            {"42"},
-            {"That depends."},
-            {"Maybe..."},
-            {"Are you sure you want to know that?"},
-            {"All present and correct, Sir."},
-            {"There ain't nobody here but us chickens..."},
-            {"I don't know."},
-            {"The lights are on, but there is nobody home right now."}
-        };
         // This will be unaffected by the Mud Server encoding setting:
-        std::string output = randomStrings.at(QRandomGenerator::global()->bounded(randomStrings.size())).toStdString();
+        std::string output = "YES";
         socketOutRaw(output);
         break;
     }
