@@ -1063,12 +1063,11 @@ function Adjustable.Container:new(cons,container)
 
     me.adjLabelstyle = me.adjLabelstyle or [[
     background-color: rgba(0,0,0,100%);
-    border: 4px double green;
-    border-radius: 4px;]]
+    border: 2px groove white;]]
     me.menuStyleMode = "light"
     me.buttonstyle= me.buttonstyle or [[
-    QLabel{ border-radius: 7px; background-color: rgba(255,30,30,100%);}
-    QLabel::hover{ background-color: rgba(255,0,0,50%);}
+    QLabel{ border-color: rgba(255,255,255,100%); background-color: rgba(0,0,0,100%); }
+    QLabel::hover{ background-color: rgba(160,160,160,50%); }
     ]]
 
     me:createContainers()
@@ -1106,7 +1105,7 @@ function Adjustable.Container:new(cons,container)
     me.minimizeLabel:setClickCallback("Adjustable.Container.onClickMin", me)
     me.attLabel:setOnEnter("Adjustable.Container.onEnterAtt", me)
     me.goInside = true
-    me.titleTxtColor = me.titleTxtColor or "green"
+    me.titleTxtColor = me.titleTxtColor or "grey"
     me.titleText = me.titleText or me.name.." - Adjustable Container"
     me:setTitle()
     me.lockStyle = me.lockStyle or "standard"
