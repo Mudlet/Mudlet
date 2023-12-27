@@ -18290,6 +18290,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mForceMTTSNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("forceMNESNegotiationOff")) {
+        host.mForceMNESNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("compactInputLine")) {
         const bool value = getVerifiedBool(L, __func__, 2, "value");
         host.setCompactInputLine(value);
@@ -18715,6 +18719,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
         { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
         { qsl("forceMTTSNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceMTTSNegotiationOff); } },
+        { qsl("forceMNESNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceMNESNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
         { qsl("blankLinesBehaviour"), [&](){

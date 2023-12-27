@@ -3800,7 +3800,14 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="3" column="1">
+           <widget class="QCheckBox" name="mForceMNESNegotiationOff">
+            <property name="text">
+             <string>Force MNES negotiation off</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
            <widget class="QLabel" name="need_reconnect_for_specialoption">
             <property name="enabled">
              <bool>true</bool>
@@ -4305,6 +4312,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
   <tabstop>mForceMTTSNegotiationOff</tabstop>
+  <tabstop>mForceMNESNegotiationOff</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>

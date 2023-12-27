@@ -333,6 +333,32 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
         }
     }
 
+    if (enableMNES) {
+        const QMap<QString, QString> environVariables = getEnvironVariables();
+        const QString var = qsl("CHARSET");
+
+        if (environVariables.contains(var)) {
+            qDebug() << "We updated NEW_ENVIRON" << var;
+    
+            std::string output;
+            output += TN_IAC;
+            output += TN_SB;
+            output += OPT_NEW_ENVIRON;
+            output += MNES_INFO;
+            output += MNES_VAR;
+            output += var.toUtf8().constData();
+            output += MNES_VAL;   
+            output += environVariables.value(var).toUtf8().constData();
+            output += TN_IAC;
+            output += TN_SE;     
+            socketOutRaw(output);
+            
+            qDebug() << "WE inform NEW_ENVIRON (MNES)" << var << "is now" << environVariables.value(var);
+        } else {
+            qDebug() << "WE do not maintain a NEW_ENVIRON (MNES) variable for" << var;
+        }      
+    }
+
     return qMakePair(true, QString());
 }
 
@@ -933,6 +959,69 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
+QMap<QString, QString> cTelnet::getEnvironVariables()
+{
+    QMap<QString, QString> environVariables;
+    const QString charsetEncoding = getEncoding();
+
+    environVariables.insert(qsl("CHARSET"), (!charsetEncoding.isEmpty() ? charsetEncoding.toLatin1().constData() : qsl("ASCII")));
+    environVariables.insert(qsl("CLIENT_NAME"), qsl("MUDLET"));
+
+    static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
+    static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
+
+    QString clientVersion = APP_VERSION;
+
+    if (QByteArray(APP_BUILD).trimmed().length()) {
+        clientVersion.append(qsl(APP_BUILD));
+    }
+
+    /*
+    * The valid characters for termType are more restricted than being ASCII
+    * from https://tools.ietf.org/html/rfc1010 (page 29):
+    * "A terminal names may be up to 40 characters taken from the set of uppercase 
+    * letters, digits, and the two punctuation characters hyphen and slash.  It must
+    * start with a letter, and end with a letter or digit."
+    */
+    clientVersion = clientVersion.toUpper()
+                                        .replace(QChar('.'), QChar('/'))
+                                        .replace(QChar::Space, QChar('-'))
+                                        .replace(allInvalidCharacters, QChar('-'))
+                                        .replace(multipleHyphens, QChar('-'))
+                                        .left(40)
+                                    .toLatin1().constData();
+
+    for (int i = clientVersion.size() - 1; i >= 0; --i) {
+        if (clientVersion.at(i).isLetterOrNumber()) {
+            clientVersion = clientVersion.left(i + 1);
+            break;
+        }
+    }
+
+    environVariables.insert(qsl("CLIENT_VERSION"), clientVersion);
+
+    const QString localAddress = socket.localAddress().toString();
+    environVariables.insert(qsl("IPADDRESS"), localAddress.toLatin1().constData());
+
+    int terminal_standards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
+
+    if (getEncoding() == "UTF-8") {
+        terminal_standards |= MTTS_STD_UTF_8;
+    }
+
+    if (mpHost->mAdvertiseScreenReader) {
+        terminal_standards |= MTTS_STD_SCREEN_READER;
+    }
+#if !defined(QT_NO_SSL)
+    terminal_standards |= MTTS_STD_SSL;
+#endif
+
+    environVariables.insert(qsl("MTTS"), qsl("%1").arg(terminal_standards));
+    environVariables.insert(qsl("TERMINAL_TYPE"), qsl("ANSI-TRUECOLOR"));
+        
+    return environVariables;
+}
+
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
     char ch = telnetCommand[1];
@@ -992,6 +1081,26 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             //EOR support (END OF RECORD=TN_GA)
             qDebug() << "EOR enabled";
             sendTelnetOption(TN_DO, OPT_EOR);
+            break;
+        }
+
+        if (option == OPT_NEW_ENVIRON) {
+            // NEW_ENVIRON support
+            if (mpHost->mForceMTTSNegotiationOff) { // We DONT welcome the WILL
+                sendTelnetOption(TN_DONT, option);
+
+                if (enableMNES) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MNES");
+                }
+
+                qDebug() << "Rejecting NEW_ENVIRON, because Force MTTS negotiation off is checked.";
+            } else {
+                sendTelnetOption(TN_DO, OPT_NEW_ENVIRON);
+                enableMNES = true; // We negotiated, the game server is welcome to SEND now
+                raiseProtocolEvent("sysProtocolEnabled", "MNES");
+                qDebug() << "NEW_ENVIRON enabled";
+            }
+    
             break;
         }
 
@@ -1228,6 +1337,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             triedToEnable[idxOption] = false;
             heAnnouncedState[idxOption] = true;
         } else {
+            if (option == OPT_NEW_ENVIRON) {
+                // NEW_ENVIRON got turned off
+                enableMNES = false;
+                raiseProtocolEvent("sysProtocolDisabled", "MNES");
+            }
+
             if (option == OPT_CHARSET) {
                 // CHARSET got turned off per https://tools.ietf.org/html/rfc2066
                 enableCHARSET = false;
@@ -1307,6 +1422,26 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DO " << decodeOption(option);
 #endif
+
+        if (option == OPT_NEW_ENVIRON) {
+            // NEW_ENVIRON support
+            if (mpHost->mForceMTTSNegotiationOff) { // We WONT welcome the DO  
+                sendTelnetOption(TN_WONT, option);
+    
+                if (enableMNES) {
+                    raiseProtocolEvent("sysProtocolDisabled", "MNES");
+                }
+    
+                qDebug() << "Rejecting NEW_ENVIRON, because Force MTTS negotiation off is checked.";
+            } else { // We have already negotiated the use of the option by us (We WILL welcome the DO)
+                sendTelnetOption(TN_WILL, OPT_NEW_ENVIRON);
+                enableMNES = true; // We negotiated, the game server is welcome to SEND now
+                raiseProtocolEvent("sysProtocolEnabled", "MNES");
+                qDebug() << "NEW_ENVIRON enabled";
+            }
+    
+            break;
+        }
 
         if (option == OPT_CHARSET) {
             // CHARSET support per https://tools.ietf.org/html/rfc2066
@@ -1431,6 +1566,13 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 #ifdef DEBUG_TELNET
         qDebug().nospace().noquote() << "Server sent telnet IAC DONT " << decodeOption(option);
 #endif
+
+        if (option == OPT_NEW_ENVIRON) {
+            // NEW_ENVIRON got turned off
+            enableMNES = false;
+            raiseProtocolEvent("sysProtocolDisabled", "MNES");
+        }
+
         if (option == OPT_CHARSET) {
             // CHARSET got turned off per https://tools.ietf.org/html/rfc2066
             enableCHARSET = false;
@@ -1489,9 +1631,133 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_SB: {
         option = telnetCommand[2];
 
+        // NEW_ENVIRON
+        if (option == OPT_NEW_ENVIRON && enableMNES) {
+            QByteArray payload = QByteArray::fromRawData(telnetCommand.c_str(), telnetCommand.size());
+
+            if (telnetCommand.size() < 7) {
+                return;
+            }
+
+            // Trim off the Telnet suboption bytes from beginning (3) and end (2)
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+
+            if (payload.data()[0] == MNES_SEND && payload.data()[1] == MNES_VAR) {
+                const QMap<QString, QString> environVariables = getEnvironVariables();
+
+                if (telnetCommand.size() == 7) { // If no variables are sent, send everything.
+                    qDebug() << "Server requests all NEW_ENVIRON (MNES) variables";
+                        
+                    std::string output;
+                    output += TN_IAC;
+                    output += TN_SB;
+                    output += OPT_NEW_ENVIRON;
+
+                    for (auto it = environVariables.begin(); it != environVariables.end(); ++it) {
+                        output += MNES_IS;   
+                        output += MNES_VAR;
+                        output += it.key().toUtf8().constData();
+                        output += MNES_VAL;
+                        output += it.value().toUtf8().constData();
+                        qDebug() << "WE send NEW_ENVIRON (MNES)" << it.key() << "is" << it.value();
+                    }
+
+                    output += TN_IAC;
+                    output += TN_SE;
+                    socketOutRaw(output);
+                    return;
+                }
+
+                QString transcodedMsg;
+
+                if (mpOutOfBandDataIncomingCodec) {
+                    // Message is encoded
+                    transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(payload);
+                } else {
+                    // Message is in ASCII (though this can handle Utf-8):
+                    transcodedMsg = payload;
+                }
+
+                int is_send = 0;
+                int is_var = 0;
+                QString var;
+
+                for (int i = 0; i < transcodedMsg.size(); ++i) {
+                    if (transcodedMsg.at(i) == MNES_SEND) {
+                        if (!i) {
+                            is_send = 1;
+                        } else if (!is_send) {
+                            is_send = 1;
+
+                            if (environVariables.contains(var)) {
+                                qDebug() << "Server requests NEW_ENVIRON (MNES)" << var;
+                        
+                                std::string output;
+                                output += TN_IAC;
+                                output += TN_SB;
+                                output += OPT_NEW_ENVIRON;
+                                output += MNES_IS;
+                                output += MNES_VAR;
+                                output += var.toUtf8().constData();
+                                output += MNES_VAL;   
+                                output += environVariables.value(var).toUtf8().constData();
+                                output += TN_IAC;
+                                output += TN_SE;     
+                                socketOutRaw(output);
+                                
+                                qDebug() << "WE send NEW_ENVIRON (MNES)" << var << "is" << environVariables.value(var);
+                            } else {
+                                qDebug() << "WE do not maintain a NEW_ENVIRON (MNES) variable for" << var;
+                            }
+                        } else {
+                            return; // Invalid MNES
+                        }
+
+                        var = "";
+                    } else if (transcodedMsg.at(i) == MNES_VAR) {
+                        if (is_send) {
+                            is_send = 0;
+                            is_var = 1;
+                        } else {
+                            return; // Invalid MNES
+                        }
+                    } else {
+                        is_var = 0;
+                        var.append(transcodedMsg.at(i));
+                    }
+                }
+
+                if (!var.isEmpty()) { // Last variable on the stack
+                    if (environVariables.contains(var)) {
+                        qDebug() << "Server requests NEW_ENVIRON" << var;
+                
+                        std::string output;
+                        output += TN_IAC;
+                        output += TN_SB;
+                        output += OPT_NEW_ENVIRON;
+                        output += MNES_IS;
+                        output += MNES_VAR;
+                        output += var.toUtf8().constData();
+                        output += MNES_VAL;   
+                        output += environVariables.value(var).toUtf8().constData();
+                        output += TN_IAC;
+                        output += TN_SE;     
+                        socketOutRaw(output);
+                        
+                        qDebug() << "WE send NEW_ENVIRON (MNES)" << var << "is" << environVariables.value(var);
+                    } else {
+                        qDebug() << "WE do not maintain a NEW_ENVIRON (MNES) variable for" << var;
+                    }          
+                }
+            }
+
+            return;
+        }
+
         // CHARSET
         if (option == OPT_CHARSET && enableCHARSET) {
             QByteArray payload = telnetCommand.c_str();
+
             if (payload.size() < 6) {
                 return;
             }
@@ -1797,84 +2063,51 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         case OPT_TERMINAL_TYPE: {
             if (telnetCommand.length() >= 6 && telnetCommand[3] == TNSB_SEND && telnetCommand[4] == TN_IAC && telnetCommand[5] == TN_SE) {
                 if (myOptionState[static_cast<size_t>(OPT_TERMINAL_TYPE)]) {
-                    //server wants us to send terminal type; he can send his own type
-                    //too, but we just ignore it, as we have no use for it...
                     std::string cmd;
                     cmd += TN_IAC;
                     cmd += TN_SB;
                     cmd += OPT_TERMINAL_TYPE;
                     cmd += TNSB_IS;
 
+                    QMap<QString, QString> environVariables = getEnvironVariables();
+
                     switch (mCycleCountMTTS) {
                         case 0: {
-                            /*
-                            * The valid characters for termTerm are more restricted
-                            * than being ASCII - from:
-                            * https://tools.ietf.org/html/rfc1010 (page 29):
-                            * "A terminal names may be up to 40 characters taken from
-                            * the set of uppercase letters, digits, and the two
-                            * punctuation characters hyphen and slash.  It must start
-                            * with a letter, and end with a letter or digit."
-                            * Once we comply with that we can be certain that Mud
-                            * Server encoding will NOT be an issue!
-                            */
-                            static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
-                            static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
-                            QString sanitisedTermType = termType.toUpper()
-                                                                .replace(QChar('.'), QChar('/'))
-                                                                .replace(QChar::Space, QChar('-'))
-                                                                .replace(allInvalidCharacters, QChar('-'))
-                                                                .replace(multipleHyphens, QChar('-'))
-                                                                .left(40)
-                                                            .toLatin1().constData();
-
-                            for (int i = sanitisedTermType.size() - 1; i >= 0; --i) {
-                                if (sanitisedTermType.at(i).isLetterOrNumber()) {
-                                    sanitisedTermType = sanitisedTermType.left(i + 1);
-                                    break;
-                                }
-                            }
-
-                            Q_ASSERT_X(!sanitisedTermType.isEmpty(),
-                                       "cTelnet::processTelnetCommand(...)",
-                                       "ended up with an empty version string whilst trying to sanitise the Mudlet one");
-
-                            cmd += sanitisedTermType.toLatin1().constData();
+                            const QString clientNameAndVersion = qsl("%1-%2").arg(environVariables.value("CLIENT_NAME"), environVariables.value("CLIENT_VERSION"));
+                            cmd += clientNameAndVersion.toLatin1().constData(); // Example: MUDLET-4/17/2-DEV
 
                             if (!mpHost->mForceMTTSNegotiationOff) { // If we don't MTTS, remainder of the cases do not execute.
                                 mCycleCountMTTS++;
+                                qDebug() << "MTTS enabled";
+                                qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << clientNameAndVersion;
+                            } else {
+                                qDebug() << "MTTS enabled";
+                                qDebug() << "WE send TERMINAL_TYPE is" << clientNameAndVersion;
                             }
 
                             break;
                         }
-                        case 1:
-                            qDebug() << "MTTS enabled";
-                            cmd += qsl("ANSI-TRUECOLOR").toLatin1().constData(); // DUMB, ANSI, VT100, XTERM
+
+                        case 1: {
+                            const QString mttsTerminalType = environVariables.value("TERMINAL_TYPE");
+                            cmd += mttsTerminalType.toLatin1().constData(); // Example: ANSI-TRUECOLOR
                             mCycleCountMTTS++;
-                            qDebug() << "WE send MTTS terminal type is ANSI-TRUECOLOR";
+                            qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << mttsTerminalType;
                             break;
-                        default:
-                            int terminal_standards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
+                        }
 
-                            if (getEncoding() == "UTF-8") {
-                                terminal_standards |= MTTS_STD_UTF_8;
-                            }
-
-                            if (mpHost->mAdvertiseScreenReader) {
-                                terminal_standards |= MTTS_STD_SCREEN_READER;
-                            }
-#if !defined(QT_NO_SSL)
-                            terminal_standards |= MTTS_STD_SSL;
-#endif
-                            cmd += qsl("MTTS %1").arg(terminal_standards).toUtf8().constData();
+                        default: {
+                            const QString mttsTerminalStandards = environVariables.value("MTTS");
+                            cmd += qsl("MTTS %1").arg(mttsTerminalStandards).toUtf8().constData(); // Example: MTTS 2349
 
                             if (mCycleCountMTTS == 2) {
                                 mCycleCountMTTS++;
-                                qDebug() << "WE send MTTS bitvector is" << terminal_standards;
+                                qDebug() << "WE send TERMINAL_TYPE (MTTS) bitvector is" << mttsTerminalStandards;
                             } else {
                                 mCycleCountMTTS = 0; // Send the bitvector twice, then reset (0) to finish MTTS negotiation
-                                qDebug() << "WE send MTTS bitvector is" << terminal_standards << "(repeated)";
+                                qDebug() << "WE send TERMINAL_TYPE (MTTS) bitvector is" << mttsTerminalStandards << "(repeated)";
                             }
+                        }
                     }
 
                     cmd += TN_IAC;

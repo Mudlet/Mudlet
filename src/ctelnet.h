@@ -110,6 +110,7 @@ const char OPT_TIMING_MARK = 6;
 const char OPT_TERMINAL_TYPE = 24;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
+const char OPT_NEW_ENVIRON = 39; // https://tintin.mudhalla.net/protocols/mnes/
 const char OPT_CHARSET = 42;
 const char OPT_MSDP = 69; // https://tintin.mudhalla.net/protocols/msdp/
 const char OPT_MSSP = static_cast<char>(70); // https://tintin.mudhalla.net/protocols/mssp/
@@ -153,6 +154,13 @@ const int MTTS_STD_MNES = 512; // Client supports the Mud New Environment Standa
 const int MTTS_STD_MSLP = 1024; // Client supports the Mud Server Link Protocol for clickable link handling.
 const int MTTS_STD_SSL = 2048; // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
 
+// https://tintin.mudhalla.net/protocols/mnes/
+const char MNES_IS = 0;
+const char MNES_SEND = 1;
+const char MNES_INFO = 2;
+const char MNES_VAR = 0;
+const char MNES_VAL = 1;
+
 class cTelnet : public QObject
 {
     Q_OBJECT
@@ -168,6 +176,7 @@ public:
     // Second argument needs to be set false when sending password to prevent
     // it being sniffed by scripts/packages:
     bool sendData(QString& data, bool permitDataSendRequestEvent = true);
+    QMap<QString, QString> getEnvironVariables();
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
@@ -198,6 +207,7 @@ public:
 #endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
+    bool isMNESEnabled() const { return enableMNES; }
     bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
@@ -337,6 +347,7 @@ private:
     int mRecordingChunkCount = 0;
     int mCycleCountMTTS = 0;
     bool mReplayHasFaultyFormat = false;
+    bool enableMNES = false;
     bool enableCHARSET = false;
     bool enableATCP = false;
     bool enableGMCP = false;
