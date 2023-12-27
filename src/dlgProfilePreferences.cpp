@@ -773,6 +773,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
+    connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
@@ -4402,6 +4403,17 @@ void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
     }
 
     qWarning() << "unknown link clicked in profile preferences:" << link;
+}
+
+void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
+{
+    Host* pHost = mpHost;
+
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mTelnet.updateMNESVariable(qsl("MTTS"));
 }
 
 void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)

@@ -289,6 +289,8 @@ QString cTelnet::errorString()
 QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const bool saveValue)
 {
     QByteArray reportedEncoding = newEncoding;
+    bool updateMTTSforMNES = (mEncoding == "UTF-8" || newEncoding == "UTF-8");
+
     if (newEncoding.isEmpty() || newEncoding == "ASCII") {
         reportedEncoding = "ASCII";
         if (!mEncoding.isEmpty()) {
@@ -328,18 +330,29 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
                                  % QLatin1String(R"(".)"));
     } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
         encodingChanged(newEncoding);
+
         if (saveValue) {
             mpHost->writeProfileData(qsl("encoding"), QLatin1String(mEncoding));
         }
     }
 
+    updateMNESVariable(qsl("CHARSET")); // Positioned here so we get ASCII updates too
+
+    if (updateMTTSforMNES) {
+        updateMNESVariable(qsl("MTTS"));
+    }
+
+    return qMakePair(true, QString());
+}
+
+void cTelnet::updateMNESVariable(const QString &var)
+{
     if (enableMNES) {
         const QMap<QString, QString> environVariables = getEnvironVariables();
-        const QString var = qsl("CHARSET");
 
         if (environVariables.contains(var)) {
             qDebug() << "We updated NEW_ENVIRON" << var;
-    
+
             std::string output;
             output += TN_IAC;
             output += TN_SB;
@@ -356,10 +369,8 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
             qDebug() << "WE inform NEW_ENVIRON (MNES)" << var << "is now" << environVariables.value(var);
         } else {
             qDebug() << "WE do not maintain a NEW_ENVIRON (MNES) variable for" << var;
-        }      
+        }
     }
-
-    return qMakePair(true, QString());
 }
 
 void cTelnet::requestDiscordInfo()
