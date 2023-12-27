@@ -251,6 +251,11 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # * Produce all the time the surprise that normally will only occur on the first
 # day of the fourth month of the Gregorian calendar year:
 # DEFINES+=DEBUG_EASTER_EGGS
+#
+# Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
+# commands for suboptions - change the value to 2 to get a bit more detail
+# about the size or nature of the command:
+DEFINES+=DEBUG_TELNET=1
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
