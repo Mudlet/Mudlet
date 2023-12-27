@@ -1097,7 +1097,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_NEW_ENVIRON) {
             // NEW_ENVIRON support
-            if (mpHost->mForceMTTSNegotiationOff) { // We DONT welcome the WILL
+            if (mpHost->mForceMNESNegotiationOff) { // We DONT welcome the WILL
                 sendTelnetOption(TN_DONT, option);
 
                 if (enableMNES) {
@@ -1436,7 +1436,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_NEW_ENVIRON) {
             // NEW_ENVIRON support
-            if (mpHost->mForceMTTSNegotiationOff) { // We WONT welcome the DO  
+            if (mpHost->mForceMNESNegotiationOff) { // We WONT welcome the DO  
                 sendTelnetOption(TN_WONT, option);
     
                 if (enableMNES) {
@@ -2080,7 +2080,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     cmd += OPT_TERMINAL_TYPE;
                     cmd += TNSB_IS;
 
-                    QMap<QString, QString> environVariables = getEnvironVariables();
+                    const QMap<QString, QString> environVariables = getEnvironVariables();
 
                     switch (mCycleCountMTTS) {
                         case 0: {
