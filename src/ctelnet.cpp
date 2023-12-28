@@ -1054,20 +1054,20 @@ QMap<QString, QString> cTelnet::getNewEnvironMap()
     const QString localAddress = socket.localAddress().toString();
     newEnvironMap.insert(qsl("IPADDRESS"), localAddress.toLatin1().constData());
 
-    int terminal_standards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
+    int terminalStandards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
 
     if (getEncoding() == "UTF-8") {
-        terminal_standards |= MTTS_STD_UTF_8;
+        terminalStandards |= MTTS_STD_UTF_8;
     }
 
     if (mpHost->mAdvertiseScreenReader) {
-        terminal_standards |= MTTS_STD_SCREEN_READER;
+        terminalStandards |= MTTS_STD_SCREEN_READER;
     }
 #if !defined(QT_NO_SSL)
-    terminal_standards |= MTTS_STD_SSL;
+    terminalStandards |= MTTS_STD_SSL;
 #endif
 
-    newEnvironMap.insert(qsl("MTTS"), qsl("%1").arg(terminal_standards));
+    newEnvironMap.insert(qsl("MTTS"), qsl("%1").arg(terminalStandards));
     newEnvironMap.insert(qsl("TERMINAL_TYPE"), qsl("ANSI-TRUECOLOR"));
         
     return newEnvironMap;
@@ -1179,7 +1179,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     raiseProtocolEvent("sysProtocolDisabled", "MNES");
                 }
 
-                qDebug() << "Rejecting NEW_ENVIRON, because Force MTTS negotiation off is checked.";
+                qDebug() << "Rejecting NEW_ENVIRON, because Force MNES negotiation off is checked.";
             } else {
                 sendTelnetOption(TN_DO, OPT_NEW_ENVIRON);
                 enableMNES = true; // We negotiated, the game server is welcome to SEND now
@@ -1518,7 +1518,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     raiseProtocolEvent("sysProtocolDisabled", "MNES");
                 }
     
-                qDebug() << "Rejecting NEW_ENVIRON, because Force MTTS negotiation off is checked.";
+                qDebug() << "Rejecting NEW_ENVIRON, because Force MNES negotiation off is checked.";
             } else { // We have already negotiated the use of the option by us (We WILL welcome the DO)
                 sendTelnetOption(TN_WILL, OPT_NEW_ENVIRON);
                 enableMNES = true; // We negotiated, the game server is welcome to SEND now
