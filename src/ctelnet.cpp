@@ -980,6 +980,7 @@ QString cTelnet::escapeNewEnviron(const QString &arg)
 
 QMap<QString, QString> cTelnet::getNewEnvironMap()
 {
+    // Note: "IPADDRESS" Intentionally NOT implemented by Mudlet Makers
     QMap<QString, QString> newEnvironMap;
     const QString charsetEncoding = getEncoding();
 
@@ -1050,9 +1051,6 @@ QMap<QString, QString> cTelnet::getNewEnvironMap()
     }
 
     newEnvironMap.insert(qsl("CLIENT_VERSION"), clientVersion);
-
-    const QString localAddress = socket.localAddress().toString();
-    newEnvironMap.insert(qsl("IPADDRESS"), localAddress.toLatin1().constData());
 
     int terminalStandards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
 
