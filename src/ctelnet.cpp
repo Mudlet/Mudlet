@@ -983,6 +983,10 @@ QMap<QString, QString> cTelnet::getNewEnvironMap()
     QMap<QString, QString> newEnvironMap;
     const QString charsetEncoding = getEncoding();
 
+    if (!mpHost->getLogin().isEmpty()) {
+        newEnvironMap.insert(qsl("USER"), qsl("%1").arg(mpHost->getLogin()).toLatin1().constData());
+    }
+
     newEnvironMap.insert(qsl("CHARSET"), (!charsetEncoding.isEmpty() ? charsetEncoding.toLatin1().constData() : qsl("ASCII")));
     newEnvironMap.insert(qsl("CLIENT_NAME"), qsl("MUDLET"));
 
