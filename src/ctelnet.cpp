@@ -983,9 +983,37 @@ QMap<QString, QString> cTelnet::getNewEnvironMap()
     QMap<QString, QString> newEnvironMap;
     const QString charsetEncoding = getEncoding();
 
+    // "USER" from the Character name dialog box
     if (!mpHost->getLogin().isEmpty()) {
         newEnvironMap.insert(qsl("USER"), qsl("%1").arg(mpHost->getLogin()).toLatin1().constData());
     }
+
+    // "SYSTEMTYPE" Inspired by https://www.rfc-editor.org/rfc/rfc1340.txt
+#if (defined(Q_OS_MAC) || defined(Q_OS_MACOS))
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("MACOS").toLatin1().constData());
+#elif defined(Q_OS_WIN64)
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("WIN64").toLatin1().constData());
+#elif defined(Q_OS_WIN32)
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("WIN32").toLatin1().constData());
+#elif defined(Q_OS_BSD4)
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("BSD4").toLatin1().constData());
+#elif defined(Q_OS_CYGWIN)
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("CYGWIN").toLatin1().constData());
+#elif (defined(Q_OS_FREEBSD) || defined(Q_OS_FREEBSD_KERNEL))
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("FREEBSD").toLatin1().constData());
+#elif defined(Q_OS_HURD)
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("HURD").toLatin1().constData());
+#elif defined(Q_OS_NETBSD)
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("NETBSD").toLatin1().constData());
+#elif defined(Q_OS_OPENBSD)
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("OPENBSD").toLatin1().constData());
+#elif defined(Q_OS_LINUX)
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("LINUX").toLatin1().constData());
+#elif defined(Q_OS_UNIX)
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("UNIX").toLatin1().constData());
+#else
+    newEnvironMap.insert(qsl("SYSTEMTYPE"), qsl("UNKNOWN").toLatin1().constData());
+#endif
 
     newEnvironMap.insert(qsl("CHARSET"), (!charsetEncoding.isEmpty() ? charsetEncoding.toLatin1().constData() : qsl("ASCII")));
     newEnvironMap.insert(qsl("CLIENT_NAME"), qsl("MUDLET"));
