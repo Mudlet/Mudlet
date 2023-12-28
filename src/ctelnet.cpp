@@ -343,25 +343,25 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
 void cTelnet::updateMNESVariable(const QString &var)
 {
     if (enableMNES) {
-        const QMap<QString, QString> environVariables = getEnvironVariables();
+        const QMap<QString, QString> newEnvironMap = getNewEnvironMap();
 
-        if (environVariables.contains(var)) {
+        if (newEnvironMap.contains(var)) {
             qDebug() << "We updated NEW_ENVIRON" << var;
 
             std::string output;
             output += TN_IAC;
             output += TN_SB;
             output += OPT_NEW_ENVIRON;
-            output += MNES_INFO;
-            output += MNES_VAR;
-            output += var.toUtf8().constData();
-            output += MNES_VAL;   
-            output += environVariables.value(var).toUtf8().constData();
+            output += NES_INFO;
+            output += NES_VAR;
+            output += escapeNewEnviron(var).toUtf8().constData();
+            output += NES_VAL;   
+            output += escapeNewEnviron(newEnvironMap.value(var)).toUtf8().constData();
             output += TN_IAC;
             output += TN_SE;     
             socketOutRaw(output);
             
-            qDebug() << "WE inform NEW_ENVIRON (MNES)" << var << "is now" << environVariables.value(var);
+            qDebug() << "WE inform NEW_ENVIRON (MNES)" << var << "is now" << newEnvironMap.value(var);
         } else {
             qDebug() << "WE do not maintain a NEW_ENVIRON (MNES) variable for" << var;
         }
@@ -965,13 +965,26 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
-QMap<QString, QString> cTelnet::getEnvironVariables()
+QString cTelnet::escapeNewEnviron(const QString &arg)
 {
-    QMap<QString, QString> environVariables;
+    QString ret = arg;
+
+    ret.replace(TN_IAC, qsl("%1%2").arg(TN_IAC, TN_IAC));
+    ret.replace(NES_ESC, qsl("%1%2").arg(NES_ESC, NES_ESC));
+    ret.replace(NES_VAL, qsl("%1%2").arg(NES_ESC, NES_VAL));
+    ret.replace(NES_USERVAL, qsl("%1%2").arg(NES_ESC, NES_USERVAL));
+    ret.replace(NES_VAR, qsl("%1%2").arg(NES_ESC, NES_VAR));
+
+    return ret;
+}
+
+QMap<QString, QString> cTelnet::getNewEnvironMap()
+{
+    QMap<QString, QString> newEnvironMap;
     const QString charsetEncoding = getEncoding();
 
-    environVariables.insert(qsl("CHARSET"), (!charsetEncoding.isEmpty() ? charsetEncoding.toLatin1().constData() : qsl("ASCII")));
-    environVariables.insert(qsl("CLIENT_NAME"), qsl("MUDLET"));
+    newEnvironMap.insert(qsl("CHARSET"), (!charsetEncoding.isEmpty() ? charsetEncoding.toLatin1().constData() : qsl("ASCII")));
+    newEnvironMap.insert(qsl("CLIENT_NAME"), qsl("MUDLET"));
 
     static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
     static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
@@ -1004,10 +1017,10 @@ QMap<QString, QString> cTelnet::getEnvironVariables()
         }
     }
 
-    environVariables.insert(qsl("CLIENT_VERSION"), clientVersion);
+    newEnvironMap.insert(qsl("CLIENT_VERSION"), clientVersion);
 
     const QString localAddress = socket.localAddress().toString();
-    environVariables.insert(qsl("IPADDRESS"), localAddress.toLatin1().constData());
+    newEnvironMap.insert(qsl("IPADDRESS"), localAddress.toLatin1().constData());
 
     int terminal_standards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
 
@@ -1022,10 +1035,10 @@ QMap<QString, QString> cTelnet::getEnvironVariables()
     terminal_standards |= MTTS_STD_SSL;
 #endif
 
-    environVariables.insert(qsl("MTTS"), qsl("%1").arg(terminal_standards));
-    environVariables.insert(qsl("TERMINAL_TYPE"), qsl("ANSI-TRUECOLOR"));
+    newEnvironMap.insert(qsl("MTTS"), qsl("%1").arg(terminal_standards));
+    newEnvironMap.insert(qsl("TERMINAL_TYPE"), qsl("ANSI-TRUECOLOR"));
         
-    return environVariables;
+    return newEnvironMap;
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
@@ -1683,8 +1696,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             // Trim off the Telnet suboption bytes from beginning (3) and end (2)
             payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
 
-            if (payload.data()[0] == MNES_SEND && payload.data()[1] == MNES_VAR) {
-                const QMap<QString, QString> environVariables = getEnvironVariables();
+            if (payload.data()[0] == NES_SEND && payload.data()[1] == NES_VAR) {
+                const QMap<QString, QString> newEnvironMap = getNewEnvironMap();
 
                 if (telnetCommand.size() == 7) { // If no variables are sent, send everything.
                     qDebug() << "Server requests all NEW_ENVIRON (MNES) variables";
@@ -1694,12 +1707,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     output += TN_SB;
                     output += OPT_NEW_ENVIRON;
 
-                    for (auto it = environVariables.begin(); it != environVariables.end(); ++it) {
-                        output += MNES_IS;   
-                        output += MNES_VAR;
-                        output += it.key().toUtf8().constData();
-                        output += MNES_VAL;
-                        output += it.value().toUtf8().constData();
+                    for (auto it = newEnvironMap.begin(); it != newEnvironMap.end(); ++it) {
+                        output += NES_IS;   
+                        output += NES_VAR;
+                        output += escapeNewEnviron(it.key()).toUtf8().constData();
+                        output += NES_VAL;
+                        output += escapeNewEnviron(it.value()).toUtf8().constData();
                         qDebug() << "WE send NEW_ENVIRON (MNES)" << it.key() << "is" << it.value();
                     }
 
@@ -1724,29 +1737,29 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 QString var;
 
                 for (int i = 0; i < transcodedMsg.size(); ++i) {
-                    if (transcodedMsg.at(i) == MNES_SEND) {
+                    if (transcodedMsg.at(i) == NES_SEND) {
                         if (!i) {
                             is_send = 1;
                         } else if (!is_send) {
                             is_send = 1;
 
-                            if (environVariables.contains(var)) {
+                            if (newEnvironMap.contains(var)) {
                                 qDebug() << "Server requests NEW_ENVIRON (MNES)" << var;
                         
                                 std::string output;
                                 output += TN_IAC;
                                 output += TN_SB;
                                 output += OPT_NEW_ENVIRON;
-                                output += MNES_IS;
-                                output += MNES_VAR;
-                                output += var.toUtf8().constData();
-                                output += MNES_VAL;   
-                                output += environVariables.value(var).toUtf8().constData();
+                                output += NES_IS;
+                                output += NES_VAR;
+                                output += escapeNewEnviron(var).toUtf8().constData();
+                                output += NES_VAL;   
+                                output += escapeNewEnviron(newEnvironMap.value(var)).toUtf8().constData();
                                 output += TN_IAC;
                                 output += TN_SE;     
                                 socketOutRaw(output);
                                 
-                                qDebug() << "WE send NEW_ENVIRON (MNES)" << var << "is" << environVariables.value(var);
+                                qDebug() << "WE send NEW_ENVIRON (MNES)" << var << "is" << newEnvironMap.value(var);
                             } else {
                                 qDebug() << "WE do not maintain a NEW_ENVIRON (MNES) variable for" << var;
                             }
@@ -1755,7 +1768,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
 
                         var = "";
-                    } else if (transcodedMsg.at(i) == MNES_VAR) {
+                    } else if (transcodedMsg.at(i) == NES_VAR) {
                         if (is_send) {
                             is_send = 0;
                             is_var = 1;
@@ -1769,23 +1782,23 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 }
 
                 if (!var.isEmpty()) { // Last variable on the stack
-                    if (environVariables.contains(var)) {
+                    if (newEnvironMap.contains(var)) {
                         qDebug() << "Server requests NEW_ENVIRON" << var;
                 
                         std::string output;
                         output += TN_IAC;
                         output += TN_SB;
                         output += OPT_NEW_ENVIRON;
-                        output += MNES_IS;
-                        output += MNES_VAR;
-                        output += var.toUtf8().constData();
-                        output += MNES_VAL;   
-                        output += environVariables.value(var).toUtf8().constData();
+                        output += NES_IS;
+                        output += NES_VAR;
+                        output += escapeNewEnviron(var).toUtf8().constData();
+                        output += NES_VAL;   
+                        output += escapeNewEnviron(newEnvironMap.value(var)).toUtf8().constData();
                         output += TN_IAC;
                         output += TN_SE;     
                         socketOutRaw(output);
                         
-                        qDebug() << "WE send NEW_ENVIRON (MNES)" << var << "is" << environVariables.value(var);
+                        qDebug() << "WE send NEW_ENVIRON (MNES)" << var << "is" << newEnvironMap.value(var);
                     } else {
                         qDebug() << "WE do not maintain a NEW_ENVIRON (MNES) variable for" << var;
                     }          
@@ -2110,11 +2123,11 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     cmd += OPT_TERMINAL_TYPE;
                     cmd += TNSB_IS;
 
-                    const QMap<QString, QString> environVariables = getEnvironVariables();
+                    const QMap<QString, QString> newEnvironMap = getNewEnvironMap();
 
                     switch (mCycleCountMTTS) {
                         case 0: {
-                            const QString clientNameAndVersion = qsl("%1-%2").arg(environVariables.value("CLIENT_NAME"), environVariables.value("CLIENT_VERSION"));
+                            const QString clientNameAndVersion = qsl("%1-%2").arg(newEnvironMap.value("CLIENT_NAME"), newEnvironMap.value("CLIENT_VERSION"));
                             cmd += clientNameAndVersion.toLatin1().constData(); // Example: MUDLET-4/17/2-DEV
 
                             if (!mpHost->mForceMTTSNegotiationOff) { // If we don't MTTS, remainder of the cases do not execute.
@@ -2130,7 +2143,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
 
                         case 1: {
-                            const QString mttsTerminalType = environVariables.value("TERMINAL_TYPE");
+                            const QString mttsTerminalType = newEnvironMap.value("TERMINAL_TYPE");
                             cmd += mttsTerminalType.toLatin1().constData(); // Example: ANSI-TRUECOLOR
                             mCycleCountMTTS++;
                             qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << mttsTerminalType;
@@ -2138,7 +2151,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
 
                         default: {
-                            const QString mttsTerminalStandards = environVariables.value("MTTS");
+                            const QString mttsTerminalStandards = newEnvironMap.value("MTTS");
                             cmd += qsl("MTTS %1").arg(mttsTerminalStandards).toUtf8().constData(); // Example: MTTS 2349
 
                             if (mCycleCountMTTS == 2) {
