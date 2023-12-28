@@ -18578,19 +18578,37 @@ int TLuaInterpreter::moveMapLabel(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    int areaId = getVerifiedInt(L, __func__, 1, "areaID");
-
-    if (!lua_isstring(L, 2) && !lua_isnumber(L, 2)) {
-        lua_pushfstring(L, "moveMapLabel: bad argument #2 type (labelID as number or labelText as string expected, got %s!)", luaL_typename(L, 2));
-        return lua_error(L);
+    if (!lua_isstring(L, 1) && !lua_isnumber(L, 1)) {
+        lua_pushfstring(L, "moveMapLabel: bad argument #1 type (areaID as number or area name as string expected, got %s!)", luaL_typename(L, 1));
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    QString areaName;
+    std::optional<int> areaId;
+    if (lua_type(L, 1) == LUA_TNUMBER) {
+        areaId = lua_tointeger(L, 1);
+        if (areaId.value() < 1) {
+            return warnArgumentValue(L, __func__, qsl("areaID %1 is invalid, it must be greater than zero").arg(areaId.value()));
+        }
+    } else {
+        areaName = lua_tostring(L, 1);
+        // Can't be an empty string as we do not allow unnamed areas
+        if (areaName.isEmpty()) {
+            return warnArgumentValue(L, __func__, "area name is invalid, it cannot be an empty string");
+        }
     }
 
+    if (!lua_isstring(L, 2) && !lua_isnumber(L, 2)) {
+        lua_pushfstring(L, "moveMapLabel: bad argument #2 type (labelID as number or label text as string expected, got %s!)", luaL_typename(L, 2));
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
     QString labelText;
-    int labelId = -1;
+    std::optional<int> labelId;
     if (lua_type(L, 2) == LUA_TNUMBER) {
         labelId = lua_tointeger(L, 2);
-        if (labelId < 0) {
-            return warnArgumentValue(L, __func__, qsl("labelID %1 is invalid, it must be zero or greater").arg(labelId));
+        if (labelId.value() < 0) {
+            return warnArgumentValue(L, __func__, qsl("labelID %1 is invalid, it must be zero or greater").arg(labelId.value()));
         }
 
     } else {
@@ -18598,23 +18616,39 @@ int TLuaInterpreter::moveMapLabel(lua_State* L)
         // Can be an empty string as image labels have no text!
     }
 
-    auto pA = host.mpMap->mpRoomDB->getArea(areaId);
-    if (!pA) {
-        return warnArgumentValue(L, __func__, qsl("areaID %1 does not exist")
-                                 .arg(areaId));
+    TArea* pA = nullptr;
+    if (areaId.has_value()) {
+        pA = host.mpMap->mpRoomDB->getArea(areaId.value());
+        if (!pA) {
+            return warnArgumentValue(L, __func__, qsl("areaID %1 does not exist")
+                                     .arg(areaId.value()));
+        }
+        areaName = host.mpMap->mpRoomDB->getAreaNamesMap().value(areaId.value());
+
+    } else {
+        areaId = host.mpMap->mpRoomDB->getAreaNamesMap().key(areaName);
+        if (areaId.value() == -1 || areaId.value() > 0 ) {
+            pA = host.mpMap->mpRoomDB->getArea(areaId.value());
+        }
+
+        if (!pA) {
+            return warnArgumentValue(L, __func__, qsl("area name \"%1\" does not exist")
+                                     .arg(areaName));
+        }
     }
+
     if (pA->mMapLabels.isEmpty()) {
-        return warnArgumentValue(L, __func__, qsl("areaID %1 does not have any labels")
-                                 .arg(QString::number(areaId)));
+        return warnArgumentValue(L, __func__, qsl("area \"%1\" (ID %2) does not have any labels")
+                                 .arg(areaName, QString::number(areaId.value())));
     }
 
     TMapLabel label;
-    if (labelId >= 0) {
-        if (!pA->mMapLabels.contains(labelId)) {
-            return warnArgumentValue(L, __func__, qsl("labelID %1 does not exist in area with areaID %2")
-                                                     .arg(QString::number(labelId), QString::number(areaId)));
+    if (labelId.has_value()) {
+        if (!pA->mMapLabels.contains(labelId.value())) {
+            return warnArgumentValue(L, __func__, qsl("labelID %1 does not exist in area \"%2\" (ID %3)")
+                                                     .arg(QString::number(labelId.value()), areaName, QString::number(areaId.value())));
         }
-        label = pA->mMapLabels.value(labelId);
+        label = pA->mMapLabels.value(labelId.value());
 
     } else {
         QMapIterator<int, TMapLabel> it(pA->mMapLabels);
@@ -18627,44 +18661,42 @@ int TLuaInterpreter::moveMapLabel(lua_State* L)
             }
         }
         if (label.isNull()) {
-            return warnArgumentValue(L, __func__, qsl("labelText \"%1\" does not exist in area with areaID %2")
-                                                     .arg(labelText, QString::number(areaId)));
+            return warnArgumentValue(L, __func__, qsl("labelText \"%1\" does not exist in area \"%2\" (ID %3)")
+                                                     .arg(labelText, areaName, QString::number(areaId.value())));
         }
     }
 
     int n = lua_gettop(L);
     // z-coordinate or delta:
     std::optional<float> z;
-    bool absoluteMove = true;
+    bool absoluteMove = false;
     switch (n) {
-    case 4: // areaId/Name, labelId/Text, x, y - absolute movement
+    case 4: // areaId/Name, labelId/Text, x, y - relative movement
         break;
     case 5:
-        if (lua_type(L, 5) == LUA_TNUMBER) { // areaId/Name, labelId/Text, x, y, z - absolute movement
+        if (lua_type(L, 5) == LUA_TNUMBER) { // areaId/Name, labelId/Text, x, y, z - relative movement
             z = lua_tonumber(L, 5);
             break;
-        } else if (lua_type(L, 5) == LUA_TBOOLEAN ) { //areaId/Name, labelId/Text, x, y, absolute or relative movement
+        }
+        if (lua_type(L, 5) == LUA_TBOOLEAN ) { //areaId/Name, labelId/Text, x, y, absolute or relative movement
             absoluteMove = lua_toboolean(L, 5);
-            if (absoluteMove) { // areaId/Name, labelId/Text, x, y, true - absoluteMove in xy plane
-                z = label.pos.z();
-            }
-            // areaId/Name, labelId/Text, x, y, false - relativeMove in xy plane
-
             break;
         }
 
         lua_pushfstring(L, "moveMapLabel: bad argument #5 type (z coordinate for relative movement in space as number or absolute (true)/relative (false) movement in xy-plane as boolean is optional, got %s", lua_typename(L, 5));
-        return lua_error(L);
+        lua_error(L);
+        Q_UNREACHABLE();
 
     default:
         if (n > 5) {
             if (lua_type(L, 6) != LUA_TBOOLEAN ) { // areaId/Name, labelId/Text, x, y, z, absolute or relative move
                 lua_pushfstring(L, "moveMapLabel: bad argument #6 type (absolute (true) / relative (false) movement in xyz-space as boolean is optional, got %S!", lua_typename(L, 5));
-                return lua_error(L);
+                lua_error(L);
+                Q_UNREACHABLE();
             }
 
-            z = getVerifiedFloat(L, __func__, 5, (absoluteMove ? "z coordinate" : "z delta"));
             absoluteMove = lua_toboolean(L, 6);
+            z = getVerifiedFloat(L, __func__, 5, (absoluteMove ? "z coordinate" : "z delta"));
         }
         // with n less than 4 we will trip an error response in the next bit of
         // code for a missing argument...
@@ -18689,7 +18721,7 @@ int TLuaInterpreter::moveMapLabel(lua_State* L)
     }
 
     // Replace the original label with the modified copy:
-    pA->mMapLabels.insert(labelId, label);
+    pA->mMapLabels.insert(labelId.value(), label);
     host.mpMap->update();
     lua_pushboolean(L, true);
     return 1;

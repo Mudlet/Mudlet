@@ -37,10 +37,12 @@ class TMapLabel
 {
 public:
     // Try and deduce whether this label has data:
-    bool isNull() const {return pos.isNull() && size.isNull() && text.isEmpty() && pix.isNull(); }
+    bool isNull() const {return pos.isNull() && !size.isValid() && text.isEmpty() && pix.isNull(); }
     QByteArray base64EncodePixmap() const;
 
     QVector3D pos;
+    // This gets initialised to (-1.0f, -1.0f) which is NOT QSizeF::isNull()
+    // {That is (0.0f, 0.0f)} but is NOT QSizeF::isValid():
     QSizeF size;
     QSizeF clickSize;
     QString text;
