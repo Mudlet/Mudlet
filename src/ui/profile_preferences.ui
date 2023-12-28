@@ -3655,7 +3655,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string></string>
             </property>
             <property name="text">
-             <string>Advertise screen reader use to games supporting MTTS (Mud Terminal Type Standard)</string>
+             <string>Advertise screen reader use to games supporting protocols that transfer it</string>
             </property>
            </widget>
           </item>

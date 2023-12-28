@@ -726,7 +726,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
     setBoolAttributeWithDefault(qsl("forceMTTSNegotiationOff"), pHost->mForceMTTSNegotiationOff, false);
-    setBoolAttributeWithDefault(qsl("forceMNESNegotiationOff"), pHost->mAdvertiseScreenReader, false);
+    setBoolAttributeWithDefault(qsl("forceMNESNegotiationOff"), pHost->mForceMNESNegotiationOff, false);
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
     setBoolAttribute(qsl("printCommand"), pHost->mPrintCommand);

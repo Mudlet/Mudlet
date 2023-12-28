@@ -358,7 +358,7 @@ void cTelnet::updateMNESVariable(const QString &var)
             output += NES_VAL;   
             output += escapeNewEnviron(newEnvironMap.value(var)).toUtf8().constData();
             output += TN_IAC;
-            output += TN_SE;     
+            output += TN_SE;
             socketOutRaw(output);
             
             qDebug() << "WE inform NEW_ENVIRON (MNES)" << var << "is now" << newEnvironMap.value(var);
