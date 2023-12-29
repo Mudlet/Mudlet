@@ -23,7 +23,8 @@
 #include "dlgSystemMessageArea.h"
 
 
-dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pF) : QWidget(pF)
+dlgSystemMessageArea::dlgSystemMessageArea(QWidget* pParentWidget)
+: QWidget(pParentWidget)
 {
     // init generated dialog
     setupUi(this);

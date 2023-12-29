@@ -130,7 +130,7 @@ void TKey::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
@@ -144,7 +144,7 @@ void TKey::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::debugMode) {
+            if (mudlet::smDebugMode) {
                 TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
@@ -165,10 +165,10 @@ bool TKey::setScript(const QString& script)
 
 bool TKey::compileScript()
 {
-    mFuncName = QString("Key") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = qsl("Key%1").arg(QString::number(mID));
+    const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, QString("Key: ") + getName())) {
+    if (mpHost->mLuaInterpreter.compile(code, error, qsl("Key: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
@@ -181,7 +181,7 @@ bool TKey::compileScript()
 
 void TKey::execute()
 {
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {

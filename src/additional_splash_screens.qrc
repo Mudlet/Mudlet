@@ -1,0 +1,29 @@
+<RCC>
+    <qresource prefix="/">
+        <file>splash/Mudlet_splashscreen_ptb.png</file>
+        <file>splash/Mudlet_splashscreen_development.png</file>
+        <file>splash/Mudlet_splashscreen_other_01.png</file>
+        <file>splash/Mudlet_splashscreen_other_02.png</file>
+        <file>splash/Mudlet_splashscreen_other_03.png</file>
+        <file>splash/Mudlet_splashscreen_other_04.png</file>
+        <file>splash/Mudlet_splashscreen_other_05.png</file>
+        <file>splash/Mudlet_splashscreen_other_06.png</file>
+        <file>splash/Mudlet_splashscreen_other_07.png</file>
+        <file>splash/Mudlet_splashscreen_other_08.png</file>
+        <file>splash/Mudlet_splashscreen_other_09.png</file>
+        <file>splash/Mudlet_splashscreen_other_10.png</file>
+        <file>splash/Mudlet_splashscreen_other_11.png</file>
+        <file>splash/Mudlet_splashscreen_other_12.png</file>
+        <file>splash/Mudlet_splashscreen_other_13.png</file>
+        <file>splash/Mudlet_splashscreen_other_14.png</file>
+        <file>splash/Mudlet_splashscreen_other_15.png</file>
+        <file>splash/Mudlet_splashscreen_other_16.png</file>
+        <file>splash/Mudlet_splashscreen_other_17.png</file>
+        <file>splash/Mudlet_splashscreen_other_18.png</file>
+        <file>splash/Mudlet_splashscreen_other_19.png</file>
+        <file>splash/Mudlet_splashscreen_other_20.png</file>
+        <file>splash/Mudlet_splashscreen_other_21.png</file>
+        <file>splash/Mudlet_splashscreen_other_22.png</file>
+        <file>splash/Mudlet_splashscreen_other_23.png</file>
+    </qresource>
+</RCC>

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
- *   Copyright (C) 2020 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2020, 2022 by Stephen Lyons - slysven@virginmedia.com   *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -34,9 +34,15 @@ protected:
     TMxpContext* mpContext;
 
 public:
-    TMxpClient() : mpContext(nullptr) {}
+    TMxpClient()
+    : mpContext(nullptr)
+    {}
 
     virtual void initialize(TMxpContext* context) { mpContext = context; }
+
+    // Declaring the next functions as virtual = 0 makes this an abstract class:
+    // That is, a derived class can only be instantiated when it actually
+    // defines these functions.
 
     virtual QString getVersion() = 0;
 
@@ -59,6 +65,17 @@ public:
     virtual void setBold(bool val) = 0;
     virtual void setItalic(bool val) = 0;
     virtual void setUnderline(bool val) = 0;
+    virtual void setStrikeOut(bool val) = 0;
+
+    virtual bool bold() = 0;
+    virtual bool italic() = 0;
+    virtual bool underline() = 0;
+    virtual bool strikeOut() = 0;
+
+    virtual void resetTextProperties() = 0;
+
+    virtual void setStyle(const QString& val) = 0;
+    virtual QString getStyle() = 0;
 
     virtual int setLink(const QStringList& hrefs, const QStringList& hints) = 0;
     virtual bool getLink(int id, QStringList** hrefs, QStringList** hints) = 0;

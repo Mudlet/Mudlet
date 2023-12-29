@@ -22,6 +22,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TrailingWhitespaceMarker.h"
 
 #include "pre_guard.h"
 #include "ui_aliases_main_area.h"
@@ -39,8 +40,10 @@ public:
     // public function allow to trim even when QLineEdit::editingFinished()
     // is not raised. Example: When the user saves without leaving the LineEdit
     void trimName();
+
 private slots:
-    void slot_editing_name_finished();
+    void slot_editingNameFinished();
+    void slot_changedPattern();
 };
 
 #endif // MUDLET_DLGALIASESMAINAREA_H

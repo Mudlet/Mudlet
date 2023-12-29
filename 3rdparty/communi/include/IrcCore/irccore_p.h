@@ -35,6 +35,12 @@
 #include <QtCore/qset.h>
 #include <QtCore/qstring.h>
 
+#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
+namespace Qt {
+    const QString::SplitBehavior SkipEmptyParts = QString::SkipEmptyParts;
+}
+#endif
+
 IRC_BEGIN_NAMESPACE
 
 namespace IrcPrivate {
@@ -50,12 +56,6 @@ namespace IrcPrivate {
     static inline QList<T> setToList(const QSet<T> &set) { return set.toList(); }
 #endif
 }
-
-#if QT_VERSION < QT_VERSION_CHECK(5, 14, 0)
-namespace Qt {
-    const QString::SplitBehavior SkipEmptyParts = QString::SkipEmptyParts;
-}
-#endif
 
 #ifndef Q_FALLTHROUGH
 #   if defined(__cplusplus)

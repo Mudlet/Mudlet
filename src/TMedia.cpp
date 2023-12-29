@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -28,7 +28,9 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QMediaPlaylist>
+#endif
 #include <QNetworkDiskCache>
 #include <QRandomGenerator>
 #include <QStandardPaths>
@@ -57,10 +59,11 @@ void TMedia::playMedia(TMediaData& mediaData)
     mediaData.setMediaFileName(mediaData.getMediaFileName().replace(QLatin1Char('\\'), QLatin1Char('/')));
 
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && mediaData.getMediaFileName() == qsl("Off")) {
+        TMedia::processUrl(mediaData);
         return;
     }
 
-    bool fileRelative = TMedia::isFileRelative(mediaData);
+    const bool fileRelative = TMedia::isFileRelative(mediaData);
 
     if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
         return; // MSP and MCMP files will not have absolute paths. Something is wrong.
@@ -82,8 +85,8 @@ void TMedia::playMedia(TMediaData& mediaData)
             TMedia::transitionNonRelativeFile(mediaData);
         }
 
-        QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
-        QFile mediaFile(absolutePathFileName);
+        const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
+        QFile const mediaFile(absolutePathFileName);
 
         if (!mediaFile.exists()) {
             if (fileRelative) {
@@ -163,7 +166,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
     }
 
     if (!mediaData.getMediaFileName().isEmpty()) {
-        bool fileRelative = TMedia::isFileRelative(mediaData);
+        const bool fileRelative = TMedia::isFileRelative(mediaData);
 
         if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
             return; // MSP and MCMP files will not have absolute paths. Something is wrong.
@@ -178,7 +181,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
-        TMediaPlayer pPlayer = itTMediaPlayer.next();
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
 
         if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolAPI) {
             if (!mediaData.getMediaKey().isEmpty() && !pPlayer.getMediaData().getMediaKey().isEmpty() && pPlayer.getMediaData().getMediaKey() != mediaData.getMediaKey()) {
@@ -197,7 +200,25 @@ void TMedia::stopMedia(TMediaData& mediaData)
                 && pPlayer.getMediaData().getMediaPriority() >= mediaData.getMediaPriority()) {
                 continue;
             }
-        }
+
+            if ((mediaData.getMediaFadeAway() == TMediaData::MediaFadeAwayEnabled || mediaData.getMediaFadeOut() != TMediaData::MediaFadeNotSet)
+                && pPlayer.getMediaData().getMediaEnd() == TMediaData::MediaEndNotSet) {
+                const int finishPosition = pPlayer.getMediaData().getMediaFinish();
+                const int duration = pPlayer.getMediaPlayer()->duration();
+                const int currentPosition = pPlayer.getMediaPlayer()->position();
+                const int fadeOut = pPlayer.getMediaData().getMediaFadeOut() ? pPlayer.getMediaData().getMediaFadeOut() : mediaData.getMediaFadeOut();
+                const int remainingDuration = (finishPosition != TMediaData::MediaFinishNotSet ? finishPosition : duration) - currentPosition;
+                const int endDuration = fadeOut != TMediaData::MediaFadeNotSet ? std::min(remainingDuration, fadeOut) : std::min(remainingDuration, 5000);
+                const int endPosition = currentPosition + endDuration;
+                TMediaPlayer pUpdatePlayer = pPlayer;
+                TMediaData updateMediaData = pUpdatePlayer.getMediaData();
+                updateMediaData.setMediaFadeOut(endDuration);
+                updateMediaData.setMediaEnd(endPosition);
+                pUpdatePlayer.setMediaData(updateMediaData);
+                TMedia::updateMediaPlayerList(pUpdatePlayer);
+                continue;
+            }
+       }
 
         pPlayer.getMediaPlayer()->stop();
     }
@@ -219,7 +240,7 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
     // This is JSON
     auto json = document.object();
 
-    QString package = packageMessage.toLower(); // Don't change original variable
+    const QString package = packageMessage.toLower(); // Don't change original variable
 
     if (package == "client.media.stop") {
         TMedia::parseJSONForMediaStop(json);
@@ -241,7 +262,7 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
 
 bool TMedia::purgeMediaCache()
 {
-    QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
@@ -253,30 +274,68 @@ bool TMedia::purgeMediaCache()
     mediaDir.removeRecursively();
     return true;
 }
+
+void TMedia::muteMedia(const TMediaData::MediaProtocol mediaProtocol)
+{
+    setMediaPlayersMuted(mediaProtocol, true);
+}
+
+void TMedia::unmuteMedia(const TMediaData::MediaProtocol mediaProtocol)
+{
+    setMediaPlayersMuted(mediaProtocol, false);
+}
 // End Public
 
 // Private
 void TMedia::stopAllMediaPlayers()
 {
-    QList<TMediaPlayer> mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList);
+    QList<TMediaPlayer> const mTMediaPlayerList = (mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
-        TMediaPlayer pPlayer = itTMediaPlayer.next();
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
         pPlayer.getMediaPlayer()->stop();
+    }
+}
+
+void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state)
+{
+    QList<TMediaPlayer> mTMediaPlayerList;
+
+    if (mediaProtocol == TMediaData::MediaProtocolMSP) {
+        mTMediaPlayerList = mMSPSoundList + mMSPMusicList;
+    } else if (mediaProtocol == TMediaData::MediaProtocolGMCP) {
+        mTMediaPlayerList = mGMCPSoundList + mGMCPMusicList;
+    } else if (mediaProtocol == TMediaData::MediaProtocolAPI) {
+        mTMediaPlayerList = mAPISoundList + mAPIMusicList;
+    } else if (mediaProtocol == TMediaData::MediaProtocolNotSet) {
+        mTMediaPlayerList = mMSPSoundList + mMSPMusicList + mGMCPSoundList + mGMCPMusicList + mAPISoundList + mAPIMusicList;
+    }
+
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        const TMediaPlayer player = itTMediaPlayer.next();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        player.getMediaPlayer()->setMuted(state);
+#else
+        if (player.getMediaPlayer()->audioOutput()) {
+            player.getMediaPlayer()->audioOutput()->setMuted(state);
+        }
+#endif
     }
 }
 
 void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 {
-    QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
-    QDir mediaDir(mediaPath);
+    const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    const QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
         qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
     } else {
-        QString mediaFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', -1));
-        QFile mediaFile(mediaFilePath);
+        const QString mediaFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', -1));
+        QFile const mediaFile(mediaFilePath);
 
         if (!mediaFile.exists() && !QFile::copy(mediaData.getMediaFileName(), mediaFilePath)) {
             qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to copy file %1 to a directory %2 failed.").arg(mediaData.getMediaFileName(), mediaFilePath);
@@ -379,7 +438,7 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
 {
     QStringList fileNameList;
 
-    QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
     QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
@@ -388,7 +447,7 @@ QStringList TMedia::getFileNameList(TMediaData& mediaData)
     }
 
     if (!mediaData.getMediaFileName().isEmpty() && mediaData.getMediaFileName().contains('/')) {
-        QString mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
+        const QString mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
         QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
@@ -429,7 +488,7 @@ QUrl TMedia::getFileUrl(TMediaData& mediaData)
     }
 
     if (!mediaLocation.isEmpty()) {
-        bool endsWithSlash = mediaLocation.endsWith('/');
+        const bool endsWithSlash = mediaLocation.endsWith('/');
 
         if (!endsWithSlash) {
             fileUrl = QUrl::fromUserInput(qsl("%1/%2").arg(mediaLocation, mediaData.getMediaFileName()));
@@ -491,7 +550,7 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
         reply->deleteLater();
         mpHost->raiseEvent(event);
     } else {
-        QFile localFile(mediaData.getMediaAbsolutePathFileName());
+        QSaveFile localFile(mediaData.getMediaAbsolutePathFileName());
 
         if (!localFile.open(QFile::WriteOnly)) {
             event.mArgumentList << QLatin1String("sysDownloadError");
@@ -507,7 +566,7 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
             mpHost->raiseEvent(event);
         }
 
-        qint64 bytesWritten = localFile.write(reply->readAll());
+        qint64 const bytesWritten = localFile.write(reply->readAll());
 
         if (bytesWritten == -1) {
             event.mArgumentList << QLatin1String("sysDownloadError");
@@ -532,7 +591,9 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
                 event.mArgumentList << QString::number(bytesWritten);
                 event.mArgumentTypeList << ARGUMENT_TYPE_NUMBER;
 
-                localFile.close();
+                if (!localFile.commit()) {
+                    qDebug() << "TMedia::slot_writeFile: error saving downloaded media: " << localFile.errorString();
+                }
 
                 reply->deleteLater();
                 mpHost->raiseEvent(event);
@@ -557,8 +618,8 @@ void TMedia::slot_writeFile(QNetworkReply* reply)
 
 void TMedia::downloadFile(TMediaData& mediaData)
 {
-    QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
-    QDir mediaDir(mediaPath);
+    const QString mediaPath = mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName());
+    const QDir mediaDir(mediaPath);
 
     if (!mediaDir.mkpath(mediaPath)) {
         qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
@@ -566,8 +627,8 @@ void TMedia::downloadFile(TMediaData& mediaData)
     }
 
     if (!mediaData.getMediaFileName().isEmpty() && mediaData.getMediaFileName().contains('/')) {
-        QString mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
-        QDir mediaSubDir(mediaSubPath);
+        const QString mediaSubPath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', 0, -2));
+        const QDir mediaSubDir(mediaSubPath);
 
         if (!mediaSubDir.mkpath(mediaSubPath)) {
             qWarning() << qsl("TMedia::downloadFile() WARNING - attempt made to create a directory failed: %1")
@@ -576,8 +637,8 @@ void TMedia::downloadFile(TMediaData& mediaData)
         }
     }
 
-    QDir dir;
-    QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    const QDir dir;
+    const QString cacheDir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
 
     if (!dir.mkpath(cacheDir)) {
         qWarning() << "TMedia::downloadFile() WARNING - couldn't create cache directory for sound file(s): " << cacheDir;
@@ -589,17 +650,12 @@ void TMedia::downloadFile(TMediaData& mediaData)
     if (!TMedia::isValidUrl(fileUrl)) {
         return;
     } else {
-        auto diskCache = new QNetworkDiskCache(this);
-        diskCache->setCacheDirectory(cacheDir);
-        mpNetworkAccessManager->setCache(diskCache);
-
         QNetworkRequest request = QNetworkRequest(fileUrl);
         request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-        request.setAttribute(QNetworkRequest::CacheLoadControlAttribute, QNetworkRequest::PreferCache);
 #if !defined(QT_NO_SSL)
         if (fileUrl.scheme() == qsl("https")) {
-            QSslConfiguration config(QSslConfiguration::defaultConfiguration());
+            QSslConfiguration const config(QSslConfiguration::defaultConfiguration());
             request.setSslConfiguration(config);
         }
 #endif
@@ -670,17 +726,159 @@ QList<TMediaPlayer> TMedia::getMediaPlayerList(TMediaData& mediaData)
     return mTMediaPlayerList;
 }
 
+void TMedia::connectMediaPlayer(TMediaPlayer& player)
+{
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    disconnect(player.getMediaPlayer(), &QMediaPlayer::stateChanged, nullptr, nullptr);
+    connect(player.getMediaPlayer(), &QMediaPlayer::stateChanged, this,
+            [=](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, player); });
+#else
+    disconnect(player.getMediaPlayer(), &QMediaPlayer::playbackStateChanged, nullptr, nullptr);
+    connect(player.getMediaPlayer(), &QMediaPlayer::playbackStateChanged, this,
+            [=](QMediaPlayerPlaybackState playbackState) { handlePlayerPlaybackStateChanged(playbackState, player); });
+#endif
+    disconnect(player.getMediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
+    connect(player.getMediaPlayer(), &QMediaPlayer::positionChanged, this, [=](qint64 progress) {
+        const int volume = player.getMediaData().getMediaVolume();
+        const int duration = player.getMediaPlayer()->duration();
+        const int fadeInDuration = player.getMediaData().getMediaFadeIn();
+        const int fadeOutDuration = player.getMediaData().getMediaFadeOut();
+        const int startPosition = player.getMediaData().getMediaStart();
+        const int finishPosition = player.getMediaData().getMediaFinish();
+        const int endPosition = player.getMediaData().getMediaEnd();
+        const bool fadeInUsed = fadeInDuration != TMediaData::MediaFadeNotSet;
+        const bool fadeOutUsed = fadeOutDuration != TMediaData::MediaFadeNotSet;
+        const bool finishUsed = finishPosition != TMediaData::MediaFinishNotSet;
+        const bool endUsed = endPosition != TMediaData::MediaEndNotSet;
+        const int relativeDuration = endUsed ? endPosition : finishUsed ? finishPosition : duration;
+        const int relativeFadeInPosition = fadeInUsed ? startPosition + fadeInDuration : TMediaData::MediaFadeNotSet;
+        const int relativeFadeOutPosition = fadeOutUsed ? relativeDuration - fadeOutDuration : TMediaData::MediaFadeNotSet;
+        bool actionTaken = false;
+
+        if (progress > relativeDuration && (endUsed || finishUsed)) {
+            player.getMediaPlayer()->stop();
+        } else {
+            if (fadeInUsed) {
+                if (progress < relativeFadeInPosition) {
+                    double const fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((relativeFadeInPosition - startPosition) * 1.0);
+
+                    player.setVolume(qRound(fadeInVolume));
+                    actionTaken = true;
+                } else if (progress == relativeFadeInPosition) {
+                    player.setVolume(volume);
+                    actionTaken = true;
+                }
+            }
+
+            if (!actionTaken && fadeOutUsed && progress > 0) {
+                if (progress > relativeFadeOutPosition) {
+                    double const fadeOutVolume = static_cast<double>(volume * (relativeDuration - progress)) / static_cast<double>(fadeOutDuration * 1.0);
+
+                    player.setVolume(qRound(fadeOutVolume));
+                    actionTaken = true;
+                }
+            }
+
+            if (!actionTaken && ((fadeInUsed && progress > relativeFadeInPosition) || (fadeOutUsed && progress < relativeFadeOutPosition))) {
+                player.setVolume(volume); // Added to support multiple continue = true calls of same music
+            }
+        }
+    });
+}
+
+void TMedia::updateMediaPlayerList(TMediaPlayer& player)
+{
+    int matchedMediaPlayerIndex = -1;
+    TMediaData mediaData = player.getMediaData();
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+
+    for (int i = 0; i < mTMediaPlayerList.size(); ++i) {
+        TMediaPlayer const pTestPlayer = mTMediaPlayerList.at(i);
+
+        if (pTestPlayer.getMediaPlayer() == player.getMediaPlayer()) {
+            matchedMediaPlayerIndex = i;
+            TMedia::connectMediaPlayer(player);
+            break;
+        }
+    }
+
+    switch (mediaData.getMediaProtocol()) {
+    case TMediaData::MediaProtocolMSP:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            if (matchedMediaPlayerIndex == -1) {
+                mMSPSoundList.append(player);
+            } else {
+                mMSPSoundList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        case TMediaData::MediaTypeMusic:
+            if (matchedMediaPlayerIndex == -1) {
+                mMSPMusicList.append(player);
+            } else {
+                mMSPMusicList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        }
+        break;
+
+    case TMediaData::MediaProtocolGMCP:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            if (matchedMediaPlayerIndex == -1) {
+                mGMCPSoundList.append(player);
+            } else {
+                mGMCPSoundList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        case TMediaData::MediaTypeMusic:
+            if (matchedMediaPlayerIndex == -1) {
+                mGMCPMusicList.append(player);
+            } else {
+                mGMCPMusicList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        }
+        break;
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            if (matchedMediaPlayerIndex == -1) {
+                mAPISoundList.append(player);
+            } else {
+                mAPISoundList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        case TMediaData::MediaTypeMusic:
+            if (matchedMediaPlayerIndex == -1) {
+                mAPIMusicList.append(player);
+            } else {
+                mAPIMusicList.replace(matchedMediaPlayerIndex, player);
+            }
+            break;
+        }
+        break;
+    }
+}
+
 TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
 {
     TMediaPlayer pPlayer{};
-    QList<TMediaPlayer> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) { // Find first available inactive QMediaPlayer
-        TMediaPlayer pTestPlayer = itTMediaPlayer.next();
+        TMediaPlayer const pTestPlayer = itTMediaPlayer.next();
 
-        if (pTestPlayer.getMediaPlayer()->state() != QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+        if (pTestPlayer.getPlaybackState() != QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
             pPlayer = pTestPlayer;
+            // Discard all information relating to the current media source
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            pPlayer.getMediaPlayer()->setMedia(nullptr);
+#else
+            pPlayer.getMediaPlayer()->setSource(QUrl());
+#endif
             pPlayer.setMediaData(mediaData);
             break;
         }
@@ -695,71 +893,48 @@ TMediaPlayer TMedia::getMediaPlayer(TMediaData& mediaData)
         }
     }
 
-    disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged, nullptr, nullptr);
-    disconnect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
-
-    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::stateChanged, [=](QMediaPlayer::State state) {
-        if (state == QMediaPlayer::StoppedState) {
-            TEvent mediaFinished{};
-            mediaFinished.mArgumentList.append("sysMediaFinished");
-            mediaFinished.mArgumentList.append(pPlayer.getMediaPlayer()->media().request().url().fileName());
-            mediaFinished.mArgumentList.append(pPlayer.getMediaPlayer()->media().request().url().path());
-            mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-            mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-
-            if (mpHost) {
-                // The host may have gone away if the sound was a long one
-                // and we are multi-playing so we ought to test it...
-                mpHost->raiseEvent(mediaFinished);
-            }
-        }
-    });
-
-    connect(pPlayer.getMediaPlayer(), &QMediaPlayer::positionChanged, [=](qint64 progress) {
-        int volume = pPlayer.getMediaData().getMediaVolume();
-        int fadeInPosition = pPlayer.getMediaData().getMediaFadeIn();
-        int fadeOutPosition = pPlayer.getMediaData().getMediaFadeOut();
-        int startPosition = pPlayer.getMediaData().getMediaStart();
-
-        if (fadeInPosition != TMediaData::MediaFadeNotSet) {
-            if (progress < fadeInPosition) {
-                double fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((fadeInPosition - startPosition) * 1.0);
-
-                pPlayer.getMediaPlayer()->setVolume(qRound(fadeInVolume));
-            } else if (progress == fadeInPosition) {
-                pPlayer.getMediaPlayer()->setVolume(volume);
-            }
-        }
-
-        if (fadeOutPosition != TMediaData::MediaFadeNotSet && progress > 0) {
-            int duration = pPlayer.getMediaPlayer()->duration();
-
-            if (progress > duration - fadeOutPosition) {
-                double fadeOutVolume = static_cast<double>(volume * (duration - progress)) / static_cast<double>(fadeOutPosition * 1.0);
-
-                pPlayer.getMediaPlayer()->setVolume(qRound(fadeOutVolume));
-            }
-        }
-    });
+    TMedia::connectMediaPlayer(pPlayer);
 
     return pPlayer;
+}
+
+void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playbackState, const TMediaPlayer& pPlayer) {
+    if (playbackState == QMediaPlayer::StoppedState) {
+        TEvent mediaFinished{};
+        mediaFinished.mArgumentList.append("sysMediaFinished");
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        QUrl const mediaUrl = pPlayer.getMediaPlayer()->media().request().url();
+#else
+        QUrl mediaUrl = pPlayer.getMediaPlayer()->source();
+#endif
+        mediaFinished.mArgumentList.append(mediaUrl.fileName());
+        mediaFinished.mArgumentList.append(mediaUrl.path());
+        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mediaFinished.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+        if (mpHost) {
+            // The host may have gone away if the sound was a long one
+            // and we are multi-playing so we ought to test it...
+            mpHost->raiseEvent(mediaFinished);
+        }
+    }
 }
 
 TMediaPlayer TMedia::matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName)
 {
     TMediaPlayer pPlayer{};
-    QList<TMediaPlayer> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
-        TMediaPlayer pTestPlayer = itTMediaPlayer.next();
+        TMediaPlayer const pTestPlayer = itTMediaPlayer.next();
 
-        if (pTestPlayer.getMediaPlayer()->state() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
-            if (pTestPlayer.getMediaPlayer()->media().request().url().toString().endsWith(absolutePathFileName)) { // Is the same sound or music playing?
+        if (pTestPlayer.getPlaybackState() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+            if (pTestPlayer.getMediaData().getMediaAbsolutePathFileName().endsWith(absolutePathFileName)) { // Is the same sound or music playing?
                 pPlayer = pTestPlayer;
                 pPlayer.setMediaData(mediaData);
-                pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.getMediaVolume());
+                pPlayer.setVolume(mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.getMediaVolume());
                 break;
             }
         }
@@ -779,14 +954,14 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 
     int maxMediaPriority = 0;
 
-    QList<TMediaPlayer> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) { // Find the maximum priority of all playing sounds
-        TMediaPlayer pTestPlayer = itTMediaPlayer.next();
+        TMediaPlayer const pTestPlayer = itTMediaPlayer.next();
 
-        if (pTestPlayer.getMediaPlayer()->state() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
-            if (!pTestPlayer.getMediaPlayer()->media().request().url().toString().endsWith(absolutePathFileName)) { // Is it a different sound or music than specified?
+        if (pTestPlayer.getPlaybackState() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+            if (!pTestPlayer.getMediaData().getMediaAbsolutePathFileName().endsWith(absolutePathFileName)) { // Is it a different sound or music than specified?
                 if (pTestPlayer.getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet && pTestPlayer.getMediaData().getMediaPriority() > maxMediaPriority) {
                     maxMediaPriority = pTestPlayer.getMediaData().getMediaPriority();
                 }
@@ -810,16 +985,16 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#key
 void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QString& absolutePathFileName)
 {
-    QList<TMediaPlayer> mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
+    QList<TMediaPlayer> const mTMediaPlayerList = TMedia::getMediaPlayerList(mediaData);
     QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
 
     while (itTMediaPlayer.hasNext()) {
-        TMediaPlayer pTestPlayer = itTMediaPlayer.next();
+        TMediaPlayer const pTestPlayer = itTMediaPlayer.next();
 
-        if (pTestPlayer.getMediaPlayer()->state() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+        if (pTestPlayer.getPlaybackState() == QMediaPlayer::PlayingState && pTestPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
             if (!mediaData.getMediaKey().isEmpty() && !pTestPlayer.getMediaData().getMediaKey().isEmpty()
                 && mediaData.getMediaKey() == pTestPlayer.getMediaData().getMediaKey()) { // Does it have the same key?
-                if (!pTestPlayer.getMediaPlayer()->media().request().url().toString().endsWith(absolutePathFileName)
+                if (!pTestPlayer.getMediaData().getMediaAbsolutePathFileName().endsWith(absolutePathFileName)
                     || (!mediaData.getMediaUrl().isEmpty() && !pTestPlayer.getMediaData().getMediaUrl().isEmpty()
                         && mediaData.getMediaUrl() != pTestPlayer.getMediaData().getMediaUrl())) { // Is it a different sound or music than specified?
                     TMediaData stopMediaData = pTestPlayer.getMediaData();
@@ -832,6 +1007,7 @@ void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QStr
 
 void TMedia::play(TMediaData& mediaData)
 {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
         return;
     }
@@ -840,7 +1016,7 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
-    QStringList fileNameList = TMedia::getFileNameList(mediaData);
+    const QStringList fileNameList = TMedia::getFileNameList(mediaData);
 
     if (fileNameList.isEmpty()) { // This should not happen.
         qWarning() << qsl("TMedia::play() WARNING - could not generate a list of media file names.");
@@ -853,10 +1029,10 @@ void TMedia::play(TMediaData& mediaData)
         pPlayer = TMedia::matchMediaPlayer(mediaData, fileNameList.at(0));
     }
 
-    if (pPlayer.isInitialized()) { // Same music is already playing
-        if (mediaData.getMediaContinue() == TMediaData::MediaContinueDefault && mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) {
-            return; // Continue playing it && Don't add more iterations of it
-        }
+    bool sameMusicIsPlaying = false;
+
+    if (pPlayer.isInitialized()) {
+        sameMusicIsPlaying = true; // Same music is playing; Reuse that MediaPlayer
     } else {
         pPlayer = TMedia::getMediaPlayer(mediaData);
     }
@@ -867,9 +1043,28 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
+    auto playlist = !sameMusicIsPlaying ? new QMediaPlaylist : (pPlayer.getMediaPlayer()->playlist() != nullptr ? pPlayer.getMediaPlayer()->playlist() : new QMediaPlaylist);
     QString absolutePathFileName;
 
     if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
+        playlist->setPlaybackMode(QMediaPlaylist::Sequential);
+
+        if (sameMusicIsPlaying) {
+            if (mediaData.getMediaContinue() == TMediaData::MediaContinueRestart) {
+                mpHost->mpMedia->stopMedia(mediaData); // Stop the music; Restart it below.
+
+                if (!playlist->isEmpty()) {
+                    playlist->clear();
+                }
+            } else {
+                if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
+                    playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                }
+
+                return; // No action required. Continue playing the same music.
+            }
+        }
+
         if (fileNameList.size() > 1) {
             absolutePathFileName = fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()));
         } else {
@@ -884,11 +1079,24 @@ void TMedia::play(TMediaData& mediaData)
             TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
         }
 
-        pPlayer.getMediaPlayer()->setMedia(QUrl::fromLocalFile(absolutePathFileName));
+        QUrl const mediaSource = QUrl::fromLocalFile(absolutePathFileName);
+        pPlayer.getMediaPlayer()->setMedia(mediaSource);
     } else {
-        auto playlist = new QMediaPlaylist;
-
         if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
+            playlist->setPlaybackMode(QMediaPlaylist::Loop);
+
+            if (sameMusicIsPlaying) {
+                if (mediaData.getMediaContinue() == TMediaData::MediaContinueRestart) {
+                    mpHost->mpMedia->stopMedia(mediaData); // Stop the music; Restart it below.
+
+                    if (!playlist->isEmpty()) {
+                        playlist->clear();
+                    }
+                } else {
+                    return; // No action required. Continue playing the same music.
+                }
+            }
+
             if (fileNameList.size() > 1) {
                 absolutePathFileName = fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()));
             } else {
@@ -904,10 +1112,23 @@ void TMedia::play(TMediaData& mediaData)
             }
 
             playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
-            playlist->setPlaybackMode(QMediaPlaylist::Loop);
         } else {
-            if (mediaData.getMediaType() == TMediaData::MediaTypeMusic && mediaData.getMediaContinue() == TMediaData::MediaContinueDefault) {
-                mediaData.setMediaLoops(mediaData.getMediaLoops() - 1); // Subtract the currently playing music from the total
+            playlist->setPlaybackMode(QMediaPlaylist::Sequential);
+
+            if (sameMusicIsPlaying) {
+                if (mediaData.getMediaContinue() == TMediaData::MediaContinueRestart) {
+                    mpHost->mpMedia->stopMedia(mediaData); // Stop the music; Restart it below.
+
+                    if (!playlist->isEmpty()) {
+                        playlist->clear();
+                    }
+                } else {
+                    if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
+                        playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                    }
+
+                    mediaData.setMediaLoops(mediaData.getMediaLoops() - 1); // Subtract the currently playing music from the total
+                }
             }
 
             for (int k = 0; k < mediaData.getMediaLoops(); k++) { // Repeat a finite number of times
@@ -931,49 +1152,42 @@ void TMedia::play(TMediaData& mediaData)
             }
         }
 
+        if (sameMusicIsPlaying && mediaData.getMediaContinue() == TMediaData::MediaContinueDefault) {
+            return;
+        }
+
         playlist->setCurrentIndex(1);
         pPlayer.getMediaPlayer()->setPlaylist(playlist);
-    }
-
-    switch (mediaData.getMediaProtocol()) {
-    case TMediaData::MediaProtocolMSP:
-        switch (mediaData.getMediaType()) {
-        case TMediaData::MediaTypeSound:
-            mMSPSoundList.append(pPlayer);
-            break;
-        case TMediaData::MediaTypeMusic:
-            mMSPMusicList.append(pPlayer);
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolGMCP:
-        switch (mediaData.getMediaType()) {
-        case TMediaData::MediaTypeSound:
-            mGMCPSoundList.append(pPlayer);
-            break;
-        case TMediaData::MediaTypeMusic:
-            mGMCPMusicList.append(pPlayer);
-            break;
-        }
-        break;
-
-    case TMediaData::MediaProtocolAPI:
-        switch (mediaData.getMediaType()) {
-        case TMediaData::MediaTypeSound:
-            mAPISoundList.append(pPlayer);
-            break;
-        case TMediaData::MediaTypeMusic:
-            mAPIMusicList.append(pPlayer);
-            break;
-        }
-        break;
     }
 
     // Set volume, start and play media
     pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.getMediaVolume());
     pPlayer.getMediaPlayer()->setPosition(mediaData.getMediaStart());
+
+    if (mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet || mediaData.getMediaFadeOut() != TMediaData::MediaFadeNotSet) {
+        pPlayer.getMediaPlayer()->setNotifyInterval(50); // Smoother volume changes with the tighter interval (default = 1000).
+    }
+
+    // Set whether or not we should be muted
+    switch (mediaData.getMediaProtocol()) {
+        case TMediaData::MediaProtocolAPI:
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteAPI());
+            break;
+        case TMediaData::MediaProtocolGMCP:
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMCMP());
+            break;
+        case TMediaData::MediaProtocolMSP:
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMSP());
+            break;
+    }
+
     pPlayer.getMediaPlayer()->play();
+
+    updateMediaPlayerList(pPlayer);
+#else
+    Q_UNUSED(mediaData)
+#warning QMediaPlaylist was removed in Qt6 - it has not been reimplemented yet!
+#endif
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#type:_sound
@@ -1072,6 +1286,22 @@ int TMedia::parseJSONByMediaStart(QJsonObject& json)
     return mediaStart;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#finish
+int TMedia::parseJSONByMediaFinish(QJsonObject& json)
+{
+    int mediaFinish = TMediaData::MediaFinishNotSet;
+
+    auto mediaFinishJSON = json.value(qsl("end"));
+
+    if (mediaFinishJSON != QJsonValue::Undefined && mediaFinishJSON.isString() && !mediaFinishJSON.toString().isEmpty()) {
+        mediaFinish = mediaFinishJSON.toString().toInt();
+    } else if (mediaFinishJSON != QJsonValue::Undefined && mediaFinishJSON.toInt()) {
+        mediaFinish = mediaFinishJSON.toInt();
+    }
+
+    return mediaFinish;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
 int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 {
@@ -1165,6 +1395,27 @@ QString TMedia::parseJSONByMediaKey(QJsonObject& json)
 
     return mediaKey;
 }
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadeaway
+TMediaData::MediaFadeAway TMedia::parseJSONByMediaFadeAway(QJsonObject& json)
+{
+    TMediaData::MediaFadeAway mediaFadeAway = TMediaData::MediaFadeAwayDefault;
+
+    auto mediaFadeAwayJSON = json.value(qsl("fadeaway"));
+
+    if (mediaFadeAwayJSON != QJsonValue::Undefined && mediaFadeAwayJSON.isString() && !mediaFadeAwayJSON.toString().isEmpty()) {
+        if (mediaFadeAwayJSON.toString() == "true") {
+            mediaFadeAway = TMediaData::MediaFadeAwayEnabled;
+        } else {
+            mediaFadeAway = TMediaData::MediaFadeAwayDefault;
+        }
+    } else if (mediaFadeAwayJSON != QJsonValue::Undefined && mediaFadeAwayJSON.toBool(true)) {
+        mediaFadeAway = TMediaData::MediaFadeAwayEnabled;
+    }
+
+    return mediaFadeAway;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#Loading_Media
 void TMedia::parseJSONForMediaDefault(QJsonObject& json)
 {
@@ -1197,9 +1448,9 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
         return;
     }
 
-    QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
+    const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
 
-    QFile mediaFile(absolutePathFileName);
+    QFile const mediaFile(absolutePathFileName);
 
     if (!mediaFile.exists()) {
         TMedia::downloadFile(mediaData);
@@ -1226,6 +1477,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaFadeIn(TMedia::parseJSONByMediaFadeIn(json));
     mediaData.setMediaFadeOut(TMedia::parseJSONByMediaFadeOut(json));
     mediaData.setMediaStart(TMedia::parseJSONByMediaStart(json));
+    mediaData.setMediaFinish(TMedia::parseJSONByMediaFinish(json));
     mediaData.setMediaLoops(TMedia::parseJSONByMediaLoops(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
@@ -1244,6 +1496,8 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
     mediaData.setMediaPriority(TMedia::parseJSONByMediaPriority(json));
+    mediaData.setMediaFadeAway(TMedia::parseJSONByMediaFadeAway(json));
+    mediaData.setMediaFadeOut(TMedia::parseJSONByMediaFadeOut(json));
 
     TMedia::stopMedia(mediaData);
 }

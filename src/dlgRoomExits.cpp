@@ -123,9 +123,9 @@ QWidget* RoomIdLineEditDelegate::createEditor(QWidget* parent, const QStyleOptio
             TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(text.toInt());
             if (exitToRoom) {
                 // Valid exit roomID in place:
-                int exitAreaID = exitToRoom->getArea();
-                bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-                bool exitRoomLocked = exitToRoom->isLocked;
+                const int exitAreaID = exitToRoom->getArea();
+                const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+                const bool exitRoomLocked = exitToRoom->isLocked;
                 mpDlgRoomExits->setActionOnExit(mpEditor, exitRoomLocked
                                                 ? mpDlgRoomExits->mpAction_exitRoomLocked
                                                 : outOfAreaExit
@@ -202,9 +202,9 @@ void RoomIdLineEditDelegate::slot_specialRoomExitIdEdited(const QString& text) c
     QString roomIdToolTipText;
     if (pExitToRoom) {
         // A valid exit roomID number:
-        int exitAreaID = pExitToRoom->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = pExitToRoom->isLocked;
+        const int exitAreaID = pExitToRoom->getArea();
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -463,7 +463,6 @@ void dlgRoomExits::slot_addSpecialExit()
     pI->setText(ExitsTreeWidget::colIndex_command, mSpecialExitCommandPlaceholder); //Exit command
     pI->setTextAlignment(ExitsTreeWidget::colIndex_command, Qt::AlignLeft);
 
-// >>>>>>> development
     specialExits->addTopLevelItem(pI);
 
     setIconAndToolTipsOnSpecialExit(pI, true);
@@ -481,8 +480,8 @@ void dlgRoomExits::save()
 
     for (int i = 0; i < specialExits->topLevelItemCount(); ++i) {
         QTreeWidgetItem* pI = specialExits->topLevelItem(i);
-        int value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
-        int weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
+        const int value = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
+        const int weight = pI->text(ExitsTreeWidget::colIndex_exitWeight).toInt();
         int door = 0;
         bool locked = false;
         if (pI->checkState(ExitsTreeWidget::colIndex_doorLocked) == Qt::Checked) {
@@ -494,7 +493,7 @@ void dlgRoomExits::save()
         } else if (pI->checkState(ExitsTreeWidget::colIndex_doorNone) == Qt::Checked) {
             door = 0;
         }
-        QString key = pI->text(ExitsTreeWidget::colIndex_command);
+        const QString key = pI->text(ExitsTreeWidget::colIndex_command);
         if (key != mSpecialExitCommandPlaceholder
             && value != 0 && mpHost->mpMap->mpRoomDB->getRoom(value) != nullptr) {
             originalExitCmds.remove(key);
@@ -953,9 +952,9 @@ void dlgRoomExits::setIconAndToolTipsOnSpecialExit(QTreeWidgetItem* pSpecialExit
     TRoom* pExitToRoom = mpHost->mpMap->mpRoomDB->getRoom(pSpecialExit->text(ExitsTreeWidget::colIndex_exitRoomId).toInt());
     if (pExitToRoom) {
         // A valid exit roomID number:
-        int exitAreaID = pExitToRoom->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = pExitToRoom->isLocked;
+        const int exitAreaID = pExitToRoom->getArea();
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = pExitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1046,72 +1045,60 @@ QAction* dlgRoomExits::getActionOnExit(QLineEdit* pExitLineEdit) const
         if (exitRoomLocked) {
             if (outOfAreaExit) {
                 return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".")
-                                               .arg(exitRoomName, exitAreaName),
-                                           tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
-                                              // Intentional comment to separate arguments
-                                              "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
+                                               .arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
+                                           //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
+                                           tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
             }
             return doubleParagraph.arg(tr("Exit to \"%1\".")
-                                           .arg(exitRoomName),
-                                       tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
-                                          // Intentional comment to separate arguments
-                                          "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
+                                           .arg(exitRoomName.toHtmlEscaped()),
+                                       //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
+                                       tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
 
         }
         if (outOfAreaExit) {
             return doubleParagraph.arg(tr("Exit to \"%1\" in area: \"%2\".")
-                                           .arg(exitRoomName, exitAreaName),
-                                       tr("<b>Room</b> Weight of destination: %1.",
-                                          // Intentional comment to separate arguments
-                                          "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                           .arg(exitRoomWeight));
+                                           .arg(exitRoomName.toHtmlEscaped(), exitAreaName.toHtmlEscaped()),
+                                       //: Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not
+                                       tr("<b>Room</b> Weight of destination: %1.").arg(exitRoomWeight));
         }
         return doubleParagraph.arg(tr("Exit to \"%1\".")
-                                       .arg(exitRoomName),
-                                   tr("<b>Room</b> Weight of destination: %1.",
-                                      // Intentional comment to separate arguments
-                                      "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                       .arg(exitRoomWeight));
+                                       .arg(exitRoomName.toHtmlEscaped()),
+                                   //: Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not
+                                   tr("<b>Room</b> Weight of destination: %1.").arg(exitRoomWeight));
     }
 
     if (exitRoomLocked) {
         if (outOfAreaExit) {
             return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
-                                           .arg(exitAreaName),
-                                       tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
-                                          // Intentional comment to separate arguments
-                                          "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
+                                           .arg(exitAreaName.toHtmlEscaped()),
+                                       //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
+                                       tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
         }
 
         return doubleParagraph.arg(tr("Exit to unnamed room is valid."),
-                                   tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it.",
-                                      // Intentional comment to separate arguments
-                                      "Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (\"No route\") setting of any exit that goes to it."));
+                                   //: Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock ("No route") setting of any exit that goes to it.
+                                   tr("<b>Room is locked</b>, it will not be used for speed-walks for any exit that leads to it."));
     }
 
     if (outOfAreaExit) {
         return doubleParagraph.arg(tr("Exit to unnamed room in area: \"%1\", is valid.")
-                                       .arg(exitAreaName),
-                                   tr("<b>Room</b> Weight of destination: %1.",
-                                      // Intentional comment to separate arguments
-                                      "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                       .arg(exitRoomWeight));
+                                       .arg(exitAreaName.toHtmlEscaped()),
+                                   //: Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.
+                                   tr("<b>Room</b> Weight of destination: %1.").arg(exitRoomWeight));
     }
 
     return doubleParagraph.arg(tr("Exit to unnamed room is valid."),
-                               tr("<b>Room</b> Weight of destination: %1.",
-                                  // Intentional comment to separate arguments
-                                  "Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.")
-                                     .arg(exitRoomWeight));
+                               //: Bold HTML tags are used to emphasis that the value is destination room's weight whether overridden by a non-zero exit weight here or not.
+                               tr("<b>Room</b> Weight of destination: %1.").arg(exitRoomWeight));
 }
 
 void dlgRoomExits::normalExitEdited(const QString& roomExitIdText, QLineEdit* pExit, QCheckBox* pNoRoute, QCheckBox* pStub, QSpinBox* pWeight, QRadioButton* pDoorType_none, QRadioButton* pDoorType_open, QRadioButton* pDoorType_closed, QRadioButton* pDoorType_locked, const QString& invalidExitToolTipText, const QString& noExitToolTipText)
 {
     TRoom* exitToRoom = mpHost->mpMap->mpRoomDB->getRoom(roomExitIdText.toInt());
     if (exitToRoom) {
-        int exitAreaID = exitToRoom->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = exitToRoom->isLocked;
+        const int exitAreaID = exitToRoom->getArea();
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = exitToRoom->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1196,7 +1183,7 @@ void dlgRoomExits::slot_nw_textEdited(const QString& text)
 {
     normalExitEdited(text, nw, noroute_nw, stub_nw, weight_nw,
                      doortype_none_nw, doortype_open_nw, doortype_closed_nw, doortype_locked_nw,
-                     utils::richText(tr("Entered number is invalid, set the number of the room northwest of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room northwest of this one.")),
                      utils::richText(tr("Set the number of the room northwest of this one.")));
     slot_checkModified();
 }
@@ -1205,7 +1192,7 @@ void dlgRoomExits::slot_n_textEdited(const QString& text)
 {
     normalExitEdited(text, n, noroute_n, stub_n, weight_n,
                      doortype_none_n, doortype_open_n, doortype_closed_n, doortype_locked_n,
-                     utils::richText(tr("Entered number is invalid, set the number of the room north of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room north of this one.")),
                      utils::richText(tr("Set the number of the room north of this one.")));
     slot_checkModified();
 }
@@ -1214,7 +1201,7 @@ void dlgRoomExits::slot_ne_textEdited(const QString& text)
 {
     normalExitEdited(text, ne, noroute_ne, stub_ne, weight_ne,
                      doortype_none_ne, doortype_open_ne, doortype_closed_ne, doortype_locked_ne,
-                     utils::richText(tr("Entered number is invalid, set the number of the room northeast of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room northeast of this one.")),
                      utils::richText(tr("Set the number of the room northeast of this one.")));
     slot_checkModified();
 }
@@ -1223,7 +1210,7 @@ void dlgRoomExits::slot_up_textEdited(const QString& text)
 {
     normalExitEdited(text, up, noroute_up, stub_up, weight_up,
                      doortype_none_up, doortype_open_up, doortype_closed_up, doortype_locked_up,
-                     utils::richText(tr("Entered number is invalid, set the number of the room up from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room up from this one.")),
                      utils::richText(tr("Set the number of the room up from this one.")));
     slot_checkModified();
 }
@@ -1232,7 +1219,7 @@ void dlgRoomExits::slot_w_textEdited(const QString& text)
 {
     normalExitEdited(text, w, noroute_w, stub_w, weight_w,
                      doortype_none_w, doortype_open_w, doortype_closed_w, doortype_locked_w,
-                     utils::richText(tr("Entered number is invalid, set the number of the room west of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room west of this one.")),
                      utils::richText(tr("Set the number of the room west of this one.")));
     slot_checkModified();
 }
@@ -1241,7 +1228,7 @@ void dlgRoomExits::slot_e_textEdited(const QString& text)
 {
     normalExitEdited(text, e, noroute_e, stub_e, weight_e,
                      doortype_none_e, doortype_open_e, doortype_closed_e, doortype_locked_e,
-                     utils::richText(tr("Entered number is invalid, set the number of the room east of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room east of this one.")),
                      utils::richText(tr("Set the number of the room east of this one.")));
     slot_checkModified();
 }
@@ -1250,7 +1237,7 @@ void dlgRoomExits::slot_down_textEdited(const QString& text)
 {
     normalExitEdited(text, down, noroute_down, stub_down, weight_down,
                      doortype_none_down, doortype_open_down, doortype_closed_down, doortype_locked_down,
-                     utils::richText(tr("Entered number is invalid, set the number of the room down from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room down from this one.")),
                      utils::richText(tr("Set the number of the room down from this one.")));
     slot_checkModified();
 }
@@ -1259,7 +1246,7 @@ void dlgRoomExits::slot_sw_textEdited(const QString& text)
 {
     normalExitEdited(text, sw, noroute_sw, stub_sw, weight_sw,
                      doortype_none_sw, doortype_open_sw, doortype_closed_sw, doortype_locked_sw,
-                     utils::richText(tr("Entered number is invalid, set the number of the room southwest of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room southwest of this one.")),
                      utils::richText(tr("Set the number of the room southwest of this one.")));
     slot_checkModified();
 }
@@ -1268,7 +1255,7 @@ void dlgRoomExits::slot_s_textEdited(const QString& text)
 {
     normalExitEdited(text, s, noroute_s, stub_s, weight_s,
                      doortype_none_s, doortype_open_s, doortype_closed_s, doortype_locked_s,
-                     utils::richText(tr("Entered number is invalid, set the number of the room south of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room south of this one.")),
                      utils::richText(tr("Set the number of the room south of this one.")));
     slot_checkModified();
 }
@@ -1277,7 +1264,7 @@ void dlgRoomExits::slot_se_textEdited(const QString& text)
 {
     normalExitEdited(text, se, noroute_se, stub_se, weight_se,
                      doortype_none_se, doortype_open_se, doortype_closed_se, doortype_locked_se,
-                     utils::richText(tr("Entered number is invalid, set the number of the room southeast of this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room southeast of this one.")),
                      utils::richText(tr("Set the number of the room southeast of this one.")));
     slot_checkModified();
 }
@@ -1286,7 +1273,7 @@ void dlgRoomExits::slot_in_textEdited(const QString& text)
 {
     normalExitEdited(text, in, noroute_in, stub_in, weight_in,
                      doortype_none_in, doortype_open_in, doortype_closed_in, doortype_locked_in,
-                     utils::richText(tr("Entered number is invalid, set the number of the room in from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room in from this one.")),
                      utils::richText(tr("Set the number of the room in from this one.")));
     slot_checkModified();
 }
@@ -1295,7 +1282,7 @@ void dlgRoomExits::slot_out_textEdited(const QString& text)
 {
     normalExitEdited(text, out, noroute_out, stub_out, weight_out,
                      doortype_none_out, doortype_open_out, doortype_closed_out, doortype_locked_out,
-                     utils::richText(tr("Entered number is invalid, set the number of the room out from this one.")),
+                     doubleParagraph.arg(tr("Entered number is invalid."), tr("Set the number of the room out from this one.")),
                      utils::richText(tr("Set the number of the room out from this one.")));
     slot_checkModified();
 }
@@ -1457,9 +1444,9 @@ void dlgRoomExits::initExit(int direction,
     if (exitId > 0 && pExitR) {                         //Does this exit point anywhere
         exitLineEdit->setText(QString::number(exitId)); //Put in the value
         exitLineEdit->setEnabled(true);                 //Enable it for editing
-        int exitAreaID = pExitR->getArea();
-        bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
-        bool exitRoomLocked = pExitR->isLocked;
+        const int exitAreaID = pExitR->getArea();
+        const bool outOfAreaExit = (exitAreaID && exitAreaID != mAreaID);
+        const bool exitRoomLocked = pExitR->isLocked;
         QString exitAreaName;
         if (outOfAreaExit) {
             exitAreaName = mpHost->mpMap->mpRoomDB->getAreaNamesMap().value(exitAreaID);
@@ -1519,9 +1506,8 @@ void dlgRoomExits::init()
     roomID->setText(QString::number(mRoomID));
     if (pR->isLocked) {
         // Revise the tool tip:
-        roomID->setToolTip(utils::richText(tr("This is the Room ID number for this room; this <b>room is locked</b> so it will not be used for speed-walks at all.",
-                                              // Intentional comment to separate arguments
-                                              "This text is a revision to the default tooltip text set for this widget in the 'room_exits.ui' file. Bold HTML tags are used to emphasis that this room's locked status overrides any weight or lock (\"No route\") setting of any exit that comes to it.")));
+        //: This text is a revision to the default tooltip text set for this widget in the 'room_exits.ui' file. Bold HTML tags are used to emphasis that this room's locked status overrides any weight or lock ("No route") setting of any exit that comes to it.
+        roomID->setToolTip(utils::richText(tr("This is the Room ID number for this room; this <b>room is locked</b> so it will not be used for speed-walks at all.")));
     } else {
         // Hide the padlock icon to the right of the room number display to
         // show the unlocked status of the room:
@@ -1568,8 +1554,8 @@ void dlgRoomExits::init()
     QMapIterator<QString, int> it(pR->getSpecialExits());
     while (it.hasNext()) {
         it.next();
-        int id_to = it.value();
-        QString dir = it.key();
+        const int id_to = it.value();
+        const QString dir = it.key();
         auto pSpecialExit = new TExit();
         // It should be impossible for this not to be valid:
         Q_ASSERT_X(pSpecialExit, "dlgRoomExits::init(...)", "failed to generate a new TExit");
@@ -1617,7 +1603,7 @@ void dlgRoomExits::init()
         pI->setToolTip(ExitsTreeWidget::colIndex_doorClosed, utils::richText(tr("Orange (Closed) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         pI->setToolTip(ExitsTreeWidget::colIndex_doorLocked, utils::richText(tr("Red (Locked) door symbol would be drawn on a custom exit line for this exit on 2D Map (but not currently).")));
         {
-            int specialDoor = pR->getDoor(dir);
+            const int specialDoor = pR->getDoor(dir);
             switch (specialDoor) {
             case 0:
                 pI->setCheckState(ExitsTreeWidget::colIndex_doorNone, Qt::Checked);
@@ -1962,7 +1948,7 @@ void dlgRoomExits::slot_checkModified()
     // At the same time existing special exits which now have a empty/zero
     // value in the ExitsTreeWidget::colIndex_exitRoomId field will be deleted if "save"ed...
     if (!isModified) {
-        int originalCount = originalSpecialExits.count();
+        const int originalCount = originalSpecialExits.count();
         int currentCount = 0;
         for (int i = 0; i < specialExits->topLevelItemCount(); i++) {
             QTreeWidgetItem* pI = specialExits->topLevelItem(i);
@@ -1997,7 +1983,7 @@ void dlgRoomExits::slot_checkModified()
                         || pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt() <= 0) {
                         continue; // Ignore new or to be deleted entries
                     }
-                    QString currentCmd = pI->text(ExitsTreeWidget::colIndex_command);
+                    const QString currentCmd = pI->text(ExitsTreeWidget::colIndex_command);
                     TExit currentExit;
                     currentExit.destination = pI->text(ExitsTreeWidget::colIndex_exitRoomId).toInt();
                     currentExit.hasNoRoute = pI->checkState(ExitsTreeWidget::colIndex_lockExit) == Qt::Checked;
@@ -2019,7 +2005,7 @@ void dlgRoomExits::slot_checkModified()
                         break;
                     }
                 }
-                if (foundMap.count()) {
+                if (!foundMap.isEmpty()) {
                     isModified = true;
                 }
             }

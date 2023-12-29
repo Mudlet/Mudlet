@@ -692,6 +692,24 @@ function deleteFull()
   tempLineTrigger(1, 1, [[if isPrompt() then deleteLine() end]])
 end
 
+function deleteMultiline(maxLines)
+  local multimatchesSize = table.size(multimatches)
+  if multimatchesSize == 0 then
+    return nil, "does not appear to be run during a multiline trigger match, please try again."
+  end
+  maxLines = maxLines or multimatchesSize
+  local firstMatch = multimatches[1][1]:patternEscape()
+  for i = 1, maxLines do
+    local content = getCurrentLine()
+    deleteLine()
+    if content:find(firstMatch) then
+      return true
+    end
+    moveCursorUp()
+  end
+  return true
+end
+
 function shms(seconds, bool)
   local seconds = tonumber(seconds)
   assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
@@ -1089,6 +1107,26 @@ function verbosePackageInstall(fileName)
   end
 end
 
+function verboseModuleInstall(fileName)
+  local ok, err = installModule(fileName)
+  local moduleName = fileName
+  -- That is all for installing, now to announce the result to the user:
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  if ok then
+    local successText = mudlet.Locale.moduleInstallSuccess.message
+    successText = string.format(successText, moduleName)
+    local okPrefix = mudlet.Locale.prefixOk.message
+    decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
+    -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
+  else
+    local failureText = mudlet.Locale.moduleInstallFail.message
+    failureText = string.format(failureText, moduleName, err)
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
+    -- Cyan and Orange; see cTelnet::postMessage for color comparison
+  end
+end
+
 local oldInstallPackage = installPackage
 
 -- Override of original installPackage to allow installs from URL
@@ -1137,7 +1175,11 @@ function packageDrop(event, fileName, suffix)
   if not table.contains(acceptableSuffix, suffix) then
     return
   end
-  verbosePackageInstall(fileName)
+  if holdingModifiers(mudlet.keymodifier.Control) then
+    verboseModuleInstall(fileName)
+  else
+    verbosePackageInstall(fileName)
+  end
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
 
@@ -1170,11 +1212,59 @@ function setConfig(...)
   local args = {...}
 
   if type(args[1]) ~= "table" then
-    oldsetConfig(...)
-    return
+    return oldsetConfig(...)
   end
 
   for k,v in pairs(args[1]) do
     oldsetConfig(k, v)
   end
+end
+
+local oldgetConfig = getConfig
+function getConfig(...)
+  local args = {...}
+  local result = {}
+
+  if #args == 0 then
+    local list = {
+      "mapRoomSize", 
+      "mapExitSize", 
+      "mapRoundRooms", 
+      "showRoomIdsOnMap", 
+      "show3dMapView", 
+      "mapperPanelVisible", 
+      "mapShowRoomBorders", 
+      "enableGMCP", 
+      "enableMSDP", 
+      "enableMSSP", 
+      "enableMSP", 
+      "askTlsAvailable", 
+      "inputLineStrictUnixEndings", 
+      "autoClearInputLine", 
+      "showSentText", 
+      "fixUnnecessaryLinebreaks", 
+      "specialForceCompressionOff", 
+      "specialForceGAOff", 
+      "specialForceCharsetNegotiationOff", 
+      "specialForceMxpNegotiationOff", 
+      "compactInputLine", 
+      "announceIncomingText", 
+      "blankLinesBehaviour", 
+      "caretShortcut", 
+      "commandLineHistorySaveSize", 
+    }
+    for _,v in ipairs(list) do
+      result[v] = oldgetConfig(v)
+    end
+    return result
+  end
+
+  if type(args[1]) == "table" then
+    for _,v in pairs(args[1]) do
+      result[v] = oldgetConfig(v)
+    end
+    return result
+  end
+
+  return oldgetConfig(args[1])
 end

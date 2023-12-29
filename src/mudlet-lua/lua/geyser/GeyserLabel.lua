@@ -1,14 +1,9 @@
--- Label class to use CSS and images
-
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
+--- Label class to use CSS and images.
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Geyser.Label">Mudlet Manual</a>
+-- @author guy
+-- @module Geyser.Label
 
 --- Represents a label like we all know and love.
--- @class table
--- @name Geyser.Label
 -- @field fillBg 1 if the background is to be filled, 0 for no background.
 Geyser.Label = Geyser.Window:new({
   name = "LabelClass",
@@ -79,6 +74,8 @@ function Geyser.Label:setFgColor(color)
   self:echo(nil, color, nil)
 end
 
+--- sets the formatting options for text on the label using a formatting string
+-- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:setFormat(format)
   self:echo(nil, nil, format)
 end
@@ -169,8 +166,8 @@ function Geyser.Label:autoAdjustSize()
 end
 
 ---Enable autoAdjustSize
--- @param set width to false if just autoAdjust height
--- @param set height to false if just autoAdjust width
+-- @param width set width to false if just autoAdjust height
+-- @param height set height to false if just autoAdjust width
 function Geyser.Label:enableAutoAdjustSize(width, height)
   self.autoHeight = true
   self.autoWidth = true
@@ -192,7 +189,7 @@ function Geyser.Label:disableAutoAdjustSize()
 end
 
 ---setMovie allows to set a gif animation on a label
--- @param filename the path to the gif file
+-- @param fileName the path to the gif file
 function Geyser.Label:setMovie(fileName)
   result, error = setMovie(self.name, fileName)
   self:autoAdjustSize()
@@ -446,7 +443,7 @@ end
 
 --- Set a predefined mouse cursor shape for this label
 -- @param cursorShape the predefined cursorshape as a string
--- see: https://wiki.mudlet.org/w/CursorShapes
+-- See: <a href="https://wiki.mudlet.org/w/CursorShapes">https://wiki.mudlet.org/w/CursorShapes</a>
 function Geyser.Label:setCursor(cursorShape)
   setLabelCursor(self.name, cursorShape)
   -- Get cursorShape as string
@@ -459,9 +456,11 @@ function Geyser.Label:setCursor(cursorShape)
   self.cursorShape = cursorShape
 end
 
---- Set a custom mouse cursor shape for this label
+--- Set a custom mouse cursor shape for this label.
+-- See: <a href=https://doc.qt.io/qt-5/qcursor.html#shape>https://doc.qt.io/qt-5/qcursor.html#shape</a>
 -- @param customCursor location of your custom cursor. It's suggested to use a png with size of 32x32 which is supported on all platforms
--- see https://doc.qt.io/qt-5/qcursor.html#shape
+-- @param hotX the X position of the cursor hotspot
+-- @param hotY the Y position of the cursor hotspot
 function Geyser.Label:setCustomCursor(customCursor, hotX, hotY)
   hotX = hotX or -1
   hotY = hotY or -1
@@ -497,7 +496,7 @@ function closeAllLevels(label)
 end
 
 --- Closes all nested labels under the given label, including any
---- nested children those children might possess
+-- nested children those children might possess
 -- @param label The name of the label to use
 function closeNestChildren(label)
   local nLabels = label.nestedLabels
@@ -520,7 +519,7 @@ function closeNestChildren(label)
 end
 
 --- Internal function.  This is a callback from a nested
---- labels scrollbar.
+-- labels scrollbar.
 -- @param label The name of the scrollbar
 function doNestScroll(label)
   local scrollDir = 0
@@ -552,7 +551,7 @@ function doNestScroll(label)
 end
 
 --- Displays the nested elements within label, and orients them
---- appropriately
+-- appropriately
 -- @param label The name of the label to use
 function Geyser.Label:displayNest()
   local maxDim = {}
@@ -963,7 +962,8 @@ function Geyser.Label:addScrollbars(parent, layout)
   return { backward, forward }
 end
 
----@param cons table of Geyser window options such as name, width, and height
+--- Add a child to this label.
+-- @param cons table of Geyser window options such as name, width, and height
 -- @param cons.name a unique name for the label
 -- @param cons.height height of the label - specify it as the defaults are huge
 -- @param cons.width width of the label - specify it as the defaults are huge
@@ -973,6 +973,7 @@ end
 -- @param[opt='white'] cons.fgColor optional foreground colour - colour to use for text on the label
 -- @param[opt='black'] cons.bgColor optional background colour - colour of the whole label
 -- @param[opt=1] cons.fillBg 1 if the background is to be filled, 0 for no background
+-- @param container the container to add as a child
 function Geyser.Label:addChild(cons, container)
   cons = cons or {}
   cons.type = cons.type or "nestedLabel"
@@ -1147,9 +1148,9 @@ function Geyser.Label:onRightClick(event)
   end
 end
 
---- finds and returns a right click menu item
--- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
--- @param only used internally the right click menu [optional]
+--- Finds and returns a right click menu item.
+-- @param name name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
+-- @param parent only used internally the right click menu [optional]
 -- @param findParent only used internally to return a Parent [optional]
 function Geyser.Label:findMenuElement(name, parent, findParent)
   if not name then
@@ -1358,9 +1359,10 @@ end
 -- @field angleDeltaY A number corresponding with the horizontal wheel motion. For most devices, this number is in increments of 120
 -- @table mouseWheelEvent
 
---- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets
+--- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets.
 -- which are applied to the label.
--- @see https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat and https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat
+-- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
+-- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
 function Geyser.Label:getFormat()
   return getLabelFormat(self.name)
 end

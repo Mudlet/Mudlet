@@ -54,14 +54,13 @@ class XMLimport : public QXmlStreamReader
 public:
     explicit XMLimport(Host*);
     virtual ~XMLimport() {}
-    bool importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
+    std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
     std::pair<dlgTriggerEditor::EditorViewType, int> importFromClipboard();
 
 private:
     const QString YES = qsl("yes");
 
     std::pair<dlgTriggerEditor::EditorViewType, int> readPackage();
-    void readUnknownPackage();
 
     void readHostPackage();
     int readTriggerPackage();
@@ -83,30 +82,24 @@ private:
     void readAreas();
     void readHelpPackage();
 
-    void readUnknownHostElement();
-    void readUnknownTriggerElement();
-    void readUnknownTimerElement();
-    void readUnknownAliasElement();
-    void readUnknownActionElement();
-    void readUnknownScriptElement();
-    void readUnknownKeyElement();
+    void readUnknownElement(const QString&);
 
-    void readHostPackage(Host*);
+    void readHost(Host*);
     void readLegacyMapInfoContributors();
     void readMapInfoContributor();
     void readProfileShortcut();
     void readStopWatchMap();
-    int readTriggerGroup(TTrigger*);
-    int readTimerGroup(TTimer*);
-    int readAliasGroup(TAlias*);
-    int readActionGroup(TAction*);
-    int readScriptGroup(TScript*);
-    int readKeyGroup(TKey*);
-    void readVariableGroup(TVar*);
+    int readTrigger(TTrigger*);
+    int readTimer(TTimer*);
+    int readAlias(TAlias*);
+    int readAction(TAction*);
+    int readScript(TScript*);
+    int readKey(TKey*);
+    void readVariable(TVar*);
     void readHiddenVariables();
 
-    void readStringList(QStringList&);
-    void readIntegerList(QList<int>&, const QString&);
+    void readStringList(QStringList&, const QString&);
+    void readIntegerList(QList<int>&, const QString& parentName, const QString &whatIsParent);
     void readModulesDetailsMap(QMap<QString, QStringList>&);
     void getVersionString(QString&);
     QString readScriptElement();
