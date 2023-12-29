@@ -5979,12 +5979,12 @@ Prova a caricare una versione più vecchia in &apos;Connetti - Opzioni - Cronolo
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="109"/>
       <source>Describe your package. Add a description, icons, assets and more.</source>
-      <translation type="unfinished"/>
+      <translation>Descrivi il tuo package. Aggiungi una descrizione, icone, risorse e altro.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <source>For attribution, displayed in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>Autore da mostrare in Gestione package.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
@@ -5999,7 +5999,7 @@ Prova a caricare una versione più vecchia in &apos;Connetti - Opzioni - Cronolo
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>One-line package description shown in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>Descrizione breve da mostrare in Gestione package.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="275"/>
@@ -6032,7 +6032,30 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
 
 * https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
 * [Link 2 might be a webpage](https://example.org)</source>
-      <translation type="unfinished"/>
+      <translation>
+La descrizione di questo package viene mostrata nel Gestore package. Questo editor supporta la formattazione Commonmark. Utilizza le seguenti indicazioni come linea guida per sapere cosa inserire nella descrizione del tuo package.
+
+### Descrizione
+
+Una descrizione completa delle funzionalità del tuo package compreso i giochi supportati. Specifica se il package ha funzionalità di auto-aggiornamento, in caso contrario inserisci un link per ottenere l'ultima versione.
+
+### Utilizzo
+
+Se il package fornisce alias, mostrane alcuni esempi e descrivine il funzionamento.
+
+`&gt; alias_1`
+
+    funzionamento alias_1  -- indentato di quattro spazi
+    altre informazioni        -- per esempio un pezzo di codice
+
+Se il package crea una GUI potresti aggiungere alcune immagini esplicative, puoi trascinarle direttamente in questo editor e saranno incluse automaticamente.
+
+### Altro
+
+Inserisci altro materiale utile, per esempio un link alla wiki di mudlet, al forum, al repository del tuo package o al suo sito internet.
+
+* https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
+* [pagine web del package](https://example.org)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="318"/>
@@ -6047,7 +6070,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="395"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package.</source>
-      <translation type="unfinished"/>
+      <translation>Questo package fa uso di altri package? Elencali qui come prerequisiti. Premi &apos;Elimina&apos; per rimuovere un package.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="427"/>
@@ -6067,12 +6090,12 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
       <source>Package Exporter</source>
-      <translation>Esportatore package</translation>
+      <translation>Esportatore Package</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="335"/>
       <source>Does this package make use of other packages? List them here as requirements.</source>
-      <translation type="unfinished"/>
+      <translation>Questo package fa uso di altri package? Elencali qui come prerequisiti.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="535"/>
@@ -6260,12 +6283,12 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="100"/>
       <source>Import Mudlet Package</source>
-      <translation>Importa package Mudlet</translation>
+      <translation>Importa Package Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="107"/>
       <source>Import Mudlet Package:</source>
-      <translation>Importa package di Mudlet:</translation>
+      <translation>Importa Package Mudlet:</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="107"/>
@@ -7030,7 +7053,7 @@ motivazione: %2.</translation>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="999"/>
       <source>(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).</source>
-      <translation>(Gli script Lua di quei profili che usano il pacchetto &lt;tt&gt;mudlet-mapper&lt;/tt&gt; devono essere preceduti da &quot;script:&quot;).</translation>
+      <translation>(Gli script Lua di quei profili che usano il package &lt;tt&gt;mudlet-mapper&lt;/tt&gt; devono essere preceduti da &quot;script:&quot;).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1048"/>
@@ -8237,7 +8260,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
       <location filename="../src/dlgTriggerEditor.cpp" line="8856"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="8861"/>
       <source>Export Package:</source>
-      <translation>Esporta package:</translation>
+      <translation>Esporta Package:</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8596"/>
@@ -8312,7 +8335,7 @@ Questo alias &apos;non è corretto&apos; perchè continuerebbe ad essere eseguit
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9157"/>
       <source>Import Mudlet Package</source>
-      <translation>Importa package Mudlet</translation>
+      <translation>Importa Package Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9251"/>
@@ -9192,7 +9215,7 @@ sono meno utili durante l'uso normale di questa applicazione:</translation>
     <message>
       <location filename="../src/main.cpp" line="297"/>
       <source>       -s, --splashscreen           show splashscreen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>       -s, --splashscreen           mostra la finestra di caricamento all'avvio.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="345"/>
@@ -9329,7 +9352,7 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="292"/>
       <source>&lt;p&gt;Install and remove collections of Mudlet lua items (packages).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Installa o rimuove le raccolte di elementi lua di Mudlet (package).&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;Installa o rimuove le raccolte di elementi lua di Mudlet (package).&lt;p&gt;I</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="300"/>
@@ -11659,7 +11682,7 @@ Prova a caricare una versione più vecchia in &apos;Connetti - Opzioni - Cronolo
     <message>
       <location filename="../src/mudlet.cpp" line="410"/>
       <source>Package Exporter</source>
-      <translation>Esportatore package</translation>
+      <translation>Esportatore Package</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="420"/>
@@ -13022,7 +13045,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3799"/>
       <source>Force MTTS negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Forza la negoziazione MTTS disattiva</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3936"/>
@@ -13209,7 +13232,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3658"/>
       <source>Advertise screen reader use to games supporting MTTS (Mud Terminal Type Standard)</source>
-      <translation type="unfinished"/>
+      <translation>Avvisa lo screen reader che il gioco supporta MTTS (Mud Terminal Type Standard)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3748"/>
@@ -13468,7 +13491,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3645"/>
       <source>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</source>
-      <translation>In alcune piattaforme, come macOS, lo strumento screen reader annunciare completamente il testo in arrivo, senza saltarlo. Con questa opzione, puoi scegliere di disabilitare l'annuncio di nuovo testo dal gioco per utilizzare, invece, un TTS personalizzato che evita tali problemi</translation>
+      <translation>In alcune piattaforme, come macOS, lo strumento screen reader ha problemi ad annunciare il testo in arrivo, senza saltarlo. Con questa opzione, puoi scegliere di disabilitare l'annuncio di nuovo testo dal gioco per utilizzare, invece, un TTS personalizzato che evita tali problemi</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3648"/>
@@ -13879,7 +13902,7 @@ Uscita</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2040"/>
       <source>&lt;p&gt;(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).&lt;/p&gt;</source>
-      <translation>&lt;p&gt;(Gli script Lua di quei profili che usano il pacchetto &lt;tt&gt;mudlet-mapper&lt;/tt&gt; devono essere preceduti da &quot;script:&quot;).&lt;/p&gt;</translation>
+      <translation>&lt;p&gt;(Gli script Lua di quei profili che usano il package &lt;tt&gt;mudlet-mapper&lt;/tt&gt; devono essere preceduti da &quot;script:&quot;).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2108"/>
