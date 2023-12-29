@@ -331,10 +331,10 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
         }
     }
 
-    updateNewEnvironValue(qsl("CHARSET")); // Positioned here so we get ASCII updates too
+    sendInfoNewEnvironValue(qsl("CHARSET")); // Positioned here so we get ASCII updates too
 
     if (triggerUpdateNewEnvironValueMTTS) {
-        updateNewEnvironValue(qsl("MTTS"));
+        sendInfoNewEnvironValue(qsl("MTTS"));
     }
 
     return qMakePair(true, QString());
@@ -984,7 +984,7 @@ QString cTelnet::getNewEnvironValueSystemType()
     systemType = qsl("UNIX").toLatin1().constData();
 #endif
 
-    return systemType.isEmpty() ? qsl("UNKNOWN").toLatin1().constData() : systemType;
+    return systemType.isEmpty() ? QString(): systemType;
 }
 
 QString cTelnet::getNewEnvironUserValueCharset()
@@ -1069,7 +1069,7 @@ QString cTelnet::getNewEnvironUserValueANSI()
 
 QString cTelnet::getNewEnvironUserValueVT100()
 {
-    return qsl("0");
+    return QString();
 }
 
 QString cTelnet::getNewEnvironUserValue256Colors()
@@ -1079,12 +1079,12 @@ QString cTelnet::getNewEnvironUserValue256Colors()
 
 QString cTelnet::getNewEnvironUserValueMouseTracking()
 {
-    return qsl("0");
+    return QString();
 }
 
 QString cTelnet::getNewEnvironUserValueUTF8()
 {
-    return getEncoding() == "UTF-8" ? qsl("1") : qsl("0");
+    return getEncoding() == "UTF-8" ? qsl("1") : QString();
 }
 
 QString cTelnet::getNewEnvironUserValueOSCColorPalette()
@@ -1094,12 +1094,12 @@ QString cTelnet::getNewEnvironUserValueOSCColorPalette()
 
 QString cTelnet::getNewEnvironUserValueScreenReader()
 {
-    return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");
+    return mpHost->mAdvertiseScreenReader ? qsl("1") : QString();
 }
 
 QString cTelnet::getNewEnvironUserValueProxy()
 {
-    return qsl("0");
+    return QString();
 }
 
 QString cTelnet::getNewEnvironUserValueTruecolor()
@@ -1109,12 +1109,12 @@ QString cTelnet::getNewEnvironUserValueTruecolor()
 
 QString cTelnet::getNewEnvironUserValueMNES()
 {
-    return mpHost->mEnableMNES ? qsl("1") : qsl("0");
+    return mpHost->mEnableMNES ? qsl("1") : QString();
 }
 
 QString cTelnet::getNewEnvironUserValueMSLP()
 {
-    return qsl("0");
+    return QString();
 }
 
 QString cTelnet::getNewEnvironUserValueTLS()
@@ -1122,7 +1122,7 @@ QString cTelnet::getNewEnvironUserValueTLS()
 #if !defined(QT_NO_SSL)
     return qsl("1");
 #else
-    return qsl("0");
+    return QString();
 #endif
 }
 
@@ -1151,29 +1151,17 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     QMap<QString, QPair<bool, QString>> newEnvironDataMap;
     const bool isUserValue = true;
  
-    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" and "SYSTEM" are well-known and will be requested with NEW_ENVIRON_VAL
-    const QString newEnvironValueUser = getNewEnvironValueUser();
-
-    if (!newEnvironValueUser.isEmpty()) {
-        newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserValue, newEnvironValueUser));
-    }
-
-    newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserValue, getNewEnvironValueSystemType()));
-
-    // Per https://tintin.mudhalla.net/protocols/mnes/
-    // Note: "IPADDRESS" Intentionally not implemented by Mudlet Makers
-    newEnvironDataMap.insert(qsl("CHARSET"), qMakePair(isUserValue, getNewEnvironUserValueCharset()));
-    newEnvironDataMap.insert(qsl("CLIENT_NAME"), qMakePair(isUserValue, getNewEnvironUserValueClientName()));
-    newEnvironDataMap.insert(qsl("CLIENT_VERSION"), qMakePair(isUserValue, getNewEnvironUserValueClientVersion()));
-
-    if (mpHost->mEnableMTTS) {
-        newEnvironDataMap.insert(qsl("MTTS"), qMakePair(isUserValue, getNewEnvironUserValueMTTS()));
-    }
-
-    newEnvironDataMap.insert(qsl("TERMINAL_TYPE"), qMakePair(isUserValue, getNewEnvironUserValueTerminalType()));
-
     // Environmental Variables
-    if (!mpHost->mEnableMNES) { // Get these from the MTTS value above if using MNES
+    if (!mpHost->mEnableMNES) {
+        // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" and "SYSTEM" are well-known and will be requested with NEW_ENVIRON_VAL
+        const QString newEnvironValueUser = getNewEnvironValueUser();
+
+        if (!newEnvironValueUser.isEmpty()) {
+            newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserValue, newEnvironValueUser));
+        }
+
+        // Per https://www.rfc-editor.org/rfc/rfc1572.txt, others will be requested with NEW_ENVIRON_USERVAL
+        newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserValue, getNewEnvironValueSystemType()));
         newEnvironDataMap.insert(qsl("ANSI"), qMakePair(isUserValue, getNewEnvironUserValueANSI()));
         newEnvironDataMap.insert(qsl("VT100"), qMakePair(isUserValue, getNewEnvironUserValueVT100()));
         newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserValue, getNewEnvironUserValue256Colors()));
@@ -1186,65 +1174,87 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
         newEnvironDataMap.insert(qsl("MNES"), qMakePair(isUserValue, getNewEnvironUserValueMNES()));
         newEnvironDataMap.insert(qsl("MSLP"), qMakePair(isUserValue, getNewEnvironUserValueMSLP()));
         newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserValue, getNewEnvironUserValueTLS()));
+        newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserValue, getNewEnvironUserValueLanguage()));
+        newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserValue, getNewEnvironUserValueFont()));
+        newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserValue, getNewEnvironUserValueFontSize()));
+        newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserValue, getNewEnvironUserValueWordWrap()));
     }
 
-    newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserValue, getNewEnvironUserValueLanguage()));
-    newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserValue, getNewEnvironUserValueFont()));
-    newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserValue, getNewEnvironUserValueFontSize()));
-    newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserValue, getNewEnvironUserValueWordWrap()));
+    // Per https://tintin.mudhalla.net/protocols/mnes/, the variables are limited to the following only.
+    // * These will be be requested with NEW_ENVIRON_VAL for the MNES protocol
+    // * "IPADDRESS" Intentionally not implemented by Mudlet Makers
+    // * These will be used by NEW_ENVIRON as well and be requested with NEW_ENVIRON_USERVAL
+    newEnvironDataMap.insert(qsl("CHARSET"), qMakePair(isUserValue, getNewEnvironUserValueCharset()));
+    newEnvironDataMap.insert(qsl("CLIENT_NAME"), qMakePair(isUserValue, getNewEnvironUserValueClientName()));
+    newEnvironDataMap.insert(qsl("CLIENT_VERSION"), qMakePair(isUserValue, getNewEnvironUserValueClientVersion()));
+    newEnvironDataMap.insert(qsl("MTTS"), qMakePair(isUserValue, getNewEnvironUserValueMTTS()));
+    newEnvironDataMap.insert(qsl("TERMINAL_TYPE"), qMakePair(isUserValue, getNewEnvironUserValueTerminalType()));
 
     return newEnvironDataMap;
 }
 
-void cTelnet::updateNewEnvironValue(const QString &var)
+bool cTelnet::isMNESVariable(const QString &var)
 {
-    if (enableNewEnviron && !mpHost->mForceNewEnvironNegotiationOff) {
-        const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
+    static const QStringList validValues = {"CHARSET", "CLIENT_NAME", "CLIENT_VERSION", "MTTS", "TERMINAL_TYPE", "IPADDRESS"};
 
-        if (newEnvironDataMap.contains(var)) {
-            qDebug() << "We updated NEW_ENVIRON" << var;
+    return validValues.contains(var);
+}
 
-            // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
-            const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
-            const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
-            const QString val = newEnvironData.second;
+void cTelnet::sendInfoNewEnvironValue(const QString &var)
+{
+    if (!enableNewEnviron || mpHost->mForceNewEnvironNegotiationOff) {
+        return;
+    }
 
-            std::string output;
-            output += TN_IAC;
-            output += TN_SB;
-            output += OPT_NEW_ENVIRON;
-            output += NEW_ENVIRON_INFO;
-            output += NEW_ENVIRON_VAR;
-            output += escapeNewEnvironData(var).toUtf8().constData();
-            output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
+    if (mpHost->mEnableMNES && !isMNESVariable(var)) {
+        return;
+    }
 
-            // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
-            // variable is defined, but has no value.
+    const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
+
+    if (newEnvironDataMap.contains(var)) {
+        qDebug() << "We updated NEW_ENVIRON" << var;
+
+        // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
+        const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
+        const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
+        const QString val = newEnvironData.second;
+
+        std::string output;
+        output += TN_IAC;
+        output += TN_SB;
+        output += OPT_NEW_ENVIRON;
+        output += NEW_ENVIRON_INFO;
+        output += NEW_ENVIRON_VAR;
+        output += escapeNewEnvironData(var).toUtf8().constData();
+        output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
+
+        // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
+        // variable is defined, but has no value.
+        if (!val.isEmpty()) {
+            output += escapeNewEnvironData(val).toUtf8().constData();
+        }
+
+        output += TN_IAC;
+        output += TN_SE;
+        socketOutRaw(output);
+
+        if (mpHost->mEnableMNES) {
             if (!val.isEmpty()) {
-                output += escapeNewEnvironData(val).toUtf8().constData();
-            }
-
-            output += TN_IAC;
-            output += TN_SE;
-            socketOutRaw(output);
-
-            if (mpHost->mEnableMNES) {
-                if (!val.isEmpty()) {
-                    qDebug() << "WE inform NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
-                } else {
-                    qDebug() << "WE inform NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
-                }
-            } else if (!isUserValue) {
-                if (!val.isEmpty()) {
-                    qDebug() << "WE inform NEW_ENVIRON VAR" << var << "VAL" << val;
-                } else {
-                    qDebug() << "WE inform NEW_ENVIRON VAR" << var << "as an emply VAL";
-                }
-            } else if (!val.isEmpty()) {
-                qDebug() << "WE inform NEW_ENVIRON VAR" << var << "USERVAL" << val;
+                qDebug() << "WE inform NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
             } else {
-                qDebug() << "WE inform NEW_ENVIRON VAR" << var << "as an empty USERVAL";
+                qDebug() << "WE inform NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
             }
+        } else if (!isUserValue) {
+            if (!val.isEmpty()) {
+                qDebug() << "WE inform NEW_ENVIRON VAR" << var << "VAL" << val;
+            } else {
+                qDebug() << "WE inform NEW_ENVIRON VAR" << var << "as an emply VAL";
+            }
+        } else if (!val.isEmpty()) {
+            qDebug() << "WE inform NEW_ENVIRON VAR" << var << "USERVAL" << val;
+        } else {
+            qDebug() << "WE inform NEW_ENVIRON VAR" << var << "as an empty USERVAL";
         }
     }
 }
@@ -1898,238 +1908,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             QByteArray payload = QByteArray::fromRawData(telnetCommand.c_str(), telnetCommand.size());
 
             if (telnetCommand.size() < 7) {
-                return;
+                return; // Invalid NEW_ENVIRON syntax
             }
 
             // Trim off the Telnet suboption bytes from beginning (3) and end (2)
             payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
 
-            if (payload.data()[0] == NEW_ENVIRON_SEND && payload.data()[1] == NEW_ENVIRON_VAR) {
-                const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
-
-                if (telnetCommand.size() == 7) { // If no variables are sent, send everything.
-                    qDebug() << "Server requests all NEW_ENVIRON variables";
-                        
-                    std::string output;
-                    output += TN_IAC;
-                    output += TN_SB;
-                    output += OPT_NEW_ENVIRON;
-
-                    for (auto it = newEnvironDataMap.begin(); it != newEnvironDataMap.end(); ++it) {
-                        // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
-                        const QPair<bool, QString> newEnvironData = it.value();
-                        const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
-                        const QString val = newEnvironData.second;
-
-                        output += NEW_ENVIRON_IS;   
-                        output += NEW_ENVIRON_VAR;
-                        output += escapeNewEnvironData(it.key()).toUtf8().constData();
-                        output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
-
-                        // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
-                        // variable is defined, but has no value.
-                        if (!val.isEmpty()) {
-                            output += escapeNewEnvironData(val).toUtf8().constData();
-                        }
-
-                        if (mpHost->mEnableMNES) {
-                            if (!val.isEmpty()) {
-                                qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "VAL" << val;
-                            } else {
-                                qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "as an empty VAL";
-                            }
-                        } else if (!isUserValue) {
-                            if (!val.isEmpty()) {
-                                qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "VAL" << val;
-                            } else {
-                                qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "as an emply VAL";
-                            }
-                        } else if (!val.isEmpty()) {
-                            qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "USERVAL" << val;
-                        } else {
-                            qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "as an empty USERVAL";
-                        }
-                    }
-
-                    output += TN_IAC;
-                    output += TN_SE;
-                    socketOutRaw(output);
-                    return;
-                }
-
-                QString transcodedMsg;
-
-                if (mpOutOfBandDataIncomingCodec) {
-                    // Message is encoded
-                    transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(payload);
-                } else {
-                    // Message is in ASCII (though this can handle Utf-8):
-                    transcodedMsg = payload;
-                }
-
-                int is_send = 0;
-                int is_var = 0;
-                QString var;
-
-                for (int i = 0; i < transcodedMsg.size(); ++i) {
-                    if (transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
-                        if (!i) {
-                            is_send = 1;
-                        } else if (!is_send) {
-                            is_send = 1;
-
-                            qDebug() << "Server requests NEW_ENVIRON" << var;
-
-                            if (newEnvironDataMap.contains(var)) {
-                                // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
-                                const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
-                                const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
-                                const QString val = newEnvironData.second;
-
-                                std::string output;
-                                output += TN_IAC;
-                                output += TN_SB;
-                                output += OPT_NEW_ENVIRON;
-                                output += NEW_ENVIRON_IS;
-                                output += NEW_ENVIRON_VAR;
-                                output += escapeNewEnvironData(var).toUtf8().constData();
-                                output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
-
-                                // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
-                                // variable is defined, but has no value.
-                                if (!val.isEmpty()) {
-                                    output += escapeNewEnvironData(val).toUtf8().constData();
-                                }
-
-                                output += TN_IAC;
-                                output += TN_SE;     
-                                socketOutRaw(output);
-
-                                if (mpHost->mEnableMNES) {
-                                    if (!val.isEmpty()) {
-                                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
-                                    } else {
-                                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
-                                    }
-                                } else if (!isUserValue) {
-                                    if (!val.isEmpty()) {
-                                        qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
-                                    } else {
-                                        qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an emply VAL";
-                                    }
-                                } else if (!val.isEmpty()) {
-                                    qDebug() << "WE send NEW_ENVIRON VAR" << var << "USERVAL" << val;
-                                } else {
-                                    qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an empty USERVAL";
-                                }
-                            } else {
-                                // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
-                                // USERVAR, or IAC SE) then that variable is undefined.
-                                std::string output;
-                                output += TN_IAC;
-                                output += TN_SB;
-                                output += OPT_NEW_ENVIRON;
-                                output += NEW_ENVIRON_IS;
-                                output += NEW_ENVIRON_VAR;
-                                output += escapeNewEnvironData(var).toUtf8().constData();
-                                output += /* isUserValue ? NEW_ENVIRON_USERVAL : */ NEW_ENVIRON_VAL;
-                                output += TN_IAC;
-                                output += TN_SE;     
-                                socketOutRaw(output);
-
-                                if (mpHost->mEnableMNES) {
-                                    qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
-                                } else {
-                                    qDebug() << "WE send that we do not maintain NEW_ENVIRON VAR" << var;
-                                }
-                            }
-                        } else {
-                            return; // Invalid NEW_ENVIRON syntax
-                        }
-
-                        var = "";
-                    } else if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
-                        if (is_send) {
-                            is_send = 0;
-                            is_var = 1;
-                        } else {
-                            return; // Invalid NEW_ENVIRON syntax
-                        }
-                    } else {
-                        is_var = 0;
-                        var.append(transcodedMsg.at(i));
-                    }
-                }
-
-                if (!var.isEmpty()) { // Last variable on the stack
-                    if (newEnvironDataMap.contains(var)) {
-                        // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
-                        const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
-                        const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
-                        const QString val = newEnvironData.second;
-
-                        qDebug() << "Server requests NEW_ENVIRON" << var;
-
-                        std::string output;
-                        output += TN_IAC;
-                        output += TN_SB;
-                        output += OPT_NEW_ENVIRON;
-                        output += NEW_ENVIRON_IS;
-                        output += NEW_ENVIRON_VAR;
-                        output += escapeNewEnvironData(var).toUtf8().constData();
-                        output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
-
-                        // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
-                        // variable is defined, but has no value.
-                        if (!val.isEmpty()) {
-                            output += escapeNewEnvironData(val).toUtf8().constData();
-                        }
-
-                        output += TN_IAC;
-                        output += TN_SE;     
-                        socketOutRaw(output);
-
-                        if (mpHost->mEnableMNES) {
-                            if (!val.isEmpty()) {
-                                qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
-                            } else {
-                                qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
-                            }
-                        } else if (!isUserValue) {
-                            if (!val.isEmpty()) {
-                                qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
-                            } else {
-                                qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an emply VAL";
-                            }
-                        } else if (!val.isEmpty()) {
-                            qDebug() << "WE send NEW_ENVIRON VAR" << var << "USERVAL" << val;
-                        } else {
-                            qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an empty USERVAL";
-                        }
-                    } else {
-                        // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
-                        // USERVAR, or IAC SE) then that variable is undefined.
-                        std::string output;
-                        output += TN_IAC;
-                        output += TN_SB;
-                        output += OPT_NEW_ENVIRON;
-                        output += NEW_ENVIRON_IS;
-                        output += NEW_ENVIRON_VAR;
-                        output += escapeNewEnvironData(var).toUtf8().constData();
-                        output += /* isUserValue ? NEW_ENVIRON_USERVAL : */ NEW_ENVIRON_VAL;
-                        output += TN_IAC;
-                        output += TN_SE;     
-                        socketOutRaw(output);
-
-                        if (mpHost->mEnableMNES) {
-                            qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
-                        } else {
-                            qDebug() << "WE send that we do not maintain NEW_ENVIRON VAR" << var;
-                        }
-                    }       
-                }
+            if (mpHost->mEnableMNES) {
+                sendIsMNESValues(payload);
+                return;
             }
-
+ 
+            sendIsNewEnvironValues(payload);
             return;
         }
 
@@ -2522,6 +2312,471 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     }
 }
 
+void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
+{
+    if (payload.data()[0] != NEW_ENVIRON_SEND) {
+        return; // Invalid NEW_ENVIRON syntax
+    }
+
+    if (payload.data()[1] == NEW_ENVIRON_VAR) {
+        const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
+
+        if (payload.size() == 2) { // If no variables are sent, send everything.
+            qDebug() << "Server requests all NEW_ENVIRON variables";
+                
+            std::string output;
+            output += TN_IAC;
+            output += TN_SB;
+            output += OPT_NEW_ENVIRON;
+            output += NEW_ENVIRON_IS;   
+
+            for (auto it = newEnvironDataMap.begin(); it != newEnvironDataMap.end(); ++it) {
+                // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
+                const QPair<bool, QString> newEnvironData = it.value();
+                const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
+                const QString val = newEnvironData.second;
+
+                output += NEW_ENVIRON_VAR;
+                output += escapeNewEnvironData(it.key()).toUtf8().constData();
+                output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
+
+                // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
+                // variable is defined, but has no value.
+                if (!val.isEmpty()) {
+                    output += escapeNewEnvironData(val).toUtf8().constData();
+                }
+
+                if (mpHost->mEnableMNES) {
+                    if (!val.isEmpty()) {
+                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "VAL" << val;
+                    } else {
+                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "as an empty VAL";
+                    }
+                } else if (!isUserValue) {
+                    if (!val.isEmpty()) {
+                        qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "VAL" << val;
+                    } else {
+                        qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "as an emply VAL";
+                    }
+                } else if (!val.isEmpty()) {
+                    qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "USERVAL" << val;
+                } else {
+                    qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "as an empty USERVAL";
+                }
+            }
+
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
+            return;
+        }
+
+        QString transcodedMsg;
+
+        if (mpOutOfBandDataIncomingCodec) {
+            // Message is encoded
+            transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(payload);
+        } else {
+            // Message is in ASCII (though this can handle Utf-8):
+            transcodedMsg = payload;
+        }
+
+        int is_send = 0;
+        int is_var = 0;
+        QString var;
+
+        for (int i = 0; i < transcodedMsg.size(); ++i) {
+            if (transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
+                if (!i) {
+                    is_send = 1;
+                } else if (!is_send) {
+                    is_send = 1;
+
+                    qDebug() << "Server requests NEW_ENVIRON" << var;
+
+                    if (newEnvironDataMap.contains(var)) {
+                        // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
+                        const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
+                        const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
+                        const QString val = newEnvironData.second;
+
+                        std::string output;
+                        output += TN_IAC;
+                        output += TN_SB;
+                        output += OPT_NEW_ENVIRON;
+                        output += NEW_ENVIRON_IS;
+                        output += NEW_ENVIRON_VAR;
+                        output += escapeNewEnvironData(var).toUtf8().constData();
+                        output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
+
+                        // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
+                        // variable is defined, but has no value.
+                        if (!val.isEmpty()) {
+                            output += escapeNewEnvironData(val).toUtf8().constData();
+                        }
+
+                        output += TN_IAC;
+                        output += TN_SE;     
+                        socketOutRaw(output);
+
+                        if (mpHost->mEnableMNES) {
+                            if (!val.isEmpty()) {
+                                qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
+                            } else {
+                                qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
+                            }
+                        } else if (!isUserValue) {
+                            if (!val.isEmpty()) {
+                                qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
+                            } else {
+                                qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an emply VAL";
+                            }
+                        } else if (!val.isEmpty()) {
+                            qDebug() << "WE send NEW_ENVIRON VAR" << var << "USERVAL" << val;
+                        } else {
+                            qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an empty USERVAL";
+                        }
+                    } else {
+                        // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
+                        // USERVAR, or IAC SE) then that variable is undefined.
+                        std::string output;
+                        output += TN_IAC;
+                        output += TN_SB;
+                        output += OPT_NEW_ENVIRON;
+                        output += NEW_ENVIRON_IS;
+                        output += NEW_ENVIRON_VAR;
+                        output += escapeNewEnvironData(var).toUtf8().constData();
+                        output += /* isUserValue ? NEW_ENVIRON_USERVAL : */ NEW_ENVIRON_VAL;
+                        output += TN_IAC;
+                        output += TN_SE;     
+                        socketOutRaw(output);
+
+                        if (mpHost->mEnableMNES) {
+                            qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
+                        } else {
+                            qDebug() << "WE send that we do not maintain NEW_ENVIRON VAR" << var;
+                        }
+                    }
+                } else {
+                    return; // Invalid NEW_ENVIRON syntax
+                }
+
+                var = "";
+            } else if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
+                if (is_send) {
+                    is_send = 0;
+                    is_var = 1;
+                } else {
+                    return; // Invalid NEW_ENVIRON syntax
+                }
+            } else {
+                is_var = 0;
+                var.append(transcodedMsg.at(i));
+            }
+        }
+
+        if (!var.isEmpty()) { // Last variable on the stack
+            if (newEnvironDataMap.contains(var)) {
+                // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
+                const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
+                const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
+                const QString val = newEnvironData.second;
+
+                qDebug() << "Server requests NEW_ENVIRON" << var;
+
+                std::string output;
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_NEW_ENVIRON;
+                output += NEW_ENVIRON_IS;
+                output += NEW_ENVIRON_VAR;
+                output += escapeNewEnvironData(var).toUtf8().constData();
+                output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
+
+                // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
+                // variable is defined, but has no value.
+                if (!val.isEmpty()) {
+                    output += escapeNewEnvironData(val).toUtf8().constData();
+                }
+
+                output += TN_IAC;
+                output += TN_SE;     
+                socketOutRaw(output);
+
+                if (mpHost->mEnableMNES) {
+                    if (!val.isEmpty()) {
+                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
+                    } else {
+                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
+                    }
+                } else if (!isUserValue) {
+                    if (!val.isEmpty()) {
+                        qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
+                    } else {
+                        qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an emply VAL";
+                    }
+                } else if (!val.isEmpty()) {
+                    qDebug() << "WE send NEW_ENVIRON VAR" << var << "USERVAL" << val;
+                } else {
+                    qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an empty USERVAL";
+                }
+            } else {
+                // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
+                // USERVAR, or IAC SE) then that variable is undefined.
+                std::string output;
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_NEW_ENVIRON;
+                output += NEW_ENVIRON_IS;
+                output += NEW_ENVIRON_VAR;
+                output += escapeNewEnvironData(var).toUtf8().constData();
+                output += /* isUserValue ? NEW_ENVIRON_USERVAL : */ NEW_ENVIRON_VAL;
+                output += TN_IAC;
+                output += TN_SE;     
+                socketOutRaw(output);
+
+                if (mpHost->mEnableMNES) {
+                    qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
+                } else {
+                    qDebug() << "WE send that we do not maintain NEW_ENVIRON VAR" << var;
+                }
+            }       
+        }
+    }
+}
+
+void cTelnet::sendIsMNESValues(const QByteArray& payload)
+{
+    if (payload.data()[0] != NEW_ENVIRON_SEND) {
+        return; // Invalid NEW_ENVIRON syntax
+    }
+
+    if (payload.data()[1] == NEW_ENVIRON_VAR) {
+        const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
+
+        if (payload.size() == 2) { // If no variables are sent, send everything.
+            qDebug() << "Server requests all NEW_ENVIRON variables";
+                
+            std::string output;
+            output += TN_IAC;
+            output += TN_SB;
+            output += OPT_NEW_ENVIRON;
+            output += NEW_ENVIRON_IS;
+
+            for (auto it = newEnvironDataMap.begin(); it != newEnvironDataMap.end(); ++it) {
+                // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
+                const QPair<bool, QString> newEnvironData = it.value();
+                const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
+                const QString val = newEnvironData.second;
+
+                output += NEW_ENVIRON_VAR;
+                output += escapeNewEnvironData(it.key()).toUtf8().constData();
+                output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
+
+                // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
+                // variable is defined, but has no value.
+                if (!val.isEmpty()) {
+                    output += escapeNewEnvironData(val).toUtf8().constData();
+                }
+
+                if (mpHost->mEnableMNES) {
+                    if (!val.isEmpty()) {
+                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "VAL" << val;
+                    } else {
+                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "as an empty VAL";
+                    }
+                } else if (!isUserValue) {
+                    if (!val.isEmpty()) {
+                        qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "VAL" << val;
+                    } else {
+                        qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "as an emply VAL";
+                    }
+                } else if (!val.isEmpty()) {
+                    qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "USERVAL" << val;
+                } else {
+                    qDebug() << "WE send NEW_ENVIRON VAR" << it.key() << "as an empty USERVAL";
+                }
+            }
+
+            output += TN_IAC;
+            output += TN_SE;
+            socketOutRaw(output);
+            return;
+        }
+
+        QString transcodedMsg;
+
+        if (mpOutOfBandDataIncomingCodec) {
+            // Message is encoded
+            transcodedMsg = mpOutOfBandDataIncomingCodec->toUnicode(payload);
+        } else {
+            // Message is in ASCII (though this can handle Utf-8):
+            transcodedMsg = payload;
+        }
+
+        int is_send = 0;
+        int is_var = 0;
+        QString var;
+
+        for (int i = 0; i < transcodedMsg.size(); ++i) {
+            if (transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
+                if (!i) {
+                    is_send = 1;
+                } else if (!is_send) {
+                    is_send = 1;
+
+                    qDebug() << "Server requests NEW_ENVIRON" << var;
+
+                    if (newEnvironDataMap.contains(var)) {
+                        // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
+                        const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
+                        const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
+                        const QString val = newEnvironData.second;
+
+                        std::string output;
+                        output += TN_IAC;
+                        output += TN_SB;
+                        output += OPT_NEW_ENVIRON;
+                        output += NEW_ENVIRON_IS;
+                        output += NEW_ENVIRON_VAR;
+                        output += escapeNewEnvironData(var).toUtf8().constData();
+                        output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
+
+                        // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
+                        // variable is defined, but has no value.
+                        if (!val.isEmpty()) {
+                            output += escapeNewEnvironData(val).toUtf8().constData();
+                        }
+
+                        output += TN_IAC;
+                        output += TN_SE;     
+                        socketOutRaw(output);
+
+                        if (mpHost->mEnableMNES) {
+                            if (!val.isEmpty()) {
+                                qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
+                            } else {
+                                qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
+                            }
+                        } else if (!isUserValue) {
+                            if (!val.isEmpty()) {
+                                qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
+                            } else {
+                                qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an emply VAL";
+                            }
+                        } else if (!val.isEmpty()) {
+                            qDebug() << "WE send NEW_ENVIRON VAR" << var << "USERVAL" << val;
+                        } else {
+                            qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an empty USERVAL";
+                        }
+                    } else {
+                        // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
+                        // USERVAR, or IAC SE) then that variable is undefined.
+                        std::string output;
+                        output += TN_IAC;
+                        output += TN_SB;
+                        output += OPT_NEW_ENVIRON;
+                        output += NEW_ENVIRON_IS;
+                        output += NEW_ENVIRON_VAR;
+                        output += escapeNewEnvironData(var).toUtf8().constData();
+                        output += /* isUserValue ? NEW_ENVIRON_USERVAL : */ NEW_ENVIRON_VAL;
+                        output += TN_IAC;
+                        output += TN_SE;     
+                        socketOutRaw(output);
+
+                        if (mpHost->mEnableMNES) {
+                            qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
+                        } else {
+                            qDebug() << "WE send that we do not maintain NEW_ENVIRON VAR" << var;
+                        }
+                    }
+                } else {
+                    return; // Invalid NEW_ENVIRON syntax
+                }
+
+                var = "";
+            } else if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
+                if (is_send) {
+                    is_send = 0;
+                    is_var = 1;
+                } else {
+                    return; // Invalid NEW_ENVIRON syntax
+                }
+            } else {
+                is_var = 0;
+                var.append(transcodedMsg.at(i));
+            }
+        }
+
+        if (!var.isEmpty()) { // Last variable on the stack
+            if (newEnvironDataMap.contains(var)) {
+                // QPair first: NEW_ENVIRON_USERVAL indicator, second: data
+                const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
+                const bool isUserValue = !mpHost->mEnableMNES && newEnvironData.first;
+                const QString val = newEnvironData.second;
+
+                qDebug() << "Server requests NEW_ENVIRON" << var;
+
+                std::string output;
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_NEW_ENVIRON;
+                output += NEW_ENVIRON_IS;
+                output += NEW_ENVIRON_VAR;
+                output += escapeNewEnvironData(var).toUtf8().constData();
+                output += isUserValue ? NEW_ENVIRON_USERVAL : NEW_ENVIRON_VAL;
+
+                // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
+                // variable is defined, but has no value.
+                if (!val.isEmpty()) {
+                    output += escapeNewEnvironData(val).toUtf8().constData();
+                }
+
+                output += TN_IAC;
+                output += TN_SE;     
+                socketOutRaw(output);
+
+                if (mpHost->mEnableMNES) {
+                    if (!val.isEmpty()) {
+                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
+                    } else {
+                        qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
+                    }
+                } else if (!isUserValue) {
+                    if (!val.isEmpty()) {
+                        qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
+                    } else {
+                        qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an emply VAL";
+                    }
+                } else if (!val.isEmpty()) {
+                    qDebug() << "WE send NEW_ENVIRON VAR" << var << "USERVAL" << val;
+                } else {
+                    qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an empty USERVAL";
+                }
+            } else {
+                // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
+                // USERVAR, or IAC SE) then that variable is undefined.
+                std::string output;
+                output += TN_IAC;
+                output += TN_SB;
+                output += OPT_NEW_ENVIRON;
+                output += NEW_ENVIRON_IS;
+                output += NEW_ENVIRON_VAR;
+                output += escapeNewEnvironData(var).toUtf8().constData();
+                output += NEW_ENVIRON_VAL;
+                output += TN_IAC;
+                output += TN_SE;     
+                socketOutRaw(output);
+
+                if (mpHost->mEnableMNES) {
+                    qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
+                } else {
+                    qDebug() << "WE send that we do not maintain NEW_ENVIRON VAR" << var;
+                }
+            }       
+        }
+    }
+}
 // msg is in the Mud Server encoding
 void cTelnet::setATCPVariables(const QByteArray& msg)
 {

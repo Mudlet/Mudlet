@@ -1867,7 +1867,7 @@ void dlgProfilePreferences::slot_setFontSize()
         return;
     }
 
-    pHost->mTelnet.updateNewEnvironValue(qsl("FONT_SIZE"));
+    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
 }
 
 void dlgProfilePreferences::slot_setDisplayFont()
@@ -1916,7 +1916,7 @@ void dlgProfilePreferences::slot_setDisplayFont()
     config->setFont(newFont);
     config->endChanges();
 
-    pHost->mTelnet.updateNewEnvironValue(qsl("FONT"));
+    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
 }
 
 // Currently UNUSED!
@@ -4202,7 +4202,7 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
         return;
     }
 
-    pHost->mTelnet.updateNewEnvironValue(qsl("LANGUAGE"));
+    pHost->mTelnet.sendInfoNewEnvironValue(qsl("LANGUAGE"));
 }
 
 void dlgProfilePreferences::slot_setAppearance(const mudlet::Appearance state)
@@ -4449,9 +4449,9 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
     }
 
     if (pHost->mEnableMTTS) {
-        pHost->mTelnet.updateNewEnvironValue(qsl("MTTS"));
+        pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
     } else {
-        pHost->mTelnet.updateNewEnvironValue(qsl("SCREEN_READER"));
+        pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
     }
 }
 
@@ -4463,7 +4463,7 @@ void dlgProfilePreferences::slot_changeWrapAt()
         return;
     }
 
-    pHost->mTelnet.updateNewEnvironValue(qsl("WORD_WRAP"));
+    pHost->mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
 }
 
 void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)

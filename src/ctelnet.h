@@ -204,7 +204,10 @@ public:
     QString getNewEnvironUserValueFontSize();
     QString getNewEnvironUserValueWordWrap();
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
-    void updateNewEnvironValue(const QString&);
+    bool isMNESVariable(const QString&);
+    void sendInfoNewEnvironValue(const QString&);
+    void sendIsNewEnvironValues(const QByteArray&);
+    void sendIsMNESValues(const QByteArray&);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
