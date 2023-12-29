@@ -5931,12 +5931,12 @@ Versuche, eine ältere Version via &apos;Connect - Optionen - Profilverlauf&apos
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="109"/>
       <source>Describe your package. Add a description, icons, assets and more.</source>
-      <translation type="unfinished"/>
+      <translation>Beschreibe dein Paket. Füge eine Beschreibung, Symbole, Assets und mehr hinzu.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <source>For attribution, displayed in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>Für die Zuordnung, die im Paketmanager angezeigt wird.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
@@ -5951,7 +5951,7 @@ Versuche, eine ältere Version via &apos;Connect - Optionen - Profilverlauf&apos
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>One-line package description shown in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>Einzeilige Paketbeschreibung, die im Paketmanager angezeigt wird.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="275"/>
