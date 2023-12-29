@@ -150,19 +150,19 @@ const int MTTS_STD_MOUSE_TRACKING = 16; // Client supports xterm mouse tracking.
 const int MTTS_STD_OSC_COLOR_PALETTE = 32; // Client supports the OSC color palette.
 const int MTTS_STD_SCREEN_READER = 64; // Client is using a screen reader.
 const int MTTS_STD_PROXY = 128; // Client is a proxy allowing different users to connect from the same IP address.
-const int MTTS_STD_TRUE_COLOR = 256; // Client supports truecolor codes using semicolon notation.
+const int MTTS_STD_TRUECOLOR = 256; // Client supports truecolor codes using semicolon notation.
 const int MTTS_STD_MNES = 512; // Client supports the Mud New Environment Standard for information exchange.
 const int MTTS_STD_MSLP = 1024; // Client supports the Mud Server Link Protocol for clickable link handling.
 const int MTTS_STD_SSL = 2048; // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
 
 // https://www.rfc-editor.org/rfc/rfc1572.txt && https://tintin.mudhalla.net/protocols/mnes/
-const char NES_IS = 0;
-const char NES_SEND = 1;
-const char NES_INFO = 2;
-const char NES_VAR = 0;
-const char NES_VAL = 1;
-const char NES_ESC = 2;
-const char NES_USERVAL = 3;
+const char NEW_ENVIRON_IS = 0;
+const char NEW_ENVIRON_SEND = 1;
+const char NEW_ENVIRON_INFO = 2;
+const char NEW_ENVIRON_VAR = 0;
+const char NEW_ENVIRON_VAL = 1;
+const char NEW_ENVIRON_ESC = 2;
+const char NEW_ENVIRON_USERVAL = 3;
 
 class cTelnet : public QObject
 {
@@ -179,8 +179,32 @@ public:
     // Second argument needs to be set false when sending password to prevent
     // it being sniffed by scripts/packages:
     bool sendData(QString& data, bool permitDataSendRequestEvent = true);
-    QString escapeNewEnviron(const QString&);
-    QMap<QString, QString> getNewEnvironMap();
+    QString escapeNewEnvironData(const QString&);
+    QString getNewEnvironValueUser();
+    QString getNewEnvironValueSystemType();
+    QString getNewEnvironUserValueCharset();
+    QString getNewEnvironUserValueClientName();
+    QString getNewEnvironUserValueClientVersion();
+    QString getNewEnvironUserValueTerminalType();
+    QString getNewEnvironUserValueMTTS();
+    QString getNewEnvironUserValueANSI();
+    QString getNewEnvironUserValueVT100();
+    QString getNewEnvironUserValue256Colors();
+    QString getNewEnvironUserValueMouseTracking();
+    QString getNewEnvironUserValueUTF8();
+    QString getNewEnvironUserValueOSCColorPalette();
+    QString getNewEnvironUserValueScreenReader();
+    QString getNewEnvironUserValueProxy();
+    QString getNewEnvironUserValueTruecolor();
+    QString getNewEnvironUserValueMNES();
+    QString getNewEnvironUserValueMSLP();
+    QString getNewEnvironUserValueTLS();
+    QString getNewEnvironUserValueLanguage();
+    QString getNewEnvironUserValueFont();
+    QString getNewEnvironUserValueFontSize();
+    QString getNewEnvironUserValueWordWrap();
+    QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
+    void updateNewEnvironValue(const QString&);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
@@ -192,7 +216,6 @@ public:
     void checkNAWS();
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
-    void updateMNESVariable(const QString&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void recordReplay();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
@@ -212,13 +235,15 @@ public:
 #endif
     QByteArray decodeBytes(const char*);
     std::string encodeAndCookBytes(const std::string&);
-    bool isMNESEnabled() const { return enableMNES; }
+    bool isNewEnvironEnabled() const { return enableNewEnviron; }
     bool isCHARSETEnabled() const { return enableCHARSET; }
     bool isATCPEnabled() const { return enableATCP; }
     bool isGMCPEnabled() const { return enableGMCP; }
-    bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSSPEnabled() const { return enableMSSP; }
+    bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSPEnabled() const { return enableMSP; }
+    bool isMTTSEnabled() const { return enableMTTS; }
+    bool isMNESEnabled() const { return enableMNES; }
     bool isChannel102Enabled() const { return enableChannel102; }
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
@@ -352,13 +377,15 @@ private:
     int mRecordingChunkCount = 0;
     int mCycleCountMTTS = 0;
     bool mReplayHasFaultyFormat = false;
-    bool enableMNES = false;
+    bool enableNewEnviron = false;
     bool enableCHARSET = false;
     bool enableATCP = false;
     bool enableGMCP = false;
     bool enableMSSP = false;
     bool enableMSDP = false;
     bool enableMSP = false;
+    bool enableMTTS = false;
+    bool enableMNES = false;
     bool enableChannel102 = false;
     bool mDontReconnect = false;
     bool mAutoReconnect = false;

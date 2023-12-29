@@ -348,7 +348,27 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="mEnableMTTS">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MTTS - provides information about your client settings at logon for supported gamesr&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MTTS  (Mud Terminal Type Standard)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="mEnableMNES">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MNES - provides information about your client settings during game play for supported games&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MNES  (Mud New-Environ Standard)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
            <widget class="QLabel" name="need_reconnect_for_data_protocol">
             <property name="enabled">
              <bool>true</bool>
@@ -3655,7 +3675,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string></string>
             </property>
             <property name="text">
-             <string>Advertise screen reader use to games supporting protocols that transfer it</string>
+             <string>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</string>
             </property>
            </widget>
           </item>
@@ -3794,16 +3814,9 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="2" column="1">
-           <widget class="QCheckBox" name="mForceMTTSNegotiationOff">
+           <widget class="QCheckBox" name="mForceNewEnvironNegotiationOff">
             <property name="text">
-             <string>Force MTTS negotiation off</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QCheckBox" name="mForceMNESNegotiationOff">
-            <property name="text">
-             <string>Force MNES negotiation off</string>
+             <string>Force NEW_ENVIRON negotiation off</string>
             </property>
            </widget>
           </item>
@@ -4164,8 +4177,10 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>acceptServerMedia</tabstop>
   <tabstop>mEnableGMCP</tabstop>
   <tabstop>mEnableMSDP</tabstop>
+  <tabstop>mEnableMTTS</tabstop>
   <tabstop>mEnableMSSP</tabstop>
   <tabstop>mEnableMSP</tabstop>
+  <tabstop>mEnableMNES</tabstop>
   <tabstop>mIsToLogInHtml</tabstop>
   <tabstop>lineEdit_logFileFolder</tabstop>
   <tabstop>comboBox_logFileNameFormat</tabstop>
@@ -4311,8 +4326,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
-  <tabstop>mForceMTTSNegotiationOff</tabstop>
-  <tabstop>mForceMNESNegotiationOff</tabstop>
+  <tabstop>mForceNewEnvironNegotiationOff</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>
