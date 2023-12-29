@@ -196,8 +196,6 @@ public:
     QString getNewEnvironUserValueScreenReader();
     QString getNewEnvironUserValueProxy();
     QString getNewEnvironUserValueTruecolor();
-    QString getNewEnvironUserValueMNES();
-    QString getNewEnvironUserValueMSLP();
     QString getNewEnvironUserValueTLS();
     QString getNewEnvironUserValueLanguage();
     QString getNewEnvironUserValueFont();

@@ -1107,16 +1107,6 @@ QString cTelnet::getNewEnvironUserValueTruecolor()
     return qsl("1");
 }
 
-QString cTelnet::getNewEnvironUserValueMNES()
-{
-    return mpHost->mEnableMNES ? qsl("1") : QString();
-}
-
-QString cTelnet::getNewEnvironUserValueMSLP()
-{
-    return QString();
-}
-
 QString cTelnet::getNewEnvironUserValueTLS()
 {
 #if !defined(QT_NO_SSL)
@@ -1150,35 +1140,6 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
 {
     QMap<QString, QPair<bool, QString>> newEnvironDataMap;
     const bool isUserValue = true;
- 
-    // Environmental Variables
-    if (!mpHost->mEnableMNES) {
-        // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" and "SYSTEM" are well-known and will be requested with NEW_ENVIRON_VAL
-        const QString newEnvironValueUser = getNewEnvironValueUser();
-
-        if (!newEnvironValueUser.isEmpty()) {
-            newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserValue, newEnvironValueUser));
-        }
-
-        // Per https://www.rfc-editor.org/rfc/rfc1572.txt, others will be requested with NEW_ENVIRON_USERVAL
-        newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserValue, getNewEnvironValueSystemType()));
-        newEnvironDataMap.insert(qsl("ANSI"), qMakePair(isUserValue, getNewEnvironUserValueANSI()));
-        newEnvironDataMap.insert(qsl("VT100"), qMakePair(isUserValue, getNewEnvironUserValueVT100()));
-        newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserValue, getNewEnvironUserValue256Colors()));
-        newEnvironDataMap.insert(qsl("MOUSE_TRACKING"), qMakePair(isUserValue, getNewEnvironUserValueMouseTracking()));
-        newEnvironDataMap.insert(qsl("UTF-8"), qMakePair(isUserValue, getNewEnvironUserValueUTF8()));
-        newEnvironDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserValue, getNewEnvironUserValueOSCColorPalette()));
-        newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserValue, getNewEnvironUserValueScreenReader()));
-        newEnvironDataMap.insert(qsl("PROXY"), qMakePair(isUserValue, getNewEnvironUserValueProxy()));
-        newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserValue, getNewEnvironUserValueTruecolor()));
-        newEnvironDataMap.insert(qsl("MNES"), qMakePair(isUserValue, getNewEnvironUserValueMNES()));
-        newEnvironDataMap.insert(qsl("MSLP"), qMakePair(isUserValue, getNewEnvironUserValueMSLP()));
-        newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserValue, getNewEnvironUserValueTLS()));
-        newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserValue, getNewEnvironUserValueLanguage()));
-        newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserValue, getNewEnvironUserValueFont()));
-        newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserValue, getNewEnvironUserValueFontSize()));
-        newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserValue, getNewEnvironUserValueWordWrap()));
-    }
 
     // Per https://tintin.mudhalla.net/protocols/mnes/, the variables are limited to the following only.
     // * These will be be requested with NEW_ENVIRON_VAL for the MNES protocol
@@ -1189,6 +1150,30 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("CLIENT_VERSION"), qMakePair(isUserValue, getNewEnvironUserValueClientVersion()));
     newEnvironDataMap.insert(qsl("MTTS"), qMakePair(isUserValue, getNewEnvironUserValueMTTS()));
     newEnvironDataMap.insert(qsl("TERMINAL_TYPE"), qMakePair(isUserValue, getNewEnvironUserValueTerminalType()));
+
+    if (mpHost->mEnableMNES) {
+        return newEnvironDataMap;
+    }
+
+    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" and "SYSTEM" are well-known and will be requested with NEW_ENVIRON_VAL
+    newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserValue, getNewEnvironValueUser()));
+    newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserValue, getNewEnvironValueSystemType()));
+
+    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, others will be requested with NEW_ENVIRON_USERVAL
+    newEnvironDataMap.insert(qsl("ANSI"), qMakePair(isUserValue, getNewEnvironUserValueANSI()));
+    newEnvironDataMap.insert(qsl("VT100"), qMakePair(isUserValue, getNewEnvironUserValueVT100()));
+    newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserValue, getNewEnvironUserValue256Colors()));
+    newEnvironDataMap.insert(qsl("MOUSE_TRACKING"), qMakePair(isUserValue, getNewEnvironUserValueMouseTracking()));
+    newEnvironDataMap.insert(qsl("UTF-8"), qMakePair(isUserValue, getNewEnvironUserValueUTF8()));
+    newEnvironDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserValue, getNewEnvironUserValueOSCColorPalette()));
+    newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserValue, getNewEnvironUserValueScreenReader()));
+    newEnvironDataMap.insert(qsl("PROXY"), qMakePair(isUserValue, getNewEnvironUserValueProxy()));
+    newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserValue, getNewEnvironUserValueTruecolor()));
+    newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserValue, getNewEnvironUserValueTLS()));
+    newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserValue, getNewEnvironUserValueLanguage()));
+    newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserValue, getNewEnvironUserValueFont()));
+    newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserValue, getNewEnvironUserValueFontSize()));
+    newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserValue, getNewEnvironUserValueWordWrap()));
 
     return newEnvironDataMap;
 }
