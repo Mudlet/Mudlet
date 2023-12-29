@@ -179,33 +179,9 @@ public:
     // Second argument needs to be set false when sending password to prevent
     // it being sniffed by scripts/packages:
     bool sendData(QString& data, bool permitDataSendRequestEvent = true);
-    QString escapeNewEnvironData(const QString&);
-    QString getNewEnvironValueUser();
-    QString getNewEnvironValueSystemType();
-    QString getNewEnvironUserValueCharset();
-    QString getNewEnvironUserValueClientName();
-    QString getNewEnvironUserValueClientVersion();
-    QString getNewEnvironUserValueTerminalType();
-    QString getNewEnvironUserValueMTTS();
-    QString getNewEnvironUserValueANSI();
-    QString getNewEnvironUserValueVT100();
-    QString getNewEnvironUserValue256Colors();
-    QString getNewEnvironUserValueMouseTracking();
-    QString getNewEnvironUserValueUTF8();
-    QString getNewEnvironUserValueOSCColorPalette();
-    QString getNewEnvironUserValueScreenReader();
-    QString getNewEnvironUserValueProxy();
-    QString getNewEnvironUserValueTruecolor();
-    QString getNewEnvironUserValueTLS();
-    QString getNewEnvironUserValueLanguage();
-    QString getNewEnvironUserValueFont();
-    QString getNewEnvironUserValueFontSize();
-    QString getNewEnvironUserValueWordWrap();
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
-    void sendIsNewEnvironValues(const QByteArray&);
-    void sendIsMNESValues(const QByteArray&);
     void setATCPVariables(const QByteArray&);
     void setGMCPVariables(const QByteArray&);
     void setMSSPVariables(const QByteArray&);
@@ -298,6 +274,33 @@ private:
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
+
+    QString escapeNewEnvironData(const QString&);
+    QString getNewEnvironValueUser();
+    QString getNewEnvironValueSystemType();
+    QString getNewEnvironUserValueCharset();
+    QString getNewEnvironUserValueClientName();
+    QString getNewEnvironUserValueClientVersion();
+    QString getNewEnvironUserValueTerminalType();
+    QString getNewEnvironUserValueMTTS();
+    QString getNewEnvironUserValueANSI();
+    QString getNewEnvironUserValueVT100();
+    QString getNewEnvironUserValue256Colors();
+    QString getNewEnvironUserValueMouseTracking();
+    QString getNewEnvironUserValueUTF8();
+    QString getNewEnvironUserValueOSCColorPalette();
+    QString getNewEnvironUserValueScreenReader();
+    QString getNewEnvironUserValueProxy();
+    QString getNewEnvironUserValueTruecolor();
+    QString getNewEnvironUserValueTLS();
+    QString getNewEnvironUserValueLanguage();
+    QString getNewEnvironUserValueFont();
+    QString getNewEnvironUserValueFontSize();
+    QString getNewEnvironUserValueWordWrap();
+    void sendIsNewEnvironValues(const QByteArray&);
+    void sendAllMNESValues();
+    void sendMNESValue(const QString&, const QMap<QString, QPair<bool, QString>>&);
+    void sendIsMNESValues(const QByteArray&);
 
     void processTelnetCommand(const std::string& telnetCommand);
     void sendTelnetOption(char type, char option);
