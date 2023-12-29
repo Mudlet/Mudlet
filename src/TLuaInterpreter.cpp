@@ -18833,32 +18833,31 @@ int TLuaInterpreter::moveRoom(lua_State* L)
     }
 
     int n = lua_gettop(L);
-    int z  = 0;
+    std::optional<int> z;
     bool absoluteMove = false;
     switch (n) {
-    case 3: // areaId, roomId, x, y - relative movement
-        {break;} // nothing to do
+    case 3: // roomId, x, y - relative movement
+        {break;} // nothing extra to do
     case 4:
         if (lua_type(L, 4) == LUA_TNUMBER) { // roomId, x, y, z - relative movement
             z = lua_tonumber(L, 4);
-        } else if (lua_type(L, 4) == LUA_TBOOLEAN ) { // roomId, x, y, absoluteMove
-            absoluteMove = lua_toboolean(L, 4);
-            if (absoluteMove) { // roomId, x, y, true - absoluteMove in xy plane
-                z = pR->z;
-            }
-            // else this is: roomId, x, y, false - relativeMove in xy plane
-            // and nothing to do
-
-        } else {
-            lua_pushfstring(L, "moveRoom: bad argument #4 type (z coordinate for relative movement in space as number or absolute (true) / relative (false) movement in xy-plane as boolean is optional, got %s", lua_typename(L, 4));
-            return lua_error(L);
+            break;
         }
+        if (lua_type(L, 4) == LUA_TBOOLEAN ) { // roomId, x, y, absolute/relative move
+            absoluteMove = lua_toboolean(L, 4);
+            break;
+        }
+        lua_pushfstring(L, "moveRoom: bad argument #4 type (z coordinate for relative movement in space as number or absolute {true} / relative {false} movement in xy-plane as boolean, is optional, got %s", luaL_typename(L, 4));
+        lua_error(L);
+        Q_UNREACHABLE();
         break;
+
     default:
         if (n > 4) {
-            if (lua_type(L, 5) != LUA_TBOOLEAN ) { // areaId, roomId, x, y, z, absoluteMove
-                lua_pushfstring(L, "moveRoom: bad argument #5 type (absolute (true) / relative (false) movement in xyz-space as boolean is optional, got %s", lua_typename(L, 5));
-                return lua_error(L);
+            if (lua_type(L, 5) != LUA_TBOOLEAN ) { // areaId, roomId, x, y, z, absolute/relative move
+                lua_pushfstring(L, "moveRoom: bad argument #5 type (absolute {true} / relative {false} movement in xyz-space as boolean is optional, got %s", luaL_typename(L, 5));
+                lua_error(L);
+                Q_UNREACHABLE();
             }
 
             absoluteMove = lua_toboolean(L, 5);
@@ -18878,11 +18877,15 @@ int TLuaInterpreter::moveRoom(lua_State* L)
     if (absoluteMove) {
         pR->x = x;
         pR->y = y;
-        pR->z = z;
+        if (z.has_value()) {
+            pR->z = z.value();
+        }
     } else {
         pR->x += x;
         pR->y += y;
-        pR->z += z;
+        if (z.has_value()) {
+            pR->z += z.value();
+        }
     }
 
     QMutableMapIterator<QString, QList<QPointF>> itCustomLine(pR->customLines);
@@ -18893,6 +18896,8 @@ int TLuaInterpreter::moveRoom(lua_State* L)
             QPointF point = itCustomLinePoint.next();
             point.setX(static_cast<float>(point.x() - oldX + x));
             point.setY(static_cast<float>(point.y() - oldY + y));
+            // Custom exit lines do not (yet?) have any z-component - they are
+            // always drawn on the same level as the room from which they leave.
             itCustomLinePoint.setValue(point);
         }
     }
@@ -18901,7 +18906,8 @@ int TLuaInterpreter::moveRoom(lua_State* L)
      * If we are moving multiple rooms the remaining code is not optimum (it
      * could be left to do just on the last room in each area) but extending
      * this function to handle multiple rooms would mess with the option to
-     * do either relative or absolute moves in the same function...
+     * do either relative or absolute moves in the same function based on a
+     * sometimes optional argument...
      * SlySven 2022/03
      */
 
