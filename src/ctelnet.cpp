@@ -1109,7 +1109,7 @@ QString cTelnet::getNewEnvironUserValueTruecolor()
 
 QString cTelnet::getNewEnvironUserValueMNES()
 {
-    return enableMNES ? qsl("1") : qsl("0");
+    return mpHost->mEnableMNES ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironUserValueMSLP()

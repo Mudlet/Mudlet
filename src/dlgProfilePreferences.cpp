@@ -796,7 +796,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     }
 
     wrap_at_spinBox->setValue(pHost->mWrapAt);
-
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
 
     show_sent_text_checkbox->setChecked(pHost->mPrintCommand);
