@@ -1288,6 +1288,8 @@ std::string cTelnet::sendNewEnvironValue(std::string &output, const QString &var
         const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
         const QString val = newEnvironData.second;
 
+        qDebug() << "Server requests NEW_ENVIRON" << var;
+
         if (newEnvironData.first != isUserVar) {
             // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
             // USERVAR, or IAC SE) then that variable is undefined.
@@ -1300,28 +1302,26 @@ std::string cTelnet::sendNewEnvironValue(std::string &output, const QString &var
             } else {
                 qDebug() << "WE send NEW_ENVIRON USERVAR" << var << "as an empty VAL" << "because we don't maintain it as USERVAR (use VAR!)";
             }
-        }
-
-        qDebug() << "Server requests NEW_ENVIRON" << var;
-
-        output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += escapeNewEnvironData(var).toUtf8().constData();
-        output += NEW_ENVIRON_VAL;
-
-        // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
-        // variable is defined, but has no value.
-        if (!val.isEmpty()) {
-            output += escapeNewEnvironData(val).toUtf8().constData();
-
-            if (!isUserVar) {
-                qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
-            } else {
-                qDebug() << "WE send NEW_ENVIRON USERVAR" << var << "VAL" << val;
-            }
-        } else if (!isUserVar) {
-            qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an empty VAL";
         } else {
-            qDebug() << "WE send NEW_ENVIRON USERVAR" << var << "as an empty VAL";
+            output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
+            output += escapeNewEnvironData(var).toUtf8().constData();
+            output += NEW_ENVIRON_VAL;
+
+            // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
+            // variable is defined, but has no value.
+            if (!val.isEmpty()) {
+                output += escapeNewEnvironData(val).toUtf8().constData();
+
+                if (!isUserVar) {
+                    qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
+                } else {
+                    qDebug() << "WE send NEW_ENVIRON USERVAR" << var << "VAL" << val;
+                }
+            } else if (!isUserVar) {
+                qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an empty VAL";
+            } else {
+                qDebug() << "WE send NEW_ENVIRON USERVAR" << var << "as an empty VAL";
+            }
         }
     } else {
         // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
