@@ -162,7 +162,7 @@ const char NEW_ENVIRON_INFO = 2;
 const char NEW_ENVIRON_VAR = 0;
 const char NEW_ENVIRON_VAL = 1;
 const char NEW_ENVIRON_ESC = 2;
-const char NEW_ENVIRON_USERVAL = 3;
+const char NEW_ENVIRON_USERVAR = 3;
 
 class cTelnet : public QObject
 {
@@ -297,6 +297,8 @@ private:
     QString getNewEnvironUserValueFont();
     QString getNewEnvironUserValueFontSize();
     QString getNewEnvironUserValueWordWrap();
+    std::string sendAllNewEnvironValues(std::string&, const bool, const QMap<QString, QPair<bool, QString>>&);
+    std::string sendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);
     void sendIsNewEnvironValues(const QByteArray&);
     void sendAllMNESValues();
     void sendMNESValue(const QString&, const QMap<QString, QPair<bool, QString>>&);
