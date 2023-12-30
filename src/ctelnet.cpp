@@ -1458,7 +1458,7 @@ void cTelnet::sendAllMNESValues()
     socketOutRaw(output);
 }
 
-void cTelnet::appendMNESValue(const QString &var, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
+void cTelnet::sendMNESValue(const QString &var, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
 {
     if (!mpHost->mEnableMNES) {
         return;
@@ -1544,7 +1544,7 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
                 is_send = 1;
             } else if (!is_send) {
                 is_send = 1;
-                appendMNESValue(var, newEnvironDataMap);
+                sendMNESValue(var, newEnvironDataMap);
             } else {
                 return; // Invalid NEW_ENVIRON (MNES) syntax
             }
@@ -1564,7 +1564,7 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
     }
 
     if (!var.isEmpty()) { // Last variable on the stack
-        appendMNESValue(var, newEnvironDataMap);
+        sendMNESValue(var, newEnvironDataMap);
     }
 }
 

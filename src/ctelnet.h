@@ -300,7 +300,7 @@ private:
     std::string appendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);
     void sendIsNewEnvironValues(const QByteArray&);
     void sendAllMNESValues();
-    void appendMNESValue(const QString&, const QMap<QString, QPair<bool, QString>>&);
+    void sendMNESValue(const QString&, const QMap<QString, QPair<bool, QString>>&);
     void sendIsMNESValues(const QByteArray&);
 
     void processTelnetCommand(const std::string& telnetCommand);
