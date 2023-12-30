@@ -1375,11 +1375,11 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
                 output += sendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
             } else {
                 output += sendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
-                var = "";
             }
 
             is_uservar = 0;
             is_var = 1;
+            var = "";
         } else if (transcodedMsg.at(i) == NEW_ENVIRON_USERVAR) {
             if (!i) {
                 is_uservar = 1;
@@ -1390,11 +1390,11 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
                 output += sendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
             } else {
                 output += sendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
-                var = "";
             }
 
             is_var = 0;
             is_uservar = 1;
+            var = "";
         } else {
             var.append(transcodedMsg.at(i));
         }
