@@ -4448,10 +4448,9 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
         return;
     }
 
-    if (pHost->mEnableMTTS) {
-        pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
-    } else {
+    if (pHost->mAdvertiseScreenReader) {
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+        pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
     }
 }
 

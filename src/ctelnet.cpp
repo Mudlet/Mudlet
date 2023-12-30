@@ -1062,6 +1062,11 @@ QString cTelnet::getNewEnvironUserValueMTTS()
     return qsl("%1").arg(terminalStandards);
 }
 
+QString cTelnet::getNewEnvironUserValueIPAddress()
+{
+    return QString(); // Intentionally not implemented by Mudlet Makers
+}
+
 QString cTelnet::getNewEnvironUserValueANSI()
 {
     return qsl("1");
@@ -1150,6 +1155,7 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("CLIENT_VERSION"), qMakePair(isUserVar, getNewEnvironUserValueClientVersion()));
     newEnvironDataMap.insert(qsl("MTTS"), qMakePair(isUserVar, getNewEnvironUserValueMTTS()));
     newEnvironDataMap.insert(qsl("TERMINAL_TYPE"), qMakePair(isUserVar, getNewEnvironUserValueTerminalType()));
+    newEnvironDataMap.insert(qsl("IPADDRESS"), qMakePair(isUserVar, getNewEnvironUserValueIPAddress()));
 
     if (mpHost->mEnableMNES) {
         return newEnvironDataMap;

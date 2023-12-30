@@ -219,8 +219,6 @@ public:
     bool isMSSPEnabled() const { return enableMSSP; }
     bool isMSDPEnabled() const { return enableMSDP; }
     bool isMSPEnabled() const { return enableMSP; }
-    bool isMTTSEnabled() const { return enableMTTS; }
-    bool isMNESEnabled() const { return enableMNES; }
     bool isChannel102Enabled() const { return enableChannel102; }
     void requestDiscordInfo();
     QString decodeOption(const unsigned char) const;
@@ -283,6 +281,7 @@ private:
     QString getNewEnvironUserValueClientVersion();
     QString getNewEnvironUserValueTerminalType();
     QString getNewEnvironUserValueMTTS();
+    QString getNewEnvironUserValueIPAddress();
     QString getNewEnvironUserValueANSI();
     QString getNewEnvironUserValueVT100();
     QString getNewEnvironUserValue256Colors();
@@ -390,8 +389,6 @@ private:
     bool enableMSSP = false;
     bool enableMSDP = false;
     bool enableMSP = false;
-    bool enableMTTS = false;
-    bool enableMNES = false;
     bool enableChannel102 = false;
     bool mDontReconnect = false;
     bool mAutoReconnect = false;
