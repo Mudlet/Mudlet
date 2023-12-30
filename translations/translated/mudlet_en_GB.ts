@@ -5900,12 +5900,12 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="109"/>
       <source>Describe your package. Add a description, icons, assets and more.</source>
-      <translation type="unfinished"/>
+      <translation>Describe your package. Add a description, icons, assets and more.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <source>For attribution, displayed in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>For attribution, displayed in the Package Manager.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
@@ -5920,7 +5920,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>One-line package description shown in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>One-line package description shown in the Package Manager.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="275"/>
@@ -5953,7 +5953,30 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
 
 * https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
 * [Link 2 might be a webpage](https://example.org)</source>
-      <translation type="unfinished"/>
+      <translation>
+This package description is shown in the package manager.  The editor supports Commonmark markdown.  Follow the description below for a thorough example of what to include in your package description.
+
+### Description
+
+A full description of what this package achieves. If the package is game specific then mention that here.  Specify if the package has autoupdating or, if not, add a link in the See Also section below to the code repository.
+
+### Usage
+
+If this package uses aliases, show a few examples and expected output.
+
+`&gt; alias_1`
+
+    output of alias_1  -- indent by four spaces
+    more output        -- for code blocks
+
+If this package is a GUI implementation consider adding screenshots by directly dragging and dropping images into this editor.
+
+### See Also
+
+Further reading material. e.g. a link to the Mudlet wiki, forums, Github package repository or webpage.
+
+* https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
+* [Link 2 might be a webpage](https://example.org)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="318"/>
@@ -5968,7 +5991,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="395"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package.</source>
-      <translation type="unfinished"/>
+      <translation>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="427"/>
@@ -5993,7 +6016,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="335"/>
       <source>Does this package make use of other packages? List them here as requirements.</source>
-      <translation type="unfinished"/>
+      <translation>Does this package make use of other packages? List them here as requirements.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="535"/>
@@ -9081,7 +9104,7 @@ less likely to be useful for normal use of this application:</translation>
     <message>
       <location filename="../src/main.cpp" line="297"/>
       <source>       -s, --splashscreen           show splashscreen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>       -s, --splashscreen           show splashscreen on startup.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="345"/>
@@ -12910,7 +12933,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3799"/>
       <source>Force MTTS negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Force MTTS negotiation off</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3936"/>
@@ -13097,7 +13120,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3658"/>
       <source>Advertise screen reader use to games supporting MTTS (Mud Terminal Type Standard)</source>
-      <translation type="unfinished"/>
+      <translation>Advertise screen reader use to games supporting MTTS (Mud Terminal Type Standard)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3748"/>
