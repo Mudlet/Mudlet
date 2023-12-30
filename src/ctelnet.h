@@ -296,11 +296,11 @@ private:
     QString getNewEnvironUserValueFont();
     QString getNewEnvironUserValueFontSize();
     QString getNewEnvironUserValueWordWrap();
-    std::string sendAllNewEnvironValues(std::string&, const bool, const QMap<QString, QPair<bool, QString>>&);
-    std::string sendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);
+    std::string appendAllNewEnvironValues(std::string&, const bool, const QMap<QString, QPair<bool, QString>>&);
+    std::string appendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);
     void sendIsNewEnvironValues(const QByteArray&);
     void sendAllMNESValues();
-    void sendMNESValue(const QString&, const QMap<QString, QPair<bool, QString>>&);
+    void appendMNESValue(const QString&, const QMap<QString, QPair<bool, QString>>&);
     void sendIsMNESValues(const QByteArray&);
 
     void processTelnetCommand(const std::string& telnetCommand);
