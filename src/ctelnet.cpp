@@ -1283,12 +1283,12 @@ std::string cTelnet::sendAllNewEnvironValues(std::string &output, const bool isU
 
 std::string cTelnet::sendNewEnvironValue(std::string &output, const QString &var, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
 {
+    qDebug() << "Server requests NEW_ENVIRON" << var;
+
     if (newEnvironDataMap.contains(var)) {
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
         const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
         const QString val = newEnvironData.second;
-
-        qDebug() << "Server requests NEW_ENVIRON" << var;
 
         if (newEnvironData.first != isUserVar) {
             // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
