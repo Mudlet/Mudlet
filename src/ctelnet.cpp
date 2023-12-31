@@ -365,6 +365,7 @@ void cTelnet::connectIt(const QString& address, int port)
     if (mpHost) {
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
+        mCycleCountMTTS = 0;
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
             auto& proxy = mpHost->getConnectionProxy();
@@ -938,7 +939,7 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
-QString cTelnet::encodeNewEnvironData(const QString& arg)
+QString cTelnet::encodeNewEnvironData(const QString &arg)
 {
     return !mEncoding.isEmpty() && outgoingDataEncoder ? outgoingDataEncoder->fromUnicode(arg).constData() : arg.toLatin1().constData();
 }
