@@ -164,6 +164,22 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     # $session.Close()
     # $session.Dispose()
     # $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+    # Set-Variable -Name "SHA256SUM" -Value (Get-FileHash -Path "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe" -Algorithm SHA256).Hash
+    # Invoke-RestMethod -Uri 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' `
+    # -Method POST `
+    # -Headers @{
+    #     "x-wp-download-token" = $Env:X_WP_DOWNLOAD_TOKEN
+    # } `
+    # -Body @{
+    #     "file_type" = "2"
+    #     "file_remote" = $Env:DEPLOY_URL
+    #     "file_name" = "Mudlet-$Env:VERSION (Windows)"
+    #     "file_des" = "sha256: $SHA256SUM"
+    #     "file_cat" = "3"
+    #     "file_permission" = "-1"
+    #     "output" = "json"
+    #     "do" = "Add File"
+    # }
     Push-AppveyorArtifact "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -DeploymentName "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe"
   }
 
