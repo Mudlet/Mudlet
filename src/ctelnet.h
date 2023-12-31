@@ -297,8 +297,8 @@ private:
     QString getNewEnvironUserValueFont();
     QString getNewEnvironUserValueFontSize();
     QString getNewEnvironUserValueWordWrap();
-    void appendAllNewEnvironValues(std::string&, const bool, const QMap<QString, QPair<bool, QString>>&);
-    void appendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);
+    std::string appendAllNewEnvironValues(std::string&, const bool, const QMap<QString, QPair<bool, QString>>&);
+    std::string appendNewEnvironValue(std::string&, const QString&, const bool, const QMap<QString, QPair<bool, QString>>&);
     void sendIsNewEnvironValues(const QByteArray&);
     void sendAllMNESValues();
     void sendMNESValue(const QString&, const QMap<QString, QPair<bool, QString>>&);
