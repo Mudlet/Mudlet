@@ -1057,7 +1057,7 @@ QString cTelnet::getNewEnvironUserValueMTTS()
         terminalStandards |= MTTS_STD_SCREEN_READER;
     }
 
-    if (mpHost->mEnableMNES) {
+    if (mpHost->mEnableMNES && !mpHost->mForceNewEnvironNegotiationOff) {
         terminalStandards |= MTTS_STD_MNES;
     }
 
