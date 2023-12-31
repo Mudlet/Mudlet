@@ -273,6 +273,7 @@ private:
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
 
+    QString encodeNewEnvironData(const QString&);
     QString escapeNewEnvironData(const QString&);
     QString getNewEnvironValueUser();
     QString getNewEnvironValueSystemType();

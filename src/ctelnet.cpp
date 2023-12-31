@@ -937,6 +937,11 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
+QString cTelnet::encodeNewEnvironData(const QString& arg)
+{
+    return !mEncoding.isEmpty() && outgoingDataEncoder ? outgoingDataEncoder->fromUnicode(arg).constData() : arg.toLatin1().constData();
+}
+
 QString cTelnet::escapeNewEnvironData(const QString &arg)
 {
     QString ret = arg;
@@ -952,7 +957,7 @@ QString cTelnet::escapeNewEnvironData(const QString &arg)
 
 QString cTelnet::getNewEnvironValueUser()
 {
-    return !mpHost->getLogin().isEmpty() ? qsl("%1").arg(mpHost->getLogin()).toLatin1().constData() : QString();
+    return !mpHost->getLogin().isEmpty() ? qsl("%1").arg(encodeNewEnvironData(mpHost->getLogin().trimmed())) : QString();
 }
 
 QString cTelnet::getNewEnvironValueSystemType()
