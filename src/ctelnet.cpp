@@ -939,12 +939,7 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
-QString cTelnet::encodeNewEnvironData(const QString &arg)
-{
-    return !mEncoding.isEmpty() && outgoingDataEncoder ? outgoingDataEncoder->fromUnicode(arg).constData() : arg.toLatin1().constData();
-}
-
-QString cTelnet::escapeNewEnvironData(const QString &arg)
+QByteArray cTelnet::escapeAndEncodeNewEnvironData(const QString &arg)
 {
     QString ret = arg;
 
@@ -954,12 +949,12 @@ QString cTelnet::escapeNewEnvironData(const QString &arg)
     ret.replace(NEW_ENVIRON_USERVAR, qsl("%1%2").arg(NEW_ENVIRON_ESC, NEW_ENVIRON_USERVAR));
     ret.replace(NEW_ENVIRON_VAR, qsl("%1%2").arg(NEW_ENVIRON_ESC, NEW_ENVIRON_VAR));
 
-    return ret;
+    return !mEncoding.isEmpty() && outgoingDataEncoder ? outgoingDataEncoder->fromUnicode(ret).constData() : ret.toLatin1().constData();
 }
 
 QString cTelnet::getNewEnvironValueUser()
 {
-    return !mpHost->getLogin().isEmpty() ? qsl("%1").arg(encodeNewEnvironData(mpHost->getLogin().trimmed())) : QString();
+    return !mpHost->getLogin().isEmpty() ? mpHost->getLogin().trimmed() : QString();
 }
 
 QString cTelnet::getNewEnvironValueSystemType()
@@ -968,27 +963,27 @@ QString cTelnet::getNewEnvironValueSystemType()
 
     // "SYSTEMTYPE" Inspired by https://www.rfc-editor.org/rfc/rfc1340.txt
 #if (defined(Q_OS_MAC) || defined(Q_OS_MACOS))
-    systemType = qsl("MACOS").toLatin1().constData();
+    systemType = qsl("MACOS");
 #elif defined(Q_OS_WIN64)
-    systemType = qsl("WIN64").toLatin1().constData();
+    systemType = qsl("WIN64");
 #elif defined(Q_OS_WIN32)
-    systemType = qsl("WIN32").toLatin1().constData();
+    systemType = qsl("WIN32");
 #elif defined(Q_OS_BSD4)
-    nsystemType = qsl("BSD4").toLatin1().constData();
+    nsystemType = qsl("BSD4");
 #elif defined(Q_OS_CYGWIN)
-    systemType = qsl("CYGWIN").toLatin1().constData();
+    systemType = qsl("CYGWIN");
 #elif (defined(Q_OS_FREEBSD) || defined(Q_OS_FREEBSD_KERNEL))
-    systemType = qsl("FREEBSD").toLatin1().constData();
+    systemType = qsl("FREEBSD");
 #elif defined(Q_OS_HURD)
-    systemType = qsl("HURD").toLatin1().constData();
+    systemType = qsl("HURD");
 #elif defined(Q_OS_NETBSD)
-    systemType = qsl("NETBSD").toLatin1().constData();
+    systemType = qsl("NETBSD");
 #elif defined(Q_OS_OPENBSD)
-    systemType = qsl("OPENBSD").toLatin1().constData();
+    systemType = qsl("OPENBSD");
 #elif defined(Q_OS_LINUX)
-    systemType = qsl("LINUX").toLatin1().constData();
+    systemType = qsl("LINUX");
 #elif defined(Q_OS_UNIX)
-    systemType = qsl("UNIX").toLatin1().constData();
+    systemType = qsl("UNIX");
 #endif
 
     return systemType.isEmpty() ? QString(): systemType;
@@ -998,12 +993,12 @@ QString cTelnet::getNewEnvironUserValueCharset()
 {
     const QString charsetEncoding = getEncoding();
 
-    return !charsetEncoding.isEmpty() ? charsetEncoding.toLatin1().constData() : qsl("ASCII").toLatin1().constData();
+    return !charsetEncoding.isEmpty() ? charsetEncoding : qsl("ASCII");
 }
 
 QString cTelnet::getNewEnvironUserValueClientName()
 {
-    return qsl("MUDLET").toLatin1().constData();
+    return qsl("MUDLET");
 }
 
 QString cTelnet::getNewEnvironUserValueClientVersion()
@@ -1028,8 +1023,7 @@ QString cTelnet::getNewEnvironUserValueClientVersion()
                                         .replace(QChar::Space, QChar('-'))
                                         .replace(allInvalidCharacters, QChar('-'))
                                         .replace(multipleHyphens, QChar('-'))
-                                        .left(40)
-                                    .toLatin1().constData();
+                                        .left(40);
 
     for (int i = clientVersion.size() - 1; i >= 0; --i) {
         if (clientVersion.at(i).isLetterOrNumber()) {
@@ -1043,7 +1037,7 @@ QString cTelnet::getNewEnvironUserValueClientVersion()
 
 QString cTelnet::getNewEnvironUserValueTerminalType()
 {
-    return qsl("ANSI-TRUECOLOR").toLatin1().constData();
+    return qsl("ANSI-TRUECOLOR");
 }
 
 QString cTelnet::getNewEnvironUserValueMTTS()
@@ -1217,13 +1211,13 @@ void cTelnet::sendInfoNewEnvironValue(const QString &var)
         output += OPT_NEW_ENVIRON;
         output += NEW_ENVIRON_INFO;
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += escapeNewEnvironData(var).toUtf8().constData();
+        output += escapeAndEncodeNewEnvironData(var).toStdString();
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += escapeNewEnvironData(val).toUtf8().constData();
+            output += escapeAndEncodeNewEnvironData(val).toStdString();
         }
 
         output += TN_IAC;
@@ -1263,13 +1257,13 @@ void cTelnet::appendAllNewEnvironValues(std::string &output, const bool isUserVa
         const QString val = newEnvironData.second;
 
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += escapeNewEnvironData(it.key()).toUtf8().constData();
+        output += escapeAndEncodeNewEnvironData(it.key()).toStdString();
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += escapeNewEnvironData(val).toUtf8().constData();
+            output += escapeAndEncodeNewEnvironData(val).toStdString();
         }
 
         if (!isUserVar) {
@@ -1299,7 +1293,7 @@ void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, con
             // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
             // USERVAR, or IAC SE) then that variable is undefined.
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-            output += escapeNewEnvironData(var).toUtf8().constData();
+            output += escapeAndEncodeNewEnvironData(var).toStdString();
 
             if (!isUserVar) {
                 qDebug() << "WE send NEW_ENVIRON VAR" << var << "with no VAL because we don't maintain it as VAR (use USERVAR!)";
@@ -1308,13 +1302,13 @@ void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, con
             }
         } else {
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-            output += escapeNewEnvironData(var).toUtf8().constData();
+            output += escapeAndEncodeNewEnvironData(var).toStdString();
             output += NEW_ENVIRON_VAL;
 
             // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
             // variable is defined, but has no value.
             if (!val.isEmpty()) {
-                output += escapeNewEnvironData(val).toUtf8().constData();
+                output += escapeAndEncodeNewEnvironData(val).toStdString();
 
                 if (!isUserVar) {
                     qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
@@ -1331,7 +1325,7 @@ void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, con
         // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
         // USERVAR, or IAC SE) then that variable is undefined.
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += escapeNewEnvironData(var).toUtf8().constData();
+        output += escapeAndEncodeNewEnvironData(var).toStdString();
 
         if (!isUserVar) {
             qDebug() << "WE send NEW_ENVIRON VAR" << var << "with no VAL because we don't maintain it";
@@ -1444,13 +1438,13 @@ void cTelnet::sendAllMNESValues()
         const QString val = newEnvironData.second;
 
         output += NEW_ENVIRON_VAR;
-        output += escapeNewEnvironData(it.key()).toUtf8().constData();
+        output += escapeAndEncodeNewEnvironData(it.key()).toStdString();
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += escapeNewEnvironData(val).toUtf8().constData();
+            output += escapeAndEncodeNewEnvironData(val).toStdString();
             qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "VAL" << val;
         } else {
             qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "as an empty VAL";
@@ -1486,13 +1480,13 @@ void cTelnet::sendMNESValue(const QString &var, const QMap<QString, QPair<bool, 
         const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
         const QString val = newEnvironData.second;
 
-        output += escapeNewEnvironData(var).toUtf8().constData();
+        output += escapeAndEncodeNewEnvironData(var).toStdString();
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += escapeNewEnvironData(val).toUtf8().constData();
+            output += escapeAndEncodeNewEnvironData(val).toStdString();
             qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
         } else {
             qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
@@ -1500,7 +1494,7 @@ void cTelnet::sendMNESValue(const QString &var, const QMap<QString, QPair<bool, 
     } else {
         // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
         // USERVAR, or IAC SE) then that variable is undefined.
-        output += escapeNewEnvironData(var).toUtf8().constData();
+        output += escapeAndEncodeNewEnvironData(var).toStdString();
         output += NEW_ENVIRON_VAL;
 
         qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
@@ -2557,7 +2551,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     switch (mCycleCountMTTS) {
                         case 0: {
                             const QString clientNameAndVersion = qsl("%1-%2").arg(getNewEnvironUserValueClientName(), getNewEnvironUserValueClientVersion());
-                            cmd += clientNameAndVersion.toLatin1().constData(); // Example: MUDLET-4/17/2-DEV
+                            cmd += clientNameAndVersion.toStdString(); // Example: MUDLET-4/17/2-DEV
 
                             if (mpHost->mEnableMTTS) { // If we don't MTTS, remainder of the cases do not execute.
                                 mCycleCountMTTS++;
@@ -2572,7 +2566,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                         case 1: {
                             const QString mttsTerminalType = getNewEnvironUserValueTerminalType();
-                            cmd += mttsTerminalType.toLatin1().constData(); // Example: ANSI-TRUECOLOR
+                            cmd += mttsTerminalType.toStdString(); // Example: ANSI-TRUECOLOR
                             mCycleCountMTTS++;
                             qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << mttsTerminalType;
                             break;
@@ -2580,7 +2574,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                         default: {
                             const QString mttsTerminalStandards = getNewEnvironUserValueMTTS();
-                            cmd += qsl("MTTS %1").arg(mttsTerminalStandards).toUtf8().constData(); // Example: MTTS 2349
+                            cmd += qsl("MTTS %1").arg(mttsTerminalStandards).toStdString(); // Example: MTTS 2349
 
                             if (mCycleCountMTTS == 2) {
                                 mCycleCountMTTS++;
