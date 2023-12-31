@@ -1376,9 +1376,9 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
             }
 
             if (var.isEmpty()) {
-                output += appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
+                appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
             } else {
-                output += appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
+                appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
                 var = "";
             }
 
