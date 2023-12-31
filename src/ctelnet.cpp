@@ -1301,12 +1301,11 @@ std::string cTelnet::appendNewEnvironValue(std::string &output, const QString &v
             // USERVAR, or IAC SE) then that variable is undefined.
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
             output += escapeNewEnvironData(var).toUtf8().constData();
-            output += NEW_ENVIRON_VAL;
 
             if (!isUserVar) {
-                qDebug() << "WE send NEW_ENVIRON VAR" << var << "as an empty VAL" << "because we don't maintain it as VAR (use USERVAR!)";
+                qDebug() << "WE send NEW_ENVIRON VAR" << var << "with no VAL because we don't maintain it as VAR (use USERVAR!)";
             } else {
-                qDebug() << "WE send NEW_ENVIRON USERVAR" << var << "as an empty VAL" << "because we don't maintain it as USERVAR (use VAR!)";
+                qDebug() << "WE send NEW_ENVIRON USERVAR" << var << "with no VAL because we don't maintain it as USERVAR (use VAR!)";
             }
         } else {
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
@@ -1334,12 +1333,11 @@ std::string cTelnet::appendNewEnvironValue(std::string &output, const QString &v
         // USERVAR, or IAC SE) then that variable is undefined.
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
         output += escapeNewEnvironData(var).toUtf8().constData();
-        output += NEW_ENVIRON_VAL;
 
         if (!isUserVar) {
-            qDebug() << "WE send that we do not maintain NEW_ENVIRON VAR" << var;
+            qDebug() << "WE send NEW_ENVIRON VAR" << var << "with no VAL because we don't maintain it";
         } else {
-            qDebug() << "WE send that we do not maintain NEW_ENVIRON USERVAR" << var;
+            qDebug() << "WE send NEW_ENVIRON USERVAR" << var << "with no VAL because we don't maintain it";
         }
     }
 
