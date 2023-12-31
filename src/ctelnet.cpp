@@ -334,6 +334,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     sendInfoNewEnvironValue(qsl("CHARSET")); // Positioned here so we get ASCII updates too
 
     if (triggerUpdateNewEnvironValueMTTS) {
+        sendInfoNewEnvironValue(qsl("UTF-8"));
         sendInfoNewEnvironValue(qsl("MTTS"));
     }
 
