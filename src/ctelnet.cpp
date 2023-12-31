@@ -2774,8 +2774,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
             auto versionJSON = json.value(qsl("version"));
 
-            if (versionJSON != QJsonValue::Undefined && !versionJSON.toString().isEmpty()) {
+            if (versionJSON != QJsonValue::Undefined && versionJSON.isString() && !versionJSON.toString().isEmpty()) {
                 version = versionJSON.toString();
+            } else if (versionJSON != QJsonValue::Undefined && versionJSON.toInt()) {
+                version = qsl("%1").arg(versionJSON.toInt());
             } else {
                 return;
             }
