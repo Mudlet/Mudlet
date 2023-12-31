@@ -1405,12 +1405,12 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     }
 
     if (!var.isEmpty()) { // Last on the stack variable
-        output += appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
+        appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
     } else if (is_var || is_uservar) { // Last on the stack VAR or USERVAR with no name
-        output += appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
+        appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
     } else { // No list specified, send the entire list of defined VAR and USERVAR variables
-        output += appendAllNewEnvironValues(output, false, newEnvironDataMap);
-        output += appendAllNewEnvironValues(output, true, newEnvironDataMap);
+        appendAllNewEnvironValues(output, false, newEnvironDataMap);
+        appendAllNewEnvironValues(output, true, newEnvironDataMap);
     }
 
     output += TN_IAC;
