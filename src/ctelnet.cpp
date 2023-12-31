@@ -1249,7 +1249,7 @@ void cTelnet::sendInfoNewEnvironValue(const QString &var)
     }
 }
 
-std::string cTelnet::appendAllNewEnvironValues(std::string &output, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
+void cTelnet::appendAllNewEnvironValues(std::string &output, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
 {
     for (auto it = newEnvironDataMap.begin(); it != newEnvironDataMap.end(); ++it) {
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
@@ -1283,11 +1283,9 @@ std::string cTelnet::appendAllNewEnvironValues(std::string &output, const bool i
             qDebug() << "WE send NEW_ENVIRON USERVAR" << it.key() << "as an empty VAL";
         }
     }
-
-    return output;
 }
 
-std::string cTelnet::appendNewEnvironValue(std::string &output, const QString &var, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
+void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
 {
     qDebug() << "Server requests NEW_ENVIRON" << var;
 
@@ -1340,8 +1338,6 @@ std::string cTelnet::appendNewEnvironValue(std::string &output, const QString &v
             qDebug() << "WE send NEW_ENVIRON USERVAR" << var << "with no VAL because we don't maintain it";
         }
     }
-
-    return output;
 }
 
 void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
@@ -1376,9 +1372,9 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
             }
 
             if (var.isEmpty()) {
-                output += appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
+                appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
             } else {
-                output += appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
+                appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
                 var = "";
             }
 
@@ -1391,9 +1387,9 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
             }
 
             if (var.isEmpty()) {
-                output += appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
+                appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
             } else {
-                output += appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
+                appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
                 var = "";
             }
 
@@ -1405,12 +1401,12 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     }
 
     if (!var.isEmpty()) { // Last on the stack variable
-        output += appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
+        appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
     } else if (is_var || is_uservar) { // Last on the stack VAR or USERVAR with no name
-        output += appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
+        appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
     } else { // No list specified, send the entire list of defined VAR and USERVAR variables
-        output += appendAllNewEnvironValues(output, false, newEnvironDataMap);
-        output += appendAllNewEnvironValues(output, true, newEnvironDataMap);
+        appendAllNewEnvironValues(output, false, newEnvironDataMap);
+        appendAllNewEnvironValues(output, true, newEnvironDataMap);
     }
 
     output += TN_IAC;
