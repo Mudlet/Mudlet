@@ -1550,7 +1550,7 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
         return;
     }
 
-    sendAllMNESValues();
+    sendAllMNESValues(); // No list specified or only a VAR, send the entire list of defined VAR variables
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
