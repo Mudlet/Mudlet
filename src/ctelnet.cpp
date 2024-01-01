@@ -1282,8 +1282,6 @@ void cTelnet::appendAllNewEnvironValues(std::string &output, const bool isUserVa
 
 void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, const bool isUserVar, const QMap<QString, QPair<bool, QString>> &newEnvironDataMap)
 {
-    qDebug() << "Server requests NEW_ENVIRON" << var;
-
     if (newEnvironDataMap.contains(var)) {
         // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
         const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
@@ -1360,32 +1358,28 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     QString var;
 
     for (int i = 0; i < transcodedMsg.size(); ++i) {
-        if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
-            if (!i) {
-                is_var = 1;
-                continue;
-            }
+        if (!i && transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
+            continue;
+        } else if (!i) {
+            return; // Invalid response;
+        }
 
-            if (var.isEmpty()) {
-                appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
-            } else {
+        if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
+            if (!var.isEmpty()) {
                 appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
                 var = "";
+            } else if (is_var || is_uservar) {
+                appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
             }
 
             is_uservar = 0;
             is_var = 1;
         } else if (transcodedMsg.at(i) == NEW_ENVIRON_USERVAR) {
-            if (!i) {
-                is_uservar = 1;
-                continue;
-            }
-
-            if (var.isEmpty()) {
-                appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
-            } else {
+            if (!var.isEmpty()) {
                 appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
                 var = "";
+            } else if (is_var || is_uservar) {
+                appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
             }
 
             is_var = 0;
@@ -1423,8 +1417,6 @@ void cTelnet::sendAllMNESValues()
     }
 
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
-
-    qDebug() << "Server requests all NEW_ENVIRON (MNES) variables";
         
     std::string output;
     output += TN_IAC;
@@ -1465,8 +1457,6 @@ void cTelnet::sendMNESValue(const QString &var, const QMap<QString, QPair<bool, 
     if (!isMNESVariable(var)) {
         return;
     }
-
-    qDebug() << "Server requests NEW_ENVIRON" << var;
 
     std::string output;
     output += TN_IAC;
@@ -1511,15 +1501,6 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
         return;
     }
 
-    if (payload.data()[0] != NEW_ENVIRON_SEND) {
-        return; // Invalid NEW_ENVIRON (MNES) syntax
-    }
-
-    if (payload.data()[1] == NEW_ENVIRON_VAR && payload.size() == 2) {
-        sendAllMNESValues();
-        return;
-    }
-
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
     QString transcodedMsg;
@@ -1532,38 +1513,33 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
         transcodedMsg = payload;
     }
 
-    int is_send = 0;
-    int is_var = 0;
     QString var;
 
     for (int i = 0; i < transcodedMsg.size(); ++i) {
-        if (transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
-            if (!i) {
-                is_send = 1;
-            } else if (!is_send) {
-                is_send = 1;
+        if (!i && transcodedMsg.at(i) == NEW_ENVIRON_SEND) {
+            continue;
+        } else if (!i) {
+            return; // Invalid response;
+        }
+
+        if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
+            if (!var.isEmpty()) {
                 sendMNESValue(var, newEnvironDataMap);
-            } else {
-                return; // Invalid NEW_ENVIRON (MNES) syntax
+                var = "";
             }
 
-            var = "";
-        } else if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
-            if (is_send) {
-                is_send = 0;
-                is_var = 1;
-            } else {
-                return; // Invalid NEW_ENVIRON (MNES) syntax
-            }
-        } else {
-            is_var = 0;
-            var.append(transcodedMsg.at(i));
+            continue;
         }
+
+        var.append(transcodedMsg.at(i));
     }
 
     if (!var.isEmpty()) { // Last variable on the stack
         sendMNESValue(var, newEnvironDataMap);
+        return;
     }
+
+    sendAllMNESValues();
 }
 
 void cTelnet::processTelnetCommand(const std::string& telnetCommand)
@@ -2218,17 +2194,14 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 return; // Invalid NEW_ENVIRON syntax
             }
 
-            if (mpHost->mEnableMNES) {
-                // Trim off the Telnet suboption bytes from beginning (3) and end (2)
-                payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
+            // Trim off the Telnet suboption bytes from beginning (3) and end (2)
+            payload = payload.mid(3, static_cast<int>(payload.size()) - 5);
 
+            if (mpHost->mEnableMNES) {
                 sendIsMNESValues(payload);
                 return;
             }
  
-            // Trim off the Telnet suboption bytes from beginning (4) and end (2)
-            payload = payload.mid(4, static_cast<int>(payload.size()) - 6);
-
             sendIsNewEnvironValues(payload);
             return;
         }
