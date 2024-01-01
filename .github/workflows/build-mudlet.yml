@@ -33,7 +33,7 @@ jobs:
             # We still need a gcc for some sub-stages - and it ain't always the same one:
             gcc_compiler_version: 9
             qt: '5.14.2'
-          - os: macos-11
+          - os: macos-12
             buildname: 'macos / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
@@ -160,7 +160,7 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
         # Use latest available XCode
-        echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
+        echo "DEVELOPER_DIR=/Applications/Xcode_14.2.app/Contents/Developer" >> $GITHUB_ENV
 
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
