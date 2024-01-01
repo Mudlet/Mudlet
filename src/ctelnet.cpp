@@ -1124,22 +1124,22 @@ QString cTelnet::getNewEnvironUserValueTLS()
 
 QString cTelnet::getNewEnvironUserValueLanguage()
 {
-    return mudlet::self()->getInterfaceLanguage().toUtf8().constData();
+    return mudlet::self()->getInterfaceLanguage();
 }
 
 QString cTelnet::getNewEnvironUserValueFont()
 {
-    return mpHost->getDisplayFont().family().toUtf8().constData();
+    return mpHost->getDisplayFont().family();
 }
 
 QString cTelnet::getNewEnvironUserValueFontSize()
 {
-    return qsl("%1").arg(mpHost->getDisplayFont().pointSize()).toUtf8().constData();
+    return qsl("%1").arg(mpHost->getDisplayFont().pointSize());
 }
 
 QString cTelnet::getNewEnvironUserValueWordWrap()
 {
-    return qsl("%1").arg(mpHost->mWrapAt).toUtf8().constData();
+    return qsl("%1").arg(mpHost->mWrapAt);
 }
 
 QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
