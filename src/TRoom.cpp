@@ -278,7 +278,7 @@ bool TRoom::setDoor(const QString& cmd, const int doorStatus)
     }
 }
 
-int TRoom::getDoor(const QString& cmd)
+int TRoom::getDoor(const QString& cmd) const
 {
     return doors.value(cmd, 0);
     // Second argument is the result if cmd is not in the doors QMap
