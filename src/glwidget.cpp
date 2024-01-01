@@ -79,42 +79,42 @@ void GLWidget::slot_showAllLevels()
 void GLWidget::slot_shiftDown()
 {
     mShiftMode = true;
-    mOy--;
+    mMapCenterY--;
     update();
 }
 
 void GLWidget::slot_shiftUp()
 {
     mShiftMode = true;
-    mOy++;
+    mMapCenterY++;
     update();
 }
 
 void GLWidget::slot_shiftLeft()
 {
     mShiftMode = true;
-    mOx--;
+    mMapCenterX--;
     update();
 }
 
 void GLWidget::slot_shiftRight()
 {
     mShiftMode = true;
-    mOx++;
+    mMapCenterX++;
     update();
 }
 
 void GLWidget::slot_shiftZup()
 {
     mShiftMode = true;
-    mOz++;
+    mMapCenterZ++;
     update();
 }
 
 void GLWidget::slot_shiftZdown()
 {
     mShiftMode = true;
-    mOz--;
+    mMapCenterZ--;
     update();
 }
 
@@ -223,7 +223,7 @@ void GLWidget::slot_setCameraPositionZ(int angle)
 
 void GLWidget::initializeGL()
 {
-    QColor color(QColorConstants::Black);
+    QColor const color(QColorConstants::Black);
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;
     yRot = 5;
@@ -243,9 +243,9 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 {
     mAID = areaId;
     mShiftMode = true;
-    mOx = xPos;
-    mOy = yPos;
-    mOz = zPos;
+    mMapCenterX = xPos;
+    mMapCenterY = yPos;
+    mMapCenterZ = zPos;
     update();
 }
 
@@ -295,14 +295,14 @@ void GLWidget::paintGL()
         ox = pRID->x;
         oy = pRID->y;
         oz = pRID->z;
-        mOx = ox;
-        mOy = oy;
-        mOz = oz;
+        mMapCenterX = ox;
+        mMapCenterY = oy;
+        mMapCenterZ = oz;
 
     } else {
-        ox = mOx;
-        oy = mOy;
-        oz = mOz;
+        ox = mMapCenterX;
+        oy = mMapCenterY;
+        oz = mMapCenterZ;
     }
     px = static_cast<float>(ox); //mpMap->rooms[mpMap->mRoomId]->x);
     py = static_cast<float>(oy); //mpMap->rooms[mpMap->mRoomId]->y);
@@ -463,7 +463,7 @@ void GLWidget::paintGL()
             exitList.push_back(pR->getNorthwest());
             exitList.push_back(pR->getUp());
             exitList.push_back(pR->getDown());
-            int e = pR->z;
+            const int e = pR->z;
             const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 1);
@@ -486,7 +486,7 @@ void GLWidget::paintGL()
                               planeColor[ef][2],
                               planeColor[ef][3]);*/
                 }
-                for (int k : exitList) {
+                for (const int k : exitList) {
                     bool areaExit = false;
                     if (k == -1) {
                         continue;
@@ -503,8 +503,8 @@ void GLWidget::paintGL()
                     auto ex = static_cast<float>(pExit->x);
                     auto ey = static_cast<float>(pExit->y);
                     auto ez = static_cast<float>(pExit->z);
-                    QVector3D p1(ex, ey, ez);
-                    QVector3D p2(rx, ry, rz);
+                    QVector3D const p1(ex, ey, ez);
+                    QVector3D const p2(rx, ry, rz);
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
@@ -781,7 +781,7 @@ void GLWidget::paintGL()
                             if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
-                                    quint8 base = env - 16;
+                                    quint8 const base = env - 16;
                                     quint8 r = base / 36;
                                     quint8 g = (base - (r * 36)) / 6;
                                     quint8 b = (base - (r * 36)) - (g * 6);
@@ -795,7 +795,7 @@ void GLWidget::paintGL()
                                     mc3[2] = b / 255.0;
                                     mc3[3] = 0.2;
                                 } else if (231 < env && env < 256) {
-                                    quint8 k = ((env - 232) * 10) + 8;
+                                    quint8 const k = ((env - 232) * 10) + 8;
                                     glColor4ub(k, k, k, 200);
                                     mc3[0] = k / 255.0;
                                     mc3[1] = k / 255.0;
@@ -804,7 +804,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->mCustomEnvColors[env];
+                            QColor const& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 25);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -897,7 +897,7 @@ void GLWidget::paintGL()
                     }
                 }
             } else {
-                for (int k : exitList) {
+                for (const int k : exitList) {
                     bool areaExit = false;
                     if (k == -1) {
                         continue;
@@ -915,8 +915,8 @@ void GLWidget::paintGL()
                     auto ex = static_cast<float>(pExit->x);
                     auto ey = static_cast<float>(pExit->y);
                     auto ez = static_cast<float>(pExit->z);
-                    QVector3D p1(ex, ey, ez);
-                    QVector3D p2(rx, ry, rz);
+                    QVector3D const p1(ex, ey, ez);
+                    QVector3D const p2(rx, ry, rz);
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
@@ -1191,7 +1191,7 @@ void GLWidget::paintGL()
                             if (!mpMap->mCustomEnvColors.contains(env)) {
                                 if (16 < env && env < 232)
                                 {
-                                    quint8 base = env - 16;
+                                    quint8 const base = env - 16;
                                     quint8 r = base / 36;
                                     quint8 g = (base - (r * 36)) / 6;
                                     quint8 b = (base - (r * 36)) - (g * 6);
@@ -1205,7 +1205,7 @@ void GLWidget::paintGL()
                                     mc3[2] = b / 255.0;
                                     mc3[3] = 0.2;
                                 } else if (231 < env && env < 256) {
-                                    quint8 k = ((env - 232) * 10) + 8;
+                                    quint8 const k = ((env - 232) * 10) + 8;
                                     glColor4ub(k, k, k, 200);
                                     mc3[0] = k / 255.0;
                                     mc3[1] = k / 255.0;
@@ -1214,7 +1214,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor& _c = mpMap->mCustomEnvColors[env];
+                            QColor const& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -1330,7 +1330,7 @@ void GLWidget::paintGL()
         QSetIterator<int> itRoom(pArea->getAreaRooms());
         while (itRoom.hasNext()) {
             glDisable(GL_LIGHT1);
-            int currentRoomId = itRoom.next();
+            const int currentRoomId = itRoom.next();
             TRoom* pR = mpMap->mpRoomDB->getRoom(currentRoomId);
             if (!pR) {
                 continue;
@@ -1353,7 +1353,7 @@ void GLWidget::paintGL()
                 }
             }
 
-            int e = pR->z;
+            const int e = pR->z;
             const int ef = abs(e % 26);
             glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, planeColor[ef]);
             glMateriali(GL_FRONT, GL_SHININESS, 36); //gut:96
@@ -1366,7 +1366,7 @@ void GLWidget::paintGL()
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                 glMateriali(GL_FRONT, GL_SHININESS, 36);
                 glColor4f(1.0, 0.0, 0.0, 1.0);
-            } else if (currentRoomId == mTarget) {
+            } else if (currentRoomId == mTargetRoomId) {
                 glDisable(GL_BLEND);
                 glEnable(GL_LIGHTING);
                 glDisable(GL_LIGHT1);
@@ -1585,7 +1585,7 @@ void GLWidget::paintGL()
                     if (!mpMap->mCustomEnvColors.contains(env)) {
                         if (16 < env && env < 232)
                         {
-                            quint8 base = env - 16;
+                            quint8 const base = env - 16;
                             quint8 r = base / 36;
                             quint8 g = (base - (r * 36)) / 6;
                             quint8 b = (base - (r * 36)) - (g * 6);
@@ -1599,7 +1599,7 @@ void GLWidget::paintGL()
                             mc3[2] = b / 255.0;
                             mc3[3] = 0.2;
                         } else if (231 < env && env < 256) {
-                            quint8 k = ((env - 232) * 10) + 8;
+                            quint8 const k = ((env - 232) * 10) + 8;
                             glColor4ub(k, k, k, 200);
                             mc3[0] = k / 255.0;
                             mc3[1] = k / 255.0;
@@ -1608,7 +1608,7 @@ void GLWidget::paintGL()
                         }
                         break;
                     }
-                    QColor& _c = mpMap->mCustomEnvColors[env];
+                    QColor const& _c = mpMap->mCustomEnvColors[env];
                     glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                     mc3[0] = _c.redF();
                     mc3[1] = _c.greenF();
@@ -1888,7 +1888,7 @@ void GLWidget::paintGL()
                 if (!mpMap->mCustomEnvColors.contains(env)) {
                     if (16 < env && env < 232)
                     {
-                        quint8 base = env - 16;
+                        quint8 const base = env - 16;
                         quint8 r = base / 36;
                         quint8 g = (base - (r * 36)) / 6;
                         quint8 b = (base - (r * 36)) - (g * 6);
@@ -1902,7 +1902,7 @@ void GLWidget::paintGL()
                         mc3[2] = b / 255.0;
                         mc3[3] = 0.2;
                     } else if (231 < env && env < 256) {
-                        quint8 k = ((env - 232) * 10) + 8;
+                        quint8 const k = ((env - 232) * 10) + 8;
                         glColor4ub(k, k, k, 200);
                         mc3[0] = k / 255.0;
                         mc3[1] = k / 255.0;
@@ -1911,7 +1911,7 @@ void GLWidget::paintGL()
                     }
                     break;
                 }
-                QColor& _c = mpMap->mCustomEnvColors[env];
+                QColor const& _c = mpMap->mCustomEnvColors[env];
                 glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                 mc3[0] = _c.redF();
                 mc3[1] = _c.greenF();
@@ -2060,8 +2060,8 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
 #else
         auto eventPos = event->position().toPoint();
 #endif
-        int x = eventPos.x();
-        int y = height() - eventPos.y(); // the opengl origin is at bottom left
+        const int x = eventPos.x();
+        const int y = height() - eventPos.y(); // the opengl origin is at bottom left
         GLuint buff[16] = {0};
         GLint hits;
         GLint view[4];
@@ -2078,7 +2078,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
         glMatrixMode(GL_MODELVIEW);
         doneCurrent();
-        mTarget = -22;
+        mTargetRoomId = -22;
         makeCurrent();
         paintGL();
         doneCurrent();
@@ -2088,7 +2088,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         hits = glRenderMode(GL_RENDER);
 
         for (int i = 0; i < hits; i++) {
-            mTarget = buff[i * 4 + 3];
+            mTargetRoomId = buff[i * 4 + 3];
             //TODO: multiple assignments
             //            unsigned int minZ = buff[i * 4 + 1];
             //            unsigned int maxZ = buff[i * 4 + 2];
@@ -2100,8 +2100,8 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         glMatrixMode(GL_MODELVIEW);
         doneCurrent();
         update();
-        if (mpMap->mpRoomDB->getRoom(mTarget)) {
-            mpMap->mTargetID = mTarget;
+        if (mpMap->mpRoomDB->getRoom(mTargetRoomId)) {
+            mpMap->mTargetID = mTargetRoomId;
             if (mpMap->mpHost->checkForCustomSpeedwalk()) {
                 mpMap->mpHost->startSpeedWalk(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID);
             } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
@@ -2169,8 +2169,8 @@ void GLWidget::mouseReleaseEvent(QMouseEvent* event)
 
 void GLWidget::wheelEvent(QWheelEvent* e)
 {
-    int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
-    int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
+    const int xDelta = qRound(e->angleDelta().x() / (8.0 * 15.0));
+    const int yDelta = qRound(e->angleDelta().y() / (8.0 * 15.0));
     bool used = false;
     if (yDelta) {
         if (abs(mScale) < 0.3) {

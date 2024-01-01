@@ -80,15 +80,24 @@ TAction* ActionUnit::findAction(const QString& name)
     return nullptr;
 }
 
-std::vector<TAction*> ActionUnit::findActionsByName(const QString& name)
+std::vector<int> ActionUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
 {
-    std::vector<TAction*> actions;
-    for (auto action : qAsConst(mActionMap)) {
-        if (action->getName() == name) {
-            actions.push_back(action);
+    std::vector<int> ids;
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : qAsConst(mActionMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    } else {
+        for (auto& item : qAsConst(mActionMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
         }
     }
-    return actions;
+    return ids;
 }
 
 void ActionUnit::addActionRootNode(TAction* pT, int parentPosition, int childPosition)
@@ -502,7 +511,7 @@ void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
         mudlet::self()->addDockWidget(((pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pToolBar);
         if (pAction->mToolbarLastFloatingState) {
             pToolBar->setFloating(true);
-            QPoint pos = QPoint(pAction->mPosX, pAction->mPosY);
+            const QPoint pos = QPoint(pAction->mPosX, pAction->mPosY);
             pToolBar->show();
             pToolBar->move(pos);
         } else {

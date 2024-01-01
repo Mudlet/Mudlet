@@ -28,7 +28,7 @@
 bool TMxpProcessor::setMode(const QString& code)
 {
     bool isOk = false;
-    int modeCode = code.toInt(&isOk);
+    const int modeCode = code.toInt(&isOk);
     if (isOk) {
         return setMode(modeCode);
     } else {
@@ -77,13 +77,22 @@ bool TMxpProcessor::setMode(int modeCode)
         mMXP_MODE = MXP_MODE_OPEN;
         break;
     case 1: // secure line (until next newline) all tags and commands in MXP are allowed within the line.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+        // When the mode is changed from OPEN mode to any other mode, any unclosed OPEN tags are automatically closed.
+        if (mMXP_MODE == MXP_MODE_OPEN) {
+            mpMxpClient->resetTextProperties();
+        }
         mMXP_MODE = MXP_MODE_SECURE;
         break;
     case 2: // locked line (until next newline) no MXP or HTML commands are allowed in the line.  The line is not parsed for any tags at all.  This is useful for "verbatim" text output from the MUD.  When a newline is received from the MUD, the mode reverts back to the Default mode.
+        // When the mode is changed from OPEN mode to any other mode, any unclosed OPEN tags are automatically closed.
+        if (mMXP_MODE == MXP_MODE_OPEN) {
+            mpMxpClient->resetTextProperties();
+        }
         mMXP_MODE = MXP_MODE_LOCKED;
         break;
     case 3: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
         mMxpTagBuilder.reset();
+        mpMxpClient->resetTextProperties();
         mMXP_MODE = mMXP_DEFAULT;
         break;
     case 4: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
@@ -93,9 +102,17 @@ bool TMxpProcessor::setMode(int modeCode)
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_OPEN;
         break;
     case 6: // lock secure mode (MXP 0.4 or later) - set secure mode.  Mode remains in effect until changed.  Secure mode becomes the new default mode.
+        // When the mode is changed from OPEN mode to any other mode, any unclosed OPEN tags are automatically closed.
+        if (mMXP_MODE == MXP_MODE_OPEN) {
+            mpMxpClient->resetTextProperties();
+        }
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_SECURE;
         break;
     case 7: // lock locked mode (MXP 0.4 or later) - set locked mode.  Mode remains in effect until changed.  Locked mode becomes the new default mode.
+        // When the mode is changed from OPEN mode to any other mode, any unclosed OPEN tags are automatically closed.
+        if (mMXP_MODE == MXP_MODE_OPEN) {
+            mpMxpClient->resetTextProperties();
+        }
         mMXP_DEFAULT = mMXP_MODE = MXP_MODE_LOCKED;
         break;
     default:
@@ -116,6 +133,10 @@ bool TMxpProcessor::isEnabled() const
 
 void TMxpProcessor::resetToDefaultMode()
 {
+    // Also, when in OPEN mode, any unclosed OPEN tags are automatically closed when a newline is received from the MUD.
+    if (mMXP_MODE == MXP_MODE_OPEN) {
+        mpMxpClient->resetTextProperties();
+    }
     mMXP_MODE = mMXP_DEFAULT;
 }
 
@@ -131,14 +152,14 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch)
     }
 
     if (mMxpTagBuilder.hasTag()) {
-        QScopedPointer<MxpTag> tag(mMxpTagBuilder.buildTag());
+        QScopedPointer<MxpTag> const tag(mMxpTagBuilder.buildTag());
 
         //        qDebug() << "TAG RECEIVED: " << tag->asString();
         if (mMXP_MODE == MXP_MODE_TEMP_SECURE) {
             mMXP_MODE = mMXP_DEFAULT;
         }
 
-        TMxpTagHandlerResult result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
+        TMxpTagHandlerResult const result = mMxpTagProcessor.handleTag(mMxpTagProcessor, *mpMxpClient, tag.get());
         return result == MXP_TAG_COMMIT_LINE ? HANDLER_COMMIT_LINE : HANDLER_NEXT_CHAR;
     }
 

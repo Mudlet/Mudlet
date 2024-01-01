@@ -13,6 +13,7 @@
         <file>icons/aardwolf_mud.png</file>
         <file>icons/accessories-text-editor.png</file>
         <file>icons/achaea_120_30.png</file>
+        <file>icons/abandonedrealms_icon.jpg</file>
         <file>icons/aetolia_120_30.png</file>
         <file>icons/application-exit.png</file>
         <file>icons/application-json.png</file>
@@ -151,8 +152,11 @@
         <file>icons/mudlet_room_exits.png</file>
         <file>icons/mume.png</file>
         <file>icons/mudren.png</file>
+        <file>icons/mute.png</file>
         <file>icons/offsettimer-off.png</file>
+        <file>icons/offsettimer-off-grey.png</file>
         <file>icons/offsettimer-on.png</file>
+        <file>icons/offsettimer-on-grey.png</file>
         <file>icons/package-exporter.png</file>
         <file>icons/package-manager.png</file>
         <file>icons/password-show-off.png</file>
@@ -183,6 +187,7 @@
         <file>icons/tag_checkbox_checked_grey.png</file>
         <file>icons/tools-report-bug.png</file>
         <file>icons/tools-wizard.png</file>
+        <file>icons/unmute.png</file>
         <file>icons/utilities-file-archiver.png</file>
         <file>icons/variable.png</file>
         <file>icons/variables.png</file>

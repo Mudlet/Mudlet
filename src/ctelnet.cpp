@@ -57,11 +57,6 @@
 
 using namespace std::chrono_literals;
 
-// Uncomment this to get debugging messages about WILL/WONT/DO/DONT commands for
-// suboptions - change the value to 2 to get a bit more detail about the sizes
-// of the messages
-#define DEBUG_TELNET 1
-
 
 constexpr size_t BUFFER_SIZE = 100000L;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
@@ -480,11 +475,12 @@ void cTelnet::slot_socketDisconnected()
     QTime timeDiff(0, 0, 0, 0);
     msg = tr("[ INFO ]  - Connection time: %1\n    ")
                   .arg(timeDiff.addMSecs(mConnectionTimer.elapsed())
-                               .toString(tr("hh:mm:ss.zzz",
-                                            // Intentional comment to separate arguments
-                                            "This is the format to be used to show the profile connection time, it follows "
-                                            "the rules of the \"QDateTime::toString(...)\" function and may need "
-                                            "modification for some locales, e.g. France, Spain.")));
+                                /*:
+                                This is the format to be used to show the profile connection time, it follows
+                                the rules of the "QDateTime::toString(...)" function and may need
+                                modification for some locales, e.g. France, Spain.
+                                */
+                               .toString(tr("hh:mm:ss.zzz")));
     mNeedDecompression = false;
     reset();
 
@@ -936,39 +932,68 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
     char ch = telnetCommand[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
-    QString _type;
-    switch ((quint8)ch) {
-    case 239:
-        _type = "TN_EOR";
+    QString commandType;
+    switch (ch) {
+    case TN_EOR:
+        commandType = QLatin1String("EOR");
         break;
-    case 249:
-        _type = "TN_GA";
+    case TN_SE:
+        commandType = QLatin1String("SE");
         break;
-    case 250:
-        _type = "SB";
+    case TN_NOP:
+        commandType = QLatin1String("NOP");
         break;
-    case 251:
-        _type = "WILL";
+    case TN_DM: // Data Mark
+        commandType = QLatin1String("DM");
         break;
-    case 252:
-        _type = "WONT";
+    case TN_BRK: // Break
+        commandType = QLatin1String("BRK");
         break;
-    case 253:
-        _type = "DO";
+    case TN_IP: // Interupt Process
+        commandType = QLatin1String("IP");
         break;
-    case 254:
-        _type = "DONT";
+    case TN_AO: // Abort Output
+        commandType = QLatin1String("AO");
         break;
-    case 255:
-        _type = "IAC";
+    case TN_AYT:
+        commandType = QLatin1String("AYT");
+        break;
+    case TN_EC: // Erase character
+        commandType = QLatin1String("EC");
+        break;
+    case TN_EL: // Erase line
+        commandType = QLatin1String("EL");
+        break;
+    case TN_GA:
+        commandType = QLatin1String("GA");
+        break;
+    case TN_SB:
+        commandType = QLatin1String("SB");
+        break;
+    case TN_WILL:
+        commandType = QLatin1String("WILL");
+        break;
+    case TN_WONT:
+        commandType = QLatin1String("WONT");
+        break;
+    case TN_DO:
+        commandType = QLatin1String("DO");
+        break;
+    case TN_DONT:
+        commandType = QLatin1String("DONT");
+        break;
+    case TN_IAC:
+        // Probably won't be seen as it will be stripped off in order for this
+        // method to have been called (it'll be in telnetCommand[0])
+        commandType = QLatin1String("IAC");
         break;
     default:
-        _type = QString::number((quint8)ch);
+        commandType = QString::number((quint8)ch);
     }
     if (telnetCommand.size() > 2) {
-        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << _type << " + " << decodeOption(telnetCommand[2]);
+        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << commandType << " + " << decodeOption(telnetCommand[2]);
     } else {
-        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << _type;
+        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << commandType;
     }
 #endif
 
@@ -977,6 +1002,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_GA:
     case TN_EOR: {
         recvdGA = true;
+        break;
+    }
+    case TN_AYT: {
+        // This will be unaffected by the Mud Server encoding setting:
+        std::string output = "YES";
+        socketOutRaw(output);
         break;
     }
     case TN_WILL: {
@@ -1675,7 +1706,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 auto request = QNetworkRequest(QUrl(url));
                 mudlet::self()->setNetworkRequestDefaults(url, request);
                 mpPackageDownloadReply = mpDownloader->get(request);
-                mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
+                mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"),
+                    //: Cancel download of GUI package from Server
+                    tr("Cancel"), 0, 4000000, mpHost->mpConsole);
                 connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
                 connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
                 mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -1801,18 +1834,79 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     cmd += TN_SB;
                     cmd += OPT_TERMINAL_TYPE;
                     cmd += TNSB_IS;
-                    /*
-                     * The valid characters for termTerm are more restricted
-                     * than being ASCII - from:
-                     * https://tools.ietf.org/html/rfc1010 (page 29):
-                     * "A terminal names may be up to 40 characters taken from
-                     * the set of uppercase letters, digits, and the two
-                     * punctuation characters hyphen and slash.  It must start
-                     * with a letter, and end with a letter or digit."
-                     * Once we comply with that we can be certain that Mud
-                     * Server encoding will NOT be an issue!
-                     */
-                    cmd += termType.toUtf8().constData();
+
+                    switch (mCycleCountMTTS) {
+                        case 0: {
+                            /*
+                            * The valid characters for termTerm are more restricted
+                            * than being ASCII - from:
+                            * https://tools.ietf.org/html/rfc1010 (page 29):
+                            * "A terminal names may be up to 40 characters taken from
+                            * the set of uppercase letters, digits, and the two
+                            * punctuation characters hyphen and slash.  It must start
+                            * with a letter, and end with a letter or digit."
+                            * Once we comply with that we can be certain that Mud
+                            * Server encoding will NOT be an issue!
+                            */
+                            static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
+                            static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
+                            QString sanitisedTermType = termType.toUpper()
+                                                                .replace(QChar('.'), QChar('/'))
+                                                                .replace(QChar::Space, QChar('-'))
+                                                                .replace(allInvalidCharacters, QChar('-'))
+                                                                .replace(multipleHyphens, QChar('-'))
+                                                                .left(40)
+                                                            .toLatin1().constData();
+
+                            for (int i = sanitisedTermType.size() - 1; i >= 0; --i) {
+                                if (sanitisedTermType.at(i).isLetterOrNumber()) {
+                                    sanitisedTermType = sanitisedTermType.left(i + 1);
+                                    break;
+                                }
+                            }
+
+                            Q_ASSERT_X(!sanitisedTermType.isEmpty(),
+                                       "cTelnet::processTelnetCommand(...)",
+                                       "ended up with an empty version string whilst trying to sanitise the Mudlet one");
+
+                            cmd += sanitisedTermType.toLatin1().constData();
+
+                            if (!mpHost->mForceMTTSNegotiationOff) { // If we don't MTTS, remainder of the cases do not execute.
+                                mCycleCountMTTS++;
+                            }
+
+                            break;
+                        }
+                        case 1:
+                            qDebug() << "MTTS enabled";
+                            cmd += qsl("ANSI-TRUECOLOR").toLatin1().constData(); // DUMB, ANSI, VT100, XTERM
+                            mCycleCountMTTS++;
+                            qDebug() << "WE send MTTS terminal type is ANSI-TRUECOLOR";
+                            break;
+                        default:
+                            int terminal_standards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
+
+                            if (getEncoding() == "UTF-8") {
+                                terminal_standards |= MTTS_STD_UTF_8;
+                            }
+
+                            if (mpHost->mAdvertiseScreenReader) {
+                                terminal_standards |= MTTS_STD_SCREEN_READER;
+                            }
+#if !defined(QT_NO_SSL)
+                            terminal_standards |= MTTS_STD_SSL;
+#endif
+                            cmd += qsl("MTTS %1").arg(terminal_standards).toUtf8().constData();
+
+                            if (mCycleCountMTTS == 2) {
+                                mCycleCountMTTS++;
+                                qDebug() << "WE send MTTS bitvector is" << terminal_standards;
+                            } else {
+                                mCycleCountMTTS = 0; // Send the bitvector twice, then reset (0) to finish MTTS negotiation
+                                qDebug() << "WE send MTTS bitvector is" << terminal_standards << "(repeated)";
+                            }
+                    }
+
                     cmd += TN_IAC;
                     cmd += TN_SE;
                     socketOutRaw(cmd);
@@ -1960,6 +2054,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
         QString version;
         QString url;
+        bool rawTelnet = false;
 
         auto document = QJsonDocument::fromJson(data.toUtf8());
 
@@ -1979,6 +2074,8 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             if (url.isEmpty()) {
                 return;
             }
+
+            rawTelnet = true;
         } else {
             // This is JSON
             auto json = document.object();
@@ -1989,8 +2086,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
             auto versionJSON = json.value(qsl("version"));
 
-            if (versionJSON != QJsonValue::Undefined && !versionJSON.toString().isEmpty()) {
+            if (versionJSON != QJsonValue::Undefined && versionJSON.isString() && !versionJSON.toString().isEmpty()) {
                 version = versionJSON.toString();
+            } else if (versionJSON != QJsonValue::Undefined && versionJSON.toInt()) {
+                version = qsl("%1").arg(versionJSON.toInt());
             } else {
                 return;
             }
@@ -2036,11 +2135,17 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
             auto request = QNetworkRequest(QUrl(url));
             mudlet::self()->setNetworkRequestDefaults(url, request);
             mpPackageDownloadReply = mpDownloader->get(request);
-            mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"), tr("Cancel", "Cancel download of GUI package from Server"), 0, 4000000, mpHost->mpConsole);
+            mpProgressDialog = new QProgressDialog(tr("downloading game GUI from server"),
+                //: Cancel download of GUI package from Server
+                tr("Cancel"), 0, 4000000, mpHost->mpConsole);
             connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
             connect(mpProgressDialog, &QProgressDialog::canceled, mpPackageDownloadReply, &QNetworkReply::abort);
             mpProgressDialog->setAttribute(Qt::WA_DeleteOnClose);
             mpProgressDialog->show();
+        }
+
+        if (rawTelnet) {
+            return; // Do not add to the GMCP table
         }
     } else if (transcodedMsg.startsWith(QLatin1String("Client.Map"), Qt::CaseInsensitive)) {
         mpHost->setMmpMapLocation(data);
@@ -2374,7 +2479,8 @@ void cTelnet::postMessage(QString msg)
             QString prefix = body.at(0).left(prefixLength).toUpper();
             QString firstLineTail = body.at(0).mid(prefixLength);
             body.removeFirst();
-            if (prefix.contains(tr("ERROR", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ERROR"))) {
+            //: Keep the capitalisation, the translated text at 7 letters max so it aligns nicely
+            if (prefix.contains(tr("ERROR")) || prefix.contains(QLatin1String("ERROR"))) {
                 mpHost->mpConsole->print(prefix, Qt::red, mpHost->mBgColor);                                  // Bright Red
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
                 for (int _i = 0; _i < body.size(); ++_i) {
@@ -2386,7 +2492,8 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(255, 255, 50), mpHost->mBgColor); // Bright Yellow
                 }
-            } else if (prefix.contains(tr("LUA", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("LUA"))) {
+            //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
+            } else if (prefix.contains(tr("LUA")) || prefix.contains(QLatin1String("LUA"))) {
                 mpHost->mpConsole->print(prefix, QColor(80, 160, 255), mpHost->mBgColor);                    // Light blue
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(50, 200, 50), mpHost->mBgColor); // Light green
                 for (int _i = 0; _i < body.size(); ++_i) {
@@ -2397,7 +2504,8 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(200, 50, 50), mpHost->mBgColor); // Red
                 }
-            } else if (prefix.contains(tr("WARN", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("WARN"))) {
+            //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
+            } else if (prefix.contains(tr("WARN")) || prefix.contains(QLatin1String("WARN"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                     // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 150, 0), mpHost->mBgColor); // Orange
                 for (int _i = 0; _i < body.size(); ++_i) {
@@ -2408,7 +2516,8 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 150, 0), mpHost->mBgColor);
                 }
-            } else if (prefix.contains(tr("ALERT", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("ALERT"))) {
+            //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
+            } else if (prefix.contains(tr("ALERT")) || prefix.contains(QLatin1String("ALERT"))) {
                 mpHost->mpConsole->print(prefix, QColor(190, 100, 50), mpHost->mBgColor);                     // Orange-ish
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
                 for (int _i = 0; _i < body.size(); ++_i) {
@@ -2419,7 +2528,8 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(190, 190, 50), mpHost->mBgColor); // Yellow
                 }
-            } else if (prefix.contains(tr("INFO", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("INFO"))) {
+            //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
+            } else if (prefix.contains(tr("INFO")) || prefix.contains(QLatin1String("INFO"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 150, 190), mpHost->mBgColor);                   // Cyan
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
                 for (int _i = 0; _i < body.size(); ++_i) {
@@ -2430,7 +2540,8 @@ void cTelnet::postMessage(QString msg)
                 if (!body.empty()) {
                     mpHost->mpConsole->print(body.join('\n').append('\n'), QColor(0, 160, 0), mpHost->mBgColor); // Light Green
                 }
-            } else if (prefix.contains(tr("OK", "Keep the capisalisation, the translated text at 7 letters max so it aligns nicely")) || prefix.contains(QLatin1String("OK"))) {
+            //: Keep the capisalisation, the translated text at 7 letters max so it aligns nicely
+            } else if (prefix.contains(tr("OK")) || prefix.contains(QLatin1String("OK"))) {
                 mpHost->mpConsole->print(prefix, QColor(0, 160, 0), mpHost->mBgColor);                        // Light Green
                 mpHost->mpConsole->print(firstLineTail.append('\n'), QColor(190, 100, 50), mpHost->mBgColor); // Orange-ish
                 for (int _i = 0; _i < body.size(); ++_i) {
@@ -2604,7 +2715,12 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
         // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
         initStreamDecompressor();
         qDebug() << "Listening for new compression sequences";
-        return -1;
+
+        // We shouldn't return -1 or an error here, as that prevents any text
+        // or any telnet negotiation strings from being properly interpreted
+        // by Mudlet, and shown to the user.
+        // Returning outSize ensures anything sent before the Z_STREAM_END is
+        // shown to the user.
     }
     return outSize;
 }

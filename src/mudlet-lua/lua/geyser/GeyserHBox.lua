@@ -1,10 +1,9 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---        HBox by Beliar            --
---                                  --
---------------------------------------
+--- A horizontal box container.
+-- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#HBox.2FVBox">Mudlet Manual</a>
+-- @author guy
+-- @author Beliar
+-- @module Geyser.HBox
+
 Geyser.HBox = Geyser.Container:new({
   name = "HBoxClass"
 })
