@@ -1163,7 +1163,7 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
         return newEnvironDataMap;
     }
 
-    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" and "SYSTEM" are well-known and will be requested with NEW_ENVIRON_VAR
+    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" and "SYSTEMTYPE" are well-known and will be requested with NEW_ENVIRON_VAR
     newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserVar, getNewEnvironValueUser()));
     newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserVar, getNewEnvironValueSystemType()));
 
