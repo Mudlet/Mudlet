@@ -366,6 +366,7 @@ void cTelnet::connectIt(const QString& address, int port)
         mUSE_IRE_DRIVER_BUGFIX = mpHost->mUSE_IRE_DRIVER_BUGFIX;
         mFORCE_GA_OFF = mpHost->mFORCE_GA_OFF;
         mCycleCountMTTS = 0;
+        newEnvironVariablesSent.clear();
 
         if (mpHost->mUseProxy && !mpHost->mProxyAddress.isEmpty() && mpHost->mProxyPort != 0) {
             auto& proxy = mpHost->getConnectionProxy();
@@ -1195,6 +1196,11 @@ void cTelnet::sendInfoNewEnvironValue(const QString &var)
         return;
     }
 
+    if (!newEnvironVariablesSent.contains(var)) {
+        qDebug() << "We did not update NEW_ENVIRON" << var << "because the server did not request it yet";
+        return;
+    }
+
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
 
     if (newEnvironDataMap.contains(var)) {
@@ -1258,6 +1264,7 @@ void cTelnet::appendAllNewEnvironValues(std::string &output, const bool isUserVa
 
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
         output += escapeAndEncodeNewEnvironData(it.key()).toStdString();
+        newEnvironVariablesSent.insert(it.key());
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
@@ -1292,6 +1299,7 @@ void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, con
             // USERVAR, or IAC SE) then that variable is undefined.
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
             output += escapeAndEncodeNewEnvironData(var).toStdString();
+            newEnvironVariablesSent.insert(var);
 
             if (!isUserVar) {
                 qDebug() << "WE send NEW_ENVIRON VAR" << var << "with no VAL because we don't maintain it as VAR (use USERVAR!)";
@@ -1301,6 +1309,7 @@ void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, con
         } else {
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
             output += escapeAndEncodeNewEnvironData(var).toStdString();
+            newEnvironVariablesSent.insert(var);
             output += NEW_ENVIRON_VAL;
 
             // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
@@ -1431,6 +1440,7 @@ void cTelnet::sendAllMNESValues()
 
         output += NEW_ENVIRON_VAR;
         output += escapeAndEncodeNewEnvironData(it.key()).toStdString();
+        newEnvironVariablesSent.insert(it.key());
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
@@ -1471,6 +1481,7 @@ void cTelnet::sendMNESValue(const QString &var, const QMap<QString, QPair<bool, 
         const QString val = newEnvironData.second;
 
         output += escapeAndEncodeNewEnvironData(var).toStdString();
+        newEnvironVariablesSent.insert(var);
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
