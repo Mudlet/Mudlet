@@ -49,9 +49,9 @@
 #include "post_guard.h"
 
 extern "C" {
-#include <lauxlib.h>
-#include <lua.h>
-#include <lualib.h>
+    #include <lauxlib.h>
+    #include <lua.h>
+    #include <lualib.h>
 }
 
 #include <list>
