@@ -1298,9 +1298,9 @@ map.help = {[[
         &lt;link: find prompt&gt;find prompt&lt;/link&gt; - Instructs the script to look for a prompt that matches
             a known pattern.
         &lt;link: prompt&gt;map prompt &lt;pattern&gt;&lt;/link&gt; - Provides a specific pattern to the script that
-            matches your prompt, uses Lua string-library patterns.
+            matches your prompt, uses &lt;urllink: https://www.lua.org/pil/20.2.html&gt;Lua string-library patterns&lt;/urllink&gt;.
         &lt;link: ignore&gt;map ignore &lt;pattern&gt;&lt;/link&gt; - Provides a specific pattern for the script to
-            ignore, uses Lua string-library patterns.
+            ignore, uses &lt;urllink: https://www.lua.org/pil/20.2.html&gt;Lua string-library patterns&lt;/urllink&gt;.
         &lt;link: movemethod&gt;map movemethod &lt;word&gt;&lt;/link&gt; - Adds a movement method for the script to
             look for when mapping.
         &lt;link: debug&gt;map debug&lt;/link&gt; - Toggles on debug mode, in which extra messages are shown with
@@ -1558,6 +1558,10 @@ map.help.ignore = [[
 
         If the given pattern is already in the list of ignore patterns, that
         pattern will be removed from the list.
+
+        Example: &lt;yellow&gt;map ignore ^You are hungry%.$&lt;reset&gt; - match exactly one line
+                 &lt;yellow&gt;map ignore ^The clock strikes %d+%.$&lt;reset&gt; - match a number
+                 &lt;yellow&gt;map ignore ^You walk %a+%.$&lt;reset&gt; - match a word, e.g. east
 ]]
 map.help.movemethod = [[
     &lt;cyan&gt;Move Method&lt;reset&gt;
@@ -2456,7 +2460,7 @@ function map.show_help(cmd)
             fg("yellow")
             setUnderline(true)
             if linktext == "urllink" then
-                echoLink(link, [[openWebPage("]]..target..[[")]], "Open Mudlet Discord", true)
+                echoLink(link, [[openWebPage("]]..target..[[")]], "Open webpage", true)
             elseif target ~= "1" then
                 echoLink(link,[[map.show_help("]]..target..[[")]],"View: map help " .. target,true)
             else
