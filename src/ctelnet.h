@@ -86,7 +86,7 @@ const char TN_EOR = static_cast<char>(239);
 const char TN_SE = static_cast<char>(240);
 const char TN_NOP = static_cast<char>(241);
 const char TN_DM = static_cast<char>(242);
-const char TN_B = static_cast<char>(243);
+const char TN_BRK = static_cast<char>(243);
 const char TN_IP = static_cast<char>(244);
 const char TN_AO = static_cast<char>(245);
 const char TN_AYT = static_cast<char>(246);
@@ -111,8 +111,8 @@ const char OPT_TERMINAL_TYPE = 24;
 const char OPT_EOR = 25;
 const char OPT_NAWS = 31;
 const char OPT_CHARSET = 42;
-const char OPT_MSDP = 69; // http://tintin.sourceforge.net/msdp/
-const char OPT_MSSP = static_cast<char>(70); // https://tintin.sourceforge.io/protocols/mssp/
+const char OPT_MSDP = 69; // https://tintin.mudhalla.net/protocols/msdp/
+const char OPT_MSSP = static_cast<char>(70); // https://tintin.mudhalla.net/protocols/mssp/
 const char OPT_COMPRESS = 85;
 const char OPT_COMPRESS2 = 86;
 const char OPT_MSP = 90;
@@ -138,6 +138,20 @@ const char MSDP_TABLE_OPEN = 3;
 const char MSDP_TABLE_CLOSE = 4;
 const char MSDP_ARRAY_OPEN = 5;
 const char MSDP_ARRAY_CLOSE = 6;
+
+// https://tintin.mudhalla.net/protocols/mtts/
+const int MTTS_STD_ANSI = 1; // Client supports all common ANSI color codes.
+const int MTTS_STD_VT100 = 2; // Client supports all common VT100 codes.
+const int MTTS_STD_UTF_8 = 4; // Client is using UTF-8 character encoding.
+const int MTTS_STD_256_COLORS = 8; // Client supports all 256 color codes.
+const int MTTS_STD_MOUSE_TRACKING = 16; // Client supports xterm mouse tracking.
+const int MTTS_STD_OSC_COLOR_PALETTE = 32; // Client supports the OSC color palette.
+const int MTTS_STD_SCREEN_READER = 64; // Client is using a screen reader.
+const int MTTS_STD_PROXY = 128; // Client is a proxy allowing different users to connect from the same IP address.
+const int MTTS_STD_TRUE_COLOR = 256; // Client supports truecolor codes using semicolon notation.
+const int MTTS_STD_MNES = 512; // Client supports the Mud New Environment Standard for information exchange.
+const int MTTS_STD_MSLP = 1024; // Client supports the Mud Server Link Protocol for clickable link handling.
+const int MTTS_STD_SSL = 2048; // Client supports SSL for data encryption, preferably TLS 1.3 or higher.
 
 class cTelnet : public QObject
 {
@@ -321,6 +335,7 @@ private:
     QElapsedTimer mConnectionTimer;
     qint32 mRecordLastChunkMSecTimeOffset = 0;
     int mRecordingChunkCount = 0;
+    int mCycleCountMTTS = 0;
     bool mReplayHasFaultyFormat = false;
     bool enableCHARSET = false;
     bool enableATCP = false;

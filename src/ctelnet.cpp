@@ -57,11 +57,6 @@
 
 using namespace std::chrono_literals;
 
-// Uncomment this to get debugging messages about WILL/WONT/DO/DONT commands for
-// suboptions - change the value to 2 to get a bit more detail about the sizes
-// of the messages
-#define DEBUG_TELNET 1
-
 
 constexpr size_t BUFFER_SIZE = 100000L;
 // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (1 of 7) - investigate switching from using `char[]` to `std::array<char>`
@@ -937,39 +932,68 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 {
     char ch = telnetCommand[1];
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET > 1)
-    QString _type;
-    switch ((quint8)ch) {
-    case 239:
-        _type = "TN_EOR";
+    QString commandType;
+    switch (ch) {
+    case TN_EOR:
+        commandType = QLatin1String("EOR");
         break;
-    case 249:
-        _type = "TN_GA";
+    case TN_SE:
+        commandType = QLatin1String("SE");
         break;
-    case 250:
-        _type = "SB";
+    case TN_NOP:
+        commandType = QLatin1String("NOP");
         break;
-    case 251:
-        _type = "WILL";
+    case TN_DM: // Data Mark
+        commandType = QLatin1String("DM");
         break;
-    case 252:
-        _type = "WONT";
+    case TN_BRK: // Break
+        commandType = QLatin1String("BRK");
         break;
-    case 253:
-        _type = "DO";
+    case TN_IP: // Interupt Process
+        commandType = QLatin1String("IP");
         break;
-    case 254:
-        _type = "DONT";
+    case TN_AO: // Abort Output
+        commandType = QLatin1String("AO");
         break;
-    case 255:
-        _type = "IAC";
+    case TN_AYT:
+        commandType = QLatin1String("AYT");
+        break;
+    case TN_EC: // Erase character
+        commandType = QLatin1String("EC");
+        break;
+    case TN_EL: // Erase line
+        commandType = QLatin1String("EL");
+        break;
+    case TN_GA:
+        commandType = QLatin1String("GA");
+        break;
+    case TN_SB:
+        commandType = QLatin1String("SB");
+        break;
+    case TN_WILL:
+        commandType = QLatin1String("WILL");
+        break;
+    case TN_WONT:
+        commandType = QLatin1String("WONT");
+        break;
+    case TN_DO:
+        commandType = QLatin1String("DO");
+        break;
+    case TN_DONT:
+        commandType = QLatin1String("DONT");
+        break;
+    case TN_IAC:
+        // Probably won't be seen as it will be stripped off in order for this
+        // method to have been called (it'll be in telnetCommand[0])
+        commandType = QLatin1String("IAC");
         break;
     default:
-        _type = QString::number((quint8)ch);
+        commandType = QString::number((quint8)ch);
     }
     if (telnetCommand.size() > 2) {
-        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << _type << " + " << decodeOption(telnetCommand[2]);
+        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << commandType << " + " << decodeOption(telnetCommand[2]);
     } else {
-        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << _type;
+        qDebug() << "SERVER sent telnet (" << telnetCommand.size() << " bytes):" << commandType;
     }
 #endif
 
@@ -978,6 +1002,12 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
     case TN_GA:
     case TN_EOR: {
         recvdGA = true;
+        break;
+    }
+    case TN_AYT: {
+        // This will be unaffected by the Mud Server encoding setting:
+        std::string output = "YES";
+        socketOutRaw(output);
         break;
     }
     case TN_WILL: {
@@ -1804,18 +1834,79 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     cmd += TN_SB;
                     cmd += OPT_TERMINAL_TYPE;
                     cmd += TNSB_IS;
-                    /*
-                     * The valid characters for termTerm are more restricted
-                     * than being ASCII - from:
-                     * https://tools.ietf.org/html/rfc1010 (page 29):
-                     * "A terminal names may be up to 40 characters taken from
-                     * the set of uppercase letters, digits, and the two
-                     * punctuation characters hyphen and slash.  It must start
-                     * with a letter, and end with a letter or digit."
-                     * Once we comply with that we can be certain that Mud
-                     * Server encoding will NOT be an issue!
-                     */
-                    cmd += termType.toUtf8().constData();
+
+                    switch (mCycleCountMTTS) {
+                        case 0: {
+                            /*
+                            * The valid characters for termTerm are more restricted
+                            * than being ASCII - from:
+                            * https://tools.ietf.org/html/rfc1010 (page 29):
+                            * "A terminal names may be up to 40 characters taken from
+                            * the set of uppercase letters, digits, and the two
+                            * punctuation characters hyphen and slash.  It must start
+                            * with a letter, and end with a letter or digit."
+                            * Once we comply with that we can be certain that Mud
+                            * Server encoding will NOT be an issue!
+                            */
+                            static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
+                            static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
+                            QString sanitisedTermType = termType.toUpper()
+                                                                .replace(QChar('.'), QChar('/'))
+                                                                .replace(QChar::Space, QChar('-'))
+                                                                .replace(allInvalidCharacters, QChar('-'))
+                                                                .replace(multipleHyphens, QChar('-'))
+                                                                .left(40)
+                                                            .toLatin1().constData();
+
+                            for (int i = sanitisedTermType.size() - 1; i >= 0; --i) {
+                                if (sanitisedTermType.at(i).isLetterOrNumber()) {
+                                    sanitisedTermType = sanitisedTermType.left(i + 1);
+                                    break;
+                                }
+                            }
+
+                            Q_ASSERT_X(!sanitisedTermType.isEmpty(),
+                                       "cTelnet::processTelnetCommand(...)",
+                                       "ended up with an empty version string whilst trying to sanitise the Mudlet one");
+
+                            cmd += sanitisedTermType.toLatin1().constData();
+
+                            if (!mpHost->mForceMTTSNegotiationOff) { // If we don't MTTS, remainder of the cases do not execute.
+                                mCycleCountMTTS++;
+                            }
+
+                            break;
+                        }
+                        case 1:
+                            qDebug() << "MTTS enabled";
+                            cmd += qsl("ANSI-TRUECOLOR").toLatin1().constData(); // DUMB, ANSI, VT100, XTERM
+                            mCycleCountMTTS++;
+                            qDebug() << "WE send MTTS terminal type is ANSI-TRUECOLOR";
+                            break;
+                        default:
+                            int terminal_standards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUE_COLOR;
+
+                            if (getEncoding() == "UTF-8") {
+                                terminal_standards |= MTTS_STD_UTF_8;
+                            }
+
+                            if (mpHost->mAdvertiseScreenReader) {
+                                terminal_standards |= MTTS_STD_SCREEN_READER;
+                            }
+#if !defined(QT_NO_SSL)
+                            terminal_standards |= MTTS_STD_SSL;
+#endif
+                            cmd += qsl("MTTS %1").arg(terminal_standards).toUtf8().constData();
+
+                            if (mCycleCountMTTS == 2) {
+                                mCycleCountMTTS++;
+                                qDebug() << "WE send MTTS bitvector is" << terminal_standards;
+                            } else {
+                                mCycleCountMTTS = 0; // Send the bitvector twice, then reset (0) to finish MTTS negotiation
+                                qDebug() << "WE send MTTS bitvector is" << terminal_standards << "(repeated)";
+                            }
+                    }
+
                     cmd += TN_IAC;
                     cmd += TN_SE;
                     socketOutRaw(cmd);
@@ -1995,8 +2086,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
             auto versionJSON = json.value(qsl("version"));
 
-            if (versionJSON != QJsonValue::Undefined && !versionJSON.toString().isEmpty()) {
+            if (versionJSON != QJsonValue::Undefined && versionJSON.isString() && !versionJSON.toString().isEmpty()) {
                 version = versionJSON.toString();
+            } else if (versionJSON != QJsonValue::Undefined && versionJSON.toInt()) {
+                version = qsl("%1").arg(versionJSON.toInt());
             } else {
                 return;
             }
