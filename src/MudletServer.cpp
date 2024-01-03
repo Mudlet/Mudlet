@@ -117,27 +117,28 @@ void MudletServer::handleReadyRead()
 
     // If mudlet is not running, stop here.
     qDebug() << "checking if mudlet is running";
-    mudlet* mudletApp = mudlet::self();
-    if(!mudletApp){
-        return;
-    }
+
 
     qDebug() << "checking if mudlet has active host";
-    // Check if a profile (host) is active.
-    Host* activeHost = mudletApp->getActiveHost();
-    if(activeHost){
-        // Try to install all packages in queue.
+
+
+    QTimer::singleShot(0, this, [this]() {
+        mudlet* mudletApp = mudlet::self();
+        Q_ASSERT(mudletApp);
+        //if(!mudletApp){
+        //    return;
+        //}
+        Host* activeHost = mudletApp->getActiveHost();
         qDebug() << "trying to install" << activeHost->getName();
-        //activeHost->resetProfile_phase1();
-        tryInstallQueuedPackages(activeHost);
-        //activeHost->resetProfile_phase1();
-        //mudletApp->activateProfile(activeHost);
-        //mudletApp->slot_showConnectionDialog();
-    } else {
-        // Prompt user to select a profile.
-        qDebug() << "show connection dialog";
-        mudletApp->slot_showConnectionDialog();
-    }
+        if(activeHost){
+            //connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
+            tryInstallQueuedPackages(activeHost);
+        } else {
+            // Prompt user to select a profile.
+            mudletApp->slot_showConnectionDialog();
+        }
+    });
+    
     qDebug() << "handleReadReady() Complete";
 }
 
