@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: development
 
       - name: Download latest IRE mapper
-        uses: carlosperate/download-file-action@v2.0.0
+        uses: carlosperate/download-file-action@v2.0.1
         with:
           file-url: https://raw.githubusercontent.com/IRE-Mudlet-Mapping/ire-mapping-script/gh-pages/downloads/mudlet-mapper.xml
           file-name: mudlet-mapper.xml
@@ -31,11 +31,13 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
+        uses: peter-evans/create-pull-request@v5
         if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
         with:
+          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+          add-paths: src/
+          branch: update-ire-mapping-script
+          commit-message: (autocommit) Updated IRE mapping script to latest upstream
           title: "Infrastructure: Update bundled IRE mapper script to latest upstream"
           body: |
             #### Brief overview of PR changes/additions
@@ -44,16 +46,14 @@ jobs:
             So people don't get attacked with a "your mapping script is out of date!" notification as soon as they create a profile for a new IRE game.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-ire-mapping-script-${{ github.sha }}
-          path: src/
-          commit-message: (autocommit) Updated IRE mapping script to latest upstream
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
 
   update-sparkle-glue-fork:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: development
           submodules: true
@@ -72,11 +72,13 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
+        uses: peter-evans/create-pull-request@v5
         if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
         with:
+          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+          add-paths: 3rdparty/sparkle-glue
+          branch: update-sparkle-glue
+          commit-message: (autocommit) Updated sparkle-glue submodule to latest in our fork
           title: "Infrastructure: Update sparkle-glue to latest in our fork"
           body: |
             #### Brief overview of PR changes/additions
@@ -85,16 +87,14 @@ jobs:
             Get new features, bugfixes, improvements! Stay modern.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-sparkle-glue-${{ github.sha }}
-          path: 3rdparty/sparkle-glue
-          commit-message: (autocommit) Updated sparkle-glue submodule to latest in our fork
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
 
   update-dblsqd-fork:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: development
           submodules: true
@@ -113,11 +113,13 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
+        uses: peter-evans/create-pull-request@v5
         if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
         with:
+          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+          add-paths: 3rdparty/dblsqd
+          branch: update-dblsqd
+          commit-message: (autocommit) Updated dblsqd submodule to latest in our fork
           title: "Infrastructure: Update dblsqd to latest in our fork"
           body: |
             #### Brief overview of PR changes/additions
@@ -126,16 +128,14 @@ jobs:
             Get new features, bugfixes, improvements! Stay modern.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-dblsqd-${{ github.sha }}
-          path: 3rdparty/dblsqd
-          commit-message: (autocommit) Updated dblsqd submodule to latest in our fork
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
 
   update-lcf-source-51:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: development
           submodules: true
@@ -157,11 +157,13 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
+        uses: peter-evans/create-pull-request@v5
         if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
         with:
+          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+          add-paths: 3rdparty/lcf
+          branch: update-lcf
+          commit-message: (autocommit) Updated lcf submodule to latest upstream branch
           title: "Infrastructure: Update Lua code formatter to latest upstream branch"
           body: |
             #### Brief overview of PR changes/additions
@@ -170,16 +172,14 @@ jobs:
             Get new features, bugfixes, improvements! Stay modern.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-lcf-${{ github.sha }}
-          path: 3rdparty/lcf
-          commit-message: (autocommit) Updated lcf submodule to latest upstream branch
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
 
   update-widecharwidth-source:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: development
 
@@ -197,11 +197,13 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
+        uses: peter-evans/create-pull-request@v5
         if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
         with:
+          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+          add-paths: src/widechar_width.h
+          branch: update-widechar-width
+          commit-message: (autocommit) Update widechar_width.h to latest upstream
           title: "Infrastructure: Update widechar_width.h to latest upstream"
           body: |
             #### Brief overview of PR changes/additions
@@ -210,16 +212,14 @@ jobs:
             Better emoji and symbol support! This file helps us tell if a particular character is 0, 1, or 2 widths wide so we can show it correctly in the display.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-widechar-width-${{ github.sha }}
-          path: src/
-          commit-message: (autocommit) Update widechar_width.h to latest upstream
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
 
   update-singleshot-connect-source:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: development
 
@@ -237,11 +237,13 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
+        uses: peter-evans/create-pull-request@v5
         if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
         with:
+          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+          add-paths: 3rdparty/kdtoolbox
+          branch: update-singleshot-connect
+          commit-message: (autocommit) Update singleshot_connect.h to latest upstream
           title: "Infrastructure: Update singleshot_connect.h to latest upstream"
           body: |
             #### Brief overview of PR changes/additions
@@ -250,16 +252,14 @@ jobs:
             Latest version of the Qt utility feature that allows singleshot connections.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-singleshot-connect-${{ github.sha }}
-          path: 3rdparty/kdtoolbox
-          commit-message: (autocommit) Update singleshot_connect.h to latest upstream
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+
 
   update-cmake-scripts-source:
     runs-on: ubuntu-latest
     if: ${{ github.repository_owner == 'Mudlet' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: development
 
@@ -277,11 +277,13 @@ jobs:
           echo ::set-output name=lines_changed::$lines_changed
 
       - name: send in a pull request
-        uses: gr2m/create-or-update-pull-request-action@v1.x
+        uses: peter-evans/create-pull-request@v5
         if: steps.getdiff.outputs.lines_changed > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
         with:
+          token: ${{ secrets.GH_PAT_UPDATE_3RDPARTY }}
+          add-paths: 3rdparty/cmake-scripts
+          branch: update-cmake-scripts
+          commit-message: (autocommit) Update sanitizers.cmake to latest upstream
           title: "Infrastructure: Update sanitizers.cmake to latest upstream"
           body: |
             #### Brief overview of PR changes/additions
@@ -290,7 +292,5 @@ jobs:
             Latest version of the CMake utility feature that allows use to use various CMake sanitizers via the `USE_SANITIZER` CMake variable.
             #### Other info (issues closed, discussion etc)
             _update triggered by ${{ github.ref }} ${{ github.sha }}_
-          branch: update-cmake-scripts-${{ github.sha }}
-          path: 3rdparty/cmake-scripts
-          commit-message: (autocommit) Update sanitizers.cmake to latest upstream
-          author: "mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>"
+          author: mudlet-machine-account <mudlet-machine-account@users.noreply.github.com>
+

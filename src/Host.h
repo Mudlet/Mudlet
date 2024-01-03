@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2015-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -30,6 +30,8 @@
 #include "AliasUnit.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
+#include "GifTracker.h"
+#include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
@@ -43,7 +45,9 @@
 #include <QFile>
 #include <QFont>
 #include <QList>
+#include <QMargins>
 #include <QPointer>
+#include <QStack>
 #include <QTextStream>
 #include "post_guard.h"
 
@@ -121,7 +125,7 @@ private:
 #ifndef QT_NO_DEBUG_STREAM
 inline QDebug& operator<<(QDebug& debug, const stopWatch& stopwatch)
 {
-    QDebugStateSaver saver(debug);
+    QDebugStateSaver const saver(debug);
     Q_UNUSED(saver);
     debug.nospace() << qsl("stopwatch(mIsRunning: %1 mInitialised: %2 mIsPersistent: %3 mEffectiveStartDateTime: %4 mElapsedTime: %5)")
                        .arg((stopwatch.running() ? QLatin1String("true") : QLatin1String("false")),
@@ -163,20 +167,20 @@ public:
 
     QString         getName()                        { return mHostName; }
     QString         getCommandSeparator()            { return mCommandSeparator; }
-    void            setName(const QString& s);
+    void            setName(const QString& name);
     QString         getUrl()                         { return mUrl; }
-    void            setUrl(const QString& s)         { mUrl = s; }
+    void            setUrl(const QString& url)       { mUrl = url; }
     QString         getDiscordGameName()             { return mDiscordGameName; }
-    void            setDiscordGameName(const QString& s) { mDiscordGameName = s; }
+    void            setDiscordGameName(const QString& name) { mDiscordGameName = name; }
     int             getPort()                        { return mPort; }
-    void            setPort(const int p)             { mPort = p; }
-    void            setAutoReconnect(const bool b)   { mTelnet.setAutoReconnect(b); }
+    void            setPort(const int port)          { mPort = port; }
+    void            setAutoReconnect(const bool reconnect) { mTelnet.setAutoReconnect(reconnect); }
     QString &       getLogin()                       { return mLogin; }
-    void            setLogin(const QString& s)       { mLogin = s; }
+    void            setLogin(const QString& login)       { mLogin = login; }
     QString &       getPass()                        { return mPass; }
-    void            setPass(const QString& s)        { mPass = s; }
+    void            setPass(const QString& password) { mPass = password; }
     int             getRetries()                     { return mRetries;}
-    void            setRetries(const int c)          { mRetries = c; }
+    void            setRetries(const int retries)    { mRetries = retries; }
     int             getTimeout()                     { return mTimeout; }
     void            setTimeout(const int seconds)    { mTimeout = seconds; }
     bool            wideAmbiguousEAsianGlyphs() { return mWideAmbigousWidthGlyphs; }
@@ -218,6 +222,7 @@ public:
     ActionUnit*  getActionUnit()  { return &mActionUnit; }
     KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
     ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
+    GifTracker*  getGifTracker()  { return &mGifTracker; }
 
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
@@ -310,7 +315,9 @@ public:
     void postMessage(const QString message) { mTelnet.postMessage(message); }
     QColor getAnsiColor(const int ansiCode, const bool isBackground = false) const;
     QPair<bool, QString> writeProfileData(const QString&, const QString&);
+    bool writeProfileIniData(const QString& item, const QString& what);
     QString readProfileData(const QString&);
+    QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
@@ -399,7 +406,19 @@ public:
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
     void setCaretEnabled(bool enabled);
-    void setFocusOnHostMainConsole();
+    void setFocusOnHostActiveCommandLine();
+    void recordActiveCommandLine(TCommandLine*);
+    void forgetCommandLine(TCommandLine*);
+    QPointer<TConsole> parentTConsole(QObject*) const;
+    QMargins borders() const { return mBorders; }
+    void setBorders(const QMargins);
+    void loadMap();
+    std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
+    void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
+    int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
+    void setCommandLineHistorySaveSize(const int lines);
+    bool showIdsInEditor() const { return mShowIDsInEditor; }
+    void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -419,10 +438,6 @@ public:
     bool mBlockScriptCompile;
     bool mBlockStopWatchCreation;
     bool mEchoLuaErrors;
-    int mBorderBottomHeight;
-    int mBorderLeftWidth;
-    int mBorderRightWidth;
-    int mBorderTopHeight;
     QFont mCommandLineFont;
     QString mCommandSeparator;
     bool mEnableGMCP;
@@ -515,9 +530,17 @@ public:
     int mScreenHeight;
     int mScreenWidth;
 
+    // has the profile save data been loaded without issues?
+    // if there were issues during loading, we should not save anything on close
+    bool mLoadedOk = false;
+
     int mTimeout;
 
     QString mUrl;
+
+    QString mBackupHostName;
+    int mBackupPort = 23;
+    QString mBackupUrl;
 
     bool mUSE_FORCE_LF_AFTER_PROMPT;
     bool mUSE_IRE_DRIVER_BUGFIX;
@@ -627,6 +650,7 @@ public:
     bool mMapperShowRoomBorders;
     bool mFORCE_MXP_NEGOTIATION_OFF;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
+    bool mForceMTTSNegotiationOff = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
@@ -653,8 +677,10 @@ public:
     QMap<QString, QKeySequence*> profileShortcuts;
 
     bool mTutorialForCompactLineAlreadyShown;
+    bool mTutorialForSplitscreenScrollbackAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
+    bool mAdvertiseScreenReader = false;
     enum class BlankLineBehaviour {
         Show,
         Hide,
@@ -687,6 +713,8 @@ signals:
     // Tells all consoles associated with this Host (but NOT the Central Debug
     // one) to change the way they show  control characters:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
+    // Tells all command lines to save their history:
+    void signal_saveCommandLinesHistory();
 
 private slots:
     void slot_purgeTemps();
@@ -708,9 +736,12 @@ private:
     void saveModules(bool backup = true);
     void updateModuleZips(const QString &zipName, const QString &moduleName);
     void reloadModules();
-    void startMapAutosave();
+    void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent *event) override;
     void autoSaveMap();
+    QString sanitizePackageName(const QString packageName) const;
+    TCommandLine* activeCommandLine();
+
 
     QFont mDisplayFont;
     QStringList mModulesToSync;
@@ -722,6 +753,9 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
+    GifTracker mGifTracker;
+    // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
+    std::optional<bool> mSaveTimer;
 
     QFile mErrorLogFile;
 
@@ -730,7 +764,6 @@ private:
     int mHostID;
     QString mHostName;
     QString mDiscordGameName; // Discord self-reported game name
-
     bool mIsClosingDown;
 
     QString mLine;
@@ -756,9 +789,9 @@ private:
     bool mHaveMapperScript;
     // This option makes the control on the preferences tristated so the value
     // used depends - currently - on what the MUD Server encoding is (only set
-    // true for GBK and GB18030 ones) - however this is likely to be due for
-    // revision once locale/language support is brought in - when it can be
-    // made dependent on that instead.
+    // true for GBK, GB18030, Big5/Big-HKCS, EUC-KR ones) - however this was
+    // due for revision once locale/language support is brought in - when it
+    // could be made dependent on that instead.
     bool mAutoAmbigousWidthGlyphsSetting;
     // If above is true is the value deduced from the MUD server encoding, if
     // the above is false is the user's direct setting - this is so that changes
@@ -849,6 +882,29 @@ private:
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;
+
+    // Tracks which command line was last used for this profile so that we can
+    // return to it when switching between profiles:
+    QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
+
+    // ensures that only one "zero-time" timer is created by the lambda in
+    // setFocusOnHostActiveCommandLine(), even when it is called multiple
+    // times:
+    bool mFocusTimerRunning = false;
+
+    QMargins mBorders;
+
+    // The range - applied to ALL command lines - is 0 to 10000, with the knob
+    // on the profile preferences having a log-step action with multiples
+    // of 10 to integer powers and steps of (0,) 10, 20, 50, 100. Prior to the
+    // introduction of this feature the control would effectively have been
+    // zero - and whilst the knob shows the special value of "None" then
+    // to reproduce that behavior there is little reason to not enable it
+    // by default:
+    int mCommandLineHistorySaveSize = 500;
+
+    // Whether to display each item's ID number in the editor:
+    bool mShowIDsInEditor = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

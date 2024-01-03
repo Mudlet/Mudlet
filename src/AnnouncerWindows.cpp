@@ -2,6 +2,7 @@
  *   Copyright 2019-2022 Leonard de Ruijter, James Teh - OSARA             *
  *   Copyright 2017 The Qt Company Ltd.                                    *
  *   Copyright (C) 2022 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -39,7 +40,9 @@
 #include <uiautomationcoreapi.h>
 
 // mingw 7.30's uiautomationclient.h is outdated, lacks this define
+#if !defined(UIA_CustomControlTypeId)
 #define UIA_CustomControlTypeId (50025)
+#endif
 
 // this class is largely inspired by OSARA's UiaProvider:
 // https://github.com/jcsteh/osara/blob/master/src/uia.cpp
@@ -137,9 +140,14 @@ bool Announcer::initializeUia()
     return true;
 }
 
-Announcer::Announcer(QWidget* parent) : QWidget{parent}
+Announcer::Announcer(QWidget* parent)
+: QWidget{parent}
 {
     initializeUia();
+    // Needed to prevent this (invisible) widget from being seen by itself in
+    // the top left corner of the main application window where it masks part of
+    // the main menu bar:
+    setVisible(false);
 }
 
 BSTR bStrFromQString(const QString& value)

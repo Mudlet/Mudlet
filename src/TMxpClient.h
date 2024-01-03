@@ -40,6 +40,10 @@ public:
 
     virtual void initialize(TMxpContext* context) { mpContext = context; }
 
+    // Declaring the next functions as virtual = 0 makes this an abstract class:
+    // That is, a derived class can only be instantiated when it actually
+    // defines these functions.
+
     virtual QString getVersion() = 0;
 
     virtual void sendToServer(QString& str) = 0;
@@ -61,6 +65,17 @@ public:
     virtual void setBold(bool val) = 0;
     virtual void setItalic(bool val) = 0;
     virtual void setUnderline(bool val) = 0;
+    virtual void setStrikeOut(bool val) = 0;
+
+    virtual bool bold() = 0;
+    virtual bool italic() = 0;
+    virtual bool underline() = 0;
+    virtual bool strikeOut() = 0;
+
+    virtual void resetTextProperties() = 0;
+
+    virtual void setStyle(const QString& val) = 0;
+    virtual QString getStyle() = 0;
 
     virtual int setLink(const QStringList& hrefs, const QStringList& hints) = 0;
     virtual bool getLink(int id, QStringList** hrefs, QStringList** hints) = 0;

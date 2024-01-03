@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2021-2022 by Stephen Lyons                        *
+ *   Copyright (C) 2017, 2021-2023 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -120,10 +120,10 @@ bool TAction::setScript(const QString& script)
 
 bool TAction::compileScript()
 {
-    mFuncName = QString("Action") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = qsl("Action%1").arg(QString::number(mID));
+    const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, QString("Button: ") + getName())) {
+    if (mpHost->mLuaInterpreter.compile(code, error, qsl("Button: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
@@ -158,14 +158,14 @@ void TAction::execute()
 
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            mpHost->setFocusOnHostMainConsole();
+            mpHost->setFocusOnHostActiveCommandLine();
             return;
         }
     }
 
     mpHost->mLuaInterpreter.call(mFuncName, mName);
     // move focus back to the active console / command line:
-    mpHost->setFocusOnHostMainConsole();
+    mpHost->setFocusOnHostActiveCommandLine();
 }
 
 void TAction::expandToolbar(TToolBar* pT)
@@ -178,8 +178,8 @@ void TAction::expandToolbar(TToolBar* pT)
             // buttons show in a "greyed-out" state... - Slysven
             continue;
         }
-        QIcon icon(action->mIcon);
-        QString name = action->getName();
+        const QIcon icon(action->mIcon);
+        const QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);
         button->setText(name);
@@ -270,8 +270,8 @@ void TAction::expandToolbar(TEasyButtonBar* pT)
         if (!action->isActive()) {
             continue;
         }
-        QIcon icon(action->mIcon);
-        QString name = action->getName();
+        const QIcon icon(action->mIcon);
+        const QString name = action->getName();
         auto button = new TFlipButton(action, mpHost);
         button->setIcon(icon);
         button->setText(name);
@@ -336,7 +336,7 @@ void TAction::fillMenu(TEasyButtonBar* pT, QMenu* menu)
             continue;
         }
         mpEasyButtonBar = pT;
-        auto newAction = new EAction(mpHost, QIcon(mIcon), action->mName, mID);
+        auto newAction = new EAction(mpHost, QIcon(mIcon), action->mName, action->mID);
         newAction->setStatusTip(action->mName);
         newAction->setCheckable(action->mIsPushDownButton);
         if (action->mIsPushDownButton) {

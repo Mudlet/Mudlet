@@ -32,11 +32,14 @@
 #if defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QMessageBox>
 #endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
+#include <QCommandLineOption>
 #include <QPainter>
+#include <QPointer>
 #include <QScreen>
+#include <QSettings>
 #include <QSplashScreen>
 #include <QStringList>
-#include <QStringListIterator>
+#include <QTranslator>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
@@ -51,8 +54,6 @@ using namespace std::chrono_literals;
 #include <Windows.h>
 #include <pcre.h>
 #endif // _MSC_VER && _DEBUG
-
-TConsole* spDebugConsole = nullptr;
 
 #if defined(Q_OS_WIN32)
 bool runUpdate();
@@ -87,15 +88,28 @@ void copyFont(const QString& externalPathName, const QString& resourcePathName, 
 #if defined(Q_OS_LINUX)
 void removeOldNoteColorEmojiFonts()
 {
+    // PLACEMARKER: previous Noto Color Emoji font versions removal
     // Identify old versions so that we can remove them and later on only try
     // to load the latest (otherwise, as they all have the same family name
     // only the first one found will be loaded by the FontManager class):
     QStringList oldNotoFontDirectories;
+    // The directory name format is made by Mudlet and is based upon the
+    // release date of the version on upstream's Github site, currently:
+    // https://github.com/googlefonts/noto-emoji/releases
+    // Not all previously released versions have been carried by Mudlet only
+    // the ones listed here have been.
+    // When adding a later version, append the path and version comment of the
+    // replaced one comment to this area:
+    // Tag: "v2018-04-24-pistol-update"
     oldNotoFontDirectories << qsl("%1/notocoloremoji-unhinted-2018-04-24-pistol-update").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    // Release: "v2019-11-19-unicode12"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2019-11-19-unicode12").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    // Release: "Noto Emoji v2.0238"
     oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-07-15-v2.028").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
+    // Release: "Unicode 14.0"
+    oldNotoFontDirectories << qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath));
 
-    QStringListIterator itOldNotoFontDirectory(oldNotoFontDirectories);
+    QListIterator<QString> itOldNotoFontDirectory(oldNotoFontDirectories);
     while (itOldNotoFontDirectory.hasNext()) {
         auto oldNotoFontDirectory = itOldNotoFontDirectory.next();
         QDir oldDir{oldNotoFontDirectory};
@@ -110,6 +124,31 @@ void removeOldNoteColorEmojiFonts()
 }
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
+
+QTranslator* loadTranslationsForCommandLine()
+{
+    QSettings const settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
+    auto pSettings = new QSettings((settings_new.contains(QLatin1String("pos")) ? QLatin1String("mudlet") : QLatin1String("Mudlet")),
+                                   (settings_new.contains(QLatin1String("pos")) ? QLatin1String("Mudlet") : QLatin1String("Mudlet 1.0")));
+    auto interfaceLanguage = pSettings->value(QLatin1String("interfaceLanguage")).toString();
+    auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
+    if (userLocale == QLocale::c()) {
+        // nothing found
+        return nullptr;
+    }
+    // We only need the Mudlet translations for the Command Line texts, no need
+    // for any Qt ones:
+    QTranslator* pMudletTranslator = new QTranslator;
+    // If we allow the translations to be outside of the resource file inside
+    // the application executable then this will have to be revised to handle
+    // it:
+    const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
+    if (!isOk) {
+        return nullptr;
+    }
+    QCoreApplication::installTranslator(pMudletTranslator);
+    return pMudletTranslator;
+}
 
 int main(int argc, char* argv[])
 {
@@ -152,11 +191,6 @@ int main(int argc, char* argv[])
         pcre_stack_free = pcre_free_dbg;
     }
 #endif // _MSC_VER && _DEBUG
-    spDebugConsole = nullptr;
-
-#if defined (Q_OS_UNIX)
-    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-#endif
 
 #if defined(Q_OS_MACOS)
     // Workaround for horrible mac rendering issues once the mapper widget
@@ -202,28 +236,39 @@ int main(int argc, char* argv[])
         app->setApplicationVersion(APP_VERSION APP_BUILD);
     }
 
+    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
     QCommandLineParser parser;
-    QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), QCoreApplication::translate("main", "Profile to open automatically"), QCoreApplication::translate("main", "profile"));
+    // The third (and fourth if provided) arguments are used to populate the
+    // help text that the QCommandLineParser::showHelp(...) would produce
+    // however we do the -h/--help option ourself so these texts are unused
+    // other than that a non-null fourth argument maybe responsible for
+    // making the option take a value that follows it - as such they do not
+    // need to be passed to the translation system.
+    const QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), qsl("Profile to open automatically"), qsl("profile"));
     parser.addOption(profileToOpen);
 
-    QCommandLineOption showHelp(QStringList() << qsl("h") << qsl("help"), QCoreApplication::translate("main", "Display help and exit"));
+    const QCommandLineOption showHelp(QStringList() << qsl("h") << qsl("help"), qsl("Display help and exit"));
     parser.addOption(showHelp);
 
-    QCommandLineOption showVersion(QStringList() << qsl("v") << qsl("version"), QCoreApplication::translate("main", "Display version and exit"));
+    const QCommandLineOption showVersion(QStringList() << qsl("v") << qsl("version"), qsl("Display version and exit"));
     parser.addOption(showVersion);
 
-    QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), QCoreApplication::translate("main", "Don't show the splash screen when starting"));
-    parser.addOption(beQuiet);
+    const QCommandLineOption showSplashscreen(QStringList() << qsl("s") << qsl("splashscreen"), qsl("Show the splash screen when starting"));
+    parser.addOption(showSplashscreen);
 
-    QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), QCoreApplication::translate("main", "Mirror output of all consoles to STDOUT"));
+    const QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), qsl("Mirror output of all consoles to STDOUT"));
     parser.addOption(mirrorToStdout);
 
-    QCommandLineOption onlyPredefinedProfileToShow(QStringList() << qsl("o") << qsl("only"),
-                                                   QCoreApplication::translate("main", "Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."),
-                                                   QCoreApplication::translate("main", "predefined_game"));
+    QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Depricated option, previously used to disable showing the splash screen"));
+    beQuiet.setFlags(QCommandLineOption::HiddenFromHelp);
+    parser.addOption(beQuiet);
+
+    const QCommandLineOption onlyPredefinedProfileToShow(QStringList() << qsl("o") << qsl("only"),
+                                                   qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."),
+                                                   qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
-    bool parsedCommandLineOk = parser.parse(app->arguments());
+    const bool parsedCommandLineOk = parser.parse(app->arguments());
 
     const QString appendLF{qsl("%1\n")};
     const QString append2LF{qsl("%1\n\n")};
@@ -231,10 +276,17 @@ int main(int argc, char* argv[])
     // Non-GUI actions --help and --version as suggested by GNU coding standards,
     // section 4.7: http://www.gnu.org/prep/standards/standards.html#Command_002dLine-Interfaces
     QStringList texts;
-    if (!parsedCommandLineOk || parser.isSet(showHelp)) {
-        if (!parsedCommandLineOk) {
-            texts << append2LF.arg(QCoreApplication::translate("main", "Error: %1").arg(parser.errorText()));
-        }
+
+    if (!parsedCommandLineOk) {
+        // Warn of unknown options but tolerate them.
+        // We want the message to be visible for someone launching from command prompt
+        // and will have standard output left on their screen, but still allow program
+        // to start when launched by installer.
+        // --squirrel-firstrun for example is given for launch at end of install process.
+        std::cout << QCoreApplication::translate("main", "Warning: %1\n").arg(parser.errorText()).toStdString();
+    }
+
+    if (parser.isSet(showHelp)) {
         // Do "help" action
         texts << appendLF.arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]",
                                                           // Comment to separate arguments
@@ -242,7 +294,7 @@ int main(int argc, char* argv[])
                                          .arg(QLatin1String(APP_TARGET)));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -h, --help                   displays this message."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -v, --version                displays version information."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       -q, --quiet                  no splash screen on startup."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       -s, --splashscreen           show splashscreen on startup."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open, may be\n"
                                                                   "                                    repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific\n"
@@ -292,7 +344,7 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
-        return parsedCommandLineOk ? 0 :-1;
+        return 0;
     }
 
     if (parser.isSet(showVersion)) {
@@ -318,26 +370,26 @@ int main(int argc, char* argv[])
     /*******************************************************************
      * If we get to HERE then we are going to run a GUI application... *
      *******************************************************************/
-    QStringList cliProfiles = parser.values(profileToOpen);
-    QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
+    // Unload translator so we can use main application translation system;
+    if (!commandLineTranslator.isNull()) {
+        QCoreApplication::removeTranslator(commandLineTranslator);
+        commandLineTranslator.clear();
+    }
 
-    bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
-#if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
-    QImage splashImage(mudlet::scmIsReleaseVersion ? qsl(":/Mudlet_splashscreen_main.png")
-                                                   : mudlet::scmIsPublicTestVersion ? qsl(":/Mudlet_splashscreen_ptb.png")
-                                                                                    : qsl(":/Mudlet_splashscreen_development.png"));
-#else
-    QImage splashImage(qsl(":/Mudlet_splashscreen_main.png"));
-#endif
+    const QStringList cliProfiles = parser.values(profileToOpen);
+    const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
-    if (show_splash) {
+    const bool showSplash = parser.isSet(showSplashscreen);
+    QImage splashImage = mudlet::getSplashScreen();
+
+    if (showSplash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
+        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont font("DejaVu Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            QFont const font("Bitstream Vera Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -349,11 +401,11 @@ int main(int argc, char* argv[])
             //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
             versionTextline.setPosition(QPointF(0, 0));
             // Only pretend, so we can see how much space it will take
-            QTextLine dummy = versionTextLayout.createLine();
+            QTextLine const dummy = versionTextLayout.createLine();
             if (!dummy.isValid()) {
                 // No second line so have got all text in first so can do it
                 isWithinSpace = true;
-                qreal versionTextWidth = versionTextline.naturalTextWidth();
+                qreal const versionTextWidth = versionTextline.naturalTextWidth();
                 // This is the ACTUAL width of the created text
                 versionTextline.setPosition(QPointF((320 - versionTextWidth) / 2.0, 270));
                 // And now we can place it centred horizontally
@@ -371,20 +423,20 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
-        QFont font(qsl("DejaVu Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
+        QFont const font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
         copyrightTextline.setLineWidth(280);
         copyrightTextline.setPosition(QPointF(1, 1));
-        qreal copyrightTextWidth = copyrightTextline.naturalTextWidth();
+        qreal const copyrightTextWidth = copyrightTextline.naturalTextWidth();
         copyrightTextline.setPosition(QPointF((320 - copyrightTextWidth) / 2.0, 340));
         copyrightTextLayout.endLayout();
         painter.setPen(QColor(112, 16, 0, 255)); // #701000
         copyrightTextLayout.draw(&painter, QPointF(0, 0));
     }
-    QPixmap pixmap = QPixmap::fromImage(splashImage);
+    QPixmap const pixmap = QPixmap::fromImage(splashImage);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     // Specifying the screen here seems to help to put the splash screen on the
     // same monitor that the main application window will be put upon on first
@@ -394,13 +446,13 @@ int main(int argc, char* argv[])
 #else
     QSplashScreen splash(pixmap);
 #endif
-    if (show_splash) {
+    if (showSplash) {
         splash.show();
     }
     app->processEvents();
 
-    QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
-    QDir dir;
+    const QString homeDirectory = mudlet::getMudletPath(mudlet::mainPath);
+    const QDir dir;
     bool first_launch = false;
     if (!dir.exists(homeDirectory)) {
         dir.mkpath(homeDirectory);
@@ -408,18 +460,20 @@ int main(int argc, char* argv[])
     }
 
 #if defined(INCLUDE_FONTS)
-    QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    const QString bitstreamVeraFontDirectory(qsl("%1/ttf-bitstream-vera-1.10").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(bitstreamVeraFontDirectory)) {
         dir.mkpath(bitstreamVeraFontDirectory);
     }
-    QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    const QString ubuntuFontDirectory(qsl("%1/ubuntu-font-family-0.83").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
 #if defined(Q_OS_LINUX)
     // Only needed/works on Linux to provide color emojis:
     removeOldNoteColorEmojiFonts();
-    QString notoFontDirectory{qsl("%1/noto-color-emoji-2021-11-01-v2.034").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
+    // PLACEMARKER: current Noto Color Emoji font directory specification:
+    // Release: "Unicode 15.0"
+    const QString notoFontDirectory{qsl("%1/noto-color-emoji-2022-09-16-v2.038").arg(mudlet::getMudletPath(mudlet::mainFontsPath))};
     if (!dir.exists(notoFontDirectory)) {
         dir.mkpath(notoFontDirectory);
     }
@@ -474,13 +528,13 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
 #if defined(Q_OS_LINUX)
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-11-01-v2.034"), qsl("NotoColorEmoji.ttf"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-11-01-v2.034"), qsl("LICENSE"));
-    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2021-11-01-v2.034"), qsl("README"));
+    // PLACEMARKER: current Noto Color Emoji font version file extraction
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("NotoColorEmoji.ttf"));
+    copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("LICENSE"));
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
-    QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
+    const QString homeLink = qsl("%1/mudlet-data").arg(QDir::homePath());
 #if defined(Q_OS_WIN32)
     /*
      * From Qt Documentation for:
@@ -506,7 +560,7 @@ int main(int argc, char* argv[])
         }
     }
 #else
-    QFile linkFile(homeLink);
+    QFile const linkFile(homeLink);
     if (!linkFile.exists() && first_launch) {
         QFile::link(homeDirectory, homeLink);
     }
@@ -531,7 +585,7 @@ int main(int argc, char* argv[])
         mudlet::self()->move(geometry.left() + (availableSize.width() / 8), geometry.top() + availableSize.height() / 8);
     }
 
-    if (show_splash) {
+    if (showSplash) {
         splash.finish(mudlet::self());
     }
 
