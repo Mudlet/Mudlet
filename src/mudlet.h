@@ -27,6 +27,7 @@
  ***************************************************************************/
 
 #include "Announcer.h"
+#include "MudletServer.h"
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
@@ -305,6 +306,7 @@ public:
 
 
     void activateProfile(Host*);
+    void registerServer(MudletServer*);
     void addConsoleForNewHost(Host*);
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
@@ -473,6 +475,7 @@ public:
     QSystemTrayIcon mTrayIcon;
     bool mUsingMudletDictionaries = false;
     bool mWindowMinimized = false;
+    MudletServer* mServer;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
 
@@ -514,6 +517,7 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_showAboutDialog();
+    void slot_showConnectionDialog();
     void slot_showHelpDialogForum();
 // Not used:    void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
@@ -560,7 +564,6 @@ private slots:
 #endif
     void slot_showActionDialog();
     void slot_showAliasDialog();
-    void slot_showConnectionDialog();
     void slot_showEditorDialog();
     void slot_showHelpDialog();
     void slot_showKeyDialog();

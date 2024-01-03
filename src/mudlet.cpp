@@ -3327,6 +3327,7 @@ void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
 
 bool mudlet::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
 {
+    qDebug() << "mudlet::unzip()" << archivePath << destination << tmpDir; 
     int err = 0;
     //from: https://gist.github.com/mobius/1759816
     struct zip_stat zs;
@@ -3430,6 +3431,7 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
         return false;
     }
 
+    qDebug() << "unzip finished";
     return true;
 }
 
@@ -4728,8 +4730,14 @@ void mudlet::activateProfile(Host* pHost)
     emit signal_profileActivated(pHost, newActiveTabIndex);
 
     mpCurrentActiveHost->setFocusOnHostActiveCommandLine();
+
+    mServer->tryInstallQueuedPackages(mpCurrentActiveHost);
 }
 
+void mudlet::registerServer(MudletServer* server)
+{
+    mServer = server;
+}
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
 {
     mpMainToolBar->setStyleSheet(styleSheet);

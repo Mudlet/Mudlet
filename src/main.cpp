@@ -24,7 +24,7 @@
 
 #include "HostManager.h"
 #include "mudlet.h"
-
+#include "MudletServer.h"
 #include "pre_guard.h"
 #include <chrono>
 #include <QCommandLineParser>
@@ -39,6 +39,8 @@
 #include <QSplashScreen>
 #include <QStringList>
 #include <QTranslator>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
@@ -46,6 +48,7 @@
 #include "Announcer.h"
 
 using namespace std::chrono_literals;
+
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
@@ -263,6 +266,10 @@ int main(int argc, char* argv[])
                                                    qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
+
+    QCommandLineOption installPackage("package", "Install a package", "file_path");
+    parser.addOption(installPackage);
+
     const bool parsedCommandLineOk = parser.parse(app->arguments());
 
     const QString appendLF{qsl("%1\n")};
@@ -321,7 +328,9 @@ int main(int argc, char* argv[])
                                                                   "                                    The value must be a path to a file that contains the\n"
                                                                   "                                    Style Sheet. Note: Relative URLs in the Style Sheet file\n"
                                                                   "                                    are relative to the Style Sheet file's path."));
+
         texts << appendLF.arg(QCoreApplication::translate("main", "       --stylesheet stylesheet      is the same as listed above."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       --package file_name   Install a package."));
 // Not sure about MacOS case as that does not use X
 #if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
         texts << appendLF.arg(QCoreApplication::translate("main", "       --sync                       forces the X server to perform each X client request\n"
@@ -360,6 +369,34 @@ int main(int argc, char* argv[])
                                                                   "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
         return 0;
+    }
+
+
+
+    // Handles installing a package via the --package flag
+    // Used when mudlet is used to open an .mpackage file
+    //
+    // If Mudlet was already open:
+    // Send the package path to the other process and exit.
+    // The other process will take responsibility for installation.
+    // Installation will occur in currently open profile.
+    // If no profile is open, the packaage will be queued for install until a profile is selected.
+    //
+    // If no other mudlet process is found:
+    // this current process will start as normal.
+    // The package will be queued for install until a profile is selected.
+    MudletServer server("MudletUniqueServerName65");
+    bool firstInstanceOfMudlet = server.tryToStart();
+    if (parser.isSet("package")) {
+        const QString filePath = parser.value(installPackage);
+        const bool installed = server.tryInstall(filePath);
+        if (!installed) {
+            std::cout << "The package " << filePath.toStdString() << " could not be installed";
+            return 1;
+        }
+        if (!firstInstanceOfMudlet){
+            return 0;
+        }
     }
 
     /*******************************************************************
@@ -562,6 +599,9 @@ int main(int argc, char* argv[])
 #endif
 
     mudlet::start();
+
+    // Pass ownership of Mudlet Server to mudlet
+    mudlet::self()->registerServer(&server);
 
     if (first_launch) {
         // give Mudlet window decent size - most of the screen on non-HiDPI
