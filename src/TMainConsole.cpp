@@ -36,6 +36,7 @@
 #include "TTextEdit.h"
 #include "dlgMapper.h"
 #include "mudlet.h"
+#include "GifTracker.h"
 
 #include "pre_guard.h"
 #include <QLineEdit>
@@ -51,7 +52,7 @@
 
 
 TMainConsole::TMainConsole(Host* pH, QWidget* parent)
-: TConsole(pH, TConsole::MainConsole, parent)
+: TConsole(pH, qsl("main"), TConsole::MainConsole, parent)
 , mClipboard(pH)
 {
     // During first use where mIsDebugConsole IS true mudlet::self() is null
@@ -428,16 +429,15 @@ QString TMainConsole::getCurrentLine(std::string& buf)
 TConsole* TMainConsole::createBuffer(const QString& name)
 {
     if (!mSubConsoleMap.contains(name)) {
-        auto pC = new TConsole(mpHost, Buffer);
+        auto pC = new TConsole(mpHost, name, Buffer);
         mSubConsoleMap[name] = pC;
-        pC->mConsoleName = name;
         pC->setContentsMargins(0, 0, 0, 0);
         pC->hide();
         pC->layerCommandLine->hide();
         return pC;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
 void TMainConsole::resetMainConsole()
@@ -489,18 +489,17 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     auto pS = mScrollBoxMap.value(windowname);
     if (!pC) {
         if (pS) {
-            pC = new TConsole(mpHost, SubConsole, pS->widget());
+            pC = new TConsole(mpHost, name, SubConsole, pS->widget());
         } else if (pW) {
-            pC = new TConsole(mpHost, SubConsole, pW->widget());
+            pC = new TConsole(mpHost, name, SubConsole, pW->widget());
         } else {
-            pC = new TConsole(mpHost, SubConsole, mpMainFrame);
+            pC = new TConsole(mpHost, name, SubConsole, mpMainFrame);
         }
         if (!pC) {
             return nullptr;
         }
         mSubConsoleMap[name] = pC;
         pC->setObjectName(name);
-        pC->mConsoleName = name;
         const auto& hostCommandLine = mpHost->mpConsole->mpCommandLine;
         pC->setFocusProxy(hostCommandLine);
         pC->mUpperPane->setFocusProxy(hostCommandLine);
@@ -583,6 +582,11 @@ std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
 
     auto pL = mLabelMap.take(name);
     if (pL) {
+
+        if (pL->mpMovie) {
+            mpHost->getGifTracker()->unregisterGif(pL->mpMovie);
+        }
+
         // Using deleteLater() rather than delete as it seems a safer option
         // given that this item is likely to be linked to some events and
         // suchlike:
@@ -1513,6 +1517,11 @@ void TMainConsole::showStatistics()
     //: Heading for the system's statistics information displayed in the console
     mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Script Report:")));
     itemMsg = std::get<0>(mpHost->getScriptUnit()->assembleReport());
+    print(itemMsg, QColor(150, 120, 0), Qt::black);
+
+    //: Heading for the system's statistics information displayed in the console
+    mpHost->mLuaInterpreter.compileAndExecuteScript(itemScript.arg(tr("Gif Report:")));
+    itemMsg = std::get<0>(mpHost->getGifTracker()->assembleReport());
     print(itemMsg, QColor(150, 120, 0), Qt::black);
 
     // Footer for the system's statistics information displayed in the console, it should be 64 'narrow' characters wide

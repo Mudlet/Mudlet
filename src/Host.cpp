@@ -42,6 +42,7 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
+#include "GifTracker.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -337,6 +338,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mAliasUnit(this)
 , mActionUnit(this)
 , mKeyUnit(this)
+, mGifTracker()
 , mHostID(id)
 , mHostName(hostname)
 , mIsClosingDown(false)
@@ -407,6 +409,24 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
                     {"DuckDuckGo", "https://duckduckgo.com/?q="},
                     {"Google",     "https://www.google.com/search?q="}
     });
+
+    // These details are filled in by the dlgConnectionProfile class when that
+    // is used to select a profile however when the profile is auto-loaded or
+    // selected from a command line argument that does not happen and they need
+    // to be populated ASAP from the stored details in the profile's settings.
+    mUrl = readProfileData(qsl("url"));
+    const QString host_port = readProfileData(qsl("port"));
+    if (bool isOk = false; !host_port.isEmpty() && host_port.toInt(&isOk) && isOk) {
+        mPort = host_port.toInt();
+    }
+    mLogin = readProfileData(qsl("login"));
+
+    const QString val = readProfileData(qsl("autoreconnect"));
+    setAutoReconnect(!val.isEmpty() && val.toInt() == Qt::Checked);
+
+    // This settings also need to be configured, note that the only time not to
+    // save the setting is on profile loading:
+    mTelnet.setEncoding(readProfileData(qsl("encoding")).toUtf8(), false);
 
     auto optin = readProfileData(qsl("discordserveroptin"));
     if (!optin.isEmpty()) {
@@ -3016,11 +3036,8 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
         mpConsole->mDockWidgetMap.insert(name, dockwidget);
         // It wasn't obvious but the parent passed to the TConsole constructor
         // is sliced down to a QWidget and is NOT a TDockWidget pointer:
-        console = new TConsole(this, TConsole::UserWindow, dockwidget->widget());
+        console = new TConsole(this, name, TConsole::UserWindow, dockwidget->widget());
         console->setObjectName(qsl("dockWindowConsole_%1_%2").arg(hostName, name));
-        // Without this the TConsole instance inside the TDockWidget will be
-        // left being called the default value of "main":
-        console->mConsoleName = name;
         console->setContentsMargins(0, 0, 0, 0);
         dockwidget->setTConsole(console);
         console->layerCommandLine->hide();
@@ -3775,6 +3792,7 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
     auto myMovie = pL->mpMovie;
     if (!myMovie) {
         myMovie = new QMovie();
+        mGifTracker.registerGif(myMovie);
         myMovie->setCacheMode(QMovie::CacheAll);
         pL->mpMovie = myMovie;
         myMovie->setParent(pL);
@@ -3785,6 +3803,7 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
     if (!myMovie->isValid()) {
         return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
     }
+
     myMovie->stop();
     pL->setMovie(myMovie);
     myMovie->start();

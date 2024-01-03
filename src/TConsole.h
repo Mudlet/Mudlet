@@ -99,8 +99,8 @@ public:
     Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
-    explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
-    ~TConsole();
+    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    ~TConsole() override;
 
     void reset();
     void resizeConsole();
@@ -318,6 +318,7 @@ public slots:
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
+    void dragMoveEvent(QDragMoveEvent*) override;
     void dropEvent(QDropEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;

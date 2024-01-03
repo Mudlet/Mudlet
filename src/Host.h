@@ -30,6 +30,7 @@
 #include "AliasUnit.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
+#include "GifTracker.h"
 #include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
@@ -221,6 +222,7 @@ public:
     ActionUnit*  getActionUnit()  { return &mActionUnit; }
     KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
     ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
+    GifTracker*  getGifTracker()  { return &mGifTracker; }
 
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
@@ -415,7 +417,8 @@ public:
     void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
     void setCommandLineHistorySaveSize(const int lines);
-
+    bool showIdsInEditor() const { return mShowIDsInEditor; }
+    void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -647,6 +650,7 @@ public:
     bool mMapperShowRoomBorders;
     bool mFORCE_MXP_NEGOTIATION_OFF;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
+    bool mForceMTTSNegotiationOff = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
@@ -676,6 +680,7 @@ public:
     bool mTutorialForSplitscreenScrollbackAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
+    bool mAdvertiseScreenReader = false;
     enum class BlankLineBehaviour {
         Show,
         Hide,
@@ -748,6 +753,7 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
+    GifTracker mGifTracker;
     // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
     std::optional<bool> mSaveTimer;
 
@@ -896,6 +902,9 @@ private:
     // to reproduce that behavior there is little reason to not enable it
     // by default:
     int mCommandLineHistorySaveSize = 500;
+
+    // Whether to display each item's ID number in the editor:
+    bool mShowIDsInEditor = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

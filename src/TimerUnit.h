@@ -4,7 +4,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2019, 2022-2023 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -52,7 +53,7 @@ public:
     std::list<TTimer*> getTimerRootNodeList() { return mTimerRootNodeList; }
     TTimer* getTimer(int id);
     TTimer* findFirstTimer(const QString&) const;
-    QList<TTimer*> findTimers(const QString&);
+    std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);
     void compileAll();
     bool enableTimer(const QString&);
     bool disableTimer(const QString&);

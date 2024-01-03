@@ -98,12 +98,15 @@ public:
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
+    void muteMedia(const TMediaData::MediaProtocol mediaProtocol);
+    void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
 
 private slots:
     void slot_writeFile(QNetworkReply* reply);
 
 private:
     void stopAllMediaPlayers();
+    void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
     void transitionNonRelativeFile(TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
@@ -115,6 +118,7 @@ private:
     void downloadFile(TMediaData& mediaData);
     QString setupMediaAbsolutePathFileName(TMediaData& mediaData);
     QList<TMediaPlayer> getMediaPlayerList(TMediaData& mediaData);
+    void connectMediaPlayer(TMediaPlayer& player);
     void updateMediaPlayerList(TMediaPlayer& player);
     TMediaPlayer getMediaPlayer(TMediaData& mediaData);
     TMediaPlayer matchMediaPlayer(TMediaData& mediaData, const QString& absolutePathFileName);
@@ -130,12 +134,14 @@ private:
     static int parseJSONByMediaFadeIn(QJsonObject& json);
     static int parseJSONByMediaFadeOut(QJsonObject& json);
     static int parseJSONByMediaStart(QJsonObject& json);
+    static int parseJSONByMediaFinish(QJsonObject& json);
     static int parseJSONByMediaPriority(QJsonObject& json);
     static int parseJSONByMediaLoops(QJsonObject& json);
     static TMediaData::MediaContinue parseJSONByMediaContinue(QJsonObject& json);
     static QString parseJSONByMediaTag(QJsonObject& json);
     static QString parseJSONByMediaUrl(QJsonObject& json);
     static QString parseJSONByMediaKey(QJsonObject& json);
+    static TMediaData::MediaFadeAway parseJSONByMediaFadeAway(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);

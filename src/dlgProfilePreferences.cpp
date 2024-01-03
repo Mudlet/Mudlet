@@ -443,7 +443,6 @@ void dlgProfilePreferences::disableHostDetails()
 
     groupBox_autoComplete->setEnabled(false);
     groupBox_editorDisplayOptions->setEnabled(false);
-    groupBox_advancedEditor->setEnabled(false);
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(false);
@@ -502,6 +501,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_blankLinesBehaviour->setEnabled(false);
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
+    checkBox_advertiseScreenReader->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -566,7 +566,6 @@ void dlgProfilePreferences::enableHostDetails()
 
     groupBox_autoComplete->setEnabled(true);
     groupBox_editorDisplayOptions->setEnabled(true);
-    groupBox_advancedEditor->setEnabled(true);
 
     // ===== tab_displayColors =====
     groupBox_displayColors->setEnabled(true);
@@ -612,6 +611,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_blankLinesBehaviour->setEnabled(true);
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
+    checkBox_advertiseScreenReader->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -640,6 +640,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
+    mForceMTTSNegotiationOff->setChecked(pHost->mForceMTTSNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
@@ -771,6 +772,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     need_reconnect_for_data_protocol->hide();
 
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
+    checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
@@ -1375,6 +1377,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
+    mForceMTTSNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
     acceptServerGUI->setChecked(false);
@@ -1473,6 +1476,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
+    checkBox_advertiseScreenReader->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
@@ -1541,6 +1545,7 @@ void dlgProfilePreferences::loadEditorTab()
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
+    checkBox_showIdNumbers->setChecked(pHost->showIdsInEditor());
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_themeSelected);
@@ -2572,8 +2577,8 @@ void dlgProfilePreferences::slot_copyMap()
 
         // Most of these we'll just get for debugging!
         QString otherProfileFileUsed;
-        int otherProfileRoomCount;
-        int otherProfileAreaCount;
+        qsizetype otherProfileRoomCount;
+        qsizetype otherProfileAreaCount;
         int otherProfileVersion;
         int otherProfileCurrentRoomId; // What we are looking for!
         if (pHost->mpMap->retrieveMapFileStats(itOtherProfile.key(),
@@ -2845,6 +2850,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
+        pHost->mForceMTTSNegotiationOff = mForceMTTSNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;
@@ -2980,6 +2986,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mEditorThemeFile = code_editor_theme_selection_combobox->currentData().toString();
         pHost->mEditorAutoComplete = checkBox_autocompleteLuaCode->isChecked();
         pHost->setEditorShowBidi(checkBox_showBidi->isChecked());
+        pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
         if (pHost->mpEditorDialog) {
             pHost->mpEditorDialog->setThemeAndOtherSettings(pHost->mEditorTheme);
         }
@@ -3038,6 +3045,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
+        pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
