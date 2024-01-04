@@ -518,7 +518,6 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_showAboutDialog();
-    void slot_showConnectionDialog();
     void slot_showHelpDialogForum();
 // Not used:    void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
@@ -565,6 +564,7 @@ private slots:
 #endif
     void slot_showActionDialog();
     void slot_showAliasDialog();
+    void slot_showConnectionDialog();
     void slot_showEditorDialog();
     void slot_showHelpDialog();
     void slot_showKeyDialog();

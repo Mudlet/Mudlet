@@ -3327,7 +3327,6 @@ void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
 
 bool mudlet::unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir)
 {
-    qDebug() << "mudlet::unzip()" << archivePath << destination << tmpDir; 
     int err = 0;
     //from: https://gist.github.com/mobius/1759816
     struct zip_stat zs;
@@ -3431,7 +3430,6 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
         return false;
     }
 
-    qDebug() << "unzip finished";
     return true;
 }
 
@@ -4738,6 +4736,7 @@ void mudlet::registerServer(MudletServer* server)
 {
     mServer = server;
 }
+
 MudletServer* mudlet::getServer()
 {
     return mServer;

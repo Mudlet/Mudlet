@@ -39,8 +39,6 @@
 #include <QSplashScreen>
 #include <QStringList>
 #include <QTranslator>
-#include <QLocalServer>
-#include <QLocalSocket>
 #include "post_guard.h"
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
@@ -267,7 +265,6 @@ int main(int argc, char* argv[])
                                                    qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
-
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
@@ -290,10 +287,11 @@ int main(int argc, char* argv[])
 
     if (parser.isSet(showHelp)) {
         // Do "help" action
-        texts << appendLF.arg(QCoreApplication::translate("main", "Usage: %1 [FILE] [OPTION...]",
+        texts << appendLF.arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...] [FILE] ",
                                                           // Comment to separate arguments
                                                           "%1 is the name of the executable as it is on this OS.")
                                          .arg(QLatin1String(APP_TARGET)));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Options:"));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -h, --help                   displays this message."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -v, --version                displays version information."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -q, --quiet                  no splash screen on startup."));
@@ -344,6 +342,8 @@ int main(int argc, char* argv[])
                                                                    "                                    specified port. The number is the port value and block is\n"
                                                                    "                                    optional and will make the application wait until a\n"
                                                                    "                                    debugger connects to it."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Arguments:"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "        [FILE]                       File to install as a package"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
@@ -653,8 +653,6 @@ int main(int argc, char* argv[])
     mudlet::self()->showChangelogIfUpdated();
 #endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER
-
-
 
     QTimer::singleShot(2s, qApp, []() {
         if (mudlet::self()->storingPasswordsSecurely()) {
