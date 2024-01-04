@@ -79,42 +79,42 @@ void GLWidget::slot_showAllLevels()
 void GLWidget::slot_shiftDown()
 {
     mShiftMode = true;
-    mOy--;
+    mMapCenterY--;
     update();
 }
 
 void GLWidget::slot_shiftUp()
 {
     mShiftMode = true;
-    mOy++;
+    mMapCenterY++;
     update();
 }
 
 void GLWidget::slot_shiftLeft()
 {
     mShiftMode = true;
-    mOx--;
+    mMapCenterX--;
     update();
 }
 
 void GLWidget::slot_shiftRight()
 {
     mShiftMode = true;
-    mOx++;
+    mMapCenterX++;
     update();
 }
 
 void GLWidget::slot_shiftZup()
 {
     mShiftMode = true;
-    mOz++;
+    mMapCenterZ++;
     update();
 }
 
 void GLWidget::slot_shiftZdown()
 {
     mShiftMode = true;
-    mOz--;
+    mMapCenterZ--;
     update();
 }
 
@@ -243,9 +243,9 @@ void GLWidget::setViewCenter(int areaId, int xPos, int yPos, int zPos)
 {
     mAID = areaId;
     mShiftMode = true;
-    mOx = xPos;
-    mOy = yPos;
-    mOz = zPos;
+    mMapCenterX = xPos;
+    mMapCenterY = yPos;
+    mMapCenterZ = zPos;
     update();
 }
 
@@ -295,14 +295,14 @@ void GLWidget::paintGL()
         ox = pRID->x;
         oy = pRID->y;
         oz = pRID->z;
-        mOx = ox;
-        mOy = oy;
-        mOz = oz;
+        mMapCenterX = ox;
+        mMapCenterY = oy;
+        mMapCenterZ = oz;
 
     } else {
-        ox = mOx;
-        oy = mOy;
-        oz = mOz;
+        ox = mMapCenterX;
+        oy = mMapCenterY;
+        oz = mMapCenterZ;
     }
     px = static_cast<float>(ox); //mpMap->rooms[mpMap->mRoomId]->x);
     py = static_cast<float>(oy); //mpMap->rooms[mpMap->mRoomId]->y);
@@ -1366,7 +1366,7 @@ void GLWidget::paintGL()
                 glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mc3);
                 glMateriali(GL_FRONT, GL_SHININESS, 36);
                 glColor4f(1.0, 0.0, 0.0, 1.0);
-            } else if (currentRoomId == mTarget) {
+            } else if (currentRoomId == mTargetRoomId) {
                 glDisable(GL_BLEND);
                 glEnable(GL_LIGHTING);
                 glDisable(GL_LIGHT1);
@@ -2078,7 +2078,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         gluPerspective(60 * mScale, (GLfloat)width() / (GLfloat)height(), 0.0001, 10000.0);
         glMatrixMode(GL_MODELVIEW);
         doneCurrent();
-        mTarget = -22;
+        mTargetRoomId = -22;
         makeCurrent();
         paintGL();
         doneCurrent();
@@ -2088,7 +2088,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         hits = glRenderMode(GL_RENDER);
 
         for (int i = 0; i < hits; i++) {
-            mTarget = buff[i * 4 + 3];
+            mTargetRoomId = buff[i * 4 + 3];
             //TODO: multiple assignments
             //            unsigned int minZ = buff[i * 4 + 1];
             //            unsigned int maxZ = buff[i * 4 + 2];
@@ -2100,8 +2100,8 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
         glMatrixMode(GL_MODELVIEW);
         doneCurrent();
         update();
-        if (mpMap->mpRoomDB->getRoom(mTarget)) {
-            mpMap->mTargetID = mTarget;
+        if (mpMap->mpRoomDB->getRoom(mTargetRoomId)) {
+            mpMap->mTargetID = mTargetRoomId;
             if (mpMap->mpHost->checkForCustomSpeedwalk()) {
                 mpMap->mpHost->startSpeedWalk(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID);
             } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {

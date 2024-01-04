@@ -85,6 +85,7 @@ set(mudlet_SRCS
     exitstreewidget.cpp
     FontManager.cpp
     GifTracker.cpp
+    TrailingWhitespaceMarker.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -241,6 +242,7 @@ set(mudlet_HDRS
     FileOpenHandler.h
     FontManager.h
     GifTracker.h
+    TrailingWhitespaceMarker.h
     Host.h
     HostManager.h
     ircmessageformatter.h
@@ -472,6 +474,11 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # * Produce all the time the surprise that normally will only occur on the
 #   first day of the fourth month of the Gregorian calendar year:
 # target_compile_definitions(mudlet PRIVATE DEBUG_EASTER_EGGS)
+#
+# * Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
+# commands for suboptions - change the value to 2 to get a bit more detail
+# about the size or nature of the command:
+target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 

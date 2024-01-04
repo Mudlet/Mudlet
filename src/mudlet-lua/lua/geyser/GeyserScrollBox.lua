@@ -1,6 +1,5 @@
 --- Represents a ScrollBox primitive.
 -- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Add_a_scrollable_box">Mudlet Manual</a>
-
 -- @author guy
 -- @author Edru
 -- @module Geyser.ScrollBox
@@ -28,7 +27,8 @@ end
 -- Save a reference to our parent constructor
 Geyser.ScrollBox.parent = Geyser.Window
 
---- Sets the style sheet of the scrollbox
+-- Sets the style sheet of the scrollbox.
+-- @todo Not currently implemented.
 -- @param css The style sheet string
 -- function Geyser.ScrollBox:setStyleSheet(css)
 --     css = css or self.stylesheet

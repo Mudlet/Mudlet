@@ -74,7 +74,7 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
 # from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
@@ -251,6 +251,11 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # * Produce all the time the surprise that normally will only occur on the first
 # day of the fourth month of the Gregorian calendar year:
 # DEFINES+=DEBUG_EASTER_EGGS
+#
+# Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
+# commands for suboptions - change the value to 2 to get a bit more detail
+# about the size or nature of the command:
+DEFINES+=DEBUG_TELNET=1
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -573,6 +578,7 @@ SOURCES += \
     exitstreewidget.cpp \
     FontManager.cpp \
     GifTracker.cpp \
+    TrailingWhitespaceMarker.cpp \
     Host.cpp \
     HostManager.cpp \
     ircmessageformatter.cpp \
@@ -691,6 +697,7 @@ HEADERS += \
     exitstreewidget.h \
     FileOpenHandler.h \
     GifTracker.h \
+    TrailingWhitespaceMarker.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
@@ -1555,7 +1562,7 @@ win32 {
 }
 
 # This is a list of files that we want to show up in the Qt Creator IDE that are
-# not otherwise used by the project:
+# not otherwise used by the main project:
 OTHER_FILES += \
     ../.appveyor.yml \
     ../.crowdin.yml \
@@ -1619,6 +1626,19 @@ OTHER_FILES += \
     ../docker/docker-compose.override.linux.yml \
     ../docker/docker-compose.yml \
     ../docker/Dockerfile \
+    ../test/CMakeLists.txt \
+    ../test/GUIConsoleTests.mpackage \
+    ../test/TEntityHandlerTest.cpp \
+    ../test/TEntityResolverTest.cpp \
+    ../test/TLinkStoreTest.cpp \
+    ../test/TLuaInterfaceTest.cpp \
+    ../test/TMxpCustomElementTagHandlerTest.cpp \
+    ../test/TMxpEntityTagHandlerTest.cpp \
+    ../test/TMxpFormattingTagsTest.cpp \
+    ../test/TMxpSendTagHandlerTest.cpp \
+    ../test/TMxpStubClient.h \
+    ../test/TMxpTagParserTest.cpp \
+    ../test/TMxpVersionTagTest.cpp \
     mac-deploy.sh \
     mudlet-lua/genDoc.sh \
     mudlet-lua/lua/ldoc.css
