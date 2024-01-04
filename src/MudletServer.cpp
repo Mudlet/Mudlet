@@ -25,28 +25,34 @@
 
 const int WAIT_FOR_RESPONSE_MS = 500;
 
-// Returns true if install is successful
-// Tries to install a package on already-running mudlet instance.
-bool MudletServer::tryInstall(const QString& packageName)
+
+// Keeps note of the package that the user want to install
+// This method is called when Mudlet is ran with the --package flag
+// or when a .mpackage file is opened
+void MudletServer::queuePackage(const QString& packageName)
+{
+    mQueuedPackagePaths << packageName;
+}
+
+// Attempts to install the package remotely 
+// Returns true on success
+bool MudletServer::installPackagesRemotely()
 {
     // Pass the absolute path of the package to the active Mudlet Server 
     // The Mudlet Server may be owned by this process or another process.
     QLocalSocket socket;
-    const QString absolutePackagePath = QDir(packageName).absolutePath();
     socket.connectToServer(mServerName);
-    qDebug() << "connecting to server";
 
     if (socket.waitForConnected(WAIT_FOR_RESPONSE_MS)) {
-        qDebug() << "connected, will send package name: " << absolutePackagePath;
-        socket.write(absolutePackagePath.toUtf8());
+        const QString packagePathsData = mQueuedPackagePaths.join(QChar::LineFeed);
+        socket.write(packagePathsData.toUtf8());
         socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
         socket.disconnectFromServer();
         return true; 
     }
-    qDebug() << "Could not connect to server after " << WAIT_FOR_RESPONSE_MS << "ms";
     return false;
-
 }
+
 
 MudletServer::MudletServer(const QString& serverName, QObject* parent) : QLocalServer(parent), mServerName(serverName)
 {
@@ -70,9 +76,11 @@ bool MudletServer::tryToStart()
 
 // Install all queued packages to a specified profile.
 // Mudlet calls this function whenever a profile is activated.
-void MudletServer::tryInstallQueuedPackages(Host* activeProfile)
+// Returns true if no installations fail
+void MudletServer::installPackagesLocally(Host* activeProfile)
 {
-    qDebug() << "InstallQueue Started";
+
+    mMutex.lock();
     foreach (const QString &path, mQueuedPackagePaths) {
         auto ret = activeProfile->installPackage(path,0);
         if (ret.first) {
@@ -82,16 +90,14 @@ void MudletServer::tryInstallQueuedPackages(Host* activeProfile)
             const QString infoMsg = tr("Error: Package \"%1\" was not installed.").arg(path);
             activeProfile->postMessage(infoMsg);
         }
-        //qApp->processEvents();
     }
     mQueuedPackagePaths.clear();
-    qDebug() << "InstallQueue Finished";
+    mMutex.unlock();
+    return true;
 }
 
 void MudletServer::incomingConnection(quintptr socketDescriptor)
 {
-
-    qDebug() << "incomingConnection()";
     QLocalSocket* socket = new QLocalSocket(this);
     socket->setSocketDescriptor(socketDescriptor);
 
@@ -99,55 +105,38 @@ void MudletServer::incomingConnection(quintptr socketDescriptor)
     connect(socket, &QLocalSocket::disconnected, this, &MudletServer::handleDisconnected);
 }
 
-// Read a package path from socket and attempt to install it
+// Receive package paths and attempt to install them 
 void MudletServer::handleReadyRead()
 {
-
-    qDebug() << "handleReadyRead()";
     QLocalSocket* socket = qobject_cast<QLocalSocket*>(sender());
     if (!socket) {
         return;
     }
 
-    // Add the package path to the install queue.
-    qDebug() << "Adding package to install queue";
+    mMutex.lock();
+    // Receive package paths and add them the install queue.
     QByteArray data = socket->readAll();
-    QString packageName = QString::fromUtf8(data);
-    mQueuedPackagePaths << packageName;
+    const QStringList packagePaths = QString::fromUtf8(data).split(QChar::LineFeed, Qt::SkipEmptyParts);
+    mQueuedPackagePaths << packagePaths;
+    mMutex.unlock();
 
-    // If mudlet is not running, stop here.
-    qDebug() << "checking if mudlet is running";
-
-
-    qDebug() << "checking if mudlet has active host";
-
-
+    // Try to install the packages
     QTimer::singleShot(0, this, [this]() {
         mudlet* mudletApp = mudlet::self();
         Q_ASSERT(mudletApp);
-        //if(!mudletApp){
-        //    return;
-        //}
         Host* activeHost = mudletApp->getActiveHost();
-        qDebug() << "trying to install" << activeHost->getName();
         if(activeHost){
-            //connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
-            tryInstallQueuedPackages(activeHost);
+            installPackagesLocally(activeHost);
         } else {
-            // Prompt user to select a profile.
             mudletApp->slot_showConnectionDialog();
         }
     });
-    
-    qDebug() << "handleReadReady() Complete";
 }
 
 void MudletServer::handleDisconnected()
 {
-    qDebug() << "handleDisconnected()";
     QLocalSocket* socket = qobject_cast<QLocalSocket*>(sender());
     if (socket) {
         socket->deleteLater();
     }
-    qDebug() << "handleDisconnected() end";
 }

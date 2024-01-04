@@ -4731,7 +4731,7 @@ void mudlet::activateProfile(Host* pHost)
 
     mpCurrentActiveHost->setFocusOnHostActiveCommandLine();
 
-    mServer->tryInstallQueuedPackages(mpCurrentActiveHost);
+    mServer->installPackagesLocally(mpCurrentActiveHost);
 }
 
 void mudlet::registerServer(MudletServer* server)

@@ -386,16 +386,17 @@ int main(int argc, char* argv[])
     // this current process will start as normal.
     // The package will be queued for install until a profile is selected.
     MudletServer server("MudletUniqueServerName65");
-    bool firstInstanceOfMudlet = server.tryToStart();
-    if (parser.isSet("package")) {
-        const QString filePath = parser.value(installPackage);
-        const bool installed = server.tryInstall(filePath);
-        if (!installed) {
-            std::cout << "The package " << filePath.toStdString() << " could not be installed";
-            return 1;
-        }
-        if (!firstInstanceOfMudlet){
-            return 0;
+    const bool firstInstanceOfMudlet = server.tryToStart();
+    if (parser.isSet("package")){
+        const QString absPath = QDir(parser.value(installPackage)).absolutePath();
+        server.queuePackage(absPath);
+        if (!firstInstanceOfMudlet) {
+            const bool successful = server.installPackagesRemotely();
+            if (successful) {
+                return 0;
+            } else {
+                return 1;
+            }
         }
     }
 
@@ -639,6 +640,8 @@ int main(int argc, char* argv[])
     mudlet::self()->showChangelogIfUpdated();
 #endif // Q_OS_LINUX
 #endif // INCLUDE_UPDATER
+
+
 
     QTimer::singleShot(2s, qApp, []() {
         if (mudlet::self()->storingPasswordsSecurely()) {

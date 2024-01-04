@@ -31,8 +31,9 @@ class MudletServer : public QLocalServer
 public:
     explicit MudletServer(const QString& serverName, QObject* parent = nullptr);
     bool tryToStart();
-    bool tryInstall(const QString& packageName);
-    void tryInstallQueuedPackages(Host* activeProfile);
+    void queuePackage(const QString& packageName);
+    void installPackagesLocally(Host* activeProfile);
+    bool installPackagesRemotely();
 
 protected:
     void incomingConnection(quintptr socketDescriptor) override;
@@ -42,6 +43,7 @@ private slots:
     void handleDisconnected();
 
 private:
+    QMutex mMutex;
     QString mServerName;
     QStringList mQueuedPackagePaths;
 };
