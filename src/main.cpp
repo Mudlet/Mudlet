@@ -389,7 +389,7 @@ int main(int argc, char* argv[])
     const bool firstInstanceOfMudlet = server.tryToStart();
 
     const QStringList positionalArguments = parser.positionalArguments();
-    if (!positionalArguments.isEmpty()){
+    if (!positionalArguments.isEmpty()) {
         const QString absPath = QDir(positionalArguments.first()).absolutePath();
         server.queuePackage(absPath);
         if (!firstInstanceOfMudlet) {
