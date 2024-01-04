@@ -73,7 +73,7 @@ bool MudletServer::tryToStart()
 void MudletServer::installPackagesToHost(Host* activeProfile)
 {
     mMutex.lock();
-    foreach (const QString& path, mQueuedPackagePaths) {
+    foreach(const QString& path, mQueuedPackagePaths) {
         auto ret = activeProfile->installPackage(path, 0);
     }
     mQueuedPackagePaths.clear();
