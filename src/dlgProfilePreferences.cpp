@@ -4448,7 +4448,8 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
         return;
     }
 
-    if (pHost->mAdvertiseScreenReader) {
+    if (pHost->mAdvertiseScreenReader != state) {
+        pHost->mAdvertiseScreenReader = state;
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
         pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
     }

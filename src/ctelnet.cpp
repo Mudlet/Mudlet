@@ -1164,8 +1164,8 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     }
 
     // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" and "SYSTEMTYPE" are well-known and will be requested with NEW_ENVIRON_VAR
-    newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserVar, getNewEnvironValueUser()));
-    newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserVar, getNewEnvironValueSystemType()));
+    //newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserVar, getNewEnvironValueUser())); // Needs an OPT-IN to be enabled, next PR
+    //newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserVar, getNewEnvironValueSystemType())); // Needs an OPT-IN to be enabled, next PR
 
     // Per https://www.rfc-editor.org/rfc/rfc1572.txt, others will be requested with NEW_ENVIRON_USERVAR
     newEnvironDataMap.insert(qsl("ANSI"), qMakePair(isUserVar, getNewEnvironUserValueANSI()));
@@ -1178,9 +1178,9 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("PROXY"), qMakePair(isUserVar, getNewEnvironUserValueProxy()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironUserValueTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironUserValueTLS()));
-    newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getNewEnvironUserValueLanguage()));
-    newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getNewEnvironUserValueFont()));
-    newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getNewEnvironUserValueFontSize()));
+    //newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getNewEnvironUserValueLanguage())); // Needs an OPT-IN to be enabled, next PR
+    //newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getNewEnvironUserValueFont())); // Needs an OPT-IN to be enabled, next PR
+    //newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getNewEnvironUserValueFontSize())); // Needs an OPT-IN to be enabled, next PR
     newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getNewEnvironUserValueWordWrap()));
 
     return newEnvironDataMap;
