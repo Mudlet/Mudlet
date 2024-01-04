@@ -307,6 +307,7 @@ public:
 
     void activateProfile(Host*);
     void registerServer(MudletServer*);
+    MudletServer* getServer();
     void addConsoleForNewHost(Host*);
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();

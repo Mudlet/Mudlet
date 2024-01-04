@@ -238,6 +238,7 @@ set(mudlet_HDRS
     dlgVarsMainArea.h
     EAction.h
     exitstreewidget.h
+    FileOpenHandler.h
     FontManager.h
     GifTracker.h
     Host.h

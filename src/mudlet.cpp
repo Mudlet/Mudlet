@@ -4731,12 +4731,16 @@ void mudlet::activateProfile(Host* pHost)
 
     mpCurrentActiveHost->setFocusOnHostActiveCommandLine();
 
-    mServer->installPackagesLocally(mpCurrentActiveHost);
+    mServer->installPackagesToHost(mpCurrentActiveHost);
 }
 
 void mudlet::registerServer(MudletServer* server)
 {
     mServer = server;
+}
+MudletServer* mudlet::getServer()
+{
+    return mServer;
 }
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
 {

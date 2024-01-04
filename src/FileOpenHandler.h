@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2023-2024 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2024-2024 by Adam Robinson - seldon1951@hotmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,36 +17,34 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLETSERVER_H
-#define MUDLETSERVER_H
+#ifndef FILEOPENHANDLER_H
+#define FILEOPENHANDLER_H
 
-#include <QStringList>
-#include <QLocalServer>
-#include "Host.h"
+#include <mudlet.h>
+#include <QCoreApplication>
+#include <QDebug>
+#include <QFileOpenEvent>
 
-class MudletServer : public QLocalServer
-{
+class FileOpenHandler : public QObject {
     Q_OBJECT
 
 public:
-    explicit MudletServer(const QString& serverName, QObject* parent = nullptr);
-    bool tryToStart();
-    void queuePackage(const QString& packageName);
-    void installPackagesToHost(Host* activeProfile);
-    void installPackagesLocally();
-    bool installPackagesRemotely();
+    explicit FileOpenHandler(QObject *parent = nullptr) : QObject(parent) {
+        QCoreApplication::instance()->installEventFilter(this);
+    }
 
-protected:
-    void incomingConnection(quintptr socketDescriptor) override;
-
-private slots:
-    void handleReadyRead();
-    void handleDisconnected();
-
-private:
-    QMutex mMutex;
-    QString mServerName;
-    QStringList mQueuedPackagePaths;
+    bool eventFilter(QObject *obj, QEvent *event) override {
+        if (event->type() == QEvent::FileOpen) {
+            QFileOpenEvent *openEvent = static_cast<QFileOpenEvent *>(event);
+            Q_ASSERT(mudlet::self());
+            MudletServer* server = mudlet::self()->getServer();
+            const QString absPath = QDir(openEvent->file()).absolutePath();
+            server->queuePackage(absPath);
+            server->installPackagesLocally();
+            return true;
+        }
+        return QObject::eventFilter(obj, event);
+    }
 };
 
-#endif // MUDLETSERVER_H
+#endif //FILEOPENHANDLER_H

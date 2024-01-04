@@ -46,6 +46,7 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "Announcer.h"
+#include "FileOpenHandler.h"
 
 using namespace std::chrono_literals;
 
@@ -267,8 +268,7 @@ int main(int argc, char* argv[])
     parser.addOption(onlyPredefinedProfileToShow);
 
 
-    QCommandLineOption installPackage("package", "Install a package", "file_path");
-    parser.addOption(installPackage);
+    parser.addPositionalArgument("package", "Path to .mpackage file");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
 
@@ -290,7 +290,7 @@ int main(int argc, char* argv[])
 
     if (parser.isSet(showHelp)) {
         // Do "help" action
-        texts << appendLF.arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]",
+        texts << appendLF.arg(QCoreApplication::translate("main", "Usage: %1 [FILE] [OPTION...]",
                                                           // Comment to separate arguments
                                                           "%1 is the name of the executable as it is on this OS.")
                                          .arg(QLatin1String(APP_TARGET)));
@@ -330,7 +330,6 @@ int main(int argc, char* argv[])
                                                                   "                                    are relative to the Style Sheet file's path."));
 
         texts << appendLF.arg(QCoreApplication::translate("main", "       --stylesheet stylesheet      is the same as listed above."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       --package file_name   Install a package."));
 // Not sure about MacOS case as that does not use X
 #if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
         texts << appendLF.arg(QCoreApplication::translate("main", "       --sync                       forces the X server to perform each X client request\n"
@@ -373,22 +372,25 @@ int main(int argc, char* argv[])
 
 
 
-    // Handles installing a package via the --package flag
-    // Used when mudlet is used to open an .mpackage file
+    // Handles installing a package from a command line argument.
+    // Used when mudlet is used to open an .mpackage file on some operating systems.
     //
     // If Mudlet was already open:
-    // Send the package path to the other process and exit.
-    // The other process will take responsibility for installation.
-    // Installation will occur in currently open profile.
-    // If no profile is open, the packaage will be queued for install until a profile is selected.
+    // 1. Send the package path to the other process and exit.
+    // 2. The other process will take responsibility for installation.
+    // 3. If a profile is open, installation will occur in currently open profile.
+    // 4. If no profile is open, the package will be queued for install until a profile is selected.
     //
     // If no other mudlet process is found:
-    // this current process will start as normal.
-    // The package will be queued for install until a profile is selected.
-    MudletServer server("MudletUniqueServerName65");
+    // 1. This current process will start as normal.
+    // 2. The package will be queued for install until a profile is selected.
+
+    MudletServer server("MudletServer");
     const bool firstInstanceOfMudlet = server.tryToStart();
-    if (parser.isSet("package")){
-        const QString absPath = QDir(parser.value(installPackage)).absolutePath();
+
+    const QStringList positionalArguments = parser.positionalArguments();
+    if (!positionalArguments.isEmpty()){
+        const QString absPath = QDir(positionalArguments.first()).absolutePath();
         server.queuePackage(absPath);
         if (!firstInstanceOfMudlet) {
             const bool successful = server.installPackagesRemotely();
@@ -601,8 +603,19 @@ int main(int argc, char* argv[])
 
     mudlet::start();
 
-    // Pass ownership of Mudlet Server to mudlet
+#if defined(Q_OS_WIN)
+    // Associate mudlet with .mpackage files
+    QSettings settings("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
+    settings.setValue(".mpackage", "MudletPackage");
+    settings.setValue("MudletPackage/.", "Mudlet Package");
+    settings.setValue("MudletPackage/shell/open/command/.", "mudlet %1");
+#endif
+
+    // Pass ownership of Mudlet Server to mudlet.
     mudlet::self()->registerServer(&server);
+
+    // Handle "QEvent::FileOpen" events.
+    FileOpenHandler fileOpenHandler;
 
     if (first_launch) {
         // give Mudlet window decent size - most of the screen on non-HiDPI

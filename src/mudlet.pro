@@ -689,6 +689,7 @@ HEADERS += \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
+    FileOpenHandler.h \
     GifTracker.h \
     Host.h \
     HostManager.h \
