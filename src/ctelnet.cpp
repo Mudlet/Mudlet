@@ -1064,11 +1064,6 @@ QString cTelnet::getNewEnvironUserValueMTTS()
     return qsl("%1").arg(terminalStandards);
 }
 
-QString cTelnet::getNewEnvironUserValueIPAddress()
-{
-    return QString(); // Intentionally not implemented by Mudlet Makers
-}
-
 QString cTelnet::getNewEnvironUserValueANSI()
 {
     return qsl("1");
@@ -1076,17 +1071,12 @@ QString cTelnet::getNewEnvironUserValueANSI()
 
 QString cTelnet::getNewEnvironUserValueVT100()
 {
-    return QString();
+    return QString("0");
 }
 
 QString cTelnet::getNewEnvironUserValue256Colors()
 {
     return qsl("1");
-}
-
-QString cTelnet::getNewEnvironUserValueMouseTracking()
-{
-    return QString();
 }
 
 QString cTelnet::getNewEnvironUserValueUTF8()
@@ -1101,12 +1091,7 @@ QString cTelnet::getNewEnvironUserValueOSCColorPalette()
 
 QString cTelnet::getNewEnvironUserValueScreenReader()
 {
-    return mpHost->mAdvertiseScreenReader ? qsl("1") : QString();
-}
-
-QString cTelnet::getNewEnvironUserValueProxy()
-{
-    return QString();
+    return mpHost->mAdvertiseScreenReader ? qsl("1") : QString("0");
 }
 
 QString cTelnet::getNewEnvironUserValueTruecolor()
@@ -1119,7 +1104,7 @@ QString cTelnet::getNewEnvironUserValueTLS()
 #if !defined(QT_NO_SSL)
     return qsl("1");
 #else
-    return QString();
+    return QString("0");
 #endif
 }
 
@@ -1157,7 +1142,6 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("CLIENT_VERSION"), qMakePair(isUserVar, getNewEnvironUserValueClientVersion()));
     newEnvironDataMap.insert(qsl("MTTS"), qMakePair(isUserVar, getNewEnvironUserValueMTTS()));
     newEnvironDataMap.insert(qsl("TERMINAL_TYPE"), qMakePair(isUserVar, getNewEnvironUserValueTerminalType()));
-    newEnvironDataMap.insert(qsl("IPADDRESS"), qMakePair(isUserVar, getNewEnvironUserValueIPAddress()));
 
     if (mpHost->mEnableMNES) {
         return newEnvironDataMap;
@@ -1171,11 +1155,9 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     newEnvironDataMap.insert(qsl("ANSI"), qMakePair(isUserVar, getNewEnvironUserValueANSI()));
     newEnvironDataMap.insert(qsl("VT100"), qMakePair(isUserVar, getNewEnvironUserValueVT100()));
     newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserVar, getNewEnvironUserValue256Colors()));
-    newEnvironDataMap.insert(qsl("MOUSE_TRACKING"), qMakePair(isUserVar, getNewEnvironUserValueMouseTracking()));
     newEnvironDataMap.insert(qsl("UTF-8"), qMakePair(isUserVar, getNewEnvironUserValueUTF8()));
     newEnvironDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserVar, getNewEnvironUserValueOSCColorPalette()));
     newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironUserValueScreenReader()));
-    newEnvironDataMap.insert(qsl("PROXY"), qMakePair(isUserVar, getNewEnvironUserValueProxy()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironUserValueTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironUserValueTLS()));
     //newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getNewEnvironUserValueLanguage())); // Needs an OPT-IN to be enabled, next PR
