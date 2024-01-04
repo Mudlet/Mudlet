@@ -20,9 +20,9 @@
 #ifndef MUDLETSERVER_H
 #define MUDLETSERVER_H
 
-#include <QStringList>
-#include <QLocalServer>
 #include "Host.h"
+#include <QLocalServer>
+#include <QStringList>
 
 class MudletServer : public QLocalServer
 {
