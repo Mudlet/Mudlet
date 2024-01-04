@@ -284,7 +284,7 @@ QString cTelnet::errorString()
 QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const bool saveValue)
 {
     QByteArray reportedEncoding = newEncoding;
-    bool triggerUpdateNewEnvironValueMTTS = (mEncoding == "UTF-8" || newEncoding == "UTF-8");
+    bool updateNewEnviron = (mEncoding == "UTF-8" || newEncoding == "UTF-8");
 
     if (newEncoding.isEmpty() || newEncoding == "ASCII") {
         reportedEncoding = "ASCII";
@@ -333,7 +333,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
 
     sendInfoNewEnvironValue(qsl("CHARSET")); // Positioned here so we get ASCII updates too
 
-    if (triggerUpdateNewEnvironValueMTTS) {
+    if (updateNewEnviron) {
         sendInfoNewEnvironValue(qsl("UTF-8"));
         sendInfoNewEnvironValue(qsl("MTTS"));
     }
@@ -940,7 +940,8 @@ std::tuple<QString, int, bool> cTelnet::getConnectionInfo() const
     }
 }
 
-QByteArray cTelnet::escapeAndEncodeNewEnvironData(const QString &arg)
+// escapes and encodes data to be send over NEW ENVIRON and MNES
+QByteArray cTelnet::prepareNewEnvironData(const QString &arg)
 {
     QString ret = arg;
 
@@ -1015,7 +1016,7 @@ QString cTelnet::getNewEnvironUserValueClientVersion()
     /*
     * The valid characters for termType are more restricted than being ASCII
     * from https://tools.ietf.org/html/rfc1010 (page 29):
-    * "A terminal names may be up to 40 characters taken from the set of uppercase 
+    * "A terminal names may be up to 40 characters taken from the set of uppercase
     * letters, digits, and the two punctuation characters hyphen and slash.  It must
     * start with a letter, and end with a letter or digit."
     */
@@ -1199,13 +1200,13 @@ void cTelnet::sendInfoNewEnvironValue(const QString &var)
         output += OPT_NEW_ENVIRON;
         output += NEW_ENVIRON_INFO;
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += escapeAndEncodeNewEnvironData(var).toStdString();
+        output += prepareNewEnvironData(var).toStdString();
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += escapeAndEncodeNewEnvironData(val).toStdString();
+            output += prepareNewEnvironData(val).toStdString();
         }
 
         output += TN_IAC;
@@ -1245,14 +1246,14 @@ void cTelnet::appendAllNewEnvironValues(std::string &output, const bool isUserVa
         const QString val = newEnvironData.second;
 
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += escapeAndEncodeNewEnvironData(it.key()).toStdString();
+        output += prepareNewEnvironData(it.key()).toStdString();
         newEnvironVariablesSent.insert(it.key());
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += escapeAndEncodeNewEnvironData(val).toStdString();
+            output += prepareNewEnvironData(val).toStdString();
         }
 
         if (!isUserVar) {
@@ -1280,7 +1281,7 @@ void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, con
             // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
             // USERVAR, or IAC SE) then that variable is undefined.
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-            output += escapeAndEncodeNewEnvironData(var).toStdString();
+            output += prepareNewEnvironData(var).toStdString();
             newEnvironVariablesSent.insert(var);
 
             if (!isUserVar) {
@@ -1290,14 +1291,14 @@ void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, con
             }
         } else {
             output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-            output += escapeAndEncodeNewEnvironData(var).toStdString();
+            output += prepareNewEnvironData(var).toStdString();
             newEnvironVariablesSent.insert(var);
             output += NEW_ENVIRON_VAL;
 
             // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
             // variable is defined, but has no value.
             if (!val.isEmpty()) {
-                output += escapeAndEncodeNewEnvironData(val).toStdString();
+                output += prepareNewEnvironData(val).toStdString();
 
                 if (!isUserVar) {
                     qDebug() << "WE send NEW_ENVIRON VAR" << var << "VAL" << val;
@@ -1314,7 +1315,7 @@ void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, con
         // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
         // USERVAR, or IAC SE) then that variable is undefined.
         output += isUserVar ? NEW_ENVIRON_USERVAR : NEW_ENVIRON_VAR;
-        output += escapeAndEncodeNewEnvironData(var).toStdString();
+        output += prepareNewEnvironData(var).toStdString();
 
         if (!isUserVar) {
             qDebug() << "WE send NEW_ENVIRON VAR" << var << "with no VAL because we don't maintain it";
@@ -1344,8 +1345,8 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     output += OPT_NEW_ENVIRON;
     output += NEW_ENVIRON_IS;
 
-    int is_uservar = 0;
-    int is_var = 0;
+    bool is_uservar = false;
+    bool is_var = false;
     QString var;
 
     for (int i = 0; i < transcodedMsg.size(); ++i) {
@@ -1358,23 +1359,23 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
         if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
                 appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
-                var = "";
+                var = QString();
             } else if (is_var || is_uservar) {
                 appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
             }
 
-            is_uservar = 0;
-            is_var = 1;
+            is_uservar = false;
+            is_var = true;
         } else if (transcodedMsg.at(i) == NEW_ENVIRON_USERVAR) {
             if (!var.isEmpty()) {
                 appendNewEnvironValue(output, var, (is_uservar ? true : false), newEnvironDataMap);
-                var = "";
+                var = QString();
             } else if (is_var || is_uservar) {
                 appendAllNewEnvironValues(output, (is_uservar ? true : false), newEnvironDataMap);
             }
 
-            is_var = 0;
-            is_uservar = 1;
+            is_var = false;
+            is_uservar = true;
         } else {
             var.append(transcodedMsg.at(i));
         }
@@ -1390,7 +1391,7 @@ void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
     }
 
     output += TN_IAC;
-    output += TN_SE;     
+    output += TN_SE;
     socketOutRaw(output);
 }
 
@@ -1408,7 +1409,7 @@ void cTelnet::sendAllMNESValues()
     }
 
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
-        
+
     std::string output;
     output += TN_IAC;
     output += TN_SB;
@@ -1421,14 +1422,14 @@ void cTelnet::sendAllMNESValues()
         const QString val = newEnvironData.second;
 
         output += NEW_ENVIRON_VAR;
-        output += escapeAndEncodeNewEnvironData(it.key()).toStdString();
+        output += prepareNewEnvironData(it.key()).toStdString();
         newEnvironVariablesSent.insert(it.key());
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += escapeAndEncodeNewEnvironData(val).toStdString();
+            output += prepareNewEnvironData(val).toStdString();
             qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "VAL" << val;
         } else {
             qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << it.key() << "as an empty VAL";
@@ -1462,14 +1463,14 @@ void cTelnet::sendMNESValue(const QString &var, const QMap<QString, QPair<bool, 
         const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
         const QString val = newEnvironData.second;
 
-        output += escapeAndEncodeNewEnvironData(var).toStdString();
+        output += prepareNewEnvironData(var).toStdString();
         newEnvironVariablesSent.insert(var);
         output += NEW_ENVIRON_VAL;
 
         // RFC 1572: If a VALUE is immediately followed by a "type" or IAC, then the
         // variable is defined, but has no value.
         if (!val.isEmpty()) {
-            output += escapeAndEncodeNewEnvironData(val).toStdString();
+            output += prepareNewEnvironData(val).toStdString();
             qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "VAL" << val;
         } else {
             qDebug() << "WE send NEW_ENVIRON (MNES) VAR" << var << "as an empty VAL";
@@ -1477,14 +1478,14 @@ void cTelnet::sendMNESValue(const QString &var, const QMap<QString, QPair<bool, 
     } else {
         // RFC 1572: If a "type" is not followed by a VALUE (e.g., by another VAR,
         // USERVAR, or IAC SE) then that variable is undefined.
-        output += escapeAndEncodeNewEnvironData(var).toStdString();
+        output += prepareNewEnvironData(var).toStdString();
         output += NEW_ENVIRON_VAL;
 
         qDebug() << "WE send that we do not maintain NEW_ENVIRON (MNES) VAR" << var;
     }
 
     output += TN_IAC;
-    output += TN_SE;     
+    output += TN_SE;
     socketOutRaw(output);
 }
 
@@ -1518,7 +1519,7 @@ void cTelnet::sendIsMNESValues(const QByteArray& payload)
         if (transcodedMsg.at(i) == NEW_ENVIRON_VAR) {
             if (!var.isEmpty()) {
                 sendMNESValue(var, newEnvironDataMap);
-                var = "";
+                var = QString();
             }
 
             continue;
@@ -1648,7 +1649,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
                 qDebug() << "NEW_ENVIRON enabled";
             }
-    
+
             break;
         }
 
@@ -1973,13 +1974,13 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_NEW_ENVIRON) {
             // NEW_ENVIRON support per https://www.rfc-editor.org/rfc/rfc1572.txt
-            if (mpHost->mForceNewEnvironNegotiationOff) { // We WONT welcome the DO  
+            if (mpHost->mForceNewEnvironNegotiationOff) { // We WONT welcome the DO
                 sendTelnetOption(TN_WONT, option);
-    
+
                 if (enableNewEnviron) {
                     raiseProtocolEvent("sysProtocolDisabled", "NEW_ENVIRON");
                 }
-    
+
                 qDebug() << "Rejecting NEW_ENVIRON, because Force NEW_ENVIRON negotiation off is checked.";
             } else { // We have already negotiated the use of the option by us (We WILL welcome the DO)
                 sendTelnetOption(TN_WILL, OPT_NEW_ENVIRON);
@@ -1987,7 +1988,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 raiseProtocolEvent("sysProtocolEnabled", "NEW_ENVIRON");
                 qDebug() << "NEW_ENVIRON enabled";
             }
-    
+
             break;
         }
 
@@ -2194,7 +2195,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 sendIsMNESValues(payload);
                 return;
             }
- 
+
             sendIsNewEnvironValues(payload);
             return;
         }
