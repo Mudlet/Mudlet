@@ -19,6 +19,7 @@
 
 #include "FileOpenHandler.h"
 #include "MudletInstanceCoordinator.h"
+#include "mudlet.h"
 
 FileOpenHandler::FileOpenHandler(QObject* parent) : QObject(parent)
 {

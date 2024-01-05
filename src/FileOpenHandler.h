@@ -21,10 +21,7 @@
 #define FILEOPENHANDLER_H
 
 #include <QObject>
-#include <QCoreApplication>
-#include <QDebug>
 #include <QFileOpenEvent>
-#include <mudlet.h>
 
 class FileOpenHandler : public QObject
 {
