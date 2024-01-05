@@ -24,7 +24,7 @@
 
 #include "HostManager.h"
 #include "mudlet.h"
-#include "MudletServer.h"
+#include "MudletInstanceCoordinator.h"
 #include "pre_guard.h"
 #include <chrono>
 #include <QCommandLineParser>
@@ -390,15 +390,15 @@ int main(int argc, char* argv[])
     // 1. This current process will start as normal.
     // 2. The package will be queued for install until a profile is selected.
 
-    MudletServer server("MudletServer");
-    const bool firstInstanceOfMudlet = server.tryToStart();
+    MudletInstanceCoordinator instanceCoordinator("MudletInstanceCoordinator");
+    const bool firstInstanceOfMudlet = instanceCoordinator.tryToStart();
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
         const QString absPath = QDir(positionalArguments.first()).absolutePath();
-        server.queuePackage(absPath);
+        instanceCoordinator.queuePackage(absPath);
         if (!firstInstanceOfMudlet) {
-            const bool successful = server.installPackagesRemotely();
+            const bool successful = instanceCoordinator.installPackagesRemotely();
             if (successful) {
                 return 0;
             } else {
@@ -616,8 +616,8 @@ int main(int argc, char* argv[])
     settings.setValue("MudletPackage/shell/open/command/.", "mudlet %1");
 #endif
 
-    // Pass ownership of Mudlet Server to mudlet.
-    mudlet::self()->registerServer(&server);
+    // Pass ownership of MudletInstanceCoordinator to mudlet.
+    mudlet::self()->registerInstanceCoordinator(&instanceCoordinator);
 
     // Handle "QEvent::FileOpen" events.
     FileOpenHandler fileOpenHandler;

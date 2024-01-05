@@ -17,7 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "MudletServer.h"
+#include "MudletInstanceCoordinator.h"
 #include "Host.h"
 #include "mudlet.h"
 #include <QDebug>
@@ -25,16 +25,16 @@
 
 const int WAIT_FOR_RESPONSE_MS = 500;
 
-MudletServer::MudletServer(const QString& serverName, QObject* parent) : QLocalServer(parent), mServerName(serverName) {}
+MudletInstanceCoordinator::MudletInstanceCoordinator(const QString& serverName, QObject* parent) : QLocalServer(parent), mServerName(serverName) {}
 
-void MudletServer::queuePackage(const QString& packageName)
+void MudletInstanceCoordinator::queuePackage(const QString& packageName)
 {
     mQueuedPackagePaths << packageName;
 }
 
 // Install the package queue on another instance of Mudlet.
 // Returns true on success
-bool MudletServer::installPackagesRemotely()
+bool MudletInstanceCoordinator::installPackagesRemotely()
 {
     // Pass the absolute path of the package to the active Mudlet Server
     // The Mudlet Server may be owned by this process or another process.
@@ -54,7 +54,7 @@ bool MudletServer::installPackagesRemotely()
 
 // Attempt to start the Mudlet Server, return true if successful.
 // If a server was already running, cancel the attempt and return false.
-bool MudletServer::tryToStart()
+bool MudletInstanceCoordinator::tryToStart()
 {
     QLocalSocket socket;
     socket.connectToServer(mServerName);
@@ -70,7 +70,7 @@ bool MudletServer::tryToStart()
 
 // Install all queued packages to a specified profile/host.
 // Mudlet will call this function whenever a profile is activated.
-void MudletServer::installPackagesToHost(Host* activeProfile)
+void MudletInstanceCoordinator::installPackagesToHost(Host* activeProfile)
 {
     mMutex.lock();
     foreach(const QString& path, mQueuedPackagePaths) {
@@ -80,17 +80,17 @@ void MudletServer::installPackagesToHost(Host* activeProfile)
     mMutex.unlock();
 }
 
-void MudletServer::incomingConnection(quintptr socketDescriptor)
+void MudletInstanceCoordinator::incomingConnection(quintptr socketDescriptor)
 {
     QLocalSocket* socket = new QLocalSocket(this);
     socket->setSocketDescriptor(socketDescriptor);
 
-    connect(socket, &QLocalSocket::readyRead, this, &MudletServer::handleReadyRead);
-    connect(socket, &QLocalSocket::disconnected, this, &MudletServer::handleDisconnected);
+    connect(socket, &QLocalSocket::readyRead, this, &MudletInstanceCoordinator::handleReadyRead);
+    connect(socket, &QLocalSocket::disconnected, this, &MudletInstanceCoordinator::handleDisconnected);
 }
 
 // Receive package paths and install them
-void MudletServer::handleReadyRead()
+void MudletInstanceCoordinator::handleReadyRead()
 {
     QLocalSocket* socket = qobject_cast<QLocalSocket*>(sender());
     if (!socket) {
@@ -108,7 +108,7 @@ void MudletServer::handleReadyRead()
 }
 
 // Find the active host and install queued packages to it
-void MudletServer::installPackagesLocally()
+void MudletInstanceCoordinator::installPackagesLocally()
 {
     QTimer::singleShot(0, this, [this]() {
         mudlet* mudletApp = mudlet::self();
@@ -122,7 +122,7 @@ void MudletServer::installPackagesLocally()
     });
 }
 
-void MudletServer::handleDisconnected()
+void MudletInstanceCoordinator::handleDisconnected()
 {
     QLocalSocket* socket = qobject_cast<QLocalSocket*>(sender());
     if (socket) {

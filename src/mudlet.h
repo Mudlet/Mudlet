@@ -27,7 +27,7 @@
  ***************************************************************************/
 
 #include "Announcer.h"
-#include "MudletServer.h"
+#include "MudletInstanceCoordinator.h"
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
@@ -306,8 +306,8 @@ public:
 
 
     void activateProfile(Host*);
-    void registerServer(MudletServer*);
-    MudletServer* getServer();
+    void registerInstanceCoordinator(MudletInstanceCoordinator*);
+    MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
@@ -476,7 +476,7 @@ public:
     QSystemTrayIcon mTrayIcon;
     bool mUsingMudletDictionaries = false;
     bool mWindowMinimized = false;
-    MudletServer* mServer;
+    MudletInstanceCoordinator* mInstanceCoordinator;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
 

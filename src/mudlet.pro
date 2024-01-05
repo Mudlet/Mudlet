@@ -587,7 +587,7 @@ SOURCES += \
     main.cpp \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
-    MudletServer.cpp \
+    MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
     ShortcutsManager.cpp \
@@ -705,7 +705,7 @@ HEADERS += \
     LuaInterface.h \
     mapInfoContributorManager.h \
     mudlet.h \
-    MudletServer.h \
+    MudletInstanceCoordinator.h \
     MxpTag.h \
     pre_guard.h \
     post_guard.h \

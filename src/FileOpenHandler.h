@@ -20,6 +20,7 @@
 #ifndef FILEOPENHANDLER_H
 #define FILEOPENHANDLER_H
 
+#include "MudletInstanceCoordinator.h"
 #include <QCoreApplication>
 #include <QDebug>
 #include <QFileOpenEvent>
@@ -37,10 +38,10 @@ public:
         if (event->type() == QEvent::FileOpen) {
             QFileOpenEvent* openEvent = static_cast<QFileOpenEvent*>(event);
             Q_ASSERT(mudlet::self());
-            MudletServer* server = mudlet::self()->getServer();
+            MudletInstanceCoordinator* instanceCoordinator = mudlet::self()->getInstanceCoordinator();
             const QString absPath = QDir(openEvent->file()).absolutePath();
-            server->queuePackage(absPath);
-            server->installPackagesLocally();
+            instanceCoordinator->queuePackage(absPath);
+            instanceCoordinator->installPackagesLocally();
             return true;
         }
         return QObject::eventFilter(obj, event);

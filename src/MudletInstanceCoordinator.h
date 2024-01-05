@@ -17,19 +17,19 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLETSERVER_H
-#define MUDLETSERVER_H
+#ifndef MUDLETINSTANCECOORDINATOR_H
+#define MUDLETINSTANCECOORDINATOR_H
 
 #include "Host.h"
 #include <QLocalServer>
 #include <QStringList>
 
-class MudletServer : public QLocalServer
+class MudletInstanceCoordinator : public QLocalServer
 {
     Q_OBJECT
 
 public:
-    explicit MudletServer(const QString& serverName, QObject* parent = nullptr);
+    explicit MudletInstanceCoordinator(const QString& serverName, QObject* parent = nullptr);
     bool tryToStart();
     void queuePackage(const QString& packageName);
     void installPackagesToHost(Host* activeProfile);
@@ -49,4 +49,4 @@ private:
     QStringList mQueuedPackagePaths;
 };
 
-#endif // MUDLETSERVER_H
+#endif // MUDLETINSTANCECOORDINATOR_H
