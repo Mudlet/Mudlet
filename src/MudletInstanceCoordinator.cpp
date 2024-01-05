@@ -72,7 +72,7 @@ bool MudletInstanceCoordinator::tryToStart()
 void MudletInstanceCoordinator::installPackagesToHost(Host* activeProfile)
 {
     mMutex.lock();
-    foreach(const QString& path, mQueuedPackagePaths) {
+    for (const QString& path : mQueuedPackagePaths) {
         auto ret = activeProfile->installPackage(path, 0);
     }
     mQueuedPackagePaths.clear();
