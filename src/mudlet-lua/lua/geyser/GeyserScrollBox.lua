@@ -1,6 +1,5 @@
 --- Represents a ScrollBox primitive.
 -- <br/>See also: <a href="https://wiki.mudlet.org/w/Manual:Geyser#Add_a_scrollable_box">Mudlet Manual</a>
-
 -- @author guy
 -- @author Edru
 -- @module Geyser.ScrollBox
