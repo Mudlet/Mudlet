@@ -49,9 +49,9 @@
 #include "post_guard.h"
 
 extern "C" {
-#include <lauxlib.h>
-#include <lua.h>
-#include <lualib.h>
+    #include <lauxlib.h>
+    #include <lua.h>
+    #include <lualib.h>
 }
 
 #include <list>
@@ -285,6 +285,7 @@ public:
     static int sendTelnetChannel102(lua_State*);
     static int isPrompt(lua_State*);
     static int feedTriggers(lua_State*);
+    static int feedTelnet(lua_State*);
     static int Wait(lua_State*);
     static int expandAlias(lua_State*);
     static int sendRaw(lua_State*);
@@ -713,7 +714,6 @@ public slots:
     void slot_deleteSender(int, QProcess::ExitStatus);
 
 private:
-    bool callReference(lua_State*, QString name, int parameters);
     static bool getVerifiedBool(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static int getVerifiedInt(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -723,30 +723,15 @@ private:
     static void errorArgumentType(lua_State*, const char* functionName, const int pos, const char* publicName, const char* publicType, const bool isOptional = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const QString& message, const bool useFalseInsteadofNil = false);
     static int warnArgumentValue(lua_State*, const char* functionName, const char* message, const bool useFalseInsteadofNil = false);
-    void logError(std::string& e, const QString&, const QString& function);
-    void logEventError(const QString& event, const QString& error);
     static int setLabelCallback(lua_State*, const QString& funcName);
     static int movieFunc(lua_State*, const QString& funcName);
-    std::pair<bool, QString> validLuaCode(const QString &code);
-    std::pair<bool, QString> validateLuaCodeParam(int index);
-    QByteArray encodeBytes(const char*);
-    void setMatches(lua_State*);
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
-    void setupLanguageData();
-    QString readScriptFile(const QString& path) const;
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const QString& verb);
-    void handleHttpOK(QNetworkReply*);
     static void raiseDownloadProgressEvent(lua_State*, QString, qint64, qint64);
-#if defined(Q_OS_WIN32)
-    void loadUtf8Filenames();
-#endif
-    void insertColorTableEntry(lua_State*, const QColor&, const QString&);
     // The last argument is only needed if the third one is true:
     static void generateElapsedTimeTable(lua_State*, const QStringList&, const bool, const qint64 elapsedTimeMilliSeconds = 0);
     static std::tuple<bool, int> getWatchId(lua_State*, Host&);
-    bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
-    void insertNativeSeparatorsFunction(lua_State*);
     static void pushMapLabelPropertiesToLua(lua_State*, const TMapLabel& label);
     static std::pair<int, TAction*> getTActionFromIdOrName(lua_State*, const int, const char*);
     static int loadMediaFileAsOrderedArguments(lua_State*);
@@ -762,11 +747,33 @@ private:
     static void parseCommandOrFunction(lua_State*, const char*, int&, QString&, int&);
     static void parseCommandsOrFunctionsTable(lua_State*, const char*, int&, QStringList&, QVector<int>&);
     static void parseHintsTable(lua_State*, const char*, int&, QStringList&);
+    static QByteArray parseTelnetCodes(const QByteArray&);
+
+    bool callReference(lua_State*, QString name, int parameters);
+    void logError(std::string& e, const QString&, const QString& function);
+    void logEventError(const QString& event, const QString& error);
+    std::pair<bool, QString> validLuaCode(const QString &code);
+    std::pair<bool, QString> validateLuaCodeParam(int index);
+    QByteArray encodeBytes(const char*);
+    void setMatches(lua_State*);
+    void setupLanguageData();
+    QString readScriptFile(const QString& path) const;
+    void handleHttpOK(QNetworkReply*);
+#if defined(Q_OS_WIN32)
+    void loadUtf8Filenames();
+#endif
+
+    void insertColorTableEntry(lua_State*, const QColor&, const QString&);
     struct lua_state_deleter {
         void operator()(lua_State* ptr) const noexcept {
             lua_close(ptr);
         }
     };
+
+
+    bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
+    void insertNativeSeparatorsFunction(lua_State*);
+
 
     const int LUA_FUNCTION_MAX_ARGS = 50;
     std::list<std::string> mCaptureGroupList;
