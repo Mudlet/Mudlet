@@ -175,7 +175,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     #     "file_remote" = $Env:DEPLOY_URL
     #     "file_name" = "Mudlet-$Env:VERSION (Windows)"
     #     "file_des" = "sha256: $SHA256SUM"
-    #     "file_cat" = "3"
+    #     "file_cat" = "0"
     #     "file_permission" = "-1"
     #     "output" = "json"
     #     "do" = "Add File"
