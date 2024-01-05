@@ -167,6 +167,8 @@ private slots:
     void slot_changeControlCharacterHandling();
     void slot_enableDarkEditor(const QString&);
     void slot_toggleMapDeleteButton(const bool);
+    void slot_toggleAdvertiseScreenReader(const bool);
+    void slot_changeWrapAt();
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_hidePasswordMigrationLabel();
