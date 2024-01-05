@@ -3201,7 +3201,7 @@ function map.export_area(name)
 	roomChar = getRoomChar(v)
         coords = {getRoomCoordinates(v)}
         tbl.rooms[v] = {name = rname, coords = coords, exits = exits, stubs = stubs, doors = doors, door_up = door_up,
-            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment, roomChar}
+            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment, roomChar = roomChar}
         tmp = {}
         for k1,v1 in pairs(exits) do
             if not table.contains(rooms,v1) then
