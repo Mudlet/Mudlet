@@ -991,19 +991,19 @@ QString cTelnet::getNewEnvironValueSystemType()
     return systemType.isEmpty() ? QString(): systemType;
 }
 
-QString cTelnet::getNewEnvironUserValueCharset()
+QString cTelnet::getNewEnvironCharset()
 {
     const QString charsetEncoding = getEncoding();
 
     return !charsetEncoding.isEmpty() ? charsetEncoding : qsl("ASCII");
 }
 
-QString cTelnet::getNewEnvironUserValueClientName()
+QString cTelnet::getNewEnvironClientName()
 {
     return qsl("MUDLET");
 }
 
-QString cTelnet::getNewEnvironUserValueClientVersion()
+QString cTelnet::getNewEnvironClientVersion()
 {
     QString clientVersion = APP_VERSION;
     static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
@@ -1037,12 +1037,12 @@ QString cTelnet::getNewEnvironUserValueClientVersion()
     return clientVersion;
 }
 
-QString cTelnet::getNewEnvironUserValueTerminalType()
+QString cTelnet::getNewEnvironTerminalType()
 {
     return qsl("ANSI-TRUECOLOR");
 }
 
-QString cTelnet::getNewEnvironUserValueMTTS()
+QString cTelnet::getNewEnvironMTTS()
 {
     int terminalStandards = MTTS_STD_ANSI|MTTS_STD_256_COLORS|MTTS_STD_OSC_COLOR_PALETTE|MTTS_STD_TRUECOLOR;
 
@@ -1065,42 +1065,42 @@ QString cTelnet::getNewEnvironUserValueMTTS()
     return qsl("%1").arg(terminalStandards);
 }
 
-QString cTelnet::getNewEnvironUserValueANSI()
+QString cTelnet::getNewEnvironANSI()
 {
     return qsl("1");
 }
 
-QString cTelnet::getNewEnvironUserValueVT100()
+QString cTelnet::getNewEnvironVT100()
 {
     return QString("0");
 }
 
-QString cTelnet::getNewEnvironUserValue256Colors()
+QString cTelnet::getNewEnviron256Colors()
 {
     return qsl("1");
 }
 
-QString cTelnet::getNewEnvironUserValueUTF8()
+QString cTelnet::getNewEnvironUTF8()
 {
     return getEncoding() == "UTF-8" ? qsl("1") : QString();
 }
 
-QString cTelnet::getNewEnvironUserValueOSCColorPalette()
+QString cTelnet::getNewEnvironOSCColorPalette()
 {
     return qsl("1");
 }
 
-QString cTelnet::getNewEnvironUserValueScreenReader()
+QString cTelnet::getNewEnvironScreenReader()
 {
     return mpHost->mAdvertiseScreenReader ? qsl("1") : QString("0");
 }
 
-QString cTelnet::getNewEnvironUserValueTruecolor()
+QString cTelnet::getNewEnvironTruecolor()
 {
     return qsl("1");
 }
 
-QString cTelnet::getNewEnvironUserValueTLS()
+QString cTelnet::getNewEnvironTLS()
 {
 #if !defined(QT_NO_SSL)
     return qsl("1");
@@ -1109,22 +1109,22 @@ QString cTelnet::getNewEnvironUserValueTLS()
 #endif
 }
 
-QString cTelnet::getNewEnvironUserValueLanguage()
+QString cTelnet::getNewEnvironLanguage()
 {
     return mudlet::self()->getInterfaceLanguage();
 }
 
-QString cTelnet::getNewEnvironUserValueFont()
+QString cTelnet::getNewEnvironFont()
 {
     return mpHost->getDisplayFont().family();
 }
 
-QString cTelnet::getNewEnvironUserValueFontSize()
+QString cTelnet::getNewEnvironFontSize()
 {
     return qsl("%1").arg(mpHost->getDisplayFont().pointSize());
 }
 
-QString cTelnet::getNewEnvironUserValueWordWrap()
+QString cTelnet::getNewEnvironWordWrap()
 {
     return qsl("%1").arg(mpHost->mWrapAt);
 }
@@ -1138,11 +1138,11 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     // * These will be be requested with NEW_ENVIRON_VAR for the MNES protocol
     // * "IPADDRESS" Intentionally not implemented by Mudlet Makers
     // * These will be used by NEW_ENVIRON as well and be requested with NEW_ENVIRON_USERVAR
-    newEnvironDataMap.insert(qsl("CHARSET"), qMakePair(isUserVar, getNewEnvironUserValueCharset()));
-    newEnvironDataMap.insert(qsl("CLIENT_NAME"), qMakePair(isUserVar, getNewEnvironUserValueClientName()));
-    newEnvironDataMap.insert(qsl("CLIENT_VERSION"), qMakePair(isUserVar, getNewEnvironUserValueClientVersion()));
-    newEnvironDataMap.insert(qsl("MTTS"), qMakePair(isUserVar, getNewEnvironUserValueMTTS()));
-    newEnvironDataMap.insert(qsl("TERMINAL_TYPE"), qMakePair(isUserVar, getNewEnvironUserValueTerminalType()));
+    newEnvironDataMap.insert(qsl("CHARSET"), qMakePair(isUserVar, getNewEnvironCharset()));
+    newEnvironDataMap.insert(qsl("CLIENT_NAME"), qMakePair(isUserVar, getNewEnvironClientName()));
+    newEnvironDataMap.insert(qsl("CLIENT_VERSION"), qMakePair(isUserVar, getNewEnvironClientVersion()));
+    newEnvironDataMap.insert(qsl("MTTS"), qMakePair(isUserVar, getNewEnvironMTTS()));
+    newEnvironDataMap.insert(qsl("TERMINAL_TYPE"), qMakePair(isUserVar, getNewEnvironTerminalType()));
 
     if (mpHost->mEnableMNES) {
         return newEnvironDataMap;
@@ -1153,22 +1153,23 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
     //newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserVar, getNewEnvironValueSystemType())); // Needs an OPT-IN to be enabled, next PR
 
     // Per https://www.rfc-editor.org/rfc/rfc1572.txt, others will be requested with NEW_ENVIRON_USERVAR
-    newEnvironDataMap.insert(qsl("ANSI"), qMakePair(isUserVar, getNewEnvironUserValueANSI()));
-    newEnvironDataMap.insert(qsl("VT100"), qMakePair(isUserVar, getNewEnvironUserValueVT100()));
-    newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserVar, getNewEnvironUserValue256Colors()));
-    newEnvironDataMap.insert(qsl("UTF-8"), qMakePair(isUserVar, getNewEnvironUserValueUTF8()));
-    newEnvironDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserVar, getNewEnvironUserValueOSCColorPalette()));
-    newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironUserValueScreenReader()));
-    newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironUserValueTruecolor()));
-    newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironUserValueTLS()));
-    //newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getNewEnvironUserValueLanguage())); // Needs an OPT-IN to be enabled, next PR
-    //newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getNewEnvironUserValueFont())); // Needs an OPT-IN to be enabled, next PR
-    //newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getNewEnvironUserValueFontSize())); // Needs an OPT-IN to be enabled, next PR
-    newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getNewEnvironUserValueWordWrap()));
+    newEnvironDataMap.insert(qsl("ANSI"), qMakePair(isUserVar, getNewEnvironANSI()));
+    newEnvironDataMap.insert(qsl("VT100"), qMakePair(isUserVar, getNewEnvironVT100()));
+    newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserVar, getNewEnviron256Colors()));
+    newEnvironDataMap.insert(qsl("UTF-8"), qMakePair(isUserVar, getNewEnvironUTF8()));
+    newEnvironDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserVar, getNewEnvironOSCColorPalette()));
+    newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
+    newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
+    newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));
+    //newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getNewEnvironLanguage())); // Needs an OPT-IN to be enabled, next PR
+    //newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getNewEnvironFont())); // Needs an OPT-IN to be enabled, next PR
+    //newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getNewEnvironFontSize())); // Needs an OPT-IN to be enabled, next PR
+    newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getNewEnvironWordWrap()));
 
     return newEnvironDataMap;
 }
 
+// SEND INFO per https://www.rfc-editor.org/rfc/rfc1572
 void cTelnet::sendInfoNewEnvironValue(const QString &var)
 {
     if (!enableNewEnviron || mpHost->mForceNewEnvironNegotiationOff) {
@@ -1325,6 +1326,7 @@ void cTelnet::appendNewEnvironValue(std::string &output, const QString &var, con
     }
 }
 
+// SEND IS per https://www.rfc-editor.org/rfc/rfc1572
 void cTelnet::sendIsNewEnvironValues(const QByteArray& payload)
 {
     const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
@@ -2517,7 +2519,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                     switch (mCycleCountMTTS) {
                         case 0: {
-                            const QString clientNameAndVersion = qsl("%1-%2").arg(getNewEnvironUserValueClientName(), getNewEnvironUserValueClientVersion());
+                            const QString clientNameAndVersion = qsl("%1-%2").arg(getNewEnvironClientName(), getNewEnvironClientVersion());
                             cmd += clientNameAndVersion.toStdString(); // Example: MUDLET-4/17/2-DEV
 
                             if (mpHost->mEnableMTTS) { // If we don't MTTS, remainder of the cases do not execute.
@@ -2532,7 +2534,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
 
                         case 1: {
-                            const QString mttsTerminalType = getNewEnvironUserValueTerminalType();
+                            const QString mttsTerminalType = getNewEnvironTerminalType();
                             cmd += mttsTerminalType.toStdString(); // Example: ANSI-TRUECOLOR
                             mCycleCountMTTS++;
                             qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << mttsTerminalType;
@@ -2540,7 +2542,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         }
 
                         default: {
-                            const QString mttsTerminalStandards = getNewEnvironUserValueMTTS();
+                            const QString mttsTerminalStandards = getNewEnvironMTTS();
                             cmd += qsl("MTTS %1").arg(mttsTerminalStandards).toStdString(); // Example: MTTS 2349
 
                             if (mCycleCountMTTS == 2) {
