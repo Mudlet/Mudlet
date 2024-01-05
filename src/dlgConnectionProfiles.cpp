@@ -332,14 +332,16 @@ void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList package
     }
 
     QWidget widget;
-    QGroupBox* packageGroupBox = new QGroupBox("Choose a profile to install the following package(s) into:", this);
+    QGroupBox* packageGroupBox = new QGroupBox("Select and load a profile to install the following package(s) into:", this);
     QVBoxLayout* packageInfoLayout = new QVBoxLayout(packageGroupBox);
 
     packageInfoLayout->setContentsMargins(8, 8, 8, 8);
     packageGroupBox->setStyleSheet("QGroupBox:title { padding-left: 8px; }");
 
     for (const QString &package : packages) {
-        QLabel *packageLabel = new QLabel(package);
+        QFileInfo fileInfo(package);
+        QString packageName = fileInfo.baseName();
+        QLabel *packageLabel = new QLabel(packageName);
         packageInfoLayout->addWidget(packageLabel);
     }
 
