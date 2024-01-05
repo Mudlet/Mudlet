@@ -35,6 +35,7 @@ public:
     void installPackagesToHost(Host* activeProfile);
     void installPackagesLocally();
     bool installPackagesRemotely();
+    QStringList readPackageQueue();
 
 protected:
     void incomingConnection(quintptr socketDescriptor) override;

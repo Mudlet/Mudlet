@@ -117,9 +117,17 @@ void MudletInstanceCoordinator::installPackagesLocally()
         if (activeHost) {
             installPackagesToHost(activeHost);
         } else {
+            qDebug() << "Showing conneciton dialog";
+            std::cout<<"sfsdfsdfs!!!";
             mudletApp->slot_showConnectionDialog();
         }
     });
+}
+
+
+QStringList MudletInstanceCoordinator::readPackageQueue()
+{
+    return mQueuedPackagePaths;
 }
 
 void MudletInstanceCoordinator::handleDisconnected()

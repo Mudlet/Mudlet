@@ -2128,6 +2128,9 @@ void mudlet::slot_showConnectionDialog()
     connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
     mpConnectionDialog->fillout_form();
 
+    QStringList packagesToInstall = mInstanceCoordinator->readPackageQueue();
+    mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
+
     connect(mpConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
     mpConnectionDialog->show();

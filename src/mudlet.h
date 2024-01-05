@@ -389,6 +389,7 @@ public:
     void setToolBarIconSize(int);
     void setToolBarVisibility(controlsVisibility);
     void showChangelogIfUpdated();
+    void slot_showConnectionDialog();
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
@@ -518,7 +519,6 @@ public slots:
     void slot_restoreMainMenu() { setMenuBarVisibility(visibleAlways); }
     void slot_restoreMainToolBar() { setToolBarVisibility(visibleAlways); }
     void slot_showAboutDialog();
-    void slot_showConnectionDialog();
     void slot_showHelpDialogForum();
 // Not used:    void slot_showHelpDialogIrc();
     void slot_showHelpDialogVideo();
