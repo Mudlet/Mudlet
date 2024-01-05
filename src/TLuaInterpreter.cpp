@@ -1803,6 +1803,299 @@ int TLuaInterpreter::paste(lua_State* L)
     return 0;
 }
 
+// Internal helper for feedTelnet(...) and socketRaw(...) that enables the
+// construction of data with bytes that cannot be prepared by normal means
+// - including embedded nulls - for testing off-line and for writing protocol
+// handlers for those that Mudlet does not provide itself respectively:
+// Note: although "<<" and ">>" are extra codes that convert to '<' and '>'
+// respectively this looks as though singular instances of either - or
+// unrecognised "tags" with unknown other characters between them will still be
+// passed through unchanged.
+QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
+{
+    // Increment the version - and document below - any changes to the table:
+    const int tableVersion = 1;
+    // Changes:
+    // 1 - Initial version.
+
+    /*
+     * Entry grouping
+     * * Hex digits
+     * * `O_` prefix - well known Telnet sub-option (less common/relevant ones ommitted)
+     * * ASCII character abbreviation
+     * * `T_` prefix - Telnet control code
+     */
+    const QHash<QByteArray, unsigned char> lookupTable = {
+        {QByteArray("<00>"), '\0'},
+        {QByteArray("<O_BINARY>"), '\0'},
+        {QByteArray("<NUL>"), '\0'},
+
+        {QByteArray("<01>"), '\x01'},
+        {QByteArray("<O_ECHO>"), '\x01'},
+        {QByteArray("<SOH>"), '\x01'},
+
+        {QByteArray("<02>"), '\x02'}, // Reconnect
+        {QByteArray("<STX>"), '\x02'},
+
+        {QByteArray("<03>"), '\x03'},
+        {QByteArray("<O_SGA>"), '\x03'},
+        {QByteArray("<ETX>"), '\x03'},
+
+        {QByteArray("<04>"), '\x04'}, // Approx Message Size Negotiation
+        {QByteArray("<EOT>"), '\x04'},
+
+        {QByteArray("<05>"), '\x05'},
+        {QByteArray("<O_STATUS>"), '\x05'},
+        {QByteArray("<ENQ>"), '\x05'},
+
+        {QByteArray("<06>"), '\x06'}, // Timing Mark
+        {QByteArray("<ACK>"), '\x06'},
+
+        {QByteArray("<07>"), '\x07'}, // Remote Controlled Trans and Echo
+        {QByteArray("<BELL>"), '\x07'},
+
+        {QByteArray("<08>"), '\x08'}, // Output Line Width
+        {QByteArray("<BS>"), '\x08'},
+
+        {QByteArray("<09>"), '\x09'}, // Output Page Size
+        {QByteArray("<HTAB>"), '\x09'},
+
+        {QByteArray("<0A>"), '\x0a'}, // Output Carriage-Return Disposition
+        {QByteArray("<LF>"), '\x0a'},
+
+        {QByteArray("<0B>"), '\x0b'}, // Output Horizontal Tab Stops
+        {QByteArray("<VTAB>"), '\x0b'},
+
+        {QByteArray("<0C>"), '\x0c'}, // Output Horizontal Tab Disposition
+        {QByteArray("<FF>"), '\x0c'},
+
+        {QByteArray("<0D>"), '\x0d'}, // Output Formfeed Disposition
+        {QByteArray("<CR>"), '\x0d'},
+
+        {QByteArray("<0E>"), '\x0e'}, // Output Vertical Tab Stops
+        {QByteArray("<SO>"), '\x0e'},
+
+        {QByteArray("<0F>"), '\x0f'}, // Output Vertical Tab Disposition
+        {QByteArray("<SI>"), '\x0f'},
+
+        {QByteArray("<10>"), '\x10'}, // Output Linefeed Disposition
+        {QByteArray("<DLE>"), '\x10'},
+
+        {QByteArray("<11>"), '\x11'}, // Extended ASCII
+        {QByteArray("<DC1>"), '\x11'},
+
+        {QByteArray("<12>"), '\x12'}, // Logout
+        {QByteArray("<DC2"), '\x12'},
+
+        {QByteArray("<13>"), '\x13'}, // Byte Macro
+        {QByteArray("<DC3>"), '\x13'},
+
+        {QByteArray("<14>"), '\x14'}, // Data Entry Terminal
+        {QByteArray("<DC4>"), '\x14'},
+
+        {QByteArray("<15>"), '\x15'}, // SUPDUP
+        {QByteArray("<NAK>"), '\x15'},
+
+        {QByteArray("<16>"), '\x16'}, // SUPDUP Output
+        {QByteArray("<SYN>"), '\x16'},
+
+        {QByteArray("<17>"), '\x17'}, // Send location
+        {QByteArray("<ETB>"), '\x17'},
+
+        {QByteArray("<18>"), '\x18'},
+        {QByteArray("<O_TERM>"), '\x18'},
+        {QByteArray("<CAN>"), '\x18'},
+
+        {QByteArray("<19>"), '\x19'},
+        {QByteArray("<O_EOR>"), '\x19'},
+        {QByteArray("<EM>"), '\x19'},
+
+        {QByteArray("<1A>"), '\x1a'}, // TACACS User Identification
+        {QByteArray("<SUB>"), '\x1a'},
+
+        {QByteArray("<1B>"), '\x1b'}, // Output Marking
+        {QByteArray("<ESC>"), '\x1b'},
+
+        {QByteArray("<1C>"), '\x1c'}, // Terminal Location Number
+        {QByteArray("<FS>"), '\x1c'},
+
+        {QByteArray("<1D>"), '\x1d'}, // Telnet 3270 Regime
+        {QByteArray("<GS>"), '\x1d'},
+
+        {QByteArray("<1E>"), '\x1e'}, // X.3 PAD
+        {QByteArray("<RS>"), '\x1e'},
+
+        {QByteArray("<1F>"), '\x1f'},
+        {QByteArray("<O_NAWS>"), '\x1f'},
+        {QByteArray("<US>"), '\x1f'},
+
+        {QByteArray("<SP>"), '\x20'}, // 32 dec, Space
+
+        {QByteArray("<O_NENV>"), '\x27'}, // 39 dec, New Environment (also MNES)
+
+        {QByteArray("<O_CHARS>"), '\x2a'}, // 42 dec, Character Set
+
+        {QByteArray("<O_KERMIT>"), '\x2f'}, // 47 dec
+
+        {QByteArray("<O_MSDP>"), '\x45'}, // 69 dec
+
+        {QByteArray("<O_MSSP>"), '\x46'}, // 70 dec
+
+        {QByteArray("<O_MCCP>"), '\x55'}, // 85 dec
+
+        {QByteArray("<O_MCCP2>"), '\x56'}, // 86 dec
+
+        {QByteArray("<O_MSP>"), '\x5a'}, // 90 dec
+
+        {QByteArray("<O_MXP>"), '\x5b'}, // 91 dec
+
+        {QByteArray("<O_ZENITH>"), '\x5d'}, // 93 dec
+
+        {QByteArray("<O_AARDWULF>"), '\x66'}, // 102 dec
+
+        {QByteArray("<DEL>"), '\x7f'}, // 127 dec
+
+        {QByteArray("<O_ATCP>"), '\xc8'}, // 200 dec
+
+        {QByteArray("<O_GMCP>"), '\xc9'}, // 201 dec
+
+        {QByteArray("<T_EOR>"), '\xef'}, // 239 dec
+
+        {QByteArray("<F0>"), '\xf0'},
+        {QByteArray("<T_SE>"), '\xf0'},
+
+        {QByteArray("<F1>"), '\xf1'},
+        {QByteArray("<T_NOP>"), '\xf1'},
+
+        {QByteArray("<F2>"), '\xf2'},
+        {QByteArray("<T_DM>"), '\xf2'},
+
+        {QByteArray("<F3>"), '\xf3'},
+        {QByteArray("<T_BRK>"), '\xf3'},
+
+        {QByteArray("<F4>"), '\xf4'},
+        {QByteArray("<T_IP>"), '\xf4'},
+
+        {QByteArray("<F5>"), '\xf5'},
+        {QByteArray("<T_ABOP>"), '\xf5'},
+
+        {QByteArray("<F6>"), '\xf6'},
+        {QByteArray("<T_AYT>"), '\xf6'},
+
+        {QByteArray("<F7>"), '\xf7'},
+        {QByteArray("<T_EC>"), '\xf7'},
+
+        {QByteArray("<F8>"), '\xf8'},
+        {QByteArray("<T_EL>"), '\xf8'},
+
+        {QByteArray("<F9>"), '\xf9'},
+        {QByteArray("<T_GA>"), '\xf9'},
+
+        {QByteArray("<FA>"), '\xfa'},
+        {QByteArray("<T_SB>"), '\xfa'},
+
+        {QByteArray("<FB>"), '\xfb'},
+        {QByteArray("<T_WILL>"), '\xfb'},
+
+        {QByteArray("<FC>"), '\xfc'},
+        {QByteArray("<T_WONT>"), '\xfc'},
+
+        {QByteArray("<FD>"), '\xfd'},
+        {QByteArray("<T_DO>"), '\xfd'},
+
+        {QByteArray("<FE>"), '\xfe'},
+        {QByteArray("<T_DONT>"), '\xfe'},
+
+        {QByteArray("<FF>"), '\xff'},
+        {QByteArray("<T_IAC>"), '\xff'}
+    };
+
+    QByteArray bytes;
+    if (input.isEmpty()) {
+        bytes = QByteArray::number(tableVersion);
+    } else {
+        for (qsizetype index = 0, total = input.size(); index < total; ++index) {
+            if (input.at(index) == '<') {
+                // got an opening marker
+                if (((index + 1) < total) && (input.at(index + 1) == '<')) {
+                    // got an escaped less than sign - so store it
+                    bytes.append('<');
+                    // nudge the index up one character
+                    ++index;
+                    // and process the next one
+                    continue;
+                }
+                // Else we haven't got an escaped one so find the closing greater then
+                qsizetype tagEnd = input.indexOf('>', index);
+                if (tagEnd > index) {
+                    // Found it, so extract the whole tag including delimiters
+                    QByteArray tag;
+                    for (qsizetype i = index; i <= tagEnd; ++i) {
+                        // store it
+                        tag.append(input.at(i));
+                    }
+                    // look the tag up:
+                    if (lookupTable.contains(tag)) {
+                        bytes.append(lookupTable.value(tag));
+                    } else {
+                        // Not found so append the original tag instead
+                        bytes.append(tag);
+                    }
+                    // nudge the index up to the closing greater then
+                    index = tagEnd;
+                    // and process the next character
+                    continue;
+                }
+            } else {
+                if (input.at(index) == '>' && ((index + 1) < total) && (input.at(index + 1) == '>')) {
+                    // got an escaped greater than sign - so store it
+                    bytes.append('>');
+                    // nudge the index up one character
+                    ++index;
+                    // and process the next one
+                    continue;
+                }
+            }
+            // Since we have not done anything that would have otherwise advanced
+            // index, then just copy the current character:
+            bytes.append(input.at(index));
+        }
+    }
+    return bytes;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#feedTelnet
+int TLuaInterpreter::feedTelnet(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L,
+                        "feedTelnet: bad argument #1 type (imitation game server data as string\n"
+                        "expected, got %s!)",
+                        luaL_typename(L, 1));
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    if (host.mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+        lua_pushnil(L);
+        lua_pushstring(L, "feedTelnet: refused, telnet connection socket is not in the unconnected state");
+        return 2;
+    }
+    const QByteArray rawData{lua_tostring(L, 1)};
+    // We need to convert any "<*>" codes to their raw byte forms:
+    QByteArray cookedData{parseTelnetCodes(rawData)};
+    if (rawData.isEmpty()) {
+        // This is a special case to get the table version
+        lua_pushboolean(L, true);
+        lua_pushfstring(L, "feedTelnet: using table version %s", cookedData.constData());
+        return 2;
+    }
+
+    host.mTelnet.loopbackTest(cookedData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#feedTriggers
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
@@ -12977,20 +13270,34 @@ int TLuaInterpreter::sendRaw(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendSocket
-// The data can, theoretically, contain embedded ASCII NUL characters:
+// The data can, theoretically, contain embedded ASCII NUL characters, but they
+// cannot be entered directly as they immediately terminate the string. Instead
+// provide a true as a second argument and use the appropriate "code" value
+// defined in the parseTelnetCodes() function:
 int TLuaInterpreter::sendSocket(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "sendSocket: bad argument #1 type (data as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    std::string data = lua_tostring(L, 1);
+    bool parseCodes = false;
+    if (lua_gettop(L) > 1) {
+        parseCodes = getVerifiedBool(L, __func__, 2, "parse telnet codes {default = false}", true);
+    }
+    const QByteArray data{lua_tostring(L, 1)};
+    std::string dataStdString{parseCodes ? parseTelnetCodes(data).toStdString() : data.toStdString()};
 
     Host& host = getHostFromLua(L);
     // msg is not in an encoded form here it is a literal set of bytes, which
     // is what this usage needs:
-    host.mTelnet.socketOutRaw(data);
-    return 0;
+    if (!host.mTelnet.socketOutRaw(dataStdString)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "sendSocket: unable to send any/all of the data, is the Server connected?");
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendIrc
@@ -16000,6 +16307,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "sendATCP", TLuaInterpreter::sendATCP);
     lua_register(pGlobalLua, "hasFocus", TLuaInterpreter::hasFocus);
     lua_register(pGlobalLua, "isPrompt", TLuaInterpreter::isPrompt);
+    lua_register(pGlobalLua, "feedTelnet", TLuaInterpreter::feedTelnet);
     lua_register(pGlobalLua, "feedTriggers", TLuaInterpreter::feedTriggers);
     lua_register(pGlobalLua, "sendTelnetChannel102", TLuaInterpreter::sendTelnetChannel102);
     lua_register(pGlobalLua, "setRoomWeight", TLuaInterpreter::setRoomWeight);

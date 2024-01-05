@@ -211,6 +211,7 @@ public:
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
+    void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
 
 
     QMap<int, bool> supportedTelnetOptions;
@@ -253,7 +254,9 @@ signals:
 private:
     cTelnet() = default;
 
-    void processSocketData(char *data, int size);
+    // loopbackTesting is for internal testing whilst OFF-LINE using the
+    // feedTelnet(...) Lua function.
+    void processSocketData(char *data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();

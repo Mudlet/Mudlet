@@ -2938,7 +2938,7 @@ void cTelnet::slot_socketReadyToBeRead()
     processSocketData(in_buffer, amount);
 }
 
-void cTelnet::processSocketData(char* in_buffer, int amount)
+void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (3 of 7) - investigate switching from using `char[]` to `std::array<char>`
     char out_buffer[BUFFER_SIZE + 10];
@@ -2962,7 +2962,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount)
         }
         // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
         buffer[static_cast<size_t>(datalen)] = '\0';
-        if (mpHost->mpConsole->mRecordReplay) {
+        if (!loopbackTesting && mpHost->mpConsole->mRecordReplay) {
             ++mRecordingChunkCount;
             // QElapsedTimer::elapsed() returns a qint64, it replaces a
             // previous QTime::elapsed() which returns a int (effectively a
