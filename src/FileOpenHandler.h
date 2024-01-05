@@ -20,7 +20,7 @@
 #ifndef FILEOPENHANDLER_H
 #define FILEOPENHANDLER_H
 
-#include "MudletInstanceCoordinator.h"
+#include <QObject>
 #include <QCoreApplication>
 #include <QDebug>
 #include <QFileOpenEvent>
@@ -31,21 +31,10 @@ class FileOpenHandler : public QObject
     Q_OBJECT
 
 public:
-    explicit FileOpenHandler(QObject* parent = nullptr) : QObject(parent) { QCoreApplication::instance()->installEventFilter(this); }
+    explicit FileOpenHandler(QObject* parent = nullptr);
 
-    bool eventFilter(QObject* obj, QEvent* event) override
-    {
-        if (event->type() == QEvent::FileOpen) {
-            QFileOpenEvent* openEvent = static_cast<QFileOpenEvent*>(event);
-            Q_ASSERT(mudlet::self());
-            MudletInstanceCoordinator* instanceCoordinator = mudlet::self()->getInstanceCoordinator();
-            const QString absPath = QDir(openEvent->file()).absolutePath();
-            instanceCoordinator->queuePackage(absPath);
-            instanceCoordinator->installPackagesLocally();
-            return true;
-        }
-        return QObject::eventFilter(obj, event);
-    }
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override;
 };
 
 #endif //FILEOPENHANDLER_H

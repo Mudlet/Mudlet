@@ -84,6 +84,7 @@ set(mudlet_SRCS
     EAction.cpp
     exitstreewidget.cpp
     FontManager.cpp
+    FileOpenHandler.cpp
     GifTracker.cpp
     TrailingWhitespaceMarker.cpp
     Host.cpp
