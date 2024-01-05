@@ -281,15 +281,12 @@ private:
     QString getNewEnvironClientVersion();
     QString getNewEnvironTerminalType();
     QString getNewEnvironMTTS();
-    QString getNewEnvironIPAddress();
     QString getNewEnvironANSI();
     QString getNewEnvironVT100();
     QString getNewEnviron256Colors();
-    QString getNewEnvironMouseTracking();
     QString getNewEnvironUTF8();
     QString getNewEnvironOSCColorPalette();
     QString getNewEnvironScreenReader();
-    QString getNewEnvironProxy();
     QString getNewEnvironTruecolor();
     QString getNewEnvironTLS();
     QString getNewEnvironLanguage();
