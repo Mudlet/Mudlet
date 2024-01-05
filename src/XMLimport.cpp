@@ -725,6 +725,9 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
+    setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
+    setBoolAttributeWithDefault(qsl("mEnableMNES"), pHost->mEnableMNES, false);
+    setBoolAttributeWithDefault(qsl("forceNewEnvironNegotiationOff"), pHost->mForceNewEnvironNegotiationOff, false);
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
     setBoolAttribute(qsl("printCommand"), pHost->mPrintCommand);
@@ -739,8 +742,8 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mFORCE_NO_COMPRESSION"), pHost->mFORCE_NO_COMPRESSION);
     setBoolAttribute(qsl("mFORCE_GA_OFF"), pHost->mFORCE_GA_OFF);
     setBoolAttribute(qsl("mEnableGMCP"), pHost->mEnableGMCP);
-    setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSSP"), pHost->mEnableMSSP);
+    setBoolAttribute(qsl("mEnableMSDP"), pHost->mEnableMSDP);
     setBoolAttribute(qsl("mEnableMSP"), pHost->mEnableMSP);
     setBoolAttribute(qsl("mMapStrongHighlight"), pHost->mMapStrongHighlight);
     setBoolAttribute(qsl("mEnableSpellCheck"), pHost->mEnableSpellCheck);
@@ -750,7 +753,6 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
     setBoolAttribute(qsl("mFORCE_MXP_NEGOTIATION_OFF"), pHost->mFORCE_MXP_NEGOTIATION_OFF);
     setBoolAttribute(qsl("mFORCE_CHARSET_NEGOTIATION_OFF"), pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
-    setBoolAttribute(qsl("forceMTTSNegotiationOff"), pHost->mForceMTTSNegotiationOff);
     setBoolAttribute(qsl("enableTextAnalyzer"), pHost->mEnableTextAnalyzer);
     setBoolAttribute(qsl("mBubbleMode"), pHost->mBubbleMode);
     setBoolAttribute(qsl("mMapViewOnly"), pHost->mMapViewOnly);

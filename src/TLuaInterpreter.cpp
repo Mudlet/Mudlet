@@ -18546,16 +18546,24 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("enableMSDP")) {
-        host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
-        return success();
-    }
     if (key == qsl("enableMSSP")) {
         host.mEnableMSSP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("enableMSDP")) {
+        host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("enableMSP")) {
         host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMTTS")) {
+        host.mEnableMTTS = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMNES")) {
+        host.mEnableMNES = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("askTlsAvailable")) {
@@ -18594,8 +18602,8 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("forceMTTSNegotiationOff")) {
-        host.mForceMTTSNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
+    if (key == qsl("forceNewEnvironNegotiationOff")) {
+        host.mForceNewEnvironNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("compactInputLine")) {
@@ -19010,9 +19018,11 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("mapperPanelVisible"), [&](){ lua_pushboolean(L, host.mShowPanel); } },
         { qsl("mapShowRoomBorders"), [&](){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
         { qsl("enableGMCP"), [&](){ lua_pushboolean(L, host.mEnableGMCP); } },
-        { qsl("enableMSDP"), [&](){ lua_pushboolean(L, host.mEnableMSDP); } },
         { qsl("enableMSSP"), [&](){ lua_pushboolean(L, host.mEnableMSSP); } },
+        { qsl("enableMSDP"), [&](){ lua_pushboolean(L, host.mEnableMSDP); } },
         { qsl("enableMSP"), [&](){ lua_pushboolean(L, host.mEnableMSP); } },
+        { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
+        { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
         { qsl("askTlsAvailable"), [&](){ lua_pushboolean(L, host.mAskTlsAvailable); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
@@ -19022,7 +19032,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
         { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
-        { qsl("forceMTTSNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceMTTSNegotiationOff); } },
+        { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
         { qsl("blankLinesBehaviour"), [&](){
