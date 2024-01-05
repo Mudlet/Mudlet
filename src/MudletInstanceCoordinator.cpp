@@ -20,7 +20,6 @@
 #include "MudletInstanceCoordinator.h"
 #include "Host.h"
 #include "mudlet.h"
-#include <QDebug>
 #include <QLocalSocket>
 
 const int WAIT_FOR_RESPONSE_MS = 500;
@@ -117,8 +116,6 @@ void MudletInstanceCoordinator::installPackagesLocally()
         if (activeHost) {
             installPackagesToHost(activeHost);
         } else {
-            qDebug() << "Showing conneciton dialog";
-            std::cout<<"sfsdfsdfs!!!";
             mudletApp->slot_showConnectionDialog();
         }
     });
