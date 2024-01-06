@@ -1009,8 +1009,8 @@ QString cTelnet::getNewEnvironClientVersion()
     static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
     static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
 
-    if (QByteArray(APP_BUILD).trimmed().length()) {
-        clientVersion.append(qsl(APP_BUILD));
+    if (auto build = mudlet::self()->mAppBuild; build.trimmed().length()) {
+        clientVersion.append(build);
     }
 
     /*
