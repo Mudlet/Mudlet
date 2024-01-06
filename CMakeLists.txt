@@ -93,7 +93,7 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# BUILD_VERSION should only be empty/null in official "release" builds, developers
+# APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
 #
@@ -101,7 +101,7 @@ execute_process(
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It will not necessarily cause
 # those files to be automatically rebuilt so you may need to 'touch' those files
 # if the variables are changed and you are not doing a full, clean, rebuild! Use
-# APP_VERSION, BUILD_VERSION and APP_TARGET defines in the source code if needed.
+# APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
@@ -109,10 +109,10 @@ set(APP_VERSION 4.17.2)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
   file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "$ENV{MUDLET_VERSION_BUILD}")
-  set(BUILD_VERSION $ENV{MUDLET_VERSION_BUILD})
+  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
   file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev")
-  set(BUILD_VERSION "-dev")
+  set(APP_BUILD "-dev")
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
@@ -241,5 +241,5 @@ if(USE_UPDATER)
 endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)  
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG -O0)
