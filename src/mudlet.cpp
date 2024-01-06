@@ -136,8 +136,6 @@ mudlet::mudlet()
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
     QString gitSha = QString::fromUtf8(gitShaFile.readAll());
 
-    qDebug() << "Git SHA:" << gitSha;
-
     mAppBuild = gitSha;
     releaseVersion = mAppBuild.isEmpty();
     publicTestVersion = mAppBuild.startsWith("-ptb");

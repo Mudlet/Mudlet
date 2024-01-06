@@ -229,7 +229,6 @@ int main(int argc, char* argv[])
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
     QString appBuild = QString::fromUtf8(gitShaFile.readAll());
 
-    qDebug() << "Git SHA 1:" << appBuild;
     const bool releaseVersion = appBuild.isEmpty();
     const bool publicTestVersion = appBuild.startsWith("-ptb");
     const bool developmentVersion = !releaseVersion && !publicTestVersion;
