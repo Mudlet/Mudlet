@@ -577,6 +577,7 @@ SOURCES += \
     EAction.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
+    FileOpenHandler.cpp \
     GifTracker.cpp \
     TrailingWhitespaceMarker.cpp \
     Host.cpp \
@@ -587,6 +588,7 @@ SOURCES += \
     main.cpp \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
+    MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
     ShortcutsManager.cpp \
@@ -694,6 +696,7 @@ HEADERS += \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
+    FileOpenHandler.h \
     GifTracker.h \
     TrailingWhitespaceMarker.h \
     Host.h \
@@ -703,6 +706,7 @@ HEADERS += \
     LuaInterface.h \
     mapInfoContributorManager.h \
     mudlet.h \
+    MudletInstanceCoordinator.h \
     MxpTag.h \
     pre_guard.h \
     post_guard.h \

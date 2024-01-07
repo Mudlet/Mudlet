@@ -84,6 +84,7 @@ set(mudlet_SRCS
     EAction.cpp
     exitstreewidget.cpp
     FontManager.cpp
+    FileOpenHandler.cpp
     GifTracker.cpp
     TrailingWhitespaceMarker.cpp
     Host.cpp
@@ -94,6 +95,7 @@ set(mudlet_SRCS
     main.cpp
     mapInfoContributorManager.cpp
     mudlet.cpp
+    MudletInstanceCoordinator.cpp
     ShortcutsManager.cpp
     ScriptUnit.cpp
     T2DMap.cpp
@@ -238,6 +240,7 @@ set(mudlet_HDRS
     dlgVarsMainArea.h
     EAction.h
     exitstreewidget.h
+    FileOpenHandler.h
     FontManager.h
     GifTracker.h
     TrailingWhitespaceMarker.h
@@ -248,6 +251,7 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    MudletInstanceCoordinator.h
     post_guard.h
     pre_guard.h
     ShortcutsManager.h
