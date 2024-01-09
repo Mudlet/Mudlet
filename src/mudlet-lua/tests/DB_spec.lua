@@ -211,7 +211,7 @@ describe("Tests DB.lua functions", function()
         _violations = "REPLACE"
       }
 
-      mydb = db:create("mydbt_testingonly", { sheet = newschema })
+      mydb = db:create("mydbttestingonly", { sheet = newschema })
       assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
     end)
 
@@ -225,7 +225,7 @@ describe("Tests DB.lua functions", function()
         _violations = "REPLACE"
       }
 
-      mydb = db:create("mydbt_testingonly", { sheet = newschema })
+      mydb = db:create("mydbttestingonly", { sheet = newschema })
       assert.are.same(db.__schema.mydbttestingonly.sheet.columns, newschema)
     end)
 
