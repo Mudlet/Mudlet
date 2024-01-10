@@ -116,6 +116,20 @@ then
       # upload an unzipped, unversioned release for appimage.github.io
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
+
+      SHA256SUM=$(shasum -a 256 "Mudlet-${VERSION}-linux-x64.AppImage.tar" | awk '{print $1}')
+
+      # file_cat=2 asuming Linux is the 2nd item in WP-Download-Manager category
+      curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
+      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+      -F "file_type=2" \
+      -F "file_remote=$DEPLOY_URL" \
+      -F "file_name=Mudlet-${VERSION} (Linux)" \
+      -F "file_des=sha256: $SHA256SUM" \
+      -F "file_cat=2" \
+      -F "file_permission=-1" \
+      -F "output=json" \
+      -F "do=Add File"
     fi
 
     # push release to DBLSQD
@@ -151,6 +165,18 @@ then
       "${HOME}/git-archive-all.sh" "Mudlet-${VERSION}.tar"
       xz "Mudlet-${VERSION}.tar"
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}.tar.xz" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+      FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
+      # file_cat=3 asuming Source is the 4th item in WP-Download-Manager category
+      curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
+      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+      -F "file_type=2" \
+      -F "file_remote=$FILE_URL" \
+      -F "file_name=Mudlet-${VERSION} (Source Code)" \
+      -F "file_des=sha256: $SHA256SUM" \
+      -F "file_cat=3" \
+      -F "file_permission=-1" \
+      -F "output=json" \
+      -F "do=Add File"
     fi
   fi
   export DEPLOY_URL

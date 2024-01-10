@@ -139,6 +139,21 @@ if [ "${DEPLOY}" = "deploy" ]; then
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+
+      SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}.dmg" | awk '{print $1}')
+
+      # file_cat=1 asuming macOS is the 1st item in WP-Download-Manager category
+      curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
+      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+      -F "file_type=2" \
+      -F "file_remote=$DEPLOY_URL" \
+      -F "file_name=Mudlet-${VERSION} (macOS)" \
+      -F "file_des=sha256: $SHA256SUM" \
+      -F "file_cat=1" \
+      -F "file_permission=-1" \
+      -F "output=json" \
+      -F "do=Add File"
+
     fi
 
     # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
