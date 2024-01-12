@@ -11341,7 +11341,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="3200"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można załadować powtórki, ponieważ w tym lub innym profilu jest już uruchomiona inna.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3219"/>
