@@ -9088,12 +9088,12 @@ less likely to be useful for normal use of this application:</translation>
     <message>
       <location filename="../src/main.cpp" line="350"/>
       <source>Arguments:</source>
-      <translation type="unfinished"/>
+      <translation>Arguments:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="351"/>
       <source>        [FILE]                       File to install as a package</source>
-      <translation type="unfinished"/>
+      <translation>        [FILE]                       File to install as a package</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="370"/>
@@ -9109,7 +9109,7 @@ less likely to be useful for normal use of this application:</translation>
       <location filename="../src/main.cpp" line="295"/>
       <source>Usage: %1 [OPTION...] [FILE] </source>
       <comment>%1 is the name of the executable as it is on this OS.</comment>
-      <translation type="unfinished"/>
+      <translation>Usage: %1 [OPTION...] [FILE] </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="299"/>
@@ -12373,12 +12373,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3678"/>
       <source>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</source>
-      <translation type="unfinished"/>
+      <translation>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3819"/>
       <source>Force NEW_ENVIRON negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Force NEW_ENVIRON negotiation off</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3853"/>
@@ -12470,22 +12470,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="354"/>
       <source>&lt;p&gt;Enables MTTS - provides information about your client settings at logon for supported gamesr&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Enables MTTS - provides information about your client settings at logon for supported gamesr&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="357"/>
       <source>Enable MTTS  (Mud Terminal Type Standard)</source>
-      <translation type="unfinished"/>
+      <translation>Enable MTTS  (Mud Terminal Type Standard)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="364"/>
       <source>&lt;p&gt;Enables MNES - provides information about your client settings during game play for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Enables MNES - provides information about your client settings during game play for supported games&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="367"/>
       <source>Enable MNES  (Mud New-Environ Standard)</source>
-      <translation type="unfinished"/>
+      <translation>Enable MNES  (Mud New-Environ Standard)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="563"/>
