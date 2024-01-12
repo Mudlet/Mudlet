@@ -441,7 +441,7 @@ function db:create(db_name, sheets, force)
     db.__env = luasql.sqlite3()
   end
 
-  assert(db_name == db:safe_name(db_name), "Santized name does not match argument.  Check you are using the correct database.")
+  assert(db_name == db:safe_name(db_name), "Database name contains illegal characters.  Only alphanumeric characters are valid.  Database not created or loaded.")
 
   db_name = db:safe_name(db_name)
 
