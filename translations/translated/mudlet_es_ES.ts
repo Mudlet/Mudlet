@@ -11203,7 +11203,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="3200"/>
       <source>Cannot load a replay as one is already in progress in this or another profile.</source>
-      <translation type="unfinished"/>
+      <translation>No se puede cargar una repetición, ya que otra se encuentra en curso en este u otro perfil.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3219"/>
