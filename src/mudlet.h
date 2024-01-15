@@ -27,6 +27,7 @@
  ***************************************************************************/
 
 #include "Announcer.h"
+#include "MudletInstanceCoordinator.h"
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
@@ -305,6 +306,8 @@ public:
 
 
     void activateProfile(Host*);
+    void registerInstanceCoordinator(MudletInstanceCoordinator*);
+    MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
     QPair<bool, bool> addWordToSet(const QString&);
     void adjustMenuBarVisibility();
@@ -386,6 +389,7 @@ public:
     void setToolBarIconSize(int);
     void setToolBarVisibility(controlsVisibility);
     void showChangelogIfUpdated();
+    void slot_showConnectionDialog();
     bool showMapAuditErrors() const { return mShowMapAuditErrors; }
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied:
@@ -473,6 +477,7 @@ public:
     QSystemTrayIcon mTrayIcon;
     bool mUsingMudletDictionaries = false;
     bool mWindowMinimized = false;
+    MudletInstanceCoordinator* mInstanceCoordinator;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
 
@@ -560,7 +565,6 @@ private slots:
 #endif
     void slot_showActionDialog();
     void slot_showAliasDialog();
-    void slot_showConnectionDialog();
     void slot_showEditorDialog();
     void slot_showHelpDialog();
     void slot_showKeyDialog();
