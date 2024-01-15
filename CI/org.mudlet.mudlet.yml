@@ -1,6 +1,6 @@
 app-id: org.mudlet.mudlet
 runtime: org.kde.Platform
-runtime-version: '5.15-22.08'
+runtime-version: '5.15-23.08'
 sdk: org.kde.Sdk
 command: mudlet
 # buggy - see https://github.com/flathub/org.flatpak.Builder/issues/138
@@ -149,8 +149,8 @@ modules:
       - cp -r * /app/include
     sources:
       - type: archive
-        url: 'https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2'
-        sha256: fc9f85fc030e233142908241af7a846e60630aa7388de9a5fafb1f3a26840854
+        url: 'https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2'
+        sha256: 6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e
 
   - name: luarucks-mods
     buildsystem: simple
@@ -181,9 +181,7 @@ modules:
   - name: mudlet
     buildsystem: cmake-ninja
     config-opts:
-      # pending https://github.com/Mudlet/Mudlet/pull/6493
-      # - -DCMAKE_BUILD_TYPE=RelWithDebInfo
-      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
     sources:
       - type: git
         url: https://github.com/Mudlet/Mudlet.git
