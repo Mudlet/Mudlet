@@ -186,3 +186,5 @@ modules:
       - type: git
         url: https://github.com/Mudlet/Mudlet.git
         branch: development
+    post-install:
+      - cp mudlet.desktop ${FLATPAK_DEST}/share/applications/mudlet.desktop
