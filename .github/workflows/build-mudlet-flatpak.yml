@@ -8,25 +8,17 @@ on:
   workflow_dispatch:
 
 jobs:
-
-  build:
+  flatpak:
+    name: "Flatpak"
     runs-on: ubuntu-latest
-
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-44
+      options: --privileged
     steps:
-    - uses: actions/checkout@v2
-
-    - name: Install Flatpak builder
-      run: |
-        sudo apt update
-        sudo apt install flatpak-builder
-
-    - name: Build Flatpak
-      run: |
-        cd CI
-        flatpak-builder build-dir org.mudlet.mudlet.yml --force-clean --install-deps-from=flathub
-
-    - name: Submit to Flathub
-      uses: flathub/flathub-submission@v2
+    - uses: actions/checkout@v4
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
       with:
-        bundle: build-dir
-        token: ${{ secrets.FLATPAK_TOKEN }}
+        bundle: mudlet.flatpak
+        manifest-path: CI/org.gnome.mudlet.yml
+        branch: development
+        cache-key: flatpak-builder-${{ github.sha }}
