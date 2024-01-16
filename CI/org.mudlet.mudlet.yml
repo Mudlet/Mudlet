@@ -177,12 +177,12 @@ modules:
       - /lib/*.a
       - /lib/*.la
       - /lib/pkgconfig
-- name: mudlet
-  buildsystem: cmake-ninja
-  config-opts:
-    - -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    - -DCMAKE_JOBS_NUMBER=2
-  sources:
-    - type: git
-      url: https://github.com/Mudlet/Mudlet.git
-      branch: development
+
+  - name: mudlet
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    sources:
+      - type: git
+        url: https://github.com/Mudlet/Mudlet.git
+        branch: development
