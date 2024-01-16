@@ -163,7 +163,7 @@ modules:
       - luarocks install --tree="/app" LuaFileSystem
       - luarocks install --tree="/app" lua-zip ZIP_INCDIR="/app/include" ZIP_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
       - luarocks install --tree="/app" LuaSQL-SQLite3 SQLITE_INCDIR="/app/include"
-      - luarocks install --tree="/app" lrexlib-pcre PCRE_INCDIR="/app/include"
+      - luarocks install --tree="/app" lrexlib-pcre PCRE_INCDIR="/app/include" PCRE_LIBDIR="/app/lib"
 
   - name: glu
     config-opts:
@@ -177,12 +177,12 @@ modules:
       - /lib/*.a
       - /lib/*.la
       - /lib/pkgconfig
-
-  - name: mudlet
-    buildsystem: cmake-ninja
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    sources:
-      - type: git
-        url: https://github.com/Mudlet/Mudlet.git
-        branch: development
+- name: mudlet
+  buildsystem: cmake-ninja
+  config-opts:
+    - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    - -DCMAKE_JOBS_NUMBER=2
+  sources:
+    - type: git
+      url: https://github.com/Mudlet/Mudlet.git
+      branch: development
