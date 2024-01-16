@@ -1,0 +1,32 @@
+name: 📦 Build Mudlet Flatpak (temp action)
+
+on:
+  push:
+    branches:
+      - development
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install Flatpak builder
+      run: |
+        sudo apt update
+        sudo apt install flatpak-builder
+
+    - name: Build Flatpak
+      run: |
+        cd CI
+        flatpak-builder build-dir org.mudlet.mudlet.yml --force-clean --install-deps-from=flathub
+
+    - name: Submit to Flathub
+      uses: flathub/flathub-submission@v2
+      with:
+        bundle: build-dir
+        token: ${{ secrets.FLATPAK_TOKEN }}
