@@ -19,6 +19,6 @@ jobs:
     - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
       with:
         bundle: mudlet.flatpak
-        manifest-path: CI/org.gnome.mudlet.yml
+        manifest-path: CI/org.mudlet.mudlet.yml
         branch: development
         cache-key: flatpak-builder-${{ github.sha }}
