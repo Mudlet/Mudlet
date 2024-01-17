@@ -636,11 +636,18 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
-   install(
+  install(
     FILES "../mudlet.desktop"
     DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
       WORLD_READ)
-
+  install(
+    FILES "../mudlet.svg"
+    DESTINATION "share/icons/hicolor/scalable/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
+  install(
+    FILES "../mudlet.png"
+    DESTINATION "share/icons/hicolor/256x256/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
 
   install(
     TARGETS mudlet
