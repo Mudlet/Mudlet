@@ -3,7 +3,6 @@ runtime: org.kde.Platform
 runtime-version: '5.15-23.08'
 sdk: org.kde.Sdk
 command: mudlet
-# buggy - see https://github.com/flathub/org.flatpak.Builder/issues/138
 rename-desktop-file: mudlet.desktop
 finish-args:
   - --share=ipc
@@ -186,5 +185,3 @@ modules:
       - type: git
         url: https://github.com/Mudlet/Mudlet.git
         branch: development
-    post-install:
-      - cp mudlet.desktop ${FLATPAK_DEST}/share/applications/mudlet.desktop
