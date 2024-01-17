@@ -632,6 +632,11 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
+   install(
+    FILES "mudlet.desktop"
+    DESTINATION "share/applications")
+
+
   install(
     TARGETS mudlet
     RUNTIME
