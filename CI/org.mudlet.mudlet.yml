@@ -131,7 +131,7 @@ modules:
 
   - name: pcre8
     config-opts:
-      - --enable-utf --enable-unicode-properties --prefix=/app
+      --enable-utf --enable-unicode-properties --prefix=/app
     sources:
       - type: archive
         url: 'https://sourceforge.net/projects/pcre/files/pcre/8.45/pcre-8.45.tar.bz2'
