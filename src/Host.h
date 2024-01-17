@@ -442,8 +442,10 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP;
     bool mEnableMSSP;
-    bool mEnableMSP;
     bool mEnableMSDP;
+    bool mEnableMSP;
+    bool mEnableMTTS = true;
+    bool mEnableMNES = false;
     bool mServerMXPenabled;
     bool mAskTlsAvailable;
     int mMSSPTlsPort;
@@ -650,7 +652,7 @@ public:
     bool mMapperShowRoomBorders;
     bool mFORCE_MXP_NEGOTIATION_OFF;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
-    bool mForceMTTSNegotiationOff = false;
+    bool mForceNewEnvironNegotiationOff = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
