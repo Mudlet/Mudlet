@@ -1,9 +1,10 @@
-app-id: org.mudlet.mudlet
+id: org.mudlet.mudlet
 runtime: org.kde.Platform
 runtime-version: '5.15-23.08'
 sdk: org.kde.Sdk
 command: mudlet
 rename-desktop-file: mudlet.desktop
+rename-icon: mudlet.png
 finish-args:
   - --share=ipc
   - --socket=x11
