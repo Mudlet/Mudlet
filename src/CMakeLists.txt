@@ -633,8 +633,9 @@ if(UNIX AND NOT APPLE)
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
    install(
-    FILES "mudlet.desktop"
-    DESTINATION "share/applications")
+    FILES "../mudlet.desktop"
+    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
 
 
   install(
