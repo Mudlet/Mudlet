@@ -184,6 +184,5 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
     sources:
-      - type: git
-        url: https://github.com/Mudlet/Mudlet.git
-        branch: development
+      - type: dir
+        path: ../
