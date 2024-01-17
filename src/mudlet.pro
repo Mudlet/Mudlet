@@ -1741,7 +1741,7 @@ DISTFILES += \
     ../COMPILE \
     ../COPYING \
     ../INSTALL \
-    ../mudlet.desktop \
+    ../org.mudlet.mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
     ../README.md \

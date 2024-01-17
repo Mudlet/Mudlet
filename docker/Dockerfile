@@ -55,7 +55,7 @@ ENV CPLUS_INCLUDE_PATH="${CPLUS_INCLUDE_PATH:+${CPLUS_INCLUDE_PATH}:}/usr/lib/gc
 RUN useradd -ms /bin/bash mudlet
 WORKDIR /home/mudlet
 
-COPY --chown=mudlet:mudlet .clang-tidy CMakeLists.txt CPPLINT.cfg mudlet.desktop mudlet.png mudlet.svg ./
+COPY --chown=mudlet:mudlet .clang-tidy CMakeLists.txt CPPLINT.cfg org.mudlet.mudlet.desktop mudlet.png mudlet.svg ./
 COPY --chown=mudlet:mudlet 3rdparty 3rdparty
 COPY --chown=mudlet:mudlet templates templates
 COPY --chown=mudlet:mudlet translations translations
