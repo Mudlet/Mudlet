@@ -562,8 +562,10 @@ if(WIN32)
 endif()
 
 if(APPLE)
+  target_link_libraries(mudlet "-framework AppKit")
+
   if(USE_UPDATER)
-    target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
+    target_link_libraries(mudlet cocoa-qt-glue)
   endif(USE_UPDATER)
 
   set_target_properties(mudlet PROPERTIES
