@@ -1394,13 +1394,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2182"/>
       <source>Profile main window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置文件主窗口历史记录。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2184"/>
       <source>Profile main window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置主窗口实时信息。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2189"/>
@@ -1418,19 +1418,19 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2207"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置 &quot;%1&quot; 嵌入式窗口 &quot;%2&quot; 历史记录。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2209"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置 &quot;%1&quot; 嵌入式窗口 &quot;%2&quot; 实时信息。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2212"/>
       <source>Profile embedded window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置嵌入式窗口 &quot;%1&quot; 历史记录。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2214"/>
@@ -1448,7 +1448,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2222"/>
       <source>Profile embedded window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置嵌入式窗口 &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2237"/>
@@ -1888,7 +1888,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1523"/>
       <source>Gif Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Gif 报告:</translation>
     </message>
   </context>
   <context>
