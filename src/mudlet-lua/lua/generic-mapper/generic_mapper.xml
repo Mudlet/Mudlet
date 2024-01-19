@@ -1976,7 +1976,7 @@ map.help.area_delete = [[
         it allows you to see a progress meter of how far it has gotten and gives
         you an ability to pause it at any time by doing 'cancel area deletion'.
 
-        Example: &lt;yellow&gt;area delete My City&lt;reset&gt; - create a new area called My City
+        Example: &lt;yellow&gt;area delete My City&lt;reset&gt; - delete an area called My City
 ]]
 map.help.area_cancel = [[
     &lt;cyan&gt;Cancel Area Deletion&lt;reset&gt;
