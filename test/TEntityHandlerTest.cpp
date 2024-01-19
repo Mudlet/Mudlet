@@ -17,9 +17,9 @@ private slots:
         TEntityHandler handler;
 
         std::string str = "Someone says &quot;Hello&quot;";
-        std::string result = processString(handler, str);
+        QString result = processString(handler, str);
 
-        QCOMPARE(result.c_str(), "Someone says \"Hello\"");
+        QCOMPARE(result, "Someone says \"Hello\"");
     }
 
     void testHandleUnfinishedString()
@@ -27,9 +27,9 @@ private slots:
         TEntityHandler handler;
 
         std::string str = "Someone says &quot;Hello&qu";
-        std::string result = processString(handler, str);
+        QString result = processString(handler, str);
 
-        QCOMPARE(result.c_str(), "Someone says \"Hello");
+        QCOMPARE(result, "Someone says \"Hello");
     }
 
     void testLongSequence()
@@ -37,9 +37,9 @@ private slots:
         TEntityHandler handler;
 
         std::string str = "Long sequence: &01234567; asdf";
-        std::string result = processString(handler, str);
+        QString result = processString(handler, str);
 
-        QCOMPARE(result.c_str(), "Long sequence: ; asdf");
+        QCOMPARE(result, "Long sequence: &01234567; asdf");
     }
 
     void testHandleSplitInTwoParts()
@@ -47,28 +47,28 @@ private slots:
         TEntityHandler handler;
 
         std::string part1 = "Someone says &quot;Hello&qu";
-        std::string result1 = processString(handler, part1);
-        QCOMPARE(result1.c_str(), "Someone says \"Hello");
+        QString result1 = processString(handler, part1);
+        QCOMPARE(result1, "Someone says \"Hello");
 
         std::string part2 = "ot; to you";
-        std::string result2 = processString(handler, part2);
-        QCOMPARE(result2.c_str(), "\" to you");
+        QString result2 = processString(handler, part2);
+        QCOMPARE(result2, "\" to you");
 
-        std::string result = result1 + result2;
+        QString result = result1 + result2;
 
-        qDebug() << result1.c_str();
-        qDebug() << result2.c_str();
-        qDebug() << result.c_str();
+        qDebug() << result1;
+        qDebug() << result2;
+        qDebug() << result;
 
-        QCOMPARE(result.c_str(), "Someone says \"Hello\" to you");
+        QCOMPARE(result, "Someone says \"Hello\" to you");
     }
 
-    inline static std::string processString(TEntityHandler& handler, std::string& str)
+    inline static QString processString(TEntityHandler& handler, std::string& str)
     {
         size_t len = str.length();
-        std::string result;
+        QString result;
         for (size_t i = 0; i < len; i++) {
-            if (!handler.handle(str[i])) {
+            if (!handler.handle(str[i], true)) {
                 result += str[i];
             } else if (handler.isEntityResolved()) {
                 result += handler.getResultAndReset();

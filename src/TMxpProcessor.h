@@ -31,7 +31,7 @@
 class Host;
 
 enum TMXPMode { MXP_MODE_OPEN, MXP_MODE_SECURE, MXP_MODE_LOCKED, MXP_MODE_TEMP_SECURE };
-enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE };
+enum TMxpProcessingResult { HANDLER_FALL_THROUGH, HANDLER_NEXT_CHAR, HANDLER_COMMIT_LINE, HANDLER_INSERT_ENTITY_CUST, HANDLER_INSERT_ENTITY_SYS, HANDLER_INSERT_ENTITY_LIT };
 
 // handles the MXP protocol
 class TMxpProcessor
@@ -53,9 +53,9 @@ public:
     bool isEnabled() const;
     void resetToDefaultMode();
 
-    TMxpProcessingResult processMxpInput(char& ch);
+    TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities);
     void processRawInput(char ch);
-
+    inline QString getEntityValue() { return lastEntityValue;}
 
 private:
     // State of MXP system:
@@ -70,6 +70,9 @@ private:
     TEntityHandler mEntityHandler;
 
     TMxpClient* mpMxpClient = nullptr;
+
+    // value of the last resolved entity:
+    QString lastEntityValue;
 };
 
 #endif //MUDLET_TMXPPROCESSOR_H

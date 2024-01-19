@@ -26,7 +26,7 @@ private slots:
 
         std::string input = "<SEND href=\"áéíóúñ\" >test link: áéíóúñ</SEND>";
         for (char &ch : input) {
-          processor.processMxpInput(ch);
+          processor.processMxpInput(ch, true);
         }
 
         QCOMPARE(stub.mHrefs.size(), 1);
