@@ -84,6 +84,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_package(Git REQUIRED)
+# Get Git SHA1 hash
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_SHA1
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 # APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
@@ -99,8 +108,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(APP_VERSION 4.17.2)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "$ENV{MUDLET_VERSION_BUILD}")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev")
   set(APP_BUILD "-dev")
 endif()
 
@@ -230,5 +241,5 @@ if(USE_UPDATER)
 endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)  
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG -O0)

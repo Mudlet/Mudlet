@@ -502,7 +502,6 @@ endif(UNIX)
 target_compile_definitions(mudlet
   PRIVATE
     APP_VERSION="${APP_VERSION}"
-    APP_BUILD="${APP_BUILD}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
