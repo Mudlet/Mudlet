@@ -240,15 +240,16 @@ public:
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
-    static QImage getSplashScreen();
+    static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
+    QString mAppBuild;
     // final, official release
-    inline static const bool scmIsReleaseVersion = QByteArray(APP_BUILD).isEmpty();
+    bool releaseVersion;
     // unofficial "nightly" build - still a type of a release
-    inline static const bool scmIsPublicTestVersion = QByteArray(APP_BUILD).startsWith("-ptb");
+    bool publicTestVersion;
     // used by developers in everyday coding:
-    inline static const bool scmIsDevelopmentVersion = !mudlet::scmIsReleaseVersion && !mudlet::scmIsPublicTestVersion;
+    bool developmentVersion;
     // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
     // (1000ths, range 0 to 999) that is used as a "version" attribute number when
     // writing the <MudletPackage ...> element of all (but maps if I ever get around
@@ -290,7 +291,7 @@ public:
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
-    inline static const QString scmVersion = qsl("Mudlet " APP_VERSION APP_BUILD);
+    QString scmVersion;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;

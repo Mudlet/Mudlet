@@ -443,7 +443,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::scmIsPublicTestVersion) {
+    if (mudlet::self()->publicTestVersion) {
         thankForUsingPTB();
     }
 
