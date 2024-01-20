@@ -455,9 +455,9 @@ jobs:
         echo "VERSION = ${{ env.VERSION }}" >> src/mudlet.pro
 
         git add CMakeLists.txt src/mudlet.pro
-        git commit -m "Infrastructure: update development with release 4.16 #6100"
+        git commit -m "Infrastructure: update development with ${{ env.APP_VERSION }}"
         git push origin update-development-${{ github.run_number }}
 
-        gh pr create --base development --head update-development-${{ github.run_number }} --title "Update development with release 4.16" --body "Automatically generated PR to update development with release  ${{ env.APP_VERSION }} "
+        gh pr create --base development --head update-development-${{ github.run_number }} --title "Update development-${{ github.run_number }}" --body "Automatically generated PR to update development with release  ${{ env.APP_VERSION }} "
 
-        git checkout master
+        git checkout developement
