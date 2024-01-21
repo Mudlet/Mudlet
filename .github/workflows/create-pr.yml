@@ -1,0 +1,43 @@
+name: Automatic PR for Development Update
+
+on:
+  release:
+    types:
+      - created
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Extract version information
+        run: |
+          APP_VERSION=$(echo "${{ github.event.release.tag_name }}" | grep -oP '\d+\.\d+\.\d+')
+          echo "Extracted APP_VERSION: $APP_VERSION"
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+
+          VERSION=$APP_VERSION  
+          echo "Extracted VERSION: $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Update version in files
+        run: |
+          echo "set(APP_VERSION ${{ env.APP_VERSION }})" >> CMakeLists.txt
+          echo "VERSION = ${{ env.VERSION }}" >> src/mudlet.pro
+
+      - name: Commit and push changes
+        run: |
+          git add CMakeLists.txt src/mudlet.pro
+          git commit -m "Infrastructure: update development with ${{ env.APP_VERSION }}"
+          git push origin HEAD
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          commit-message: "Infrastructure: update development with ${{ env.APP_VERSION }}"
+          title: "Update development with release ${{ env.APP_VERSION }}"
+          branch: "development"
+          token: ${{ secrets.GITHUB_TOKEN }}

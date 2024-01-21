@@ -436,29 +436,4 @@ jobs:
           cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
         }
 
-    - name: Create PR to update developement
-      if: github.event_name == 'push' && (github.event_name == 'developement' || startsWith(github.ref, 'refs/tags/Mudlet-'))
-      run: |
-        git checkout development
-        git pull origin development
-        git checkout -b update-development-${{ github.run_number }}
-
-        APP_VERSION=$(grep 'set(APP_VERSION' CMakeLists.txt | grep -oP '\d+\.\d+\.\d+')
-        echo "Extracted APP_VERSION: $APP_VERSION"
-        echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
-
-        VERSION=$(grep 'VERSION =' src/mudlet.pro | grep -oP '\d+\.\d+\.\d+')
-        echo "Extracted VERSION: $VERSION"
-        echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-        echo "set(APP_VERSION ${{ env.APP_VERSION }})" >> CMakeLists.txt
-        echo "VERSION = ${{ env.VERSION }}" >> src/mudlet.pro
-
-        git add CMakeLists.txt src/mudlet.pro
-        git commit -m "Infrastructure: update development with ${{ env.APP_VERSION }}"
-        git push origin update-development-${{ github.run_number }}
-
-        gh pr create --base development --head update-development-${{ github.run_number }} --title "Update development-${{ github.run_number }}" --body "Automatically generated PR to update development with release  ${{ env.APP_VERSION }} "
-        
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+ 
