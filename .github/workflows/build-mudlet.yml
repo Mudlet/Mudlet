@@ -435,5 +435,3 @@ jobs:
           echo "CMakeOutput.log: "
           cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
         }
-
- 
