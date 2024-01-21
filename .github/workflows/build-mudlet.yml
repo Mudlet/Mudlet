@@ -459,7 +459,6 @@ jobs:
         git push origin update-development-${{ github.run_number }}
 
         gh pr create --base development --head update-development-${{ github.run_number }} --title "Update development-${{ github.run_number }}" --body "Automatically generated PR to update development with release  ${{ env.APP_VERSION }} "
-
-        git checkout developement
+        
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
