@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v2
 
       - name: Extract version from mudlet.pro
         run: |
@@ -38,6 +38,7 @@ jobs:
       - name: Strip out BUILD variable in release branch
         run: |
           if [ "${{ github.event_name }}" == "release" ]; then
+            release_branch="release/${{ env.VERSION }}"
             git checkout -b release/${{ env.VERSION }}
             sed -i "s/set(APP_BUILD .*/set(APP_BUILD )/" CMakeLists.txt
             git add CMakeLists.txt
