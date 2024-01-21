@@ -19,7 +19,7 @@ jobs:
           echo "Extracted APP_VERSION: $APP_VERSION"
           echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
 
-          VERSION=$APP_VERSION  # Assuming VERSION is the same as APP_VERSION
+          VERSION=$APP_VERSION  
           echo "Extracted VERSION: $VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
