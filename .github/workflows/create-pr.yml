@@ -1,9 +1,9 @@
 name: Automatic PR for Development Update
 
 on:
-  release:
-    types:
-      - created
+  push:
+    tags:
+      - 'refs/tags/Mudlet-*'
 
 jobs:
   create-pr:
@@ -19,14 +19,11 @@ jobs:
           echo "Extracted APP_VERSION: $APP_VERSION"
           echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
 
-          VERSION=$APP_VERSION  
-          echo "Extracted VERSION: $VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
       - name: Update version in files
         run: |
-          echo "set(APP_VERSION ${{ env.APP_VERSION }})" >> CMakeLists.txt
-          echo "VERSION = ${{ env.VERSION }}" >> src/mudlet.pro
+          sed -i "s/set(APP_VERSION .*)/set(APP_VERSION ${{ env.APP_VERSION }})/" CMakeLists.txt
+
+          sed -i "s/VERSION = .*/VERSION = ${{ env.APP_VERSION }}/" src/mudlet.pro
 
       - name: Commit and push changes
         run: |
