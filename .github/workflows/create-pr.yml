@@ -1,9 +1,9 @@
 name: Automatic PR for Development Update
 
 on:
-  push:
-    tags:
-      - 'refs/tags/Mudlet-*'
+  create:
+    branches:
+      - 'release-*'
 
 jobs:
   create-pr:
