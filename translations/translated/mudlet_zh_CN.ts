@@ -1534,7 +1534,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2231"/>
       <source>User window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>用户窗口 &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2233"/>
@@ -1822,7 +1822,9 @@ Tried these locations:
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+--------------------------------------------------------------+
+|                      系统统计信息                       |
++--------------------------------------------------------------+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1465"/>
@@ -3953,7 +3955,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="151"/>
       <source>^mycommand$ (example)</source>
-      <translation type="unfinished"/>
+      <translation>^mycommand$ (示例)</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="158"/>
@@ -3983,7 +3985,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="222"/>
       <source>Replacement text (optional)</source>
-      <translation type="unfinished"/>
+      <translation>替换文本 (可选)</translation>
     </message>
   </context>
   <context>
