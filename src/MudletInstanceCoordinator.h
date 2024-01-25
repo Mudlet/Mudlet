@@ -31,11 +31,11 @@ class MudletInstanceCoordinator : public QLocalServer
 public:
     explicit MudletInstanceCoordinator(const QString& serverName, QObject* parent = nullptr);
     bool tryToStart();
-    void queuePackage(const QString& packageName);
-    void installPackagesToHost(Host* activeProfile);
-    void installPackagesLocally();
-    bool installPackagesRemotely();
-    QStringList readPackageQueue();
+    void queueUri(const QString& uri);
+    void openUrisWithHost(Host* activeProfile);
+    void openUrisLocally();
+    bool openUrisRemotely();
+    QStringList readUriQueue();
 
 protected:
     void incomingConnection(quintptr socketDescriptor) override;
@@ -47,7 +47,7 @@ private slots:
 private:
     QMutex mMutex;
     QString mServerName;
-    QStringList mQueuedPackagePaths;
+    QStringList mQueuedUris;
 };
 
 #endif // MUDLETINSTANCECOORDINATOR_H

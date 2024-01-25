@@ -398,7 +398,7 @@ int main(int argc, char* argv[])
         const QString absPath = QDir(positionalArguments.first()).absolutePath();
         instanceCoordinator.queuePackage(absPath);
         if (!firstInstanceOfMudlet) {
-            const bool successful = instanceCoordinator.installPackagesRemotely();
+            const bool successful = instanceCoordinator.openUrisRemotely();
             if (successful) {
                 return 0;
             } else {
@@ -614,6 +614,10 @@ int main(int argc, char* argv[])
     settings.setValue(".mpackage", "MudletPackage");
     settings.setValue("MudletPackage/.", "Mudlet Package");
     settings.setValue("MudletPackage/shell/open/command/.", "mudlet %1");
+    // Associate Mudlet with telnet links
+    settings.setValue("telnet/.", "URL:Telnet Protocol");
+    settings.setValue("telnet/URL Protocol", "");
+    settings.setValue("telnet/shell/open/command/.", "mudlet %1");
 #endif
 
     // Pass ownership of MudletInstanceCoordinator to mudlet.

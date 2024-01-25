@@ -26,17 +26,31 @@ FileOpenHandler::FileOpenHandler(QObject* parent) : QObject(parent)
     QCoreApplication::instance()->installEventFilter(this);
 }
 
-bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
-{
+bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event) {
     if (event->type() == QEvent::FileOpen) {
         QFileOpenEvent* openEvent = static_cast<QFileOpenEvent*>(event);
         Q_ASSERT(mudlet::self());
         MudletInstanceCoordinator* instanceCoordinator = mudlet::self()->getInstanceCoordinator();
-        const QString absPath = QDir(openEvent->file()).absolutePath();
-        instanceCoordinator->queuePackage(absPath);
-        instanceCoordinator->installPackagesLocally();
-        return true;
+
+        if (openEvent->url().isValid()) {
+            QUrl url = openEvent->url();
+            if (url.scheme() == "telnet") {
+                // Handle telnet url 
+                instanceCoordinator->queueUri(url.toString());
+                instanceCoordinator->openUrisLocally();
+                return true;
+            }
+        } else if (!openEvent->file().isEmpty()) {
+            // Handle file
+            const QString absPath = QDir(openEvent->file()).absolutePath();
+            bool isPackage = true;
+            if (isPackage) {
+                instanceCoordinator->queueUri(absPath);
+                instanceCoordinator->openUrisLocally();
+                return true;
+            }
+        }
     }
+
     return QObject::eventFilter(obj, event);
 }
-
