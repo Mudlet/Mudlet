@@ -135,7 +135,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     echo "Deployed Mudlet to '$DEPLOY_URL'"
   } else {
     $sshKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows"
-    ssh-keygen -t rsa -b 2048 -f $sshPrivateKeyPath -N ${Env:DEPLOY_KEY_PASS}
+    ssh-keygen -t rsa -b 2048 -f $sshKeyPath -N ${Env:DEPLOY_KEY_PASS}
     Write-Output "ssh key generated"
 
     # get winscp .NET dll for uploads
