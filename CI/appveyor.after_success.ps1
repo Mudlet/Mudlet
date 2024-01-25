@@ -134,52 +134,54 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     $DEPLOY_URL = $DEPLOY_URL.Trim()
     echo "Deployed Mudlet to '$DEPLOY_URL'"
   } else {
-    # disabled temporarily as ssh key is unavailable
+    $sshKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows"
+    ssh-keygen -t rsa -b 2048 -f $sshPrivateKeyPath -N ${Env:DEPLOY_KEY_PASS}
+    Write-Output "ssh key generated"
 
     # get winscp .NET dll for uploads
     # activate higher TLS version. Seems PS only uses 1.0 by default
     # credit: https://stackoverflow.com/questions/41618766/powershell-invoke-webrequest-fails-with-ssl-tls-secure-channel/48030563#48030563
-    # [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
-    # (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
-    # Add-Type -AssemblyName System.IO.Compression.FileSystem
-    # [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\src\Winscp-automation.zip", "C:\src\Winscp-automation\")
-    # Add-Type -Path 'C:\src\Winscp-automation\WinSCPnet.dll'
+    [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
+    (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory("C:\src\Winscp-automation.zip", "C:\src\Winscp-automation\")
+    Add-Type -Path 'C:\src\Winscp-automation\WinSCPnet.dll'
 
-    # # do the upload
-    # $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
-    #   # sftp://
-    #   Protocol = [WinSCP.Protocol]::Scp
-    #   HostName = "mudlet.org"
-    #   UserName = "keneanung"
-    #   SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
-    #   SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
-    # }
-    # $session = New-Object WinSCP.Session
-    # $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
-    # $sessionOptions.SshHostKeyFingerprint = $fingerprint
-    # # Connect
-    # Write-Output "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    # $session.Open($sessionOptions)
-    # $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
-    # $session.Close()
-    # $session.Dispose()
-    # $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
-    # Set-Variable -Name "SHA256SUM" -Value (Get-FileHash -Path "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe" -Algorithm SHA256).Hash
-    # Invoke-RestMethod -Uri 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' `
-    # -Method POST `
-    # -Headers @{
-    #     "x-wp-download-token" = $Env:X_WP_DOWNLOAD_TOKEN
-    # } `
-    # -Body @{
-    #     "file_type" = "2"
-    #     "file_remote" = $Env:DEPLOY_URL
-    #     "file_name" = "Mudlet-$Env:VERSION (Windows)"
-    #     "file_des" = "sha256: $SHA256SUM"
-    #     "file_cat" = "0"
-    #     "file_permission" = "-1"
-    #     "output" = "json"
-    #     "do" = "Add File"
-    # }
+    # do the upload
+    $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
+      # sftp://
+      Protocol = [WinSCP.Protocol]::Scp
+      HostName = "mudlet.org"
+      UserName = "keneanung"
+      SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
+      SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
+    }
+    $session = New-Object WinSCP.Session
+    $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
+    $sessionOptions.SshHostKeyFingerprint = $fingerprint
+    # Connect
+    Write-Output "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+    $session.Open($sessionOptions)
+    $session.PutFiles("${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
+    $session.Close()
+    $session.Dispose()
+    $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+    Set-Variable -Name "SHA256SUM" -Value (Get-FileHash -Path "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe" -Algorithm SHA256).Hash
+    Invoke-RestMethod -Uri 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' `
+    -Method POST `
+    -Headers @{
+        "x-wp-download-token" = $Env:X_WP_DOWNLOAD_TOKEN
+    } `
+    -Body @{
+        "file_type" = "2"
+        "file_remote" = $Env:DEPLOY_URL
+        "file_name" = "Mudlet-$Env:VERSION (Windows)"
+        "file_des" = "sha256: $SHA256SUM"
+        "file_cat" = "0"
+        "file_permission" = "-1"
+        "output" = "json"
+        "do" = "Add File"
+    }
     Push-AppveyorArtifact "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -DeploymentName "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe"
   }
 
