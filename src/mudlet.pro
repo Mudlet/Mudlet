@@ -95,6 +95,15 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 
 TEMPLATE = app
 
+# Define a variable for the Git executable
+GIT_EXECUTABLE = git
+
+# Run the command to get the short SHA1 hash of the current HEAD
+GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
+
+# Use the result in your QMake project
+message("Git SHA1: " $$GIT_SHA1)
+
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
@@ -104,14 +113,17 @@ VERSION = 4.17.2
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
 # variable to make identification of the used version simple
 # the qmake BUILD variable is NOT built-in
-BUILD = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD ) {
+BUILD_TEST = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD_TEST ) {
 # Possible values are:
 # "-dev" for the development build
 # "-ptb" for the public test build
 # "" for the release build
-   BUILD = "-dev"
+   BUILD_TEST = "-dev-"$${GIT_SHA1}
+} else {
+   BUILD_TEST = $${GIT_SHA1}
 }
+write_file( app-build.txt, BUILD_TEST )
 
 # As the above also modifies the splash screen image (so developers get reminded
 # what they are working with!) Packagers (e.g. for Linux distributions) will
