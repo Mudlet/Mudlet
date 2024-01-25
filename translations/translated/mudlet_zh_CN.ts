@@ -4138,17 +4138,17 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="3156"/>
       <source>WARN</source>
-      <translation type="unfinished"/>
+      <translation>警告</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3168"/>
       <source>ALERT</source>
-      <translation type="unfinished"/>
+      <translation>提醒</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3180"/>
       <source>INFO</source>
-      <translation type="unfinished"/>
+      <translation>信息</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3192"/>
@@ -6051,7 +6051,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/dlgPackageExporter.cpp" line="135"/>
       <source>Package Exporter - %1</source>
       <extracomment>Title of the window. The %1 will be replaced by the current profile&apos;s name</extracomment>
-      <translation type="unfinished"/>
+      <translation>包导出器 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="180"/>
@@ -6450,37 +6450,37 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/dlgProfilePreferences.cpp" line="810"/>
       <source>200</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>200</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="811"/>
       <source>500</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>500</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="812"/>
       <source>1,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>1,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="813"/>
       <source>2,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>2,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="814"/>
       <source>5,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>5,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="815"/>
       <source>10,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1774"/>
@@ -6588,7 +6588,9 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3177"/>
       <source>%n selected - change destinations...</source>
       <extracomment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n 已选定 - 改变选定目标...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3184"/>
@@ -6767,7 +6769,8 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2357"/>
       <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 无法加载 JSON 地图文件： %1
+原因： %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2398"/>
@@ -7175,7 +7178,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="246"/>
       <location filename="../src/dlgRoomProperties.cpp" line="286"/>
       <source>count</source>
-      <translation type="unfinished"/>
+      <translation>总计</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="517"/>
@@ -7412,12 +7415,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="163"/>
       <source>new folder</source>
-      <translation type="unfinished"/>
+      <translation>新建文件夹</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="164"/>
       <source>new item</source>
-      <translation type="unfinished"/>
+      <translation>新项目</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="168"/>
@@ -7732,7 +7735,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="484"/>
       <source>Add Group (Control+Shift+N)</source>
-      <translation type="unfinished"/>
+      <translation>添加组 (Control+Shift+N)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5626"/>
@@ -8065,27 +8068,27 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7697"/>
       <source>Add Variable</source>
-      <translation type="unfinished"/>
+      <translation>添加变量</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7698"/>
       <source>Add new variable</source>
-      <translation type="unfinished"/>
+      <translation>添加新变量</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7699"/>
       <source>Add Lua table</source>
-      <translation type="unfinished"/>
+      <translation>添加 Lua Table</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Add new Lua table</source>
-      <translation type="unfinished"/>
+      <translation>添加 新的 Lua Table</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7701"/>
       <source>Delete Variable</source>
-      <translation type="unfinished"/>
+      <translation>删除变量</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7702"/>
