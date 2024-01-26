@@ -97,14 +97,14 @@ void dlgPackageManager::resetPackageTable()
 
 void dlgPackageManager::slot_installPackage()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
+    const QString fileName = QFileDialog::getOpenFileName(this, tr("Import Mudlet Package"), QDir::currentPath());
     if (fileName.isEmpty()) {
         return;
     }
 
     QFile file(fileName);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName, file.errorString()));
+        QMessageBox::warning(this, tr("Import Mudlet Package:"), tr("Cannot read file %1:\n%2.").arg(fileName.toHtmlEscaped(), file.errorString()));
         return;
     }
 
@@ -113,10 +113,10 @@ void dlgPackageManager::slot_installPackage()
 
 void dlgPackageManager::slot_removePackages()
 {
-    QModelIndexList selection = packageTable->selectionModel()->selectedRows();
+    QModelIndexList const selection = packageTable->selectionModel()->selectedRows();
     QStringList removePackages;
     for (int i = 0; i < selection.count(); i++) {
-        QModelIndex index = selection.at(i);
+        QModelIndex const index = selection.at(i);
         auto package = packageTable->item(index.row(), 0);
         removePackages << package->text();
     }
@@ -140,7 +140,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
     for (int i = additionalDetails->rowCount() - 1; i >= 0; --i) {
         additionalDetails->removeRow(i);
     }
-    QString packageName = packageTable->item(pItem->row(), 0)->text();
+    const QString packageName = packageTable->item(pItem->row(), 0)->text();
     auto packageInfo{mpHost->mPackageInfo.value(packageName)};
     if (packageInfo.isEmpty()) {
         packageDescription->clear();
@@ -158,7 +158,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
         packageDescription->hide();
     } else {
         packageDescription->show();
-        QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
+        const QString packageDir = mudlet::self()->getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), packageName);
         description.replace(QLatin1String("$packagePath"), packageDir);
         packageDescription->setMarkdown(description);
     }
@@ -168,7 +168,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
     details << qsl("author") << qsl("version") << qsl("created") << qsl("dependencies");
     int counter = 0;
     for (int i = 0; i < details.size(); i++) {
-        QString valueText{packageInfo.take(details.at(i))};
+        const QString valueText{packageInfo.take(details.at(i))};
         if (valueText.isEmpty()) {
             continue;
         }
@@ -198,7 +198,7 @@ void dlgPackageManager::slot_itemClicked(QTableWidgetItem* pItem)
         additionalDetails->show();
         detailsLabel->show();
     }
-    int maxHeight = additionalDetails->rowCount() * additionalDetails->rowHeight(0);
+    const int maxHeight = additionalDetails->rowCount() * additionalDetails->rowHeight(0);
     additionalDetails->setMaximumHeight(maxHeight);
     additionalDetails->verticalScrollBar()->hide();
     packageTable->scrollToItem(pItem);
@@ -228,17 +228,14 @@ void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& pack
 
 void dlgPackageManager::slot_toggleRemoveButton()
 {
-    QModelIndexList selection = packageTable->selectionModel()->selectedRows();
-    int selectionCount = selection.count();
+    QModelIndexList const selection = packageTable->selectionModel()->selectedRows();
+    const int selectionCount = selection.count();
     removeButton->setEnabled(selectionCount);
     if (selectionCount) {
-        removeButton->setText(tr("Remove %n package(s)",
-                                  // Intentional comment to separate arguments
-                                  "Message on button in package manager to remove one or more (%n is the count of) selected package(s).",
-                                  selectionCount));
+        //: Message on button in package manager to remove one or more (%n is the count of) selected package(s).
+        removeButton->setText(tr("Remove %n package(s)", nullptr, selectionCount));
     } else {
-        removeButton->setText(tr("Remove package",
-                                  // Intentional comment to separate arguments
-                                  "Message on button in package manager initially and when there is no packages to remove."));
+        //: Message on button in package manager initially and when there is no packages to remove
+        removeButton->setText(tr("Remove package"));
     }
 }

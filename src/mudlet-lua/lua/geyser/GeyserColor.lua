@@ -1,8 +1,6 @@
---------------------------------------
---                                  --
--- The Geyser Layout Manager by guy --
---                                  --
---------------------------------------
+--- Geyser color functions.
+-- @author guy
+-- @module Geyser.Color
 
 Geyser.Color = {}
 

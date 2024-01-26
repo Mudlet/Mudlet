@@ -38,8 +38,8 @@
 # source code in....}
 
 # To determine the communi version check the #define value for IRC_VERSION_STR
-# in 3rdparty/communi/include/IrcCore/ircglobal.h - at the time of creation of
-# this file it was "3.6.0"
+# in 3rdparty/communi/include/IrcCore/ircglobal.h - at the time of the last
+# update of this file it was "3.7.0"
 
 include(src/core/core.pri)
 include(src/model/model.pri)

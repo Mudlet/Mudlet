@@ -27,8 +27,13 @@
 #include "Tree.h"
 
 #include "pre_guard.h"
+#include <QDebug>
 #include <QPointer>
 #include "post_guard.h"
+
+extern "C" {
+    #include <lua.h>
+}
 
 class Host;
 
@@ -43,12 +48,12 @@ public:
     TKey(TKey* parent, Host* pHost);
     TKey(QString name, Host* pHost);
     void compileAll();
-    QString getName() { return mName; }
+    QString getName() const { return mName; }
     void setName(const QString & name);
     Qt::Key getKeyCode() const { return mKeyCode; }
     void setKeyCode(const Qt::Key code) { mKeyCode = code; }
     void setKeyCode(const int codeNumber) { setKeyCode(static_cast<Qt::Key>(codeNumber)); }
-    Qt::KeyboardModifiers getKeyModifiers() { return mKeyModifier; }
+    Qt::KeyboardModifiers getKeyModifiers() const { return mKeyModifier; }
     void setKeyModifiers(const Qt::KeyboardModifiers code) { mKeyModifier = code; }
     void setKeyModifiers(const int codeNumber) { setKeyModifiers(static_cast<Qt::KeyboardModifiers>(codeNumber)); }
     void enableKey(const QString& name);
@@ -56,10 +61,10 @@ public:
     void compile();
     bool compileScript();
     void execute();
-    QString getScript() { return mScript; }
+    QString getScript() const { return mScript; }
     bool setScript(const QString& script);
     void setCommand(QString command) { mCommand = command; }
-    QString getCommand() { return mCommand; }
+    QString getCommand() const { return mCommand; }
 
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     bool registerKey();
@@ -88,12 +93,25 @@ private:
     Qt::Key mKeyCode = {};
     Qt::KeyboardModifiers mKeyModifier = Qt::NoModifier;
 
-    QString mRegexCode;
     QString mScript;
     QString mFuncName;
     QPointer<Host> mpHost;
     bool mNeedsToBeCompiled = true;
     bool mModuleMember = false;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const TKey* key)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+    debug.nospace() << "TKey(" << key->getName();
+    debug.nospace() << ", keyCode=" << key->getKeyCode();
+    debug.nospace() << ", keyModifiers=" << key->getKeyModifiers();
+    debug.nospace() << ", script=" << key->getScript();
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TKEY_H

@@ -1,8 +1,9 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2018-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -36,16 +37,19 @@
 #include <QKeyEvent>
 #include <QRegularExpression>
 #include <QScrollBar>
+#include <QSaveFile>
 #include "post_guard.h"
 
-TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
-, mCommandLineName(qsl("main"))
+, mCommandLineName(name)
 , mpHost(pHost)
 , mType(type)
 , mpKeyUnit(pHost->getKeyUnit())
 , mpConsole(pConsole)
 {
+    setObjectName(qsl("commandLine_%1_%2").arg(mpHost->getName(), name));
+
     setAutoFillBackground(true);
     setFocusPolicy(Qt::StrongFocus);
 
@@ -60,8 +64,8 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     setPalette(mRegularPalette);
     //style subCommandLines by stylesheet
     if (mType != MainCommandLine) {
-        QColor c = mpHost->mCommandLineBgColor;
-        QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
+        QColor const c = mpHost->mCommandLineBgColor;
+        const QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
         setStyleSheet(styleSheet);
     }
 
@@ -74,6 +78,17 @@ TCommandLine::TCommandLine(Host* pHost, CommandLineType type, TConsole* pConsole
     // We do NOT want the standard context menu to happen as we generate it
     // ourself:
     setContextMenuPolicy(Qt::PreventContextMenu);
+
+    connect(mudlet::self(), &mudlet::signal_adjustAccessibleNames, this, &TCommandLine::slot_adjustAccessibleNames);
+    slot_adjustAccessibleNames();
+    // Restore the history settings:
+    std::tie(mBackingFileName, mSaveCommands) = mpHost->getCmdLineSettings(mType, name);
+
+    // Restore any previous historic commands even if we are not going to save
+    // them under current settings:
+    restoreHistory();
+
+    connect(pHost, &Host::signal_saveCommandLinesHistory, this, &TCommandLine::slot_saveHistory);
 }
 
 void TCommandLine::processNormalKey(QEvent* event)
@@ -128,6 +143,10 @@ bool TCommandLine::event(QEvent* event)
         }
 
         if (ke->matches(QKeySequence::Find)){ // Find is Ctrl+F
+            if (keybindingMatched(ke)) { // If user has set up a keybind then do that instead.
+                return true;
+            }
+
             if (mudlet::self()->dactionInputLine->isChecked()) {
                 // If hidden then reveal as if pressed Alt-L
                 mudlet::self()->dactionInputLine->setChecked(false);
@@ -171,13 +190,10 @@ bool TCommandLine::event(QEvent* event)
             if ((ke->modifiers() & (allModifiers & ~(Qt::ShiftModifier))) == Qt::ControlModifier) {
                 // Switch to PREVIOUS profile tab when used with <CTRL> (and
                 // implicit <SHIFT>):
-                int currentIndex = mudlet::self()->mpTabBar->currentIndex();
-                int count = mudlet::self()->mpTabBar->count();
-                if (currentIndex - 1 < 0) {
-                    mudlet::self()->slot_tabChanged(count - 1);
-                } else {
-                    mudlet::self()->slot_tabChanged(currentIndex - 1);
-                }
+                const int currentIndex = mudlet::self()->mpTabBar->currentIndex();
+                const int count = mudlet::self()->mpTabBar->count();
+                const int newIndex = (currentIndex - 1 < 0) ? (count - 1) : (currentIndex - 1);
+                mudlet::self()->slot_tabChanged(newIndex);
                 ke->accept();
                 return true;
             }
@@ -207,13 +223,10 @@ bool TCommandLine::event(QEvent* event)
 
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
                 // Switch to NEXT profile tab
-                int currentIndex = mudlet::self()->mpTabBar->currentIndex();
-                int count = mudlet::self()->mpTabBar->count();
-                if (currentIndex + 1 < count) {
-                    mudlet::self()->slot_tabChanged(currentIndex + 1);
-                } else {
-                    mudlet::self()->slot_tabChanged(0);
-                }
+                const int currentIndex = mudlet::self()->mpTabBar->currentIndex();
+                const int count = mudlet::self()->mpTabBar->count();
+                const int newIndex = (currentIndex + 1 < count) ? (currentIndex + 1) : 0;
+                mudlet::self()->slot_tabChanged(newIndex);
                 ke->accept();
                 return true;
             }
@@ -233,9 +246,13 @@ bool TCommandLine::event(QEvent* event)
             break;
 
         case Qt::Key_F6:
-            if (mpHost->mCaretShortcut == Host::CaretShortcut::F6) {
+            if ((mpHost->mCaretShortcut == Host::CaretShortcut::F6) && ((ke->modifiers() & allModifiers) == Qt::NoModifier)) {
                 mpHost->setCaretEnabled(true);
                 ke->accept();
+                return true;
+            }
+
+            if (keybindingMatched(ke)) {
                 return true;
             }
             break;
@@ -255,8 +272,10 @@ bool TCommandLine::event(QEvent* event)
                 mTabCompletionCount = -1;
                 mAutoCompletionCount = -1;
                 mLastCompletion.clear();
+                // This does the actual deletion of the character:
                 QPlainTextEdit::event(event);
-
+                // Recheck spelling of shortened word:
+                spellCheck();
                 adjustHeight();
                 return true;
             }
@@ -281,7 +300,10 @@ bool TCommandLine::event(QEvent* event)
                 mAutoCompletionCount = -1;
                 mTabCompletionCount = -1;
                 mLastCompletion.clear();
+                // This does the actual deletion of the character:
                 QPlainTextEdit::event(event);
+                // Recheck spelling of shortened word:
+                spellCheck();
                 adjustHeight();
                 return true;
             }
@@ -294,14 +316,7 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_Return: // This is the main one (not the keypad)
             if ((ke->modifiers() & allModifiers) == Qt::ControlModifier) {
                 // If Ctrl-Return is pressed - scroll to the bottom of text:
-                mpConsole->mLowerPane->mCursorY = mpConsole->buffer.size();
-                mpConsole->mLowerPane->hide();
-                mpConsole->buffer.mCursorY = mpConsole->buffer.size();
-                mpConsole->mUpperPane->mCursorY = mpConsole->buffer.size();
-                mpConsole->mUpperPane->mCursorX = 0;
-                mpConsole->mUpperPane->mIsTailMode = true;
-                mpConsole->mUpperPane->updateScreenView();
-                mpConsole->mUpperPane->forceUpdate();
+                mpConsole->clearSplit();
                 ke->accept();
                 return true;
 
@@ -437,7 +452,7 @@ bool TCommandLine::event(QEvent* event)
         case Qt::Key_PageUp:
             if ((ke->modifiers() & allModifiers) == Qt::NoModifier) {
                 mpConsole->scrollUp(0);
-                QTimer::singleShot(0, [this]() {  mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight()); });
+                QTimer::singleShot(0, this, [this]() {  mpConsole->scrollUp(mpConsole->mUpperPane->getScreenHeight()); });
                 ke->accept();
                 return true;
             }
@@ -543,8 +558,13 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     mpConsole->mUpperPane->forceUpdate();
     mpConsole->mLowerPane->forceUpdate();
 
-    // Make sure this profile's tab gets activated in multi-view mode:
-    mudlet::self()->activateProfile(mpHost);
+    // Record that this is the CommandLine in use for this profile, but NOT
+    // if it was Qt::ActiveWindowFocusReason as that gets used just by
+    // switching away and back to the Mudlet application and it messes up
+    // the record:
+    if (event->reason() != Qt::ActiveWindowFocusReason) {
+        mpHost->recordActiveCommandLine(this);
+    }
 
     QPlainTextEdit::focusInEvent(event);
 }
@@ -563,9 +583,6 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 
 void TCommandLine::hideEvent(QHideEvent* event)
 {
-    if (hasFocus()) {
-        mudlet::self()->mpCurrentActiveHost->mpConsole->mpCommandLine->setFocus();
-    }
     QPlainTextEdit::hideEvent(event);
 }
 
@@ -591,7 +608,7 @@ void TCommandLine::adjustHeight()
     if (lines > 10) {
         lines = 10;
     }
-    int fontH = QFontMetrics(font()).height();
+    const int fontH = QFontMetrics(font()).height();
     // Adjust height margin based on font size and if it is more than one row
     int marginH = lines > 1 ? 2+fontH/3 : 5;
     if (lines > 1 && marginH < 8) {
@@ -604,9 +621,9 @@ void TCommandLine::adjustHeight()
     if (_height > height() || _height < height()) {
         mpConsole->layerCommandLine->setMinimumHeight(_height);
         mpConsole->layerCommandLine->setMaximumHeight(_height);
-        int x = mpConsole->width();
-        int y = mpConsole->height();
-        QSize s = QSize(x, y);
+        const int x = mpConsole->width();
+        const int y = mpConsole->height();
+        QSize const s = QSize(x, y);
         QResizeEvent event(s, s);
         QApplication::sendEvent(mpConsole, &event);
     }
@@ -636,7 +653,7 @@ void TCommandLine::slot_popupMenu()
 #if defined(Q_OS_FREEBSD)
     QString t = pA->data().toString();
 #else
-    QString t = pA->text();
+    const QString t = pA->text();
 #endif
     QTextCursor c = cursorForPosition(mPopupPosition);
     c.select(QTextCursor::WordUnderCursor);
@@ -657,270 +674,276 @@ void TCommandLine::slot_popupMenu()
     spellCheck();
 }
 
+void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
+{
+    QTextCursor c = cursorForPosition(event->pos());
+    c.select(QTextCursor::WordUnderCursor);
+    mSpellCheckedWord = c.selectedText();
+
+    const bool wantSpellCheck = TBuffer::lengthInGraphemes(mSpellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
+    if (!wantSpellCheck) {
+        return;
+    }
+
+    auto codec = mpHost->mpConsole->getHunspellCodec_system();
+    auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
+    auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
+    bool haveAddOption = false;
+    bool haveRemoveOption = false;
+    QAction* action_addWord = nullptr;
+    QAction* action_removeWord = nullptr;
+    QAction* action_dictionarySeparatorLine = nullptr;
+    if (handle_profile) {
+        // if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        //    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
+        //    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
+        // } else {
+        action_addWord = new QAction(tr("Add to user dictionary"));
+        action_addWord->setEnabled(false);
+        action_removeWord = new QAction(tr("Remove from user dictionary"));
+        action_removeWord->setEnabled(false);
+        // }
+        if (mudlet::self()->mUsingMudletDictionaries) {
+            /*:
+            This line is shown in the list of spelling suggestions on the profile's command
+            line context menu to clearly divide up where the suggestions for correct
+            spellings are coming from.  The precise format might be modified as long as it
+            is clear that the entries below this line in the menu come from the spelling
+            dictionary that the user has chosen in the profile setting which we have
+            bundled with Mudlet; the entries about this line are the ones that the user
+            has personally added.
+            */
+            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
+        } else {
+            /*:
+            This line is shown in the list of spelling suggestions on the profile's command
+            line context menu to clearly divide up where the suggestions for correct
+            spellings are coming from.  The precise format might be modified as long as it
+            is clear that the entries below this line in the menu come from the spelling
+            dictionary that the user has chosen in the profile setting which is provided
+            as part of the OS; the entries about this line are the ones that the user has
+            personally added.
+            */
+            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
+        }
+        action_dictionarySeparatorLine->setEnabled(false);
+    }
+
+    QList<QAction*> spellings_system;
+    QList<QAction*> spellings_profile;
+    // We always use UTF-8 for the per profile/shared dictionary so we do not
+    // need to have a codec prepared for it and can use QString::toUtf8()
+    // directly:
+    const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
+    if (!(handle_system && codec)) {
+        mSystemDictionarySuggestionsCount = 0;
+    } else {
+        // The dictionary used from "the system" may not be UTF-8 encoded so we
+        // will need to transform the UTF-16BE "QString" to the appropriate encoding
+        // using "codec" declared previously in this method:
+        const QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
+        if (!Hunspell_spell(handle_system, encodedText.constData())) {
+            // The word is NOT in the main system dictionary:
+            if (handle_profile) {
+                // Have a user dictionary so check it:
+                if (!Hunspell_spell(handle_profile, utf8Text.constData())) {
+                    // The word is NOT in the profile one either - so enable add option
+                    haveAddOption = true;
+                } else {
+                    // However the word is in the profile one - so enable remove option
+                    haveRemoveOption = true;
+                }
+
+                if (haveAddOption) {
+                    action_addWord->setEnabled(true);
+                    connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
+                }
+                if (haveRemoveOption) {
+                    action_removeWord->setEnabled(true);
+                    connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
+                }
+            }
+        }
+
+        mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
+    }
+
+    if (handle_profile) {
+        mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, utf8Text.constData());
+    } else {
+        mUserDictionarySuggestionsCount = 0;
+    }
+
+    if (mSystemDictionarySuggestionsCount) {
+        for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
+            auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
+#if defined(Q_OS_FREEBSD)
+            // Adding the text afterwards as user data as well as in the
+            // constructor is to fix a bug(?) in FreeBSD that
+            // automagically adds a '&' somewhere in the text to be a
+            // shortcut - but doesn't show it and forgets to remove
+            // it when asked for the text later:
+            pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
+#endif
+            connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
+            spellings_system << pA;
+        }
+
+    } else {
+        /*:
+        Used when the command spelling checker using the selected system dictionary has
+        no words to suggest.
+        */
+        auto pA = new QAction(tr("no suggestions (system)"));
+        pA->setEnabled(false);
+        spellings_system << pA;
+    }
+
+    if (handle_profile) {
+        if (mUserDictionarySuggestionsCount) {
+            for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
+                auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
+#if defined(Q_OS_FREEBSD)
+                // Adding the text afterwards as user data as well as in the
+                // constructor is to fix a bug(?) in FreeBSD that
+                // automagically adds a '&' somewhere in the text to be a
+                // shortcut - but doesn't show it and forgets to remove
+                // it when asked for the text later:
+                pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
+#endif
+                connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
+                spellings_profile << pA;
+            }
+
+        } else {
+            QAction* pA = nullptr;
+            auto mainConsole = mpConsole->mpHost->mpConsole;
+            if (mainConsole->isUsingSharedDictionary()) {
+                /*:
+                Used when the command spelling checker using the dictionary shared between
+                profile has no words to suggest.
+                */
+                pA = new QAction(tr("no suggestions (shared)"));
+            } else {
+                /*:
+                Used when the command spelling checker using the profile's own dictionary has
+                no words to suggest.
+                */
+                pA = new QAction(tr("no suggestions (profile)"));
+            }
+            pA->setEnabled(false);
+            spellings_profile << pA;
+        }
+    }
+
+    /*
+    * Build up the extra context menu items from the BOTTOM up, so that
+    * the top of the context menu looks like:
+    *
+    * profile dictionary suggestions
+    * --------- separator_aboveDictionarySeparatorLine
+    * \/ System dictionary suggestions /\ Profile  <== Text
+    * --------- separator_aboveSystemDictionarySuggestions
+    * system dictionary suggestions
+    * --------- separator_aboveAddAndRemove
+    * Add word action
+    * Remove word action
+    * --------- separator_aboveStandardMenu
+    *
+    * The insertAction[s](...)/(Separator(...)) insert their things
+    * second argument (or generated by themself) before the first (or
+    * only) argument given.
+    */
+
+    auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
+    if (handle_profile) {
+        popup->insertAction(separator_aboveStandardMenu, action_removeWord);
+        popup->insertAction(action_removeWord, action_addWord);
+        auto separator_aboveAddAndRemove = popup->insertSeparator(action_addWord);
+        popup->insertActions(separator_aboveAddAndRemove, spellings_system);
+        auto separator_aboveSystemDictionarySuggestions = popup->insertSeparator(spellings_system.first());
+        popup->insertAction(separator_aboveSystemDictionarySuggestions, action_dictionarySeparatorLine);
+        auto separator_aboveDictionarySeparatorLine = popup->insertSeparator(action_dictionarySeparatorLine);
+        popup->insertActions(separator_aboveDictionarySeparatorLine, spellings_profile);
+    } else {
+        popup->insertActions(separator_aboveStandardMenu, spellings_system);
+    }
+}
+
 void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
-
     if (event->button() == Qt::RightButton) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         auto popup = createStandardContextMenu(event->globalPos());
+#else
+        auto popup = createStandardContextMenu(event->globalPosition().toPoint());
+#endif
         if (mpHost->mEnableSpellCheck) {
-            QTextCursor c = cursorForPosition(event->pos());
-            c.select(QTextCursor::WordUnderCursor);
-            mSpellCheckedWord = c.selectedText();
-            auto codec = mpHost->mpConsole->getHunspellCodec_system();
-            auto handle_system = mpHost->mpConsole->getHunspellHandle_system();
-            auto handle_profile = mpHost->mpConsole->getHunspellHandle_user();
-            bool haveAddOption = false;
-            bool haveRemoveOption = false;
-            QAction* action_addWord = nullptr;
-            QAction* action_removeWord = nullptr;
-            QAction* action_dictionarySeparatorLine = nullptr;
-            if (handle_profile) {
-                // TODO: Make icons for these?
-//                if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
-//                    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
-//                    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
-//                } else {
-                action_addWord = new QAction(tr("Add to user dictionary"));
-                action_addWord->setEnabled(false);
-                action_removeWord = new QAction(tr("Remove from user dictionary"));
-                action_removeWord->setEnabled(false);
-//                }
-                if (mudlet::self()->mUsingMudletDictionaries) {
-                    action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which we have "
-                                                                         "bundled with Mudlet; the entries about this line are the ones that the user "
-                                                                         "has personally added."));
-                } else {
-                    action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲",
-                                                                         // Intentional separator
-                                                                         "This line is shown in the list of spelling suggestions on the profile's command-"
-                                                                         "line context menu to clearly divide up where the suggestions for correct "
-                                                                         "spellings are coming from.  The precise format might be modified as long as it "
-                                                                         "is clear that the entries below this line in the menu come from the spelling "
-                                                                         "dictionary that the user has chosen in the profile setting which is provided "
-                                                                         "as part of the OS; the entries about this line are the ones that the user has "
-                                                                         "personally added."));
-                }
-                action_dictionarySeparatorLine->setEnabled(false);
-            }
-
-            QList<QAction*> spellings_system;
-            QList<QAction*> spellings_profile;
-            if (handle_system && codec) {
-                QByteArray encodedText = codec->fromUnicode(mSpellCheckedWord);
-
-                if (!Hunspell_spell(handle_system, encodedText.constData())) {
-                    // The word is NOT in the main system dictionary:
-                    if (handle_profile) {
-                        // Have a user dictionary so check it:
-                        if (!Hunspell_spell(handle_profile, mSpellCheckedWord.toUtf8().constData())) {
-                            // The word is NOT in the profile one either - so enable add option
-                            haveAddOption = true;
-                        } else {
-                            // However the word is in the profile one - so enable remove option
-                            haveRemoveOption = true;
-                        }
-
-                        if (haveAddOption) {
-                            action_addWord->setEnabled(true);
-                            connect(action_addWord, &QAction::triggered, this, &TCommandLine::slot_addWord);
-                        }
-                        if (haveRemoveOption) {
-                            action_removeWord->setEnabled(true);
-                            connect(action_removeWord, &QAction::triggered, this, &TCommandLine::slot_removeWord);
-                        }
-                    }
-                }
-
-                mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
-            } else {
-                mSystemDictionarySuggestionsCount = 0;
-            }
-
-            if (handle_profile) {
-                mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, mSpellCheckedWord.toUtf8().constData());
-            } else {
-                mUserDictionarySuggestionsCount = 0;
-            }
-
-            if (mSystemDictionarySuggestionsCount) {
-                for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
-                    auto pA = new QAction(codec->toUnicode(mpSystemSuggestionsList[i]));
-#if defined(Q_OS_FREEBSD)
-                    // Adding the text afterwards as user data as well as in the
-                    // constructor is to fix a bug(?) in FreeBSD that
-                    // automagically adds a '&' somewhere in the text to be a
-                    // shortcut - but doesn't show it and forgets to remove
-                    // it when asked for the text later:
-                    pA->setData(codec->toUnicode(mpSystemSuggestionsList[i]));
-#endif
-                    connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
-                    spellings_system << pA;
-                }
-
-            } else {
-                auto pA = new QAction(tr("no suggestions (system)",
-                                         // Intentional comment
-                                         "used when the command spelling checker using the selected system dictionary has no words to suggest"));
-                pA->setEnabled(false);
-                spellings_system << pA;
-            }
-
-            if (handle_profile) {
-                if (mUserDictionarySuggestionsCount) {
-                    for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
-                        auto pA = new QAction(codec->toUnicode(mpUserSuggestionsList[i]));
-#if defined(Q_OS_FREEBSD)
-                        // Adding the text afterwards as user data as well as in the
-                        // constructor is to fix a bug(?) in FreeBSD that
-                        // automagically adds a '&' somewhere in the text to be a
-                        // shortcut - but doesn't show it and forgets to remove
-                        // it when asked for the text later:
-                        pA->setData(codec->toUnicode(mpUserSuggestionsList[i]));
-#endif
-                        connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
-                        spellings_profile << pA;
-                    }
-
-                } else {
-                    QAction* pA = nullptr;
-                    auto mainConsole = mpConsole->mpHost->mpConsole;
-                    if (mainConsole->isUsingSharedDictionary()) {
-                        pA = new QAction(tr("no suggestions (shared)",
-                                                 // Intentional comment
-                                                 "used when the command spelling checker using the dictionary shared between profile has no words to suggest"));
-                    } else {
-                        pA = new QAction(tr("no suggestions (profile)",
-                                                 // Intentional comment
-                                                 "used when the command spelling checker using the profile's own dictionary has no words to suggest"));
-                    }
-                    pA->setEnabled(false);
-                    spellings_profile << pA;
-                }
-            }
-
-           /*
-            * Build up the extra context menu items from the BOTTOM up, so that
-            * the top of the context menu looks like:
-            *
-            * profile dictionary suggestions
-            * --------- separator_aboveDictionarySeparatorLine
-            * \/ System dictionary suggestions /\ Profile  <== Text
-            * --------- separator_aboveSystemDictionarySuggestions
-            * system dictionary suggestions
-            * --------- separator_aboveAddAndRemove
-            * Add word action
-            * Remove word action
-            * --------- separator_aboveStandardMenu
-            *
-            * The insertAction[s](...)/(Separator(...)) insert their things
-            * second argument (or generated by themself) before the first (or
-            * only) argument given.
-            */
-
-            auto separator_aboveStandardMenu = popup->insertSeparator(popup->actions().first());
-            if (handle_profile) {
-                popup->insertAction(separator_aboveStandardMenu, action_removeWord);
-                popup->insertAction(action_removeWord, action_addWord);
-                auto separator_aboveAddAndRemove = popup->insertSeparator(action_addWord);
-                popup->insertActions(separator_aboveAddAndRemove, spellings_system);
-                auto separator_aboveSystemDictionarySuggestions = popup->insertSeparator(spellings_system.first());
-                popup->insertAction(separator_aboveSystemDictionarySuggestions, action_dictionarySeparatorLine);
-                auto separator_aboveDictionarySeparatorLine = popup->insertSeparator(action_dictionarySeparatorLine);
-                popup->insertActions(separator_aboveDictionarySeparatorLine, spellings_profile);
-            } else {
-                popup->insertActions(separator_aboveStandardMenu, spellings_system);
-            }
-            // else the word is in the dictionary - in either ca`se show the context
-            // menu - either the one with the prefixed spellings, or the standard
-            // one:
+            fillSpellCheckList(event, popup);
+            // else the word is in the dictionary - in either case show the context
+            // menu - either the one with the prefixed spellings, or the standard one
         }
 
         popup->addSeparator();
         foreach(auto label, contextMenuItems.keys()) {
             auto eventName = contextMenuItems.value(label);
             auto action = new QAction(label, this);
-            connect(action, &QAction::triggered, [=]() {
-                TEvent event = {};
-                event.mArgumentList << eventName;
-                event.mArgumentTypeList << ARGUMENT_TYPE_STRING;
-                mpHost->raiseEvent(event);
+            connect(action, &QAction::triggered, this, [=]() {
+                TEvent mudletEvent = {};
+                mudletEvent.mArgumentList << eventName;
+                mudletEvent.mArgumentTypeList << ARGUMENT_TYPE_STRING;
+                mpHost->raiseEvent(mudletEvent);
             });
             popup->addAction(action);
         }
 
         mPopupPosition = event->pos();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         popup->popup(event->globalPos());
+#else
+        popup->popup(event->globalPosition().toPoint());
+#endif
         // The use of accept here is supposed to prevents this event from
         // reaching any parent widget - like the TConsole containing this
         // TCommandLine...
         event->accept();
     }
 
-    // Process any other possible mousePressEvent - which is default popup
-    // handling - and which accepts the event:
+    // Process any other possible mousePressEvent - which is default context
+    // menu handling - and which accepts the event:
     QPlainTextEdit::mousePressEvent(event);
     mudlet::self()->activateProfile(mpHost);
-    if (mType & (SubCommandLine|ConsoleCommandLine)) {
-        // This is NOT the main TMainConsole so keep the focus in this
-        // TConsole/TCommandLine - but due to the way things happen we
-        // need to do it after other things have happened - by using a zero
-        // time-out timer:
-        QTimer::singleShot(0, this, [this]() {
-            if (mpConsole) {
-                mpConsole->setFocusOnAppropriateConsole();
-                this->setFocus(Qt::OtherFocusReason);
-            }
-        });
-    }
 }
 
 void TCommandLine::mouseReleaseEvent(QMouseEvent* event)
 {
-    // Process any other possible mousePressEvent - which is default popup
-    // handling - and which accepts the event:
-    QPlainTextEdit::mousePressEvent(event);
+    // Process any other possible mouseReleaseEvent - which is default context
+    // menu handling - and which accepts the event:
+    QPlainTextEdit::mouseReleaseEvent(event);
     mudlet::self()->activateProfile(mpHost);
-    if (mType & (SubCommandLine|ConsoleCommandLine)) {
-        // This is NOT the main TMainConsole so keep the focus in this
-        // TConsole/TCommandLine - but due to the way things happen we
-        // need to do it after other things have happened - by using a zero
-        // time-out timer:
-        QTimer::singleShot(0, this, [this]() {
-            if (mpConsole) {
-                mpConsole->setFocusOnAppropriateConsole();
-                this->setFocus(Qt::OtherFocusReason);
-            }
-        });
-    }
 }
 
 void TCommandLine::enterCommand(QKeyEvent* event)
 {
     Q_UNUSED(event)
-    QString _t = toPlainText();
     mTabCompletionCount = -1;
     mAutoCompletionCount = -1;
     mTabCompletionTyped.clear();
     mLastCompletion.clear();
     mUserKeptOnTyping = false;
 
-    QStringList _l = _t.split(QChar::LineFeed);
+    QStringList commandList = toPlainText().split(QChar::LineFeed);
 
-    for (int i = 0; i < _l.size(); i++) {
+    for (int i = 0; i < commandList.size(); ++i) {
         if (mType != MainCommandLine && mActionFunction) {
-            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, _l[i]);
+            mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, commandList.at(i));
         } else {
-            mpHost->send(_l[i]);
+            mpHost->send(commandList.at(i));
         }
         // send command to your MiniConsole
         if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mPrintCommand){
-            mpConsole->printCommand(_l[i]);
+            // This usage of commandList modifies the content!!!
+            mpConsole->printCommand(commandList[i]);
         }
     }
 
@@ -939,6 +962,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
         }
         mHistoryList.push_front(QString());
     }
+
     if (mpHost->mAutoClearCommandLineAfterSend) {
 #if defined (Q_OS_MACOS)
         // clearing the input line on macOS 11.6 makes VoiceOver announce the removed text,
@@ -978,15 +1002,25 @@ void TCommandLine::handleTabCompletion(bool direction)
         amount = 500;
     }
 
-    QStringList bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
+    const QStringList bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
     QString buffer = bufferList.join(QChar::Space);
 
     buffer.replace(QChar(0x21af), QChar::LineFeed);
     buffer.replace(QChar::LineFeed, QChar::Space);
 
     QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
+    wordList.append(commandLineSuggestions.values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead.
+    const QStringList blacklist = tabCompleteBlacklist.values();
+    QStringList toDelete;
 
-    wordList.append(commandLineSuggestions.values());
+    for (const QString& wstr : qAsConst(wordList)) {
+        if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
+            toDelete += wstr;
+        }
+    }
+    for (const QString& dstr : qAsConst(toDelete)) {
+        wordList.removeAll(dstr);
+    }
 
     if (direction) {
         mTabCompletionCount++;
@@ -998,9 +1032,9 @@ void TCommandLine::handleTabCompletion(bool direction)
             return;
         }
         QString lastWord;
-        QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
-        QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
-        int typePosition = match.capturedStart();
+        QRegularExpression const reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
+        QRegularExpressionMatch const match = reg.match(mTabCompletionTyped);
+        const int typePosition = match.capturedStart();
         if (reg.captureCount() >= 1) {
             lastWord = match.captured(1);
         } else {
@@ -1008,12 +1042,13 @@ void TCommandLine::handleTabCompletion(bool direction)
         }
 
         QStringList filterList = wordList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
+
         if (filterList.empty()) {
             return;
         }
         int offset = 0;
         forever {
-            QString tmp = filterList.back();
+            const QString tmp = filterList.back();
             filterList.removeAll(tmp);
             filterList.insert(offset, tmp);
             ++offset;
@@ -1029,8 +1064,8 @@ void TCommandLine::handleTabCompletion(bool direction)
             if (mTabCompletionCount < 0) {
                 mTabCompletionCount = 0;
             }
-            QString proposal = filterList[mTabCompletionCount];
-            QString userWords = mTabCompletionTyped.left(typePosition);
+            const QString proposal = filterList[mTabCompletionCount];
+            const QString userWords = mTabCompletionTyped.left(typePosition);
             setPlainText(QString(userWords + proposal));
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
@@ -1050,7 +1085,7 @@ void TCommandLine::handleAutoCompletion()
     neu.chop(textCursor().selectedText().size());
     setPlainText(neu);
     mTabCompletionOld = neu;
-    int oldLength = toPlainText().size();
+    const int oldLength = toPlainText().size();
     if (mAutoCompletionCount >= mHistoryList.size()) {
         mAutoCompletionCount = mHistoryList.size() - 1;
     }
@@ -1058,7 +1093,7 @@ void TCommandLine::handleAutoCompletion()
         mAutoCompletionCount = 0;
     }
     for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
-        QString h = mHistoryList[i].mid(0, neu.size());
+        const QString h = mHistoryList[i].mid(0, neu.size());
         if (neu == h) {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
@@ -1085,7 +1120,7 @@ void TCommandLine::historyMove(MoveDirection direction)
     if (mHistoryList.empty()) {
         return;
     }
-    int shift = (direction == MOVE_UP ? 1 : -1);
+    const int shift = (direction == MOVE_UP ? 1 : -1);
     if ((textCursor().selectedText().size() == toPlainText().size()) || (toPlainText().isEmpty()) || !mpHost->mHighlightHistory) {
         mHistoryBuffer += shift;
         if (mHistoryBuffer >= mHistoryList.size()) {
@@ -1150,12 +1185,29 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     QTextCharFormat f;
     mSpellChecking = true;
     c.select(QTextCursor::WordUnderCursor);
-    QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(c.selectedText());
+    const QString spellCheckedWord = c.selectedText();
+    const bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
+    if (!wantSpellCheck) {
+        // We don't check when the word is too short, but may need to
+        // undo any prior underline, and we need to also reset the flag:
+        f.setFontUnderline(false);
+        c.setCharFormat(f);
+        setTextCursor(c);
+        mSpellChecking = false;
+        return;
+    }
+
+    // The dictionary used from "the system" may not be UTF-8 encoded so we
+    // will need to transform the UTF-16BE "QString" to the appropriate encoding
+    // using the correct "codec":
+    const QByteArray encodedText = mpHost->mpConsole->getHunspellCodec_system()->fromUnicode(spellCheckedWord);
     if (!Hunspell_spell(systemDictionaryHandle, encodedText.constData())) {
         // Word is not in selected system dictionary
         Hunhandle* userDictionaryhandle = mpHost->mpConsole->getHunspellHandle_user();
         if (userDictionaryhandle) {
-            if (Hunspell_spell(userDictionaryhandle, c.selectedText().toUtf8().constData())) {
+            // The per-profile/shared dictionary is always UTF-8 encoded - so
+            // we can use QString::toUtf8() directly to get the bytes needed:
+            if (Hunspell_spell(userDictionaryhandle, spellCheckedWord.toUtf8().constData())) {
                 // We are using a user dictionary and it does contain this word - so
                 // use a different underline, on many systems the spell-check underline is
                 // a wavy line but on macOs it is a dotted line - so use dash underline
@@ -1215,9 +1267,8 @@ void TCommandLine::recheckWholeLine()
     }
 
     // Save the current position
-    QTextCursor oldCursor = textCursor();
+    QTextCursor const oldCursor = textCursor();
 
-    QTextCharFormat f;
     QTextCursor c = textCursor();
     // Move Cursor AND selection anchor to start:
     c.movePosition(QTextCursor::Start);
@@ -1287,4 +1338,221 @@ void TCommandLine::removeSuggestion(const QString& suggestion)
 void TCommandLine::clearSuggestions()
 {
     commandLineSuggestions.clear();
+}
+
+void TCommandLine::addBlacklist(const QString& word)
+{
+    tabCompleteBlacklist += word;
+}
+
+void TCommandLine::removeBlacklist(const QString& word)
+{
+    tabCompleteBlacklist.remove(word);
+}
+
+void TCommandLine::clearBlacklist()
+{
+    tabCompleteBlacklist.clear();
+}
+
+void TCommandLine::slot_adjustAccessibleNames()
+{
+    const bool multipleProfilesActive = (mudlet::self()->getHostManager().getHostCount() > 1);
+    const QString hostName{mpHost ? mpHost->getName() : QString()};
+    switch (mType) {
+    case MainCommandLine:
+        if (multipleProfilesActive) {
+            /*:
+            Accessibility-friendly name to describe the main command line for a
+            Mudlet profile when more than one profile is loaded, %1 is the
+            profile name. Because this is likely to be used often it should be
+            kept as short as possible.
+            */
+            setAccessibleName(tr("Input line for \"%1\" profile.").arg(hostName));
+            /*:
+            Accessibility-friendly description for the main command line for
+            a Mudlet profile when more than one profile is loaded, %1 is the
+            profile name. Because this is likely to be used often it should be
+            kept as short as possible.
+            */
+            setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
+                                        "to run commands locally.").arg(hostName));
+        } else {
+            /*:
+            Accessibility-friendly name to describe the main command line for a
+            Mudlet profile when only one profile is loaded. Because this is
+            likely to be used often it should be kept as short as possible.
+            */
+            setAccessibleName(tr("Input line."));
+            /*:
+            Accessibility-friendly description for the main command line for
+            a Mudlet profile when only one profile is loaded. Because this is
+            likely to be used often it should be kept as short as possible.
+            */
+            setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
+                                        "locally."));
+        }
+        break;
+    case SubCommandLine:
+        if (multipleProfilesActive) {
+            /*:
+            Accessibility-friendly name to describe an extra command line on
+            top of console/window when more than one profile is loaded, %1 is
+            the command line name, %2 is the name of the window/console that
+            it is on and %3 is the name of the profile.
+            */
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window of \"%3\"profile.")
+                                      .arg(mCommandLineName, mpConsole->mConsoleName, hostName));
+            /*:
+            Accessibility-friendly description for an extra command line on top of a
+            console/window when more than one profile is loaded, %1 is the profile
+            name.
+            */
+            setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
+                                        "to run commands locally.").arg(hostName));
+        } else {
+            /*:
+            Accessibility-friendly name to describe an extra command line on
+            top of console/window when only one profile is loaded, %1 is the
+            command line name and %2 is the name of the window/console that
+            it is on.
+            */
+            setAccessibleName(tr("Additional input line \"%1\" on \"%2\" window.")
+                                      .arg(mCommandLineName, mpConsole->mConsoleName));
+            /*:
+            Accessibility-friendly description for an extra command line on
+            top of a console/window when only one profile is loaded.
+            */
+            setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
+                                        "locally."));
+        }
+        break;
+    case ConsoleCommandLine:
+        // The mCommandLine for this type is the same as the parent TConsole
+        if (multipleProfilesActive) {
+            /*:
+            Accessibility-friendly name to describe the built-in command line of a
+            console/window other than the main one, when more than one profile is
+            loaded, %1 is the name of the window/console and %2 is the name of the
+            profile.
+            */
+            setAccessibleName(tr("Input line of \"%1\" window of \"%2\" profile.").arg(mCommandLineName, hostName));
+            /*:
+            Accessibility-friendly description for the built-in command line of a
+            console/window other than the main window's one when more than one profile is
+            loaded, %1 is the profile name.
+            */
+            setAccessibleDescription(tr("Type in text to send to the game server for the \"%1\" profile, or enter an alias "
+                                        "to run commands locally.").arg(hostName));
+        } else {
+            /*:
+            Accessibility-friendly name to describe the built-in command line
+            of a console/window other than the main one, when only one
+            profile is loaded, %1 is the name of the window/console.
+            */
+            setAccessibleName(tr("Input line of \"%1\" window.")
+                                      .arg(mCommandLineName));
+            /*:
+            Accessibility-friendly description for the built-in command line of a
+            console/window other than the main window's one when only one profile is
+            loaded.
+            */
+            setAccessibleDescription(tr("Type in text to send to the game server, or enter an alias to run commands "
+                                        "locally."));
+        }
+        break;
+    case UnknownType:
+        Q_UNREACHABLE();
+    }
+}
+
+void TCommandLine::restoreHistory()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        qWarning().nospace().noquote() << "TCommandLine::restoreHistory() ERROR - got a Host pointer that was null - unable to save command history for the command line called: " << mCommandLineName
+                                       << " of type: " << mType;
+        return;
+    }
+
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QFile historyFile(pathFileName, this);
+    if (historyFile.exists()) {
+        if (historyFile.open(QIODevice::ReadOnly | QIODevice::Unbuffered)) {
+            // In Qt6 the default encoding is UTF-8
+            QTextStream ifs(&historyFile);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+            ifs.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+            QString buffer;
+            while (!ifs.atEnd() && ifs.status() == QTextStream::Ok) {
+                ifs.readLineInto(&buffer);
+                mHistoryList.append(buffer);
+            }
+
+            if (historyFile.error() != QFileDevice::NoError) {
+                qWarning() << "TCommandLine::restoreHistory() ERROR - unable to read command history from file for the command line called: " << mCommandLineName << " of type: " << mType
+                           << " reason: " << historyFile.errorString();
+                historyFile.close();
+                return;
+            }
+
+            historyFile.close();
+            // Success!
+            return;
+        }
+
+        // else failed to open the file despite it existing
+        if (historyFile.error() != QFileDevice::NoError) {
+            qWarning() << "TCommandLine::restoreHistory() ERROR - unable to open command history for the command line called: "
+                       << mCommandLineName << " of type: " << mType
+                       << " reason: " << historyFile.errorString();
+            return;
+        }
+    }
+    // else no such file - which will be the case for the first time the
+    // command line is created - so it might not be an error:
+    if (mCommandLineName != qsl("main")) {
+        qDebug() << "TCommandLine::restoreHistory() ALERT - unable to open command history for the command line called: "
+                << mCommandLineName << " of type: " << mType
+                << " because the file: " << mBackingFileName
+                << " does not exist in the profile's home directory, unless this is a new command line then this is an unexpected error.";
+    }
+}
+
+void TCommandLine::slot_saveHistory()
+{
+    auto pHost = mpHost;
+    if (!pHost) {
+        qWarning().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - got a Host pointer that was null - unable to save command history for the command line called: " << mCommandLineName
+                                       << " of type: " << mType;
+        return;
+    }
+
+    pHost->setCmdLineSettings(mType, mSaveCommands, mCommandLineName);
+    auto saveSize = pHost->getCommandLineHistorySaveSize();
+    if (!saveSize || !mSaveCommands) {
+        // Option has been disabled so do nothing (won't delete the previous one
+        // though!):
+        return;
+    }
+
+    QString pathFileName{mudlet::self()->mudlet::getMudletPath(mudlet::profileDataItemPath, pHost->getName(), mBackingFileName)};
+    QSaveFile historyFile(pathFileName, this);
+    if (historyFile.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        QTextStream ofs(&historyFile);
+        // In Qt6 the default encoding is UTF-8
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        ofs.setCodec(QTextCodec::codecForName("UTF-8"));
+#endif
+        // We need to add one here because usually the first line in
+        // mHistoryList is an empty one - maybe it might represent the current
+        // line and will get captured/saved if the profile is closed with some
+        // unsent text in the command line?
+        ofs << mHistoryList.mid(0, saveSize + 1).join(QChar::LineFeed);
+        if (!historyFile.commit()) {
+            qDebug().nospace().noquote() << "TCommandLine::slot_saveHistory() ERROR - unable to save command history for the command line called: " << mCommandLineName
+                                         << " of type: " << mType << " reason: " << historyFile.errorString();
+        }
+    }
 }

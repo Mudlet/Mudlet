@@ -64,6 +64,35 @@ public:
     // clang-format off
     // games are to be added here in alphabetical order
     inline static const QList<GameDetail> scmDefaultGames = {
+            { qsl("Abandoned Realms"),
+            qsl("abandonedrealms.com"),
+            9000,
+            false,
+qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
+                "<a href='https://abandonedrealms.com/forum'>Forum</a>"),
+            qsl(":/icons/abandonedrealms_icon.jpg"),
+            qsl("The Abandoned Realms is a completely free RP-enforced, PK-encouraged, MUD in a fantasy setting "
+                 "(swords/magic/lore/intrigue) that has been up and running constantly since 1997."
+                 "\n\n"
+                 "With 20 races and 16 classes, there are vast possibilities for players to explore and enjoy. "
+                 "The Abandoned Realms has a dedicated staff of highly skilled immortals/coders/builders, "
+                 "and a diverse base players online at any given time. There are extensive opportunities for "
+                 "role-play, including writing character background entries, building your own house "
+                 "(including decor), contributing to the in-game newspaper, engaging in political intrigue, "
+                 "choosing a deity to worship (and opening exceptional Immortal RP opportunities), and "
+                 "more."
+                 "\n\n"
+                 "It is a dangerous realm, filled with exceptional killers but new players are not hunted – they "
+                 "are welcomed and supported. Perma-death exists, but it is common for characters to live "
+                 "for hundreds of  hours, or as long as the player desires. Information and advice are shared "
+                 "freely – see The Codex for item identifications/locations, the logboard for battles, and the "
+                 "forum and discord for gameplay discussion and advice."
+                 "\n\n"
+                 "If you are interested in a completely free, immersive RP/PK experience, in a vibrant land filled "
+                 "with lore/intrigue, where you can forge long-lasting friendships and bitter rivalries, and have an "
+                 "opportunity to leave your lasting mark and be remembered forever, then welcome ye to the "
+                 "Abandoned Realms.")
+            },
             {qsl("Avalon.de"), // Name
              qsl("avalon.mud.de"), // address to connect to
              23, // port to connect on
@@ -535,6 +564,37 @@ public:
                  "Rivendell, Goblin-town, Mirkwood, Dol Guldur, and the Mines of Moria. The game is "
                  "completely at no cost to play and has been continually enhanced since its "
                  "inception in the fall of 1991.")},
+
+            {qsl("MorgenGrauen"),
+             qsl("mg.mud.de"),
+             4711,
+             false,
+             qsl("<a href='http://mg.mud.de/'>MorgenGrauen Webseite</a><br>"
+                 "<a href='https://www.youtube.com/MorgenGrauen'>YouTube Kanal</a><br>"
+                 "<a href='https://discord.gg/nHJnYHk'>Discord Server</a>"),
+             qsl(":/icons/morgengrauen_480x120.png"),
+             /* English translation, provided by game:
+              * "Welcome to Morgengrauen, the largest German-language "
+              * "MUD, which has been continuously developed since 1992."
+              * "\n\n"
+              * "Discover hundrets of unique quests! Raise your skills "
+              * "in special guilds: demonnic warriors of chaos, drunken "
+              * "beer shakers, werewolves, orcs, elves, and many more."
+              * "\n\n"
+              * "Our friendly player base is glad to help you with your first steps."
+              * "\n\n"
+              * "Play now or never!"
+              */
+             qsl("Willkommen im Morgengrauen, dem größten deutschsprachigen "
+                 "MUD, das seit 1992 kontinuierlich weiterentwickelt wird."
+                 "\n\n"
+                 "Entdecke hunderte einzigartige Abenteuer! Steigere Deine "
+                 "Fähigkeiten in besonderen Gilden: Dämonische Krieger des Chaos, "
+                 "betrunkene Bierschüttler, Werwölfe, Orks, Elfen, und viele weitere."
+                 "\n\n"
+                 "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
+                 "\n\n"
+                 "Spiel jetzt oder nie!")},
             };
     // clang-format on
 };

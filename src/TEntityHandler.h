@@ -34,7 +34,7 @@ public:
     : mpEntityResolver(pResolver)
     {}
 
-    bool handle(char ch);
+    bool handle(char character);
     void reset();
 
     bool isEntityResolved() const;

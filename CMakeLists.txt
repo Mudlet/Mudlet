@@ -84,6 +84,15 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_package(Git REQUIRED)
+# Get Git SHA1 hash
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_SHA1
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 # APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
@@ -96,11 +105,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
-set(APP_VERSION 4.16.0)
+set(APP_VERSION 4.17.2)
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "$ENV{MUDLET_VERSION_BUILD}")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev")
   set(APP_BUILD "-dev")
 endif()
 
@@ -125,12 +136,35 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
                         OPTION_VARIABLE USE_VARIABLE_SPLASH_SCREEN
                         READABLE_NAME "build-type splash screen")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
-                        OPTION_VARIABLE USE_OWN_QT5KEYCHAIN
-                        READABLE_NAME "own QKeychain (Qt5) library")
+                        OPTION_VARIABLE USE_OWN_QTKEYCHAIN
+                        READABLE_NAME "own QtKeychain library")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_MAIN_BUILD_SYSTEM
                         OPTION_VARIABLE USE_MAIN_BUILD_SYSTEM
                         READABLE_NAME "original CI (setup-windows-sdk.ps1) windows build system"
                         SUPPORTED_SYSTEMS "Windows")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
+                        OPTION_VARIABLE USE_QT6
+                        READABLE_NAME "build with Qt6 (if installed)")
+
+if(USE_QT6)
+  find_package(
+          Qt6 6.2.0
+          QUIET)
+  if(NOT Qt6_FOUND)
+    message(STATUS "Qt6 >= 6.2.0 was not found. Building with Qt5.")
+  endif()
+endif()
+
+# Set Qt version for src, test, translations and communi
+set(WITH_QT6 ${Qt6_FOUND} CACHE BOOL "Whether to build with Qt6 or Qt5.")
+# Set Qt version for edbee-lib and dblsqd
+if(WITH_QT6)
+  option(BUILD_WITH_QT5 "" OFF)
+else()
+  option(BUILD_WITH_QT5 "" ON)
+endif()
+# Set Qt version for qtkeychain
+option(BUILD_WITH_QT6 "" ${WITH_QT6})
 
 include(InitGitSubmodule)
 
@@ -138,7 +172,7 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-if(USE_OWN_QT5KEYCHAIN)
+if(USE_OWN_QTKEYCHAIN)
   git_submodule_init(
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
     SUBMODULE_PATH "3rdparty/qtkeychain"
@@ -149,6 +183,15 @@ endif()
 git_submodule_init(
   CHECK_FILE "3rdparty/lcf/lcf-scm-1.rockspec" SUBMODULE_PATH "3rdparty/lcf"
   READABLE_NAME "lua code formatter source code")
+
+# PLACEMARKER: sample benchmarking code
+# include(FetchContent)
+# FetchContent_Declare(
+#     nanobench
+#     GIT_REPOSITORY https://github.com/martinus/nanobench.git
+#     GIT_TAG v4.3.11
+#     GIT_SHALLOW TRUE)
+# FetchContent_MakeAvailable(nanobench)
 
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH
@@ -196,3 +239,7 @@ if(USE_UPDATER)
   endif()
 
 endif()
+
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG -O0)

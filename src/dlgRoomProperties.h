@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2021 by Piotr Wilczynski - delwing@gmail.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2022 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -87,6 +87,9 @@ private slots:
     void slot_selectRoomColor(QListWidgetItem*);
     void slot_defineNewColor();
     void slot_openRoomColorSelector();
+
+    void slot_symbolComboBoxItemChanged(const int);
+    void slot_weightComboBoxItemChanged(const int);
 };
 
 #endif // MUDLET_DLGROOMPROPERTIES_H
