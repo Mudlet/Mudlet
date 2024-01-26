@@ -85,6 +85,7 @@
 #include <QToolTip>
 #include <QVariantHash>
 #include <QRandomGenerator>
+#include <memory>
 #include <zip.h>
 #include <QStyle>
 #if defined(Q_OS_WIN32)
@@ -4967,14 +4968,14 @@ void mudlet::activateProfile(Host* pHost)
     mInstanceCoordinator->openUrisLocally();
 }
 
-void mudlet::registerInstanceCoordinator(MudletInstanceCoordinator* instanceCoordinator)
+void mudlet::takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator> instanceCoordinator)
 {
-    mInstanceCoordinator = instanceCoordinator;
+    mInstanceCoordinator = std::move(instanceCoordinator);
 }
 
 MudletInstanceCoordinator* mudlet::getInstanceCoordinator()
 {
-    return mInstanceCoordinator;
+    return mInstanceCoordinator.get();
 }
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
 {

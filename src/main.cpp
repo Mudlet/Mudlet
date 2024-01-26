@@ -398,8 +398,8 @@ int main(int argc, char* argv[])
     // 1. This current process will start as normal.
     // 2. The package will be queued for install until a profile is selected.
 
-    MudletInstanceCoordinator instanceCoordinator("MudletInstanceCoordinator");
-    const bool firstInstanceOfMudlet = instanceCoordinator.tryToStart();
+    std::unique_ptr<MudletInstanceCoordinator> instanceCoordinator = std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator");
+    const bool firstInstanceOfMudlet = instanceCoordinator->tryToStart();
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
@@ -621,7 +621,7 @@ int main(int argc, char* argv[])
 #endif
 
     // Pass ownership of MudletInstanceCoordinator to mudlet.
-    mudlet::self()->registerInstanceCoordinator(&instanceCoordinator);
+    mudlet::self()->takeOwnershipOfInstanceCoordinator(std::move(instanceCoordinator));
 
     // Handle "QEvent::FileOpen" events.
     FileOpenHandler fileOpenHandler;
