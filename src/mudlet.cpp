@@ -2148,11 +2148,10 @@ void mudlet::writeSettings()
 
 void mudlet::slot_showConnectionDialog()
 {
-    if (mpConnectionDialog) {
-        return;
+    if (!mpConnectionDialog) {
+        mpConnectionDialog = new dlgConnectionProfiles(this);
+        connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
     }
-    mpConnectionDialog = new dlgConnectionProfiles(this);
-    connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
     mpConnectionDialog->fillout_form();
 
     QStringList packagesToInstall = mInstanceCoordinator->listUrisWithScheme("file");
@@ -2800,6 +2799,113 @@ void mudlet::setMudletAsDefault()
 #endif
 }
 
+    // prepend n+1 to end of the profile name
+    if (profile_name.at(profile_name.size() - 1).isDigit()) {
+        int i = 1;
+        do {
+            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
+        } while (hostList.contains(profile_name));
+    } else {
+        int i = 1;
+        QString profile_name2;
+        do {
+            profile_name2 = profile_name + QString::number(i++);
+        } while (hostList.contains(profile_name2));
+        profile_name = profile_name2;
+    }
+}
+QString mudlet::addProfile(const QString &host, const int port, const QString &login, const QString &password)
+{
+    QString profile_name(host);
+    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    if (hostList.contains(profile_name)) {
+        generateUniqueProfileName(profile_name);
+    }
+
+    QString profilePath = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+    QDir dir;
+    dir.mkpath(profilePath);
+
+    writeProfileData(profile_name, QStringLiteral("url"), host);
+    writeProfileData(profile_name, QStringLiteral("port"), QString::number(port));
+
+    if (!login.isEmpty()) {
+        writeProfileData(profile_name, QStringLiteral("login"), login);
+    }
+    if (!password.isEmpty()) {
+        writeProfileData(profile_name, QStringLiteral("password"), password);
+    }
+
+    return profile_name;
+}
+
+bool mudlet::mudletIsDefault()
+{
+    // TODO: implement me
+    return false;
+}
+// open a dialog to prompt the user to set Mudlet as default
+void mudlet::openDefaultCheck()
+{
+    if (!mpDefaultClientDlg) {
+        QUiLoader loader;
+        QFile file(QStringLiteral(":/ui/check_default_client.ui"));
+        file.open(QFile::ReadOnly);
+        mpDefaultClientDlg = dynamic_cast<QDialog*>(loader.load(&file, this));
+        file.close();
+
+        if (!mpDefaultClientDlg) {
+            // don't need to print error message from loader as that is already in stdout
+            qWarning() << "mudlet::openDefaultClientCheck() error: failed to load dialog: " << loader.errorString();
+            return;
+        }
+
+        auto buttonBox = mpDefaultClientDlg->findChild<QDialogButtonBox*>(QStringLiteral("buttonBox"));
+        auto checkBox_alwaysPerformCheck = mpDefaultClientDlg->findChild<QCheckBox*>(QStringLiteral("checkBox_alwaysPerformCheck"));
+
+        buttonBox->clear();
+
+        auto setAsDefault = new QPushButton(tr("Use Mudlet as my default client"), mpDefaultClientDlg);
+        auto notNow = new QPushButton(tr("Not now"), mpDefaultClientDlg);
+
+        buttonBox->addButton(setAsDefault, QDialogButtonBox::AcceptRole);
+        setAsDefault->setAutoDefault(true);
+        buttonBox->addButton(notNow, QDialogButtonBox::RejectRole);
+        connect(buttonBox, &QDialogButtonBox::accepted, mpDefaultClientDlg, &QDialog::accept);
+        connect(buttonBox, &QDialogButtonBox::rejected, mpDefaultClientDlg, &QDialog::reject);
+
+        checkBox_alwaysPerformCheck->setChecked(mudlet::self()->mAlwaysCheckDefault);
+        connect(checkBox_alwaysPerformCheck, &QCheckBox::stateChanged, this, [=](int state) {
+            if (state == Qt::Checked) {
+                mudlet::self()->mAlwaysCheckDefault = true;
+            } else {
+                mudlet::self()->mAlwaysCheckDefault = false;
+            }
+        });
+
+        connect(setAsDefault, &QAbstractButton::clicked, this, [=](){
+            setMudletAsDefault();
+        });
+
+        mpDefaultClientDlg->setAttribute(Qt::WA_DeleteOnClose);
+#if defined(Q_OS_WIN32)
+        // framelooks really poor in Windows
+        mpDefaultClientDlg->setWindowFlags(Qt::Tool);
+#else
+        mpDefaultClientDlg->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
+#endif
+    }
+
+    mpDefaultClientDlg->raise();
+    mpDefaultClientDlg->show();
+    mpDefaultClientDlg->move(mpDefaultClientDlg->x(), 0);
+}
+
+void mudlet::setMudletAsDefault()
+{
+    qDebug() << "set Mudlet as default :)";
+}
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(getMudletPath(profileDataItemPath, profile, item));
