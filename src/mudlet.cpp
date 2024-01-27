@@ -664,6 +664,16 @@ mudlet::mudlet()
     // load bundled fonts
     mFontManager.addFonts();
 
+
+    // TODO change to 5s
+    QTimer::singleShot(1s, this, [this]() {
+        if (mAlwaysCheckDefault && !mudletIsDefault()) {
+            openDefaultCheck();
+        }
+    });
+
+    mIsGoingUp = false;
+
     // Initialise a couple of QMaps with elements that must be translated into
     // the current GUI Language
     loadMaps();
@@ -1841,6 +1851,10 @@ void mudlet::closeEvent(QCloseEvent* event)
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
 
+    if (mpDefaultClientDlg) {
+        mpDefaultClientDlg->close();
+    }
+
     for (auto pHost : mHostManager) {
         if (pHost->currentlySavingProfile()) {
             pHost->waitForProfileSave();
@@ -1962,6 +1976,7 @@ void mudlet::readLateSettings(const QSettings& settings)
 
     mShowMapAuditErrors = settings.value("reportMapIssuesToConsole", QVariant(false)).toBool();
     mStorePasswordsSecurely = settings.value("storePasswordsSecurely", QVariant(true)).toBool();
+    mAlwaysCheckDefault = settings.value("alwaysCheckDefault", QVariant(true)).toBool();
 
 
     resize(size);
@@ -2115,6 +2130,7 @@ void mudlet::writeSettings()
     settings.setValue("maximized", isMaximized());
     settings.setValue("editorTextOptions", static_cast<int>(mEditorTextOptions));
     settings.setValue("reportMapIssuesToConsole", mShowMapAuditErrors);
+    settings.setValue("alwaysCheckDefault", mAlwaysCheckDefault);
     settings.setValue("storePasswordsSecurely", mStorePasswordsSecurely);
     settings.setValue("showIconsInMenus", mShowIconsOnMenuCheckedState);
     settings.setValue("enableFullScreenMode", mEnableFullScreenMode);
@@ -2133,14 +2149,13 @@ void mudlet::writeSettings()
 
 void mudlet::slot_showConnectionDialog()
 {
-    if (mpConnectionDialog) {
-        return;
+    if (!mpConnectionDialog) {
+        mpConnectionDialog = new dlgConnectionProfiles(this);
+        connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
     }
-    mpConnectionDialog = new dlgConnectionProfiles(this);
-    connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
     mpConnectionDialog->fillout_form();
 
-    QStringList packagesToInstall = mInstanceCoordinator->readPackageQueue();
+    QStringList packagesToInstall = mInstanceCoordinator->readUriQueue();
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
@@ -2640,7 +2655,117 @@ void mudlet::slot_replay()
     // No third argument causes error messages to be sent to pHost's main console:
     loadReplay(pHost, fileName);
 }
+void mudlet::generateUniqueProfileName(QString& profile_name)
+{
+    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
+    // prepend n+1 to end of the profile name
+    if (profile_name.at(profile_name.size() - 1).isDigit()) {
+        int i = 1;
+        do {
+            profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
+        } while (hostList.contains(profile_name));
+    } else {
+        int i = 1;
+        QString profile_name2;
+        do {
+            profile_name2 = profile_name + QString::number(i++);
+        } while (hostList.contains(profile_name2));
+        profile_name = profile_name2;
+    }
+}
+QString mudlet::addProfile(const QString &host, const int port, const QString &login, const QString &password)
+{
+    QString profile_name(host);
+    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    if (hostList.contains(profile_name)) {
+        generateUniqueProfileName(profile_name);
+    }
+
+    QString profilePath = mudlet::getMudletPath(mudlet::profileMapsPath, profile_name);
+    QDir dir;
+    dir.mkpath(profilePath);
+
+    writeProfileData(profile_name, QStringLiteral("url"), host);
+    writeProfileData(profile_name, QStringLiteral("port"), QString::number(port));
+
+    if (!login.isEmpty()) {
+        writeProfileData(profile_name, QStringLiteral("login"), login);
+    }
+    if (!password.isEmpty()) {
+        writeProfileData(profile_name, QStringLiteral("password"), password);
+    }
+
+    return profile_name;
+}
+
+bool mudlet::mudletIsDefault()
+{
+    // TODO: implement me
+    return false;
+}
+// open a dialog to prompt the user to set Mudlet as default
+void mudlet::openDefaultCheck()
+{
+    if (!mpDefaultClientDlg) {
+        QUiLoader loader;
+        QFile file(QStringLiteral(":/ui/check_default_client.ui"));
+        file.open(QFile::ReadOnly);
+        mpDefaultClientDlg = dynamic_cast<QDialog*>(loader.load(&file, this));
+        file.close();
+
+        if (!mpDefaultClientDlg) {
+            // don't need to print error message from loader as that is already in stdout
+            qWarning() << "mudlet::openDefaultClientCheck() error: failed to load dialog: " << loader.errorString();
+            return;
+        }
+
+        auto buttonBox = mpDefaultClientDlg->findChild<QDialogButtonBox*>(QStringLiteral("buttonBox"));
+        auto checkBox_alwaysPerformCheck = mpDefaultClientDlg->findChild<QCheckBox*>(QStringLiteral("checkBox_alwaysPerformCheck"));
+
+        buttonBox->clear();
+
+        auto setAsDefault = new QPushButton(tr("Use Mudlet as my default client"), mpDefaultClientDlg);
+        auto notNow = new QPushButton(tr("Not now"), mpDefaultClientDlg);
+
+        buttonBox->addButton(setAsDefault, QDialogButtonBox::AcceptRole);
+        setAsDefault->setAutoDefault(true);
+        buttonBox->addButton(notNow, QDialogButtonBox::RejectRole);
+        connect(buttonBox, &QDialogButtonBox::accepted, mpDefaultClientDlg, &QDialog::accept);
+        connect(buttonBox, &QDialogButtonBox::rejected, mpDefaultClientDlg, &QDialog::reject);
+
+        checkBox_alwaysPerformCheck->setChecked(mudlet::self()->mAlwaysCheckDefault);
+        connect(checkBox_alwaysPerformCheck, &QCheckBox::stateChanged, this, [=](int state) {
+            if (state == Qt::Checked) {
+                mudlet::self()->mAlwaysCheckDefault = true;
+            } else {
+                mudlet::self()->mAlwaysCheckDefault = false;
+            }
+        });
+
+        connect(setAsDefault, &QAbstractButton::clicked, this, [=](){
+            setMudletAsDefault();
+        });
+
+        mpDefaultClientDlg->setAttribute(Qt::WA_DeleteOnClose);
+#if defined(Q_OS_WIN32)
+        // framelooks really poor in Windows
+        mpDefaultClientDlg->setWindowFlags(Qt::Tool);
+#else
+        mpDefaultClientDlg->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
+#endif
+    }
+
+    mpDefaultClientDlg->raise();
+    mpDefaultClientDlg->show();
+    mpDefaultClientDlg->move(mpDefaultClientDlg->x(), 0);
+}
+
+void mudlet::setMudletAsDefault()
+{
+    qDebug() << "set Mudlet as default :)";
+}
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(getMudletPath(profileDataItemPath, profile, item));
@@ -2877,14 +3002,84 @@ void mudlet::doAutoLogin(const QString& profile_name)
     if (preInstallPackages) {
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower());
     }
-
+    
+    // May be needed
+    // pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")), false);
+    
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     emit signal_adjustAccessibleNames();
     slot_connectionDialogueFinished(profile_name, true);
     enableToolbarButtons();
     updateMultiViewControls();
 }
+void mudlet::handleTelnetUri(const QUrl &telnetUri)
+{
+    QUrl url(telnetUri);
 
+    qWarning() << "handleTelnetUri url is" << url;
+
+    if (url.port() == -1) {
+        url.setPort(23);
+    }
+
+    QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+
+    int profilesFound {};
+    QString lastHostFound;
+    for (auto& host : hostList) {
+        QString hostUrl = readProfileData(host, QStringLiteral("url"));
+        int hostPort = readProfileData(host, QStringLiteral("port")).toInt();
+
+        if (url.host().compare(hostUrl, Qt::CaseInsensitive) == 0
+            && url.port() == hostPort) {
+            profilesFound++;
+            lastHostFound = host;
+        }
+    }
+
+    qWarning() << profilesFound << "profilesFound";
+    if (profilesFound == 0) {
+        const auto profile_name = addProfile(url.host().toLower(), url.port(), url.userName(), url.password());
+        doAutoLogin(profile_name);
+        auto pHost = getHostManager().getHost(profile_name);
+        if (!pHost) {
+            return;
+        }
+
+        mudlet::self()->setupPreInstallPackages(url.host().toLower());
+        mudlet::self()->installDefaultPackages(pHost);
+        qWarning() <<"case 1";
+    } else if (profilesFound == 1) {
+        doAutoLogin(lastHostFound);
+        qWarning() <<"case 2";
+    } else {
+        if (!mpConnectionDialog) {
+            slot_showConnectionDialog();
+        }
+        if (mpConnectionDialog) {
+            mpConnectionDialog->showInformationMessage(tr("%n matching profiles found for %1, which would you like to open?", "this message is shown when Mudlet is opened from a telnet:// link on a webpage, and more than one profile matches the game server/port - so the user needs to pick which of the available profiles they'd like to play with", profilesFound).arg(url.host()));
+        }
+
+        qWarning() <<"case 3";
+    }
+}
+
+void mudlet::installDefaultPackages(Host* pHost)
+{
+    for (int i = 0; i < mPackagesToInstallList.size(); i++) {
+        pHost->installPackage(mPackagesToInstallList[i], 0);
+    }
+
+    mPackagesToInstallList.clear();
+}
+// open the 'Connection' window if we haven't got any profiles loaded
+void mudlet::openConnectionsWindow()
+{
+    if (mpConnectionDialog) {
+        return;
+    }
+    slot_showConnectionDialog();
+}
 void mudlet::processEventLoopHack()
 {
     QTimer::singleShot(1ms, this, &mudlet::slot_processEventLoopHackTimerRun);
@@ -2948,11 +3143,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     }
 
     // install default packages
-    for (int i = 0; i < mPackagesToInstallList.size(); i++) {
-        pHost->installPackage(mPackagesToInstallList[i], 0);
-    }
-
-    mPackagesToInstallList.clear();
+    installDefaultPackages(pHost);
 
     // This marks the end of the profile loading process, so all the aliases
     // triggers and other items are present in the Lua sub-system:
@@ -4744,7 +4935,7 @@ void mudlet::activateProfile(Host* pHost)
 
     mpCurrentActiveHost->setFocusOnHostActiveCommandLine();
 
-    mInstanceCoordinator->installPackagesToHost(mpCurrentActiveHost);
+    mInstanceCoordinator->openUrisLocally();
 }
 
 void mudlet::registerInstanceCoordinator(MudletInstanceCoordinator* instanceCoordinator)

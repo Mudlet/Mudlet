@@ -554,20 +554,10 @@ void dlgConnectionProfiles::slot_saveName()
         // CHECKME: previous code specified a path ending in a '/'
         QDir parentpath(mudlet::getMudletPath(mudlet::profilesPath));
         if (!parentpath.rename(currentProfileEditName, newProfileName)) {
-            notificationArea->show();
-            notificationAreaIconLabelWarning->show();
-            notificationAreaIconLabelError->hide();
-            notificationAreaIconLabelInformation->hide();
-            notificationAreaMessageBox->show();
-            notificationAreaMessageBox->setText(tr("Could not rename your profile data on the computer."));
+            showWarningMessage(tr("Could not rename your profile data on the computer."));
         }
     } else if (!dir.mkpath(mudlet::getMudletPath(mudlet::profileHomePath, newProfileName))) {
-        notificationArea->show();
-        notificationAreaIconLabelWarning->show();
-        notificationAreaIconLabelError->hide();
-        notificationAreaIconLabelInformation->hide();
-        notificationAreaMessageBox->show();
-        notificationAreaMessageBox->setText(tr("Could not create the new profile folder on your computer."));
+        showWarningMessage(tr("Could not create the new profile folder on your computer."));
     }
 
     if (!newProfileHost.isEmpty()) {
@@ -737,9 +727,28 @@ void dlgConnectionProfiles::slot_deleteProfile()
     delete_profile_dialog->show();
     delete_profile_dialog->raise();
 }
+void dlgConnectionProfiles::showWarningMessage(const QString& message)
+{
+    notificationArea->show();
+    notificationAreaIconLabelWarning->show();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->hide();
+    notificationAreaMessageBox->show();
+    notificationAreaMessageBox->setText(message);
+}
 
+void dlgConnectionProfiles::showInformationMessage(const QString &message)
+{
+    notificationArea->show();
+    notificationAreaIconLabelWarning->hide();
+    notificationAreaIconLabelError->hide();
+    notificationAreaIconLabelInformation->show();
+    notificationAreaMessageBox->show();
+    notificationAreaMessageBox->setText(message);
+}
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
+    mudlet::self()->readProfileData(profile,item);
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
     const bool success = file.open(QIODevice::ReadOnly);
     QString ret;

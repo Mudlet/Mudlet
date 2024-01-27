@@ -73,22 +73,22 @@ bool MudletInstanceCoordinator::tryToStart()
 
 // Install all queued packages to a specified profile/host.
 // Mudlet will call this function whenever a profile is activated.
-void MudletInstanceCoordinator::openUrisWithHost(Host* activeProfile)
-{
-    mMutex.lock();
-    for (const QString& uri : mQueuedUris) {
-        auto url = QUrl(uri);
-        const bool isPackage = url.isLocalFile();
-        const bool isTelnet = url.scheme() == "telnet";
-        if (isPackage) {
-            activeProfile->installPackage(url.toLocalFile(), 0);
-        } else if (isTelnet) {
-            activeProfile->openTelnet(&url);
-        }
-    }
-    mQueuedUris.clear();
-    mMutex.unlock();
-}
+// void MudletInstanceCoordinator::openUrisWithHost(Host* activeProfile)
+// {
+//     mMutex.lock();
+//     for (const QString& uri : mQueuedUris) {
+//         auto url = QUrl(uri);
+//         const bool isPackage = url.isLocalFile();
+//         const bool isTelnet = url.scheme() == "telnet";
+//         if (isPackage) {
+//             activeProfile->installPackage(url.toLocalFile(), 0);
+//         } else if (isTelnet) {
+//             activeProfile->handleTelnetUri(&url);
+//         }
+//     }
+//     mQueuedUris.clear();
+//     mMutex.unlock();
+// }
 
 void MudletInstanceCoordinator::incomingConnection(quintptr socketDescriptor)
 {
@@ -118,17 +118,44 @@ void MudletInstanceCoordinator::handleReadyRead()
 }
 
 // Find the active host and install queued packages to it
+// This is called when:
+// - after a profile has been opened
+// - after another instance of Mudlet has transmitted a list of URIs to this instance 
 void MudletInstanceCoordinator::openUrisLocally()
 {
     QTimer::singleShot(0, this, [this]() {
         mudlet* mudletApp = mudlet::self();
         Q_ASSERT(mudletApp);
-        Host* activeHost = mudletApp->getActiveHost();
-        if (activeHost) {
-            openUrisWithHost(activeHost);
-        } else {
-            mudletApp->slot_showConnectionDialog();
+
+        QStringList skippedUris;
+        mMutex.lock();
+
+        // Process queued URIs until we have to wait for a profile to be selected or loaded
+        while(!mQueuedUris.isEmpty()){
+            QUrl url = QUrl(mQueuedUris.last());
+            const bool isTelnet = url.scheme() == "telnet" && url.scheme() == "mudlet";
+            const bool isPackage = url.isLocalFile();
+            if (isTelnet) {
+                // Telnet URI is found, so we need to handle it and open a profile.
+                // Progress on uri queue will resume after the profile has been opened.
+                mudletApp->handleTelnetUri(url);
+                mQueuedUris.removeLast();
+                break;
+            } 
+            if (isPackage) {
+                Host* activeHost = mudletApp->getActiveHost();
+                if (!activeHost) {
+                    // Ask the user to choose a profile, since none are active. 
+                    // Progress on uri queue will resume after the profile has been opened.
+                    mudletApp->slot_showConnectionDialog();
+                    break;
+                }
+                // Install the package to the active host
+                activeHost->installPackage(url.toLocalFile(),0);
+                mQueuedUris.removeLast();
+            }
         }
+        mMutex.unlock();
     });
 }
 

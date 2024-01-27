@@ -217,5 +217,6 @@
         <file>ui/package_manager.ui</file>
         <file>ui/package_manager_unpack.ui</file>
         <file>ui/set_room_area.ui</file>
+        <file>ui/check_default_client.ui</file>
     </qresource>
 </RCC>

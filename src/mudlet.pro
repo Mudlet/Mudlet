@@ -826,6 +826,7 @@ FORMS += \
     ui/about_dialog.ui \
     ui/actions_main_area.ui \
     ui/aliases_main_area.ui \
+    ui/check_default_client.ui \
     ui/color_trigger.ui \
     ui/composer.ui \
     ui/connection_profiles.ui \

@@ -32,7 +32,6 @@ public:
     explicit MudletInstanceCoordinator(const QString& serverName, QObject* parent = nullptr);
     bool tryToStart();
     void queueUri(const QString& uri);
-    void openUrisWithHost(Host* activeProfile);
     void openUrisLocally();
     bool openUrisRemotely();
     QStringList readUriQueue();

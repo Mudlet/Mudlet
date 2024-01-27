@@ -404,7 +404,7 @@ int main(int argc, char* argv[])
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
         const QString absPath = QDir(positionalArguments.first()).absolutePath();
-        instanceCoordinator.queuePackage(absPath);
+        instanceCoordinator.queueUri(absPath);
         if (!firstInstanceOfMudlet) {
             const bool successful = instanceCoordinator.openUrisRemotely();
             if (successful) {
