@@ -38,9 +38,7 @@ for i in $BREWS; do
   for RETRIES in $(seq 1 3); do
     echo " "
     echo "Installing ${i}"
-    #Added the -w (whole-word) option so that the grep will NOT match for pcre2
-    #when we are considering pcre:
-    brew list | grep -w -q $i || brew install $i
+    brew install "$i"
     STATUS="$?"
     if [ "${STATUS}" -eq 0 ]; then
       break
