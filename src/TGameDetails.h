@@ -444,6 +444,32 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Busted. You can also use it as a starting point to create automated tests for your "
                  "own profiles!")},
 
+            {qsl("Accursed Lands"),
+             qsl("mud.accursed-lands.com"),
+             7979,
+             true,
+             qsl("<a href='https://www.accursed-lands.net'>https://www.accursed-lands.net</a><br>"
+                    "Discord<br>"
+                    "<a href='https://discord.gg/pUPdVra'>https://discord.gg/pUPdVra</a>"),
+             qsl(":/icons/accursed_lands.png"),
+             qsl("Accursed Lands is a long-standing text-based online role-playing game (MUD) "
+             "with a post-apocalyptic medieval setting.  It offers a \"Role-Play Enforced\" "
+             "environment without alignments, character levels, or classes, allowing players "
+             "to choose their own fate and live their character's life as they see fit. "
+             "Players can expect a community-focused, immersive sandbox experience focusing "
+             "on freedom with fewer restrictions on their actions.  The game also boasts "
+             "strong support for visually impaired players, complex magic and crafting, "
+             "permanent housing, terrain/weather systems, and a vast global map with millions "
+             "of areas to explore.  Whether seeking adventure, knowledge, fortune, or more, "
+             "craft your unique story in a world designed to test your every step.<br>"
+             "<br>"
+             "If you enjoy a slower-paced, skill-based MUD with a richly detailed world and a "
+             "strong emphasis on role-playing,  Accursed Lands may be the perfect fit for you. "
+             "We would be happy to have you!")
+
+
+            }
+
             {qsl("Carrion Fields"),
              qsl("carrionfields.net"),
              4449,
