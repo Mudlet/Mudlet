@@ -465,10 +465,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              "<br>"
              "If you enjoy a slower-paced, skill-based MUD with a richly detailed world and a "
              "strong emphasis on role-playing,  Accursed Lands may be the perfect fit for you. "
-             "We would be happy to have you!")
-
-
-            }
+             "We would be happy to have you!")},
 
             {qsl("Carrion Fields"),
              qsl("carrionfields.net"),
