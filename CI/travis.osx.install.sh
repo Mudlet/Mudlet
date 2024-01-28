@@ -58,4 +58,4 @@ gem update cocoapods
 # we want to expand the subshell only once (it's only temporary anyways)
 # shellcheck disable=2139
 alias luarocks-5.1="luarocks --lua-dir='$(brew --prefix lua@5.1)'"
-luarocks-5.1 --local install lua-yajl
+LIBRARY_PATH=/opt/homebrew/Cellar/yajl/2.1.0/lib C_INCLUDE_PATH=/opt/homebrew/Cellar/yajl/2.1.0/include luarocks-5.1 --local install lua-yajl
