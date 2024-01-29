@@ -77,7 +77,7 @@ jobs:
         cache: true
 
     - name: Restore Boost cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -300,7 +300,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}

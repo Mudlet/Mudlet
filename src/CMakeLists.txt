@@ -502,7 +502,6 @@ endif(UNIX)
 target_compile_definitions(mudlet
   PRIVATE
     APP_VERSION="${APP_VERSION}"
-    APP_BUILD="${APP_BUILD}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
@@ -562,8 +561,10 @@ if(WIN32)
 endif()
 
 if(APPLE)
+  target_link_libraries(mudlet "-framework AppKit")
+
   if(USE_UPDATER)
-    target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
+    target_link_libraries(mudlet cocoa-qt-glue)
   endif(USE_UPDATER)
 
   set_target_properties(mudlet PROPERTIES
@@ -636,6 +637,24 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
+   install(
+    FILES "../mudlet.desktop"
+    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
+
+  install(
+    FILES "../mudlet.desktop"
+    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
+  install(
+    FILES "../mudlet.svg"
+    DESTINATION "share/icons/hicolor/scalable/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
+  install(
+    FILES "../mudlet.png"
+    DESTINATION "share/icons/hicolor/256x256/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
+
   install(
     FILES "../mudlet.desktop"
     DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ

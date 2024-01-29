@@ -1956,7 +1956,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
     }
 
     if (otherProfileVersion > mDefaultVersion) {
-        if (mudlet::scmIsReleaseVersion || mudlet::scmIsPublicTestVersion) {
+        if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
             // This is a release/public test version - should not support any map file versions higher that it was built for
             if (fileVersion) {
                 *fileVersion = otherProfileVersion;
