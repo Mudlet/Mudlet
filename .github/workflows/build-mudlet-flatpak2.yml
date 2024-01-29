@@ -2,8 +2,6 @@ name: 📦 Build Mudlet Flatpak Repo
 
 on:
   push:
-    branches:
-      - development
   pull_request:
   schedule:
     - cron: '0 0 * * *'  # Scheduled run, e.g., daily at midnight
