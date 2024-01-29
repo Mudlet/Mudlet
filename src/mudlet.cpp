@@ -664,8 +664,6 @@ mudlet::mudlet()
     // load bundled fonts
     mFontManager.addFonts();
 
-
-    // TODO change to 5s
     QTimer::singleShot(1s, this, [this]() {
         if (mAlwaysCheckDefault && !mudletIsDefault()) {
             openDefaultCheck();
@@ -2149,13 +2147,14 @@ void mudlet::writeSettings()
 
 void mudlet::slot_showConnectionDialog()
 {
-    if (!mpConnectionDialog) {
-        mpConnectionDialog = new dlgConnectionProfiles(this);
-        connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
+    if (mpConnectionDialog) {
+        return;
     }
+    mpConnectionDialog = new dlgConnectionProfiles(this);
+    connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
     mpConnectionDialog->fillout_form();
 
-    QStringList packagesToInstall = mInstanceCoordinator->readUriQueue();
+    QStringList packagesToInstall = mInstanceCoordinator->listUrisWithScheme("file");
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
@@ -2702,9 +2701,29 @@ QString mudlet::addProfile(const QString &host, const int port, const QString &l
 
 bool mudlet::mudletIsDefault()
 {
-    // TODO: implement me
-    return false;
+
+#if defined(Q_OS_WIN)
+    QSettings settings("HKEY_CLASSES_ROOT/telnet/shell/open/command", QSettings::NativeFormat);
+    QString value = settings.value(".", QString()).toString();
+    return value.contains("mudlet");
+#endif    
+
+#if defined(Q_OS_LINUX)
+    QProcess process;
+    process.start("xdg-mime", QStringList() << "query" << "default" << "x-scheme-handler/telnet");
+    process.waitForFinished();
+    QString output = process.readAllStandardOutput().trimmed();
+    return output == "mudlet.desktop";
+#endif
+
+#if defined(Q_OS_MACOS)
+    return true;
+#endif
+    // Unknown operating system
+    // Return true to we don't try to set Mudlet as the default
+    return true;
 }
+
 // open a dialog to prompt the user to set Mudlet as default
 void mudlet::openDefaultCheck()
 {
@@ -2764,8 +2783,22 @@ void mudlet::openDefaultCheck()
 
 void mudlet::setMudletAsDefault()
 {
-    qDebug() << "set Mudlet as default :)";
+#if defined(Q_OS_WIN)
+    QSettings settings("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
+    settings.setValue("telnet/.", "URL:Telnet Protocol");
+    settings.setValue("telnet/URL Protocol", "");
+    settings.setValue("telnet/shell/open/command/.", "mudlet %1");
+#endif    
+#if defined(Q_OS_LINUX)
+    QProcess process;
+    process.start("xdg-mime", QStringList() << "default" << "mudlet.desktop" << "x-scheme-handler/telnet");
+    process.waitForFinished(-1);
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        qWarning() << "Failed to set mudlet.desktop as the default handler for telnet links.";
+    }
+#endif
 }
+
 QString mudlet::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(getMudletPath(profileDataItemPath, profile, item));
@@ -2968,6 +3001,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     // pre-install packages when loading this profile for the first time
     bool preInstallPackages = false;
     if (entries.isEmpty()) {
+
         preInstallPackages = true;
         pHost->mLoadedOk = true;
 
@@ -2978,6 +3012,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
             pHost->mSslTsl = (*it).tlsEnabled;
         }
     } else {
+        
         QFile file(qsl("%1%2").arg(folder, entries.at(0)));
         file.open(QFile::ReadOnly | QFile::Text);
         XMLimport importer(pHost);
@@ -3004,7 +3039,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     }
     
     // May be needed
-    // pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
     
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     emit signal_adjustAccessibleNames();
@@ -3039,10 +3074,14 @@ void mudlet::handleTelnetUri(const QUrl &telnetUri)
 
     qWarning() << profilesFound << "profilesFound";
     if (profilesFound == 0) {
+        qWarning() << "handleTelnetUri url is" << url;
         const auto profile_name = addProfile(url.host().toLower(), url.port(), url.userName(), url.password());
+
+        qWarning() << "profile name is" << profile_name;
         doAutoLogin(profile_name);
         auto pHost = getHostManager().getHost(profile_name);
         if (!pHost) {
+            qWarning() << "no host!";
             return;
         }
 

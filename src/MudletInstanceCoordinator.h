@@ -34,6 +34,7 @@ public:
     void queueUri(const QString& uri);
     void openUrisLocally();
     bool openUrisRemotely();
+    QStringList listUrisWithScheme(QString scheme);
     QStringList readUriQueue();
 
 protected:

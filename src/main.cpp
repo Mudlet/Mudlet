@@ -403,15 +403,18 @@ int main(int argc, char* argv[])
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
-        const QString absPath = QDir(positionalArguments.first()).absolutePath();
-        instanceCoordinator.queueUri(absPath);
+
+        QUrl uri = QUrl(positionalArguments.first());
+        if (uri.isLocalFile()) {
+            // Convert to absolute file path
+            QFileInfo fileInfo(uri.toLocalFile());
+            QString absoluteFilePath = fileInfo.absoluteFilePath();
+            uri.setPath(absoluteFilePath);
+        }
+        instanceCoordinator.queueUri(uri.toString());
         if (!firstInstanceOfMudlet) {
             const bool successful = instanceCoordinator.openUrisRemotely();
-            if (successful) {
-                return 0;
-            } else {
-                return 1;
-            }
+            return !successful; // return 0 if successful, 1 if unsuccessful
         }
     }
 
@@ -622,10 +625,6 @@ int main(int argc, char* argv[])
     settings.setValue(".mpackage", "MudletPackage");
     settings.setValue("MudletPackage/.", "Mudlet Package");
     settings.setValue("MudletPackage/shell/open/command/.", "mudlet %1");
-    // Associate Mudlet with telnet links
-    settings.setValue("telnet/.", "URL:Telnet Protocol");
-    settings.setValue("telnet/URL Protocol", "");
-    settings.setValue("telnet/shell/open/command/.", "mudlet %1");
 #endif
 
     // Pass ownership of MudletInstanceCoordinator to mudlet.
@@ -661,7 +660,14 @@ int main(int argc, char* argv[])
     }
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin(cliProfiles);
+    // Do auto login if a no URIs that open profiles are supplied
+    QStringList telnetUris = mudlet::self()->getInstanceCoordinator()->listUrisWithScheme("telnet");
+    bool willOpenProfileWithUri = telnetUris.length();
+    if (willOpenProfileWithUri){
+        mudlet::self()->getInstanceCoordinator()->openUrisLocally();
+    } else {
+        mudlet::self()->startAutoLogin(cliProfiles);
+    }
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();
