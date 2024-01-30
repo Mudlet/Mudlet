@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
                                                    qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
-    parser.addPositionalArgument("package", "Path to .mpackage file");
+    parser.addPositionalArgument("URI or file path", "Any URI or file path that Mudlet should open");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
 
@@ -356,7 +356,7 @@ int main(int argc, char* argv[])
                                                                    "                                    optional and will make the application wait until a\n"
                                                                    "                                    debugger connects to it."));
         texts << appendLF.arg(QCoreApplication::translate("main", "Arguments:"));
-        texts << appendLF.arg(QCoreApplication::translate("main", "        [FILE]                       File to install as a package"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "        [URI/FILE]                       Package path or telnet URI"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
@@ -385,18 +385,19 @@ int main(int argc, char* argv[])
 
 
 
-    // Handles installing a package from a command line argument.
-    // Used when mudlet is used to open an .mpackage file on some operating systems.
+    // Handles opening a URI from a command line argument.
+    // Used when mudlet is used to open an .mpackage file or telnet URI on some operating systems.
     //
     // If Mudlet was already open:
-    // 1. Send the package path to the other process and exit.
-    // 2. The other process will take responsibility for installation.
-    // 3. If a profile is open, installation will occur in currently open profile.
-    // 4. If no profile is open, the package will be queued for install until a profile is selected.
+    // 1. Send the URI to the other process and exit.
+    // 2. The other process will take responsibility for opening.
+    // 3. If a profile is open, package installations will occur in currently open profile.
+    // 4. If no profile is open, package installations will be queued for install until a profile is selected.
     //
     // If no other mudlet process is found:
     // 1. This current process will start as normal.
-    // 2. The package will be queued for install until a profile is selected.
+    // 2. Any telnet URIs will be used to open a profile.
+    // 3. Any package will be queued for install until a profile has been opened.
 
     std::unique_ptr<MudletInstanceCoordinator> instanceCoordinator = std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator");
     const bool firstInstanceOfMudlet = instanceCoordinator->tryToStart();
