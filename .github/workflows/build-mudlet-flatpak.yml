@@ -28,7 +28,7 @@ jobs:
         GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
       run: |
         gpg --list-keys --with-keygrip
-        yum install -y pinentry
+        yum install -q -y pinentry
 
         echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
         gpg-connect-agent reloadagent /bye
