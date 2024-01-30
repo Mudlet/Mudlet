@@ -36,19 +36,15 @@ bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event) {
             QUrl url = openEvent->url();
             if (url.scheme() == "telnet") {
                 // Handle telnet url 
-                instanceCoordinator->queueUri(url.toString());
+                instanceCoordinator->queueUriOrFile(url.toString());
                 instanceCoordinator->openUrisLocally();
                 return true;
             }
         } else if (!openEvent->file().isEmpty()) {
             // Handle file
-            const QString absPath = QDir(openEvent->file()).absolutePath();
-            bool isPackage = true;
-            if (isPackage) {
-                instanceCoordinator->queueUri(absPath);
-                instanceCoordinator->openUrisLocally();
-                return true;
-            }
+            instanceCoordinator->queueUriOrFile(openEvent->file());
+            instanceCoordinator->openUrisLocally();
+            return true;
         }
     }
 
