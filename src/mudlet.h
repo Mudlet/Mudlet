@@ -322,7 +322,7 @@ public:
     void disableToolbarButtons();
     void startAutoLogin();
     void doAutoLogin(const QString&);
-    void handleTelnetUri(const QUrl &telnetUri);
+    void handleTelnetUri(const QUrl& telnetUri);
     void openConnectionsWindow();
     void enableToolbarButtons();
     void forceClose();
@@ -610,7 +610,7 @@ private:
     bool mudletIsDefault();
     void openDefaultCheck();
     void setMudletAsDefault();
-    void installDefaultPackages(Host *pHost);
+    void installDefaultPackages(Host* pHost);
     bool overwriteAffixFile(const QString& affixPath, const QHash<QString, unsigned int>&);
     bool overwriteDictionaryFile(const QString& dictionaryPath, const QStringList&);
     bool scanDictionaryFile(const QString& dictionaryPath, int&, QHash<QString, unsigned int>&, QStringList&);
