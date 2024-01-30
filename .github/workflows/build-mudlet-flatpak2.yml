@@ -40,7 +40,7 @@ jobs:
         echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
         gpg-connect-agent reloadagent /bye
         echo $GPG_PASSPHRASE | /usr/libexec/gpg-preset-passphrase --preset $GPG_KEY_GREP
-        gpg --import --batch $GPG_PRIVATE_KEY
+        echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import
     - name: Build and Install Flatpak
       env:
         MANIFEST_PATH: ${{ github.workspace }}/CI/${{ env.APP_ID }}.yaml
