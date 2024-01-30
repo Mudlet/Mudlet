@@ -20,10 +20,6 @@ jobs:
     container:
       image: docker.io/bilelmoussaoui/flatpak-github-actions:kde-5.15-23.08
     steps:
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      env:
-        GPG_KEY_GREP: ${{ secrets.GPG_KEY_GREP }}
     - name: Checkout Mudlet source code
       uses: actions/checkout@v4
       with:
@@ -40,7 +36,7 @@ jobs:
         echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
         gpg-connect-agent reloadagent /bye
         echo $GPG_PASSPHRASE | /usr/libexec/gpg-preset-passphrase --preset $GPG_KEY_GREP
-        echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import
+        echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import --batch
     - name: Build and Install Flatpak
       env:
         MANIFEST_PATH: ${{ github.workspace }}/CI/${{ env.APP_ID }}.yaml
