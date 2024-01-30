@@ -403,7 +403,6 @@ int main(int argc, char* argv[])
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
-
         instanceCoordinator->queueUriOrFile(positionalArguments.first());
         if (!firstInstanceOfMudlet) {
             const bool successful = instanceCoordinator->openUrisRemotely();
@@ -656,7 +655,7 @@ int main(int argc, char* argv[])
     // Do auto login if a no URIs that open profiles are supplied
     QStringList telnetUris = mudlet::self()->getInstanceCoordinator()->listUrisWithScheme("telnet");
     bool willOpenProfileWithUri = telnetUris.length();
-    if (willOpenProfileWithUri){
+    if (willOpenProfileWithUri) {
         mudlet::self()->getInstanceCoordinator()->openUrisLocally();
     } else {
         mudlet::self()->startAutoLogin(cliProfiles);
