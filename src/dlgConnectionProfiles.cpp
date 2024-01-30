@@ -737,7 +737,7 @@ void dlgConnectionProfiles::showWarningMessage(const QString& message)
     notificationAreaMessageBox->setText(message);
 }
 
-void dlgConnectionProfiles::showInformationMessage(const QString &message)
+void dlgConnectionProfiles::showInformationMessage(const QString& message)
 {
     notificationArea->show();
     notificationAreaIconLabelWarning->hide();
@@ -748,7 +748,7 @@ void dlgConnectionProfiles::showInformationMessage(const QString &message)
 }
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
-    mudlet::self()->readProfileData(profile,item);
+    mudlet::self()->readProfileData(profile, item);
     QFile file(mudlet::getMudletPath(mudlet::profileDataItemPath, profile, item));
     const bool success = file.open(QIODevice::ReadOnly);
     QString ret;
