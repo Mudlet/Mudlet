@@ -37,16 +37,13 @@ jobs:
         gpg-connect-agent reloadagent /bye
         echo $GPG_PASSPHRASE | /usr/libexec/gpg-preset-passphrase --preset $GPG_KEY_GREP
         echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import --batch
-    - name: Build and Install Flatpak
-      env:
-        MANIFEST_PATH: ${{ github.workspace }}/CI/${{ env.APP_ID }}.yml
-      run: |
-        flatpak-builder build --user --install-deps-from=flathub --gpg-sign=$GPG_KEY_ID --disable-rofiles-fuse --disable-updates --force-clean --repo=repo $MANIFEST_PATH
-    - name: Generate Flatpak Bundle
-      env:
-        BUNDLE: "${{ env.APP_ID }}.flatpak"
-      run: |
-        flatpak build-bundle --gpg-sign=$GPG_KEY_ID repo $BUNDLE --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo ${{ env.APP_ID }}
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      with:
+        bundle: mudlet.flatpak
+        manifest-path: CI/org.mudlet.mudlet.yml
+        cache-key: flatpak-builder-${{ github.sha }}
+        gpg-sign: ${{ secrets.GPG_KEY_ID }}
+
     - name: Update Flatpak Repo
       run: |
         flatpak build-update-repo --gpg-sign=$GPG_KEY_ID --generate-static-deltas --prune repo/
@@ -72,6 +69,5 @@ jobs:
         sudo apt-get install -y rsync
     - name: Prepare GitHub Pages Deployment
       run: |
-        mkdir public
-        rsync -av --exclude='public' --exclude='.git' . public/
-        # Add additional deployment steps here
+        # mkdir public
+        # rsync -av --exclude='public' --exclude='.git' . public/
