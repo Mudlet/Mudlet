@@ -28,6 +28,8 @@ jobs:
         GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
       run: |
         gpg --list-keys --with-keygrip
+        gpg --pinentry-version
+
         echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
         gpg-connect-agent reloadagent /bye
         echo $GPG_PASSPHRASE | /usr/libexec/gpg-preset-passphrase --preset $GPG_KEY_GREP

@@ -36,7 +36,7 @@ jobs:
         echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
         gpg-connect-agent reloadagent /bye
         echo $GPG_PASSPHRASE | /usr/libexec/gpg-preset-passphrase --preset $GPG_KEY_GREP
-        echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import --batch
+        echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import --batchpinentry-version
     - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
       with:
         bundle: mudlet.flatpak
