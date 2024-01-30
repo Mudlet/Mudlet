@@ -404,9 +404,9 @@ int main(int argc, char* argv[])
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
 
-        instanceCoordinator.queueUriOrFile(positionalArguments.first());
+        instanceCoordinator->queueUriOrFile(positionalArguments.first());
         if (!firstInstanceOfMudlet) {
-            const bool successful = instanceCoordinator.openUrisRemotely();
+            const bool successful = instanceCoordinator->openUrisRemotely();
             return !successful; // return 0 if successful, 1 if unsuccessful
         }
     }
