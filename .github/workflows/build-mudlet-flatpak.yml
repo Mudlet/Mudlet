@@ -28,7 +28,7 @@ jobs:
         GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
       run: |
         gpg --list-keys --with-keygrip
-        apt-install pinentry-tty
+        apt-get install pinentry-tty
 
         echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
         gpg-connect-agent reloadagent /bye
