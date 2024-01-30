@@ -39,7 +39,7 @@ jobs:
         echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import --batch
     - name: Build and Install Flatpak
       env:
-        MANIFEST_PATH: ${{ github.workspace }}/CI/${{ env.APP_ID }}.yaml
+        MANIFEST_PATH: ${{ github.workspace }}/CI/${{ env.APP_ID }}.yml
       run: |
         flatpak-builder build --user --install-deps-from=flathub --gpg-sign=$GPG_KEY_ID --disable-rofiles-fuse --disable-updates --force-clean --repo=repo $MANIFEST_PATH
     - name: Generate Flatpak Bundle
