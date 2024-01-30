@@ -253,7 +253,6 @@ bool TLuaInterpreter::getVerifiedBool(lua_State* L, const char* functionName, co
         errorArgumentType(L, functionName, pos, publicName, "boolean", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
-        return false;
     }
     return lua_toboolean(L, pos);
 }
@@ -286,7 +285,6 @@ QString TLuaInterpreter::getVerifiedString(lua_State* L, const char* functionNam
         errorArgumentType(L, functionName, pos, publicName, "string", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
-        return QString();
     }
     return lua_tostring(L, pos);
 }
@@ -299,7 +297,6 @@ int TLuaInterpreter::getVerifiedInt(lua_State* L, const char* functionName, cons
         errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
-        return -1;
     }
     return lua_tointeger(L, pos);
 }
@@ -312,7 +309,6 @@ float TLuaInterpreter::getVerifiedFloat(lua_State* L, const char* functionName, 
         errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
-        return 0;
     }
     return static_cast <float> (lua_tonumber(L, pos));
 }
@@ -325,7 +321,6 @@ double TLuaInterpreter::getVerifiedDouble(lua_State* L, const char* functionName
         errorArgumentType(L, functionName, pos, publicName, "number", isOptional);
         lua_error(L);
         Q_UNREACHABLE();
-        return 0;
     }
     return lua_tonumber(L, pos);
 }
@@ -1808,6 +1803,299 @@ int TLuaInterpreter::paste(lua_State* L)
     return 0;
 }
 
+// Internal helper for feedTelnet(...) and socketRaw(...) that enables the
+// construction of data with bytes that cannot be prepared by normal means
+// - including embedded nulls - for testing off-line and for writing protocol
+// handlers for those that Mudlet does not provide itself respectively:
+// Note: although "<<" and ">>" are extra codes that convert to '<' and '>'
+// respectively this looks as though singular instances of either - or
+// unrecognised "tags" with unknown other characters between them will still be
+// passed through unchanged.
+QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
+{
+    // Increment the version - and document below - any changes to the table:
+    const int tableVersion = 1;
+    // Changes:
+    // 1 - Initial version.
+
+    /*
+     * Entry grouping
+     * * Hex digits
+     * * `O_` prefix - well known Telnet sub-option (less common/relevant ones ommitted)
+     * * ASCII character abbreviation
+     * * `T_` prefix - Telnet control code
+     */
+    const QHash<QByteArray, unsigned char> lookupTable = {
+        {QByteArray("<00>"), '\0'},
+        {QByteArray("<O_BINARY>"), '\0'},
+        {QByteArray("<NUL>"), '\0'},
+
+        {QByteArray("<01>"), '\x01'},
+        {QByteArray("<O_ECHO>"), '\x01'},
+        {QByteArray("<SOH>"), '\x01'},
+
+        {QByteArray("<02>"), '\x02'}, // Reconnect
+        {QByteArray("<STX>"), '\x02'},
+
+        {QByteArray("<03>"), '\x03'},
+        {QByteArray("<O_SGA>"), '\x03'},
+        {QByteArray("<ETX>"), '\x03'},
+
+        {QByteArray("<04>"), '\x04'}, // Approx Message Size Negotiation
+        {QByteArray("<EOT>"), '\x04'},
+
+        {QByteArray("<05>"), '\x05'},
+        {QByteArray("<O_STATUS>"), '\x05'},
+        {QByteArray("<ENQ>"), '\x05'},
+
+        {QByteArray("<06>"), '\x06'}, // Timing Mark
+        {QByteArray("<ACK>"), '\x06'},
+
+        {QByteArray("<07>"), '\x07'}, // Remote Controlled Trans and Echo
+        {QByteArray("<BELL>"), '\x07'},
+
+        {QByteArray("<08>"), '\x08'}, // Output Line Width
+        {QByteArray("<BS>"), '\x08'},
+
+        {QByteArray("<09>"), '\x09'}, // Output Page Size
+        {QByteArray("<HTAB>"), '\x09'},
+
+        {QByteArray("<0A>"), '\x0a'}, // Output Carriage-Return Disposition
+        {QByteArray("<LF>"), '\x0a'},
+
+        {QByteArray("<0B>"), '\x0b'}, // Output Horizontal Tab Stops
+        {QByteArray("<VTAB>"), '\x0b'},
+
+        {QByteArray("<0C>"), '\x0c'}, // Output Horizontal Tab Disposition
+        {QByteArray("<FF>"), '\x0c'},
+
+        {QByteArray("<0D>"), '\x0d'}, // Output Formfeed Disposition
+        {QByteArray("<CR>"), '\x0d'},
+
+        {QByteArray("<0E>"), '\x0e'}, // Output Vertical Tab Stops
+        {QByteArray("<SO>"), '\x0e'},
+
+        {QByteArray("<0F>"), '\x0f'}, // Output Vertical Tab Disposition
+        {QByteArray("<SI>"), '\x0f'},
+
+        {QByteArray("<10>"), '\x10'}, // Output Linefeed Disposition
+        {QByteArray("<DLE>"), '\x10'},
+
+        {QByteArray("<11>"), '\x11'}, // Extended ASCII
+        {QByteArray("<DC1>"), '\x11'},
+
+        {QByteArray("<12>"), '\x12'}, // Logout
+        {QByteArray("<DC2"), '\x12'},
+
+        {QByteArray("<13>"), '\x13'}, // Byte Macro
+        {QByteArray("<DC3>"), '\x13'},
+
+        {QByteArray("<14>"), '\x14'}, // Data Entry Terminal
+        {QByteArray("<DC4>"), '\x14'},
+
+        {QByteArray("<15>"), '\x15'}, // SUPDUP
+        {QByteArray("<NAK>"), '\x15'},
+
+        {QByteArray("<16>"), '\x16'}, // SUPDUP Output
+        {QByteArray("<SYN>"), '\x16'},
+
+        {QByteArray("<17>"), '\x17'}, // Send location
+        {QByteArray("<ETB>"), '\x17'},
+
+        {QByteArray("<18>"), '\x18'},
+        {QByteArray("<O_TERM>"), '\x18'},
+        {QByteArray("<CAN>"), '\x18'},
+
+        {QByteArray("<19>"), '\x19'},
+        {QByteArray("<O_EOR>"), '\x19'},
+        {QByteArray("<EM>"), '\x19'},
+
+        {QByteArray("<1A>"), '\x1a'}, // TACACS User Identification
+        {QByteArray("<SUB>"), '\x1a'},
+
+        {QByteArray("<1B>"), '\x1b'}, // Output Marking
+        {QByteArray("<ESC>"), '\x1b'},
+
+        {QByteArray("<1C>"), '\x1c'}, // Terminal Location Number
+        {QByteArray("<FS>"), '\x1c'},
+
+        {QByteArray("<1D>"), '\x1d'}, // Telnet 3270 Regime
+        {QByteArray("<GS>"), '\x1d'},
+
+        {QByteArray("<1E>"), '\x1e'}, // X.3 PAD
+        {QByteArray("<RS>"), '\x1e'},
+
+        {QByteArray("<1F>"), '\x1f'},
+        {QByteArray("<O_NAWS>"), '\x1f'},
+        {QByteArray("<US>"), '\x1f'},
+
+        {QByteArray("<SP>"), '\x20'}, // 32 dec, Space
+
+        {QByteArray("<O_NENV>"), '\x27'}, // 39 dec, New Environment (also MNES)
+
+        {QByteArray("<O_CHARS>"), '\x2a'}, // 42 dec, Character Set
+
+        {QByteArray("<O_KERMIT>"), '\x2f'}, // 47 dec
+
+        {QByteArray("<O_MSDP>"), '\x45'}, // 69 dec
+
+        {QByteArray("<O_MSSP>"), '\x46'}, // 70 dec
+
+        {QByteArray("<O_MCCP>"), '\x55'}, // 85 dec
+
+        {QByteArray("<O_MCCP2>"), '\x56'}, // 86 dec
+
+        {QByteArray("<O_MSP>"), '\x5a'}, // 90 dec
+
+        {QByteArray("<O_MXP>"), '\x5b'}, // 91 dec
+
+        {QByteArray("<O_ZENITH>"), '\x5d'}, // 93 dec
+
+        {QByteArray("<O_AARDWULF>"), '\x66'}, // 102 dec
+
+        {QByteArray("<DEL>"), '\x7f'}, // 127 dec
+
+        {QByteArray("<O_ATCP>"), '\xc8'}, // 200 dec
+
+        {QByteArray("<O_GMCP>"), '\xc9'}, // 201 dec
+
+        {QByteArray("<T_EOR>"), '\xef'}, // 239 dec
+
+        {QByteArray("<F0>"), '\xf0'},
+        {QByteArray("<T_SE>"), '\xf0'},
+
+        {QByteArray("<F1>"), '\xf1'},
+        {QByteArray("<T_NOP>"), '\xf1'},
+
+        {QByteArray("<F2>"), '\xf2'},
+        {QByteArray("<T_DM>"), '\xf2'},
+
+        {QByteArray("<F3>"), '\xf3'},
+        {QByteArray("<T_BRK>"), '\xf3'},
+
+        {QByteArray("<F4>"), '\xf4'},
+        {QByteArray("<T_IP>"), '\xf4'},
+
+        {QByteArray("<F5>"), '\xf5'},
+        {QByteArray("<T_ABOP>"), '\xf5'},
+
+        {QByteArray("<F6>"), '\xf6'},
+        {QByteArray("<T_AYT>"), '\xf6'},
+
+        {QByteArray("<F7>"), '\xf7'},
+        {QByteArray("<T_EC>"), '\xf7'},
+
+        {QByteArray("<F8>"), '\xf8'},
+        {QByteArray("<T_EL>"), '\xf8'},
+
+        {QByteArray("<F9>"), '\xf9'},
+        {QByteArray("<T_GA>"), '\xf9'},
+
+        {QByteArray("<FA>"), '\xfa'},
+        {QByteArray("<T_SB>"), '\xfa'},
+
+        {QByteArray("<FB>"), '\xfb'},
+        {QByteArray("<T_WILL>"), '\xfb'},
+
+        {QByteArray("<FC>"), '\xfc'},
+        {QByteArray("<T_WONT>"), '\xfc'},
+
+        {QByteArray("<FD>"), '\xfd'},
+        {QByteArray("<T_DO>"), '\xfd'},
+
+        {QByteArray("<FE>"), '\xfe'},
+        {QByteArray("<T_DONT>"), '\xfe'},
+
+        {QByteArray("<FF>"), '\xff'},
+        {QByteArray("<T_IAC>"), '\xff'}
+    };
+
+    QByteArray bytes;
+    if (input.isEmpty()) {
+        bytes = QByteArray::number(tableVersion);
+    } else {
+        for (qsizetype index = 0, total = input.size(); index < total; ++index) {
+            if (input.at(index) == '<') {
+                // got an opening marker
+                if (((index + 1) < total) && (input.at(index + 1) == '<')) {
+                    // got an escaped less than sign - so store it
+                    bytes.append('<');
+                    // nudge the index up one character
+                    ++index;
+                    // and process the next one
+                    continue;
+                }
+                // Else we haven't got an escaped one so find the closing greater then
+                qsizetype tagEnd = input.indexOf('>', index);
+                if (tagEnd > index) {
+                    // Found it, so extract the whole tag including delimiters
+                    QByteArray tag;
+                    for (qsizetype i = index; i <= tagEnd; ++i) {
+                        // store it
+                        tag.append(input.at(i));
+                    }
+                    // look the tag up:
+                    if (lookupTable.contains(tag)) {
+                        bytes.append(lookupTable.value(tag));
+                    } else {
+                        // Not found so append the original tag instead
+                        bytes.append(tag);
+                    }
+                    // nudge the index up to the closing greater then
+                    index = tagEnd;
+                    // and process the next character
+                    continue;
+                }
+            } else {
+                if (input.at(index) == '>' && ((index + 1) < total) && (input.at(index + 1) == '>')) {
+                    // got an escaped greater than sign - so store it
+                    bytes.append('>');
+                    // nudge the index up one character
+                    ++index;
+                    // and process the next one
+                    continue;
+                }
+            }
+            // Since we have not done anything that would have otherwise advanced
+            // index, then just copy the current character:
+            bytes.append(input.at(index));
+        }
+    }
+    return bytes;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#feedTelnet
+int TLuaInterpreter::feedTelnet(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
+    if (!lua_isstring(L, 1)) {
+        lua_pushfstring(L,
+                        "feedTelnet: bad argument #1 type (imitation game server data as string\n"
+                        "expected, got %s!)",
+                        luaL_typename(L, 1));
+        lua_error(L);
+        Q_UNREACHABLE();
+    }
+    if (host.mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+        lua_pushnil(L);
+        lua_pushstring(L, "feedTelnet: refused, telnet connection socket is not in the unconnected state");
+        return 2;
+    }
+    const QByteArray rawData{lua_tostring(L, 1)};
+    // We need to convert any "<*>" codes to their raw byte forms:
+    QByteArray cookedData{parseTelnetCodes(rawData)};
+    if (rawData.isEmpty()) {
+        // This is a special case to get the table version
+        lua_pushboolean(L, true);
+        lua_pushfstring(L, "feedTelnet: using table version %s", cookedData.constData());
+        return 2;
+    }
+
+    host.mTelnet.loopbackTest(cookedData);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#feedTriggers
 int TLuaInterpreter::feedTriggers(lua_State* L)
 {
@@ -2560,6 +2848,18 @@ int TLuaInterpreter::scrollingActive(lua_State* L)
 
     auto console = CONSOLE(L, windowName);
     lua_pushboolean(L, console->getScrolling());
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#holdingModifiers
+int TLuaInterpreter::holdingModifiers(lua_State* L)
+{
+    Qt::KeyboardModifiers keyModifiers;
+    keyModifiers = static_cast<Qt::KeyboardModifiers>(
+        getVerifiedInt(L, __func__, 1, "key modifier", true)
+    );
+    Qt::KeyboardModifiers modifiersHeld = QGuiApplication::queryKeyboardModifiers();
+    lua_pushboolean(L, modifiersHeld == keyModifiers);
     return 1;
 }
 
@@ -5844,7 +6144,7 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
     int intValue = 0;
     bool boolValue = 0;
 
-    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url])
+    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,continue][,url][,finish]
     for (int i = 1; i <= numArgs; i++) {
         if (lua_isnil(L, i)) {
             continue;
@@ -5931,6 +6231,16 @@ int TLuaInterpreter::playMusicFileAsOrderedArguments(lua_State* L)
             stringValue = getVerifiedString(L, __func__, i, "url");
             mediaData.setMediaUrl(stringValue);
             break;
+        case 11:
+            intValue = getVerifiedInt(L, __func__, i, "finish");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFinish(intValue);
+            break;
         }
     }
 
@@ -5981,7 +6291,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("loops")) {
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")) {
             int value = getVerifiedInt(L,
                                        __func__,
                                        -1,
@@ -5989,6 +6299,7 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                                        : key == QLatin1String("fadein")  ? "value for fadein"
                                        : key == QLatin1String("fadeout") ? "value for fadeout"
                                        : key == QLatin1String("start")   ? "value for start"
+                                       : key == QLatin1String("finish")  ? "value for finish"
                                                                          : "value for loops");
 
             if (key == QLatin1String("volume")) {
@@ -6023,6 +6334,13 @@ int TLuaInterpreter::playMusicFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaStart(value);
+            } else if (key == QLatin1String("finish")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playMusicFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaFinish(value);
             } else if (key == QLatin1String("loops")) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
@@ -6075,7 +6393,7 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
     QString stringValue;
     int intValue = 0;
 
-    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,priority][,url])
+    // name[,volume][,fadein][,fadeout][,start][,loops][,key][,tag][,priority][,url][,finish]
     for (int i = 1; i <= numArgs; i++) {
         if (lua_isnil(L, i)) {
             continue;
@@ -6169,6 +6487,16 @@ int TLuaInterpreter::playSoundFileAsOrderedArguments(lua_State* L)
             stringValue = getVerifiedString(L, __func__, i, "url");
             mediaData.setMediaUrl(stringValue);
             break;
+        case 11:
+            intValue = getVerifiedInt(L, __func__, i, "finish");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %s)", "finish", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFinish(intValue);
+            break;
         }
     }
 
@@ -6220,7 +6548,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
-        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("loops")
+        } else if (key == QLatin1String("volume") || key == QLatin1String("fadein") || key == QLatin1String("fadeout") || key == QLatin1String("start") || key == QLatin1String("finish") || key == QLatin1String("loops")
                    || key == QLatin1String("priority")) {
             int value = getVerifiedInt(L,
                                        __func__,
@@ -6229,6 +6557,7 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
                                        : key == QLatin1String("fadein")  ? "value for fadein"
                                        : key == QLatin1String("fadeout") ? "value for fadeout"
                                        : key == QLatin1String("start")   ? "value for start"
+                                       : key == QLatin1String("finish")  ? "value for finish"
                                        : key == QLatin1String("loops")   ? "value for loops"
                                                                          : "value for priority");
 
@@ -6264,6 +6593,13 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L)
                 }
 
                 mediaData.setMediaStart(value);
+            } else if (key == QLatin1String("finish")) {
+                if (value < 0) {
+                    lua_pushfstring(L, "playSoundFile: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "finish", value);
+                    return lua_error(L);
+                }
+
+                mediaData.setMediaFinish(value);
             } else if (key == QLatin1String("loops")) {
                 if (value < TMediaData::MediaLoopsRepeat || value == 0) {
                     value = TMediaData::MediaLoopsDefault;
@@ -6320,8 +6656,10 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
     TMediaData mediaData{};
     const int numArgs = lua_gettop(L);
     QString stringValue;
+    bool boolValue;
+    int intValue;
 
-    // values as ordered args: name[,key][,tag])
+    // values as ordered args: name[,key][,tag][,fadeaway][,fadeout]
     for (int i = 1; i <= numArgs; i++) {
         if (lua_isnil(L, i)) {
             continue;
@@ -6346,6 +6684,20 @@ int TLuaInterpreter::stopMusicAsOrderedArguments(lua_State* L)
         case 3:
             stringValue = getVerifiedString(L, __func__, i, "tag");
             mediaData.setMediaTag(stringValue);
+            break;
+        case 4:
+            boolValue = getVerifiedBool(L, __func__, i, "fadeaway");
+            mediaData.setMediaFadeAway(boolValue);
+            break;
+        case 5:
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "stopMusic: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(intValue);
             break;
         }
     }
@@ -6386,6 +6738,18 @@ int TLuaInterpreter::stopMusicAsTableArgument(lua_State* L)
             } else if (key == QLatin1String("tag") && !value.isEmpty()) {
                 mediaData.setMediaTag(value);
             }
+        } else if (key == QLatin1String("fadeaway")) {
+            const bool value = getVerifiedBool(L, __func__, -1, "value for fadeaway must be boolean");
+            mediaData.setMediaFadeAway(value);
+        } else if (key == QLatin1String("fadeout")) {
+            int value = getVerifiedInt(L, __func__, -1, "value for fadeout");
+
+            if (value < 0) {
+                lua_pushfstring(L, "stopMusic: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(value);
         }
 
         // removes value, but keeps key for next iteration
@@ -6430,6 +6794,7 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
     TMediaData mediaData{};
     const int numArgs = lua_gettop(L);
     QString stringValue;
+    bool boolValue;
     int intValue = 0;
 
     // values as ordered args: name[,key][,tag][,priority])
@@ -6468,6 +6833,20 @@ int TLuaInterpreter::stopSoundsAsOrderedArguments(lua_State* L)
             }
 
             mediaData.setMediaPriority(intValue);
+            break;
+        case 5:
+            boolValue = getVerifiedBool(L, __func__, i, "fadeaway");
+            mediaData.setMediaFadeAway(boolValue);
+            break;
+        case 6:
+            intValue = getVerifiedInt(L, __func__, i, "fadeout");
+
+            if (intValue < 0) {
+                lua_pushfstring(L, "stopSounds: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", intValue);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(intValue);
             break;
         }
     }
@@ -6520,6 +6899,18 @@ int TLuaInterpreter::stopSoundsAsTableArgument(lua_State* L)
 
                 mediaData.setMediaPriority(value);
             }
+        } else if (key == QLatin1String("fadeaway")) {
+            const bool value = getVerifiedBool(L, __func__, -1, "value for fadeaway must be boolean");
+            mediaData.setMediaFadeAway(value);
+        } else if (key == QLatin1String("fadeout")) {
+            int value = getVerifiedInt(L, __func__, -1, "value for fadeout");
+
+            if (value < 0) {
+                lua_pushfstring(L, "stopSounds: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", "fadeout", value);
+                return lua_error(L);
+            }
+
+            mediaData.setMediaFadeOut(value);
         }
 
         // removes value, but keeps key for next iteration
@@ -6627,108 +7018,68 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLink
 int TLuaInterpreter::setLink(lua_State* L)
 {
-    QString windowName, linkFunction{QString()};
-    int funcRef{0};
-    int s = 1;
+    QString windowName = qsl("main");
+    int s = 0;
     if (lua_gettop(L) > 2) {
-        windowName = WINDOW_NAME(L, s++);
+        windowName = WINDOW_NAME(L, ++s);
     }
 
-    if (!(lua_isstring(L, s) || lua_isfunction(L, s))) {
-        lua_pushfstring(L, "setLink: bad argument #%d type (command as string or function expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    if (lua_isfunction(L, s)) {
-        lua_pushvalue(L, s++);
-        funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
-    } else {
-        linkFunction = lua_tostring(L, s++);
-    }
-
-    const QString linkHint = getVerifiedString(L, __func__, s++, "tooltip");
+    QString command;
+    int luaReference = 0;
+    parseCommandOrFunction(L, __func__, ++s, command, luaReference);
+    const QString hint = getVerifiedString(L, __func__, ++s, "tooltip");
 
     const Host& host = getHostFromLua(L);
-    QStringList _linkFunction;
-    _linkFunction << linkFunction;
-    QStringList _linkHint;
-    _linkHint << linkHint;
-    QVector<int> _linkReference;
-    _linkReference << funcRef;
+    QStringList commandList;
+    QStringList hintList;
+    QVector<int> luaReferences;
+    commandList << command;
+    hintList << hint;
+    luaReferences << luaReference;
 
     auto console = CONSOLE(L, windowName);
-    console->setLink(_linkFunction, _linkHint, _linkReference);
+    console->setLink(commandList, hintList, luaReferences);
     if (console != host.mpConsole) {
         console->mUpperPane->forceUpdate();
         console->mLowerPane->forceUpdate();
     }
-    return 0;
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setPopup
 int TLuaInterpreter::setPopup(lua_State* L)
 {
-    QString windowName = "";
-    QStringList _hintList;
-    QStringList _commandList;
-    QVector<int> luaReference;
-    int s = 1;
-    const int n = lua_gettop(L);
-
-    // console name is an optional first argument
-    if (n > 2) {
-        windowName = WINDOW_NAME(L, s++);
+    QString windowName = qsl("main");
+    int s = 0;
+    if (lua_gettop(L) > 2) {
+        windowName = WINDOW_NAME(L, ++s);
     }
 
-    if (!lua_istable(L, s)) {
-        lua_pushfstring(L, "setPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    lua_pushnil(L);
-    while (lua_next(L, s) != 0) {
-        // key at index -2 and value at index -1
-        if (lua_type(L, -1) == LUA_TSTRING) {
-            const QString cmd = lua_tostring(L, -1);
-            _commandList << cmd;
-            luaReference << 0;
-        }
+    QStringList commandList;
+    QVector<int> luaReferences;
+    parseCommandsOrFunctionsTable(L, __func__, ++s, commandList, luaReferences);
 
-        if (lua_type(L, -1) == LUA_TFUNCTION) {
-            lua_pushvalue(L, -1);
-            _commandList << QString();
-            luaReference << luaL_ref(L, LUA_REGISTRYINDEX);
-        }
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-    if (!lua_istable(L, ++s)) {
-        lua_pushfstring(L, "setPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    lua_pushnil(L);
-    while (lua_next(L, s) != 0) {
-        // key at index -2 and value at index -1
-        if (lua_type(L, -1) == LUA_TSTRING) {
-            const QString hint = lua_tostring(L, -1);
-            _hintList << hint;
-        }
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
+    QStringList hintList;
+    parseHintsTable(L, __func__, ++s, hintList);
+
+    if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup", commandList.size(), hintList.size());
+        return 2;
     }
 
     const Host& host = getHostFromLua(L);
-    if (_commandList.size() != _hintList.size()) {
-        lua_pushstring(L, "setPopup: commands and hints list aren't the same size");
-        return lua_error(L);
-    }
-
     auto console = CONSOLE(L, windowName);
-    console->setLink(_commandList, _hintList, luaReference);
+    console->setLink(commandList, hintList, luaReferences);
     if (console != host.mpConsole) {
         console->mUpperPane->forceUpdate();
         console->mLowerPane->forceUpdate();
     }
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBold
@@ -7891,11 +8242,12 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     const QString name = getVerifiedString(L, __func__, 1, "name");
     const QString css = getVerifiedString(L, __func__, 2, "css");
     Host& host = getHostFromLua(L);
-    auto actionsList = host.getActionUnit()->findActionsByName(name);
-    if (actionsList.empty()) {
+    auto actionIds = host.getActionUnit()->findItems(name);
+    if (actionIds.empty()) {
         return warnArgumentValue(L, __func__, qsl("no button named '%1' found").arg(name));
     }
-    for (auto action : actionsList) {
+    for (auto actionId : actionIds) {
+        auto action = host.getActionUnit()->getAction(actionId);
         action->css = css;
     }
     host.getActionUnit()->updateToolbar();
@@ -8028,11 +8380,70 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#findItems
+int TLuaInterpreter::findItems(lua_State* L)
+{
+    const int n = lua_gettop(L);
+    const auto name = getVerifiedString(L, __func__, 1, "item name");
+    // Although we only use 6 ASCII strings the user may not enter a purely
+    // ASCII value which we might have to report...
+    const QString type = getVerifiedString(L, __func__, 2, "item type");
+    bool exactMatch = true;
+    bool caseSensitive = true;
+    if (n > 2) {
+        exactMatch = getVerifiedBool(L, __func__, 3, "exact match", true);
+    }
+    if (n > 3) {
+        caseSensitive = getVerifiedBool(L, __func__, 4, "case sensitive", true);
+    }
+    Host& host = getHostFromLua(L);
+    auto generateList = [](const auto vector, auto l) {
+        lua_newtable(l);
+        int index = 0;
+        for (const auto& item : vector) {
+            lua_pushnumber(l, ++index);
+            lua_pushnumber(l, item);
+            lua_settable(l, -3);
+        }
+    };
+    if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        const auto itemList = host.getTimerUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
+        const auto itemList = host.getTriggerUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
+        const auto itemList = host.getAliasUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
+        const auto itemList = host.getKeyUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
+        const auto itemList = host.getActionUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
+        const auto itemList = host.getScriptUnit()->findItems(name, exactMatch, caseSensitive);
+        generateList(itemList, L);
+        return 1;
+    }
+    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#exists
 int TLuaInterpreter::exists(lua_State* L)
 {
     auto [isId, nameOrId] = getVerifiedStringOrInteger(L, __func__, 1, "itemID or item name");
-    // Although we only use 4 ASCII strings the user may not enter a purely
+    // Although we only use 6 ASCII strings the user may not enter a purely
     // ASCII value which we might have to report...
     QString type = getVerifiedString(L, __func__, 2, "item type").toLower();
     bool isOk = false;
@@ -8087,7 +8498,7 @@ int TLuaInterpreter::exists(lua_State* L)
             return 1;
         }
 
-        count = host.getActionUnit()->findActionsByName(nameOrId).size();
+        count = host.getActionUnit()->findItems(nameOrId).size();
     } else if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getScriptUnit()->getScript(id);
@@ -8095,7 +8506,7 @@ int TLuaInterpreter::exists(lua_State* L)
             return 1;
         }
 
-        count = host.getScriptUnit()->findScriptId(nameOrId).size();
+        count = host.getScriptUnit()->findItems(nameOrId).size();
     } else {
         return warnArgumentValue(L, __func__, qsl(
             "invalid item type '%1' given, it should be one of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
@@ -8123,6 +8534,10 @@ int TLuaInterpreter::isActive(lua_State* L)
         // show what was entered:
         return warnArgumentValue(L, __func__, csmInvalidItemID.arg(lua_tostring(L, 1)));
     }
+    bool checkAncestors = false;
+    if (lua_gettop(L) > 2) {
+        checkAncestors = getVerifiedBool(L, __func__, 3, "also check ancestors", true);
+    }
 
     Host& host = getHostFromLua(L);
     int cnt = 0;
@@ -8130,14 +8545,20 @@ int TLuaInterpreter::isActive(lua_State* L)
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getTimerUnit()->getTimer(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (static_cast<bool>(pT)
+                   && (pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive())
+                   && (!checkAncestors || pT->shouldAncestorsBeActive())) ? 1 : 0;
         } else {
-            auto it1 = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getTimerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getTimerUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getTimerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                // Offset timer have their active state recorded differently
+                if ((pT->isOffsetTimer() ? pT->shouldBeActive() : pT->isActive())
+                    && (!checkAncestors || pT->shouldAncestorsBeActive())) {
+
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8146,12 +8567,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getTriggerUnit()->getTrigger(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto it1 = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getTriggerUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getTriggerUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getTriggerUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8160,12 +8582,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getAliasUnit()->getAlias(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto it1 = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getAliasUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getAliasUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getAliasUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8174,12 +8597,13 @@ int TLuaInterpreter::isActive(lua_State* L)
             auto pT = host.getKeyUnit()->getKey(id);
             cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
         } else {
-            auto it1 = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
-            while (it1 != host.getKeyUnit()->mLookupTable.cend() && it1.key() == nameOrId) {
-                if (it1.value()->isActive()) {
+            auto itpItem = host.getKeyUnit()->mLookupTable.constFind(nameOrId);
+            while (itpItem != host.getKeyUnit()->mLookupTable.cend() && itpItem.key() == nameOrId) {
+                auto pT = itpItem.value();
+                if (pT->isActive() && (!checkAncestors || pT->ancestorsActive())) {
                     ++cnt;
                 }
-                ++it1;
+                ++itpItem;
             }
         }
 
@@ -8190,7 +8614,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         } else {
             QMap<int, TAction*> const actions = host.getActionUnit()->getActionList();
             for (auto action : actions) {
-                if (action->getName() == nameOrId && action->isActive()) {
+                if (action->getName() == nameOrId && action->isActive() && (!checkAncestors || action->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -8203,7 +8627,7 @@ int TLuaInterpreter::isActive(lua_State* L)
         } else {
             QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
             for (auto script : scripts) {
-                if (script->getName() == nameOrId && script->isActive()) {
+                if (script->getName() == nameOrId && script->isActive() && (!checkAncestors || script->ancestorsActive())) {
                     ++cnt;
                 }
             }
@@ -8215,6 +8639,415 @@ int TLuaInterpreter::isActive(lua_State* L)
     }
     lua_pushnumber(L, cnt);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#isAncestorsActive
+int TLuaInterpreter::isAncestorsActive(lua_State* L)
+{
+    auto id = getVerifiedInt(L, __func__, 1, "item ID");
+    // Although we only use ASCII strings for the type the user may not enter a
+    // purely ASCII value which we might have to report...
+    QString type = getVerifiedString(L, __func__, 2, "item type");
+    if (id < 0) {
+        // Must be zero or more but doesn't seem to be:
+        return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
+    }
+
+    Host& host = getHostFromLua(L);
+    // Remember, QString::compare(...) returns zero for a match:
+    QString typeCheck{QLatin1String("timer")};
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getTimerUnit()->getTimer(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+
+        // Offset timer have their active state recorded differently
+        lua_pushboolean(L, pT->isOffsetTimer() ? pT->shouldAncestorsBeActive() : pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("trigger");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getTriggerUnit()->getTrigger(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("alias");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getAliasUnit()->getAlias(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("keybind");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getKeyUnit()->getKey(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("button");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getActionUnit()->getAction(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    typeCheck = QLatin1String("script");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getScriptUnit()->getScript(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        lua_pushboolean(L, pT->ancestorsActive());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ancestors
+int TLuaInterpreter::ancestors(lua_State* L)
+{
+    auto id = getVerifiedInt(L, __func__, 1, "item ID");
+    // Although we only use ASCII strings for the type the user may not enter a
+    // purely ASCII value which we might have to report...
+    QString type = getVerifiedString(L, __func__, 2, "item type");
+    if (id < 0) {
+        // Must be zero or more but doesn't seem to be:
+        return warnArgumentValue(L, __func__, qsl("item ID as %1 does not seem to be parseable as a positive integer").arg(lua_tostring(L, 1)));
+    }
+
+    Host& host = getHostFromLua(L);
+    // Remember, QString::compare(...) returns zero for a match:
+    QString typeCheck{QLatin1String("timer")};
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getTimerUnit()->getTimer(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                // We are confining ourselves to a small set of details here
+                // enough to help to build a table of the items perhaps but
+                // something to provide more details about each of the diffent
+                // item types (once the user knows which IDs/names to use to
+                // get them) would probably be a good idea as well:
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    // offset timers have a parent node that is NOT a group!
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                // Offset timer have their active state recorded differently
+                lua_pushboolean(L, pAncestor->isOffsetTimer() ? pAncestor->shouldBeActive() : pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("trigger");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getTriggerUnit()->getTrigger(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("alias");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getAliasUnit()->getAlias(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("keybind");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getKeyUnit()->getKey(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("button");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getActionUnit()->getAction(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    typeCheck = QLatin1String("script");
+    if (!type.compare(typeCheck, Qt::CaseInsensitive)) {
+        auto pT = host.getScriptUnit()->getScript(id);
+        if (!pT) {
+            return warnArgumentValue(L, __func__, qsl("%1 item ID %2 does not exist").arg(typeCheck, QString::number(id)));
+        }
+        const auto ancestorsList = pT->getAncestorList();
+        lua_newtable(L);
+        int index = 0;
+        for (const auto pAncestor : ancestorsList) {
+            if (!pAncestor) {
+                // Uh oh! This is not expected, so clear that table off the
+                // stack so we can push an error message there:
+                lua_pop(L, 1);
+                lua_pushfstring(L, "%s: internal error, got a nullptr whilst looking for an ancestor of the %s with ID: %i", __func__, typeCheck.toLatin1().constData(), id);
+                lua_error(L);
+                Q_UNREACHABLE();
+            }
+            lua_pushnumber(L, ++index);
+            lua_newtable(L);
+            {
+                lua_pushstring(L, "id");
+                lua_pushnumber(L, pAncestor->getID());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "name");
+                lua_pushstring(L, pAncestor->getName().toUtf8().constData());
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "node");
+                if (pAncestor->isFolder()) {
+                    if (!pAncestor->mPackageName.isEmpty() && pAncestor->mPackageName == pAncestor->getName()) {
+                        lua_pushstring(L, "package");
+                    } else {
+                        lua_pushstring(L, "group");
+                    }
+                } else {
+                    lua_pushstring(L, "item");
+                }
+                lua_settable(L, -3);
+
+                lua_pushstring(L, "isActive");
+                lua_pushboolean(L, pAncestor->isActive());
+                lua_settable(L, -3);
+            }
+            lua_settable(L, -3);
+        }
+
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("invalid item type '%1' given, it should be one (case insensitive) of: 'alias', 'button', 'script', 'keybind', 'timer' or 'trigger'").arg(type));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#permAlias
@@ -8251,17 +9084,18 @@ int TLuaInterpreter::getScript(lua_State* L)
     }
     Host& host = getHostFromLua(L);
 
-    auto ids = host.getScriptUnit()->findScriptId(name);
-    auto pS = host.getScriptUnit()->getScript(ids.value(--pos, -1));
-    if (!pS) {
-        lua_pushnumber(L, -1);
-        lua_pushstring(L, qsl("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos).toUtf8().constData());
-        return 2;
+    auto ids = host.getScriptUnit()->findItems(name);
+    if (pos >= 1 && pos <= static_cast<int>(ids.size())) {
+        auto pS = host.getScriptUnit()->getScript(ids.at(pos - 1));
+        if (pS) {
+            lua_pushstring(L, pS->getScript().toUtf8().constData());
+            lua_pushnumber(L, ids.at(pos - 1));
+            return 2;
+        }
     }
 
-    const int id = pS->getID();
-    lua_pushstring(L, pS->getScript().toUtf8().constData());
-    lua_pushnumber(L, id);
+    lua_pushnumber(L, -1);
+    lua_pushstring(L, qsl("script \"%1\" at position %2 not found").arg(name, QString::number(pos)).toUtf8().constData());
     return 2;
 }
 
@@ -10842,160 +11676,194 @@ int TLuaInterpreter::setBgColor(lua_State* L)
     return 1;
 }
 
+// The next three functions are internal helpers for use by
+// (echo|insert|set)|(Link|Popup) functions
+void TLuaInterpreter::parseCommandOrFunction(lua_State* lState, const char* functionName, int& index, QString& command, int& luaFunctionNumber)
+{
+    if (!(lua_isstring(lState, index) || lua_isfunction(lState, index))) {
+        lua_pushfstring(lState, "%s: bad argument #%d type (command as string or function expected, got %s!)", functionName, index, luaL_typename(lState, index));
+        lua_error(lState);
+        Q_UNREACHABLE();
+    }
+
+    if (lua_isfunction(lState, index)) {
+        lua_pushvalue(lState, index);
+        luaFunctionNumber = luaL_ref(lState, LUA_REGISTRYINDEX);
+        return;
+    }
+    command = lua_tostring(lState, index);
+}
+
+void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionName, int& index, QStringList& hintList)
+{
+    if (!lua_istable(lState, index)) {
+        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "hints", luaL_typename(lState, index));
+        lua_error(lState);
+        Q_UNREACHABLE();
+    }
+
+    lua_pushnil(lState);
+    // Keep track of the index of the item in the table
+    int subIndex = 0;
+    while (lua_next(lState, index)) {
+        // key at index -2 and value at index -1
+        ++subIndex;
+        if (!lua_isstring(lState, -1)) {
+            lua_pushfstring(lState, "%s: bad item #%d in table argument #%d in type (hint as string expected, got %s!)", functionName, subIndex, index, luaL_typename(lState, -1));
+            lua_error(lState);
+            Q_UNREACHABLE();
+        }
+
+        const QString hint = lua_tostring(lState, -1);
+        hintList << hint;
+
+        // removes value, but keeps key for next iteration
+        lua_pop(lState, 1);
+    }
+}
+
+void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const char* functionName, int& index, QStringList& commandsList, QVector<int>& luaFunctionNumbers)
+{
+    if (!lua_istable(lState, index)) {
+        lua_pushfstring(lState, "%s: bad argument #%d type (%s as table expected, got %s!)", functionName, "commands/functions", luaL_typename(lState, index));
+        lua_error(lState);
+        Q_UNREACHABLE();
+    }
+
+    lua_pushnil(lState);
+    // Keep track of the index of the item in the table
+    int subIndex = 0;
+    while (lua_next(lState, index)) {
+        // key at index -2 and value at index -1
+        ++subIndex;
+        if (!(lua_isstring(lState, -1) || lua_isfunction(lState, -1))) {
+            lua_pushfstring(lState, "%s: bad item #%d in table argument #%d in type (command as string or function expected, got %s!)", functionName, subIndex, index, luaL_typename(lState, -1));
+            lua_error(lState);
+            Q_UNREACHABLE();
+        }
+
+        if (lua_isfunction(lState, -1)) {
+            lua_pushvalue(lState, -1);
+            luaFunctionNumbers << luaL_ref(lState, LUA_REGISTRYINDEX);
+            commandsList << QString();
+        } else {
+            const QString command = lua_tostring(lState, -1);
+            luaFunctionNumbers << 0;
+            commandsList << command;
+        }
+
+        // removes value, but keeps key for next iteration
+        lua_pop(lState, 1);
+    }
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertLink
 int TLuaInterpreter::insertLink(lua_State* L)
 {
+    QStringList commandList;
+    QStringList hintList;
+    QVector<int> luaReferences;
     const int n = lua_gettop(L);
-    int funcRef{0};
-    bool useCurrentFormat{false};
-    QString windowName{qsl("main")};
-    QString singleHint, singleFunction{QString()}, text;
+    int s = 0;
+    int luaReference = 0;
+    bool useCurrentFormat = false;
+    QString windowName = qsl("main");
+    QString hint;
+    QString command;
+    QString text;
+
     if (n < 4) {
-        text = getVerifiedString(L, __func__, 1, "text");
-        if (!(lua_isstring(L, 2) || lua_isfunction(L, 2))) {
-            lua_pushfstring(L, "insertLink: bad argument #2 type (command as string or function expected, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        if (lua_isfunction(L, 2)) {
-            lua_pushvalue(L, 2);
-            funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
-        } else {
-            singleFunction = lua_tostring(L, 2);
-        }
-        singleHint = getVerifiedString(L, __func__, 3, "hint");
-    }
-    if (n == 4) {
-        bool isBool{false};
-        if (lua_isboolean(L, 4)) {
-            isBool = true;
-            useCurrentFormat = lua_toboolean(L, 4);
-        }
-        if (isBool) {
-            text = getVerifiedString(L, __func__, 1, "text");
-            singleHint = getVerifiedString(L, __func__, 3, "hint");
-            if (!(lua_isstring(L, 2) || lua_isfunction(L, 2))) {
-                lua_pushfstring(L, "insertLink: bad argument #2 type (command as string or function expected, got %s!)", luaL_typename(L, 2));
-                return lua_error(L);
+        // (string) text, (string) command/function, (string) hint
+        text = getVerifiedString(L, __func__, ++s, "text");
+        parseCommandOrFunction(L, __func__, ++s, command, luaReference);
+        hint = getVerifiedString(L, __func__, ++s, "hint");
+
+    } else {
+        if (n == 4) {
+            // EITHER: (string) text, (string) command/function, (string) hint, (bool) standard/NotDefaultFormat
+            //     OR: (string) windowName, (string) text, (string) command/function, (string) hint
+            if (!lua_isboolean(L, 4)) {
+                windowName = getVerifiedString(L, __func__, ++s, "window name");
             }
-            if (lua_isfunction(L, 2)) {
-                lua_pushvalue(L, 2);
-                funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
-            } else {
-                singleFunction = lua_tostring(L, 2);
+            text = getVerifiedString(L, __func__, ++s, "text");
+            parseCommandOrFunction(L, __func__, ++s, command, luaReference);
+            hint = getVerifiedString(L, __func__, ++s, "hint");
+            if (lua_isboolean(L, 4)) {
+                useCurrentFormat = getVerifiedBool(L, __func__, ++s, "useCurrentFormat");
             }
         } else {
-            windowName = getVerifiedString(L, __func__, 1, "window name");
-            text = getVerifiedString(L, __func__, 2, "text");
-            singleHint = getVerifiedString(L, __func__, 4, "hint");
-            if (!(lua_isstring(L, 3) || lua_isfunction(L, 3))) {
-                lua_pushfstring(L, "insertLink: bad argument #3 type (command as string or function expected, got %s!)", luaL_typename(L, 3));
-                return lua_error(L);
-            }
-            if (lua_isfunction(L, 3)) {
-                lua_pushvalue(L, 3);
-                funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
-            } else {
-                singleFunction = lua_tostring(L, 3);
-            }
+            // n > 4:
+            // (string) windowName, (string) text, (string) command/function, (string) hint, (bool) standard/NotDefaultFormat
+            windowName = getVerifiedString(L, __func__, ++s, "window name");
+            text = getVerifiedString(L, __func__, ++s, "text");
+            parseCommandOrFunction(L, __func__, ++s, command, luaReference);
+            hint = getVerifiedString(L, __func__, ++s, "hint");
+            useCurrentFormat = getVerifiedBool(L, __func__, ++s, "useCurrentFormat");
         }
     }
 
-    if (n > 4) {
-        windowName = getVerifiedString(L, __func__, 1, "window name");
-        text = getVerifiedString(L, __func__, 2, "text");
-        singleHint = getVerifiedString(L, __func__, 4, "hint");
-        useCurrentFormat = getVerifiedBool(L, __func__, 5, "useCurrentFormat");
-        if (!(lua_isstring(L, 3) || lua_isfunction(L, 3))) {
-            lua_pushfstring(L, "insertLink: bad argument #3 type (command as string or function expected, got %s!)", luaL_typename(L, 3));
-            return lua_error(L);
-        }
-        if (lua_isfunction(L, 3)) {
-            lua_pushvalue(L, 3);
-            funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
-        } else {
-            singleFunction = lua_tostring(L, 3);
-        }
-    }
-
-
-    QStringList function;
-    QStringList hint;
-    QVector<int> luaReference;
-    function << singleFunction;
-    hint << singleHint;
-    luaReference << funcRef;
+    commandList << command;
+    luaReferences << luaReference;
+    hintList << hint;
 
     auto console = CONSOLE(L, windowName);
-    console->insertLink(text, function, hint, useCurrentFormat, luaReference);
-    return 0;
+    console->insertLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertPopup
 int TLuaInterpreter::insertPopup(lua_State* L)
 {
-    QString windowName;
-    QStringList _hintList;
-    QStringList _commandList;
-    QVector<int> luaReference;
-    bool customFormat = false;
-    int s = 1;
+    QStringList commandList;
+    QStringList hintList;
+    QVector<int> luaReferences;
     const int n = lua_gettop(L);
+    int s = 0;
+    bool useCurrentFormat = false;
+    QString windowName = qsl("main");
+    QString text;
 
-    // console name is an optional first argument
-    if (n >= 4) {
-        windowName = WINDOW_NAME(L, s++);
-    }
-    const QString txt = getVerifiedString(L, __func__, s++, "text");
+    if (n < 4) {
+        // (string) text, {table of (string) / (functions) commands}, {table of (strings) hints}
+        text = getVerifiedString(L, __func__, ++s, "text");
+        parseCommandsOrFunctionsTable(L, __func__, ++s, commandList, luaReferences);
+        parseHintsTable(L, __func__, ++s, hintList);
 
-    if (!lua_istable(L, s)) {
-        lua_pushfstring(L, "insertPopup: bad argument #%d type (commands as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    lua_pushnil(L);
-    while (lua_next(L, s) != 0) {
-        // key at index -2 and value at index -1
-        if (lua_type(L, -1) == LUA_TSTRING) {
-            const QString cmd = lua_tostring(L, -1);
-            _commandList << cmd;
-            luaReference << 0;
+    } else {
+        if (n == 4) {
+            // EITHER: (string) text, {table of (string) / (functions) commands}, {table of (strings) hints}, (bool) standard/NotDefaultFormat
+            //     OR: (string) windowName, (string) text, {table of (string) / (functions) commands}, {table of (strings) hints}
+            if (!lua_isboolean(L, 4)) {
+                windowName = getVerifiedString(L, __func__, ++s, "window name");
+            }
+            text = getVerifiedString(L, __func__, ++s, "text");
+            parseCommandsOrFunctionsTable(L, __func__, ++s, commandList, luaReferences);
+            parseHintsTable(L, __func__, ++s, hintList);
+            if (lua_isboolean(L, 4)) {
+                useCurrentFormat = getVerifiedBool(L, __func__, ++s, "useCurrentFormat");
+            }
+        } else {
+            // n > 4:
+            // (string) windowName, (string) text, {table of (string) / (functions) commands}, {table of (strings) hints}, (bool) standard/NotDefaultFormat
+            windowName = getVerifiedString(L, __func__, ++s, "window name");
+            text = getVerifiedString(L, __func__, ++s, "text");
+            parseCommandsOrFunctionsTable(L, __func__, ++s, commandList, luaReferences);
+            parseHintsTable(L, __func__, ++s, hintList);
+            useCurrentFormat = getVerifiedBool(L, __func__, ++s, "useCurrentFormat");
         }
-
-        if (lua_type(L, -1) == LUA_TFUNCTION){
-            lua_pushvalue(L, -1);
-            _commandList << QString();
-            luaReference << luaL_ref(L, LUA_REGISTRYINDEX);
-        }
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
     }
 
-    if (!lua_istable(L, ++s)) {
-        lua_pushfstring(L, "insertPopup: bad argument #%d type (hints as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    lua_pushnil(L);
-    while (lua_next(L, s) != 0) {
-        // key at index -2 and value at index -1
-        if (lua_type(L, -1) == LUA_TSTRING) {
-            const QString hint = lua_tostring(L, -1);
-            _hintList << hint;
-        }
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    if (n >= ++s) {
-        customFormat = lua_toboolean(L, s);
-    }
-
-    if (_commandList.size() != _hintList.size()) {
-        lua_pushstring(L, "Error: command list size and hint list size do not match cannot create popup");
-        return lua_error(L);
+    if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup", commandList.size(), hintList.size());
+        return 2;
     }
 
     auto console = CONSOLE(L, windowName);
-    console->insertLink(txt, _commandList, _hintList, customFormat, luaReference);
-    return 0;
+    console->insertLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText
@@ -11067,154 +11935,110 @@ int TLuaInterpreter::echo(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoPopup
 int TLuaInterpreter::echoPopup(lua_State* L)
 {
-    QString windowName;
-    QStringList hintList;
     QStringList commandList;
-    QVector<int> luaReference;
-    bool customFormat = false;
-    int s = 1;
+    QStringList hintList;
+    QVector<int> luaReferences;
     const int n = lua_gettop(L);
-    // console name is an optional first argument
-    if (n >= 4) {
-        windowName = WINDOW_NAME(L, s++);
-    }
-    const QString text = getVerifiedString(L, __func__, s++, "text as string");
+    int s = 0;
+    bool useCurrentFormat = false;
+    QString windowName = qsl("main");
+    QString text;
 
-    if (!lua_istable(L, s)) {
-        lua_pushfstring(L, "echoPopup: bad argument #%d type (command list as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    lua_pushnil(L);
-    while (lua_next(L, s) != 0) {
-        // key at index -2 and value at index -1
-        if (lua_type(L, -1) == LUA_TSTRING) {
-            const QString cmd = lua_tostring(L, -1);
-            commandList << cmd;
-            luaReference << 0;
+    if (n < 4) {
+        // (string) text, {table of (string) / (functions) commands}, {table of (strings) hints}
+        text = getVerifiedString(L, __func__, ++s, "text");
+        parseCommandsOrFunctionsTable(L, __func__, ++s, commandList, luaReferences);
+        parseHintsTable(L, __func__, ++s, hintList);
+
+    } else {
+        if (n == 4) {
+            // EITHER: (string) text, {table of (string) / (functions) commands}, {table of (strings) hints}, (bool) standard/NotDefaultFormat
+            //     OR: (string) windowName, (string) text, {table of (string) / (functions) commands}, {table of (strings) hints}
+            if (!lua_isboolean(L, 4)) {
+                windowName = getVerifiedString(L, __func__, ++s, "window name");
+            }
+            text = getVerifiedString(L, __func__, ++s, "text");
+            parseCommandsOrFunctionsTable(L, __func__, ++s, commandList, luaReferences);
+            parseHintsTable(L, __func__, ++s, hintList);
+            if (lua_isboolean(L, 4)) {
+                useCurrentFormat = getVerifiedBool(L, __func__, ++s, "useCurrentFormat");
+            }
+        } else {
+            // n > 4:
+            // (string) windowName, (string) text, {table of (string) / (functions) commands}, {table of (strings) hints}, (bool) standard/NotDefaultFormat
+            windowName = getVerifiedString(L, __func__, ++s, "window name");
+            text = getVerifiedString(L, __func__, ++s, "text");
+            parseCommandsOrFunctionsTable(L, __func__, ++s, commandList, luaReferences);
+            parseHintsTable(L, __func__, ++s, hintList);
+            useCurrentFormat = getVerifiedBool(L, __func__, ++s, "useCurrentFormat");
         }
-        if (lua_type(L, -1) == LUA_TFUNCTION){
-            lua_pushvalue(L, -1);
-            commandList << QString();
-            luaReference << luaL_ref(L, LUA_REGISTRYINDEX);
-        }
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
     }
 
-    if (!lua_istable(L, ++s)) {
-        lua_pushfstring(L, "echoPopup: bad argument #%d type (hint list as table expected, got %s!)", s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-    lua_pushnil(L);
-    while (lua_next(L, s) != 0) {
-        // key at index -2 and value at index -1
-        if (lua_type(L, -1) == LUA_TSTRING) {
-            const QString hint = lua_tostring(L, -1);
-            hintList << hint;
-        }
-        // removes value, but keeps key for next iteration
-        lua_pop(L, 1);
-    }
-
-    if (n >= ++s) {
-        customFormat = lua_toboolean(L, s);
-    }
-
-    if (commandList.size() != hintList.size()) {
-        lua_pushfstring(L, "echoPopup: commands and hints list aren't the same size");
-        return lua_error(L);
+    if ((hintList.size() - commandList.size()) < 0 || (hintList.size() - commandList.size()) > 1) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "command table and hint table sizes do not match up (%d and %d, either they must be the same or there should be one extra hint) - cannot create popup", commandList.size(), hintList.size());
+        return 2;
     }
 
     auto console = CONSOLE(L, windowName);
-    console->echoLink(text, commandList, hintList, customFormat, luaReference);
-    return 0;
+    console->echoLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoLink
 int TLuaInterpreter::echoLink(lua_State* L)
 {
+    QStringList commandList;
+    QStringList hintList;
+    QVector<int> luaReferences;
     const int n = lua_gettop(L);
-    int funcRef{0};
-    bool useCurrentFormat{false};
-    QString windowName{qsl("main")};
-    QString singleHint, singleFunction{QString()}, text;
+    int s = 0;
+    int luaReference = 0;
+    bool useCurrentFormat = false;
+    QString windowName = qsl("main");
+    QString hint;
+    QString command;
+    QString text;
+
     if (n < 4) {
-        text = getVerifiedString(L, __func__, 1, "text");
-        singleHint = getVerifiedString(L, __func__, 3, "hint");
-        if (!(lua_isstring(L, 2) || lua_isfunction(L, 2))) {
-            lua_pushfstring(L, "echoLink: bad argument #2 type (command as string or function expected, got %s!)", luaL_typename(L, 2));
-            return lua_error(L);
-        }
-        if (lua_isfunction(L, 2)) {
-            lua_pushvalue(L, 2);
-            funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
-        } else {
-            singleFunction = lua_tostring(L, 2);
-        }
-    }
-    if (n == 4) {
-        bool isBool{false};
-        if (lua_isboolean(L, 4)) {
-            isBool = true;
-            useCurrentFormat = lua_toboolean(L, 4);
-        }
-        if (isBool) {
-            text = getVerifiedString(L, __func__, 1, "text");
-            singleHint = getVerifiedString(L, __func__, 3, "hint");
-            if (!(lua_isstring(L, 2) || lua_isfunction(L, 2))) {
-                lua_pushfstring(L, "echoLink: bad argument #2 type (command as string or function expected, got %s!)", luaL_typename(L, 2));
-                return lua_error(L);
+        // (string) text, (string) command/function, (string) hint
+        text = getVerifiedString(L, __func__, ++s, "text");
+        parseCommandOrFunction(L, __func__, ++s, command, luaReference);
+        hint = getVerifiedString(L, __func__, ++s, "hint");
+
+    } else {
+        if (n == 4) {
+            // EITHER: (string) text, (string) command/function, (string) hint, (bool) standard/NotDefaultFormat
+            //     OR: (string) windowName, (string) text, (string) command/function, (string) hint
+            if (!lua_isboolean(L, 4)) {
+                windowName = getVerifiedString(L, __func__, ++s, "window name");
             }
-            if (lua_isfunction(L, 2)) {
-                lua_pushvalue(L, 2);
-                funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
-            } else {
-                singleFunction = lua_tostring(L, 2);
+            text = getVerifiedString(L, __func__, ++s, "text");
+            parseCommandOrFunction(L, __func__, ++s, command, luaReference);
+            hint = getVerifiedString(L, __func__, ++s, "hint");
+            if (lua_isboolean(L, 4)) {
+                useCurrentFormat = getVerifiedBool(L, __func__, ++s, "useCurrentFormat");
             }
         } else {
-            windowName = getVerifiedString(L, __func__, 1, "window name");
-            text = getVerifiedString(L, __func__, 2, "text");
-            singleHint = getVerifiedString(L, __func__, 4, "hint");
-            if (!(lua_isstring(L, 3) || lua_isfunction(L, 3))) {
-                lua_pushfstring(L, "echoLink: bad argument #3 type (command as string or function expected, got %s!)", luaL_typename(L, 3));
-                return lua_error(L);
-            }
-            if (lua_isfunction(L, 3)) {
-                lua_pushvalue(L, 3);
-                funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
-            } else {
-                singleFunction = lua_tostring(L, 3);
-            }
+            // n > 4:
+            // (string) windowName, (string) text, (string) command/function, (string) hint, (bool) standard/NotDefaultFormat
+            windowName = getVerifiedString(L, __func__, ++s, "window name");
+            text = getVerifiedString(L, __func__, ++s, "text");
+            parseCommandOrFunction(L, __func__, ++s, command, luaReference);
+            hint = getVerifiedString(L, __func__, ++s, "hint");
+            useCurrentFormat = getVerifiedBool(L, __func__, ++s, "useCurrentFormat");
         }
     }
 
-    if (n > 4) {
-        windowName = getVerifiedString(L, __func__, 1, "window name");
-        text = getVerifiedString(L, __func__, 2, "text");
-        singleHint = getVerifiedString(L, __func__, 4, "hint");
-        useCurrentFormat = getVerifiedBool(L, __func__, 5, "useCurrentFormat");
-        if (!(lua_isstring(L, 3) || lua_isfunction(L, 3))) {
-            lua_pushfstring(L, "echoLink: bad argument #3 type (command as string or function expected, got %s!)", luaL_typename(L, 3));
-            return lua_error(L);
-        }
-        if (lua_isfunction(L, 3)) {
-            lua_pushvalue(L, 3);
-            funcRef = luaL_ref(L, LUA_REGISTRYINDEX);
-        } else {
-            singleFunction = lua_tostring(L, 3);
-        }
-    }
-
-    QStringList function;
-    QStringList hint;
-    QVector<int> luaReference;
-    function << singleFunction;
-    hint << singleHint;
-    luaReference << funcRef;
+    commandList << command;
+    luaReferences << luaReference;
+    hintList << hint;
 
     auto console = CONSOLE(L, windowName);
-    console->echoLink(text, function, hint, useCurrentFormat, luaReference);
-    return 0;
+    console->echoLink(text, commandList, hintList, useCurrentFormat, luaReferences);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMergeTables
@@ -11341,7 +12165,7 @@ int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
 int TLuaInterpreter::getMudletVersion(lua_State* L)
 {
     QByteArray version = QByteArray(APP_VERSION).trimmed();
-    QByteArray const build = QByteArray(APP_BUILD).trimmed();
+    QByteArray const build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
 
     QList<QByteArray> const versionData = version.split('.');
     if (versionData.size() != 3) {
@@ -11421,7 +12245,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
         lua_pushinteger(L, revision);
         lua_settable(L, -3);
         lua_pushstring(L, "build");
-        lua_pushstring(L, QByteArray(APP_BUILD).trimmed().data());
+        lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
         lua_settable(L, -3);
     } else {
         lua_pushstring(L,
@@ -12446,20 +13270,34 @@ int TLuaInterpreter::sendRaw(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendSocket
-// The data can, theoretically, contain embedded ASCII NUL characters:
+// The data can, theoretically, contain embedded ASCII NUL characters, but they
+// cannot be entered directly as they immediately terminate the string. Instead
+// provide a true as a second argument and use the appropriate "code" value
+// defined in the parseTelnetCodes() function:
 int TLuaInterpreter::sendSocket(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
         lua_pushfstring(L, "sendSocket: bad argument #1 type (data as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    std::string data = lua_tostring(L, 1);
+    bool parseCodes = false;
+    if (lua_gettop(L) > 1) {
+        parseCodes = getVerifiedBool(L, __func__, 2, "parse telnet codes {default = false}", true);
+    }
+    const QByteArray data{lua_tostring(L, 1)};
+    std::string dataStdString{parseCodes ? parseTelnetCodes(data).toStdString() : data.toStdString()};
 
     Host& host = getHostFromLua(L);
     // msg is not in an encoded form here it is a literal set of bytes, which
     // is what this usage needs:
-    host.mTelnet.socketOutRaw(data);
-    return 0;
+    if (!host.mTelnet.socketOutRaw(dataStdString)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "sendSocket: unable to send any/all of the data, is the Server connected?");
+        return 2;
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendIrc
@@ -15447,6 +16285,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "tempKey", TLuaInterpreter::tempKey);
     lua_register(pGlobalLua, "exists", TLuaInterpreter::exists);
     lua_register(pGlobalLua, "isActive", TLuaInterpreter::isActive);
+    lua_register(pGlobalLua, "isAncestorsActive", TLuaInterpreter::isAncestorsActive);
+    lua_register(pGlobalLua, "ancestors", TLuaInterpreter::ancestors);
     lua_register(pGlobalLua, "enableAlias", TLuaInterpreter::enableAlias);
     lua_register(pGlobalLua, "tempAlias", TLuaInterpreter::tempAlias);
     lua_register(pGlobalLua, "disableAlias", TLuaInterpreter::disableAlias);
@@ -15467,6 +16307,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "sendATCP", TLuaInterpreter::sendATCP);
     lua_register(pGlobalLua, "hasFocus", TLuaInterpreter::hasFocus);
     lua_register(pGlobalLua, "isPrompt", TLuaInterpreter::isPrompt);
+    lua_register(pGlobalLua, "feedTelnet", TLuaInterpreter::feedTelnet);
     lua_register(pGlobalLua, "feedTriggers", TLuaInterpreter::feedTriggers);
     lua_register(pGlobalLua, "sendTelnetChannel102", TLuaInterpreter::sendTelnetChannel102);
     lua_register(pGlobalLua, "setRoomWeight", TLuaInterpreter::setRoomWeight);
@@ -15751,6 +16592,8 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "disableScrolling", TLuaInterpreter::disableScrolling);
     lua_register(pGlobalLua, "clearMapSelection", TLuaInterpreter::clearMapSelection);
     lua_register(pGlobalLua, "scrollingActive", TLuaInterpreter::scrollingActive);
+    lua_register(pGlobalLua, "findItems", TLuaInterpreter::findItems);
+    lua_register(pGlobalLua, "holdingModifiers", TLuaInterpreter::holdingModifiers);
     // PLACEMARKER: End of main Lua interpreter functions registration
     // check new functions against https://www.linguistic-antipatterns.com when creating them
 
@@ -16219,11 +17062,11 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
         // FIXME: There can be more than one script with the same name - we will
         // use only the FIRST one for now, but we really ought to enhance the
         // API to handle more than one potential parent with the same name:
-        auto ids = mpHost->getScriptUnit()->findScriptId(parent);
-        auto pParentScript = mpHost->getScriptUnit()->getScript(ids.value(0, -1));
-        if (!pParentScript) {
+        auto ids = mpHost->getScriptUnit()->findItems(parent);
+        if (ids.empty()) {
             return {-1, qsl("parent '%1' not found").arg(parent)}; //parent not found
         }
+        auto pParentScript = mpHost->getScriptUnit()->getScript(ids.at(0));
         pS = new TScript(pParentScript, mpHost);
     }
     pS->setIsFolder((luaCode.isEmpty()));
@@ -16243,24 +17086,31 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
 }
 
 // No documentation available in wiki - internal function
-std::pair<int, QString> TLuaInterpreter::setScriptCode(QString& name, const QString& luaCode, int pos)
+// pos is 0 for the first script with the matching name so needs
+// to be incremented if it is to be referred to in an error message, but can
+// be used to directly index into the QVector<int> that is "ids".
+std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, const QString& luaCode, const int pos)
 {
     if (name.isEmpty()) {
         return {-1, qsl("cannot have an empty string as name")};
     }
 
-    auto ids = mpHost->getScriptUnit()->findScriptId(name);
-    TScript* pS = mpHost->getScriptUnit()->getScript(ids.value(pos, -1));
-    if (!pS) {
-        return {-1, qsl("script \"%1\" at position \"%2\" not found").arg(name).arg(++pos)}; //script not found
+    const auto ids = mpHost->getScriptUnit()->findItems(name);
+    int id = -1;
+    TScript* pS = nullptr;
+    if (pos >= 0 && pos < ids.size()) {
+        id = ids.at(pos);
+        pS = mpHost->getScriptUnit()->getScript(id);
     }
-    auto oldCode = pS->getScript();
+    if (!pS) {
+        return {-1, qsl("script \"%1\" at position %2 not found").arg(name, QString::number(pos + 1))}; //script not found
+    }
+    const auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
         const QString errMsg = pS->getError();
         pS->setScript(oldCode);
-        return {-1, qsl("unable to compile \"%1\" at position \"%2\", reason: %3").arg(luaCode).arg(++pos).arg(errMsg)};
+        return {-1, qsl("unable to compile \"%1\" for the script \"%2\" at position %3, reason: %4").arg(luaCode, name, QString::number(pos + 1), errMsg)};
     }
-    const int id = pS->getID();
     mpHost->mpEditorDialog->writeScript(id);
     return {id, QString()};
 }
@@ -17696,16 +18546,24 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    if (key == qsl("enableMSDP")) {
-        host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
-        return success();
-    }
     if (key == qsl("enableMSSP")) {
         host.mEnableMSSP = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("enableMSDP")) {
+        host.mEnableMSDP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("enableMSP")) {
         host.mEnableMSP = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMTTS")) {
+        host.mEnableMTTS = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("enableMNES")) {
+        host.mEnableMNES = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("askTlsAvailable")) {
@@ -17744,6 +18602,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mFORCE_MXP_NEGOTIATION_OFF = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("forceNewEnvironNegotiationOff")) {
+        host.mForceNewEnvironNegotiationOff = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     if (key == qsl("compactInputLine")) {
         const bool value = getVerifiedBool(L, __func__, 2, "value");
         host.setCompactInputLine(value);
@@ -17755,6 +18617,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("announceIncomingText")) {
         host.mAnnounceIncomingText = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("advertiseScreenReader")) {
+        host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
     if (key == qsl("blankLinesBehaviour")) {
@@ -17901,6 +18767,7 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     auto [_3, timersTotal, tempTimers, activeTimers] = host.getTimerUnit()->assembleReport();
     auto [_4, keysTotal, tempKeys, activeKeys] = host.getKeyUnit()->assembleReport();
     auto [_5, scriptsTotal, tempScripts, activeScripts] = host.getScriptUnit()->assembleReport();
+    auto [_6, gifsTotal, activeGifs] = host.getGifTracker()->assembleReport();
 
     lua_newtable(L);
 
@@ -18001,6 +18868,19 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
     lua_pushnumber(L, activeScripts);
     lua_settable(L, -3);
     lua_settable(L, -3);
+
+    // Gifs
+    lua_pushstring(L,"gifs");
+    lua_newtable(L);
+
+    lua_pushstring(L,"total");
+    lua_pushnumber(L,gifsTotal);
+    lua_settable(L,-3);
+
+    lua_pushstring(L,"active");
+    lua_pushnumber(L,activeGifs);
+    lua_settable(L,-3);
+    lua_settable(L,-3);
 
     return 1;
 }
@@ -18138,9 +19018,11 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("mapperPanelVisible"), [&](){ lua_pushboolean(L, host.mShowPanel); } },
         { qsl("mapShowRoomBorders"), [&](){ lua_pushboolean(L, host.mMapperShowRoomBorders); } },
         { qsl("enableGMCP"), [&](){ lua_pushboolean(L, host.mEnableGMCP); } },
-        { qsl("enableMSDP"), [&](){ lua_pushboolean(L, host.mEnableMSDP); } },
         { qsl("enableMSSP"), [&](){ lua_pushboolean(L, host.mEnableMSSP); } },
+        { qsl("enableMSDP"), [&](){ lua_pushboolean(L, host.mEnableMSDP); } },
         { qsl("enableMSP"), [&](){ lua_pushboolean(L, host.mEnableMSP); } },
+        { qsl("enableMTTS"), [&](){ lua_pushboolean(L, host.mEnableMTTS); } },
+        { qsl("enableMNES"), [&](){ lua_pushboolean(L, host.mEnableMNES); } },
         { qsl("askTlsAvailable"), [&](){ lua_pushboolean(L, host.mAskTlsAvailable); } },
         { qsl("inputLineStrictUnixEndings"), [&](){ lua_pushboolean(L, host.mUSE_UNIX_EOL); } },
         { qsl("autoClearInputLine"), [&](){ lua_pushboolean(L, host.mAutoClearCommandLineAfterSend); } },
@@ -18150,6 +19032,7 @@ int TLuaInterpreter::getConfig(lua_State *L)
         { qsl("specialForceGAOff"), [&](){ lua_pushboolean(L, host.mFORCE_GA_OFF); } },
         { qsl("specialForceCharsetNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_CHARSET_NEGOTIATION_OFF); } },
         { qsl("specialForceMxpNegotiationOff"), [&](){ lua_pushboolean(L, host.mFORCE_MXP_NEGOTIATION_OFF); } },
+        { qsl("forceNewEnvironNegotiationOff"), [&](){ lua_pushboolean(L, host.mForceNewEnvironNegotiationOff); } },
         { qsl("compactInputLine"), [&](){ lua_pushboolean(L, host.getCompactInputLine()); } },
         { qsl("announceIncomingText"), [&](){ lua_pushboolean(L, host.mAnnounceIncomingText); } },
         { qsl("blankLinesBehaviour"), [&](){

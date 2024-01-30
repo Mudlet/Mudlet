@@ -103,6 +103,40 @@ TChar::TChar(const TChar& copy)
 {
 }
 
+quint8 TChar::alternateFont() const
+{
+    // As this is the most likely case check it first:
+    if (!(mFlags & AltFontMask)) {
+        return 0;
+    }
+
+    if (mFlags & AltFont9) {
+        return 9;
+    }
+    if (mFlags & AltFont8) {
+        return 8;
+    }
+    if (mFlags & AltFont7) {
+        return 7;
+    }
+    if (mFlags & AltFont6) {
+        return 6;
+    }
+    if (mFlags & AltFont5) {
+        return 5;
+    }
+    if (mFlags & AltFont4) {
+        return 4;
+    }
+    if (mFlags & AltFont3) {
+        return 3;
+    }
+    if (mFlags & AltFont2) {
+        return 2;
+    }
+    return 1;
+}
+
 const QString timeStampFormat = qsl("hh:mm:ss.zzz ");
 const QString blankTimeStamp  = qsl("------------ ");
 
@@ -547,7 +581,10 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                                 | (mOverline ? TChar::Overline : TChar::None)
                                 | (mReverse ? TChar::Reverse : TChar::None)
                                 | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None);
+                                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
+                                | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
+                                | (TChar::alternateFontFlag(mAltFont))
+                                | (mConcealed ? TChar::Concealed : TChar::None);
 
                         // Note: we are using the background color for the
                         // foreground color as well so that we are transparent:
@@ -698,7 +735,10 @@ COMMIT_LINE:
                             | (mOverline ? TChar::Overline : TChar::None)
                             | (mReverse ? TChar::Reverse : TChar::None)
                             | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-                            | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None);
+                            | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
+                            | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
+                            | (TChar::alternateFontFlag(mAltFont))
+                            | (mConcealed ? TChar::Concealed : TChar::None);
 
                     // Note: we are using the background color for the
                     // foreground color as well so that we are transparent:
@@ -841,7 +881,10 @@ COMMIT_LINE:
                 | (mOverline ? TChar::Overline : TChar::None)
                 | (mReverse ? TChar::Reverse : TChar::None)
                 | (mStrikeOut || mpHost->mMxpClient.strikeOut() ? TChar::StrikeOut : TChar::None)
-                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None);
+                | (mUnderline || mpHost->mMxpClient.underline() ? TChar::Underline : TChar::None)
+                | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
+                | (TChar::alternateFontFlag(mAltFont))
+                | (mConcealed ? TChar::Concealed : TChar::None);
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, attributeFlags);
 
@@ -1484,6 +1527,10 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mReverse = false;
                     mStrikeOut = false;
                     mUnderline = false;
+                    mBlink = false;
+                    mFastBlink = false;
+                    mConcealed = false;
+                    mAltFont = 0;
                     break;
                 case 1:
                     mBold = true;
@@ -1513,28 +1560,54 @@ void TBuffer::decodeSGR(const QString& sequence)
                     // sub-string separated part:
                     mUnderline = true;
                     break;
-                 case 5:
-                     if (mItalics) {
-                         mItalicBeforeBlink = true;
-                     }
-                     mItalics = true;
-                     break; //slow-blinking, represented as italics instead
-                 case 6:
-                     if (mItalics) {
-                         mItalicBeforeBlink = true;
-                     }
-                     mItalics = true;
-                     break; //fast blinking, represented as italics instead
+                case 5:
+                    mBlink = true;
+                    mFastBlink = false;
+                    break; //slow-blinking, display as italics instead for the moment
+                case 6:
+                    mBlink = false;
+                    mFastBlink = true;
+                    break; //fast blinking, display as italics instead for the moment
                 case 7:
                     mReverse = true;
                     break;
-                // case 8: // Concealed characters (set foreground to be the same as background?)
-                //    break;
+                case 8: // Concealed characters (set foreground to be the same as background?)
+                    mConcealed = true;
+                    break;
                 case 9:
                     mStrikeOut = true;
                     break;
-                // case 10:
-                //    break; //default font
+                case 10: //default font
+                    mAltFont = 0;
+                    break;
+                case 11: // 11 to 19 are alternate fonts, what and where those
+                         // are set is not so well specified
+                    mAltFont = 1;
+                    break;
+                case 12:
+                    mAltFont = 2;
+                    break;
+                case 13:
+                    mAltFont = 3;
+                    break;
+                case 14:
+                    mAltFont = 4;
+                    break;
+                case 15:
+                    mAltFont = 5;
+                    break;
+                case 16:
+                    mAltFont = 6;
+                    break;
+                case 17:
+                    mAltFont = 7;
+                    break;
+                case 18:
+                    mAltFont = 8;
+                    break;
+                case 19:
+                    mAltFont = 9;
+                    break;
                 // case 21: // Double underline according to specs
                 //    break;
                 case 22:
@@ -1546,17 +1619,16 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 24:
                     mUnderline = false;
                     break;
-                 case 25:
-                     if (!mItalicBeforeBlink) {
-                         mItalics = false;
-                     }
-                     mItalicBeforeBlink = false;
+                case 25:
+                    mBlink = false;
+                    mFastBlink = false;
                     break; // blink off
                 case 27:
                     mReverse = false;
                     break;
-                // case 28: // Revealed characters (undoes the effect of "8")
-                //    break;
+                case 28: // Revealed characters (undoes the effect of "8")
+                    mConcealed = false;
+                    break;
                 case 29:
                     mStrikeOut = false;
                     break;
@@ -2097,7 +2169,13 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-    int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
+#else
+    // Qt 6 changed the return type of QLIST<T>::size() to qsizetype which is
+    // not directly comparable to a const int& without a cast:
+    const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
+#endif
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -2175,6 +2253,68 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     }
 }
 
+// Wraps text to max line length of mWrapAt
+// Applies indentation of mWrapIndent to wrapped lines
+// If wrapLength <= indentWidth, emits a warning and returns unmodified text
+QString TBuffer::wrapText(const QString& text) const
+{
+    if (mWrapAt <= mWrapIndent) {
+        qWarning() << "Wrap (" << mWrapAt << ") is too small to accommodate Indent (" << mWrapIndent << ")";
+        return text;
+    }
+
+    QString wrappedText;
+    qsizetype curIndent = 0;
+    QTextBoundaryFinder lineFinder(QTextBoundaryFinder::Line, text);
+    const QString indentText = QChar::LineFeed + QString(" ").repeated(mWrapIndent);
+
+    for (qsizetype curLineStart = 0; curLineStart < text.size(); curLineStart++) {
+        // Find where the next line break is.
+        // The end of the input text also counts as a line break.
+        qsizetype nextLineBreak = text.indexOf(QChar::LineFeed, curLineStart);
+        if (nextLineBreak == -1) {
+            nextLineBreak = text.size();
+        }
+
+        // Find where the wrap window ends
+        const qsizetype wrapWindowEnd = curLineStart + mWrapAt - curIndent;
+
+        // If linebreak happens within wrap window:
+        // Clear indentation, write the line, and skip the rest of the steps
+        if (nextLineBreak < wrapWindowEnd) {
+            curIndent = 0;
+            const qsizetype lineWidth = nextLineBreak - curLineStart + 1;
+            wrappedText += text.mid(curLineStart, lineWidth);
+            curLineStart = nextLineBreak;
+            continue;
+        }
+
+        // Find a good place to break up this line
+        lineFinder.setPosition(wrapWindowEnd + 1);
+        lineFinder.toPreviousBoundary();
+        qsizetype safeLineEnd = lineFinder.position();
+
+        // If a single word is too long to fit in the wrap window:
+        // Write as much of it as possible
+        if (safeLineEnd <= curLineStart) {
+            safeLineEnd = wrapWindowEnd;
+        }
+
+        // Move start point forward, set indention level
+        const qsizetype lineWidth = safeLineEnd - curLineStart;
+        wrappedText += text.mid(curLineStart, lineWidth);
+        curIndent = mWrapIndent;
+        curLineStart = safeLineEnd - 1;
+
+        // Apply indentation, unless we've reached the end of the text
+        if (curLineStart < text.size()) {
+            wrappedText += indentText;
+        }
+    }
+    return wrappedText;
+}
+
+
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
     // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
@@ -2198,7 +2338,11 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-    int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
+#else
+    const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
+#endif
     if (sub_end >= length) {
         sub_end = text.size() - 1;
     }
@@ -2295,7 +2439,11 @@ void TBuffer::appendLine(const QString& text, const int sub_start, const int sub
         return;
     }
     bool firstChar = (lineBuffer.back().isEmpty());
-    int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    const int length = std::min(text.size(), MAX_CHARACTERS_PER_ECHO);
+#else
+    const int length = std::min(static_cast<int>(text.size()), MAX_CHARACTERS_PER_ECHO);
+#endif
     int lineEndPos = sub_end;
     if (lineEndPos >= length) {
         lineEndPos = text.size() - 1;

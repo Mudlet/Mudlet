@@ -30,6 +30,7 @@
 #include "AliasUnit.h"
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
+#include "GifTracker.h"
 #include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
@@ -221,6 +222,7 @@ public:
     ActionUnit*  getActionUnit()  { return &mActionUnit; }
     KeyUnit*     getKeyUnit()     { return &mKeyUnit; }
     ScriptUnit*  getScriptUnit()  { return &mScriptUnit; }
+    GifTracker*  getGifTracker()  { return &mGifTracker; }
 
     void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
@@ -440,8 +442,10 @@ public:
     QString mCommandSeparator;
     bool mEnableGMCP;
     bool mEnableMSSP;
-    bool mEnableMSP;
     bool mEnableMSDP;
+    bool mEnableMSP;
+    bool mEnableMTTS = true;
+    bool mEnableMNES = false;
     bool mServerMXPenabled;
     bool mAskTlsAvailable;
     int mMSSPTlsPort;
@@ -648,6 +652,7 @@ public:
     bool mMapperShowRoomBorders;
     bool mFORCE_MXP_NEGOTIATION_OFF;
     bool mFORCE_CHARSET_NEGOTIATION_OFF;
+    bool mForceNewEnvironNegotiationOff = false;
     QSet<QChar> mDoubleClickIgnore;
     QPointer<QDockWidget> mpDockableMapWidget;
     bool mEnableTextAnalyzer;
@@ -677,6 +682,7 @@ public:
     bool mTutorialForSplitscreenScrollbackAlreadyShown = false;
 
     bool mAnnounceIncomingText = true;
+    bool mAdvertiseScreenReader = false;
     enum class BlankLineBehaviour {
         Show,
         Hide,
@@ -749,6 +755,7 @@ private:
     AliasUnit mAliasUnit;
     ActionUnit mActionUnit;
     KeyUnit mKeyUnit;
+    GifTracker mGifTracker;
     // ensures that only one saveProfile call is active when multiple modules are being uninstalled in one go
     std::optional<bool> mSaveTimer;
 

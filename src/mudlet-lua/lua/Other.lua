@@ -1107,6 +1107,26 @@ function verbosePackageInstall(fileName)
   end
 end
 
+function verboseModuleInstall(fileName)
+  local ok, err = installModule(fileName)
+  local moduleName = fileName
+  -- That is all for installing, now to announce the result to the user:
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+  if ok then
+    local successText = mudlet.Locale.moduleInstallSuccess.message
+    successText = string.format(successText, moduleName)
+    local okPrefix = mudlet.Locale.prefixOk.message
+    decho('<0,160,0>' .. okPrefix .. '<190,100,50>' .. successText .. '\n')
+    -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
+  else
+    local failureText = mudlet.Locale.moduleInstallFail.message
+    failureText = string.format(failureText, moduleName, err)
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
+    -- Cyan and Orange; see cTelnet::postMessage for color comparison
+  end
+end
+
 local oldInstallPackage = installPackage
 
 -- Override of original installPackage to allow installs from URL
@@ -1155,7 +1175,11 @@ function packageDrop(event, fileName, suffix)
   if not table.contains(acceptableSuffix, suffix) then
     return
   end
-  verbosePackageInstall(fileName)
+  if holdingModifiers(mudlet.keymodifier.Control) then
+    verboseModuleInstall(fileName)
+  else
+    verbosePackageInstall(fileName)
+  end
 end
 registerAnonymousEventHandler("sysDropEvent", "packageDrop")
 
@@ -1214,6 +1238,8 @@ function getConfig(...)
       "enableMSDP", 
       "enableMSSP", 
       "enableMSP", 
+      "enableMTTS",
+      "enableMNES",
       "askTlsAvailable", 
       "inputLineStrictUnixEndings", 
       "autoClearInputLine", 
@@ -1223,6 +1249,7 @@ function getConfig(...)
       "specialForceGAOff", 
       "specialForceCharsetNegotiationOff", 
       "specialForceMxpNegotiationOff", 
+      "forceNewEnvironNegotiationOff", 
       "compactInputLine", 
       "announceIncomingText", 
       "blankLinesBehaviour", 

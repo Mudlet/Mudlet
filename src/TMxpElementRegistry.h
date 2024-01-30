@@ -22,6 +22,7 @@
 
 #include "MxpTag.h"
 #include "pre_guard.h"
+#include <QHash>
 #include <QMap>
 #include <QStringList>
 #include <QList>
