@@ -21,6 +21,10 @@ jobs:
     container:
       image: docker.io/bilelmoussaoui/flatpak-github-actions:kde-5.15-23.08
     steps:
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      env:
+        GPG_KEY_GREP: ${{ secrets.GPG_KEY_GREP }}
     - name: Checkout Mudlet source code
       uses: actions/checkout@v4
       with:
