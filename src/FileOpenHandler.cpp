@@ -26,7 +26,8 @@ FileOpenHandler::FileOpenHandler(QObject* parent) : QObject(parent)
     QCoreApplication::instance()->installEventFilter(this);
 }
 
-bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event) {
+bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
+{
     if (event->type() == QEvent::FileOpen) {
         QFileOpenEvent* openEvent = static_cast<QFileOpenEvent*>(event);
         Q_ASSERT(mudlet::self());
@@ -35,7 +36,7 @@ bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event) {
         if (openEvent->url().isValid()) {
             QUrl url = openEvent->url();
             if (url.scheme() == "telnet") {
-                // Handle telnet url 
+                // Handle telnet url
                 instanceCoordinator->queueUriOrFile(url.toString());
                 instanceCoordinator->openUrisLocally();
                 return true;
