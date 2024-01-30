@@ -37,12 +37,12 @@ void MudletInstanceCoordinator::queueUriOrFile(const QString& uriOrFile)
 
     QString file = uriOrFile;
     if (file.startsWith("~")) {
-        // Need to expand home directory 
+        // Need to expand home directory
         file = QDir::homePath() + file.mid(1);
     }
 
     if (QFile::exists(file)) {
-        // Comfirm file exists before adding to queue 
+        // Comfirm file exists before adding to queue
         queueUri(QUrl::fromLocalFile(file));
         return;
     }
@@ -54,9 +54,10 @@ void MudletInstanceCoordinator::queueUri(const QUrl& uri)
     mQueuedUris << uri.toString();
 }
 
-QStringList MudletInstanceCoordinator::listUrisWithScheme(const QString scheme){
+QStringList MudletInstanceCoordinator::listUrisWithScheme(const QString scheme)
+{
     QStringList matchingUris;
-    for (const QString &uri : mQueuedUris) {
+    for (const QString& uri : mQueuedUris) {
         if (QUrl(uri).scheme().toLower() == scheme) {
             matchingUris << uri;
         }
@@ -68,7 +69,6 @@ QStringList MudletInstanceCoordinator::listUrisWithScheme(const QString scheme){
 // Returns true on success
 bool MudletInstanceCoordinator::openUrisRemotely()
 {
-
     // Pass the URIs to the active Mudlet Server
     // The Mudlet Server may be owned by this process or another process.
     QLocalSocket socket;
@@ -131,10 +131,9 @@ void MudletInstanceCoordinator::handleReadyRead()
 // Try to open queued URIs
 // This is called when:
 // - after a profile has been opened
-// - after another instance of Mudlet has transmitted a list of URIs to this instance 
+// - after another instance of Mudlet has transmitted a list of URIs to this instance
 void MudletInstanceCoordinator::openUrisLocally()
 {
-
     mMutex.lock();
     QTimer::singleShot(0, this, [this]() {
         mudlet* mudletApp = mudlet::self();
@@ -143,7 +142,7 @@ void MudletInstanceCoordinator::openUrisLocally()
         QStringList skippedUris;
 
         // Process queued URIs until we have to wait for a profile to be selected or loaded
-        while(!mQueuedUris.isEmpty()){
+        while (!mQueuedUris.isEmpty()) {
             QUrl url = QUrl(mQueuedUris.last());
             const bool isTelnet = url.scheme() == "telnet" || url.scheme() == "mudlet";
             const bool isPackage = url.scheme() == "file";
@@ -154,11 +153,11 @@ void MudletInstanceCoordinator::openUrisLocally()
                 mMutex.unlock();
                 mudletApp->handleTelnetUri(url);
                 break;
-            } 
+            }
             if (isPackage) {
                 Host* activeHost = mudletApp->getActiveHost();
                 if (!activeHost) {
-                    // Ask the user to choose a profile, since none are active. 
+                    // Ask the user to choose a profile, since none are active.
                     // Progress on uri queue will resume after the profile has been opened.
                     mudletApp->slot_showConnectionDialog();
                     mMutex.unlock();
@@ -167,7 +166,7 @@ void MudletInstanceCoordinator::openUrisLocally()
                 // Install the package to the active host
                 mQueuedUris.removeLast();
                 mMutex.unlock();
-                activeHost->installPackage(url.toLocalFile(),0);
+                activeHost->installPackage(url.toLocalFile(), 0);
             }
         }
         mMutex.unlock();
