@@ -299,7 +299,7 @@
             </property>
            </widget>
           </item>
-           <item>
+          <item row="4" column="0">
              <widget class="QCheckBox" name="checkBox_checkMudletDefault">
                <property name="toolTip">
                  <string>&lt;p&gt;Open &lt;code&gt;telnet://&lt;/code&gt; links with Mudlet&lt;/p&gt;</string>
