@@ -75,6 +75,7 @@ jobs:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
+        modules: qt5compat
 
     - name: Restore Boost cache
       uses: actions/cache@v4
