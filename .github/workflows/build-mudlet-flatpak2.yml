@@ -43,6 +43,7 @@ jobs:
         manifest-path: CI/org.mudlet.mudlet.yml
         cache-key: flatpak-builder-${{ github.sha }}
         gpg-sign: ${{ secrets.GPG_KEY_ID }}
+        verbose: true
 
     - name: Update Flatpak Repo
       run: |
