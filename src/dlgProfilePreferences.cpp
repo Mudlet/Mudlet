@@ -2951,7 +2951,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         if (!newIrcChannels.isEmpty()) {
             const QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-            for (const QString &s : tL) {
+            for (const QString& s : tL) {
                 if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                     newChanList << s;
                 }
