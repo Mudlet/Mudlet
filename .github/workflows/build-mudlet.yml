@@ -37,7 +37,7 @@ jobs:
             buildname: 'macos / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
-            qt: '5.14.2'
+            qt: '6.6.*'
             deploy: 'deploy'
             run_tests: 'true'
 #           - os: windows-2019
