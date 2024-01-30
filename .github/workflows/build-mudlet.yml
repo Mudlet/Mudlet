@@ -23,7 +23,7 @@ jobs:
             triplet: x64-linux
             compiler: gcc_64
             gcc_compiler_version: 8
-            qt: '5.14.2'
+            qt: '6.6.*'
             deploy: 'deploy'
             run_tests: 'true'
           - os: ubuntu-latest
@@ -32,7 +32,7 @@ jobs:
             compiler: clang_64
             # We still need a gcc for some sub-stages - and it ain't always the same one:
             gcc_compiler_version: 9
-            qt: '5.14.2'
+            qt: '6.6.*'
           - os: macos-12
             buildname: 'macos / c++, lua tests'
             triplet: x64-osx
