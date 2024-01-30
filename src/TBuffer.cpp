@@ -2284,7 +2284,7 @@ QString TBuffer::wrapText(const QString& text) const
         if (nextLineBreak < wrapWindowEnd) {
             curIndent = 0;
             const qsizetype lineWidth = nextLineBreak - curLineStart + 1;
-            wrappedText += text.midRef(curLineStart, lineWidth);
+            wrappedText += text.mid(curLineStart, lineWidth);
             curLineStart = nextLineBreak;
             continue;
         }
@@ -2302,7 +2302,7 @@ QString TBuffer::wrapText(const QString& text) const
 
         // Move start point forward, set indention level
         const qsizetype lineWidth = safeLineEnd - curLineStart;
-        wrappedText += text.midRef(curLineStart, lineWidth);
+        wrappedText += text.mid(curLineStart, lineWidth);
         curIndent = mWrapIndent;
         curLineStart = safeLineEnd - 1;
 
@@ -2313,6 +2313,7 @@ QString TBuffer::wrapText(const QString& text) const
     }
     return wrappedText;
 }
+
 
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
