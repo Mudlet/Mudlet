@@ -26,12 +26,35 @@ const int WAIT_FOR_RESPONSE_MS = 500;
 
 MudletInstanceCoordinator::MudletInstanceCoordinator(const QString& serverName, QObject* parent) : QLocalServer(parent), mServerName(serverName) {}
 
-void MudletInstanceCoordinator::queueUri(const QString& uri)
+void MudletInstanceCoordinator::queueUriOrFile(const QString& uriOrFile)
 {
-    mQueuedUris << uri;
+    QUrl uri(uriOrFile);
+    if (uri.isValid() && !uri.scheme().isEmpty()) {
+        // It's a URI if it has a valid scheme.
+        queueUri(uri.toString());
+        return;
+    }
+
+    QString file = uriOrFile;
+    if (file.startsWith("~")) {
+        // Need to expand home directory 
+        file = QDir::homePath() + file.mid(1);
+    }
+
+    if (QFile::exists(file)) {
+        // Comfirm file exists before adding to queue 
+        queueUri(QUrl::fromLocalFile(file));
+        return;
+    }
+
+    qWarning() << "Tried to queue invalid URI or file:" << uriOrFile;
+}
+void MudletInstanceCoordinator::queueUri(const QUrl& uri)
+{
+    mQueuedUris << uri.toString();
 }
 
-QStringList MudletInstanceCoordinator::listUrisWithScheme(QString scheme){
+QStringList MudletInstanceCoordinator::listUrisWithScheme(const QString scheme){
     QStringList matchingUris;
     for (const QString &uri : mQueuedUris) {
         if (QUrl(uri).scheme().toLower() == scheme) {
@@ -123,7 +146,7 @@ void MudletInstanceCoordinator::openUrisLocally()
         while(!mQueuedUris.isEmpty()){
             QUrl url = QUrl(mQueuedUris.last());
             const bool isTelnet = url.scheme() == "telnet" || url.scheme() == "mudlet";
-            const bool isPackage = url.isLocalFile();
+            const bool isPackage = url.scheme() == "file";
             if (isTelnet) {
                 // Telnet URI is found, so we need to handle it and open a profile.
                 // Progress on uri queue will resume after the profile has been opened.

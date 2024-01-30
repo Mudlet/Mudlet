@@ -31,10 +31,11 @@ class MudletInstanceCoordinator : public QLocalServer
 public:
     explicit MudletInstanceCoordinator(const QString& serverName, QObject* parent = nullptr);
     bool tryToStart();
-    void queueUri(const QString& uri);
+    void queueUriOrFile(const QString& uri);
+    void queueUri(const QUrl& uri);
     void openUrisLocally();
     bool openUrisRemotely();
-    QStringList listUrisWithScheme(QString scheme);
+    QStringList listUrisWithScheme(const QString scheme);
     QStringList readUriQueue();
 
 protected:

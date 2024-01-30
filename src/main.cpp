@@ -404,14 +404,7 @@ int main(int argc, char* argv[])
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
 
-        QUrl uri = QUrl(positionalArguments.first());
-        if (uri.isLocalFile()) {
-            // Convert to absolute file path
-            QFileInfo fileInfo(uri.toLocalFile());
-            QString absoluteFilePath = fileInfo.absoluteFilePath();
-            uri.setPath(absoluteFilePath);
-        }
-        instanceCoordinator.queueUri(uri.toString());
+        instanceCoordinator.queueUriOrFile(positionalArguments.first());
         if (!firstInstanceOfMudlet) {
             const bool successful = instanceCoordinator.openUrisRemotely();
             return !successful; // return 0 if successful, 1 if unsuccessful
