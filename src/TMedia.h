@@ -28,6 +28,9 @@
 #include "TEvent.h"
 #include "mudlet.h"
 #include "TMediaData.h"
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include "TMediaPlaylist.h"
+#endif
 
 #include "pre_guard.h"
 #include <QAudioOutput>
@@ -43,6 +46,7 @@ using QMediaPlayerPlaybackState = QMediaPlayer::PlaybackState;
 
 class TMediaPlayer
 {
+
 public:
     TMediaPlayer()
     : mMediaData()
@@ -56,7 +60,6 @@ public:
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
         mMediaPlayer->setAudioOutput(new QAudioOutput(pHost));
         mMediaPlaylist = new TMediaPlaylist();
-        connect(mMediaPlaylist, &TMediaPlaylist::currentIndexChanged, this, &TMediaPlayer::playlistPositionChanged);
 #endif
     }
     ~TMediaPlayer() = default;
@@ -66,10 +69,7 @@ public:
     QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     void setPlaylist(TMediaPlaylist* mediaPlaylist) {
-        disconnect(mMediaPlaylist, &TMediaPlaylist::currentIndexChanged, nullptr, nullptr);
-
         mMediaPlaylist = mediaPlaylist;
-        connect(mMediaPlaylist, &TMediaPlaylist::currentIndexChanged, this, &TMediaPlayer::playlistPositionChanged);
     }
     TMediaPlaylist* playlist() const { return mMediaPlaylist; }
 #endif

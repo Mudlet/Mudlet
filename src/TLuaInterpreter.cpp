@@ -13778,6 +13778,9 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         case QTextToSpeech::State::Ready:
             event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
             break;
+        case QTextToSpeech::State::Synthesizing:
+            event.mArgumentList.append(QLatin1String("ttsSpeechSynthesizing"));
+            break;
         }
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 
