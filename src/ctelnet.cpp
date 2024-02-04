@@ -2534,15 +2534,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                     switch (mCycleCountMTTS) {
                         case 0: {
-                            const QString clientNameAndVersion = qsl("%1-%2").arg(getNewEnvironClientName(), getNewEnvironClientVersion());
-                            cmd += clientNameAndVersion.toStdString(); // Example: MUDLET-4/17/2-DEV
+                            const QString clientName = getNewEnvironClientName();
+                            cmd += clientName.toStdString();
 
                             if (mpHost->mEnableMTTS) { // If we don't MTTS, remainder of the cases do not execute.
                                 mCycleCountMTTS++;
                                 qDebug() << "MTTS enabled";
-                                qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << clientNameAndVersion;
+                                qDebug() << "WE send TERMINAL_TYPE (MTTS) terminal type is" << clientName;
                             } else {
-                                qDebug() << "WE send TERMINAL_TYPE is" << clientNameAndVersion;
+                                qDebug() << "WE send TERMINAL_TYPE is" << clientName;
                             }
 
                             break;
