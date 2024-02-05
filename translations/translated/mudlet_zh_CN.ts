@@ -145,7 +145,7 @@ please wait...</source>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
       <source>An invisible widget used as a workaround to announce text to the screen reader</source>
-      <translation type="unfinished"/>
+      <translation>一个不可见的小组件，用来向屏幕阅读器发布文字</translation>
     </message>
   </context>
   <context>
@@ -1499,12 +1499,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2164"/>
       <source>Error messages are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>在编辑器里显示错误消息。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2170"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>&quot;%1&quot; 配置文件的主窗口</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2172"/>
@@ -1514,7 +1514,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2199"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>&quot;%2&quot; 配置文件的嵌入式窗口 &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2201"/>
