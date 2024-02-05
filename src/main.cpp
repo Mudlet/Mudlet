@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
                                                    qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
-    parser.addPositionalArgument("URI or file path", "Any URI or file path that Mudlet should open");
+    parser.addPositionalArgument(qsl("URI or file path"), qsl("Any URI or file path that Mudlet should open"));
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
 
@@ -653,8 +653,8 @@ int main(int argc, char* argv[])
     }
     mudlet::self()->show();
 
-    // Do auto login if a no URIs that open profiles are supplied
-    QStringList telnetUris = mudlet::self()->getInstanceCoordinator()->listUrisWithScheme("telnet");
+    // Do auto login if no profile-opening URIs are supplied
+    QStringList telnetUris = mudlet::self()->getInstanceCoordinator()->listUrisWithScheme(qsl("telnet"));
     bool willOpenProfileWithUri = telnetUris.length();
     if (willOpenProfileWithUri) {
         mudlet::self()->getInstanceCoordinator()->openUrisLocally();

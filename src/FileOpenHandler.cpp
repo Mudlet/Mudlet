@@ -35,7 +35,7 @@ bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
 
         if (openEvent->url().isValid()) {
             QUrl url = openEvent->url();
-            if (url.scheme() == "telnet") {
+            if (url.scheme() == qsl("telnet") || url.scheme() == qsl("mudlet")) {
                 // Handle telnet url
                 instanceCoordinator->queueUriOrFile(url.toString());
                 instanceCoordinator->openUrisLocally();

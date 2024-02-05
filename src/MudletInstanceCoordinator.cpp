@@ -139,13 +139,11 @@ void MudletInstanceCoordinator::openUrisLocally()
         mudlet* mudletApp = mudlet::self();
         Q_ASSERT(mudletApp);
 
-        QStringList skippedUris;
-
         // Process queued URIs until we have to wait for a profile to be selected or loaded
-        while (!mQueuedUris.isEmpty()) {
-            QUrl url = QUrl(mQueuedUris.last());
-            const bool isTelnet = url.scheme() == "telnet" || url.scheme() == "mudlet";
-            const bool isPackage = url.scheme() == "file";
+        for (qsizetype i = mQueuedUris.length() - 1; i >= 0; i--) {
+            QUrl url = QUrl(mQueuedUris[i]);
+            const bool isTelnet = url.scheme() == qsl("telnet") || url.scheme() == qsl("mudlet");
+            const bool isPackage = url.scheme() == qsl("file");
             if (isTelnet) {
                 // Telnet URI is found, so we need to handle it and open a profile.
                 // Progress on uri queue will resume after the profile has been opened.
@@ -164,8 +162,8 @@ void MudletInstanceCoordinator::openUrisLocally()
                     break;
                 }
                 // Install the package to the active host
+                // Keep our lock on the mutex since the loop continues
                 mQueuedUris.removeLast();
-                mMutex.unlock();
                 activeHost->installPackage(url.toLocalFile(), 0);
             }
         }

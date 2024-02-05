@@ -2154,7 +2154,7 @@ void mudlet::slot_showConnectionDialog()
     }
     mpConnectionDialog->fillout_form();
 
-    QStringList packagesToInstall = mInstanceCoordinator->listUrisWithScheme("file");
+    QStringList packagesToInstall = mInstanceCoordinator->listUrisWithScheme(qsl("file"));
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
@@ -2686,14 +2686,14 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
     QDir dir;
     dir.mkpath(profilePath);
 
-    writeProfileData(profile_name, QStringLiteral("url"), host);
-    writeProfileData(profile_name, QStringLiteral("port"), QString::number(port));
+    writeProfileData(profile_name, qsl("url"), host);
+    writeProfileData(profile_name, qsl("port"), QString::number(port));
 
     if (!login.isEmpty()) {
-        writeProfileData(profile_name, QStringLiteral("login"), login);
+        writeProfileData(profile_name, qsl("login"), login);
     }
     if (!password.isEmpty()) {
-        writeProfileData(profile_name, QStringLiteral("password"), password);
+        writeProfileData(profile_name, qsl("password"), password);
     }
 
     return profile_name;
@@ -2709,13 +2709,13 @@ bool mudlet::mudletIsDefault()
 
 #if defined(Q_OS_LINUX)
     QProcess process;
-    process.start("xdg-mime",
-                  QStringList() << "query"
-                                << "default"
-                                << "x-scheme-handler/telnet");
+    process.start(qsl("xdg-mime"),
+                  QStringList() << qsl("query")
+                                << qsl("default")
+                                << qsl("x-scheme-handler/telnet"));
     process.waitForFinished();
     QString output = process.readAllStandardOutput().trimmed();
-    return output == "mudlet.desktop";
+    return output == qsl("mudlet.desktop");
 #endif
 
 #if defined(Q_OS_MACOS)
@@ -2731,19 +2731,19 @@ void mudlet::openDefaultCheck()
 {
     if (!mpDefaultClientDlg) {
         QUiLoader loader;
-        QFile file(QStringLiteral(":/ui/check_default_client.ui"));
+        QFile file(qsl(":/ui/check_default_client.ui"));
         file.open(QFile::ReadOnly);
         mpDefaultClientDlg = dynamic_cast<QDialog*>(loader.load(&file, this));
         file.close();
 
         if (!mpDefaultClientDlg) {
             // don't need to print error message from loader as that is already in stdout
-            qWarning() << "mudlet::openDefaultClientCheck() error: failed to load dialog: " << loader.errorString();
+            qWarning() << qsl("mudlet::openDefaultClientCheck() error: failed to load dialog: ") << loader.errorString();
             return;
         }
 
-        auto buttonBox = mpDefaultClientDlg->findChild<QDialogButtonBox*>(QStringLiteral("buttonBox"));
-        auto checkBox_alwaysPerformCheck = mpDefaultClientDlg->findChild<QCheckBox*>(QStringLiteral("checkBox_alwaysPerformCheck"));
+        auto buttonBox = mpDefaultClientDlg->findChild<QDialogButtonBox*>(qsl("buttonBox"));
+        auto checkBox_alwaysPerformCheck = mpDefaultClientDlg->findChild<QCheckBox*>(qsl("checkBox_alwaysPerformCheck"));
 
         buttonBox->clear();
 
@@ -2783,21 +2783,36 @@ void mudlet::openDefaultCheck()
 
 void mudlet::setMudletAsDefault()
 {
+    QString executablePath = QCoreApplication::applicationFilePath();
 #if defined(Q_OS_WIN)
-    QSettings settings("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
-    settings.setValue("telnet/.", "URL:Telnet Protocol");
-    settings.setValue("telnet/URL Protocol", "");
-    settings.setValue("telnet/shell/open/command/.", "mudlet %1");
+    QSettings settings(qsl("HKEY_CLASSES_ROOT"), QSettings::NativeFormat);
+    settings.setValue(qsl("telnet/."), qsl("URL:Telnet Protocol"));
+    settings.setValue(qsl("telnet/URL Protocol"), qsl(""));
+    settings.setValue(qsl("telnet/shell/open/command/."), qsl("\"") + executablePath + qsl("\" \"%1\""));
+    QSettings settings(qsl("HKEY_CLASSES_ROOT"), QSettings::NativeFormat);
+    settings.setValue(qsl("mudlet/."), qsl("URL:Mudlet Protocol"));
+    settings.setValue(qsl("mudlet/URL Protocol"), qsl(""));
+    settings.setValue(qsl("mudlet/shell/open/command/."), qsl("\"") + executablePath + qsl("\" \"%1\""));
 #endif
 #if defined(Q_OS_LINUX)
     QProcess process;
-    process.start("xdg-mime",
-                  QStringList() << "default"
-                                << "mudlet.desktop"
-                                << "x-scheme-handler/telnet");
+    process.start(qsl("xdg-mime"),
+                  QStringList() << qsl("default")
+                                << qsl("mudlet.desktop")
+                                << qsl("x-scheme-handler/telnet"));
     process.waitForFinished(-1);
     if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        qWarning() << "Failed to set mudlet.desktop as the default handler for telnet links.";
+        qWarning() << qsl("Failed to set " << executablePath << " as the default handler for telnet links.");
+    }
+#endif
+#if defined(Q_OS_MACOS)
+    QProcess process;
+    process.start(qsl("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"),
+                  QStringList() << qsl("-f")
+                                << executablePath);
+    process.waitForFinished(-1);
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        qWarning() << qsl("Failed to set " << executablePath << " as the default handler for telnet links.");
     }
 #endif
 }
@@ -3040,7 +3055,7 @@ void mudlet::doAutoLogin(const QString& profile_name)
     }
 
     // May be needed
-    pHost->mTelnet.setEncoding(readProfileData(profile_name, QStringLiteral("encoding")).toUtf8(), false);
+    pHost->mTelnet.setEncoding(readProfileData(profile_name, qsl("encoding")).toUtf8(), false);
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     emit signal_adjustAccessibleNames();
@@ -3061,8 +3076,8 @@ void mudlet::handleTelnetUri(const QUrl& telnetUri)
     int profilesFound{};
     QString lastHostFound;
     for (auto& host : hostList) {
-        QString hostUrl = readProfileData(host, QStringLiteral("url"));
-        int hostPort = readProfileData(host, QStringLiteral("port")).toInt();
+        QString hostUrl = readProfileData(host, qsl("url"));
+        int hostPort = readProfileData(host, qsl("port")).toInt();
 
         if (url.host().compare(hostUrl, Qt::CaseInsensitive) == 0 && url.port() == hostPort) {
             profilesFound++;
@@ -3075,7 +3090,7 @@ void mudlet::handleTelnetUri(const QUrl& telnetUri)
         doAutoLogin(profile_name);
         auto pHost = getHostManager().getHost(profile_name);
         if (!pHost) {
-            qWarning() << "no host!";
+            qWarning() << qsl("no host!");
             return;
         }
 
