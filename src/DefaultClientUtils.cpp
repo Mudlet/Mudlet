@@ -83,6 +83,11 @@ if let appURL = NSWorkspace.shared.urlForApplication(toOpen: url) {
 QString commandForCurrentExecutable()
 {
     QString executablePath = qsl("\"") + QCoreApplication::applicationFilePath() + qsl("\"");
+    QByteArray appImagePath = qgetenv("APPIMAGE");
+    if (!appImagePath.isEmpty()) {
+        executablePath = appImagePath;
+    }
+
 #if defined(Q_OS_WIN)
     return executablePath + qsl(" \"%1\"");
 #elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
