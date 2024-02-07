@@ -356,7 +356,7 @@ int main(int argc, char* argv[])
                                                                    "                                    optional and will make the application wait until a\n"
                                                                    "                                    debugger connects to it."));
         texts << appendLF.arg(QCoreApplication::translate("main", "Arguments:"));
-        texts << appendLF.arg(QCoreApplication::translate("main", "        [URI/FILE]                       Package path or telnet URI"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "        [URI/FILE]                   Package path or telnet URI"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
@@ -654,7 +654,7 @@ int main(int argc, char* argv[])
     mudlet::self()->show();
 
     // Do auto login if no profile-opening URIs are supplied
-    QStringList telnetUris = mudlet::self()->getInstanceCoordinator()->listUrisWithScheme(qsl("telnet"));
+    QStringList telnetUris = mudlet::self()->getInstanceCoordinator()->listUrisWithSchemes(QStringList{qsl("telnet"),qsl("mudlet")});
     bool willOpenProfileWithUri = telnetUris.length();
     if (willOpenProfileWithUri) {
         mudlet::self()->getInstanceCoordinator()->openUrisLocally();

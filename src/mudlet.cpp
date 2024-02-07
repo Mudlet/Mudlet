@@ -57,6 +57,7 @@
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 #include "VarUnit.h"
+#include "DefaultClientUtils.h"
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -666,12 +667,11 @@ mudlet::mudlet()
     mFontManager.addFonts();
 
     QTimer::singleShot(1s, this, [this]() {
+        qDebug() << "checking default: " << mudletIsDefault();
         if (mAlwaysCheckDefault && !mudletIsDefault()) {
             openDefaultCheck();
         }
     });
-
-    mIsGoingUp = false;
 
     // Initialise a couple of QMaps with elements that must be translated into
     // the current GUI Language
@@ -2154,7 +2154,7 @@ void mudlet::slot_showConnectionDialog()
     }
     mpConnectionDialog->fillout_form();
 
-    QStringList packagesToInstall = mInstanceCoordinator->listUrisWithScheme(qsl("file"));
+    QStringList packagesToInstall = mInstanceCoordinator->listUrisWithSchemes(QStringList{qsl("file")});
     mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
@@ -2701,29 +2701,7 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
 
 bool mudlet::mudletIsDefault()
 {
-#if defined(Q_OS_WIN)
-    QSettings settings("HKEY_CLASSES_ROOT/telnet/shell/open/command", QSettings::NativeFormat);
-    QString value = settings.value(".", QString()).toString();
-    return value.contains("mudlet");
-#endif
-
-#if defined(Q_OS_LINUX)
-    QProcess process;
-    process.start(qsl("xdg-mime"),
-                  QStringList() << qsl("query")
-                                << qsl("default")
-                                << qsl("x-scheme-handler/telnet"));
-    process.waitForFinished();
-    QString output = process.readAllStandardOutput().trimmed();
-    return output == qsl("mudlet.desktop");
-#endif
-
-#if defined(Q_OS_MACOS)
-    return true;
-#endif
-    // Unknown operating system
-    // Return true to we don't try to set Mudlet as the default
-    return true;
+    return isCurrentExecutableDefault(); 
 }
 
 // open a dialog to prompt the user to set Mudlet as default
@@ -2749,6 +2727,14 @@ void mudlet::openDefaultCheck()
 
         auto setAsDefault = new QPushButton(tr("Use Mudlet as my default client"), mpDefaultClientDlg);
         auto notNow = new QPushButton(tr("Not now"), mpDefaultClientDlg);
+
+        // If not on release version, update text to show the command that will be used
+        QLabel* label_3 = mpDefaultClientDlg->findChild<QLabel*>(QStringLiteral("label_3"));
+        if (label_3 && !releaseVersion) {
+            QString currentText = label_3->text();
+            QString newText = currentText + QChar::LineFeed + qsl("Command: ") + commandForCurrentExecutable();
+            label_3->setText(newText);
+        }
 
         buttonBox->addButton(setAsDefault, QDialogButtonBox::AcceptRole);
         setAsDefault->setAutoDefault(true);
@@ -2783,38 +2769,7 @@ void mudlet::openDefaultCheck()
 
 void mudlet::setMudletAsDefault()
 {
-    QString executablePath = QCoreApplication::applicationFilePath();
-#if defined(Q_OS_WIN)
-    QSettings settings(qsl("HKEY_CLASSES_ROOT"), QSettings::NativeFormat);
-    settings.setValue(qsl("telnet/."), qsl("URL:Telnet Protocol"));
-    settings.setValue(qsl("telnet/URL Protocol"), qsl(""));
-    settings.setValue(qsl("telnet/shell/open/command/."), qsl("\"") + executablePath + qsl("\" \"%1\""));
-    QSettings settings(qsl("HKEY_CLASSES_ROOT"), QSettings::NativeFormat);
-    settings.setValue(qsl("mudlet/."), qsl("URL:Mudlet Protocol"));
-    settings.setValue(qsl("mudlet/URL Protocol"), qsl(""));
-    settings.setValue(qsl("mudlet/shell/open/command/."), qsl("\"") + executablePath + qsl("\" \"%1\""));
-#endif
-#if defined(Q_OS_LINUX)
-    QProcess process;
-    process.start(qsl("xdg-mime"),
-                  QStringList() << qsl("default")
-                                << qsl("mudlet.desktop")
-                                << qsl("x-scheme-handler/telnet"));
-    process.waitForFinished(-1);
-    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        qWarning() << qsl("Failed to set " << executablePath << " as the default handler for telnet links.");
-    }
-#endif
-#if defined(Q_OS_MACOS)
-    QProcess process;
-    process.start(qsl("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"),
-                  QStringList() << qsl("-f")
-                                << executablePath);
-    process.waitForFinished(-1);
-    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        qWarning() << qsl("Failed to set " << executablePath << " as the default handler for telnet links.");
-    }
-#endif
+    setCurrentExecutableAsTelnetOpenCommand();
 }
 
 QString mudlet::readProfileData(const QString& profile, const QString& item)
@@ -3073,9 +3028,9 @@ void mudlet::handleTelnetUri(const QUrl& telnetUri)
 
     QStringList hostList = QDir(getMudletPath(profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
-    int profilesFound{};
+    int profilesFound = 0;
     QString lastHostFound;
-    for (auto& host : hostList) {
+    for (const auto& host : hostList) {
         QString hostUrl = readProfileData(host, qsl("url"));
         int hostPort = readProfileData(host, qsl("port")).toInt();
 
@@ -3103,11 +3058,12 @@ void mudlet::handleTelnetUri(const QUrl& telnetUri)
             slot_showConnectionDialog();
         }
         if (mpConnectionDialog) {
-            mpConnectionDialog->showInformationMessage(tr("%n matching profiles found for %1, which would you like to open?",
-                                                          "this message is shown when Mudlet is opened from a telnet:// link on a webpage, and more than one profile matches the game server/port - so "
-                                                          "the user needs to pick which of the available profiles they'd like to play with",
-                                                          profilesFound)
-                                                               .arg(url.host()));
+            /*: This message is shown when Mudlet is opened from a telnet:// link on a webpage, and more than one profile matches the game server/port - so 
+            the user needs to pick which of the available profiles they'd like to play with.*/
+            mpConnectionDialog->showInformationMessage(
+                tr("%n matching profile(s) found for %1, which would you like to open?", "", profilesFound)
+                .arg(url.host())
+            );
         }
     }
 }

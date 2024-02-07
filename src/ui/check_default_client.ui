@@ -64,7 +64,7 @@
       </size>
      </property>
      <property name="text">
-      <string>Mudlet is not currently set as your default client. Would you like to make it your default client?</string>
+      <string><![CDATA[Mudlet is not currently set as the default client for handling <code>telnet://</code> URLs. Would you like to make it your default?]]></string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

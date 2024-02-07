@@ -34,6 +34,7 @@
 #include "ShortcutsManager.h"
 #include "TMediaData.h"
 #include "utils.h"
+#include "DefaultClientUtils.h"
 #include <memory>
 
 #if defined(INCLUDE_UPDATER)
@@ -649,7 +650,6 @@ private:
     QKeySequence mKeySequenceShowMap;
     QKeySequence mKeySequenceTriggers;
     bool mIsGoingDown = false;
-    bool mIsGoingUp = true;
     // Whether multi-view is in effect:
     controlsVisibility mMenuBarVisibility = visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each

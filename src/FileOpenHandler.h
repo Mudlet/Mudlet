@@ -20,8 +20,8 @@
 #ifndef FILEOPENHANDLER_H
 #define FILEOPENHANDLER_H
 
-#include <QFileOpenEvent>
 #include <QObject>
+#include <QFileOpenEvent>
 
 class FileOpenHandler : public QObject
 {

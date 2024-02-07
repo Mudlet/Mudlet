@@ -21,6 +21,7 @@
 #include "Host.h"
 #include "mudlet.h"
 #include <QLocalSocket>
+#include <qnamespace.h>
 
 const int WAIT_FOR_RESPONSE_MS = 500;
 
@@ -36,7 +37,7 @@ void MudletInstanceCoordinator::queueUriOrFile(const QString& uriOrFile)
     }
 
     QString file = uriOrFile;
-    if (file.startsWith("~")) {
+    if (file.startsWith("~/")) {
         // Need to expand home directory
         file = QDir::homePath() + file.mid(1);
     }
@@ -54,11 +55,12 @@ void MudletInstanceCoordinator::queueUri(const QUrl& uri)
     mQueuedUris << uri.toString();
 }
 
-QStringList MudletInstanceCoordinator::listUrisWithScheme(const QString scheme)
+QStringList MudletInstanceCoordinator::listUrisWithSchemes(const QStringList schemes)
 {
     QStringList matchingUris;
+
     for (const QString& uri : mQueuedUris) {
-        if (QUrl(uri).scheme().toLower() == scheme) {
+        if (schemes.contains(QUrl(uri).scheme(),Qt::CaseInsensitive)) {
             matchingUris << uri;
         }
     }
@@ -165,9 +167,13 @@ void MudletInstanceCoordinator::openUrisLocally()
                 // Keep our lock on the mutex since the loop continues
                 mQueuedUris.removeLast();
                 activeHost->installPackage(url.toLocalFile(), 0);
+
+                // If this loop won't run again, unlock the mutex
+                if(i==0) {
+                    mMutex.unlock();
+                }
             }
         }
-        mMutex.unlock();
     });
 }
 
