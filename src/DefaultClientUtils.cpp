@@ -66,7 +66,7 @@ if let appURL = NSWorkspace.shared.urlForApplication(toOpen: url) {
     print(appURL.path)
 } else {
     print("")
-})";
+})");
 
     QProcess process;
     process.start(qsl("swift"),
@@ -142,7 +142,7 @@ void setCurrentExecutableAsTelnetOpenCommand()
     process.start(qsl("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"), QStringList() << qsl("-f") << commandForCurrentExecutable());
     process.waitForFinished(-1);
     if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
-        qWarning() << qsl("Failed to set " << commandForCurrentExecutable() << " as the default handler for telnet links.");
+        qWarning() << qsl("Failed to set ") << commandForCurrentExecutable() << qsl(" as the default handler for telnet links.");
     }
 #else
     Q_STATIC_ASSERT(false);
