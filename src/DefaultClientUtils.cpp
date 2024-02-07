@@ -1,25 +1,23 @@
 
 #include "DefaultClientUtils.h"
-#include <QSettings>
-#include <QProcess>
-#include <QDir>
-#include <QDebug>
-#include <QRegularExpression>
 #include "utils.h"
+#include <QDebug>
+#include <QDir>
+#include <QProcess>
+#include <QRegularExpression>
+#include <QSettings>
 
 const QString desktopFileName = QDir::homePath() + qsl("/.local/share/applications/mudlet.desktop");
 
-QString getCurrentTelnetOpenCommand() {
+QString getCurrentTelnetOpenCommand()
+{
 #if defined(Q_OS_WIN)
     QSettings settings("HKEY_CLASSES_ROOT/telnet/shell/open/command", QSettings::NativeFormat);
     QString value = settings.value(".", QString()).toString();
     return value;
 #elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     QProcess process;
-    process.start(qsl("xdg-mime"),
-                  QStringList() << qsl("query")
-                                << qsl("default")
-                                << qsl("x-scheme-handler/telnet"));
+    process.start(qsl("xdg-mime"), QStringList() << qsl("query") << qsl("default") << qsl("x-scheme-handler/telnet"));
     process.waitForFinished();
     const QString output = process.readAllStandardOutput().trimmed();
     if (output != qsl("mudlet.desktop")) {
@@ -33,7 +31,7 @@ QString getCurrentTelnetOpenCommand() {
     }
     const QString content = desktopFile.readAll();
     desktopFile.close();
-    const QString execFieldName = qsl("Exec"); 
+    const QString execFieldName = qsl("Exec");
     const QRegularExpression fieldPattern(qsl("%1=([^\n]*)").arg(execFieldName), QRegularExpression::CaseInsensitiveOption);
     const QRegularExpressionMatch match = fieldPattern.match(content);
 
@@ -73,7 +71,7 @@ QString commandForCurrentExecutable()
 
 #elif defined(Q_OS_MACOS)
     return executablePath;
-#else 
+#else
     Q_STATIC_ASSERT(false);
 #endif
 }
@@ -92,7 +90,7 @@ void setCurrentExecutableAsTelnetOpenCommand()
 #elif defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
     QProcess process;
 
-    // Read mudlet.desktop 
+    // Read mudlet.desktop
     QFile desktopFile(desktopFileName);
     if (!desktopFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning() << qsl("Failed to open") << desktopFileName;
@@ -100,11 +98,11 @@ void setCurrentExecutableAsTelnetOpenCommand()
     }
     QString content = desktopFile.readAll();
     desktopFile.close();
-    
+
     // Find exising Exec field and update it
     QRegularExpression execPattern("^Exec=(.*)$", QRegularExpression::MultilineOption);
     QString updatedContent = content.replace(execPattern, qsl("Exec=") + commandForCurrentExecutable());
-    
+
     // Write changes to mudlet.desktop
     if (!desktopFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qWarning() << qsl("Failed to open") << desktopFileName << qsl("for writing");
@@ -115,30 +113,27 @@ void setCurrentExecutableAsTelnetOpenCommand()
     desktopFile.close();
 
     // Tell xdg-mime to use the updated mudlet.desktop
-    process.start(qsl("xdg-mime"),
-                  QStringList() << qsl("default") << qsl("mudlet.desktop")
-                                << qsl("x-scheme-handler/telnet"));
+    process.start(qsl("xdg-mime"), QStringList() << qsl("default") << qsl("mudlet.desktop") << qsl("x-scheme-handler/telnet"));
     process.waitForFinished(-1);
     if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
         qWarning() << qsl("Failed to set ") << commandForCurrentExecutable() << qsl(" as the default handler for telnet links.");
     }
 #elif defined(Q_OS_MACOS)
     QProcess process;
-    process.start(qsl("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"),
-                  QStringList() << qsl("-f")
-                                << commandForCurrentExecutable());
+    process.start(qsl("/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"), QStringList() << qsl("-f") << commandForCurrentExecutable());
     process.waitForFinished(-1);
     if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
         qWarning() << qsl("Failed to set " << commandForCurrentExecutable() << " as the default handler for telnet links.");
     }
-#else 
+#else
     Q_STATIC_ASSERT(false);
 #endif
 }
 
-bool isCurrentExecutableDefault() {
+bool isCurrentExecutableDefault()
+{
     QString current = getCurrentTelnetOpenCommand();
-    if(current.isEmpty()) {
+    if (current.isEmpty()) {
         return false;
     }
     return current == commandForCurrentExecutable();

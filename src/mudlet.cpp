@@ -29,6 +29,8 @@
 #include "mudlet.h"
 
 #include "AltFocusMenuBarDisable.h"
+#include "DarkTheme.h"
+#include "DefaultClientUtils.h"
 #include "EAction.h"
 #include "LuaInterface.h"
 #include "TCommandLine.h"
@@ -36,16 +38,16 @@
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "TGameDetails.h"
 #include "TLabel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
-#include "TGameDetails.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "TToolBar.h"
+#include "VarUnit.h"
 #include "XMLimport.h"
-#include "DarkTheme.h"
 #include "dlgAboutDialog.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
@@ -56,8 +58,6 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
-#include "VarUnit.h"
-#include "DefaultClientUtils.h"
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -2701,7 +2701,7 @@ QString mudlet::addProfile(const QString& host, const int port, const QString& l
 
 bool mudlet::mudletIsDefault()
 {
-    return isCurrentExecutableDefault(); 
+    return isCurrentExecutableDefault();
 }
 
 // open a dialog to prompt the user to set Mudlet as default
@@ -3060,10 +3060,7 @@ void mudlet::handleTelnetUri(const QUrl& telnetUri)
         if (mpConnectionDialog) {
             /*: This message is shown when Mudlet is opened from a telnet:// link on a webpage, and more than one profile matches the game server/port - so 
             the user needs to pick which of the available profiles they'd like to play with.*/
-            mpConnectionDialog->showInformationMessage(
-                tr("%n matching profile(s) found for %1, which would you like to open?", "", profilesFound)
-                .arg(url.host())
-            );
+            mpConnectionDialog->showInformationMessage(tr("%n matching profile(s) found for %1, which would you like to open?", "", profilesFound).arg(url.host()));
         }
     }
 }

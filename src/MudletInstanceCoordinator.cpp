@@ -60,7 +60,7 @@ QStringList MudletInstanceCoordinator::listUrisWithSchemes(const QStringList sch
     QStringList matchingUris;
 
     for (const QString& uri : mQueuedUris) {
-        if (schemes.contains(QUrl(uri).scheme(),Qt::CaseInsensitive)) {
+        if (schemes.contains(QUrl(uri).scheme(), Qt::CaseInsensitive)) {
             matchingUris << uri;
         }
     }
@@ -169,7 +169,7 @@ void MudletInstanceCoordinator::openUrisLocally()
                 activeHost->installPackage(url.toLocalFile(), 0);
 
                 // If this loop won't run again, unlock the mutex
-                if(i==0) {
+                if (i == 0) {
                     mMutex.unlock();
                 }
             }

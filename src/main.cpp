@@ -384,7 +384,6 @@ int main(int argc, char* argv[])
     }
 
 
-
     // Handles opening a URI from a command line argument.
     // Used when mudlet is used to open an .mpackage file or telnet URI on some operating systems.
     //
@@ -654,7 +653,7 @@ int main(int argc, char* argv[])
     mudlet::self()->show();
 
     // Do auto login if no profile-opening URIs are supplied
-    QStringList telnetUris = mudlet::self()->getInstanceCoordinator()->listUrisWithSchemes(QStringList{qsl("telnet"),qsl("mudlet")});
+    QStringList telnetUris = mudlet::self()->getInstanceCoordinator()->listUrisWithSchemes(QStringList{qsl("telnet"), qsl("mudlet")});
     bool willOpenProfileWithUri = telnetUris.length();
     if (willOpenProfileWithUri) {
         mudlet::self()->getInstanceCoordinator()->openUrisLocally();

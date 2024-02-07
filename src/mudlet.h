@@ -27,14 +27,14 @@
  ***************************************************************************/
 
 #include "Announcer.h"
-#include "MudletInstanceCoordinator.h"
-#include "discord.h"
+#include "DefaultClientUtils.h"
 #include "FontManager.h"
 #include "HostManager.h"
+#include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "TMediaData.h"
+#include "discord.h"
 #include "utils.h"
-#include "DefaultClientUtils.h"
 #include <memory>
 
 #if defined(INCLUDE_UPDATER)
