@@ -7,7 +7,7 @@
 
 
 MMCPClient::MMCPClient(Host *host, MMCPServer *serv)
-	: m_state(Disconnected), mpHost(host), server(serv) {
+	: m_state(Disconnected), tcpSocket(this), mpHost(host), server(serv) {
 	
 	//auto ignore or ignorelist match?
 	m_isIgnored = (1 == 0 ? true : false);
@@ -21,24 +21,21 @@ MMCPClient::MMCPClient(Host *host, MMCPServer *serv)
 	m_canSnoop = false;
 	m_isSnooped = false;
 	m_isSnooping = false;
-
-	
-	tcpSocket = new QTcpSocket(this);
 	
 	//Disable Nagle's algorithm
-	tcpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+	tcpSocket.setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
-	connect(tcpSocket, &QTcpSocket::connected,      this, &MMCPClient::slotConnected);
-	connect(tcpSocket, &QTcpSocket::disconnected,   this, &MMCPClient::slotDisconnected);
-	connect(tcpSocket, &QTcpSocket::readyRead,      this, &MMCPClient::slotReadData);
-	connect(tcpSocket,SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(slotDisplayError(QAbstractSocket::SocketError)));
+	connect(&tcpSocket, &QTcpSocket::connected,          this, &MMCPClient::slotConnected);
+	connect(&tcpSocket, &QTcpSocket::disconnected,       this, &MMCPClient::slotDisconnected);
+	connect(&tcpSocket, &QTcpSocket::readyRead,          this, &MMCPClient::slotReadData);
+	connect(&tcpSocket, &QAbstractSocket::errorOccurred, this, &MMCPClient::slotDisplayError);
 
 	connect(this, &MMCPClient::clientDisconnected, server, &MMCPServer::slotClientDisconnected);
 }
 
 void MMCPClient::tryConnect(const QString& host, quint16 port) {
 	m_state = ConnectingOut;
-	tcpSocket->connectToHost(host, port);
+	tcpSocket.connectToHost(host, port);
 }
 
 
@@ -46,7 +43,7 @@ void MMCPClient::tryConnect(const QString& host, quint16 port) {
  * Disconnect the client.  This will result in the disconnected() signal.
  */
 void MMCPClient::disconnect() {
-	tcpSocket->disconnectFromHost();
+	tcpSocket.disconnectFromHost();
 }
 
 
@@ -55,15 +52,15 @@ void MMCPClient::disconnect() {
  */
 void MMCPClient::incoming(int socketDesc) {
 	m_state = ConnectingIn;
-	tcpSocket->setSocketDescriptor(socketDesc);
+	tcpSocket.setSocketDescriptor(socketDesc);
 }
 
 QString MMCPClient::host() {
-	return tcpSocket->peerAddress().toString();
+	return tcpSocket.peerAddress().toString();
 }
 
 quint16 MMCPClient::port() {
-	return tcpSocket->peerPort();
+	return tcpSocket.peerPort();
 }
 
 
@@ -71,12 +68,12 @@ quint16 MMCPClient::port() {
  * Outgoing connection established, send chat request.
  */
 void MMCPClient::slotConnected() {
-	m_host = tcpSocket->peerAddress().toString();
-	m_port = tcpSocket->peerPort();
+	m_host = tcpSocket.peerAddress().toString();
+	m_port = tcpSocket.peerPort();
 
 	QString str = QString("CHAT:%1\n%3%2").arg(server->chatName()).arg(m_port, 5).arg(m_host);
 
-	tcpSocket->write(str.toLatin1());
+	tcpSocket.write(str.toLatin1());
 	
 	server->clientMessage(QString("<CHAT> Waiting for response from %2:%1 ...").arg(m_port).arg(m_host));
 }
@@ -99,8 +96,8 @@ void MMCPClient::slotDisconnected() {
 
 void MMCPClient::slotReadData() {
 		
-	while (tcpSocket->bytesAvailable()) {
-		buffer.append(tcpSocket->read(tcpSocket->bytesAvailable()));
+	while (tcpSocket.bytesAvailable()) {
+		buffer.append(tcpSocket.read(tcpSocket.bytesAvailable()));
 	}
 	
 	switch (m_state) {
@@ -112,9 +109,6 @@ void MMCPClient::slotReadData() {
             QRegularExpressionMatch match = chatIncoming.match(buffer);
 
             if (match.hasMatch()) {
-			//if (chatIncoming.indexIn(buffer) == -1) {
-			//	m_state = Disconnected;
-			//} else {
 				//Check auto accept?
 				m_state = Connected;
 				
@@ -124,8 +118,8 @@ void MMCPClient::slotReadData() {
 										
 				server->clientMessage(QString("<CHAT> Connection from %1 at %3:%2 accepted.")
 										.arg(m_chatName)
-										.arg(tcpSocket->peerPort())
-										.arg(tcpSocket->peerAddress().toString()));
+										.arg(tcpSocket.peerPort())
+										.arg(tcpSocket.peerAddress().toString()));
 				
 				server->slotClientConnected(this);
 			} else {
@@ -147,8 +141,8 @@ void MMCPClient::slotReadData() {
 										
 				server->clientMessage(QString("<CHAT> Connection to %1 at %3:%2 accepted.")
 										.arg(m_chatName)
-										.arg(tcpSocket->peerPort())
-										.arg(tcpSocket->peerAddress().toString()));
+										.arg(tcpSocket.peerPort())
+										.arg(tcpSocket.peerAddress().toString()));
 				
 				server->slotClientConnected(this);
 				sendVersion();
@@ -161,8 +155,8 @@ void MMCPClient::slotReadData() {
                 m_state = Disconnected;
 										
 				server->clientMessage(QString("<CHAT> Connection to %2:%1 refused.")
-										.arg(tcpSocket->peerPort())
-										.arg(tcpSocket->peerAddress().toString()));
+										.arg(tcpSocket.peerPort())
+										.arg(tcpSocket.peerAddress().toString()));
              }
 
 
@@ -170,7 +164,6 @@ void MMCPClient::slotReadData() {
 		}
 			
 		case Connected:
-			//if (buffer.lastIndexOf(QChar::fromLatin1(0xff)) == -1)
             if (buffer.lastIndexOf('\xff') == -1)
 				return;
 		
@@ -199,7 +192,7 @@ void MMCPClient::slotDisplayError(QAbstractSocket::SocketError socketError) {
 			message = tr("The connection was refused by the peer.");
 			break;
 		default:
-			message = tr("The following error occurred: %1.").arg(tcpSocket->errorString());
+			message = tr("The following error occurred: %1.").arg(tcpSocket.errorString());
 	}
 
 	server->clientMessage(message);
@@ -215,7 +208,7 @@ void MMCPClient::sendChat(const QString &msg, MMCPChatCommands command) {
 			break;
 			
 		case TextPersonal:
-			output = QString("%1%2 chats to you, '%3'%4")
+			output = QString("%1%2 chats to you, '%3'\n%4")
 							.arg((char)command)
 							.arg(server->chatName())
 							.arg(msg)
@@ -249,14 +242,14 @@ void MMCPClient::sendPingRequest() {
  */
 void MMCPClient::sendVersion() {
 	writeData(QString("%1%2 %3%4")	.arg((char)Version)
-									.arg("QtMud")
-									.arg("alpha")
+									.arg("Mudlet")
+									.arg(" (Humera's MMCP Test)")
 									.arg((char)End));
 }
 
 
 void MMCPClient::writeData(const QString &data) {
-	tcpSocket->write(data.toLatin1());
+	tcpSocket.write(data.toLatin1());
 }
 
 /**
@@ -268,7 +261,6 @@ void MMCPClient::snoop() {
 }
 
 void MMCPClient::handleConnectedState(const QByteArray &bytes) {
-	//QByteArray bytes = str.toLatin1();
 	const char *data = bytes.data();
 	int cmdIdx = 0;
 	while (cmdIdx < bytes.length()) {
@@ -289,8 +281,6 @@ void MMCPClient::handleConnectedState(const QByteArray &bytes) {
 		
 		QString stringData = QString::fromLatin1(data + cmdIdx + 1, (endIdx - cmdIdx) - 1);
 
-        qDebug() << "handleConnectedState: " << stringData;
-		
 		switch (cmd) {
 			case MMCPChatCommand::NameChange:
 				handleIncomingNameChange(stringData);
@@ -314,6 +304,7 @@ void MMCPClient::handleConnectedState(const QByteArray &bytes) {
 				
 			case MMCPChatCommand::Version:
 				version = stringData;
+                qDebug() << "got MMCP client version: " << version;
 				break;
 				
 			case MMCPChatCommand::PingRequest:
@@ -453,6 +444,10 @@ void MMCPClient::handleIncomingSnoopData(const QString &sData) {
 		server->snoopMessage(strLine);
 }
 
+const QString& MMCPClient::getVersion() {
+    return version;
+}
+
 const QString MMCPClient::getFlagsString() {
 	
 	return QString("%1%2%3%4%5%6%7%8")
@@ -471,8 +466,6 @@ const QString MMCPClient::getFlagsString() {
 				.arg(' ');
 
 }
-
-
 
 const QString MMCPClient::getInfoString() {
 
@@ -500,10 +493,10 @@ const QString MMCPClient::getInfoString() {
 
 	return QString("%1 %5 %2 %3 %4")
 							.arg(m_chatName, 20)
-							.arg(tcpSocket->peerPort(), 5)
+							.arg(tcpSocket.peerPort(), 5)
 							.arg("               ", 15)
 							.arg(getFlagsString())
 							
 							//Try this last to avoid IPv6 issues
-							.arg(tcpSocket->peerAddress().toString(), 15);
+							.arg(tcpSocket.peerAddress().toString(), 15);
 }

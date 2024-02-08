@@ -153,7 +153,9 @@ macx {
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
+
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
+
 # To skip bundling Bitstream Vera Sans and Ubuntu Mono fonts with Mudlet,
 # set the environment WITH_FONTS variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
@@ -175,6 +177,7 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
     # and it is not obvious that there is a demand to do this currently.
 }
 
+WITH_UPDATER = NO
 ######################### Auto Updater setting detection #########,#############
 # To remove the built-in updater, set the environment WITH_UPDATER variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
@@ -189,7 +192,7 @@ linux|macx|win32 {
     isEmpty( UPDATER_TEST ) | !equals(UPDATER_TEST, "NO" ) {
        # The environmental variable does not exist or it does and it is NOT the
        # particular value we are looking out for - so include the updater code:
-       DEFINES += INCLUDE_UPDATER
+       #DEFINES += INCLUDE_UPDATER
     }
     # else the environment variable is the specific "don't include the updater
     # code" setting - so don't!
@@ -599,6 +602,8 @@ SOURCES += \
     LuaInterface.cpp \
     main.cpp \
     mapInfoContributorManager.cpp \
+	MMCPServer.cpp \
+	MMCPClient.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
@@ -717,6 +722,9 @@ HEADERS += \
     KeyUnit.h \
     LuaInterface.h \
     mapInfoContributorManager.h \
+	MMCP.h \
+	MMCPServer.h \
+	MMCPClient.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \

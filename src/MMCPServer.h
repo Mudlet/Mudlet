@@ -25,6 +25,8 @@ class MMCPServer : public QTcpServer {
         inline static QString MMCPChatNameCfgItem = qsl("mmcp_chatname");
         //inline static int DefaultMessageBufferLimit = 5000;
 
+        static QString getColorCode(const QString&);
+
         static int readMMCPHostPort(Host*);
         static QString readMMCPChatName(Host*);
 
@@ -79,21 +81,6 @@ class MMCPServer : public QTcpServer {
         
         int port() { return m_port; }
         void setPort(int val) { m_port = val; }
-        
-        //Script Invokables
-        /*
-        QPair<bool, QString> Chat(const QString &, const QString &);
-        QPair<bool, QString> ChatAll(const QString &);
-        QPair<bool, QString> ChatCall();
-        QPair<bool, QString> ChatCall(const QString &, const QString &);
-        QPair<bool, QString> ChatEmoteAll(const QString &);
-        QPair<bool, QString> ChatUnChat(const QString &);
-        QPair<bool, QString> ChatPing(const QString &);
-        QPair<bool, QString> ChatRaw(const QString &);
-        QPair<bool, QString> ChatServe(const QString &);
-        QPair<bool, QString> ChatSnoopAllow(const QString &);
-        QPair<bool, QString> ChatSnoop(const QString &);
-        */
 
     signals:
         void serverStarted(int);

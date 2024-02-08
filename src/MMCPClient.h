@@ -50,6 +50,7 @@ class MMCPClient : public QObject {
         
         const QString getInfoString();
         const QString getFlagsString();
+        const QString& getVersion();
         QString host();
         quint16 port();
         
@@ -106,10 +107,9 @@ class MMCPClient : public QObject {
         int m_state;
         QString m_host;
         quint16 m_port;
-        //QString buffer;
         QByteArray buffer;
     
-        QTcpSocket *tcpSocket;
+        QTcpSocket tcpSocket;
         Host *mpHost;
         MMCPServer *server;
         QString version;

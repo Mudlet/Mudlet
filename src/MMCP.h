@@ -1,5 +1,5 @@
-#ifndef _MMCP__H
-#define _MMCP_H
+#ifndef _MMCP_H_
+#define _MMCP_H_
 
 #include <QFlags>
 
@@ -60,6 +60,5 @@ namespace AnsiColors {
     constexpr char const* BCYN = "\x1b[46m";
     constexpr char const* BWHT = "\x1b[47m";
 }
-
 
 #endif

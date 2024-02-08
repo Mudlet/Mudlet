@@ -13302,7 +13302,7 @@ int TLuaInterpreter::sendSocket(lua_State* L)
     return 1;
 }
 
-int TLuaInterpreter::doChatCall(lua_State* L) {
+int TLuaInterpreter::chatCall(lua_State* L) {
     const QString host = getVerifiedString(L, __func__, 1, "host");
     int port = getVerifiedInt(L, __func__, 2, "port number {default = 4050}", true);
 
@@ -13325,7 +13325,7 @@ int TLuaInterpreter::doChatCall(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::doChatEmoteAll(lua_State* L) {
+int TLuaInterpreter::chatEmoteAll(lua_State* L) {
     const QString msg = getVerifiedString(L, __func__, 1, "message");
 
     Host* pHost = &getHostFromLua(L);
@@ -13343,7 +13343,7 @@ int TLuaInterpreter::doChatEmoteAll(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::doChatUnChat(lua_State* L) {
+int TLuaInterpreter::chatUnChat(lua_State* L) {
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
@@ -13361,7 +13361,7 @@ int TLuaInterpreter::doChatUnChat(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::doChatList(lua_State* L) {
+int TLuaInterpreter::chatList(lua_State* L) {
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mmcpServer) {
         pHost->mmcpServer = new MMCPServer(pHost);
@@ -13377,7 +13377,7 @@ int TLuaInterpreter::doChatList(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::doChatName(lua_State* L) {
+int TLuaInterpreter::chatName(lua_State* L) {
     const QString name = getVerifiedString(L, __func__, 1, "name");
 
     Host* pHost = &getHostFromLua(L);
@@ -13395,7 +13395,7 @@ int TLuaInterpreter::doChatName(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::doChatPing(lua_State* L) {
+int TLuaInterpreter::chatPing(lua_State* L) {
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
@@ -13413,7 +13413,7 @@ int TLuaInterpreter::doChatPing(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::sendChat(lua_State* L) {
+int TLuaInterpreter::chat(lua_State* L) {
     const QString target = getVerifiedString(L, __func__, 1, "target");
     const QString msg = getVerifiedString(L, __func__, 2, "message");
 
@@ -13432,7 +13432,7 @@ int TLuaInterpreter::sendChat(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::sendChatAll(lua_State* L) {
+int TLuaInterpreter::chatAll(lua_State* L) {
     const QString msg = getVerifiedString(L, __func__, 1, "message");
 
     Host* pHost = &getHostFromLua(L);
@@ -13447,6 +13447,15 @@ int TLuaInterpreter::sendChatAll(lua_State* L) {
     }
 
     lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::chatColor(lua_State* L) {
+    const QString color = getVerifiedString(L, __func__, 1, "color");
+
+    const QString colorCode = MMCPServer::getColorCode(color);
+
+    lua_pushstring(L, colorCode.toUtf8().constData());
     return 1;
 }
 
@@ -16541,14 +16550,15 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
-    lua_register(pGlobalLua, "doChatCall", TLuaInterpreter::doChatCall);
-    lua_register(pGlobalLua, "doChatEmoteAll", TLuaInterpreter::doChatEmoteAll);
-    lua_register(pGlobalLua, "doChatUnChat", TLuaInterpreter::doChatUnChat);
-    lua_register(pGlobalLua, "doChatList", TLuaInterpreter::doChatList);
-    lua_register(pGlobalLua, "doChatName", TLuaInterpreter::doChatName);
-    lua_register(pGlobalLua, "doChatPing", TLuaInterpreter::doChatPing);
-    lua_register(pGlobalLua, "sendChat", TLuaInterpreter::sendChat);
-    lua_register(pGlobalLua, "sendChatAll", TLuaInterpreter::sendChatAll);
+    lua_register(pGlobalLua, "chatCall", TLuaInterpreter::chatCall);
+    lua_register(pGlobalLua, "chatEmoteAll", TLuaInterpreter::chatEmoteAll);
+    lua_register(pGlobalLua, "chatUnChat", TLuaInterpreter::chatUnChat);
+    lua_register(pGlobalLua, "chatList", TLuaInterpreter::chatList);
+    lua_register(pGlobalLua, "chatName", TLuaInterpreter::chatName);
+    lua_register(pGlobalLua, "chatPing", TLuaInterpreter::chatPing);
+    lua_register(pGlobalLua, "chat", TLuaInterpreter::chat);
+    lua_register(pGlobalLua, "chatAll", TLuaInterpreter::chatAll);
+    lua_register(pGlobalLua, "chatColor", TLuaInterpreter::chatColor);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
