@@ -448,7 +448,7 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
              qsl("mud.accursed-lands.com"),
              7979,
              true,
-             qsl("<a href='https://www.accursed-lands.net'>https://www.accursed-lands.net</a><br>"
+             qsl("<a href='https://www.accursed-lands.net'>www.accursed-lands.net</a><br>"
                     "Discord<br>"
                     "<a href='https://discord.gg/pUPdVra'>https://discord.gg/pUPdVra</a>"),
              qsl(":/icons/accursed_lands.png"),
