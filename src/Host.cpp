@@ -1633,6 +1633,14 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
     raiseEvent(event);
 }
 
+void Host::postMMCPMessage(const QString& a, const QString& b, const QString& c) {
+    TEvent event {};
+    event.mArgumentList << QLatin1String("sysMMCPMessage");
+    event.mArgumentList << a << b << c;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    raiseEvent(event);
+}
+
 void Host::enableTimer(const QString& name)
 {
     mTimerUnit.enableTimer(name);

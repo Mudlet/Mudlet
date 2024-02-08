@@ -200,6 +200,14 @@ public:
     static int deleteMapLabel(lua_State*);
     static int getRooms(lua_State*);
     static int connectToServer(lua_State*);
+    static int doChatCall(lua_State*);
+    static int doChatEmoteAll(lua_State*);
+    static int doChatUnChat(lua_State*);
+    static int doChatList(lua_State*);
+    static int doChatName(lua_State*);
+    static int doChatPing(lua_State*);
+    static int sendChat(lua_State*);
+    static int sendChatAll(lua_State*);
     static int sendIrc(lua_State*);
     static int getIrcNick(lua_State*);
     static int getIrcServer(lua_State*);

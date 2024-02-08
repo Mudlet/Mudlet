@@ -29,6 +29,7 @@
 
 
 #include "EAction.h"
+#include "MMCPServer.h"
 #include "Host.h"
 #include "TAlias.h"
 #include "TArea.h"
@@ -55,6 +56,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
+
 
 #include <limits>
 #include <math.h>
@@ -13300,6 +13302,154 @@ int TLuaInterpreter::sendSocket(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::doChatCall(lua_State* L) {
+    const QString host = getVerifiedString(L, __func__, 1, "host");
+    int port = getVerifiedInt(L, __func__, 2, "port number {default = 4050}", true);
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->mmcpServer = new MMCPServer(pHost);
+    }
+
+    if (port > 65535 || port < 1) {
+        return warnArgumentValue(L, __func__, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->call(host, port);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::doChatEmoteAll(lua_State* L) {
+    const QString msg = getVerifiedString(L, __func__, 1, "message");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->mmcpServer = new MMCPServer(pHost);
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->emoteAll(msg);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::doChatUnChat(lua_State* L) {
+    const QString target = getVerifiedString(L, __func__, 1, "target");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->mmcpServer = new MMCPServer(pHost);
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->unChat(target);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::doChatList(lua_State* L) {
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->mmcpServer = new MMCPServer(pHost);
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->chatList();
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::doChatName(lua_State* L) {
+    const QString name = getVerifiedString(L, __func__, 1, "name");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->mmcpServer = new MMCPServer(pHost);
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->chatName(name);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::doChatPing(lua_State* L) {
+    const QString target = getVerifiedString(L, __func__, 1, "target");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->mmcpServer = new MMCPServer(pHost);
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->ping(target);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::sendChat(lua_State* L) {
+    const QString target = getVerifiedString(L, __func__, 1, "target");
+    const QString msg = getVerifiedString(L, __func__, 2, "message");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->mmcpServer = new MMCPServer(pHost);
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->chat(target, msg);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::sendChatAll(lua_State* L) {
+    const QString msg = getVerifiedString(L, __func__, 1, "message");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->mmcpServer = new MMCPServer(pHost);
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->chatAll(msg);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendIrc
 int TLuaInterpreter::sendIrc(lua_State* L)
 {
@@ -16391,6 +16541,14 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
+    lua_register(pGlobalLua, "doChatCall", TLuaInterpreter::doChatCall);
+    lua_register(pGlobalLua, "doChatEmoteAll", TLuaInterpreter::doChatEmoteAll);
+    lua_register(pGlobalLua, "doChatUnChat", TLuaInterpreter::doChatUnChat);
+    lua_register(pGlobalLua, "doChatList", TLuaInterpreter::doChatList);
+    lua_register(pGlobalLua, "doChatName", TLuaInterpreter::doChatName);
+    lua_register(pGlobalLua, "doChatPing", TLuaInterpreter::doChatPing);
+    lua_register(pGlobalLua, "sendChat", TLuaInterpreter::sendChat);
+    lua_register(pGlobalLua, "sendChatAll", TLuaInterpreter::sendChatAll);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
