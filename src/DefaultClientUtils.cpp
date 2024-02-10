@@ -25,6 +25,7 @@
 #include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
+#include <QTemporaryFile>
 
 const QString desktopFileName = QDir::homePath() + qsl("/.local/share/applications/mudlet.desktop");
 
@@ -59,22 +60,52 @@ QString getCurrentTelnetOpenCommand()
     }
     return QString();
 #elif defined(Q_OS_MACOS)
-    QString swiftScript = qsl(R"(
-import Cocoa
-let url = URL(string: "telnet://")!
-if let appURL = NSWorkspace.shared.urlForApplication(toOpen: url) {
-    print(appURL.path)
-} else {
-    print("")
-})");
 
-    QProcess process;
-    process.start(qsl("swift"),
-                  QStringList() << qsl("c")
-                                << swiftScript);
-    process.waitForFinished();
+    const QString swiftScript = qsl(R"(
+    import Cocoa
 
-    return process.readAllStandardOutput().trimmed();
+    let url = URL(string: "telnet://")!
+    if let appURL = NSWorkspace.shared.urlForApplication(toOpen: url) {
+        print(appURL.path)
+    } else {
+        print("")
+    })");
+
+    QTemporaryFile tempFile(qsl("telnet-open-command-XXXXXX.swift"));
+    if (!tempFile.open()) {
+        return QString();
+    }
+
+    QTextStream stream(&tempFile);
+    stream << swiftScript;
+    tempFile.close();
+
+    QString binaryPath = tempFile.fileName() + ".bin";
+
+    QProcess compileProcess;
+    compileProcess.start(qsl("swiftc"), QStringList() << qsl("-framework") << qsl("Cocoa") << tempFile.fileName() << qsl("-o") << binaryPath);
+    compileProcess.waitForFinished();
+
+    QByteArray stderr = compileProcess.readAllStandardError();
+
+    if (compileProcess.exitCode() != 0) {
+        qDebug() << "Failed to compile the script, error:" << stderr;
+        return QString();
+    }
+
+    QProcess runProcess;
+    runProcess.start(binaryPath);
+    runProcess.waitForFinished();
+
+    auto output = runProcess.readAllStandardOutput().trimmed();
+    auto error = runProcess.readAllStandardError().trimmed();
+
+    if (compileProcess.exitCode() != 0) {
+        qDebug() << "Failed to run the script, error:" << error;
+        return QString();
+    }
+
+    return output;
 #else
     Q_STATIC_ASSERT(false);
 #endif
@@ -160,5 +191,6 @@ bool isCurrentExecutableDefault()
     if (current.isEmpty()) {
         return false;
     }
+    qDebug() << "Current telnet open command:" << current;
     return current == commandForCurrentExecutable();
 }
