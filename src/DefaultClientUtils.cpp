@@ -23,6 +23,7 @@
 #include <QDebug>
 #include <QDir>
 #include <QProcess>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QTemporaryFile>
@@ -86,10 +87,10 @@ QString getCurrentTelnetOpenCommand()
     compileProcess.start(qsl("swiftc"), QStringList() << qsl("-framework") << qsl("Cocoa") << tempFile.fileName() << qsl("-o") << binaryPath);
     compileProcess.waitForFinished();
 
-    QByteArray stderr = compileProcess.readAllStandardError();
+    QByteArray compileErrorOutput = compileProcess.readAllStandardError();
 
     if (compileProcess.exitCode() != 0) {
-        qDebug() << "Failed to compile the script, error:" << stderr;
+        qDebug() << "Failed to compile the script, error:" << compileErrorOutput;
         return QString();
     }
 
@@ -97,15 +98,15 @@ QString getCurrentTelnetOpenCommand()
     runProcess.start(binaryPath);
     runProcess.waitForFinished();
 
-    auto output = runProcess.readAllStandardOutput().trimmed();
-    auto error = runProcess.readAllStandardError().trimmed();
+    auto runOutput = runProcess.readAllStandardOutput().trimmed();
+    auto runError = runProcess.readAllStandardError().trimmed();
 
-    if (compileProcess.exitCode() != 0) {
-        qDebug() << "Failed to run the script, error:" << error;
+    if (runProcess.exitCode() != 0) {
+        qDebug() << "Failed to run the script, error:" << runError;
         return QString();
     }
 
-    return output;
+    return runOutput;
 #else
     Q_STATIC_ASSERT(false);
 #endif
