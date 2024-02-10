@@ -84,6 +84,7 @@ QString getCurrentTelnetOpenCommand()
     QString binaryPath = tempFile.fileName() + ".bin";
 
     QProcess compileProcess;
+    // use of the Cocoa framework necessitates a compiled binary
     compileProcess.start(qsl("swiftc"), QStringList() << qsl("-framework") << qsl("Cocoa") << tempFile.fileName() << qsl("-o") << binaryPath);
     compileProcess.waitForFinished();
 
