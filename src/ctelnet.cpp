@@ -964,26 +964,39 @@ QString cTelnet::getNewEnvironValueSystemType()
     QString systemType;
 
     // "SYSTEMTYPE" Inspired by https://www.rfc-editor.org/rfc/rfc1340.txt
-#if (defined(Q_OS_MAC) || defined(Q_OS_MACOS))
-    systemType = qsl("MACOS");
-#elif defined(Q_OS_WIN64)
-    systemType = qsl("WIN64");
-#elif defined(Q_OS_WIN32)
-    systemType = qsl("WIN32");
-#elif defined(Q_OS_BSD4)
-    nsystemType = qsl("BSD4");
-#elif defined(Q_OS_CYGWIN)
+    // Ordering redone to follow general format of TLuaInterpreter::getOs()
+#if defined(Q_OS_CYGWIN)
+    // Try for this one before Q_OS_WIN32 as both are likely to be defined on
+    // a Cygwin platform
     systemType = qsl("CYGWIN");
-#elif (defined(Q_OS_FREEBSD) || defined(Q_OS_FREEBSD_KERNEL))
-    systemType = qsl("FREEBSD");
+#elif defined(Q_OS_WIN32)
+    // This is defined on BOTH Win32 and Win64 hosts - but it reflects
+    // the build machine rather than the run-time one and our published
+    // builds are actually 32-bit ones that can run on either. If we
+    // really wanted to distinguish between the two bit-nesses we'd have
+    // to do that at run-time - and we can probably leave off doing that
+    // until we officially publish 64 bit builds specifically for Win64
+    // machines:
+    systemType = qsl("WIN32");
+#elif (defined(Q_OS_MACOS))
+    systemType = qsl("MACOS");
+#elif defined(Q_OS_LINUX)
+    systemType = qsl("LINUX");
 #elif defined(Q_OS_HURD)
     systemType = qsl("HURD");
+#elif (defined(Q_OS_FREEBSD_KERNEL))
+    // Defined for BOTH Debian kFreeBSD hybrid with a GNU userland and
+    // main FreeBSD so it must be after a Q_OS_FREEBSD check if we needed
+    // to tell the different; OTOH only a Debian packager for this, now
+    // obsolete hybrid would want to worry about this!
+    systemType = qsl("FREEBSD");
 #elif defined(Q_OS_NETBSD)
     systemType = qsl("NETBSD");
 #elif defined(Q_OS_OPENBSD)
     systemType = qsl("OPENBSD");
-#elif defined(Q_OS_LINUX)
-    systemType = qsl("LINUX");
+#elif defined(Q_OS_BSD4)
+    // Generic *nix - must be before unix and after other more specific results
+    systemType = qsl("BSD4");
 #elif defined(Q_OS_UNIX)
     systemType = qsl("UNIX");
 #endif
