@@ -160,7 +160,7 @@ void Updater::setupOnWindows()
 {
     // Setup to automatically download the new release when an update is available
     connect(feed, &dblsqd::Feed::ready, feed, [=]() {
-        if (mudlet::self()->developmentVersion) {
+        if (mudlet::self()->cmDevelopmentVersion) {
             return;
         }
 
@@ -225,7 +225,7 @@ void Updater::setupOnLinux()
     connect(feed, &dblsqd::Feed::ready, this, [=]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (mudlet::self()->developmentVersion) {
+        if (mudlet::self()->cmDevelopmentVersion) {
             return;
         }
 
@@ -418,7 +418,7 @@ bool Updater::shouldShowChangelog()
     return false;
 #endif
 
-    if (mudlet::self()->developmentVersion || !updateAutomatically()) {
+    if (mudlet::self(*)->cmDevelopmentVersion || !updateAutomatically()) {
         return false;
     }
 

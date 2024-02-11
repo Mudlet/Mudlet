@@ -75,10 +75,7 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // than that in the initialisation list so that it is processed as a change
     // to set up the initial encoder
     encodingChanged("UTF-8");
-    termType = qsl("Mudlet " APP_VERSION);
-    if (mudlet::self()->mAppBuild.trimmed().length()) {
-        termType.append(mudlet::self()->mAppBuild);
-    }
+    termType = qsl("Mudlet %1%2").arg(APP_VERSION, mudlet::self()->cmAppBuild);
 
     command = "";
     // The raw string literals are QByteArrays now not QStrings:
@@ -1018,13 +1015,9 @@ QString cTelnet::getNewEnvironClientName()
 
 QString cTelnet::getNewEnvironClientVersion()
 {
-    QString clientVersion = APP_VERSION;
+    QString clientVersion = qsl(APP_VERSION "%1").arg(mudlet::self()->cmAppBuild);
     static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
     static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
-
-    if (auto build = mudlet::self()->mAppBuild; build.trimmed().length()) {
-        clientVersion.append(build);
-    }
 
     /*
     * The valid characters for termType are more restricted than being ASCII
@@ -1741,8 +1734,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
-            // mudlet::self()->mAppBuild could, conceivably contain a non ASCII character:
-            std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData() + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
+            // mudlet::self()->getAppBuild() could, conceivable, contain non ASCII characters:
+            std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + mudlet::self()->cmAppBuild.toUtf8().constData() + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
             output += encodeAndCookBytes(atcpOptions);
             output += TN_IAC;
             output += TN_SE;
@@ -1765,8 +1758,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            // mudlet::self()->mAppBuild could, conceivably contain a non-ASCII character:
-            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + mudlet::self()->mAppBuild.toUtf8().constData() + std::string(R"("})"));
+            // mudlet::self()->getAppBuild() could, conceivable, contain non ASCII characters:
+            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + mudlet::self()->cmAppBuild.toUtf8().constData() + std::string(R"("})"));
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -2350,8 +2343,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += TN_IAC;
                 output += TN_SB;
                 output += OPT_ATCP;
-                // mudlet::self()->mAppBuild *could* be a non-ASCII UTF-8 string:
-                std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData() + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
+                // mudlet::self()->getAppBuild() could, conceivable, contain non ASCII characters:
+                std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + mudlet::self()->cmAppBuild.toUtf8().constData() + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
                 output += encodeAndCookBytes(atcpOptions);
                 output += TN_IAC;
                 output += TN_SE;

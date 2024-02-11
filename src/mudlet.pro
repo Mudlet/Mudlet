@@ -101,8 +101,17 @@ GIT_EXECUTABLE = git
 # Run the command to get the short SHA1 hash of the current HEAD
 GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
 
-# Use the result in your QMake project
-message("Git SHA1: " $$GIT_SHA1)
+# Check to see if the source has been modified from that in the commit:
+SOURCE_DIRTY_OUTPUT = $$system($$GIT_EXECUTABLE status --porcelain -uno)
+
+# Record this and report it:
+isEmpty( SOURCE_DIRTY_OUTPUT ) {
+  SOURCE_DIRTY = "FALSE"
+  !build_pass:message("Git SHA1:" $$GIT_SHA1)
+} else {
+  SOURCE_DIRTY = "TRUE"
+  !build_pass:message("Git SHA1:" $$GIT_SHA1 "(MODIFIED)")
+}
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
@@ -113,17 +122,25 @@ VERSION = 4.17.2
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
 # variable to make identification of the used version simple
 # the qmake BUILD variable is NOT built-in
-BUILD_TEST = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD_TEST ) {
+BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD ) {
 # Possible values are:
 # "-dev" for the development build
 # "-ptb" for the public test build
 # "" for the release build
-   BUILD_TEST = "-dev-"$${GIT_SHA1}
+    !equals(SOURCE_DIRTY, "FALSE") {
+        BUILD = -dev-$${GIT_SHA1}-MODIFIED
+    } else {
+        BUILD = -dev-$${GIT_SHA1}
+    }
 } else {
-   BUILD_TEST = $${GIT_SHA1}
+    !equals(SOURCE_DIRTY, "FALSE") {
+        BUILD = $${BUILD}-$${GIT_SHA1}-MODIFIED
+    } else {
+        BUILD = $${BUILD}-$${GIT_SHA1}
+    }
 }
-write_file( app-build.txt, BUILD_TEST )
+write_file( app-build.txt, BUILD )
 
 # As the above also modifies the splash screen image (so developers get reminded
 # what they are working with!) Packagers (e.g. for Linux distributions) will
@@ -1552,26 +1569,34 @@ macx {
 win32 {
     # set the Windows binary icon, a proper .ico file will contains several
     # images/layers in specific formats and is used in MORE than one way!
-    contains(BUILD, "-ptb.+") {
+    contains( BUILD, "-ptb.+") {
+        # Product name also determines the Windows Start Menu shortcut name
+        QMAKE_TARGET_PRODUCT = "Mudlet PTB"
         RC_ICONS = icons/mudlet_ptb.ico
     } else {
-        contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
-            RC_ICONS = icons/mudlet_dev.ico
+        QMAKE_TARGET_PRODUCT = "Mudlet"
+        contains( DEFINES, INCLUDE_VARIABLE_SPLASH_SCREEN ) {
+            isEmpty( BUILD ) {
+                # This condition cannot be set normally - it is only achievable
+                # by someone hacking the project files during the production of
+                # a release as we have previously overridden an empty/non-
+                # existant MUDLET_BUILD_VERSION environmental variable!
+                # So a packager for a Linux or other distribution will probably
+                # want to define WITH_VARIABLE_SPLASH_SCREEN to NO to avoid
+                # their builds looking like a development one:
+                RC_ICONS = icons/mudlet.ico
+            } else {
+                RC_ICONS = icons/mudlet_dev.ico
+            }
         } else {
             RC_ICONS = icons/mudlet.ico
         }
     }
 
+
     # specify some windows information about the binary
     QMAKE_TARGET_COMPANY = "Mudlet makers"
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
-
-    # Product name determines the Windows Start Menu shortcut name
-    contains(BUILD, "-ptb.+") {
-        QMAKE_TARGET_PRODUCT = "Mudlet PTB"
-    } else {
-        QMAKE_TARGET_PRODUCT = "Mudlet"
-    }
 }
 
 # This is a list of files that we want to show up in the Qt Creator IDE that are

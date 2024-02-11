@@ -93,6 +93,23 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
+# Check to see if the source has been modified from that in the commit:
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} status --porcelain -uno
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE SOURCE_DIRTY_OUTPUT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Report the Git SHA1 found - and if the source does not match it (has been modified):
+if(SOURCE_DIRTY_OUTPUT STREQUAL "")
+    set(SOURCE_DIRTY FALSE)
+    message(STATUS "Git SHA1: ${GIT_SHA1}")
+else()
+    set(SOURCE_DIRTY TRUE)
+    message(STATUS "Git SHA1: ${GIT_SHA1} (MODIFIED)")
+endif()
+
 # APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
@@ -106,13 +123,20 @@ execute_process(
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
 set(APP_VERSION 4.17.2)
-if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
-                                         STREQUAL "")
-  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "$ENV{MUDLET_VERSION_BUILD}")
-  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
+if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
+    if(SOURCE_DIRTY)
+        file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}-MODIFIED")
+    else()
+        file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+    endif()
+    set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
 else()
-  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev")
-  set(APP_BUILD "-dev")
+    if(SOURCE_DIRTY)
+        file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev-${GIT_SHA1}-MODIFIED")
+    else()
+        file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev-${GIT_SHA1}")
+    endif()
+    set(APP_BUILD "-dev")
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})

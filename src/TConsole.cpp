@@ -1826,7 +1826,9 @@ void TConsole::echo(const QString& msg)
 
 void TConsole::copy()
 {
-    mpHost->mpConsole->mClipboard = buffer.copy(P_begin, P_end);
+    if (!(P_begin.isNull() && P_end.isNull())) {
+        mpHost->mpConsole->mClipboard = buffer.copy(P_begin, P_end);
+    }
 }
 
 void TConsole::cut()

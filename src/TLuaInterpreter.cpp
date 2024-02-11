@@ -12164,10 +12164,10 @@ int TLuaInterpreter::getCustomEnvColorTable(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletVersion
 int TLuaInterpreter::getMudletVersion(lua_State* L)
 {
+    // This variable can't be const as we append to it in some cases:
     QByteArray version = QByteArray(APP_VERSION).trimmed();
-    QByteArray const build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
-
-    QList<QByteArray> const versionData = version.split('.');
+    const QByteArray build = mudlet::self()->cmAppBuild.toUtf8();
+    const QList<QByteArray> versionData = version.split('.');
     if (versionData.size() != 3) {
         qWarning() << "TLuaInterpreter::getMudletVersion(): ERROR: Version data not correctly set on compilation,\n"
                    << "   is the VERSION value in the project file present?";
@@ -12245,7 +12245,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
         lua_pushinteger(L, revision);
         lua_settable(L, -3);
         lua_pushstring(L, "build");
-        lua_pushstring(L, mudlet::self()->mAppBuild.trimmed().toUtf8().constData());
+        lua_pushstring(L, build);
         lua_settable(L, -3);
     } else {
         lua_pushstring(L,

@@ -68,7 +68,6 @@
 #include <QImage>
 #include <QJsonObject>
 #include <QJsonValue>
-#include <QNetworkDiskCache>
 #include <QMediaPlayer>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
@@ -106,7 +105,6 @@ namespace coreMacOS {
 
 using namespace std::chrono_literals;
 
-
 bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
 {
     if (event->type() == QEvent::Close) {
@@ -118,9 +116,9 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
     }
 }
 
-/*static*/ void mudlet::start()
+/*static*/ void mudlet::start(const QString& appBuild)
 {
-    smpSelf = new mudlet;
+    smpSelf = new mudlet(appBuild);
 }
 
 /*static*/ mudlet* mudlet::self()
@@ -128,21 +126,15 @@ bool TConsoleMonitor::eventFilter(QObject* obj, QEvent* event)
     return smpSelf;
 }
 
-mudlet::mudlet()
+mudlet::mudlet(QString appBuild)
 : QMainWindow()
+, cmReleaseVersion(appBuild.isEmpty())
+, cmPublicTestVersion(appBuild.startsWith(qsl("-ptb")))
+, cmDevelopmentVersion(!(cmReleaseVersion||cmPublicTestVersion))
+, cmVersion(qsl("Mudlet " APP_VERSION "%1").arg(appBuild))
+, cmAppBuild(appBuild)
 {
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
-
-    QFile gitShaFile(":/app-build.txt");
-    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
-    QString gitSha = QString::fromUtf8(gitShaFile.readAll());
-
-    mAppBuild = gitSha;
-    releaseVersion = mAppBuild.isEmpty();
-    publicTestVersion = mAppBuild.startsWith("-ptb");
-    developmentVersion = !releaseVersion && !publicTestVersion;
-
-    scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
 
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
@@ -194,12 +186,12 @@ mudlet::mudlet()
 
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    setWindowTitle(scmVersion);
-    if (releaseVersion) {
+    setWindowTitle(cmVersion);
+    if (cmReleaseVersion) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet.png")));
-    } else if (publicTestVersion) {
+    } else if (cmPublicTestVersion) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet_ptb_256px.png")));
-    } else { // developmentVersion
+    } else { // scmDevelopmentVersion
         setWindowIcon(QIcon(qsl(":/icons/mudlet_dev_256px.png")));
     }
     mpMainToolBar = new QToolBar(this);
@@ -452,7 +444,7 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
 #if defined(INCLUDE_UPDATER)
-    if (publicTestVersion) {
+    if (cmPublicTestVersion) {
         mpActionReportIssue = new QAction(tr("Report issue"), this);
         const QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
@@ -544,13 +536,13 @@ mudlet::mudlet()
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
     // release OR a public test version:
-    dactionUpdate->setVisible(releaseVersion || publicTestVersion);
+    dactionUpdate->setVisible(cmReleaseVersion || cmPublicTestVersion);
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
     // going to want the updater to change things for them) AND only for a
     // public test version:
-    if (publicTestVersion) {
+    if (cmPublicTestVersion) {
         dactionReportIssue->setVisible(true);
         connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_reportIssue);
         connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_reportIssue);
@@ -633,7 +625,7 @@ mudlet::mudlet()
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings, publicTestVersion);
+    pUpdater = new Updater(this, mpSettings, cmPublicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
 #if defined(Q_OS_MACOS)
@@ -1528,8 +1520,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     // Potential to be translated in the future if the need arises, with the following disambiguation:
     // "Title for the main window when a profile is loaded or active, %1 is the name "
     // "of the profile and %2 is the Mudlet version string."
-    setWindowTitle(qsl("%1 - %2")
-                           .arg(pH->getName(), scmVersion));
+    setWindowTitle(qsl("%1 - %2").arg(pH->getName(), cmVersion));
 
     mpSplitter_profileContainer->addWidget(pConsole);
     if (mpCurrentActiveHost && !mMultiView) {
@@ -3183,7 +3174,7 @@ mudlet::~mudlet()
             }
         }
     }
-    mudlet::smpSelf = nullptr;
+    mudlet::smpSelf.clear();
 }
 
 void mudlet::slot_toggleFullScreenView()
@@ -3708,7 +3699,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (releaseVersion || publicTestVersion) {
+    if (cmReleaseVersion || cmPublicTestVersion) {
         // Only try and create an updater (which checks for updates online) if
         // this is a release/public test version:
         pUpdater->checkUpdatesOnStart();
@@ -4628,7 +4619,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 {
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, cmAppBuild).toUtf8().constData()));
 #if !defined(QT_NO_SSL)
     if (url.scheme() == qsl("https")) {
         QSslConfiguration const config(QSslConfiguration::defaultConfiguration());
@@ -4727,8 +4718,7 @@ void mudlet::activateProfile(Host* pHost)
     // Potential to be translated in the future if the need arises, with the following disambiguation:
     // "Title for the main window when a profile is loaded or active, %1 is the name "
     // "of the profile and %2 is the Mudlet version string."
-    setWindowTitle(qsl("%1 - %2")
-                           .arg(mpCurrentActiveHost->getName(), scmVersion));
+    setWindowTitle(qsl("%1 - %2").arg(mpCurrentActiveHost->getName(), cmVersion));
 
     dactionInputLine->setChecked(mpCurrentActiveHost->getCompactInputLine());
 

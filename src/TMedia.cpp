@@ -651,7 +651,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
         return;
     } else {
         QNetworkRequest request = QNetworkRequest(fileUrl);
-        request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
+        request.setRawHeader(QByteArray("User-Agent"), qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->cmAppBuild).toUtf8());
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 #if !defined(QT_NO_SSL)
         if (fileUrl.scheme() == qsl("https")) {

@@ -38,7 +38,7 @@
 
 dlgIRC::dlgIRC(Host* pHost)
 : mpHost(pHost)
-, mRealName(mudlet::self()->scmVersion)
+, mRealName(mudlet::self()->cmVersion)
 {
     setupUi(this);
     setWindowIcon(QIcon(qsl(":/icons/mudlet_irc.png")));

@@ -129,7 +129,7 @@ class mudlet : public QMainWindow, public Ui::main_window
 
 public:
     Q_DISABLE_COPY(mudlet)
-    mudlet();
+    mudlet(QString appBuild);
     ~mudlet() override;
 
     enum Appearance {
@@ -237,20 +237,20 @@ public:
     static bool loadLuaFunctionList();
     static std::string replaceString(std::string subject, const std::string& search, const std::string& replace);
     static mudlet* self();
-    static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
     // This method allows better debugging when mudlet::self() is called inappropriately.
-    static void start();
+    static void start(const QString& appBuild);
     static bool unzip(const QString& archivePath, const QString& destination, const QDir& tmpDir);
     static QImage getSplashScreen(bool releaseVersion, bool testVersion);
 
 
-    QString mAppBuild;
     // final, official release
-    bool releaseVersion;
+    const bool cmReleaseVersion = false;
     // unofficial "nightly" build - still a type of a release
-    bool publicTestVersion;
+    const bool cmPublicTestVersion = false;
     // used by developers in everyday coding:
-    bool developmentVersion;
+    const bool cmDevelopmentVersion = false;
+    const QString cmVersion;
+    const QString cmAppBuild;
     // "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
     // (1000ths, range 0 to 999) that is used as a "version" attribute number when
     // writing the <MudletPackage ...> element of all (but maps if I ever get around
@@ -292,7 +292,6 @@ public:
     // translations done high enough will get a gold star to hide the last few percent
     // as well as encourage translators to maintain it
     static const int scmTranslationGoldStar = 95;
-    QString scmVersion;
     // These have to be "inline" to satisfy the ODR (One Definition Rule):
     inline static bool smDebugMode = false;
     inline static bool smFirstLaunch = false;
@@ -408,6 +407,8 @@ public:
     bool muteMSP() const { return mMuteMSP; }
     bool mediaMuted() const { return mMuteAPI && mMuteMCMP && mMuteMSP; }
     bool mediaUnmuted() const { return !mMuteAPI && !mMuteMCMP && !mMuteMSP; }
+    void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
+
 
     Appearance mAppearance = Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)
@@ -606,7 +607,8 @@ private:
     void reshowRequiredMainConsoles();
     void toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* menuAction, TMediaData::MediaProtocol protocol, const QString& unmuteText, const QString& muteText);
 
-    inline static QPointer<mudlet> smpSelf = nullptr;
+
+    inline static QPointer<mudlet> smpSelf;
 
 
     bool mDarkMode = false;

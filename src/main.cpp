@@ -230,10 +230,11 @@ int main(int argc, char* argv[])
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
     QString appBuild = QString::fromUtf8(gitShaFile.readAll());
+    appBuild = appBuild.trimmed();
+    gitShaFile.close();
 
     const bool releaseVersion = appBuild.isEmpty();
-    const bool publicTestVersion = appBuild.startsWith("-ptb");
-    const bool developmentVersion = !releaseVersion && !publicTestVersion;
+    const bool publicTestVersion = appBuild.startsWith(qsl("-ptb"));
 
     if (publicTestVersion) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));
@@ -243,7 +244,7 @@ int main(int argc, char* argv[])
     if (releaseVersion) {
         app->setApplicationVersion(APP_VERSION);
     } else {
-        app->setApplicationVersion(QString(APP_VERSION) + appBuild);
+        app->setApplicationVersion(qsl(APP_VERSION).append(appBuild));
     }
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
@@ -409,9 +410,8 @@ int main(int argc, char* argv[])
             const bool successful = instanceCoordinator->installPackagesRemotely();
             if (successful) {
                 return 0;
-            } else {
-                return 1;
             }
+            return 1;
         }
     }
 
@@ -433,7 +433,7 @@ int main(int argc, char* argv[])
     if (showSplash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION + appBuild));
+        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1%2").arg(APP_VERSION, appBuild));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -614,7 +614,7 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    mudlet::start();
+    mudlet::start(appBuild);
 
 #if defined(Q_OS_WIN)
     // Associate mudlet with .mpackage files

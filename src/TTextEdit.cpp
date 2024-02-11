@@ -1580,7 +1580,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // switches away from the ASCII default
     text.append("  <meta name='generator' content='Mudlet MUD Client version: ");
     text.append(APP_VERSION);
-    text.append(mudlet::self()->mAppBuild);
+    text.append(mudlet::self()->cmAppBuild);
     text.append("'>\n");
     // Nice to identify what made the file!
     text.append("  <title>");

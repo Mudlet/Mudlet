@@ -26,7 +26,7 @@
 
 QString TMxpMudlet::getVersion()
 {
-    return mudlet::self()->scmVersion;
+    return mudlet::self()->cmVersion;
 }
 
 void TMxpMudlet::sendToServer(QString& str)

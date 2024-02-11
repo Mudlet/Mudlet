@@ -813,7 +813,7 @@ pugi::xml_node XMLexport::writeXmlHeader()
     mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
 
     auto mudletPackage = mExportDoc.append_child("MudletPackage");
-    mudletPackage.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
+    mudletPackage.append_attribute("version") = mudlet::scmMudletXmlDefaultVersion.toUtf8().constData();
 
     return mudletPackage;
 }
