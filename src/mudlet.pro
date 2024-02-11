@@ -629,6 +629,7 @@ SOURCES += \
     TMainConsole.cpp \
     TMap.cpp \
     TMapLabel.cpp \
+    TLuaInterpreterDiscord.cpp \
     TMedia.cpp \
     TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
