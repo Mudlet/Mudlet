@@ -76,6 +76,78 @@
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
+#define WINDOW_NAME(ARG_L, ARG_pos)                                                                      \
+    ({                                                                                                   \
+        int pos_ = (ARG_pos);                                                                            \
+        const char *res_;                                                                                \
+        if ((lua_gettop(ARG_L) < pos_) || lua_isnil(ARG_L, pos_)) {                                      \
+            res_ = "";                                                                                   \
+        } else {                                                                                         \
+            if (!lua_isstring(ARG_L, pos_)) {                                                            \
+                lua_pushfstring(ARG_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_)); \
+                return lua_error(ARG_L);                                                                 \
+            }                                                                                            \
+            res_ = lua_tostring(ARG_L, pos_);                                                            \
+        }                                                                                                \
+        res_;                                                                                            \
+    })
+
+#define CMDLINE_NAME(ARG_L, ARG_pos)                                                                 \
+    ({                                                                                               \
+        int pos_ = (ARG_pos);                                                                        \
+        if (!lua_isstring(ARG_L, pos_)) {                                                            \
+            lua_pushfstring(ARG_L, bad_cmdline_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_));\
+            return lua_error(ARG_L);                                                                 \
+        }                                                                                            \
+        lua_tostring(ARG_L, pos_);                                                                   \
+    })
+
+#define CONSOLE_NIL(ARG_L, ARG_name)                                                           \
+    ({                                                                                         \
+        auto name_ = (ARG_name);                                                               \
+        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
+        console_;                                                                              \
+    })
+
+#define CONSOLE(ARG_L, ARG_name)                                                               \
+    ({                                                                                         \
+        auto name_ = (ARG_name);                                                               \
+        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
+        if (!console_) {                                                                       \
+            lua_pushnil(ARG_L);                                                                \
+            lua_pushfstring(ARG_L, bad_window_value, name_.toUtf8().constData());              \
+            return 2;                                                                          \
+        }                                                                                      \
+        console_;                                                                              \
+    })
+
+#define COMMANDLINE(ARG_L, ARG_name)                                                           \
+    ({                                                                                         \
+        const QString& name_ = (ARG_name);                                                     \
+        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
+        auto cmdLine_ = isMain(name_) ? &*console_->mpCommandLine                              \
+                                    : console_->mSubCommandLineMap.value(name_);               \
+        if (!cmdLine_) {                                                                       \
+            lua_pushnil(ARG_L);                                                                \
+            lua_pushfstring(ARG_L, bad_cmdline_value, name_.toUtf8().constData());             \
+            return 2;                                                                          \
+        }                                                                                      \
+        cmdLine_;                                                                              \
+    })
+
+#define LABEL(ARG_L, ARG_name)                                                                 \
+    ({                                                                                         \
+        const QString& name_ = (ARG_name);                                                     \
+        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
+        auto label_ = console_->mLabelMap.value(name_);                                        \
+        if (!label_) {                                                                         \
+            lua_pushnil(ARG_L);                                                                \
+            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());               \
+            return 2;                                                                          \
+        }                                                                                      \
+        label_;                                                                                \
+    })
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineSuggestion
 int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
 {
