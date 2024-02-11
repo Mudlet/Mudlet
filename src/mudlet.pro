@@ -1631,7 +1631,6 @@ OTHER_FILES += \
     ../CI/qt-silent-install.qs \
     ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
-    ../CI/travis.compile.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.after_success.sh \
     ../CI/travis.linux.before_install.sh \
