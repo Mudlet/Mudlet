@@ -8205,6 +8205,27 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     return 2;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#unsetRoomCharColor
+int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
+{
+    const int id = getVerifiedInt(L, __func__, 1, "roomID");
+
+    const Host& host = getHostFromLua(L);
+    TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+
+    // Reset it to the default (and invalid) QColor:
+    pR->mSymbolColor = {};
+    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
+        host.mpMap->mpMapper->mp2dMap->update();
+    }
+    host.mpMap->setUnsaved(__func__);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFgColor
 int TLuaInterpreter::setFgColor(lua_State* L)
 {
