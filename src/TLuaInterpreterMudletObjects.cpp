@@ -82,6 +82,18 @@ static const char *bad_window_value = "window \"%s\" not found";
 static const char *bad_cmdline_value = "command line \"%s\" not found";
 static const char *bad_label_value = "label \"%s\" not found";
 
+// No documentation available in wiki - internal function
+static bool isMain(const QString& name)
+{
+    if (name.isEmpty()) {
+        return true;
+    }
+    if (!name.compare(qsl("main"))) {
+        return true;
+    }
+    return false;
+}
+
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                      \
     ({                                                                                                   \
         int pos_ = (ARG_pos);                                                                            \
