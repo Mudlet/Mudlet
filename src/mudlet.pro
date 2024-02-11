@@ -630,6 +630,8 @@ SOURCES += \
     TMap.cpp \
     TMapLabel.cpp \
     TMedia.cpp \
+    TMediaPlaylist.cpp \
+    TMediaPlaylist_p.cpp \
     TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
@@ -651,6 +653,8 @@ SOURCES += \
     TMxpTagProcessor.cpp \
     TMxpVersionTagHandler.cpp \
     TMxpVarTagHandler.cpp \
+    TPlaylistFileParser.cpp \
+    TPlaylistModel.cpp
     TriggerUnit.cpp \
     TRoom.cpp \
     TRoomDB.cpp \
@@ -756,6 +760,8 @@ HEADERS += \
     TMatchState.h \
     TMedia.h \
     TMediaData.h \
+    TMediaPlaylist.h \
+    TMediaPlaylist_p.h \
     TMxpBRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
@@ -779,6 +785,8 @@ HEADERS += \
     TMxpSupportTagHandler.h \
     TMxpVarTagHandler.h \
     TMxpVersionTagHandler.h \
+    TPlaylistFileParser.h \
+    TPlaylistModel.h \
     Tree.h \
     TriggerUnit.h \
     TRoom.h \

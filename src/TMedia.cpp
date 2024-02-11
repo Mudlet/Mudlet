@@ -1007,7 +1007,6 @@ void TMedia::matchMediaKeyAndStopMediaVariants(TMediaData& mediaData, const QStr
 
 void TMedia::play(TMediaData& mediaData)
 {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
         return;
     }
@@ -1043,11 +1042,19 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     auto playlist = !sameMusicIsPlaying ? new QMediaPlaylist : (pPlayer.getMediaPlayer()->playlist() != nullptr ? pPlayer.getMediaPlayer()->playlist() : new QMediaPlaylist);
+#else
+    auto playlist = !sameMusicIsPlaying ? new TMediaPlaylist : (pPlayer.playlist() != nullptr ? pPlayer.playlist() : new TMediaPlaylist);
+#endif
     QString absolutePathFileName;
 
     if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         playlist->setPlaybackMode(QMediaPlaylist::Sequential);
+#else
+        playlist->setPlaybackMode(TMediaPlaylist::Sequential);
+#endif
 
         if (sameMusicIsPlaying) {
             if (mediaData.getMediaContinue() == TMediaData::MediaContinueRestart) {
@@ -1080,10 +1087,18 @@ void TMedia::play(TMediaData& mediaData)
         }
 
         QUrl const mediaSource = QUrl::fromLocalFile(absolutePathFileName);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         pPlayer.getMediaPlayer()->setMedia(mediaSource);
+#else
+        pPlayer.getMediaPlayer()->setSource(mediaSource);
+#endif
     } else {
         if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             playlist->setPlaybackMode(QMediaPlaylist::Loop);
+#else
+            playlist->setPlaybackMode(TMediaPlaylist::Loop);
+#endif
 
             if (sameMusicIsPlaying) {
                 if (mediaData.getMediaContinue() == TMediaData::MediaContinueRestart) {
@@ -1113,7 +1128,11 @@ void TMedia::play(TMediaData& mediaData)
 
             playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
         } else {
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             playlist->setPlaybackMode(QMediaPlaylist::Sequential);
+#else
+            playlist->setPlaybackMode(TMediaPlaylist::Sequential);
+#endif
 
             if (sameMusicIsPlaying) {
                 if (mediaData.getMediaContinue() == TMediaData::MediaContinueRestart) {
@@ -1157,37 +1176,51 @@ void TMedia::play(TMediaData& mediaData)
         }
 
         playlist->setCurrentIndex(1);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         pPlayer.getMediaPlayer()->setPlaylist(playlist);
+#else
+        //disconnect(pPlayer.playlist(), &TMediaPlaylist::currentIndexChanged, nullptr, nullptr);
+        pPlayer.setPlaylist(playlist);
+        //connect(pPlayer.playlist(), &TMediaPlaylist::currentIndexChanged, pPlayer, &TMediaPlayer::playlistPositionChanged);
+#endif
     }
 
     // Set volume, start and play media
-    pPlayer.getMediaPlayer()->setVolume(mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.getMediaVolume());
+    pPlayer.setVolume(mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.getMediaVolume());
     pPlayer.getMediaPlayer()->setPosition(mediaData.getMediaStart());
-
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     if (mediaData.getMediaFadeIn() != TMediaData::MediaFadeNotSet || mediaData.getMediaFadeOut() != TMediaData::MediaFadeNotSet) {
         pPlayer.getMediaPlayer()->setNotifyInterval(50); // Smoother volume changes with the tighter interval (default = 1000).
     }
-
+#endif
     // Set whether or not we should be muted
     switch (mediaData.getMediaProtocol()) {
         case TMediaData::MediaProtocolAPI:
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteAPI());
+#else
+            pPlayer.getMediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteAPI());
+#endif
             break;
         case TMediaData::MediaProtocolGMCP:
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMCMP());
+#else
+            pPlayer.getMediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteAPI());
+#endif
             break;
         case TMediaData::MediaProtocolMSP:
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMSP());
+#else
+            pPlayer.getMediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteAPI());
+#endif
             break;
     }
 
     pPlayer.getMediaPlayer()->play();
 
     updateMediaPlayerList(pPlayer);
-#else
-    Q_UNUSED(mediaData)
-#warning QMediaPlaylist was removed in Qt6 - it has not been reimplemented yet!
-#endif
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#type:_sound

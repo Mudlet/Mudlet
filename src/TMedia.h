@@ -28,6 +28,9 @@
 #include "TEvent.h"
 #include "mudlet.h"
 #include "TMediaData.h"
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+#include "TMediaPlaylist.h"
+#endif
 
 #include "pre_guard.h"
 #include <QAudioOutput>
@@ -43,6 +46,7 @@ using QMediaPlayerPlaybackState = QMediaPlayer::PlaybackState;
 
 class TMediaPlayer
 {
+
 public:
     TMediaPlayer()
     : mMediaData()
@@ -54,7 +58,8 @@ public:
     , initialized(true)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-        mMediaPlayer->setAudioOutput(new QAudioOutput());
+        mMediaPlayer->setAudioOutput(new QAudioOutput(pHost));
+        mMediaPlaylist = new TMediaPlaylist();
 #endif
     }
     ~TMediaPlayer() = default;
@@ -62,6 +67,12 @@ public:
     TMediaData getMediaData() const { return mMediaData; }
     void setMediaData(TMediaData& mediaData) { mMediaData = mediaData; }
     QMediaPlayer* getMediaPlayer() const { return mMediaPlayer; }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    void setPlaylist(TMediaPlaylist* mediaPlaylist) {
+        mMediaPlaylist = mediaPlaylist;
+    }
+    TMediaPlaylist* playlist() const { return mMediaPlaylist; }
+#endif
     bool isInitialized() const { return initialized; }
     QMediaPlayerPlaybackState getPlaybackState() const {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -77,11 +88,19 @@ public:
         return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
 #endif
     }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    void playlistPositionChanged(int currentItem) {
+        mMediaPlayer->setSource(mMediaPlaylist->currentMedia());
+    }
+#endif
 
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer = nullptr;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    TMediaPlaylist *mMediaPlaylist = nullptr;
+#endif
     bool initialized = false;
 };
 

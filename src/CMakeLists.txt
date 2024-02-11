@@ -124,6 +124,8 @@ set(mudlet_SRCS
     TMapLabel.cpp
     TMainConsole.cpp
     TMedia.cpp
+    TMediaPlaylist.cpp
+    TMediaPlaylist_p.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
     TMxpFormattingTagsHandler.cpp
@@ -146,6 +148,8 @@ set(mudlet_SRCS
     TMxpTagProcessor.cpp
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
+    TPlaylistFileParser.cpp
+    TPlaylistModel.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
@@ -287,6 +291,8 @@ set(mudlet_HDRS
     TMapLabel.h
     TMatchState.h
     TMedia.h
+    TMediaPlaylist.h
+    TMediaPlaylist_p.h
     TMxpBRTagHandler.h
     TMxpClient.h
     TMxpColorTagHandler.h
@@ -311,6 +317,8 @@ set(mudlet_HDRS
     TMxpSupportTagHandler.cpp
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TPlaylistFileParser.h
+    TPlaylistModel.h
     Tree.h
     TriggerUnit.h
     TRoom.h
