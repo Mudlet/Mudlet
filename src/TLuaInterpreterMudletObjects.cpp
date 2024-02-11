@@ -76,6 +76,12 @@
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
+static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
+static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
+static const char *bad_window_value = "window \"%s\" not found";
+static const char *bad_cmdline_value = "command line \"%s\" not found";
+static const char *bad_label_value = "label \"%s\" not found";
+
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                      \
     ({                                                                                                   \
         int pos_ = (ARG_pos);                                                                            \
