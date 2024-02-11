@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -128,7 +128,7 @@ public:
     bool gotoRoom(int, int);
     bool serialize(QDataStream&, int saveVersion = 0);
     bool restore(QString location, bool downloadIfNotFound = true);
-    bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
+    bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
     QString connectExitStubByToId(const int fromRoomId, const int toRoomId);
@@ -179,7 +179,7 @@ public:
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
-    int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
+    qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
@@ -196,6 +196,9 @@ public:
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
     bool isUnsaved() const { return mUnsavedMap; }
+    void setDefaultAreaShown(bool);
+    bool getDefaultAreaShown() { return mShowDefaultArea; }
+
 
     TRoomDB* mpRoomDB = nullptr;
     QMap<int, int> mEnvColors;
@@ -208,8 +211,7 @@ public:
     bool m2DPanMode = false;
     bool mLeftDown = false;
     bool mRightDown = false;
-    float m2DPanXStart = 0.0f;
-    float m2DPanYStart = 0.0f;
+    QPointF m2DPanStart;
     int mTargetID = 0;
     QList<int> mPathList;
     QList<QString> mDirList;
@@ -274,6 +276,12 @@ public:
      *   that prefixed a '1' for a locked exit or '0' for an unlocked one onto the
      *   special exit name (stored in the VALUE) in the old format.
      * It has been tested and *seems* to work. SlySven - 2020/12
+     * * The 2D Map labels are now stored in each TArea instead of in the TMap
+     *   this makes it easier to delete them and their area. SlySven - 2021/01
+     * * The 2D Map zoom now persists for each area and that value will be stored
+     *   directly into the TArea class serialization - for lower map versions it
+     *   is placed into a "system.fallback_map2DZoom" value in the Area userdata.
+     *   SlySven - 2023/03
      */
     const int mMaxVersion = 20;
 
@@ -366,15 +374,18 @@ private:
     QProgressDialog* mpProgressDialog = nullptr;
     // Using during updates of text in progress dialog partially from other
     // classes:
-    int mProgressDialogAreasTotal = 0;
-    int mProgressDialogAreasCount = 0;
-    int mProgressDialogRoomsTotal = 0;
-    int mProgressDialogRoomsCount = 0;
-    int mProgressDialogLabelsTotal = 0;
-    int mProgressDialogLabelsCount = 0;
+    qsizetype mProgressDialogAreasTotal = 0;
+    qsizetype mProgressDialogAreasCount = 0;
+    qsizetype mProgressDialogRoomsTotal = 0;
+    qsizetype mProgressDialogRoomsCount = 0;
+    qsizetype mProgressDialogLabelsTotal = 0;
+    qsizetype mProgressDialogLabelsCount = 0;
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    // Used to hide the default area from casual viewing for those MUDs that
+    // want to script a "fog-of-war" system by hiding rooms in the -1 area:
+    bool mShowDefaultArea = true;
 };
 
 #endif // MUDLET_TMAP_H

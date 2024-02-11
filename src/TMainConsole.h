@@ -71,7 +71,7 @@ public:
     std::pair<bool, QString> createCommandLine(const QString &windowname, const QString &name, int, int, int, int);
     QSize getUserWindowSize(const QString& windowname) const;
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
-    void setLabelStyleSheet(std::string& buf, std::string& sh);
+    void setLabelStyleSheet(std::string& buf, std::string& stylesheet);
     std::optional<QString> getLabelStyleSheet(const QString& name) const;
     std::optional<QSize> getLabelSizeHint(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);

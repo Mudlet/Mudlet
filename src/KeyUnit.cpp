@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2020, 2022 by Stephen Lyons                       *
+ *   Copyright (C) 2018, 2020, 2022-2023 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -108,17 +108,37 @@ void KeyUnit::reenableAllTriggers()
 
 TKey* KeyUnit::findFirstKey(QString& name)
 {
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     if (it != mLookupTable.cend() && it.key() == name) {
         return it.value();
     }
     return nullptr;
 }
 
+std::vector<int> KeyUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
+{
+    std::vector<int> ids;
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : qAsConst(mKeyMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    } else {
+        for (auto& item : qAsConst(mKeyMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    }
+    return ids;
+}
+
 bool KeyUnit::enableKey(const QString& name)
 {
     bool found = false;
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TKey* pT = it.value();
         // Unlike the TTriggerUnit version of this code we directly set
@@ -135,7 +155,7 @@ bool KeyUnit::enableKey(const QString& name)
 bool KeyUnit::disableKey(const QString& name)
 {
     bool found = false;
-    QMap<QString, TKey*>::const_iterator it = mLookupTable.constFind(name);
+    auto it = mLookupTable.constFind(name);
     while (it != mLookupTable.cend() && it.key() == name) {
         TKey* pT = it.value();
         // Unlike the TTriggerUnit version of this code we directly clear

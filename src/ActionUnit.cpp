@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2017, 2021, 2023 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -79,15 +80,24 @@ TAction* ActionUnit::findAction(const QString& name)
     return nullptr;
 }
 
-std::vector<TAction*> ActionUnit::findActionsByName(const QString& name)
+std::vector<int> ActionUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)
 {
-    std::vector<TAction*> actions;
-    for (auto action : qAsConst(mActionMap)) {
-        if (action->getName() == name) {
-            actions.push_back(action);
+    std::vector<int> ids;
+    const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (exactMatch) {
+        for (auto& item : qAsConst(mActionMap)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
+        }
+    } else {
+        for (auto& item : qAsConst(mActionMap)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
+                ids.push_back(item->getID());
+            }
         }
     }
-    return actions;
+    return ids;
 }
 
 void ActionUnit::addActionRootNode(TAction* pT, int parentPosition, int childPosition)
@@ -436,7 +446,9 @@ void ActionUnit::showToolBar(const QString& name)
         }
     }
     mudlet::self()->processEventLoopHack();
-    mpHost->setFocusOnHostMainConsole();
+    // If a toolbar is clicked on for a profile that is not the "current"
+    // one, this will switch the focus to THAT profile:
+    mudlet::self()->activateProfile(mpHost);
 }
 
 void ActionUnit::hideToolBar(const QString& name)
@@ -450,70 +462,70 @@ void ActionUnit::hideToolBar(const QString& name)
     mudlet::self()->processEventLoopHack();
 }
 
-void ActionUnit::constructToolbar(TAction* pA, TToolBar* pTB)
+void ActionUnit::constructToolbar(TAction* pAction, TToolBar* pToolBar)
 {
-    if (!pA->isDataChanged()) {
+    if (!pAction->isDataChanged()) {
         return;
     }
 
-    pTB->clear();
-    if (pA->mLocation != 4) {
+    pToolBar->clear();
+    if (pAction->mLocation != 4) {
         // EasyButtonBars are handled differently from ToolBars, and
         // if we get here then the TAction has just been changed to be one of
         // those; we might still have a TToolBar associated with the
         // (owner) TAction and if so we need to dispose of it:
-        if (pA->mpToolBar) {
+        if (pAction->mpToolBar) {
             // We need to remove the TToolBar from the list of TToolBars
-            mToolBarList.remove(pA->mpToolBar);
+            mToolBarList.remove(pAction->mpToolBar);
             // before we get rid of it:
-            pA->mpToolBar->deleteLater();
-            pA->mpToolBar = nullptr;
+            pAction->mpToolBar->deleteLater();
+            pAction->mpToolBar = nullptr;
         }
     }
 
-    if (!pA->isActive()) {
-        pTB->setFloating(false);
-        mudlet::self()->removeDockWidget(pTB);
+    if (!pAction->isActive()) {
+        pToolBar->setFloating(false);
+        mudlet::self()->removeDockWidget(pToolBar);
         return;
     }
 
-    if (pA->mLocation == 4) {
-        pA->expandToolbar(pTB);
-        pTB->setTitleBarWidget(nullptr);
+    if (pAction->mLocation == 4) {
+        pAction->expandToolbar(pToolBar);
+        pToolBar->setTitleBarWidget(nullptr);
     }
 
-    pTB->finalize();
+    pToolBar->finalize();
 
-    if (pA->mOrientation == 0) {
-        pTB->setHorizontalOrientation();
+    if (pAction->mOrientation == 0) {
+        pToolBar->setHorizontalOrientation();
     } else {
-        pTB->setVerticalOrientation();
+        pToolBar->setVerticalOrientation();
     }
 
-    pTB->setTitleBarWidget(nullptr);
-    pTB->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-    if (pA->mLocation == 4) {
-        if (pA->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
-            qWarning() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pA->getName() << "\"), for this toolbar forcing it to the Left one!";
+    pToolBar->setTitleBarWidget(nullptr);
+    pToolBar->setFeatures(QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
+    if (pAction->mLocation == 4) {
+        if (pAction->mToolbarLastDockArea == Qt::NoDockWidgetArea) {
+            qWarning() << "ActionUnit::constructToolbar(TAction*, TToolBar*) WARNING - no last dockarea was set for the TAction (\"" << pAction->getName() << "\"), for this toolbar forcing it to the Left one!";
         }
-        mudlet::self()->addDockWidget(((pA->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pA->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pTB);
-        if (pA->mToolbarLastFloatingState) {
-            pTB->setFloating(true);
-            QPoint pos = QPoint(pA->mPosX, pA->mPosY);
-            pTB->show();
-            pTB->move(pos);
+        mudlet::self()->addDockWidget(((pAction->mToolbarLastDockArea != Qt::NoDockWidgetArea) ? pAction->mToolbarLastDockArea : Qt::LeftDockWidgetArea), pToolBar);
+        if (pAction->mToolbarLastFloatingState) {
+            pToolBar->setFloating(true);
+            const QPoint pos = QPoint(pAction->mPosX, pAction->mPosY);
+            pToolBar->show();
+            pToolBar->move(pos);
         } else {
-            pTB->setFloating(false);
-            pTB->show();
+            pToolBar->setFloating(false);
+            pToolBar->show();
         }
-        pTB->mpTAction = pA;
-        pTB->recordMove();
+        pToolBar->mpTAction = pAction;
+        pToolBar->recordMove();
     } else {
-        pTB->show();
+        pToolBar->show();
     }
 
-    pTB->setStyleSheet(pTB->mpTAction->css);
-    pA->setDataSaved();
+    pToolBar->setStyleSheet(pToolBar->mpTAction->css);
+    pAction->setDataSaved();
 }
 
 TAction* ActionUnit::getHeadAction(TEasyButtonBar* pT)

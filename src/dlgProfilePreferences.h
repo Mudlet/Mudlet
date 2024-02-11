@@ -167,8 +167,13 @@ private slots:
     void slot_changeControlCharacterHandling();
     void slot_enableDarkEditor(const QString&);
     void slot_toggleMapDeleteButton(const bool);
+    void slot_toggleAdvertiseScreenReader(const bool);
+    void slot_changeWrapAt();
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
+    void slot_hidePasswordMigrationLabel();
+    void slot_loadHistoryMap();
+
 
 signals:
     void signal_themeUpdateCompleted();
@@ -197,9 +202,11 @@ private:
     void disconnectHostRelatedControls();
     void generateMapGlyphDisplay();
     void generateDiscordTooltips();
-    void hidePasswordMigrationLabel();
     void setupPasswordsMigration();
     QString mapSaveLoadDirectory(Host* pHost);
+    void loadMap(const QString&);
+    void fillOutMapHistory();
+
 
     int mFontSize = 10;
     QPointer<Host> mpHost;

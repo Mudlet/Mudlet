@@ -74,7 +74,7 @@ lessThan(QT_MAJOR_VERSION, 5)|if(lessThan(QT_MAJOR_VERSION,6):lessThan(QT_MINOR_
 msvc:QMAKE_CXXFLAGS += -MP
 
 # Mac specific flags.
-macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
+macx:QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
 
 # Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
 # from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
@@ -85,34 +85,45 @@ win32 {
 }
 
 QT += network uitools multimedia gui concurrent
-qtHaveModule(gamepad) {
-    QT += gamepad
-    !build_pass : message("Using Gamepad module")
-}
 qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
 }
+greaterThan(QT_MAJOR_VERSION, 5) {
+    QT += core5compat
+}
 
 TEMPLATE = app
+
+# Define a variable for the Git executable
+GIT_EXECUTABLE = git
+
+# Run the command to get the short SHA1 hash of the current HEAD
+GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
+
+# Use the result in your QMake project
+message("Git SHA1: " $$GIT_SHA1)
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.16.0
+VERSION = 4.17.2
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
 # variable to make identification of the used version simple
 # the qmake BUILD variable is NOT built-in
-BUILD = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD ) {
+BUILD_TEST = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD_TEST ) {
 # Possible values are:
 # "-dev" for the development build
 # "-ptb" for the public test build
 # "" for the release build
-   BUILD = "-dev"
+   BUILD_TEST = "-dev-"$${GIT_SHA1}
+} else {
+   BUILD_TEST = $${GIT_SHA1}
 }
+write_file( app-build.txt, BUILD_TEST )
 
 # As the above also modifies the splash screen image (so developers get reminded
 # what they are working with!) Packagers (e.g. for Linux distributions) will
@@ -248,7 +259,15 @@ isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
 # the map file gets requested and when such a request gets actioned (or
 # rejected because the profile is being loaded):
 # DEFINES+=DEBUG_MAPAUTOSAVE
-
+#
+# * Produce all the time the surprise that normally will only occur on the first
+# day of the fourth month of the Gregorian calendar year:
+# DEFINES+=DEBUG_EASTER_EGGS
+#
+# Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
+# commands for suboptions - change the value to 2 to get a bit more detail
+# about the size or nature of the command:
+DEFINES+=DEBUG_TELNET=1
 
 unix:!macx {
 # Distribution packagers would be using PREFIX = /usr but this is accepted
@@ -322,7 +341,7 @@ unix:!macx {
             -lhunspell-1.6
 
         INCLUDEPATH += \
-             "C:\\Libraries\\boost_1_77_0" \
+             "C:\\Libraries\\boost_1_83_0" \
              "$${MINGW_BASE_DIR_TEST}\\include" \
              "$${MINGW_BASE_DIR_TEST}\\lib\\include"
 
@@ -570,6 +589,9 @@ SOURCES += \
     EAction.cpp \
     exitstreewidget.cpp \
     FontManager.cpp \
+    FileOpenHandler.cpp \
+    GifTracker.cpp \
+    TrailingWhitespaceMarker.cpp \
     Host.cpp \
     HostManager.cpp \
     ircmessageformatter.cpp \
@@ -578,6 +600,7 @@ SOURCES += \
     main.cpp \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
+    MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
     ShortcutsManager.cpp \
@@ -685,6 +708,9 @@ HEADERS += \
     dlgVarsMainArea.h \
     EAction.h \
     exitstreewidget.h \
+    FileOpenHandler.h \
+    GifTracker.h \
+    TrailingWhitespaceMarker.h \
     Host.h \
     HostManager.h \
     ircmessageformatter.h \
@@ -692,6 +718,7 @@ HEADERS += \
     LuaInterface.h \
     mapInfoContributorManager.h \
     mudlet.h \
+    MudletInstanceCoordinator.h \
     MxpTag.h \
     pre_guard.h \
     post_guard.h \
@@ -828,6 +855,11 @@ FORMS += \
 RESOURCES += \
     mudlet.qrc \
     ../translations/translated/qm.qrc
+
+contains(DEFINES, "INCLUDE_VARIABLE_SPLASH_SCREEN") {
+    RESOURCES += \
+        additional_splash_screens.qrc
+}
 
 contains(DEFINES, INCLUDE_FONTS) {
     RESOURCES += \
@@ -967,7 +999,8 @@ LUA_GEYSER.files = \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUserWindow.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserUtil.lua \
     $${PWD}/mudlet-lua/lua/geyser/GeyserVBox.lua \
-    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua
+    $${PWD}/mudlet-lua/lua/geyser/GeyserWindow.lua \
+    $${PWD}/mudlet-lua/lua/geyser/GeyserButton.lua
 LUA_GEYSER.depends = mudlet
 
 LUA_TRANSLATIONS.files = \
@@ -1542,7 +1575,7 @@ win32 {
 }
 
 # This is a list of files that we want to show up in the Qt Creator IDE that are
-# not otherwise used by the project:
+# not otherwise used by the main project:
 OTHER_FILES += \
     ../.appveyor.yml \
     ../.crowdin.yml \
@@ -1567,7 +1600,9 @@ OTHER_FILES += \
     ../.github/workflows/codespell-analysis.yml \
     ../.github/workflows/dangerjs.yml \
     ../.github/workflows/generate-changelog.yml \
+    ../.github/workflows/generate-coder-attribution.yml \
     ../.github/workflows/link-ptbs-to-dblsqd.yml \
+    ../.github/workflows/performance-analysis.yml \
     ../.github/workflows/tag-pull-requests.yml \
     ../.github/workflows/update-3rdparty.yml \
     ../.github/workflows/update-autocompletion.yml \
@@ -1588,7 +1623,6 @@ OTHER_FILES += \
     ../CI/qt-silent-install.qs \
     ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
-    ../CI/travis.compile.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.after_success.sh \
     ../CI/travis.linux.before_install.sh \
@@ -1604,6 +1638,19 @@ OTHER_FILES += \
     ../docker/docker-compose.override.linux.yml \
     ../docker/docker-compose.yml \
     ../docker/Dockerfile \
+    ../test/CMakeLists.txt \
+    ../test/GUIConsoleTests.mpackage \
+    ../test/TEntityHandlerTest.cpp \
+    ../test/TEntityResolverTest.cpp \
+    ../test/TLinkStoreTest.cpp \
+    ../test/TLuaInterfaceTest.cpp \
+    ../test/TMxpCustomElementTagHandlerTest.cpp \
+    ../test/TMxpEntityTagHandlerTest.cpp \
+    ../test/TMxpFormattingTagsTest.cpp \
+    ../test/TMxpSendTagHandlerTest.cpp \
+    ../test/TMxpStubClient.h \
+    ../test/TMxpTagParserTest.cpp \
+    ../test/TMxpVersionTagTest.cpp \
     mac-deploy.sh \
     mudlet-lua/genDoc.sh \
     mudlet-lua/lua/ldoc.css
@@ -1715,6 +1762,7 @@ DISTFILES += \
     .clang-format \
     CF-loader.xml \
     CMakeLists.txt \
+    mg-loader.xml \
     mudlet-lua/lua/generic-mapper/generic_mapper.xml \
     mudlet-lua/lua/generic-mapper/versions.lua \
     mudlet-lua/tests/DB.lua \
