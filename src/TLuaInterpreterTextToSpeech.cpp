@@ -76,6 +76,91 @@
 #endif // QT_TEXTTOSPEECH_LIB
 #include "post_guard.h"
 
+#ifdef QT_TEXTTOSPEECH_LIB
+QPointer<QTextToSpeech> speechUnit;
+QVector<QString> speechQueue;
+bool bSpeechBuilt;
+bool bSpeechQueueing;
+int speechState = QTextToSpeech::State::Ready;
+QString speechCurrent;
+
+// BackendError was renamed to Error in Qt6
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::BackendError;
+#else
+static const QTextToSpeech::State TEXT_TO_SPEECH_ERROR_STATE = QTextToSpeech::State::Error;
+#endif
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::ttsBuild()
+{
+    if (bSpeechBuilt) {
+        return;
+    }
+
+    speechUnit = new QTextToSpeech();
+    bSpeechBuilt = true;
+    bSpeechQueueing = false;
+
+    connect(speechUnit, &QTextToSpeech::stateChanged, &TLuaInterpreter::ttsStateChanged);
+    return;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSkip
+int TLuaInterpreter::ttsSkip(lua_State* L)
+{
+    Q_UNUSED(L)
+    TLuaInterpreter::ttsBuild();
+
+    speechUnit->stop();
+
+    return 0;
+}
+
+// No documentation available in wiki - internal function
+void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
+{
+    if (state != speechState) {
+        speechState = state;
+        TEvent event {};
+        switch (state) {
+        case QTextToSpeech::State::Paused:
+            event.mArgumentList.append(QLatin1String("ttsSpeechPaused"));
+            break;
+        case QTextToSpeech::State::Speaking:
+            event.mArgumentList.append(QLatin1String("ttsSpeechStarted"));
+            break;
+        case TEXT_TO_SPEECH_ERROR_STATE:
+            event.mArgumentList.append(QLatin1String("ttsSpeechError"));
+            break;
+        case QTextToSpeech::State::Ready:
+            event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
+            break;
+        }
+        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+
+        if (state == QTextToSpeech::Speaking) {
+            event.mArgumentList.append(speechCurrent);
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        }
+
+        mudlet::self()->getHostManager().postInterHostEvent(NULL, event, true);
+    }
+
+    if (state != QTextToSpeech::State::Ready || speechQueue.empty()) {
+        bSpeechQueueing = false;
+        return;
+    }
+
+    QString textToSay;
+    textToSay = speechQueue.takeFirst();
+
+    speechUnit->say(textToSay);
+    speechCurrent = textToSay;
+
+    return;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsClearQueue
 int TLuaInterpreter::ttsClearQueue(lua_State* L)
 {
@@ -444,3 +529,5 @@ int TLuaInterpreter::ttsSetVoiceByName(lua_State* L)
     return 1;
 }
 
+
+#endif // QT_TEXTTOSPEECH_LIB
