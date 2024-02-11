@@ -1134,13 +1134,12 @@ void TTextEdit::expandSelectionToWords()
                 || mpHost->mDoubleClickIgnore.contains(currentChar)) {
                 break;
             }
-        } else {
-            break; // xind is out of bounds, break the loop
         }
     }
     mDragSelectionEnd.setX(xind - 1);
     mPB.setX(xind - 1);
 }
+
 
 
 void TTextEdit::expandSelectionToLine(int y)
