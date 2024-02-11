@@ -418,7 +418,7 @@ bool Updater::shouldShowChangelog()
     return false;
 #endif
 
-    if (mudlet::self(*)->cmDevelopmentVersion || !updateAutomatically()) {
+    if (mudlet::self()->cmDevelopmentVersion || !updateAutomatically()) {
         return false;
     }
 
