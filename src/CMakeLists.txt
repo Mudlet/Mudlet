@@ -117,6 +117,7 @@ set(mudlet_SRCS
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
+    TLuaInterpreterMudletObjects.cpp
     TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp

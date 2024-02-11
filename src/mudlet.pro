@@ -631,6 +631,7 @@ SOURCES += \
     TMapLabel.cpp \
     TMedia.cpp \
     TMxpBRTagHandler.cpp \
+    TLuaInterpreterMudletObjects.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
