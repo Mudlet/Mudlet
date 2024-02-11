@@ -126,6 +126,7 @@ set(mudlet_SRCS
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
+    TLuaInterpreterTextToSpeech.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
