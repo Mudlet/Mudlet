@@ -29,7 +29,6 @@
 
 #include "TLuaInterpreter.h"
 
-// TODO - optimise these includes
 #include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"
@@ -78,7 +77,6 @@
 #include "post_guard.h"
 
 // No documentation available in wiki - internal function
-// TODO fix duplication by moving out into a common TLuaInterpterterUtils.cpp
 static bool isMain(const QString& name)
 {
     if (name.isEmpty()) {
@@ -480,7 +478,6 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     const bool arrow = getVerifiedBool(L, __func__, 6, "end with arrow");
     const int lz = z.at(0);
     QList<QPointF> points;
-    // TODO: make provision for 3D custom lines (and store the z coordinates and allow them to vary)
     points.append(QPointF(x.at(0), y.at(0)));
     for (int i = 1, total = z.size(); i < total; ++i) {
         if (lz != z.at(i)) {
