@@ -94,6 +94,8 @@ set(mudlet_SRCS
     LuaInterface.cpp
     main.cpp
     mapInfoContributorManager.cpp
+    MMCPServer.cpp
+    MMCPClient.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     ShortcutsManager.cpp
@@ -250,6 +252,9 @@ set(mudlet_HDRS
     KeyUnit.h
     LuaInterface.h
     mapInfoContributorManager.h
+    MMCP.h
+    MMCPServer.h
+    MMCPClient.h
     mudlet.h
     MudletInstanceCoordinator.h
     post_guard.h
