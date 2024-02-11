@@ -129,7 +129,7 @@ class mudlet : public QMainWindow, public Ui::main_window
 
 public:
     Q_DISABLE_COPY(mudlet)
-    mudlet(QString appBuild);
+    explicit mudlet(QString appBuild);
     ~mudlet() override;
 
     enum Appearance {

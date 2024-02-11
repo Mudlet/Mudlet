@@ -130,7 +130,7 @@ mudlet::mudlet(QString appBuild)
 : QMainWindow()
 , cmReleaseVersion(appBuild.isEmpty())
 , cmPublicTestVersion(appBuild.startsWith(qsl("-ptb")))
-, cmDevelopmentVersion(!(cmReleaseVersion||cmPublicTestVersion))
+, cmDevelopmentVersion(!(cmReleaseVersion || cmPublicTestVersion))
 , cmVersion(qsl("Mudlet " APP_VERSION "%1").arg(appBuild))
 , cmAppBuild(appBuild)
 {
