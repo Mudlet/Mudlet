@@ -148,7 +148,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
       # sftp://
       Protocol = [WinSCP.Protocol]::Scp
       HostName = "mudlet.org"
-      UserName = "keneanung"
+      UserName = "vadi"
       SshPrivateKeyPath = "$Env:APPVEYOR_BUILD_FOLDER\CI\mudlet-deploy-key-windows.ppk"
       SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
     }
