@@ -348,6 +348,13 @@ jobs:
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
+    - name: (Windows) add ssh-agent for tag deployment
+      if: (runner.os == 'Windows') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
+      uses: webfactory/ssh-agent@v0.8.0
+      shell: powershell
+      with:
+        ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}        
+
     - name: (Linux/macOS) package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: ${{github.workspace}}/CI/travis.after_success.sh
@@ -362,6 +369,21 @@ jobs:
         MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
         AC_USERNAME: ${{secrets.APPLE_USERNAME}}
         AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
+
+    - name: (Windows) package Mudlet
+      if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
+      run: ..\..\CI\appveyor.after_success.ps1
+      env:
+        BUILD_FOLDER: ${{runner.workspace}}/b/ninja
+        RUNNER_OS: ${{runner.os}}
+        X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
+        DEPLOY: ${{matrix.deploy}}
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        MACOS_SIGNING_PASS: ${{secrets.MACOS_SIGNING_PASS}}
+        AC_USERNAME: ${{secrets.APPLE_USERNAME}}
+        AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}        
 
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v4
