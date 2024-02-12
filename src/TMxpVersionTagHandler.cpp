@@ -35,8 +35,10 @@ TMxpTagHandlerResult TMxpVersionTagHandler::handleStartTag(TMxpContext& ctx, TMx
     }
 
     // version can contain ' ' which would break MXP/xml syntax. Also, usually the actual
-    // version number follows the last space (if any), so we use this
+    // version number follows the last space (if any), so we use this:
     QString payload = scmVersionString.arg(version.section(' ', -1));
+
+    // Add the style, if it had been set
     if (!client.getStyle().isNull()) {
         payload.replace(qsl(">"), qsl(" STYLE=%1>").arg(client.getStyle()));
     }
