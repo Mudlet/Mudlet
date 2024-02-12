@@ -208,7 +208,6 @@ public:
     static int chatPing(lua_State*);
     static int chat(lua_State*);
     static int chatAll(lua_State*);
-    static int chatColor(lua_State*);
     static int sendIrc(lua_State*);
     static int getIrcNick(lua_State*);
     static int getIrcServer(lua_State*);

@@ -6,41 +6,14 @@
 
 #include <QMap>
 
-QString MMCPServer::getColorCode(const QString& colorName) {
-        static const QMap<QString, const char*> colorMap = {
-            {"reset", AnsiColors::RST}, {"bold", AnsiColors::BLD}, {"reverse", AnsiColors::REV},
-            {"black", AnsiColors::FBLK}, {"red", AnsiColors::FRED}, {"green", AnsiColors::FGRN},
-            {"yellow", AnsiColors::FYEL}, {"blue", AnsiColors::FBLU}, {"magenta", AnsiColors::FMAG},
-            {"cyan", AnsiColors::FCYN}, {"white", AnsiColors::FWHT},
-            {"bold_gray", AnsiColors::FBLDGRY}, {"bold_red", AnsiColors::FBLDRED},
-            {"bold_green", AnsiColors::FBLDGRN}, {"bold_yellow", AnsiColors::FBLDYEL},
-            {"bold_blue", AnsiColors::FBLDBLU}, {"bold_magenta", AnsiColors::FBLDMAG},
-            {"bold_cyan", AnsiColors::FBLDCYN}, {"bold_white", AnsiColors::FBLDWHT},
-            {"bg_black", AnsiColors::BBLK}, {"bg_red", AnsiColors::BRED},
-            {"bg_green", AnsiColors::BGRN}, {"bg_yellow", AnsiColors::BYEL},
-            {"bg_blue", AnsiColors::BBLU}, {"bg_magenta", AnsiColors::BMAG},
-            {"bg_cyan", AnsiColors::BCYN}, {"bg_white", AnsiColors::BWHT}
-        };
-
-        auto it = colorMap.find(colorName);
-        if (it != colorMap.end()) {
-            return it.value();
-        } else {
-            qDebug() << "Color name '" << colorName << "' not recognized. Returning default color code.";
-            return AnsiColors::RST; // Default color if not found
-        }
-    }
-
 
 MMCPServer::MMCPServer(Host* pHost) :
         QTcpServer(), mpHost(pHost), mRealName(mudlet::self()->scmVersion), snoopCount(0) {
 
 
-    bool isIntOk = false;
+    QString chatName = readMMCPChatName(pHost);
 
-    m_chatName = readMMCPChatName(pHost);
-
-    //qDebug() << "Got chatname from mudlet prefs: " << m_chatName;
+	m_chatName = chatName;
 };
 
 MMCPServer::~MMCPServer() {
@@ -295,8 +268,9 @@ QPair<bool, QString> MMCPServer::chat(const QVariant &target, const QString &msg
  */
 QPair<bool, QString> MMCPServer::chatAll(const QString &msg) {
 
-    if (clients.isEmpty())
+    if (clients.isEmpty()) {
         return QPair<bool, QString>(false, qsl("no connected clients"));
+	}
 	
 	QString outMsg = QString("%1%2 chats to everybody, '%3'%4")
 							.arg((char)TextEveryone)
@@ -318,8 +292,8 @@ QPair<bool, QString> MMCPServer::chatAll(const QString &msg) {
 
 
 QPair<bool, QString> MMCPServer::chatName(const QString &name) {
-    writeChatName(mpHost, name);
-    m_chatName = name;
+	qDebug() << "in MMCPServer::chatName, " << name;
+    setChatName(name);
 
     if (!clients.isEmpty()) {
 	
@@ -347,8 +321,9 @@ QPair<bool, QString> MMCPServer::chatName(const QString &name) {
  */
 QPair<bool, QString> MMCPServer::chatRaw(const QString &msg) {
 
-    if (clients.isEmpty())
+    if (clients.isEmpty()) {
         return QPair<bool, QString>(false, qsl("no connected clients"));
+	}
 
 	QString outMsg = QString("%1%2%3")
 							.arg((char)TextEveryone)
@@ -373,16 +348,10 @@ QPair<bool, QString> MMCPServer::chatRaw(const QString &msg) {
  */
 QPair<bool, QString> MMCPServer::emoteAll(const QString &msg) {
 	
-    if (clients.isEmpty())
+    if (clients.isEmpty()) {
         return QPair<bool, QString>(false, qsl("no connected clients"));
-
-	/*
-	QString outMsg = QString("%1%2 %3\n%4")
-							.arg((char)TextEveryone)
-							.arg(session->getChatName())
-							.arg(msg)
-							.arg((char)End);
-	*/						
+	}
+						
 	QString outMsg = QString("%1%2\n%3")
 							.arg((char)TextEveryone)
 							.arg(msg)
@@ -454,7 +423,6 @@ void MMCPServer::snoopMessage(const QString &message) {
     mpHost->mpConsole->printOnDisplay(trimmedStdStr);
     mpHost->mpConsole->finalize();
 }
-
 
 
 void MMCPServer::sendAll(QString& msg) {

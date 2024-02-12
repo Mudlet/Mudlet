@@ -13450,14 +13450,6 @@ int TLuaInterpreter::chatAll(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatColor(lua_State* L) {
-    const QString color = getVerifiedString(L, __func__, 1, "color");
-
-    const QString colorCode = MMCPServer::getColorCode(color);
-
-    lua_pushstring(L, colorCode.toUtf8().constData());
-    return 1;
-}
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendIrc
 int TLuaInterpreter::sendIrc(lua_State* L)
@@ -16558,7 +16550,6 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "chatPing", TLuaInterpreter::chatPing);
     lua_register(pGlobalLua, "chat", TLuaInterpreter::chat);
     lua_register(pGlobalLua, "chatAll", TLuaInterpreter::chatAll);
-    lua_register(pGlobalLua, "chatColor", TLuaInterpreter::chatColor);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
@@ -16794,7 +16785,7 @@ void TLuaInterpreter::initLuaGlobals()
     additionalLuaPaths << qsl("%1/.luarocks/share/lua/5.1/?.lua;%1/.luarocks/share/lua/5.1/?/init.lua").arg(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first());
 #elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
     // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
-    additionalCPaths << qsl("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
+    additionalCPaths << qsl("C:\\Qt6\\Tools\\mingw1120_64\\lib\\lua\\5.1\\?.dll");
 #endif
 
     insertNativeSeparatorsFunction(pGlobalLua);

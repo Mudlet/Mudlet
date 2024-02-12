@@ -25,8 +25,6 @@ class MMCPServer : public QTcpServer {
         inline static QString MMCPChatNameCfgItem = qsl("mmcp_chatname");
         //inline static int DefaultMessageBufferLimit = 5000;
 
-        static QString getColorCode(const QString&);
-
         static int readMMCPHostPort(Host*);
         static QString readMMCPChatName(Host*);
 

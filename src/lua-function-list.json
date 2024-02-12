@@ -403,7 +403,6 @@
     "chatPing": "chatPing()",
     "chat": "chat(target, message)",
     "chatAll": "chatAll(message)",
-    "chatColor": "chatColor(color)",
     "sendIrc": "sendIrc(target, message)",
     "sendMSDP": "sendMSDP(variable[, value][, value...])",
     "sendSocket": "sendSocket(data)",
