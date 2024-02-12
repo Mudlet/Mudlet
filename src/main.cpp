@@ -229,11 +229,12 @@ int main(int argc, char* argv[])
 
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
-    QString appBuild = QString::fromUtf8(gitShaFile.readAll());
+    // The qmake made version of this file has a superfluous line-feed that we
+    // don't need:
+    QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
 
     const bool releaseVersion = appBuild.isEmpty();
     const bool publicTestVersion = appBuild.startsWith("-ptb");
-    const bool developmentVersion = !releaseVersion && !publicTestVersion;
 
     if (publicTestVersion) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));

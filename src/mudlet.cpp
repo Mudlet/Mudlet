@@ -135,7 +135,9 @@ mudlet::mudlet()
 
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
-    QString gitSha = QString::fromUtf8(gitShaFile.readAll());
+    // The qmake made version of this file has a superfluous line-feed that we
+    // don't need:
+    QString gitSha = QString::fromUtf8(gitShaFile.readAll()).trimmed();
 
     mAppBuild = gitSha;
     releaseVersion = mAppBuild.isEmpty();
