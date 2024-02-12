@@ -135,7 +135,7 @@ mudlet::mudlet()
 
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
-    QString gitSha = QString::fromUtf8(gitShaFile.readAll());
+    const QString gitSha = QString::fromUtf8(gitShaFile.readAll()).trimmed();
 
     mAppBuild = gitSha;
     releaseVersion = mAppBuild.isEmpty();
