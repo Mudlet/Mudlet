@@ -29,8 +29,7 @@ jobs:
             qt: '5.14.1'
             triplet: x64-linux
             compiler: gcc_64
-            # We need a gcc and it ain't always the same one:
-            gcc_compiler_version: 9
+            gcc_compiler_version: 10
             os: ubuntu-latest
 
     env:
@@ -123,7 +122,7 @@ jobs:
         # If not available, use other methods
         sudo apt-get install ccache pkg-config pcregrep luarocks expect libzip-dev libglu1-mesa-dev libpulse-dev g++-${{matrix.gcc_compiler_version}} -y
 
-        # switch to GCC that supports C++17 while retaining support for older OS's
+        # switch to GCC that supports C++20 while retaining support for older OS's
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-${{matrix.gcc_compiler_version}} ${{matrix.gcc_compiler_version}}
         sudo update-alternatives --set gcc /usr/bin/gcc-${{matrix.gcc_compiler_version}}
