@@ -384,7 +384,7 @@ please wait...</source>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="415"/>
       <source>[WHOIS] %1 is connected since %2 (idle %3)</source>
-      <translation type="unfinished"/>
+      <translation>[WHOIS] %1 은(는) %2 부터 연결되어 잇습니다 (유휴 시간: %3)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="417"/>
