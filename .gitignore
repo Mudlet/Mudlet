@@ -46,3 +46,5 @@ CMakeSettings.json
 # flatpak builder
 CI/.flatpak-builder
 CI/build-dir
+
+.sentry-native
