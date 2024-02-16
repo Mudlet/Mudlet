@@ -12264,21 +12264,6 @@ int TLuaInterpreter::openWebPage(lua_State* L)
     return 1;
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#usingMudletsDiscordID
-int TLuaInterpreter::usingMudletsDiscordID(lua_State* L)
-{
-    mudlet* pMudlet = mudlet::self();
-    auto& host = getHostFromLua(L);
-
-    auto result = discordApiEnabled(L);
-    if (!result.first) {
-        return warnArgumentValue(L, __func__, result.second);
-    }
-
-    lua_pushboolean(L, pMudlet->mDiscord.usingMudletsDiscordID(&host));
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getTime
 int TLuaInterpreter::getTime(lua_State* L)
 {
@@ -13803,27 +13788,6 @@ std::pair<bool, QString> TLuaInterpreter::validLuaCode(const QString &code)
     }
     lua_pop(L, 1);
     return {!error, e};
-}
-
-// No documentation available in wiki - internal function
-std::pair<bool, QString> TLuaInterpreter::discordApiEnabled(lua_State* L, bool writeAccess)
-{
-    mudlet* pMudlet = mudlet::self();
-
-    if (!pMudlet->mDiscord.libraryLoaded()) {
-        return {false, qsl("Discord API is not available")};
-    }
-
-    auto& host = getHostFromLua(L);
-    if (!(host.mDiscordAccessFlags & Host::DiscordLuaAccessEnabled)) {
-        return {false, qsl("Discord API is disabled in settings for privacy")};
-    }
-
-    if (writeAccess && !pMudlet->mDiscord.discordUserIdMatch(&host)) {
-        return {false, qsl("Discord API is read-only as you're logged in with a different account in Discord compared to the one you entered for this profile")};
-    }
-
-    return {true, QString()};
 }
 
 // No documentation available in wiki - internal function
