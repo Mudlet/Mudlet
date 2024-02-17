@@ -1,10 +1,12 @@
-#include <QAbstractSocket>
-#include <QRegularExpression>
-
 #include "Host.h"
+#include "mudlet.h"
 #include "MMCPClient.h"
 #include "MMCPServer.h"
 
+#include "pre_guard.h"
+#include <QAbstractSocket>
+#include <QRegularExpression>
+#include "post_guard.h"
 
 MMCPClient::MMCPClient(Host *host, MMCPServer *serv)
 	: m_state(Disconnected), tcpSocket(this), mpHost(host), server(serv) {
@@ -271,7 +273,7 @@ void MMCPClient::sendRequestConnections() {
  */
 void MMCPClient::sendVersion() {
 	writeData(QString("%1%2 %3%4")	.arg((char)Version)
-									.arg("Mudlet")
+									.arg(mudlet::self()->scmVersion)
 									.arg(" (Humera's MMCP Test)")
 									.arg((char)End));
 }

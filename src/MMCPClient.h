@@ -1,10 +1,11 @@
-
 #ifndef _MMCPCLIENT_H_
 #define _MMCPCLIENT_H_
 
+#include "pre_guard.h"
 #include <QtNetwork>
 #include <QObject>
 #include <QString>
+#include "post_guard.h"
 
 #include "MMCP.h"
 

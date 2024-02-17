@@ -1,7 +1,9 @@
 #ifndef _MMCPSERVER_H_
 #define _MMCPSERVER_H_
 
+#include "pre_guard.h"
 #include <QTcpServer>
+#include "post_guard.h"
 
 #include "utils.h"
 
@@ -103,7 +105,6 @@ class MMCPServer : public QTcpServer {
         static QString readAppDefaultMMCPAutostart();
 
         Host *mpHost = nullptr;
-        QString mRealName;  // Used for?
         bool m_enabled;
         QString m_chatName;
         QString m_address;

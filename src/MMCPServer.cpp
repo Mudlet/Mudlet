@@ -4,11 +4,13 @@
 #include "mudlet.h"
 #include "MMCPClient.h"
 
+#include "pre_guard.h"
 #include <QMap>
+#include "post_guard.h"
 
 
 MMCPServer::MMCPServer(Host* pHost) :
-        QTcpServer(), mpHost(pHost), mRealName(mudlet::self()->scmVersion), snoopCount(0) {
+        QTcpServer(), mpHost(pHost), snoopCount(0) {
 
 
     QString chatName = readMMCPChatName(pHost);

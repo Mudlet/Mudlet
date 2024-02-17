@@ -1,7 +1,9 @@
 #ifndef _MMCP_H_
 #define _MMCP_H_
 
+#include "pre_guard.h"
 #include <QFlags>
+#include "post_guard.h"
 
 enum MMCPChatCommand {
     NameChange			= 1,
