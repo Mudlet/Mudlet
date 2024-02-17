@@ -120,6 +120,7 @@ set(mudlet_SRCS
     TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
+    TLuaInterpreterMapper.cpp
     TMap.cpp
     TMapLabel.cpp
     TLuaInterpreterDiscord.cpp
@@ -127,6 +128,7 @@ set(mudlet_SRCS
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
+    TLuaInterpreterTextToSpeech.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
