@@ -363,7 +363,7 @@ unix:!macx {
             -llibhunspell-1.7
 
         INCLUDEPATH += \
-             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+            $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
              $${MINGW_BASE_DIR_TEST}/include/pugixml
     }
 
@@ -603,6 +603,7 @@ SOURCES += \
     mapInfoContributorManager.cpp \
 	MMCPServer.cpp \
 	MMCPClient.cpp \
+    TLuaInterpreterMMCP.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
     MxpTag.cpp \

@@ -96,6 +96,7 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     MMCPServer.cpp
     MMCPClient.cpp
+    TLuaInterpreterMMCP.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
     ShortcutsManager.cpp
