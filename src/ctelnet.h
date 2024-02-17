@@ -52,6 +52,8 @@
 #include <queue>
 #include <string>
 
+#include "GMCPAuthenticator.h"
+
 #if defined(Q_OS_WIN32)
 #include <ws2tcpip.h>
 #include "mstcpip.h"
@@ -417,6 +419,8 @@ private:
     // we can send NAWS data when it changes:
     int mNaws_x = 0;
     int mNaws_y = 0;
+
+    GMCPAuthenticator mAuth;
 };
 
 #endif // MUDLET_CTELNET_H

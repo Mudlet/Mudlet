@@ -591,6 +591,7 @@ SOURCES += \
     FontManager.cpp \
     FileOpenHandler.cpp \
     GifTracker.cpp \
+    GMCPAuthenticator.cpp \
     TrailingWhitespaceMarker.cpp \
     Host.cpp \
     HostManager.cpp \
@@ -710,6 +711,7 @@ HEADERS += \
     exitstreewidget.h \
     FileOpenHandler.h \
     GifTracker.h \
+    GMCPAuthenticator.h \
     TrailingWhitespaceMarker.h \
     Host.h \
     HostManager.h \
