@@ -172,6 +172,10 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
+git_submodule_init(
+  CHECK_FILE "3rdparty/sentry-native/CMakeLists.txt" SUBMODULE_PATH
+  "3rdparty/sentry-native" READABLE_NAME "sentry-native")
+
 if(USE_OWN_QTKEYCHAIN)
   git_submodule_init(
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
