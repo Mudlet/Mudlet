@@ -626,6 +626,7 @@ SOURCES += \
     TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TLuaInterpreterNetworking.cpp \
     TLuaInterpreterMapper.cpp \
     TMainConsole.cpp \
     TMap.cpp \
