@@ -21,12 +21,13 @@
 
 #include <QDebug>
 #include "Host.h"
+#include "ctelnet.h"
 
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost) : mpHost(pHost) {}
 
-void GMCPAuthenticator::saveSupportsSet(const QString& message)
+void GMCPAuthenticator::saveSupportsSet(const QString& data)
 {
-    auto jsonDoc = QJsonDocument::fromJson(message.toUtf8());
+    auto jsonDoc = QJsonDocument::fromJson(data.toUtf8());
     auto jsonObj = jsonDoc.object();
 
     if (jsonObj.contains("types")) {
@@ -55,20 +56,21 @@ void GMCPAuthenticator::sendCredentials()
     QJsonDocument doc(credentials);
     QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
 
-    QString output = TN_IAC;
+    std::string output;
+    output += TN_IAC;
     output += TN_SB;
     output += OPT_GMCP;
     output += "Client.Authenticate.Credentials";
-    output += gmcpMessage;
+    output += gmcpMessage.toStdString();
     output += TN_IAC;
     output += TN_SE;
 
     // Send credentials to server
-    socketOutRaw(output);
+    mpHost->mTelnet.socketOutRaw(output);
 }
 
 
-void GMCPAuthenticator::handleAuthResult(const QVariantMap& result)
+void GMCPAuthenticator::handleAuthResult(const QString& data)
 {
     auto doc = QJsonDocument::fromJson(data.toUtf8());
     auto obj = doc.object();

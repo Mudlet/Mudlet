@@ -40,9 +40,9 @@ public:
     GMCPAuthenticator(Host* pHost);
     ~GMCPAuthenticator() = default;
 
-    void saveSupportsSet(const QString& message);
+    void saveSupportsSet(const QString& data);
     void sendCredentials();
-    void handleAuthResult(const QVariantMap& result);
+    void handleAuthResult(const QString& data);
     void handleAuthGMCP(const QString& packageMessage, const QString& data);
 
 private:
