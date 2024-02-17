@@ -2,65 +2,84 @@
 
 #include <QDebug>
 
-GMCPAuthenticator::GMCPAuthenticator()
-{
-    // Initialize
-}
+GMCPAuthenticator::GMCPAuthenticator(Host* pHost) : mpHost(pHost) {}
 
-void GMCPAuthenticator::handleSupportsSet(const QString& message)
+void GMCPAuthenticator::saveSupportsSet(const QString& message)
 {
-    // Parse message to get supported auth types
-    // Store in mSupportedAuthTypes
+    auto jsonDoc = QJsonDocument::fromJson(data.toUtf8());
+    auto jsonObj = jsonDoc.object();
+
+    if (jsonObj.contains("types")) {
+        QJsonArray typesArray = jsonObj["types"].toArray();
+        for (const auto& type : typesArray) {
+            mSupportedAuthTypes.append(type.toString());
+        }
+    }
 
     qDebug() << "Supported auth types:" << mSupportedAuthTypes;
 }
 
 void GMCPAuthenticator::sendCredentials(const QString& character, const QString& password)
 {
-    // Validate supported auth types includes credentials
+    auto character = mpHost->getLogin();
+    auto password = mpHost->getPass();
+    if (character.isEmpty() || password.isEmpty()) {
+        qDebug() << "No login or password set in connection settings. Cannot authenticate with GMCP.";
+        return;
+    }
 
-    // Send Client.Authenticate.Credentials message
+    QJsonObject credentials;
+    credentials["character"] = character;
+    credentials["password"] = password;
 
-    qDebug() << "Sent credentials for" << character;
+    QJsonDocument doc(credentials);
+    QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
+
+    QString output = TN_IAC;
+    output += TN_SB;
+    output += OPT_GMCP;
+    output += "Client.Authenticate.Credentials";
+    output += gmcpMessage;
+    output += TN_IAC;
+    output += TN_SE;
+
+    // Send credentials to server
+    socketOutRaw(output);
 }
+
 
 void GMCPAuthenticator::handleAuthResult(const QVariantMap& result)
 {
-    // Check result success and message
-    // Take action as needed
+    auto doc = QJsonDocument::fromJson(data.toUtf8());
+    auto obj = doc.object();
 
-    qDebug() << "Auth" << (result["success"].toBool() ? "succeeded" : "failed");
+    bool success = obj["success"].toBool();
+    auto message = obj["message"].toString();
+
+    if (success) {
+        qDebug() << "GMCP login successful"
+    } else {
+        qDebug() << "GMCP login failed:" << message;
+    }
 }
 
+// controller for GMCP authentication
 void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QString& data)
 {
     if (packageMessage == qsl("Client.Authenticate.Default")) {
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(data.toUtf8());
-        QJsonObject jsonObj = jsonDoc.object();
+        saveSupportsSet(data);
 
-        if (jsonObj.contains("types")) {
-            QJsonArray typesArray = jsonObj["types"].toArray();
-            for (const auto& type : typesArray) {
-                mSupportedAuthTypes.append(type.toString());
-            }
+        if (mSupportedAuthTypes.contains("credentials")) {
+            sendCredentials("username", "password");
+        } else {
+            qDebug() << "Server does not support credentials authentication and we don't support any other";
         }
     }
 
-    else if (packageMessage == "Client.Authenticate.Result") {
-        QJsonDocument doc = QJsonDocument::fromJson(data.toUtf8());
-        QJsonObject obj = doc.object();
+    else if (packageMessage == qsl("Client.Authenticate.Result")) {
+        handleAuthResult(data);
 
-        bool success = obj["success"].toBool();
-        QString message = obj["message"].toString();
-
-        if (success) {
-            // Login succeeded
-        } else {
-            // Login failed, handle message
-        }
-    } else if (packageMessage == "Client.Authenticate.OAuth") {
-        // Handle OAuth data based on flow
     } else {
-        // Unknown package, log warning
+        qDebug() << "Unknown GMCP auth package:" << packageMessage;
     }
 }

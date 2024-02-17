@@ -1,14 +1,25 @@
 #pragma once
 
+#include "pre_guard.h"
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QString>
 #include <QVariantMap>
+#include "post_guard.h"
 
-class GMCPAuthenticator
+class Host;
+
+#include "utils.h"
+
+class GMCPAuthenticator : public QObject
 {
-public:
-    GMCPAuthenticator();
+    Q_OBJECT
 
-    void handleSupportsSet(const QString& message);
+public:
+    GMCPAuthenticator(Host* pHost);
+
+    void saveSupportsSet(const QString& message);
 
     void sendCredentials(const QString& character, const QString& password);
 
@@ -17,5 +28,6 @@ public:
     void handleAuthGMCP(const QString& packageMessage, const QString& data);
 
 private:
+    Host* mpHost;
     QStringList mSupportedAuthTypes;
 };
