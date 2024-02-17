@@ -89,6 +89,7 @@ private:
     void readMapInfoContributor();
     void readProfileShortcut();
     void readStopWatchMap();
+    void readMMCPOptions();
     int readTrigger(TTrigger*);
     int readTimer(TTimer*);
     int readAlias(TAlias*);

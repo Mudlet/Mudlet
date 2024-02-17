@@ -444,11 +444,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mDiscordAccessFlags") = QString::number(pHost->mDiscordAccessFlags).toUtf8().constData();
     host.append_attribute("mRequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();
     host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
-    host.append_attribute("mMMCPChatName") = pHost->mMMCPChatName.toUtf8().constData();
-    host.append_attribute("mMMCPChatPort") = QString::number(pHost->mMMCPChatPort).toUtf8().constData();
-    host.append_attribute("mMMCPAutostartServer") = pHost->mMMCPAutostartServer ? "yes" : "no";
-    host.append_attribute("mMMCPAllowConnectionRequests") = pHost->mMMCPAllowConnectionRequests ? "yes" : "no";
-    host.append_attribute("mMMCPAllowPeekRequests") = pHost->mMMCPAllowPeekRequests ? "yes" : "no";
     host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
     host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
     quint8 styleCode = 0;
@@ -631,6 +626,16 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             }
         }
     }
+    {
+        // Store MMCP relates stuff in the MMCP child node
+        auto mmcpNode = host.append_child("MMCP");
+        mmcpNode.append_attribute("chatName") = pHost->mMMCPChatName.toUtf8().constData();
+        mmcpNode.append_attribute("chatPort") = QString::number(pHost->mMMCPChatPort).toUtf8().constData();
+        mmcpNode.append_attribute("autostartServer") = pHost->mMMCPAutostartServer ? "yes" : "no";
+        mmcpNode.append_attribute("allowConnectionRequests") = pHost->mMMCPAllowConnectionRequests ? "yes" : "no";
+        mmcpNode.append_attribute("allowPeekRequests") = pHost->mMMCPAllowPeekRequests ? "yes" : "no";
+    }
+
     writeTriggerPackage(pHost, mudletPackage, true);
     writeTimerPackage(pHost, mudletPackage, true);
     writeAliasPackage(pHost, mudletPackage, true);

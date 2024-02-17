@@ -876,40 +876,6 @@ void XMLimport::readHost(Host* pHost)
         pHost->mRequiredDiscordUserDiscriminator.clear();
     }
 
-    
-    if (attributes().hasAttribute(QLatin1String("mMMCPChatName"))) {
-        pHost->mMMCPChatName = attributes().value(QLatin1String("mMMCPChatName")).toString();
-    } else {
-        pHost->mMMCPChatName.clear();
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mMMCPChatPort"))) {
-        pHost->mMMCPChatPort = attributes().value(QLatin1String("mMMCPChatPort")).toUShort();
-    } else {
-        pHost->mMMCPChatPort = 4050;
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mMMCPAutostartServer"))) {
-        pHost->mMMCPAutostartServer = attributes().value(QLatin1String("mMMCPAutostartServer")).toString() == "yes";
-        qDebug() << "XMLImport::readHost: mMMCPAutoStartServer" << pHost->mMMCPAutostartServer;
-    } else {
-        pHost->mMMCPAutostartServer = false;
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mMMCPAllowConnectionRequests"))) {
-        pHost->mMMCPAllowConnectionRequests = attributes().value(QLatin1String("mMMCPAllowConnectionRequests")).toString() == "yes";
-        qDebug() << "XMLImport::readHost: mMMCPAllowConnectionRequests" << pHost->mMMCPAllowConnectionRequests;
-    } else {
-        pHost->mMMCPAllowConnectionRequests = false;
-    }
-
-    if (attributes().hasAttribute(QLatin1String("mMMCPAllowPeekRequests"))) {
-        pHost->mMMCPAllowPeekRequests = attributes().value(QLatin1String("mMMCPAllowPeekRequests")).toString() == "yes";
-        qDebug() << "XMLImport::readHost: mMMCPAllowPeekRequests" << pHost->mMMCPAllowPeekRequests;
-    } else {
-        pHost->mMMCPAllowPeekRequests = false;
-    }
-
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
         quint8 styleCode = 0;
         quint8 outerDiameterPercentage = 0;
@@ -1214,6 +1180,8 @@ void XMLimport::readHost(Host* pHost)
                 readProfileShortcut();
             } else if (name() == qsl("stopwatches")) {
                 readStopWatchMap();
+            } else if (name() == qsl("MMCP")) {
+                readMMCPOptions();
             } else {
                 readUnknownElement(qsl("Host"));
             }
@@ -1986,6 +1954,27 @@ void XMLimport::readStopWatchMap()
         }
     }
 
+}
+
+void XMLimport::readMMCPOptions() {
+
+    mpHost->mMMCPChatName = attributes().value(qsl("chatName")).toString();
+    qDebug() << "XMLImport::readMMCPOptions: chatName" << mpHost->mMMCPChatName;
+
+    mpHost->mMMCPChatPort = attributes().value(qsl("chatPort")).toUShort();
+    qDebug() << "XMLImport::readMMCPOptions: chatPort" << mpHost->mMMCPChatPort;
+
+    mpHost->mMMCPAutostartServer = attributes().value(qsl("autostartServer")) == YES;
+    qDebug() << "XMLImport::readMMCPOptions: autoStartServer" << mpHost->mMMCPAutostartServer;
+
+    mpHost->mMMCPAllowConnectionRequests = attributes().value(qsl("allowConnectionRequests")) == YES;
+    qDebug() << "XMLImport::readMMCPOptions: allowConnectionRequests" << mpHost->mMMCPAllowConnectionRequests;
+
+    mpHost->mMMCPAllowPeekRequests = attributes().value(qsl("allowPeekRequests")) == YES;
+    qDebug() << "XMLImport::readMMCPOptions: allowPeekRequests" << mpHost->mMMCPAllowPeekRequests;
+
+    // MMCP is a self-closing tag, need to call readNext to move along..
+    readNext();
 }
 
 void XMLimport::readMapInfoContributor()
