@@ -423,6 +423,7 @@ exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/cc
 macx:LIBS += -lz
 
 INCLUDEPATH += ../3rdparty/discord/rpc/include
+INCLUDEPATH += ../3rdparty/sentry-native/include
 
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
@@ -673,6 +674,7 @@ SOURCES += \
 HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h \
+    ../3rdparty/sentry-native/include/sentry.h \
     ActionUnit.h \
     Announcer.h \
     AliasUnit.h \
@@ -802,7 +804,8 @@ HEADERS += \
     XMLimport.h \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
-    ../3rdparty/discord/rpc/include/discord_rpc.h
+    ../3rdparty/discord/rpc/include/discord_rpc.h \
+    ../3rdparty/sentry-native/include/sentry.h
 
 macx|win32 {
     macx {
