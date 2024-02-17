@@ -3115,25 +3115,35 @@ you can use it but there could be issues with aligning columns of text</string>
          <property name="title">
           <string>MudMaster Chat options</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_MMCPOptions" columnstretch="2,0,0,0">
-          <item row="0" column="0">
-           <widget class="QLabel" name="lblMMCPName">
+         <layout class="QGridLayout" name="gridLayout">
+          <item row="0" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAutostartServer">
+            <property name="toolTip">
+             <string>Automatically start a chat server when your profile loads. Uses the default port setting.</string>
+            </property>
             <property name="text">
-             <string>Chatname:</string>
-            </property>
-            <property name="buddy">
-             <cstring>lineEdit_mmcpChatName</cstring>
+             <string>Auto-Start Server</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
-           <widget class="QLineEdit" name="lineEdit_mmcpChatName">
-            <property name="placeholderText">
-             <string>MMCPUser123</string>
+          <item row="3" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAllowPeekReq">
+            <property name="text">
+             <string>Allow Peek Requests</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2">
+          <item row="1" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpPort">
+            <property name="toolTip">
+             <string>Port to use when connecting to another client without specifying a port along with the IP address. This is also the default port that listened for incoming connections when running a local server.</string>
+            </property>
+            <property name="text">
+             <string>4050</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="5">
            <widget class="QCheckBox" name="checkBox_mmcpLuaAPI">
             <property name="toolTip">
              <string>&lt;p&gt;Allow Lua to control MMCP connections&lt;/p&gt;</string>
@@ -3146,7 +3156,53 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-    
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblMMCPPort">
+            <property name="text">
+             <string>Default Port:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpChatName">
+            <property name="toolTip">
+             <string>Chat name as seen by connected chat clients.</string>
+            </property>
+            <property name="placeholderText">
+             <string>MMCPUser123</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblMMCPName">
+            <property name="text">
+             <string>Chatname:</string>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_mmcpChatName</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAllowConnReq">
+            <property name="text">
+             <string>Allow Connection Requests</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="6">
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
          </layout>
         </widget>
        </item>

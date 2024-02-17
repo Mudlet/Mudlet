@@ -20,24 +20,11 @@ MMCPServer::~MMCPServer() {
 
 }
 
-
-/* Maybe used for connecting to a default server
-QString MMCPServer::readMMCPHostName(Host* pH) {
-    QString hostname = pH->readProfileData(MMCPServer::HostNameCfgItem);
-    if (hostname.isEmpty()) {
-        hostname = MMCPServer::DefaultHostName;
-    }
-    return hostname;
-}
-*/
-
-int MMCPServer::readMMCPHostPort(Host* pH) {
+quint16 MMCPServer::readMMCPHostPort(Host* pH) {
     const QString portStr = pH->readProfileData(MMCPServer::MMCPHostPortCfgItem);
     bool ok;
-    int port = portStr.toInt(&ok);
+    quint16 port = portStr.toInt(&ok);
     if (portStr.isEmpty() || !ok) {
-        port = MMCPServer::MMCPDefaultHostPort;
-    } else if (port > 65535 || port < 1) {
         port = MMCPServer::MMCPDefaultHostPort;
     }
     return port;
@@ -56,9 +43,12 @@ QString MMCPServer::readMMCPChatName(Host* pH) {
     return chatName;
 }
 
+
 QPair<bool, QString> MMCPServer::writeChatName(Host* pH, const QString& chatname) {
-    // update app-wide file to set a default nick as whatever the last-used nick was.
+    // update app-wide file to set a default chatname as whatever the last-used name was.
     writeAppDefaultMMCPChatName(chatname);
+
+	pH->setMMCPChatName(chatname);
 
     return pH->writeProfileData(MMCPServer::MMCPChatNameCfgItem, chatname);
 }
@@ -93,48 +83,32 @@ void MMCPServer::writeAppDefaultMMCPChatName(const QString& nick) {
     }
 }
 
-
-void MMCPServer::startServer(quint16 port) {
-	if (!listen(QHostAddress::Any, port)) {
-		clientMessage(QString("<CHAT> Unable to start server: %1").arg(errorString()));
+/**
+ * Handle an incoming connection, create an MMCPClient and set its state
+ * to ConnectingIn
+ */
+void MMCPServer::incomingConnection(qintptr socketDescriptor) {
 	
-	} else {
-		clientMessage(QString("<CHAT> Started server on port: %1").arg(port));
-		emit serverStarted(port);
+	MMCPClient *client = new MMCPClient(mpHost, this);
+	if (!client->incoming(socketDescriptor)) {
+		client->deleteLater();
 	}
+	
 }
-
 
 /**
- * The ChatFilter is installed between the TelnetFilter and ScriptFilter.
- * This allows triggering on text from chat clients.
+ * Receive mud data from our current session
  */
-/*
-bool MMCPServer::receiveFromPlayer(QString &obj) {
-
-
-    if (processCommand(obj))
-        return true;
-        
-    //Send our output to snoopers if local echo is enabled, but not if its a password or such!
-    //if (snoopCount > 0 && session->localEcho() && !session->shouldOmit())
-    //    sendSnoopData(obj);
-		
-    if (snoopCount > 0)
-        sendSnoopData(obj);
-		
-        
-	} //else {	//fromDir == OUTWARD
-	//	if (snoopCount > 0)
-		//	sendSnoopData(obj);
-			
-	//	return send(obj, INWARD, option);
-	//}
-    
+bool MMCPServer::receiveFromPlayer(std::string& str) {
+    if (snoopCount > 0) {
+        sendSnoopData(str);
+	} 
 }
-*/
 
-void MMCPServer::sendSnoopData(const QString &line) {
+/**
+ * Send mud data from our mud to all clients snooping us
+ */
+void MMCPServer::sendSnoopData(std::string &line) {
 	
 	//Note: Fore and Back colors use MudMaster color indices which are NOT the same as
 	//		ANSI color indices.  Don't ask me why. So I'll just use background BLACK
@@ -143,7 +117,7 @@ void MMCPServer::sendSnoopData(const QString &line) {
 	QString outData = QString("%1%2%3\n%4%5")	.arg((char)SnoopData)
 												.arg(15, 2, 10)	//foreground color
 												.arg(0, 2, 10)		//background color
-												.arg(line)
+												.arg(QString::fromStdString(line))
 												.arg((char)End);
 
 	QListIterator<MMCPClient *> it(clients);
@@ -156,15 +130,9 @@ void MMCPServer::sendSnoopData(const QString &line) {
 	}
 }
 
-
-void MMCPServer::incomingConnection(int socketDescriptor) {
-	
-	MMCPClient *client = new MMCPClient(mpHost, this);
-	client->incoming(socketDescriptor);
-	
-}
-
-
+/**
+ * Return a pointer to a client given their client name or connection Id
+ */
 MMCPClient *MMCPServer::clientByNameOrId(const QVariant &arg) {
 	MMCPClient *client = NULL;
 
@@ -184,7 +152,6 @@ MMCPClient *MMCPServer::clientByNameOrId(const QVariant &arg) {
 		}
 
 	} else {
-		//qDebug() << id << clients.size();
 		if (id > 0 && id <= clients.size())
 			client = clients[id - 1];
 	}
@@ -192,7 +159,10 @@ MMCPClient *MMCPServer::clientByNameOrId(const QVariant &arg) {
 	return client;
 }
 
-
+/**
+ * Script command, attempt a connection to a new client.
+ * Parse port from line
+ */
 QPair<bool, QString> MMCPServer::call(const QString &line) {
 	QStringList args = line.split(' ');
 
@@ -215,7 +185,9 @@ QPair<bool, QString> MMCPServer::call(const QString &line) {
     return QPair<bool, QString>(true, qsl("command successful"));
 }
 
-
+/**
+ * Script command, attempt a connection to a new client
+ */
 QPair<bool, QString> MMCPServer::call(const QString& host, int port) {
 	MMCPClient *client = NULL;
 	
@@ -246,7 +218,7 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port) {
 
 
 /**
- * Send private chat.
+ * Script command, Send private chat.
  */
 QPair<bool, QString> MMCPServer::chat(const QVariant &target, const QString &msg) {
 	MMCPClient *client = clientByNameOrId(target);
@@ -264,7 +236,7 @@ QPair<bool, QString> MMCPServer::chat(const QVariant &target, const QString &msg
 
 
 /**
- * Send a chat message to everybody.
+ * Script COmmand, Send a chat message to everybody.
  */
 QPair<bool, QString> MMCPServer::chatAll(const QString &msg) {
 
@@ -290,9 +262,42 @@ QPair<bool, QString> MMCPServer::chatAll(const QString &msg) {
     return QPair<bool, QString>(true, qsl("command successful"));
 }
 
+/**
+ * Script command, Display a list of connected chat clients on the main console
+ */
+QPair<bool, QString> MMCPServer::chatList() {
 
+    using namespace AnsiColors;
+
+	QString strMessage;
+	strMessage =  "     Name                 Address         Port  Group           Flags    ChatClient\n";
+	strMessage += "     ==================== =============== ===== =============== ======== ================\n";
+
+	QString list;
+	int i = 1;
+	QListIterator<MMCPClient *> it(clients);
+	while (it.hasNext()) {
+		MMCPClient *client = it.next();
+		strMessage.append(QString("%1%2:%3 %4 %5\n")
+                            .arg(FBLDWHT)
+							.arg(i++, 3)
+                            .arg(RST)
+							.arg(client->getInfoString())
+							.arg(client->getVersion()));
+	}
+
+	strMessage += "Flags:  A - Allow Commands, F - Firewall, I - Ignore,  P - Private   n - Allow Snooping\n";
+	strMessage += "        N - Being Snooped,  S - Serving,  T - Allows File Transfers, X - Serve Exclude\n";
+	
+	clientMessage(strMessage);
+
+    return QPair<bool, QString>(true, qsl("command successful"));
+}
+
+/**
+ * Script Command, Set our chat name to name, and tell connected chat clients
+ */
 QPair<bool, QString> MMCPServer::chatName(const QString &name) {
-	qDebug() << "in MMCPServer::chatName, " << name;
     setChatName(name);
 
     if (!clients.isEmpty()) {
@@ -316,7 +321,7 @@ QPair<bool, QString> MMCPServer::chatName(const QString &name) {
 
 
 /**
- * Sends an unformatted chat message to everyone.
+ * Script command, Sends an unformatted chat message to everyone.
  * Warning, this has the potential for abuse!  But whatever, the chat protocol allows it.
  */
 QPair<bool, QString> MMCPServer::chatRaw(const QString &msg) {
@@ -344,7 +349,7 @@ QPair<bool, QString> MMCPServer::chatRaw(const QString &msg) {
 
 
 /**
- * Send an emote message to everybody.
+ * Script command, Send an emote message to everybody.
  */
 QPair<bool, QString> MMCPServer::emoteAll(const QString &msg) {
 	
@@ -368,7 +373,30 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString &msg) {
     return QPair<bool, QString>(true, qsl("command successful"));
 }
 
+/**
+ * Ignore or un-ignore a person
+ */
+QPair<bool, QString> MMCPServer::ignore(const QString& target) {
+	MMCPClient *client = clientByNameOrId(target);
 
+	if (client != NULL) {	
+		if (client->isIgnored()) {
+			clientMessage(QString("<CHAT> You are no longer ignoring %1.").arg(client->chatName()));
+		} else {
+			clientMessage(QString("<CHAT> You are now ignoring %1.").arg(client->chatName()));
+		}
+		client->setIgnore(!client->isIgnored());
+		return QPair<bool, QString>(true, qsl("command successful"));
+	}
+
+	clientMessage(QString("<CHAT> Cannot find a client identified by: %1").arg(target));
+
+	return QPair<bool, QString>(false, qsl("no client by that name or id"));
+}
+
+/**
+ * Script command, send ping request to a client
+ */
 QPair<bool, QString> MMCPServer::ping(const QVariant &target) {
 	MMCPClient *client = clientByNameOrId(target);
 
@@ -377,11 +405,146 @@ QPair<bool, QString> MMCPServer::ping(const QVariant &target) {
 		return QPair<bool, QString>(true, qsl("command successful"));
 	}
 
+    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+}
+
+/**
+ * Toggle a client's private state
+ */
+QPair<bool, QString> MMCPServer::chatPrivate(const QVariant& target) {
+	MMCPClient *client = clientByNameOrId(target);
+
+	if (client != NULL) {		
+		if (client->isPrivate()) {
+			client->setPrivate(false);
+			clientMessage(QString("<CHAT> %1 is no longer private"));
+		} else {
+			client->setPrivate(true);
+			clientMessage(QString("<CHAT> %1 is now set as private"));
+		}
+		return QPair<bool, QString>(true, qsl("command successful"));
+	}
+
+    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+}
+
+/**
+ * Begin serving a client to our other connections
+ */
+QPair<bool, QString> MMCPServer::serve(const QVariant &target) {
+	MMCPClient *client = clientByNameOrId(target);
+	
+	if (client != NULL) {
+		if (client->isServed()) {
+			client->setServed(false);
+			client->sendMessage(QString("<CHAT> You are no longer being served by %1.").arg(m_chatName));
+			
+			clientMessage(QString("<CHAT> You are no longer serving %1.").arg(m_chatName));
+			
+		} else {
+			client->setServed(true);
+			client->sendMessage(QString("<CHAT> You are now being served by %1.").arg(m_chatName));
+			
+			clientMessage(QString("<CHAT> You are now serving %1.").arg(m_chatName));
+		}
+
+        return QPair<bool, QString>(true, qsl("command successful"));
+		
+	}
+
+    return QPair<bool, QString>(false, qsl("no client by that name"));
+}
+
+/**
+ * Script command, start listening for incoming client connections
+ */
+QPair<bool, QString> MMCPServer::startServer(quint16 port) {
+	if (!listen(QHostAddress::Any, port)) {
+		clientMessage(QString("<CHAT> Unable to start server: %1").arg(errorString()));
+		return QPair<bool, QString>(false, qsl("unable to start server"));
+	}
+
+	clientMessage(QString("<CHAT> Started server on port: %1").arg(port));
+	emit serverStarted(port);
+	
+	return QPair<bool, QString>(true, qsl("command successful"));
+}
+
+/**
+ * Script command, Stop our server from listening
+ */
+QPair<bool, QString> MMCPServer::stopServer() {
+	if (isListening()) {
+		close();
+		return QPair<bool, QString>(true, qsl("command successful"));
+	}
+
+	return QPair<bool, QString>(false, qsl("unable to stop server, it is not listening"));
+}
+
+
+/**
+ * Allow a client to snoop you (the user).
+ */
+QPair<bool, QString> MMCPServer::allowSnoop(const QVariant &target) {
+	MMCPClient *client = clientByNameOrId(target);
+	
+	if (client != NULL) {
+		if (client->canSnoop()) {
+			client->setCanSnoop(false);
+			client->setSnooped(false);
+			client->sendMessage(QString("<CHAT> You are no longer allowed to snoop %1.").arg(m_chatName));
+			
+			clientMessage(QString("<CHAT> %1 is no longer allowed to snoop you.").arg(m_chatName));
+			
+		} else {
+			client->setCanSnoop(true);
+			client->sendMessage(QString("<CHAT> You are now allowed to snoop %1.").arg(m_chatName));
+			
+			clientMessage(QString("<CHAT> %1 can now snoop you.").arg(m_chatName));
+		}
+
+        return QPair<bool, QString>(true, qsl("command successful"));
+	}
+
+    return QPair<bool, QString>(false, qsl("no client by that name"));
+}
+
+/**
+ * Send a request to snoop someone, or stop snooping them if snooped
+ */
+QPair<bool, QString> MMCPServer::snoop(const QVariant &target) {
+	MMCPClient *client = clientByNameOrId(target);
+	
+	if (client != NULL) {
+		if (client->isSnooped()) {
+			client->setSnooped(false);
+		} else {
+			client->snoop();
+		}
+
+        return QPair<bool, QString>(true, qsl("command successful"));
+	}
+
+    return QPair<bool, QString>(false, qsl("no client by that name"));
+}
+
+/**
+ * Unchat someone by name or id
+ */
+QPair<bool, QString> MMCPServer::unChat(const QVariant &target) {
+	MMCPClient *client = clientByNameOrId(target);
+	
+	if (client != NULL) {
+		client->disconnect();
+        return QPair<bool, QString>(true, qsl("command successful"));
+	}
+
     return QPair<bool, QString>(false, qsl("no client by that name"));
 }
 
 
-void MMCPServer::slotClientConnected(MMCPClient *client) {
+void MMCPServer::addConnectedClient(MMCPClient *client) {
 	clients.append(client);
 	client->setId(clients.indexOf(client));
 	emit clientConnected(client);
@@ -411,16 +574,23 @@ void MMCPServer::clientMessage(const QString &message) {
     const QString coloredStr = QString("\n%1%2%3\n").arg(FBLDRED).arg(trimmed).arg(RST);
 
     std::string trimmedStdStr = coloredStr.toStdString();
-    mpHost->mpConsole->printOnDisplay(trimmedStdStr, true);
+    mpHost->mpConsole->printOnDisplay(trimmedStdStr, false);
     mpHost->mpConsole->finalize();
 }
 
 /**
  * Received snoop data from a client, display it on screen
  */
-void MMCPServer::snoopMessage(const QString &message) {
-    std::string trimmedStdStr = message.toStdString();
-    mpHost->mpConsole->printOnDisplay(trimmedStdStr);
+void MMCPServer::snoopMessage(const std::string &message) {	
+	using namespace AnsiColors;
+
+	std::stringstream ss;
+	ss << FBLDGRN << ">> " << RST;
+	ss << message << "\n";
+	
+	std::string outStr = ss.str();
+
+    mpHost->mpConsole->printOnDisplay(outStr, false);
     mpHost->mpConsole->finalize();
 }
 
@@ -433,7 +603,9 @@ void MMCPServer::sendAll(QString& msg) {
 	}
 }
 
-
+/**
+ * Send our public connections to everyone (not the client that requested)
+ */
 void MMCPServer::sendPublicConnections(MMCPClient *client) {
 	QString list;
 	
@@ -455,6 +627,37 @@ void MMCPServer::sendPublicConnections(MMCPClient *client) {
 											.arg((char)End);
 											
 		client->writeData(cmdStr);
+	}
+}
+
+/**
+ * Send a peek list of our public connections to everyone (not the client that requested)
+ */
+void MMCPServer::sendPublicPeek(MMCPClient *client) {
+	QString list;
+	
+	QListIterator<MMCPClient *> it(clients);
+	while (it.hasNext()) {
+		MMCPClient *cl = it.next();
+	
+		if (cl != client && !cl->isPrivate()) {
+			qDebug() << "peeking client" << cl->chatName();
+			list.append(QString("%1~%2~%3")
+				.arg(cl->host())
+				.arg(cl->port())
+				.arg(cl->chatName()));
+		}
+	}
+	
+	if (!list.isEmpty()) {
+		QString cmdStr = QString("%1%2%3")	.arg((char)PeekList)
+											.arg(list)
+											.arg((char)End);
+
+		qDebug() << "sending peeks:" << cmdStr;
+		client->writeData(cmdStr);
+	} else {
+		client->sendMessage(QString("<CHAT> %1 doesn't have any other connections").arg(m_chatName));
 	}
 }
 
@@ -490,116 +693,9 @@ void MMCPServer::sendMessageToServed(MMCPClient *client, const QString &msg) {
 	}
 }
 
-
-QPair<bool, QString> MMCPServer::serve(const QVariant &target) {
-	MMCPClient *client = clientByNameOrId(target);
-	
-	if (client != NULL) {
-		if (client->isServed()) {
-			client->setServed(false);
-			client->sendMessage(QString("<CHAT> You are no longer being served by %1.").arg(m_chatName));
-			
-			clientMessage(QString("<CHAT> You are no longer serving %1.").arg(m_chatName));
-			
-		} else {
-			client->setServed(true);
-			client->sendMessage(QString("<CHAT> You are now being served by %1.").arg(m_chatName));
-			
-			clientMessage(QString("<CHAT> You are now serving %1.").arg(m_chatName));
-		}
-
-        return QPair<bool, QString>(true, qsl("command successful"));
-		
-	}
-
-    return QPair<bool, QString>(false, qsl("no client by that name"));
-}
-
-
 /**
- * Allow a client to snoop you (the user).
+ * Set chat name and write to current profile
  */
-QPair<bool, QString> MMCPServer::allowSnoop(const QVariant &target) {
-	MMCPClient *client = clientByNameOrId(target);
-	
-	if (client != NULL) {
-		if (client->canSnoop()) {
-			client->setCanSnoop(false);
-			client->setSnooped(false);
-			client->sendMessage(QString("<CHAT> You are no longer allowed to snoop %1.").arg(m_chatName));
-			
-			clientMessage(QString("<CHAT> %1 is no longer allowed to snoop you.").arg(m_chatName));
-			
-		} else {
-			client->setCanSnoop(true);
-			client->sendMessage(QString("<CHAT> You are now allowed to snoop %1.").arg(m_chatName));
-			
-			clientMessage(QString("<CHAT> %1 can now snoop you.").arg(m_chatName));
-		}
-
-        return QPair<bool, QString>(true, qsl("command successful"));
-	}
-
-    return QPair<bool, QString>(false, qsl("no client by that name"));
-}
-
-/**
- * Send a request to snoop someone
- */
-QPair<bool, QString> MMCPServer::snoop(const QVariant &target) {
-	MMCPClient *client = clientByNameOrId(target);
-	
-	if (client != NULL) {
-		client->snoop();
-        return QPair<bool, QString>(true, qsl("command successful"));
-	}
-
-    return QPair<bool, QString>(false, qsl("no client by that name"));
-}
-
-
-QPair<bool, QString> MMCPServer::unChat(const QVariant &target) {
-	MMCPClient *client = clientByNameOrId(target);
-	
-	if (client != NULL) {
-		client->disconnect();
-        return QPair<bool, QString>(true, qsl("command successful"));
-	}
-
-    return QPair<bool, QString>(false, qsl("no client by that name"));
-}
-
-
-
-QPair<bool, QString> MMCPServer::chatList() {
-
-    using namespace AnsiColors;
-
-	QString strMessage;
-	strMessage =  "     Name                 Address         Port  Group           Flags\n";
-	strMessage += "     ==================== =============== ===== =============== ========\n";
-
-	QString list;
-	int i = 1;
-	QListIterator<MMCPClient *> it(clients);
-	while (it.hasNext()) {
-		MMCPClient *client = it.next();
-		strMessage.append(QString("%1%2:%3 %4\n")
-                            .arg(FBLDWHT)
-							.arg(i++, 3)
-                            .arg(RST)
-							.arg(client->getInfoString()));
-	}
-
-	strMessage += "Flags:  A - Allow Commands, F - Firewall, I - Ignore,  P - Private n - Allow Snooping\n";
-	strMessage += "        N - Being Snooped,  S - Serving, T - Allows File Transfers, X - Serve Exclude\n";
-	
-	clientMessage(strMessage);
-
-    return QPair<bool, QString>(true, qsl("command successful"));
-}
-
-
 void MMCPServer::setChatName(const QString &val) {
 	m_chatName = val;
 	

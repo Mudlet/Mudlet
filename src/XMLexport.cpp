@@ -444,6 +444,11 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mDiscordAccessFlags") = QString::number(pHost->mDiscordAccessFlags).toUtf8().constData();
     host.append_attribute("mRequiredDiscordUserName") = pHost->mRequiredDiscordUserName.toUtf8().constData();
     host.append_attribute("mRequiredDiscordUserDiscriminator") = pHost->mRequiredDiscordUserDiscriminator.toUtf8().constData();
+    host.append_attribute("mMMCPChatName") = pHost->mMMCPChatName.toUtf8().constData();
+    host.append_attribute("mMMCPChatPort") = QString::number(pHost->mMMCPChatPort).toUtf8().constData();
+    host.append_attribute("mMMCPAutostartServer") = pHost->mMMCPAutostartServer ? "yes" : "no";
+    host.append_attribute("mMMCPAllowConnectionRequests") = pHost->mMMCPAllowConnectionRequests ? "yes" : "no";
+    host.append_attribute("mMMCPAllowPeekRequests") = pHost->mMMCPAllowPeekRequests ? "yes" : "no";
     host.append_attribute("mSGRCodeHasColSpaceId") = pHost->getHaveColorSpaceId() ? "yes" : "no";
     host.append_attribute("mServerMayRedefineColors") = pHost->getMayRedefineColors() ? "yes" : "no";
     quint8 styleCode = 0;

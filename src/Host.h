@@ -327,6 +327,11 @@ public:
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    QString getMMCPChatName();
+    quint16 getMMCPPort();
+    bool getMMCPAutoStartServer();
+    bool getMMCPAllowConnectionRequests();
+    bool getMMCPAllowPeekRequests();
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -421,6 +426,9 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
+
+    void initMMCPServer();
+    void setMMCPChatName(const QString&);
 
     cTelnet mTelnet;
     QPointer<TMainConsole> mpConsole;
@@ -720,6 +728,7 @@ signals:
     void signal_controlCharacterHandlingChanged(const ControlCharacterMode);
     // Tells all command lines to save their history:
     void signal_saveCommandLinesHistory();
+    void mmcpChatNameChanged(const QString&);
 
 private slots:
     void slot_purgeTemps();
@@ -821,6 +830,12 @@ private:
     // we won't use Discord functions.
     QString mRequiredDiscordUserName;
     QString mRequiredDiscordUserDiscriminator;
+
+    QString mMMCPChatName;
+    quint16 mMMCPChatPort;
+    bool mMMCPAutostartServer;
+    bool mMMCPAllowConnectionRequests;
+    bool mMMCPAllowPeekRequests;
 
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter

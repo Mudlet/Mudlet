@@ -57,6 +57,7 @@
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 #include "VarUnit.h"
+#include "MMCPServer.h"
 
 #include "pre_guard.h"
 #include <QApplication>
@@ -2299,6 +2300,7 @@ void mudlet::showOptionsDialog(const QString& tab)
         connect(pPrefs, &dlgProfilePreferences::signal_preferencesSaved, this, [=]() {
             slot_assignShortcutsFromProfile(getActiveHost());
         });
+        connect(pHost, &Host::mmcpChatNameChanged, pPrefs, &dlgProfilePreferences::slot_setMMCPChatName);
         pPrefs->setAttribute(Qt::WA_DeleteOnClose);
     }
 
@@ -2976,6 +2978,20 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     } else {
         const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
         pHost->postMessage(infoMsg);
+    }
+
+    if (pHost->getMMCPAutoStartServer()) {
+        qDebug() << "we should auto start mmcp server";
+        if (!pHost->mmcpServer) {
+            pHost->initMMCPServer();
+        }
+
+        quint16 port = pHost->getMMCPPort();
+
+        qDebug() << "AutoStarting MMCP Server on port " << port;
+        pHost->mmcpServer->startServer(port);
+    } else {
+        qDebug() << "we're not auto starting the mmcp server";
     }
 }
 

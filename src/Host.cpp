@@ -51,6 +51,7 @@
 #include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
+#include "MMCPServer.h"
 
 #include "pre_guard.h"
 #include <chrono>
@@ -329,6 +330,10 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
 , mpDlgIRC(nullptr)
 , mmcpServer(nullptr)
+, mMMCPChatPort(4050)
+, mMMCPAutostartServer(false)
+, mMMCPAllowConnectionRequests(false)
+, mMMCPAllowPeekRequests(false)
 , mpDlgProfilePreferences(nullptr)
 , mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
@@ -1634,13 +1639,6 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
     raiseEvent(event);
 }
 
-void Host::postMMCPMessage(const QString& a, const QString& b, const QString& c) {
-    TEvent event {};
-    event.mArgumentList << QLatin1String("sysMMCPMessage");
-    event.mArgumentList << a << b << c;
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
-    raiseEvent(event);
-}
 
 void Host::enableTimer(const QString& name)
 {
@@ -2715,6 +2713,59 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
     } else {
         return true;
     }
+}
+
+void Host::postMMCPMessage(const QString& a, const QString& b, const QString& c) {
+    TEvent event {};
+    event.mArgumentList << QLatin1String("sysMMCPMessage");
+    event.mArgumentList << a << b << c;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    raiseEvent(event);
+}
+
+void Host::initMMCPServer() {
+    if (mmcpServer) {
+        return;
+    }
+
+    mmcpServer = new MMCPServer(this);
+    setMMCPChatName(mmcpServer->getChatName());
+}
+
+/**
+ * Get the current chat name from the MMCPServer if it exists, otherwise
+ * read it from our saved profile information
+ * There is also the mMMCPChatname read from the xml package, where should we
+ * use that?
+ */
+QString Host::getMMCPChatName() {
+    if (mmcpServer) {
+        return mmcpServer->getChatName();
+    }
+
+    return MMCPServer::readMMCPChatName(this);
+}
+
+void Host::setMMCPChatName(const QString& name) {
+    mMMCPChatName = name;
+    emit mmcpChatNameChanged(name);
+}
+
+quint16 Host::getMMCPPort() {
+    mMMCPChatPort =  MMCPServer::readMMCPHostPort(this);
+    return mMMCPChatPort;
+}
+
+bool Host::getMMCPAutoStartServer() {
+    return mMMCPAutostartServer;
+}
+
+bool Host::getMMCPAllowConnectionRequests() {
+    return mMMCPAllowConnectionRequests;
+}
+
+bool Host::getMMCPAllowPeekRequests() {
+    return mMMCPAllowPeekRequests;
 }
 
 QString  Host::getSpellDic()

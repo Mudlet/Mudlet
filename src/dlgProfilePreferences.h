@@ -125,6 +125,9 @@ public slots:
     void slot_logFileNameFormatChange(int index);
     void slot_changeLogFileAsHtml(bool isHtml);
 
+    // Chat
+    void slot_setMMCPChatName(const QString&);
+
     // Save.
     void slot_saveAndClose();
 

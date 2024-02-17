@@ -1,5 +1,6 @@
 
-#pragma once
+#ifndef _MMCPCLIENT_H_
+#define _MMCPCLIENT_H_
 
 #include <QtNetwork>
 #include <QObject>
@@ -36,11 +37,12 @@ class MMCPClient : public QObject {
     public:
         MMCPClient(Host*, MMCPServer *);
         
-        void incoming(int);
+        bool incoming(qintptr);
         void tryConnect(const QString&, quint16);
         void writeData(const QString &);
         void sendMessage(const QString &);
         void sendPingRequest();
+        void sendRequestConnections();
         
         void disconnect();
         
@@ -101,9 +103,9 @@ class MMCPClient : public QObject {
         bool m_isIgnored;
         bool m_isPrivate;
         bool m_isServed;
-        bool m_isServing;	//do we actually know this?
-        bool m_isSnooped;
-        bool m_isSnooping;
+        bool m_isServing;	// do we actually know this?
+        bool m_isSnooped;   // are we snooping THEM?
+        bool m_isSnooping;  // is this client snooping US?
         int m_state;
         QString m_host;
         quint16 m_port;
@@ -119,12 +121,16 @@ class MMCPClient : public QObject {
         void handleIncomingChannelData(const QString &);
         void handleIncomingChatEveryone(const QString &);
         void handleIncomingChatPersonal(const QString &);
+        void handleIncomingConnectionList(const QString &);
         void handleIncomingConnectionsRequest();
         void handleIncomingMessage(const QString &);
         void handleIncomingNameChange(const QString &);
+        void handleIncomingPeekConnections();
+        void handleIncomingPeekList(const QString &);
         void handleIncomingPingRequest(const QString &);
         void handleIncomingPingResponse(const QString &);
         void handleIncomingSnoop();
-        void handleIncomingSnoopData(const QString &);
+        void handleIncomingSnoopData(const char*, quint16);
         
 };
+#endif

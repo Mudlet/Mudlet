@@ -44,6 +44,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
+#include "MMCPServer.h"
 
 #include "pre_guard.h"
 #include <QTextCodec>
@@ -3323,6 +3324,9 @@ void cTelnet::postData()
 {
     if (mpHost->mpConsole) {
         mpHost->mpConsole->printOnDisplay(mMudData, true);
+    }
+    if (mpHost->mmcpServer /*&& !mpHost->mIsRemoteEchoingActive*/) {
+        mpHost->mmcpServer->receiveFromPlayer(mMudData);
     }
     if (mAlertOnNewData) {
         QApplication::alert(mudlet::self(), 0);

@@ -876,6 +876,40 @@ void XMLimport::readHost(Host* pHost)
         pHost->mRequiredDiscordUserDiscriminator.clear();
     }
 
+    
+    if (attributes().hasAttribute(QLatin1String("mMMCPChatName"))) {
+        pHost->mMMCPChatName = attributes().value(QLatin1String("mMMCPChatName")).toString();
+    } else {
+        pHost->mMMCPChatName.clear();
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mMMCPChatPort"))) {
+        pHost->mMMCPChatPort = attributes().value(QLatin1String("mMMCPChatPort")).toUShort();
+    } else {
+        pHost->mMMCPChatPort = 4050;
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mMMCPAutostartServer"))) {
+        pHost->mMMCPAutostartServer = attributes().value(QLatin1String("mMMCPAutostartServer")).toString() == "yes";
+        qDebug() << "XMLImport::readHost: mMMCPAutoStartServer" << pHost->mMMCPAutostartServer;
+    } else {
+        pHost->mMMCPAutostartServer = false;
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mMMCPAllowConnectionRequests"))) {
+        pHost->mMMCPAllowConnectionRequests = attributes().value(QLatin1String("mMMCPAllowConnectionRequests")).toString() == "yes";
+        qDebug() << "XMLImport::readHost: mMMCPAllowConnectionRequests" << pHost->mMMCPAllowConnectionRequests;
+    } else {
+        pHost->mMMCPAllowConnectionRequests = false;
+    }
+
+    if (attributes().hasAttribute(QLatin1String("mMMCPAllowPeekRequests"))) {
+        pHost->mMMCPAllowPeekRequests = attributes().value(QLatin1String("mMMCPAllowPeekRequests")).toString() == "yes";
+        qDebug() << "XMLImport::readHost: mMMCPAllowPeekRequests" << pHost->mMMCPAllowPeekRequests;
+    } else {
+        pHost->mMMCPAllowPeekRequests = false;
+    }
+
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {
         quint8 styleCode = 0;
         quint8 outerDiameterPercentage = 0;
