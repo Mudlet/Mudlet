@@ -60,8 +60,8 @@ void GMCPAuthenticator::sendCredentials()
     output += TN_IAC;
     output += TN_SB;
     output += OPT_GMCP;
-    output += "Client.Authenticate.Credentials";
-    output += gmcpMessage.toStdString();
+    output += "Client.Authenticate.Credentials ";
+    output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
     output += TN_IAC;
     output += TN_SE;
 
