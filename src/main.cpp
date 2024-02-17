@@ -46,6 +46,7 @@
 #include "TAccessibleTextEdit.h"
 #include "Announcer.h"
 #include "FileOpenHandler.h"
+#include "sentry.h"
 
 using namespace std::chrono_literals;
 
@@ -152,10 +153,29 @@ QTranslator* loadTranslationsForCommandLine()
     return pMudletTranslator;
 }
 
+void initSentry() {
+  sentry_options_t *options = sentry_options_new();
+  sentry_options_set_dsn(options, "");
+  sentry_options_set_handler_path(options, "./crashpad_handler");
+  sentry_options_set_debug(options, 1);
+  sentry_init(options);
+
+    /*
+    sentry_capture_event(sentry_value_new_message_event(
+        SENTRY_LEVEL_INFO,
+        "Testing",
+        "Working as expected!"
+    ));
+    */
+}
+
 int main(int argc, char* argv[])
 {
     // print stdout to console if Mudlet is started in a console in Windows
     // credit to https://stackoverflow.com/a/41701133 for the workaround
+    
+    initSentry();
+
 #ifdef Q_OS_WIN32
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         freopen("CONOUT$", "w", stdout);

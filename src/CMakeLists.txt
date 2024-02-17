@@ -523,6 +523,7 @@ target_compile_definitions(communi PUBLIC IRC_STATIC)
 target_link_libraries(
         mudlet
         communi
+        sentry
         edbee-lib
         Boost::boost
         HUNSPELL::HUNSPELL
