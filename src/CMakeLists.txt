@@ -120,12 +120,14 @@ set(mudlet_SRCS
     TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
+    TLuaInterpreterMapper.cpp
     TMap.cpp
     TMapLabel.cpp
     TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
+    TLuaInterpreterTextToSpeech.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
