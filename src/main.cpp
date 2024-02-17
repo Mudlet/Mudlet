@@ -229,8 +229,7 @@ int main(int argc, char* argv[])
 
     QFile gitShaFile(":/app-build.txt");
     gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
-    QString appBuild = QString::fromUtf8(gitShaFile.readAll());
-    appBuild = appBuild.trimmed();
+    const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
     gitShaFile.close();
 
     const bool releaseVersion = appBuild.isEmpty();
