@@ -1,12 +1,32 @@
+/***************************************************************************
+ *   Copyright (C) 2024 by Vadim Peretokin - vperetokin@gmail.com          *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
 #include "GMCPAuthenticator.h"
 
 #include <QDebug>
+#include "Host.h"
 
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost) : mpHost(pHost) {}
 
 void GMCPAuthenticator::saveSupportsSet(const QString& message)
 {
-    auto jsonDoc = QJsonDocument::fromJson(data.toUtf8());
+    auto jsonDoc = QJsonDocument::fromJson(message.toUtf8());
     auto jsonObj = jsonDoc.object();
 
     if (jsonObj.contains("types")) {
@@ -19,7 +39,7 @@ void GMCPAuthenticator::saveSupportsSet(const QString& message)
     qDebug() << "Supported auth types:" << mSupportedAuthTypes;
 }
 
-void GMCPAuthenticator::sendCredentials(const QString& character, const QString& password)
+void GMCPAuthenticator::sendCredentials()
 {
     auto character = mpHost->getLogin();
     auto password = mpHost->getPass();
@@ -57,7 +77,7 @@ void GMCPAuthenticator::handleAuthResult(const QVariantMap& result)
     auto message = obj["message"].toString();
 
     if (success) {
-        qDebug() << "GMCP login successful"
+        qDebug() << "GMCP login successful";
     } else {
         qDebug() << "GMCP login failed:" << message;
     }
@@ -69,8 +89,8 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
     if (packageMessage == qsl("Client.Authenticate.Default")) {
         saveSupportsSet(data);
 
-        if (mSupportedAuthTypes.contains("credentials")) {
-            sendCredentials("username", "password");
+        if (mSupportedAuthTypes.contains(qsl("credentials"))) {
+            sendCredentials();
         } else {
             qDebug() << "Server does not support credentials authentication and we don't support any other";
         }
