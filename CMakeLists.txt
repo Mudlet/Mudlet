@@ -109,7 +109,7 @@ message(STATUS "Git SHA1: ${GIT_SHA1}")
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
 set(APP_VERSION 4.17.2)
-# We now make APP_BUILD a CACHE variable so it can be propogated to the ./src/
+# We now make APP_BUILD a CACHE variable so it can be propagated to the ./src/
 # sub-directory build.
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
