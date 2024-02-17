@@ -37,7 +37,7 @@ class GMCPAuthenticator : public QObject
 
 public:
     Q_DISABLE_COPY(GMCPAuthenticator)
-    GMCPAuthenticator(Host* pHost);
+    explicit GMCPAuthenticator(Host* pHost);
     ~GMCPAuthenticator() = default;
 
     void saveSupportsSet(const QString& data);

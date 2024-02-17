@@ -19,9 +19,9 @@
 
 #include "GMCPAuthenticator.h"
 
-#include <QDebug>
 #include "Host.h"
 #include "ctelnet.h"
+#include <QDebug>
 
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost) : mpHost(pHost) {}
 
@@ -96,9 +96,8 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
         } else {
             qDebug() << "Server does not support credentials authentication and we don't support any other";
         }
-    }
 
-    else if (packageMessage == qsl("Client.Authenticate.Result")) {
+    } else if (packageMessage == qsl("Client.Authenticate.Result")) {
         handleAuthResult(data);
 
     } else {
