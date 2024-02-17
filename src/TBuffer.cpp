@@ -2507,11 +2507,14 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         return slice;
     }
 
-    if ((x < 0) || (x >= static_cast<int>(buffer.at(y).size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer.at(y).size()))) {
-        x = 0;
+    // Ensure x starts within the valid range, and adjust P2.x() if it's out of bounds
+    if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
+        x = 0; // Reset x to start of line if out of bounds
     }
+    int P2x_corrected = std::min(P2.x(), static_cast<int>(buffer.at(y).size()) - 1); // Correct P2.x() to prevent out-of-bounds
+
     int oldLinkId{}, id{};
-    for (const int total = P2.x(); x < total; ++x) {
+    for (; x <= P2x_corrected; ++x) {
         const int linkId = buffer.at(y).at(x).linkIndex();
         if (linkId && (linkId != oldLinkId)) {
             id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
@@ -2521,7 +2524,6 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         if (!linkId) {
             id = 0;
         }
-        // This is rather inefficient as s is only ever one QChar long
         const QString s(lineBuffer.at(y).at(x));
         slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags, id);
     }
