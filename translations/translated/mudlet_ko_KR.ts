@@ -1141,7 +1141,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
 Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&quot;%1&quot; 프로필에 대해 게임 서버로 보낼 텍스트를 입력하거나 줄임말을 입력하여 로컬에서 명령을 실행합니다.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1386"/>
