@@ -630,6 +630,7 @@ SOURCES += \
     TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TLuaInterpreterMapper.cpp \
     TMainConsole.cpp \
     TMap.cpp \
     TMapLabel.cpp \
@@ -638,6 +639,7 @@ SOURCES += \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
+    TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
@@ -1630,7 +1632,6 @@ OTHER_FILES += \
     ../CI/qt-silent-install.qs \
     ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
-    ../CI/travis.compile.sh \
     ../CI/travis.install.sh \
     ../CI/travis.linux.after_success.sh \
     ../CI/travis.linux.before_install.sh \

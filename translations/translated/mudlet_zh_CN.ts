@@ -145,7 +145,7 @@ please wait...</source>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
       <source>An invisible widget used as a workaround to announce text to the screen reader</source>
-      <translation type="unfinished"/>
+      <translation>一个不可见的小组件，用来向屏幕阅读器发布文字</translation>
     </message>
   </context>
   <context>
@@ -1394,13 +1394,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2182"/>
       <source>Profile main window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置文件主窗口历史记录。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2184"/>
       <source>Profile main window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置主窗口实时信息。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2189"/>
@@ -1418,19 +1418,19 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2207"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置 &quot;%1&quot; 嵌入式窗口 &quot;%2&quot; 历史记录。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2209"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置 &quot;%1&quot; 嵌入式窗口 &quot;%2&quot; 实时信息。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2212"/>
       <source>Profile embedded window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置嵌入式窗口 &quot;%1&quot; 历史记录。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2214"/>
@@ -1448,7 +1448,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2222"/>
       <source>Profile embedded window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置嵌入式窗口 &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2237"/>
@@ -1499,12 +1499,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2164"/>
       <source>Error messages are shown here in the editor.</source>
-      <translation type="unfinished"/>
+      <translation>在编辑器里显示错误消息。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2170"/>
       <source>Main Window for &quot;%1&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>&quot;%1&quot; 配置文件的主窗口</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2172"/>
@@ -1514,7 +1514,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2199"/>
       <source>Embedded window &quot;%1&quot; for &quot;%2&quot; profile.</source>
-      <translation type="unfinished"/>
+      <translation>&quot;%2&quot; 配置文件的嵌入式窗口 &quot;%1&quot;</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2201"/>
@@ -1534,7 +1534,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2231"/>
       <source>User window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>用户窗口 &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2233"/>
@@ -1822,7 +1822,9 @@ Tried these locations:
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+--------------------------------------------------------------+
+|                      系统统计信息                       |
++--------------------------------------------------------------+</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1465"/>
@@ -1888,7 +1890,7 @@ Tried these locations:
       <location filename="../src/TMainConsole.cpp" line="1523"/>
       <source>Gif Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Gif 报告:</translation>
     </message>
   </context>
   <context>
@@ -3953,7 +3955,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="151"/>
       <source>^mycommand$ (example)</source>
-      <translation type="unfinished"/>
+      <translation>^mycommand$ (示例)</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="158"/>
@@ -3983,7 +3985,7 @@ and this one cannot read it, you need a newer Mudlet!</source>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="222"/>
       <source>Replacement text (optional)</source>
-      <translation type="unfinished"/>
+      <translation>替换文本 (可选)</translation>
     </message>
   </context>
   <context>
@@ -4136,17 +4138,17 @@ changed.</source>
     <message>
       <location filename="../src/ctelnet.cpp" line="3156"/>
       <source>WARN</source>
-      <translation type="unfinished"/>
+      <translation>警告</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3168"/>
       <source>ALERT</source>
-      <translation type="unfinished"/>
+      <translation>提醒</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3180"/>
       <source>INFO</source>
-      <translation type="unfinished"/>
+      <translation>信息</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3192"/>
@@ -6049,7 +6051,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/dlgPackageExporter.cpp" line="135"/>
       <source>Package Exporter - %1</source>
       <extracomment>Title of the window. The %1 will be replaced by the current profile&apos;s name</extracomment>
-      <translation type="unfinished"/>
+      <translation>包导出器 - %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="180"/>
@@ -6448,37 +6450,37 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/dlgProfilePreferences.cpp" line="810"/>
       <source>200</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>200</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="811"/>
       <source>500</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>500</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="812"/>
       <source>1,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>1,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="813"/>
       <source>2,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>2,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="814"/>
       <source>5,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>5,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="815"/>
       <source>10,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10,000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1774"/>
@@ -6586,7 +6588,9 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="3177"/>
       <source>%n selected - change destinations...</source>
       <extracomment>text on button to select other profiles to receive the map from this profile, %n is the number of other profiles that have already been selected to receive it and will always be 1 or more</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n 已选定 - 改变选定目标...</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3184"/>
@@ -6765,7 +6769,8 @@ and there is enough space. The copying operation has failed.</source>
       <location filename="../src/dlgProfilePreferences.cpp" line="2357"/>
       <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ 错误 ] - 无法加载 JSON 地图文件： %1
+原因： %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2398"/>
@@ -7173,7 +7178,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="246"/>
       <location filename="../src/dlgRoomProperties.cpp" line="286"/>
       <source>count</source>
-      <translation type="unfinished"/>
+      <translation>总计</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="517"/>
@@ -7410,12 +7415,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="163"/>
       <source>new folder</source>
-      <translation type="unfinished"/>
+      <translation>新建文件夹</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="164"/>
       <source>new item</source>
-      <translation type="unfinished"/>
+      <translation>新项目</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="168"/>
@@ -7730,7 +7735,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="484"/>
       <source>Add Group (Control+Shift+N)</source>
-      <translation type="unfinished"/>
+      <translation>添加组 (Control+Shift+N)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5626"/>
@@ -8063,27 +8068,27 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7697"/>
       <source>Add Variable</source>
-      <translation type="unfinished"/>
+      <translation>添加变量</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7698"/>
       <source>Add new variable</source>
-      <translation type="unfinished"/>
+      <translation>添加新变量</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7699"/>
       <source>Add Lua table</source>
-      <translation type="unfinished"/>
+      <translation>添加 Lua Table</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Add new Lua table</source>
-      <translation type="unfinished"/>
+      <translation>添加 新的 Lua Table</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7701"/>
       <source>Delete Variable</source>
-      <translation type="unfinished"/>
+      <translation>删除变量</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7702"/>
@@ -9042,12 +9047,12 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="350"/>
       <source>Arguments:</source>
-      <translation type="unfinished"/>
+      <translation>参数:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="351"/>
       <source>        [FILE]                       File to install as a package</source>
-      <translation type="unfinished"/>
+      <translation>        [文件]                      以包形式安装的文件</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="370"/>
@@ -9063,7 +9068,7 @@ less likely to be useful for normal use of this application:</source>
       <location filename="../src/main.cpp" line="295"/>
       <source>Usage: %1 [OPTION...] [FILE] </source>
       <comment>%1 is the name of the executable as it is on this OS.</comment>
-      <translation type="unfinished"/>
+      <translation>用法: %1 [OPTION...] [FILE] </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="299"/>
@@ -12319,12 +12324,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3678"/>
       <source>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</source>
-      <translation type="unfinished"/>
+      <translation>广告屏幕阅读器通过支持此通知的协议使用 (NEW-ENVIRON, MNES, MTTS)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3819"/>
       <source>Force NEW_ENVIRON negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>强制关闭 NEW_ENVIRON 协商</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3853"/>
@@ -12416,22 +12421,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="354"/>
       <source>&lt;p&gt;Enables MTTS - provides information about your client settings at logon for supported gamesr&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;启用 MTTS - 登录时提供有关客户机设置的信息 &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="357"/>
       <source>Enable MTTS  (Mud Terminal Type Standard)</source>
-      <translation type="unfinished"/>
+      <translation>启用 MTTS (Mud Terminal Type标准)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="364"/>
       <source>&lt;p&gt;Enables MNES - provides information about your client settings during game play for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;启用 MNES - 在游戏中为受支持的游戏提供关于您的客户端设置的信息&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="367"/>
       <source>Enable MNES  (Mud New-Environ Standard)</source>
-      <translation type="unfinished"/>
+      <translation>启用 MNES (Mud New-Environ 标准)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="563"/>
