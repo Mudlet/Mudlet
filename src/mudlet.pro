@@ -630,14 +630,18 @@ SOURCES += \
     TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TLuaInterpreterNetworking.cpp \
+    TLuaInterpreterMapper.cpp \
     TMainConsole.cpp \
     TMap.cpp \
     TMapLabel.cpp \
+    TLuaInterpreterDiscord.cpp \
     TMedia.cpp \
     TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
+    TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \

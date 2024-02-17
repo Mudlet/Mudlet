@@ -17,5 +17,6 @@
         <file>mudlet_tr_TR.qm</file>
         <file>mudlet_fi_FI.qm</file>
         <file>mudlet_ar_SA.qm</file>
+        <file>mudlet_ko_KR.qm</file>
     </qresource>
 </RCC>
