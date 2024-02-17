@@ -73,6 +73,7 @@ class dlgIRC;
 class dlgPackageManager;
 class dlgModuleManager;
 class dlgProfilePreferences;
+class cTelnet;
 
 class stopWatch {
     friend class XMLimport;

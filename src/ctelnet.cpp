@@ -37,6 +37,7 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"

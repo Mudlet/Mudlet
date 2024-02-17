@@ -52,8 +52,6 @@
 #include <queue>
 #include <string>
 
-#include "GMCPAuthenticator.h"
-
 #if defined(Q_OS_WIN32)
 #include <ws2tcpip.h>
 #include "mstcpip.h"

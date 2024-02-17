@@ -37,6 +37,7 @@
 #include "TLabel.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "GMCPAuthenticator.h"
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TTextEdit.h"
