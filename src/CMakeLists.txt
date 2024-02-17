@@ -123,6 +123,7 @@ set(mudlet_SRCS
     TLuaInterpreterMapper.cpp
     TMap.cpp
     TMapLabel.cpp
+    TLuaInterpreterDiscord.cpp
     TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
