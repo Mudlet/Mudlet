@@ -419,8 +419,6 @@ private:
     // we can send NAWS data when it changes:
     int mNaws_x = 0;
     int mNaws_y = 0;
-
-    GMCPAuthenticator mAuth;
 };
 
 #endif // MUDLET_CTELNET_H

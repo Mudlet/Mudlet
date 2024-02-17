@@ -2830,7 +2830,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     if (packageMessage.startsWith(qsl("Client.Authenticate"), Qt::CaseInsensitive)) {
-        mAuth.handleAuthGMCP(packageMessage, data);
+        mpHost->mpAuth->handleAuthGMCP(packageMessage, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
