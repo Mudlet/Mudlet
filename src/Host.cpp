@@ -42,6 +42,7 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
+#include "GifTracker.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -339,6 +340,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mAliasUnit(this)
 , mActionUnit(this)
 , mKeyUnit(this)
+, mGifTracker()
 , mHostID(id)
 , mHostName(hostname)
 , mIsClosingDown(false)
@@ -445,7 +447,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::scmIsPublicTestVersion) {
+    if (mudlet::self()->publicTestVersion) {
         thankForUsingPTB();
     }
 
@@ -3801,6 +3803,7 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
     auto myMovie = pL->mpMovie;
     if (!myMovie) {
         myMovie = new QMovie();
+        mGifTracker.registerGif(myMovie);
         myMovie->setCacheMode(QMovie::CacheAll);
         pL->mpMovie = myMovie;
         myMovie->setParent(pL);
@@ -3811,6 +3814,7 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
     if (!myMovie->isValid()) {
         return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
     }
+
     myMovie->stop();
     pL->setMovie(myMovie);
     myMovie->start();

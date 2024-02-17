@@ -2,6 +2,7 @@
     <qresource prefix="/">
         <file alias="materiaMagicaIcon">icons/logo_mm-120x30px-verticalBlackBgd.png</file>
         <file alias="translation-stats.json">../translations/translated/translation-stats.json</file>
+        <file>app-build.txt</file>
         <file>CF-loader.xml</file>
         <file>deleteOldProfiles.xml</file>
         <file>echo.xml</file>
@@ -11,9 +12,10 @@
         <file>icons/3klogo.png</file>
         <file>icons/3slogo.png</file>
         <file>icons/aardwolf_mud.png</file>
-        <file>icons/accessories-text-editor.png</file>
-        <file>icons/achaea_120_30.png</file>
         <file>icons/abandonedrealms_icon.jpg</file>
+        <file>icons/accessories-text-editor.png</file>
+        <file>icons/accursed_lands.png</file>
+        <file>icons/achaea_120_30.png</file>
         <file>icons/aetolia_120_30.png</file>
         <file>icons/application-exit.png</file>
         <file>icons/application-json.png</file>
@@ -21,9 +23,9 @@
         <file>icons/applications-accessories.png</file>
         <file>icons/applications-engineering.png</file>
         <file>icons/applications-internet.png</file>
+        <file>icons/arrow-down_grey-16x.png</file>
         <file>icons/arrow-down-16x.png</file>
         <file>icons/arrow-down.png</file>
-        <file>icons/arrow-down_grey-16x.png</file>
         <file>icons/arrow-down_grey.png</file>
         <file>icons/arrow-right-16x.png</file>
         <file>icons/arrow-right.png</file>

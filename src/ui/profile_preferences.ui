@@ -348,7 +348,27 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="0" colspan="2">
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="mEnableMTTS">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MTTS - provides information about your client settings at logon for supported gamesr&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MTTS  (Mud Terminal Type Standard)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="mEnableMNES">
+            <property name="toolTip">
+             <string>&lt;p&gt;Enables MNES - provides information about your client settings during game play for supported games&lt;/p&gt;</string>
+            </property>
+            <property name="text">
+             <string>Enable MNES  (Mud New-Environ Standard)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0" colspan="2">
            <widget class="QLabel" name="need_reconnect_for_data_protocol">
             <property name="enabled">
              <bool>true</bool>
@@ -3649,7 +3669,17 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="0">
+          <item row="1" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_advertiseScreenReader">
+            <property name="toolTip">
+             <string></string>
+            </property>
+            <property name="text">
+             <string>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
            <widget class="QLabel" name="label_blankLinesBehaviour">
             <property name="text">
              <string>When the game sends blank lines:</string>
@@ -3659,7 +3689,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+          <item row="2" column="1">
            <widget class="QComboBox" name="comboBox_blankLinesBehaviour">
             <item>
              <property name="text">
@@ -3678,7 +3708,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
-          <item row="2" column="0">
+          <item row="3" column="0">
            <widget class="QLabel" name="label_caretModeKey">
             <property name="text">
              <string>Switch between input line and main window using:</string>
@@ -3688,7 +3718,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="1">
+          <item row="3" column="1">
            <widget class="QComboBox" name="comboBox_caretModeKey">
             <item>
              <property name="text">
@@ -3783,7 +3813,14 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="0" colspan="2">
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="mForceNewEnvironNegotiationOff">
+            <property name="text">
+             <string>Force NEW_ENVIRON negotiation off</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
            <widget class="QLabel" name="need_reconnect_for_specialoption">
             <property name="enabled">
              <bool>true</bool>
@@ -4157,8 +4194,10 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>acceptServerMedia</tabstop>
   <tabstop>mEnableGMCP</tabstop>
   <tabstop>mEnableMSDP</tabstop>
+  <tabstop>mEnableMTTS</tabstop>
   <tabstop>mEnableMSSP</tabstop>
   <tabstop>mEnableMSP</tabstop>
+  <tabstop>mEnableMNES</tabstop>
   <tabstop>mIsToLogInHtml</tabstop>
   <tabstop>lineEdit_logFileFolder</tabstop>
   <tabstop>comboBox_logFileNameFormat</tabstop>
@@ -4296,6 +4335,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>lineEdit_proxyPassword</tabstop>
   <tabstop>toolButton_resetMainWindowShortcuts</tabstop>
   <tabstop>checkBox_announceIncomingText</tabstop>
+  <tabstop>checkBox_advertiseScreenReader</tabstop>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
@@ -4303,6 +4343,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>
   <tabstop>checkBox_mUSE_FORCE_LF_AFTER_PROMPT</tabstop>
   <tabstop>mFORCE_MXP_NEGOTIATION_OFF</tabstop>
+  <tabstop>mForceNewEnvironNegotiationOff</tabstop>
   <tabstop>buttonPurgeMediaCache</tabstop>
   <tabstop>checkbox_noAutomaticUpdates</tabstop>
   <tabstop>search_engine_combobox</tabstop>

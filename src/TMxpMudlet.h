@@ -130,8 +130,6 @@ public:
     QQueue<TMxpEvent> mMxpEvents;
 
 private:
-    inline static const QString scmVersion = qsl(APP_VERSION APP_BUILD);
-
     Host* mpHost;
     bool mLinkMode;
 };

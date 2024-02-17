@@ -322,6 +322,29 @@ void dlgConnectionProfiles::slot_updateDescription()
     }
 }
 
+void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList packages)
+{
+    if (!packages.length()) {
+        return;
+    }
+
+    QWidget widget;
+    QGroupBox* packageGroupBox = new QGroupBox("Select and load a profile to install the following package(s) into:", this);
+    QVBoxLayout* packageInfoLayout = new QVBoxLayout(packageGroupBox);
+
+    packageInfoLayout->setContentsMargins(8, 8, 8, 8);
+    packageGroupBox->setStyleSheet("QGroupBox:title { padding-left: 8px; }");
+
+    for (const QString &package : packages) {
+        QFileInfo fileInfo(package);
+        QString packageName = fileInfo.baseName();
+        QLabel *packageLabel = new QLabel(packageName);
+        packageInfoLayout->addWidget(packageLabel);
+    }
+
+    layout()->addWidget(packageGroupBox);
+}
+
 // Not used:
 //void dlgConnectionProfiles::slot_updateWebsite(const QString& url)
 //{

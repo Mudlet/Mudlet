@@ -89,6 +89,7 @@ public slots:
     void slot_cancel();
     void slot_copyProfile();
     void slot_copyOnlySettingsOfProfile();
+    void indicatePackagesInstallOnConnect(QStringList packages);
 
 
 protected:
