@@ -177,7 +177,6 @@ isEmpty( FONT_TEST ) | !equals(FONT_TEST, "NO" ) {
     # and it is not obvious that there is a demand to do this currently.
 }
 
-WITH_UPDATER = NO
 ######################### Auto Updater setting detection #########,#############
 # To remove the built-in updater, set the environment WITH_UPDATER variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
@@ -192,7 +191,7 @@ linux|macx|win32 {
     isEmpty( UPDATER_TEST ) | !equals(UPDATER_TEST, "NO" ) {
        # The environmental variable does not exist or it does and it is NOT the
        # particular value we are looking out for - so include the updater code:
-       #DEFINES += INCLUDE_UPDATER
+       DEFINES += INCLUDE_UPDATER
     }
     # else the environment variable is the specific "don't include the updater
     # code" setting - so don't!
