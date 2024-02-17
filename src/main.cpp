@@ -233,7 +233,6 @@ int main(int argc, char* argv[])
 
     const bool releaseVersion = appBuild.isEmpty();
     const bool publicTestVersion = appBuild.startsWith("-ptb");
-    const bool developmentVersion = !releaseVersion && !publicTestVersion;
 
     if (publicTestVersion) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));
