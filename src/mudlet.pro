@@ -635,6 +635,7 @@ SOURCES += \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
+    TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \
