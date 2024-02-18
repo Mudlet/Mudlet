@@ -1119,10 +1119,8 @@ void TConsole::scrollUp(int lines)
 
 void TConsole::deselect()
 {
-    P_begin.setX(0);
-    P_begin.setY(0);
-    P_end.setX(0);
-    P_end.setY(0);
+    P_begin = QPoint();
+    P_end = QPoint();
 }
 
 void TConsole::showEvent(QShowEvent* event)
@@ -1182,7 +1180,7 @@ void TConsole::insertLink(const QString& text, QStringList& func, QStringList& h
         return;
 
     } else {
-        if ((buffer.buffer.empty() && buffer.buffer[0].empty()) || mUserCursor == buffer.getEndPos()) {
+        if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
             if (customFormat) {
                 buffer.addLink(mTriggerEngineMode, text, func, hint, mFormatCurrent, luaReference);
             } else {
@@ -1231,7 +1229,7 @@ void TConsole::insertText(const QString& text, QPoint P)
         }
 
     } else {
-        if ((buffer.buffer.empty() && buffer.buffer[0].empty()) || mUserCursor == buffer.getEndPos()) {
+        if ((buffer.buffer.empty()) || mUserCursor == buffer.getEndPos()) {
             buffer.append(text, 0, text.size(), mFormatCurrent);
             mUpperPane->showNewLines();
             mLowerPane->showNewLines();
@@ -1557,10 +1555,8 @@ bool TConsole::moveCursor(int x, int y)
 
 int TConsole::select(const QString& text, int numOfMatch)
 {
-    if (mUserCursor.y() < 0) {
-        return -1;
-    }
-    if (mUserCursor.y() >= buffer.size()) {
+    if (mUserCursor.y() < 0 || mUserCursor.y() >= buffer.size()) {
+        deselect();
         return -1;
     }
 
@@ -1579,19 +1575,18 @@ int TConsole::select(const QString& text, int numOfMatch)
         begin = li.indexOf(text, begin + 1);
 
         if (begin == -1) {
-            P_begin.setX(0);
-            P_begin.setY(0);
-            P_end.setX(0);
-            P_end.setY(0);
+            deselect();
             return -1;
         }
     }
+    if (begin < 0) {
+        deselect();
+        return -1;
+    }
 
     const int end = begin + text.size();
-    P_begin.setX(begin);
-    P_begin.setY(mUserCursor.y());
-    P_end.setX(end);
-    P_end.setY(mUserCursor.y());
+    P_begin = QPoint(begin, mUserCursor.y());
+    P_end = QPoint(end, mUserCursor.y());
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::darkRed, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
@@ -1616,10 +1611,8 @@ bool TConsole::selectSection(int from, int to)
     if (from > s || from + to > s) {
         return false;
     }
-    P_begin.setX(from);
-    P_begin.setY(mUserCursor.y());
-    P_end.setX(from + to);
-    P_end.setY(mUserCursor.y());
+    P_begin = QPoint(from, mUserCursor.y());
+    P_end = QPoint(from + to, mUserCursor.y());
 
     if (mudlet::smDebugMode) {
         TDebug(Qt::darkMagenta, Qt::black) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""

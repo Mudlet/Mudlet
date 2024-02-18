@@ -1216,7 +1216,7 @@ TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
         return nullptr;
     }
 
-    auto pCT = new TColorTable;
+    auto pCT = new (std::nothrow) TColorTable;
     if (!pCT) {
         return nullptr;
     }

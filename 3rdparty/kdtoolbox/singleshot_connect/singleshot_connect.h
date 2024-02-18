@@ -1,7 +1,7 @@
 /*
   This file is part of KDToolBox.
 
-  SPDX-FileCopyrightText: 2020-2023 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
+  SPDX-FileCopyrightText: 2020 Klarälvdalens Datakonsult AB, a KDAB Group company <info@kdab.com>
   Author: Giuseppe D'Angelo <giuseppe.dangelo@kdab.com>
 
   SPDX-License-Identifier: MIT

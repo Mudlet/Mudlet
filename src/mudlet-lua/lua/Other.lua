@@ -562,6 +562,10 @@ function _comp(a, b)
   return true
 end
 
+--- exposes _comp as compare as it's a global, has been for years, and is also
+--- extremely useful. But documenting it as _comp is inconsistent with the rest
+--- of the API
+compare = _comp
 
 
 --- <b><u>TODO</u></b> phpTable(...) - abuse to: http://richard.warburton.it
@@ -1238,6 +1242,8 @@ function getConfig(...)
       "enableMSDP", 
       "enableMSSP", 
       "enableMSP", 
+      "enableMTTS",
+      "enableMNES",
       "askTlsAvailable", 
       "inputLineStrictUnixEndings", 
       "autoClearInputLine", 
@@ -1247,6 +1253,7 @@ function getConfig(...)
       "specialForceGAOff", 
       "specialForceCharsetNegotiationOff", 
       "specialForceMxpNegotiationOff", 
+      "forceNewEnvironNegotiationOff", 
       "compactInputLine", 
       "announceIncomingText", 
       "blankLinesBehaviour", 
