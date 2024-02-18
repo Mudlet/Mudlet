@@ -338,6 +338,7 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
     return 2;
 }
 
+// No documentation available in wiki - internal function
 int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, const char* message, const bool useFalseInsteadofNil)
 {
     if (Q_LIKELY(!useFalseInsteadofNil)) {
@@ -449,6 +450,7 @@ void TLuaInterpreter::slot_httpRequestFinished(QNetworkReply* reply)
     handleHttpOK(reply);
 }
 
+// No documentation available in wiki - internal function
 void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
 {
     TEvent event {};
@@ -578,6 +580,7 @@ void TLuaInterpreter::handleHttpOK(QNetworkReply* reply)
     pHost->raiseEvent(event);
 }
 
+// No documentation available in wiki - internal function
 void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, qint64 bytesDownloaded, qint64 totalBytes)
 {
     Host& host = getHostFromLua(L);
@@ -600,6 +603,7 @@ void TLuaInterpreter::raiseDownloadProgressEvent(lua_State* L, QString fileUrl, 
     host.raiseEvent(event);
 }
 
+// No documentation available in wiki - internal function
 void TLuaInterpreter::slot_pathChanged(const QString& path)
 {
     // According to QtDocs it is possible that some editors will delete old file and create new one on edits
@@ -2379,6 +2383,7 @@ int TLuaInterpreter::setMapWindowTitle(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMudletInfo
 int TLuaInterpreter::getMudletInfo(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -2609,6 +2614,7 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const QString& labelNam
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteLabel
 int TLuaInterpreter::deleteLabel(lua_State* L)
 {
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
@@ -2621,6 +2627,7 @@ int TLuaInterpreter::deleteLabel(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelToolTip
 int TLuaInterpreter::setLabelToolTip(lua_State* L)
 {
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
@@ -2640,6 +2647,7 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelCursor
 int TLuaInterpreter::setLabelCursor(lua_State* L)
 {
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
@@ -2654,6 +2662,7 @@ int TLuaInterpreter::setLabelCursor(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelCustomCursor
 int TLuaInterpreter::setLabelCustomCursor(lua_State* L)
 {
     const int n = lua_gettop(L);
@@ -2946,6 +2955,7 @@ int TLuaInterpreter::setWindow(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMainWindowSize
 int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
     const int x1 = getVerifiedInt(L, __func__, 1, "mainWidth");
@@ -5876,6 +5886,7 @@ void TLuaInterpreter::parseCommandOrFunction(lua_State* lState, const char* func
     command = lua_tostring(lState, index);
 }
 
+// No documentation available in wiki - internal function
 void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionName, int& index, QStringList& hintList)
 {
     if (!lua_istable(lState, index)) {
@@ -5904,6 +5915,7 @@ void TLuaInterpreter::parseHintsTable(lua_State* lState, const char* functionNam
     }
 }
 
+// No documentation available in wiki - internal function
 void TLuaInterpreter::parseCommandsOrFunctionsTable(lua_State* lState, const char* functionName, int& index, QStringList& commandsList, QVector<int>& luaFunctionNumbers)
 {
     if (!lua_istable(lState, index)) {
@@ -6472,6 +6484,7 @@ int TLuaInterpreter::selectCmdLineText(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#selectCmdLineText
 int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
@@ -6485,6 +6498,7 @@ int TLuaInterpreter::addCmdLineBlacklist(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#removeCmdLineBlacklist
 int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
@@ -6498,6 +6512,7 @@ int TLuaInterpreter::removeCmdLineBlacklist(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#clearCmdLineBlacklist
 int TLuaInterpreter::clearCmdLineBlacklist(lua_State* L)
 {
     const int n = lua_gettop(L);
@@ -7185,6 +7200,7 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
      */
 }
 
+// No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, const NamedMatchesRanges& namePositions)
 {
     mCapturedNameGroups = nameGroups;
@@ -7247,8 +7263,8 @@ void TLuaInterpreter::setAtcpTable(const QString& var, const QString& arg)
     host.raiseEvent(event);
 }
 
-void
-TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions) {
+// No documentation available in wiki - internal function
+void TLuaInterpreter::signalMXPEvent(const QString &type, const QMap<QString, QString> &attrs, const QStringList &actions) {
     lua_State *L = pGlobalLua;
     lua_getglobal(L, "mxp");
     if (!lua_istable(L, -1)) {
@@ -9444,14 +9460,15 @@ void TLuaInterpreter::initLuaGlobals()
     //FIXME make function call in destructor lua_close(L);
 }
 
+// No documentation available in wiki - internal function
 lua_State* TLuaInterpreter::getLuaGlobalState() {
     return pGlobalLua;
 }
 
 // No documentation available in wiki - internal function
-// Creates a 'mudlet.translations' table with directions
 void TLuaInterpreter::setupLanguageData()
 {
+    // Creates a 'mudlet.translations' table with directions
     lua_State* L = pGlobalLua;
 
     // 'mudlet' global table
@@ -9523,13 +9540,14 @@ void TLuaInterpreter::setupLanguageData()
 }
 
 // No documentation available in wiki - internal function
-// Initialised a slimmed-down Lua state just to run the indenter in a separate sandbox.
-// The indenter by default pollutes the global environment with some utility functions
-// and we don't want to tie ourselves to it by exposing them for scripting.
 void TLuaInterpreter::initIndenterGlobals()
 {
     Q_ASSERT_X(!pIndenterState, "TLuaInterpreter::initIndenterGlobals()", "Indenter state is already initialized - re-initializing it is very expensive!");
 
+
+    // Initialise a slimmed-down Lua state just to run the indenter in a separate sandbox.
+    // The indenter by default pollutes the global environment with some utility functions
+    // and we don't want to tie ourselves to it by exposing them for scripting.
     pIndenterState.reset(newstate());
     storeHostInLua(pIndenterState.get(), mpHost);
 
@@ -11268,6 +11286,7 @@ int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#announce
 int TLuaInterpreter::announce(lua_State *L) {
     const QString text = getVerifiedString(L, __func__, 1, "text to announce");
     static const QStringList processingKinds{"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"};
