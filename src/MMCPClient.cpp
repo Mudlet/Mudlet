@@ -1,8 +1,3 @@
-#include "MMCPClient.h"
-#include "Host.h"
-#include "MMCPServer.h"
-#include "mudlet.h"
-
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
  *                                                                         *
@@ -21,6 +16,11 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
+#include "MMCPClient.h"
+#include "Host.h"
+#include "MMCPServer.h"
+#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <QTcpSocket>
