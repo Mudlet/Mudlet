@@ -33,12 +33,13 @@ jobs:
             # We still need a gcc for some sub-stages - and it ain't always the same one:
             gcc_compiler_version: 9
             qt: '5.14.2'
-          - os: macos-11
-            buildname: 'macos / c++ tests'
+          - os: macos-12
+            buildname: 'macos / c++, lua tests'
             triplet: x64-osx
             compiler: clang_64
             qt: '5.14.2'
             deploy: 'deploy'
+            run_tests: 'true'
 #           - os: windows-2019
 #             buildname: 'windows'
 #             triplet: x64-mingw-dynamic
@@ -47,13 +48,13 @@ jobs:
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
-      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.77.0/boost_1_77_0.tar.bz2/download
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2/download
       # APP_BUILD embeds the git sha which changes on every commit, throwing the cache off - ignore it
       CCACHE_IGNOREOPTIONS: "-DAPP_BUILD=*"
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         submodules: true
         fetch-depth: 0
@@ -76,7 +77,7 @@ jobs:
         cache: true
 
     - name: Restore Boost cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -159,7 +160,7 @@ jobs:
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
         # Use latest available XCode
-        echo "DEVELOPER_DIR=/Applications/Xcode_12.4.app/Contents/Developer" >> $GITHUB_ENV
+        echo "DEVELOPER_DIR=/Applications/Xcode_14.2.app/Contents/Developer" >> $GITHUB_ENV
 
       # though we vcpkg installs Lua for us, the way it arranges directories is not compatible with Luarocks,
       # so install it in a format that works
@@ -239,11 +240,12 @@ jobs:
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      uses: pat-s/always-upload-cache@v3.0.11
+      uses: actions/cache@v4
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
+        save-always: true
       if: matrix.os != 'windows-latest'
 
     - name: (Linux) Set build info
@@ -284,7 +286,7 @@ jobs:
 
     - name: Upload GitHub Actions artifact of vcpkg build logs
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: vcpkg-logs-${{ runner.os }}
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
@@ -299,7 +301,7 @@ jobs:
       run: ctest --output-on-failure
 
     - name: (Linux/macOS) restore Luarocks for packaging
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
@@ -352,6 +354,7 @@ jobs:
       env:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
+        X_WP_DOWNLOAD_TOKEN: ${{secrets.X_WP_DOWNLOAD_TOKEN}}
         DEPLOY: ${{matrix.deploy}}
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
@@ -361,7 +364,7 @@ jobs:
         AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
     - name: Upload packaged Mudlet
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
@@ -373,17 +376,36 @@ jobs:
       shell: bash
 
     # we need to be in the right place for LuaGlobals.lua to load
-    - name: Prep binary for running tests
-      if: matrix.run_tests == 'true'
+    - name: (Linux) Prep binary for running tests
+      if: matrix.run_tests == 'true' && runner.os =='Linux'
+      # macOS binary is in ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}/Contents/MacOS
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
       shell: bash
 
-    - name: Run Lua tests
-      if: matrix.run_tests == 'true'
+    - name: (macOS) Prep binary for running tests
+      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      run: |
+        cp -r ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop
+        cd ~/Desktop
+        sudo codesign --remove-signature ${{env.UPLOAD_FILENAME}}.app
+      shell: bash
+
+    - name: (Linux) Run Lua tests
+      if: matrix.run_tests == 'true' && runner.os == 'Linux'
       timeout-minutes: 5
       uses: GabrielBB/xvfb-action@v1.6
       with:
         run: ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror
+      env:
+        AUTORUN_BUSTED_TESTS: 'true'
+        TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
+        QUIT_MUDLET_AFTER_TESTS: 'true'
+
+    - name: (macOS) Run Lua tests
+      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      timeout-minutes: 5
+      shell: bash
+      run: ~/Desktop/${{env.UPLOAD_FILENAME}}.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests

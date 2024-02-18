@@ -35,12 +35,13 @@
 #include "pre_guard.h"
 #include <QDataStream>
 #include <QElapsedTimer>
-#include <QHBoxLayout>
 #include <QFile>
+#include <QHBoxLayout>
+#include <QIcon>
 #include <QLabel>
 #include <QPointer>
+#include <QSaveFile>
 #include <QWidget>
-#include <QIcon>
 #include "post_guard.h"
 
 #include <hunspell/hunspell.h>
@@ -98,8 +99,8 @@ public:
     Q_DECLARE_FLAGS(SearchOptions, SearchOption)
 
     Q_DISABLE_COPY(TConsole)
-    explicit TConsole(Host*, ConsoleType type = UnknownType, QWidget* parent = nullptr);
-    ~TConsole();
+    explicit TConsole(Host*, const QString&, const ConsoleType type = UnknownType, QWidget* parent = nullptr);
+    ~TConsole() override;
 
     void reset();
     void resizeConsole();
@@ -159,6 +160,8 @@ public:
     void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
     void setHorizontalScrollBar(bool);
+    void setScrolling(const bool state);
+    bool getScrolling() const { return mScrollingEnabled; }
     void setCmdVisible(bool);
     void changeColors();
     void scrollDown(int lines);
@@ -206,6 +209,11 @@ public:
     void setSearchOptions(const SearchOptions);
     void setProxyForFocus(TCommandLine*);
     void raiseMudletSysWindowResizeEvent(const int overallWidth, const int overallHeight);
+    // Raises an event if the number of lines (in the
+    // (QStringList) TBuffer::lineBuffer) exceeds the number of rows in a
+    // non-scrolling window:
+    void handleLinesOverflowEvent(const int lineCount);
+    void clearSplit();
 
 
     QPointer<Host> mpHost;
@@ -263,7 +271,7 @@ public:
 
     QElapsedTimer mProcessingTimer;
     bool mRecordReplay = false;
-    QFile mReplayFile;
+    QSaveFile mReplayFile;
     QDataStream mReplayStream;
 
     bool mTriggerEngineMode = false;
@@ -310,6 +318,7 @@ public slots:
 
 protected:
     void dragEnterEvent(QDragEnterEvent*) override;
+    void dragMoveEvent(QDragMoveEvent*) override;
     void dropEvent(QDropEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mousePressEvent(QMouseEvent*) override;
@@ -327,6 +336,7 @@ private:
     SearchOptions mSearchOptions = SearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
+    bool mScrollingEnabled = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
@@ -335,7 +345,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(TConsole::ConsoleType)
 inline QDebug& operator<<(QDebug& debug, const TConsole::ConsoleType& type)
 {
     QString text;
-    QDebugStateSaver saver(debug);
+    QDebugStateSaver const saver(debug);
     switch (type) {
     case TConsole::UnknownType:           text = qsl("Unknown"); break;
     case TConsole::CentralDebugConsole:   text = qsl("Central Debug Console"); break;

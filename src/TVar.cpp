@@ -21,7 +21,6 @@
 
 
 #include "TVar.h"
-#include <lua.h> // Needed for LUA_TNONE in Constructors!
 
 /*
  * LUA type values from lua.h for lua 5.1:
@@ -39,8 +38,8 @@
 
 TVar::TVar()
 : hidden(false)
-, kpointer(nullptr)
-, vpointer(nullptr)
+, pKey(nullptr)
+, pValue(nullptr)
 , saved(false)
 , reference(false)
 , parent(nullptr)
@@ -55,8 +54,8 @@ TVar::TVar()
 
 TVar::TVar(TVar* p)
 : hidden(false)
-, kpointer(nullptr)
-, vpointer(nullptr)
+, pKey(nullptr)
+, pValue(nullptr)
 , saved(false)
 , reference(false)
 , parent(p)
@@ -71,8 +70,8 @@ TVar::TVar(TVar* p)
 
 TVar::TVar(TVar* p, const QString& kName, const int kt, const QString& val, const int vt)
 : hidden(false)
-, kpointer(nullptr)
-, vpointer(nullptr)
+, pKey(nullptr)
+, pValue(nullptr)
 , saved(false)
 , reference(false)
 , parent(p)
@@ -95,15 +94,15 @@ void TVar::addChild(TVar* c)
     children.append(c);
 }
 
-QString TVar::getName()
+QString TVar::getName() const
 {
     return name;
 }
 
 bool TVarLessThan(TVar* varA, TVar* varB)
 {
-    QString a = varA->getName();
-    QString b = varB->getName();
+    const QString a = varA->getName();
+    const QString b = varB->getName();
     bool isAOk = false;
     bool isBOk = false;
 
@@ -141,17 +140,17 @@ void TVar::removeChild(TVar* t)
     children.removeAll(t);
 }
 
-int TVar::getKeyType()
+int TVar::getKeyType() const
 {
     return keyType;
 }
 
-QString TVar::getValue()
+QString TVar::getValue() const
 {
     return value;
 }
 
-int TVar::getValueType()
+int TVar::getValueType() const
 {
     return valueType;
 }
@@ -162,12 +161,12 @@ void TVar::setNewName(const QString& n, const int t)
     newKeyType = t;
 }
 
-int TVar::getNewKeyType()
+int TVar::getNewKeyType() const
 {
     return newKeyType;
 }
 
-QString TVar::getNewName()
+QString TVar::getNewName() const
 {
     return nName;
 }

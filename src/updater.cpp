@@ -41,7 +41,7 @@ using namespace std::chrono_literals;
 //   and promptly quits. Installer updates Mudlet and launches Mudlet when its done
 // mac: handled completely outside of Mudlet by Sparkle
 
-Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
+Updater::Updater(QObject* parent, QSettings* settings, bool testVersion) : QObject(parent)
 , updateDialog(nullptr)
 , mpInstallOrRestart(new QPushButton(tr("Update")))
 , mUpdateInstalled(false)
@@ -50,7 +50,7 @@ Updater::Updater(QObject* parent, QSettings* settings) : QObject(parent)
     this->settings = settings;
 
     feed = new dblsqd::Feed(qsl("https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw"),
-                            mudlet::scmIsPublicTestVersion ? qsl("public-test-build") : qsl("release"));
+                            testVersion ? qsl("public-test-build") : qsl("release"));
 
     if (!mDailyCheck) {
         mDailyCheck = std::make_unique<QTimer>();
@@ -160,7 +160,7 @@ void Updater::setupOnWindows()
 {
     // Setup to automatically download the new release when an update is available
     connect(feed, &dblsqd::Feed::ready, feed, [=]() {
-        if (mudlet::scmIsDevelopmentVersion) {
+        if (mudlet::self()->developmentVersion) {
             return;
         }
 
@@ -225,7 +225,7 @@ void Updater::setupOnLinux()
     connect(feed, &dblsqd::Feed::ready, this, [=]() {
         // don't update development builds to prevent auto-update from overwriting your
         // compiled binary while in development
-        if (mudlet::scmIsDevelopmentVersion) {
+        if (mudlet::self()->developmentVersion) {
             return;
         }
 
@@ -370,7 +370,7 @@ void Updater::slot_installOrRestartClicked(QAbstractButton* button, const QStrin
 // updated, then you do want to see the changelog.
 void Updater::recordUpdateTime() const
 {
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
+    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_at")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update timestamp file for writing.";
@@ -382,14 +382,16 @@ void Updater::recordUpdateTime() const
         ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs << QDateTime::currentDateTime().toMSecsSinceEpoch();
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "Updater::recordUpdateTime: error recording update time: " << file.errorString();
+    }
 }
 
 // records the previous version of Mudlet that we updated from, so we can show
 // the changelog on next startup for the latest version only
 void Updater::recordUpdatedVersion() const
 {
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
+    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mudlet_updated_from")));
     bool opened = file.open(QIODevice::WriteOnly);
     if (!opened) {
         qWarning() << "Couldn't open update version file for writing.";
@@ -401,7 +403,9 @@ void Updater::recordUpdatedVersion() const
         ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
     }
     ifs << APP_VERSION;
-    file.close();
+    if (!file.commit()) {
+        qDebug() << "Updater::recordUpdatedVersion: error saving old mudlet version: " << file.errorString();
+    }
 }
 
 // returns true if Mudlet was updated automatically and a changelog should be shown
@@ -414,7 +418,7 @@ bool Updater::shouldShowChangelog()
     return false;
 #endif
 
-    if (mudlet::scmIsDevelopmentVersion || !updateAutomatically()) {
+    if (mudlet::self()->developmentVersion || !updateAutomatically()) {
         return false;
     }
 

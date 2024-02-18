@@ -128,7 +128,7 @@ public:
     bool gotoRoom(int, int);
     bool serialize(QDataStream&, int saveVersion = 0);
     bool restore(QString location, bool downloadIfNotFound = true);
-    bool retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
+    bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
     QString connectExitStubByToId(const int fromRoomId, const int toRoomId);
@@ -179,7 +179,7 @@ public:
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false, const bool allowUserCancellation = true);
-    int getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
+    qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
@@ -196,6 +196,8 @@ public:
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
     bool isUnsaved() const { return mUnsavedMap; }
+    void setDefaultAreaShown(bool);
+    bool getDefaultAreaShown() { return mShowDefaultArea; }
 
 
     TRoomDB* mpRoomDB = nullptr;
@@ -372,15 +374,18 @@ private:
     QProgressDialog* mpProgressDialog = nullptr;
     // Using during updates of text in progress dialog partially from other
     // classes:
-    int mProgressDialogAreasTotal = 0;
-    int mProgressDialogAreasCount = 0;
-    int mProgressDialogRoomsTotal = 0;
-    int mProgressDialogRoomsCount = 0;
-    int mProgressDialogLabelsTotal = 0;
-    int mProgressDialogLabelsCount = 0;
+    qsizetype mProgressDialogAreasTotal = 0;
+    qsizetype mProgressDialogAreasCount = 0;
+    qsizetype mProgressDialogRoomsTotal = 0;
+    qsizetype mProgressDialogRoomsCount = 0;
+    qsizetype mProgressDialogLabelsTotal = 0;
+    qsizetype mProgressDialogLabelsCount = 0;
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    // Used to hide the default area from casual viewing for those MUDs that
+    // want to script a "fog-of-war" system by hiding rooms in the -1 area:
+    bool mShowDefaultArea = true;
 };
 
 #endif // MUDLET_TMAP_H

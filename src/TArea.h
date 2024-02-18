@@ -43,7 +43,7 @@ class TArea
 
     friend bool TMap::serialize(QDataStream&, int);
     friend bool TMap::restore(QString, bool);
-    friend bool TMap::retrieveMapFileStats(QString, QString*, int*, int*, int*, int*);
+    friend bool TMap::retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
 
 public:
     TArea(TMap*, TRoomDB*);

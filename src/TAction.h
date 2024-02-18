@@ -28,6 +28,7 @@
 
 #include "pre_guard.h"
 #include <QColor>
+#include <QDebug>
 #include <QIcon>
 #include <QObject>
 #include <QPointer>
@@ -54,44 +55,44 @@ public:
     TAction(TAction* parent, Host* pHost);
     TAction(const QString& name, Host* pHost);
     void compileAll();
-    QString getName() { return mName; }
+    QString getName() const { return mName; }
     void setName(const QString& name);
-    void setButtonRotation(int r) { if(r != mButtonRotation) { setDataChanged(); mButtonRotation = r; } }
-    int getButtonRotation() { return mButtonRotation; }
-    void setButtonColumns(int c) { if(c != mButtonColumns) { setDataChanged(); mButtonColumns = c; } }
-    int getButtonColumns() { return mButtonColumns; }
-    bool getButtonFlat() { return mButtonFlat; }
-    void setButtonFlat(bool flat) { if(flat != mButtonFlat) { setDataChanged(); mButtonFlat = flat; } }
+    void setButtonRotation(int rotation) { if (rotation != mButtonRotation) { setDataChanged(); mButtonRotation = rotation; } }
+    int getButtonRotation() const { return mButtonRotation; }
+    void setButtonColumns(int columns) { if (columns != mButtonColumns) { setDataChanged(); mButtonColumns = columns; } }
+    int getButtonColumns() const { return mButtonColumns; }
+    bool getButtonFlat() const { return mButtonFlat; }
+    void setButtonFlat(bool flat) { if (flat != mButtonFlat) { setDataChanged(); mButtonFlat = flat; } }
 
-    void setSizeX(int s) { if(s != mSizeX) { setDataChanged(); mSizeX = s; } }
-    int getSizeX() { return mSizeX; }
-    void setSizeY(int s) { if(s != mSizeY) { setDataChanged(); mSizeY = s; } }
-    int getSizeY() { return mSizeY; }
+    void setSizeX(int size) { if (size != mSizeX) { setDataChanged(); mSizeX = size; } }
+    int getSizeX() const { return mSizeX; }
+    void setSizeY(int size) { if (size != mSizeY) { setDataChanged(); mSizeY = size; } }
+    int getSizeY() const { return mSizeY; }
 
     void fillMenu(TEasyButtonBar* pT, QMenu* menu);
     void compile();
     bool compileScript();
     void execute();
-    QString getIcon() { return mIcon; }
-    void setIcon(const QString& icon) { if(icon != mIcon) { mIcon = icon; } }
-    QString getScript() { return mScript; }
+    QString getIcon() const { return mIcon; }
+    void setIcon(const QString& icon) { if (icon != mIcon) { mIcon = icon; } }
+    QString getScript() const { return mScript; }
     bool setScript(const QString& script);
-    QString getCommandButtonUp() { return mCommandButtonUp; }
-    void setCommandButtonUp(const QString& cmd) { if(cmd != mCommandButtonUp) { setDataChanged(); mCommandButtonUp = cmd; } }
-    void setCommandButtonDown(const QString& cmd) { if(cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
-    QString getCommandButtonDown() { return mCommandButtonDown; }
+    QString getCommandButtonUp() const { return mCommandButtonUp; }
+    void setCommandButtonUp(const QString& cmd) { if (cmd != mCommandButtonUp) { setDataChanged(); mCommandButtonUp = cmd; } }
+    void setCommandButtonDown(const QString& cmd) { if (cmd != mCommandButtonDown) { setDataChanged(); mCommandButtonDown = cmd; } }
+    QString getCommandButtonDown() const { return mCommandButtonDown; }
     bool isPushDownButton() { return mIsPushDownButton; }
-    void setIsPushDownButton(bool b) { if(b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
+    void setIsPushDownButton(bool b) { if (b != mIsPushDownButton) { setDataChanged(); mIsPushDownButton = b; } }
 
-    void setIsFolder(bool b) { if(b != isFolder()) { setDataChanged(); this->Tree::setIsFolder(b);} }
+    void setIsFolder(bool b) { if (b != isFolder()) { setDataChanged(); this->Tree::setIsFolder(b);} }
 
     bool registerAction();
     void insertActions(TToolBar* pT, QMenu* menu);
     void expandToolbar(TToolBar* pT);
     void insertActions(TEasyButtonBar* pT, QMenu* menu);
     void expandToolbar(TEasyButtonBar* pT);
-    void setDataSaved() { if(mpParent) { mpParent->setDataSaved(); } mDataChanged = false; }
-    void setDataChanged() { if(mpParent) { mpParent->setDataChanged(); } mDataChanged = true; }
+    void setDataSaved() { if (mpParent) { mpParent->setDataSaved(); } mDataChanged = false; }
+    void setDataChanged() { if (mpParent) { mpParent->setDataChanged(); } mDataChanged = true; }
     bool isDataChanged() { return mDataChanged; }
 
     QPointer<TToolBar> mpToolBar;
@@ -155,5 +156,19 @@ private:
     bool mModuleMember = false;
     bool mDataChanged = true;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const TAction* action)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+    debug.nospace() << "TAction(" << action->getName() << ")";
+    debug.nospace() << ", commandButtonUp=" << action->getCommandButtonUp();
+    debug.nospace() << ", commandButtonDown=" << action->getCommandButtonDown();
+    debug.nospace() << ", script=" << action->getScript();
+    debug.nospace() << ')';
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TACTION_H

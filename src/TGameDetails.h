@@ -64,6 +64,35 @@ public:
     // clang-format off
     // games are to be added here in alphabetical order
     inline static const QList<GameDetail> scmDefaultGames = {
+            { qsl("Abandoned Realms"),
+            qsl("abandonedrealms.com"),
+            9000,
+            false,
+qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
+                "<a href='https://abandonedrealms.com/forum'>Forum</a>"),
+            qsl(":/icons/abandonedrealms_icon.jpg"),
+            qsl("The Abandoned Realms is a completely free RP-enforced, PK-encouraged, MUD in a fantasy setting "
+                 "(swords/magic/lore/intrigue) that has been up and running constantly since 1997."
+                 "\n\n"
+                 "With 20 races and 16 classes, there are vast possibilities for players to explore and enjoy. "
+                 "The Abandoned Realms has a dedicated staff of highly skilled immortals/coders/builders, "
+                 "and a diverse base players online at any given time. There are extensive opportunities for "
+                 "role-play, including writing character background entries, building your own house "
+                 "(including decor), contributing to the in-game newspaper, engaging in political intrigue, "
+                 "choosing a deity to worship (and opening exceptional Immortal RP opportunities), and "
+                 "more."
+                 "\n\n"
+                 "It is a dangerous realm, filled with exceptional killers but new players are not hunted – they "
+                 "are welcomed and supported. Perma-death exists, but it is common for characters to live "
+                 "for hundreds of  hours, or as long as the player desires. Information and advice are shared "
+                 "freely – see The Codex for item identifications/locations, the logboard for battles, and the "
+                 "forum and discord for gameplay discussion and advice."
+                 "\n\n"
+                 "If you are interested in a completely free, immersive RP/PK experience, in a vibrant land filled "
+                 "with lore/intrigue, where you can forge long-lasting friendships and bitter rivalries, and have an "
+                 "opportunity to leave your lasting mark and be remembered forever, then welcome ye to the "
+                 "Abandoned Realms.")
+            },
             {qsl("Avalon.de"), // Name
              qsl("avalon.mud.de"), // address to connect to
              23, // port to connect on
@@ -414,6 +443,29 @@ public:
              qsl("This isn't a game profile, but a special one for testing Mudlet itself using "
                  "Busted. You can also use it as a starting point to create automated tests for your "
                  "own profiles!")},
+
+            {qsl("Accursed Lands"),
+             qsl("mud.accursed-lands.com"),
+             7979,
+             true,
+             qsl("<a href='https://www.accursed-lands.net'>www.accursed-lands.net</a><br>"
+                    "Discord<br>"
+                    "<a href='https://discord.gg/pUPdVra'>https://discord.gg/pUPdVra</a>"),
+             qsl(":/icons/accursed_lands.png"),
+             qsl("Accursed Lands is a long-standing text-based online role-playing game (MUD) "
+             "with a post-apocalyptic medieval setting.  It offers a \"Role-Play Enforced\" "
+             "environment without alignments, character levels, or classes, allowing players "
+             "to choose their own fate and live their character's life as they see fit. "
+             "Players can expect a community-focused, immersive sandbox experience focusing "
+             "on freedom with fewer restrictions on their actions.  The game also boasts "
+             "strong support for visually impaired players, complex magic and crafting, "
+             "permanent housing, terrain/weather systems, and a vast global map with millions "
+             "of areas to explore.  Whether seeking adventure, knowledge, fortune, or more, "
+             "craft your unique story in a world designed to test your every step."
+             "\n\n"
+             "If you enjoy a slower-paced, skill-based MUD with a richly detailed world and a "
+             "strong emphasis on role-playing,  Accursed Lands may be the perfect fit for you. "
+             "We would be happy to have you!")},
 
             {qsl("Carrion Fields"),
              qsl("carrionfields.net"),

@@ -147,7 +147,7 @@ void dlgRoomProperties::init(
 
 void dlgRoomProperties::initLockInstructions()
 {
-    QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
+    const QString instructions = tr("Lock room(s), so it/they will never be used for speedwalking",
                            // Intentional comment to separate arguments!
                            "This text will be shown at a checkbox, where you can set/unset a number of room's lock.",
                            mpRooms.size());
@@ -238,11 +238,12 @@ QStringList dlgRoomProperties::getComboBoxSymbolItems()
             if (itSymbolUsed.value() == symbolCountsList.at(i)) {
                 displayStrings.append(qsl("%1 {%2:%3}")
                     .arg(itSymbolUsed.key())
-                    .arg(tr("count",
-                            // Intentional comment to separate arguments
-                            "This text will be part of a list of room values shown, which will show the value "
-                            "itself, followed by the counted number of rooms with this very value like: "
-                            "grey {count:2} - so please translate like counted ammount, number of, etc."))
+                    /*:
+                    This text will be part of a list of room values shown, which will show the value
+                    itself, followed by the counted number of rooms with this very value like:
+                    grey {count:2} - so please translate like counted ammount, number of, etc.
+                    */
+                    .arg(tr("count"))
                     .arg(QString::number(itSymbolUsed.value())));
             }
         }
@@ -277,11 +278,12 @@ QStringList dlgRoomProperties::getComboBoxWeightItems()
             if (itWeightUsed.value() == weightCountsList.at(i)) {
                 displayStrings.append(qsl("%1 {%2:%3}")
                     .arg(QString::number(itWeightUsed.key()))
-                    .arg(tr("count",
-                            // Intentional comment to separate arguments
-                            "This text will be part of a list of room values shown, which will name the value "
-                            "itself, followed by the counted number of rooms with that very value like: "
-                            "grey {count: 2} - So please translate like counted amount, number of, etc."))
+                    /*:
+                    This text will be part of a list of room values shown, which will name the value
+                    itself, followed by the counted number of rooms with that very value like:
+                    grey {count: 2} - So please translate like counted amount, number of, etc.
+                    */
+                    .arg(tr("count"))
                     .arg(QString::number(itWeightUsed.value())));
             }
         }
@@ -309,9 +311,9 @@ void dlgRoomProperties::accept()
     //   to the other room data here) - They need no further review at this time.
 
     // Find symbol to return back
-    QString newSymbol = getNewSymbol();
+    const QString newSymbol = getNewSymbol();
     bool changeSymbol = true;
-    QColor newSymbolColor = selectedSymbolColor;
+    QColor const newSymbolColor = selectedSymbolColor;
     bool changeSymbolColor = true;
     if (newSymbol == multipleValuesPlaceholder) {
         // We don't want to change then
@@ -320,7 +322,7 @@ void dlgRoomProperties::accept()
     }
 
     // Find weight to return back
-    int newWeight = getNewWeight();
+    const int newWeight = getNewWeight();
     bool changeWeight = true;
     if (newWeight <= -1) {
         // We don't want to change then
@@ -328,7 +330,7 @@ void dlgRoomProperties::accept()
     }
 
     // Find lock status to return back
-    Qt::CheckState newCheckState = checkBox_locked->checkState();
+    Qt::CheckState const newCheckState = checkBox_locked->checkState();
     bool changeLockStatus = true;
     bool newLockStatus;
     if (newCheckState == Qt::PartiallyChecked) {
@@ -360,8 +362,8 @@ QString dlgRoomProperties::getNewSymbol()
     }
     QString newSymbolText = comboBox_roomSymbol->currentText();
     // Parse the initial text before the curly braces containing count
-    QRegularExpression countStripper(qsl("^(.*) {.*}$"));
-    QRegularExpressionMatch match = countStripper.match(newSymbolText);
+    QRegularExpression const countStripper(qsl("^(.*) {.*}$"));
+    QRegularExpressionMatch const match = countStripper.match(newSymbolText);
     if (match.hasMatch() && match.lastCapturedIndex() > 0) {
         return match.captured(1);
     }
@@ -374,13 +376,13 @@ int dlgRoomProperties::getNewWeight()
     if (mpWeights.size() <= 1) {
         return spinBox_weight->value();
     }
-    QString newWeightText = comboBox_weight->currentText();
+    const QString newWeightText = comboBox_weight->currentText();
     if (newWeightText == multipleValuesPlaceholder) {
         return -1; // User did not want to select any weight, so we will do no change
     }
     // Parse an initial number out of what was selected or typed
-    QRegularExpression countStripper(qsl("^\\s*(\\d+)"));
-    QRegularExpressionMatch match = countStripper.match(newWeightText);
+    QRegularExpression const countStripper(qsl("^\\s*(\\d+)"));
+    QRegularExpressionMatch const match = countStripper.match(newWeightText);
     if (match.hasMatch() && match.lastCapturedIndex() > 0) {
         return match.captured(1).toInt();
     }
@@ -417,13 +419,13 @@ QFont dlgRoomProperties::getFontForPreview(QString symbolString)
     auto font = mpHost->mpMap->mMapSymbolFont;
     font.setPointSize(font.pointSize() * 0.9);
     if (!symbolString.isEmpty()) {
-        QFontMetrics mapSymbolFontMetrics = QFontMetrics(font);
-        QVector<quint32> codePoints = symbolString.toUcs4();
+        QFontMetrics const mapSymbolFontMetrics = QFontMetrics(font);
+        QVector<quint32> const codePoints = symbolString.toUcs4();
         QVector<bool> isUsable;
         for (int i = 0; i < codePoints.size(); ++i) {
             isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoints.at(i)));
         }
-        bool needToFallback = isUsable.contains(false);
+        const bool needToFallback = isUsable.contains(false);
         if (needToFallback) {
             symbolString = QString(QChar::ReplacementCharacter);
             font.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpHost->mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
@@ -511,7 +513,8 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(listWidget, &QListWidget::customContextMenuRequested, this, [=]() {
         QMenu menu;
-        menu.addAction(tr("Delete room color", "This action deletes a color from the list of all room colors"), this, [=]() {
+        //: This action deletes a color from the list of all room colors
+        menu.addAction(tr("Delete room color"), this, [=]() {
             auto selectedItem = listWidget->takeItem(listWidget->currentRow());
             auto color = selectedItem->text();
 
@@ -538,12 +541,14 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     hboxLayout->addWidget(pB_newColor);
 
     auto pB_ok = new QPushButton(pButtonBar);
-    pB_ok->setText(tr("OK", "confirm room color selection dialog"));
+    //: confirm room color selection dialog
+    pB_ok->setText(tr("OK"));
     hboxLayout->addWidget(pB_ok);
     connect(pB_ok, &QAbstractButton::clicked, dialog, &QDialog::accept);
 
     auto pB_abort = new QPushButton(pButtonBar);
-    pB_abort->setText(tr("Cancel", "cancel room color selection dialog"));
+    //: cancel room color selection dialog
+    pB_abort->setText(tr("Cancel"));
     connect(pB_abort, &QAbstractButton::clicked, dialog, &QDialog::reject);
     hboxLayout->addWidget(pB_abort);
     vboxLayout->addWidget(pButtonBar);
@@ -556,7 +561,7 @@ void dlgRoomProperties::slot_openRoomColorSelector()
         auto pI = new QListWidgetItem(listWidget);
         QPixmap pix = QPixmap(50, 50);
         pix.fill(c);
-        QIcon mi(pix);
+        const QIcon mi(pix);
         pI->setIcon(mi);
         pI->setText(QString::number(it.key()));
         listWidget->addItem(pI);

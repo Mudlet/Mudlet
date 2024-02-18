@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2022 by Stephen Lyons - slysven@virginmedia.com         *
+ *   Copyright (C) 2022-2023 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -57,7 +57,7 @@ public:
     }
 
     TScript* getScript(int id);
-    void compileAll();
+    void compileAll(bool saveLoadingError = false);
     bool registerScript(TScript* pT);
     void unregisterScript(TScript* pT);
     void reParentScript(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
@@ -65,7 +65,7 @@ public:
     void uninstall(const QString&);
     void _uninstall(TScript* pChild, const QString& packageName);
     int getNewID();
-    QVector<int> findScriptId(const QString& name) const;
+    std::vector<int> findItems(const QString& name, const bool exactMatch = true, const bool caseSensitive = true);
     void resetStats();
     std::tuple<QString, int, int, int> assembleReport();
 

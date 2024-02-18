@@ -21,6 +21,9 @@
   <a href="https://www.codefactor.io/repository/github/mudlet/mudlet">
     <img src="https://www.codefactor.io/repository/github/mudlet/mudlet/badge" alt="CodeFactor" />
   </a>
+  <a href="https://console.algora.io/org/Mudlet/bounties?status=open">
+    <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fconsole.algora.io%2Fapi%2Fshields%2FMudlet%2Fbounties%3Fstatus%3Dopen"/>
+  </a>
 </p>
 
 <p align="center">
@@ -39,7 +42,7 @@
 
 ## About
 
-Mudlet is a quality [MUD](https://en.wikipedia.org/wiki/MUD) client, designed to take mudding to a new level.
+Mudlet is a quality [MUD](https://en.wikipedia.org/wiki/Multi-user_dungeon) client, designed to take mudding to a new level.
 
 It’s a modern breed of a client on the gaming scene – with an intuitive user interface, a specially designed scripting framework, and a very fast text display. That, along with cross-platform capability and an open-source development model result in a very likable game client.
 
@@ -118,7 +121,7 @@ This software wouldnt've been possible without these open source packages:
 - [edbee](http://www.edbee.net/)
 - [DBLSQD](https://www.dblsqd.com/)
 - [argparse](https://github.com/luarocks/argparse)
-- [Boost Graph Library](https://www.boost.org/doc/libs/1_77_0/libs/graph/doc/)
+- [Boost Graph Library](https://www.boost.org/doc/libs/1_83_0/libs/graph/doc/)
 - [Busted](https://lunarmodules.github.io/busted/)
 - [Ccache](https://ccache.dev/)
 - [Communi](https://communi.github.io/)

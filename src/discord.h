@@ -95,8 +95,8 @@ public:
     void setJoinSecret(const QString&);
     void setMatchSecret(const QString&);
     void setSpectateSecret(const QString&);
-    void setPartySize(const int n) { mPartySize = n; }
-    void setPartyMax(const int n) { mPartyMax = n; }
+    void setPartySize(const int size) { mPartySize = size; }
+    void setPartyMax(const int maximum) { mPartyMax = maximum; }
     DiscordRichPresence convert() const;
     QString getStateText() const { return mState; }
     QString getDetailText() const { return mDetails; }
@@ -136,7 +136,7 @@ private:
 // Note "inline" is REQUIRED:
 inline QDebug& operator<<(QDebug& debug, const localDiscordPresence& ldp)
 {
-    QDebugStateSaver saver(debug);
+    QDebugStateSaver const saver(debug);
     Q_UNUSED(saver);
 
     QString result = qsl("localDiscordPresence(\n"
