@@ -1785,6 +1785,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
             output = TN_IAC;
             output += TN_SB;
+            output += OPT_GMCP;
             output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1", "Client.Authenticate 1"])";
             output += TN_IAC;
             output += TN_SE;
