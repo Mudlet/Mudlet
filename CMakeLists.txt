@@ -93,6 +93,9 @@ execute_process(
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
+# Report it:
+message(STATUS "Git SHA1: ${GIT_SHA1}")
+
 # APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
@@ -106,14 +109,19 @@ execute_process(
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
 set(APP_VERSION 4.17.2)
+# We now make APP_BUILD a CACHE variable so it can be propagated to the ./src/
+# sub-directory build.
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
-  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "$ENV{MUDLET_VERSION_BUILD}")
-  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+  message(STATUS "Value written to app-build.txt file: $ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD} CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 else()
-  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev")
-  set(APP_BUILD "-dev")
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev-${GIT_SHA1}")
+  message(STATUS "Value written to app-build.txt file: -dev-${GIT_SHA1}")
+  set(APP_BUILD "-dev" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 endif()
+
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
