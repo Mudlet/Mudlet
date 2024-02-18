@@ -1307,53 +1307,6 @@ void TLuaInterpreter::generateElapsedTimeTable(lua_State* L, const QStringList& 
     }
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrolling
-int TLuaInterpreter::enableScrolling(lua_State* L)
-{
-    QString const windowName {WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
-        return 2;
-    }
-
-    auto console = CONSOLE(L, windowName);
-    console->setScrolling(true);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrolling
-int TLuaInterpreter::disableScrolling(lua_State* L)
-{
-    QString const windowName {WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
-        return 2;
-    }
-
-    auto console = CONSOLE(L, windowName);
-    console->setScrolling(false);
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollingActive
-int TLuaInterpreter::scrollingActive(lua_State* L)
-{
-    QString const windowName {WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        // Handle the main console case:
-        lua_pushboolean(L, true);
-        return 1;
-    }
-
-    auto console = CONSOLE(L, windowName);
-    lua_pushboolean(L, console->getScrolling());
-    return 1;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#holdingModifiers
 int TLuaInterpreter::holdingModifiers(lua_State* L)
 {
@@ -3566,19 +3519,6 @@ int TLuaInterpreter::setMergeTables(lua_State* L)
     host.mGMCP_merge_table_keys = host.mGMCP_merge_table_keys + modulesList;
     host.mGMCP_merge_table_keys.removeDuplicates();
 
-    return 0;
-}
-
-// No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
-int TLuaInterpreter::pasteWindow(lua_State* L)
-{
-    if (!lua_isstring(L, 1)) {
-        lua_pushfstring(L, "pasteWindow: bad argument #1 type (window name as string expected, got %s!)", luaL_typename(L, 1));
-        return lua_error(L);
-    }
-    const QString windowName {WINDOW_NAME(L, 1)};
-    Host& host = getHostFromLua(L);
-    host.pasteWindow(windowName);
     return 0;
 }
 
