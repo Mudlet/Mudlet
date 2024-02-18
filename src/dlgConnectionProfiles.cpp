@@ -615,7 +615,7 @@ void dlgConnectionProfiles::slot_addProfile()
 
     const QString newname = tr("new profile name");
 
-    auto pItem = new QListWidgetItem();
+    auto pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {
         return;
     }
@@ -1445,7 +1445,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         profile_name = profile_name2;
     }
 
-    pItem = new QListWidgetItem();
+    pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {
         return false;
     }

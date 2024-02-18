@@ -43,7 +43,7 @@ QList<QByteArray> TEncodingTable::getEncodingNames() const
                 if (encoding == "CP437") {
                     // Okay to insert our replacement TTextCodex_XXXX into the
                     // system we must instantiate them once:
-                    auto* pTTextCodec_437 = new TTextCodec_437();
+                    auto* pTTextCodec_437 = new (std::nothrow) TTextCodec_437();
                     // Now that it has been instantiated, the system knows about
                     // it - indeed it takes possession of it and we must NOT
                     // delete it ourselves!
@@ -51,17 +51,17 @@ QList<QByteArray> TEncodingTable::getEncodingNames() const
                         itEncoding.insert(pTTextCodec_437->name());
                     }
                 } else if (encoding == "CP667") {
-                    auto* pTTextCodec_667 = new TTextCodec_667();
+                    auto* pTTextCodec_667 = new (std::nothrow) TTextCodec_667();
                     if (pTTextCodec_667) {
                         itEncoding.insert(pTTextCodec_667->name());
                     }
                 } else if (encoding == "CP737") {
-                    auto* pTTextCodec_737 = new TTextCodec_737();
+                    auto* pTTextCodec_737 = new (std::nothrow) TTextCodec_737();
                     if (pTTextCodec_737) {
                         itEncoding.insert(pTTextCodec_737->name());
                     }
                 } else if (encoding == "CP869") {
-                    auto* pTTextCodec_869 = new TTextCodec_869();
+                    auto* pTTextCodec_869 = new (std::nothrow) TTextCodec_869();
                     if (pTTextCodec_869) {
                         itEncoding.insert(pTTextCodec_869->name());
                     }
