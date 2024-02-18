@@ -165,6 +165,7 @@ static bool isMain(const QString& name)
         }                                                                                      \
         label_;                                                                                \
     })
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineSuggestion
 int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
 {
