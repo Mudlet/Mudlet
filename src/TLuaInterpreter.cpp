@@ -2945,6 +2945,7 @@ int TLuaInterpreter::setWindow(lua_State* L)
     lua_pushboolean(L, true);
     return 1;
 }
+
 int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
     const int x1 = getVerifiedInt(L, __func__, 1, "mainWidth");
@@ -11266,6 +11267,7 @@ int TLuaInterpreter::removeCommandLineMenuEvent(lua_State * L)
     lua_pushboolean(L, true);
     return 1;
 }
+
 int TLuaInterpreter::announce(lua_State *L) {
     const QString text = getVerifiedString(L, __func__, 1, "text to announce");
     static const QStringList processingKinds{"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"};
