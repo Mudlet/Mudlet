@@ -1,3 +1,22 @@
+/***************************************************************************
+ *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
 #include "MMCPServer.h"
 #include "Host.h"
 #include "MMCP.h"
@@ -185,7 +204,7 @@ QPair<bool, QString> MMCPServer::chat(const QVariant& target, const QString& msg
 
 
 /**
- * Script COmmand, Send a chat message to everybody.
+ * Script Command, Send a chat message to everybody.
  */
 QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
 {
@@ -194,9 +213,9 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
     }
 
     QString outMsg = QString("%1%2 chats to everybody, '%3'%4")
-							.arg(static_cast<char>(TextEveryone))
-							.arg(m_chatName).arg(msg)
-							.arg(static_cast<char>(End));
+                            .arg(static_cast<char>(TextEveryone))
+                            .arg(m_chatName).arg(msg)
+                            .arg(static_cast<char>(End));
 
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
@@ -245,9 +264,9 @@ QPair<bool, QString> MMCPServer::chatName(const QString& name)
 
     if (!clients.isEmpty()) {
         const QString outMsg = QString("%1%2%3")
-								.arg(static_cast<char>(NameChange))
-								.arg(name)
-								.arg(static_cast<char>(End));
+                                .arg(static_cast<char>(NameChange))
+                                .arg(name)
+                                .arg(static_cast<char>(End));
 
         QListIterator<MMCPClient*> it(clients);
         while (it.hasNext()) {
@@ -274,9 +293,9 @@ QPair<bool, QString> MMCPServer::chatRaw(const QString& msg)
     }
 
     const QString outMsg = QString("%1%2%3")
-							.arg(static_cast<char>(TextEveryone))
-							.arg(msg)
-							.arg(static_cast<char>(End));
+                            .arg(static_cast<char>(TextEveryone))
+                            .arg(msg)
+                            .arg(static_cast<char>(End));
 
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
@@ -300,9 +319,9 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
     }
 
     const QString outMsg = QString("%1%2\n%3")
-							.arg(static_cast<char>(TextEveryone))
-							.arg(msg)
-							.arg(static_cast<char>(End));
+                            .arg(static_cast<char>(TextEveryone))
+                            .arg(msg)
+                            .arg(static_cast<char>(End));
 
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
@@ -604,9 +623,9 @@ void MMCPServer::sendPublicConnections(MMCPClient* client)
 
     if (!list.isEmpty()) {
         const QString cmdStr = QString("%1%2%3")
-								.arg(static_cast<char>(ConnectionList))
-								.arg(list)
-								.arg(static_cast<char>(End));
+                                .arg(static_cast<char>(ConnectionList))
+                                .arg(list)
+                                .arg(static_cast<char>(End));
 
         client->writeData(cmdStr);
     }
@@ -646,9 +665,9 @@ void MMCPServer::sendPublicPeek(MMCPClient* client)
 void MMCPServer::sendServedMessage(MMCPClient* client, const QString& msg)
 {
     const QString cmdStr = QString("%1%2%3")
-							.arg(static_cast<char>(TextEveryone))
-							.arg(msg)
-							.arg(static_cast<char>(End));
+                            .arg(static_cast<char>(TextEveryone))
+                            .arg(msg)
+                            .arg(static_cast<char>(End));
 
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
@@ -664,9 +683,9 @@ void MMCPServer::sendServedMessage(MMCPClient* client, const QString& msg)
 void MMCPServer::sendMessageToServed(MMCPClient* client, const QString& msg)
 {
     const QString cmdStr = QString("%1%2%3")
-							.arg(static_cast<char>(TextEveryone))
-							.arg(msg)
-							.arg(static_cast<char>(End));
+                            .arg(static_cast<char>(TextEveryone))
+                            .arg(msg)
+                            .arg(static_cast<char>(End));
 
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {

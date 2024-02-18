@@ -3,6 +3,25 @@
 #include "MMCPServer.h"
 #include "mudlet.h"
 
+/***************************************************************************
+ *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the          *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
 #include "pre_guard.h"
 #include <QTcpSocket>
 #include <QRegularExpression>
@@ -232,10 +251,10 @@ void MMCPClient::sendChat(const QString& msg, MMCPChatCommands command)
 
     case TextPersonal:
         output = QString("%1%2 chats to you, '%3'\n%4")
-						.arg(static_cast<char>(command))
-						.arg(server->getChatName())
-						.arg(msg)
-						.arg(static_cast<char>(End));
+                            .arg(static_cast<char>(command))
+                            .arg(server->getChatName())
+                            .arg(msg)
+                            .arg(static_cast<char>(End));
         break;
     }
 
@@ -248,9 +267,9 @@ void MMCPClient::sendChat(const QString& msg, MMCPChatCommands command)
 void MMCPClient::sendMessage(const QString& msg)
 {
     writeData(QString("%1%2%3")
-				.arg(static_cast<char>(Message))
-				.arg(msg)
-				.arg(static_cast<char>(End)));
+                .arg(static_cast<char>(Message))
+                .arg(msg)
+                .arg(static_cast<char>(End)));
 }
 
 
@@ -260,9 +279,9 @@ void MMCPClient::sendMessage(const QString& msg)
 void MMCPClient::sendPingRequest()
 {
     writeData(QString("%1%2%3")
-				.arg(static_cast<char>(PingRequest))
-				.arg(QDateTime::currentMSecsSinceEpoch())
-				.arg(static_cast<char>(End)));
+                .arg(static_cast<char>(PingRequest))
+                .arg(QDateTime::currentMSecsSinceEpoch())
+                .arg(static_cast<char>(End)));
 
     const QString infoMsg = tr("[ CHAT ]  - Pinging %1...").arg(m_chatName);
     mpHost->postMessage(infoMsg);
@@ -274,8 +293,8 @@ void MMCPClient::sendPingRequest()
 void MMCPClient::sendPeekRequest()
 {
     writeData(QString("%1%2")
-				.arg(static_cast<char>(PeekConnections))
-				.arg(static_cast<char>(End)));
+                .arg(static_cast<char>(PeekConnections))
+                .arg(static_cast<char>(End)));
 
     const QString infoMsg = tr("[ CHAT ]  - Attempting to peek at %1's public connections...").arg(m_chatName);
     mpHost->postMessage(infoMsg);
@@ -287,8 +306,8 @@ void MMCPClient::sendPeekRequest()
 void MMCPClient::sendRequestConnections()
 {
     writeData(QString("%1%2")
-				.arg(static_cast<char>(RequestConnections))
-				.arg(static_cast<char>(End)));
+                .arg(static_cast<char>(RequestConnections))
+                .arg(static_cast<char>(End)));
 
     const QString infoMsg = tr("[ CHAT ]  - Requested connections from %1").arg(m_chatName);
     mpHost->postMessage(infoMsg);
@@ -301,10 +320,10 @@ void MMCPClient::sendRequestConnections()
 void MMCPClient::sendVersion()
 {
     writeData(QString("%1%2 %3%4")
-				.arg(static_cast<char>(Version))
-				.arg(mudlet::self()->scmVersion)
-				.arg(" (Humera's MMCP Test)")
-				.arg(static_cast<char>(End)));
+                .arg(static_cast<char>(Version))
+                .arg(mudlet::self()->scmVersion)
+                .arg(" (Humera's MMCP Test)")
+                .arg(static_cast<char>(End)));
 }
 
 /**
@@ -321,8 +340,8 @@ void MMCPClient::writeData(const QString& data)
 void MMCPClient::snoop()
 {
     writeData(QString("%1%2")
-				.arg(static_cast<char>(Snoop))
-				.arg(static_cast<char>(End)));
+                .arg(static_cast<char>(Snoop))
+                .arg(static_cast<char>(End)));
 }
 
 /**
@@ -535,9 +554,9 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
 void MMCPClient::handleIncomingPingRequest(const QString& msg)
 {
     writeData(QString("%1%2%3")
-				.arg(static_cast<char>(PingResponse))
-				.arg(msg)
-				.arg(static_cast<char>(End)));
+                .arg(static_cast<char>(PingResponse))
+                .arg(msg)
+                .arg(static_cast<char>(End)));
 }
 
 /**
