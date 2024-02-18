@@ -209,6 +209,24 @@ int TLuaInterpreter::chatPing(lua_State* L) {
     return 1;
 }
 
+int TLuaInterpreter::chatPeek(lua_State* L) {
+    const QString target = getVerifiedString(L, __func__, 1, "target");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->peek(target);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 int TLuaInterpreter::chatPrivate(lua_State* L) {
     const QString target = getVerifiedString(L, __func__, 1, "target");
 

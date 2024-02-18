@@ -81,7 +81,8 @@ void MMCPClient::slotConnected() {
 
 	tcpSocket.write(str.toLatin1());
 	
-	server->clientMessage(QString("<CHAT> Waiting for response from %2:%1 ...").arg(m_port).arg(m_host));
+	const QString infoMsg = tr("[ CHAT ]  - Waiting for response from %1:%2.").arg(m_host).arg(m_port);
+    mpHost->postMessage(infoMsg);
 }
 
 /**
@@ -89,7 +90,8 @@ void MMCPClient::slotConnected() {
  * Clear snoop flags if we were snooping or they were snooping us.
  */
 void MMCPClient::slotDisconnected() {
-	server->clientMessage(QString("<CHAT> You are disconnected from %2:%1 ...").arg(m_port).arg(m_host));
+	const QString infoMsg = tr("[ CHAT ]  - You are now disconnected from %1:%2.").arg(m_host).arg(m_port);
+    mpHost->postMessage(infoMsg);
 	
 	if (isSnooping()) {
 		setSnooping(false);
@@ -126,11 +128,12 @@ void MMCPClient::slotReadData() {
 				m_chatName = match.captured(1);
 				
 				writeData(QString("YES:%1\n").arg(server->getChatName()));
-										
-				server->clientMessage(QString("<CHAT> Connection from %1 at %3:%2 accepted.")
+
+				const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
 										.arg(m_chatName)
-										.arg(tcpSocket.peerPort())
-										.arg(tcpSocket.peerAddress().toString()));
+										.arg(tcpSocket.peerAddress().toString())
+										.arg(tcpSocket.peerPort());
+        		mpHost->postMessage(infoMsg);				
 				
 				server->addConnectedClient(this);
 
@@ -151,11 +154,12 @@ void MMCPClient::slotReadData() {
             if (match.hasMatch()) {			
 				m_chatName = match.captured(1);
 				m_state = Connected;
-										
-				server->clientMessage(QString("<CHAT> Connection to %1 at %3:%2 accepted.")
+
+				const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
 										.arg(m_chatName)
-										.arg(tcpSocket.peerPort())
-										.arg(tcpSocket.peerAddress().toString()));
+										.arg(tcpSocket.peerAddress().toString())
+										.arg(tcpSocket.peerPort());
+        		mpHost->postMessage(infoMsg);			
 				
 				server->addConnectedClient(this);
 				sendVersion();
@@ -166,10 +170,11 @@ void MMCPClient::slotReadData() {
 				}
 			 } else {
                 m_state = Disconnected;
-										
-				server->clientMessage(QString("<CHAT> Connection to %2:%1 refused.")
+
+				const QString infoMsg = tr("[ CHAT ]  - Connection from %1:%2 refused.")
 										.arg(tcpSocket.peerPort())
-										.arg(tcpSocket.peerAddress().toString()));
+										.arg(tcpSocket.peerAddress().toString());
+        		mpHost->postMessage(infoMsg);				
              }
 
 
@@ -254,7 +259,19 @@ void MMCPClient::sendPingRequest() {
 								.arg(QDateTime::currentMSecsSinceEpoch())
 								.arg((char)End));
 
-	server->clientMessage(QString("<CHAT> Pinging %1...").arg(m_chatName));
+	const QString infoMsg = tr("[ CHAT ]  - Pinging %1...").arg(m_chatName);
+    mpHost->postMessage(infoMsg);
+}
+
+/**
+ * Send a peek connections request to this client.
+ */
+void MMCPClient::sendPeekRequest() {
+	writeData(QString("%1%2")	.arg((char)PeekConnections)
+								.arg((char)End));
+
+	const QString infoMsg = tr("[ CHAT ]  - Attempting to peek at %1's public connections...").arg(m_chatName);
+    mpHost->postMessage(infoMsg);
 }
 
 /**
@@ -264,7 +281,8 @@ void MMCPClient::sendRequestConnections() {
 	writeData(QString("%1%2")	.arg((char)RequestConnections)
 								.arg((char)End));
 
-	server->clientMessage(QString("<CHAT> Requested connections from %1").arg(m_chatName));
+	const QString infoMsg = tr("[ CHAT ]  - Requested connections from %1").arg(m_chatName);
+    mpHost->postMessage(infoMsg);
 }
 
 
@@ -387,17 +405,20 @@ void MMCPClient::handleIncomingConnectionList(const QString &list) {
 void MMCPClient::handleIncomingConnectionsRequest() {
 
 	if (m_isIgnored) {
-		server->clientMessage(QString("<CHAT> %1 is trying to request your connections!").arg(m_chatName));
+		const QString infoMsg = tr("[ CHAT ]  - %1 is trying to request your connections!").arg(m_chatName);
+    	mpHost->postMessage(infoMsg);
 		return;
 	}
 
 	if (mpHost->getMMCPAllowConnectionRequests()) {
 
-		server->clientMessage(QString("<CHAT> %1 has requested your public connections...").arg(m_chatName));
+		const QString infoMsg = tr("[ CHAT ]  - %1 has requested your public connections...").arg(m_chatName);
+    	mpHost->postMessage(infoMsg);
 
 		server->sendPublicConnections(this);
 	} else {
-		server->clientMessage(QString("<CHAT> %1 has requested your public connections, but you're ignoring connection requests...").arg(m_chatName));
+		const QString infoMsg = tr("[ CHAT ]  - %1 has requested your public connections, but you're ignoring connection requests...").arg(m_chatName);
+    	mpHost->postMessage(infoMsg);
 	}
 }
 
@@ -430,7 +451,8 @@ void MMCPClient::handleIncomingChatPersonal(const QString &msg) {
  * A client changed their name
  */
 void MMCPClient::handleIncomingNameChange(const QString &newName) {
-	server->clientMessage(QString("<CHAT> %1 is now known as %2.").arg(m_chatName).arg(newName));
+	const QString infoMsg = tr("[ CHAT ]  - %1 is now known as %2.").arg(m_chatName).arg(newName);
+    mpHost->postMessage(infoMsg);
 	m_chatName = newName;
 }
 
@@ -440,17 +462,20 @@ void MMCPClient::handleIncomingNameChange(const QString &newName) {
 void MMCPClient::handleIncomingPeekConnections() {
 	//check if this client is ignored before doing anything drastic
 	if (m_isIgnored) {
-		server->clientMessage(QString("<CHAT> %1 is trying to peek your connections!").arg(m_chatName));
+		const QString infoMsg = tr("[ CHAT ]  - %1 is trying to peek your connections!").arg(m_chatName);
+    	mpHost->postMessage(infoMsg);
 		return;
 	}
 
 	if (mpHost->getMMCPAllowPeekRequests()) {
 
-		server->clientMessage(QString("<CHAT> %1 is peeking at your connections...").arg(m_chatName));
+		const QString infoMsg = tr("[ CHAT ]  - %1 is peeking at your connections...").arg(m_chatName);
+    	mpHost->postMessage(infoMsg);
 
 		server->sendPublicPeek(this);
 	} else {
-		server->clientMessage(QString("<CHAT> %1 is peeking at your connections, but you're ignoring peek requests...").arg(m_chatName));
+		const QString infoMsg = tr("[ CHAT ]  - %1 is trying to peek your connections, but you're ignoring peek requests...").arg(m_chatName);
+    	mpHost->postMessage(infoMsg);
 	}
 }
 
@@ -463,7 +488,8 @@ void MMCPClient::handleIncomingPeekList(const QString &list) {
 	QStringList parts = list.split("~");
 
 	if (parts.size() % 3 != 0) {
-		server->clientMessage(QString("<Chat Error> Badly formatted peek list from %1").arg(m_chatName));
+		const QString infoMsg = tr("[ CHAT ]  - Badly formatted peek list from %1").arg(m_chatName);
+    	mpHost->postMessage(infoMsg);
 		return;
 	}
 
@@ -507,14 +533,16 @@ void MMCPClient::handleIncomingPingResponse(const QString &data) {
 	bool ok;
 	qint64 returnTime = data.toLongLong(&ok);
 	
-	if (ok){
-		server->clientMessage(QString("<CHAT> Ping returned from %1: %2 ms")
+	if (ok) {
+		const QString infoMsg = tr("[ CHAT ]  - Ping returned from %1: %2 ms")
 								.arg(m_chatName)
-								.arg(QDateTime::currentMSecsSinceEpoch() - returnTime));
+								.arg(QDateTime::currentMSecsSinceEpoch() - returnTime);
+    	mpHost->postMessage(infoMsg);
 	} else {
-		server->clientMessage(QString("<CHAT> Bad Ping response from %1: %2")
+		const QString infoMsg = tr("[ CHAT ]  - Bad Ping response from %1: %2")
 								.arg(m_chatName)
-								.arg(data));
+								.arg(data);
+    	mpHost->postMessage(infoMsg);
 	}
 }
 
@@ -532,15 +560,17 @@ void MMCPClient::handleIncomingSnoop() {
 	if (isSnooping()) {
 		setSnooping(false);
 		server->decrementSnoopCount();
-		
-		server->clientMessage(QString("<CHAT> %1 has stopped snooping you.").arg(m_chatName));
+
+		const QString infoMsg = tr("[ CHAT ]  - %1 has stopped snooping you.").arg(m_chatName);
+    	mpHost->postMessage(infoMsg);
 		sendMessage(QString("<CHAT> You have stopped snooping %1.").arg(server->getChatName()));
 
 	} else {
 		setSnooping(true);
 		server->incrementSnoopCount();
 		
-		server->clientMessage(QString("<CHAT> %1 has begun snooping you.").arg(m_chatName));
+		const QString infoMsg = tr("[ CHAT ]  - %1 has begun snooping you.").arg(m_chatName);
+    	mpHost->postMessage(infoMsg);
 		sendMessage(QString("<CHAT> You have stopped snooping %1.").arg(server->getChatName()));
 	}
 	
@@ -628,11 +658,9 @@ const QString MMCPClient::getInfoString() {
 
 	return QString("%1 %2 %3 %4 %5")
 							.arg(m_chatName, 20)
-							.arg(tcpSocket.peerAddress().toString(), 15)
+							.arg(tcpSocket.peerAddress().toString(), 20)
 							.arg(tcpSocket.peerPort(), 5)
 							.arg("               ", 15)
 							.arg(getFlagsString(), 8)
-							
-							//Try this last to avoid IPv6 issues
 							;
 }

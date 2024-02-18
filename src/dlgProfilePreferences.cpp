@@ -3085,7 +3085,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mMMCPChatName = lineEdit_mmcpChatName->text().trimmed();
         bool ok;
         quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
-        pHost->mMMCPChatPort = ok ? port : MMCPServer::readMMCPHostPort(pHost);
+        pHost->mMMCPChatPort = ok ? port : MMCPServer::MMCPDefaultHostPort;
         
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAllowConnectionRequests = checkBox_mmcpAllowConnReq->isChecked();

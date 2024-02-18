@@ -330,11 +330,11 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
 , mpDlgIRC(nullptr)
 , mmcpServer(nullptr)
+, mpDlgProfilePreferences(nullptr)
 , mMMCPChatPort(4050)
 , mMMCPAutostartServer(false)
 , mMMCPAllowConnectionRequests(false)
 , mMMCPAllowPeekRequests(false)
-, mpDlgProfilePreferences(nullptr)
 , mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
@@ -2729,7 +2729,6 @@ void Host::initMMCPServer() {
     }
 
     mmcpServer = new MMCPServer(this);
-    setMMCPChatName(mmcpServer->getChatName());
 }
 
 /**
@@ -2739,11 +2738,7 @@ void Host::initMMCPServer() {
  * use that?
  */
 QString Host::getMMCPChatName() {
-    if (mmcpServer) {
-        return mmcpServer->getChatName();
-    }
-
-    return MMCPServer::readMMCPChatName(this);
+    return mMMCPChatName;
 }
 
 void Host::setMMCPChatName(const QString& name) {
@@ -2752,7 +2747,6 @@ void Host::setMMCPChatName(const QString& name) {
 }
 
 quint16 Host::getMMCPPort() {
-    mMMCPChatPort =  MMCPServer::readMMCPHostPort(this);
     return mMMCPChatPort;
 }
 

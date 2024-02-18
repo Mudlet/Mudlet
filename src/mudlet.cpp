@@ -2982,18 +2982,18 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         pHost->postMessage(infoMsg);
     }
 
+    // Now check if we should auto-start the MMCP server, and do so
     if (pHost->getMMCPAutoStartServer()) {
-        qDebug() << "we should auto start mmcp server";
         if (!pHost->mmcpServer) {
             pHost->initMMCPServer();
         }
 
         quint16 port = pHost->getMMCPPort();
 
-        qDebug() << "AutoStarting MMCP Server on port " << port;
+        const QString infoMsg = tr("[ CHAT ]  - Auto-starting MMCP Server on port %1.").arg(port);
+        pHost->postMessage(infoMsg);
+
         pHost->mmcpServer->startServer(port);
-    } else {
-        qDebug() << "we're not auto starting the mmcp server";
     }
 }
 

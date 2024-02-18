@@ -1,4 +1,3 @@
-
 #include "MMCPServer.h"
 #include "Host.h"
 #include "mudlet.h"
@@ -8,81 +7,14 @@
 #include <QMap>
 #include "post_guard.h"
 
-
 MMCPServer::MMCPServer(Host* pHost) :
         QTcpServer(), mpHost(pHost), snoopCount(0) {
 
-
-    QString chatName = readMMCPChatName(pHost);
-
-	m_chatName = chatName;
+	m_chatName = pHost->getMMCPChatName();
 };
 
 MMCPServer::~MMCPServer() {
 
-}
-
-quint16 MMCPServer::readMMCPHostPort(Host* pH) {
-    const QString portStr = pH->readProfileData(MMCPServer::MMCPHostPortCfgItem);
-    bool ok;
-    quint16 port = portStr.toInt(&ok);
-    if (portStr.isEmpty() || !ok) {
-        port = MMCPServer::MMCPDefaultHostPort;
-    }
-    return port;
-}
-
-QString MMCPServer::readMMCPChatName(Host* pH) {
-    QString chatName = pH->readProfileData(MMCPServer::MMCPChatNameCfgItem);
-    if (chatName.isEmpty()) {
-        // if the new config doesn't exist, try loading the old one.
-        chatName = readAppDefaultMMCPChatName();
-
-        if (chatName.isEmpty()) {
-            chatName = qsl("%1%2").arg(MMCPServer::DefaultMMCPChatName, QString::number(rand() % 10000));
-        }
-    }
-    return chatName;
-}
-
-
-QPair<bool, QString> MMCPServer::writeChatName(Host* pH, const QString& chatname) {
-    // update app-wide file to set a default chatname as whatever the last-used name was.
-    writeAppDefaultMMCPChatName(chatname);
-
-	pH->setMMCPChatName(chatname);
-
-    return pH->writeProfileData(MMCPServer::MMCPChatNameCfgItem, chatname);
-}
-
-QString MMCPServer::readAppDefaultMMCPChatName() {
-    QFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mmcp_chatname")));
-    const bool opened = file.open(QIODevice::ReadOnly);
-    QString rstr;
-    if (opened) {
-        QDataStream ifs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ifs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
-        ifs >> rstr;
-        file.close();
-    }
-    return rstr;
-}
-
-void MMCPServer::writeAppDefaultMMCPChatName(const QString& nick) {
-    QSaveFile file(mudlet::getMudletPath(mudlet::mainDataItemPath, qsl("mmcp_chatname")));
-    const bool opened = file.open(QIODevice::WriteOnly);
-    if (opened) {
-        QDataStream ofs(&file);
-        if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-            ofs.setVersion(mudlet::scmQDataStreamFormat_5_12);
-        }
-        ofs << nick;
-        if (!file.commit()) {
-            qDebug() << "MMCPServer::writeAppDefaultMMCPChatName: error saving default chatname: " << file.errorString();
-        }
-    }
 }
 
 /**
@@ -171,7 +103,8 @@ QPair<bool, QString> MMCPServer::call(const QString &line) {
 	int n = args.length();
 
 	if (n < 1) {
-		clientMessage(QString("<CHAT> You must specify a host"));
+		const QString infoMsg = tr("[ CHAT ]  - You must specify a host");
+        mpHost->postMessage(infoMsg);
 		return QPair<bool, QString>(false, qsl("must specify a host"));
 	}
 		
@@ -204,12 +137,14 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port) {
 
 	//Check if we're already connected to this person
 	if (client != NULL) {
-		clientMessage(QString("<CHAT> Already connected to %2:%1.").arg(port).arg(host));
+		const QString infoMsg = tr("[ CHAT ]  - Already connected to %1:%2.").arg(host).arg(port);
+        mpHost->postMessage(infoMsg);
 		
 		return QPair<bool, QString>(false, qsl("already connected to that client"));
 	}
 		
-	clientMessage(QString("<CHAT> Connecting to %2:%1...").arg(port).arg(host));
+	const QString infoMsg = tr("[ CHAT ]  - Connecting to %1:%2...").arg(host).arg(port);
+    mpHost->postMessage(infoMsg);
 	
 	client = new MMCPClient(mpHost, this);
 	
@@ -232,7 +167,8 @@ QPair<bool, QString> MMCPServer::chat(const QVariant &target, const QString &msg
         return QPair<bool, QString>(true, qsl("command successful"));
 	}
 
-	clientMessage(QString("<CHAT> Invalid Client ID"));
+	const QString infoMsg = tr("[ CHAT ]  - Invalid client id.");
+    mpHost->postMessage(infoMsg);
     return QPair<bool, QString>(false, qsl("no client by that name or id"));
 }
 
@@ -272,8 +208,8 @@ QPair<bool, QString> MMCPServer::chatList() {
     using namespace AnsiColors;
 
 	QString strMessage;
-	strMessage =  "     Name                 Address         Port  Group           Flags    ChatClient\n";
-	strMessage += "     ==================== =============== ===== =============== ======== ================\n";
+	strMessage =  "     Name                 Address              Port  Group           Flags    ChatClient\n";
+	strMessage += "     ==================== ==================== ===== =============== ======== ================\n";
 
 	QString list;
 	int i = 1;
@@ -316,7 +252,8 @@ QPair<bool, QString> MMCPServer::chatName(const QString &name) {
         }
     }
 	
-	clientMessage(QString("<CHAT> You are now known as %1").arg(name));
+	const QString infoMsg = tr("[ CHAT ]  - You are now known as %1.").arg(name);
+    mpHost->postMessage(infoMsg);
 
     return QPair<bool, QString>(true, qsl("command successful"));
 }
@@ -383,15 +320,18 @@ QPair<bool, QString> MMCPServer::ignore(const QString& target) {
 
 	if (client != NULL) {	
 		if (client->isIgnored()) {
-			clientMessage(QString("<CHAT> You are no longer ignoring %1.").arg(client->chatName()));
+			const QString infoMsg = tr("[ CHAT ]  - You are no longer ignoring %1.").arg(client->chatName());
+        	mpHost->postMessage(infoMsg);
 		} else {
-			clientMessage(QString("<CHAT> You are now ignoring %1.").arg(client->chatName()));
+			const QString infoMsg = tr("[ CHAT ]  - You are now ignoring %1.").arg(client->chatName());
+        	mpHost->postMessage(infoMsg);
 		}
 		client->setIgnore(!client->isIgnored());
 		return QPair<bool, QString>(true, qsl("command successful"));
 	}
 
-	clientMessage(QString("<CHAT> Cannot find a client identified by: %1").arg(target));
+	const QString infoMsg = tr("[ CHAT ]  - Cannot find client identified by %1.").arg(target);
+    mpHost->postMessage(infoMsg);
 
 	return QPair<bool, QString>(false, qsl("no client by that name or id"));
 }
@@ -411,6 +351,20 @@ QPair<bool, QString> MMCPServer::ping(const QVariant &target) {
 }
 
 /**
+ * Script command, send peek connections request to a client
+ */
+QPair<bool, QString> MMCPServer::peek(const QVariant &target) {
+	MMCPClient *client = clientByNameOrId(target);
+
+	if (client != NULL) {		
+		client->sendPeekRequest();
+		return QPair<bool, QString>(true, qsl("command successful"));
+	}
+
+    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+}
+
+/**
  * Toggle a client's private state
  */
 QPair<bool, QString> MMCPServer::chatPrivate(const QVariant& target) {
@@ -419,10 +373,12 @@ QPair<bool, QString> MMCPServer::chatPrivate(const QVariant& target) {
 	if (client != NULL) {		
 		if (client->isPrivate()) {
 			client->setPrivate(false);
-			clientMessage(QString("<CHAT> %1 is no longer private"));
+			const QString infoMsg = tr("[ CHAT ]  - %1 is no longer private.").arg(client->chatName());
+        	mpHost->postMessage(infoMsg);
 		} else {
 			client->setPrivate(true);
-			clientMessage(QString("<CHAT> %1 is now set as private"));
+			const QString infoMsg = tr("[ CHAT ]  - %1 is now set as private.").arg(client->chatName());
+        	mpHost->postMessage(infoMsg);
 		}
 		return QPair<bool, QString>(true, qsl("command successful"));
 	}
@@ -441,13 +397,15 @@ QPair<bool, QString> MMCPServer::serve(const QVariant &target) {
 			client->setServed(false);
 			client->sendMessage(QString("<CHAT> You are no longer being served by %1.").arg(m_chatName));
 			
-			clientMessage(QString("<CHAT> You are no longer serving %1.").arg(m_chatName));
+			const QString infoMsg = tr("[ CHAT ]  - You are no longer serving %1.").arg(client->chatName());
+        	mpHost->postMessage(infoMsg);
 			
 		} else {
 			client->setServed(true);
 			client->sendMessage(QString("<CHAT> You are now being served by %1.").arg(m_chatName));
 			
-			clientMessage(QString("<CHAT> You are now serving %1.").arg(m_chatName));
+			const QString infoMsg = tr("[ CHAT ]  - You are now serving %1.").arg(client->chatName());
+        	mpHost->postMessage(infoMsg);
 		}
 
         return QPair<bool, QString>(true, qsl("command successful"));
@@ -462,11 +420,13 @@ QPair<bool, QString> MMCPServer::serve(const QVariant &target) {
  */
 QPair<bool, QString> MMCPServer::startServer(quint16 port) {
 	if (!listen(QHostAddress::Any, port)) {
-		clientMessage(QString("<CHAT> Unable to start server: %1").arg(errorString()));
+		const QString infoMsg = tr("[ CHAT ]  - Unable to start server: %1.").arg(errorString());
+        mpHost->postMessage(infoMsg);
 		return QPair<bool, QString>(false, qsl("unable to start server"));
 	}
 
-	clientMessage(QString("<CHAT> Started server on port: %1").arg(port));
+	const QString infoMsg = tr("[ CHAT ]  - Started server on port %1.").arg(port);
+    mpHost->postMessage(infoMsg);
 	emit serverStarted(port);
 	
 	return QPair<bool, QString>(true, qsl("command successful"));
@@ -497,13 +457,15 @@ QPair<bool, QString> MMCPServer::allowSnoop(const QVariant &target) {
 			client->setSnooped(false);
 			client->sendMessage(QString("<CHAT> You are no longer allowed to snoop %1.").arg(m_chatName));
 			
-			clientMessage(QString("<CHAT> %1 is no longer allowed to snoop you.").arg(m_chatName));
+			const QString infoMsg = tr("[ CHAT ]  - %1 is no longer allowed to snoop you.").arg(client->chatName());
+        	mpHost->postMessage(infoMsg);
 			
 		} else {
 			client->setCanSnoop(true);
 			client->sendMessage(QString("<CHAT> You are now allowed to snoop %1.").arg(m_chatName));
 			
-			clientMessage(QString("<CHAT> %1 can now snoop you.").arg(m_chatName));
+			const QString infoMsg = tr("[ CHAT ]  - %1 can now snoop you.").arg(client->chatName());
+        	mpHost->postMessage(infoMsg);
 		}
 
         return QPair<bool, QString>(true, qsl("command successful"));
@@ -656,7 +618,6 @@ void MMCPServer::sendPublicPeek(MMCPClient *client) {
 											.arg(list)
 											.arg((char)End);
 
-		qDebug() << "sending peeks:" << cmdStr;
 		client->writeData(cmdStr);
 	} else {
 		client->sendMessage(QString("<CHAT> %1 doesn't have any other connections").arg(m_chatName));
@@ -700,6 +661,6 @@ void MMCPServer::sendMessageToServed(MMCPClient *client, const QString &msg) {
  */
 void MMCPServer::setChatName(const QString &val) {
 	m_chatName = val;
-	
-	writeChatName(mpHost, m_chatName);
+	// set the host chatname so it gets saved in the profile
+	mpHost->setMMCPChatName(m_chatName);
 }

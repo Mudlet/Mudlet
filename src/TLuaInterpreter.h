@@ -209,6 +209,7 @@ public:
     static int chatList(lua_State*);
     static int chatName(lua_State*);
     static int chatPing(lua_State*);
+    static int chatPeek(lua_State*);
     static int chatPrivate(lua_State*);
     static int chatServe(lua_State*);
     static int chatSnoop(lua_State*);

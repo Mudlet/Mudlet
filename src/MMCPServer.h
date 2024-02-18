@@ -22,14 +22,6 @@ class MMCPServer : public QTcpServer {
     public:
         inline static int MMCPDefaultHostPort = 4050;
         inline static QString DefaultMMCPChatName = qsl("MudletMMCP");
-        inline static QString MMCPHostNameCfgItem = qsl("mmcp_host");
-        inline static QString MMCPHostPortCfgItem = qsl("mmcp_port");
-        inline static QString MMCPChatNameCfgItem = qsl("mmcp_chatname");
-
-        static quint16 readMMCPHostPort(Host*);
-        static QString readMMCPChatName(Host*);
-
-        static QPair<bool, QString> writeChatName(Host*, const QString&);
 
         explicit MMCPServer(Host*);
         ~MMCPServer();
@@ -49,6 +41,7 @@ class MMCPServer : public QTcpServer {
         QPair<bool, QString> emoteAll(const QString&);
         QPair<bool, QString> ignore(const QString&);
         QPair<bool, QString> ping(const QVariant&);
+        QPair<bool, QString> peek(const QVariant&);
         QPair<bool, QString> chatPrivate(const QVariant&);
         QPair<bool, QString> serve(const QVariant&);
         QPair<bool, QString> allowSnoop(const QVariant&);
@@ -99,10 +92,6 @@ class MMCPServer : public QTcpServer {
         void incomingConnection(qintptr) override;
 
     private:
-
-        static QString readAppDefaultMMCPChatName();
-        static void writeAppDefaultMMCPChatName(const QString&);
-        static QString readAppDefaultMMCPAutostart();
 
         Host *mpHost = nullptr;
         bool m_enabled;

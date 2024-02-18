@@ -43,6 +43,7 @@ class MMCPClient : public QObject {
         void writeData(const QString &);
         void sendMessage(const QString &);
         void sendPingRequest();
+        void sendPeekRequest();
         void sendRequestConnections();
         
         void disconnect();

@@ -403,6 +403,7 @@
     "chatIgnore": "chatIgnore(target)",
     "chatList": "chatList()",
     "chatName": "chatName([name])",
+    "chatPeek": "chatPeek(target)",
     "chatPing": "chatPing(target)",
     "chatPrivate": "chatPrivate(target)",
     "chatServe": "chatServe(target)",
