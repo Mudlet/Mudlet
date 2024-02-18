@@ -632,6 +632,7 @@ SOURCES += \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
     TLuaInterpreterNetworking.cpp \
+    TLuaInterpreterMudletObjects.cpp \
     TLuaInterpreterMapper.cpp \
     TMainConsole.cpp \
     TMap.cpp \
