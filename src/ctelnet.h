@@ -227,6 +227,7 @@ public:
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
     void loopbackTest(QByteArray& data) { processSocketData(data.data(), data.size(), true); }
+    void cancelLoginTimers();
 
 
     QMap<int, bool> supportedTelnetOptions;
@@ -275,6 +276,7 @@ private:
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
     void reset();
+    void sendLoginAndPass();
 
     QByteArray prepareNewEnvironData(const QString&);
     QString getNewEnvironValueUser();
