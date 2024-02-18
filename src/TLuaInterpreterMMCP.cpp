@@ -27,11 +27,12 @@
 // mmcp-specific functions of TLuaInterpreter, split out separately
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
-#include "TLuaInterpreter.h"
-#include "MMCPServer.h"
 #include "Host.h"
+#include "MMCPServer.h"
+#include "TLuaInterpreter.h"
 
-int TLuaInterpreter::chat(lua_State* L) {
+int TLuaInterpreter::chat(lua_State* L)
+{
     const QString target = getVerifiedString(L, __func__, 1, "target");
     const QString msg = getVerifiedString(L, __func__, 2, "message");
 
@@ -50,7 +51,8 @@ int TLuaInterpreter::chat(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatAll(lua_State* L) {
+int TLuaInterpreter::chatAll(lua_State* L)
+{
     const QString msg = getVerifiedString(L, __func__, 1, "message");
 
     Host* pHost = &getHostFromLua(L);
@@ -68,7 +70,8 @@ int TLuaInterpreter::chatAll(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatAllowSnoop(lua_State* L) {
+int TLuaInterpreter::chatAllowSnoop(lua_State* L)
+{
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
@@ -86,10 +89,11 @@ int TLuaInterpreter::chatAllowSnoop(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatCall(lua_State* L) {
+int TLuaInterpreter::chatCall(lua_State* L)
+{
     const QString host = getVerifiedString(L, __func__, 1, "host");
-    int port;
-    
+    int port = MMCPServer::MMCPDefaultHostPort;
+
     const int n = lua_gettop(L);
     if (n > 1) {
         port = getVerifiedInt(L, __func__, 2, "port number {default = 4050}", true);
@@ -113,7 +117,8 @@ int TLuaInterpreter::chatCall(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatEmoteAll(lua_State* L) {
+int TLuaInterpreter::chatEmoteAll(lua_State* L)
+{
     const QString msg = getVerifiedString(L, __func__, 1, "message");
 
     Host* pHost = &getHostFromLua(L);
@@ -131,7 +136,8 @@ int TLuaInterpreter::chatEmoteAll(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatIgnore(lua_State* L) {
+int TLuaInterpreter::chatIgnore(lua_State* L)
+{
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
@@ -149,7 +155,8 @@ int TLuaInterpreter::chatIgnore(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatList(lua_State* L) {
+int TLuaInterpreter::chatList(lua_State* L)
+{
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mmcpServer) {
         pHost->initMMCPServer();
@@ -165,8 +172,8 @@ int TLuaInterpreter::chatList(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatName(lua_State* L) {
-
+int TLuaInterpreter::chatName(lua_State* L)
+{
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mmcpServer) {
         pHost->initMMCPServer();
@@ -191,7 +198,8 @@ int TLuaInterpreter::chatName(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatPing(lua_State* L) {
+int TLuaInterpreter::chatPing(lua_State* L)
+{
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
@@ -209,7 +217,8 @@ int TLuaInterpreter::chatPing(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatPeek(lua_State* L) {
+int TLuaInterpreter::chatPeek(lua_State* L)
+{
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
@@ -227,7 +236,8 @@ int TLuaInterpreter::chatPeek(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatPrivate(lua_State* L) {
+int TLuaInterpreter::chatPrivate(lua_State* L)
+{
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
@@ -245,7 +255,8 @@ int TLuaInterpreter::chatPrivate(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatServe(lua_State* L) {
+int TLuaInterpreter::chatServe(lua_State* L)
+{
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
@@ -263,7 +274,8 @@ int TLuaInterpreter::chatServe(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatSnoop(lua_State* L) {
+int TLuaInterpreter::chatSnoop(lua_State* L)
+{
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
@@ -281,7 +293,8 @@ int TLuaInterpreter::chatSnoop(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatStartServer(lua_State* L) {
+int TLuaInterpreter::chatStartServer(lua_State* L)
+{
     int port;
     const int n = lua_gettop(L);
     if (n > 1) {
@@ -308,7 +321,8 @@ int TLuaInterpreter::chatStartServer(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatStopServer(lua_State* L) {
+int TLuaInterpreter::chatStopServer(lua_State* L)
+{
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mmcpServer) {
         pHost->initMMCPServer();
@@ -324,7 +338,8 @@ int TLuaInterpreter::chatStopServer(lua_State* L) {
     return 1;
 }
 
-int TLuaInterpreter::chatUnChat(lua_State* L) {
+int TLuaInterpreter::chatUnChat(lua_State* L)
+{
     const QString target = getVerifiedString(L, __func__, 1, "target");
 
     Host* pHost = &getHostFromLua(L);
