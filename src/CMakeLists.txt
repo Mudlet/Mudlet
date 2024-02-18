@@ -37,15 +37,17 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  # Neither BUILD nor APP_BUILD does not seem to be available?
+  # APP_BUILD should now be be available
 
-  # if(APP_BUILD matches "-ptb.+")
-  #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
-  #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  # else()
+  if(APP_BUILD matches "-ptb.+")
+    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+    # The above test may not be correct as it won't pick up builds where
+    # MUDLET_VERSION_BUILD has been set in the environment:
+    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
-  # endif()
+  endif()
 endif()
 
 set(mudlet_SRCS
@@ -120,9 +122,11 @@ set(mudlet_SRCS
     TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
+    TLuaInterpreterNetworking.cpp
     TLuaInterpreterMapper.cpp
     TMap.cpp
     TMapLabel.cpp
+    TLuaInterpreterDiscord.cpp
     TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp

@@ -102,7 +102,7 @@ GIT_EXECUTABLE = git
 GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
 
 # Use the result in your QMake project
-message("Git SHA1: " $$GIT_SHA1)
+!build_pass:message("Git SHA1: " $${GIT_SHA1})
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
@@ -111,19 +111,23 @@ VERSION = 4.17.2
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
-# variable to make identification of the used version simple
-# the qmake BUILD variable is NOT built-in
-BUILD_TEST = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD_TEST ) {
+# variable (it should use '-' as the first character) to make identification of
+# the used version simple the qmake BUILD variable is NOT built-in
+BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD ) {
 # Possible values are:
 # "-dev" for the development build
 # "-ptb" for the public test build
 # "" for the release build
-   BUILD_TEST = "-dev-"$${GIT_SHA1}
+   BUILD = "-dev-"$${GIT_SHA1}
 } else {
-   BUILD_TEST = $${GIT_SHA1}
+   BUILD = $${BUILD}-$${GIT_SHA1}
 }
-write_file( app-build.txt, BUILD_TEST )
+
+!build_pass:message("Value written to app-build.txt file: " $${BUILD})
+
+# This does append a line-feed to the file which might be problematic!
+write_file( app-build.txt, BUILD )
 
 # As the above also modifies the splash screen image (so developers get reminded
 # what they are working with!) Packagers (e.g. for Linux distributions) will
@@ -631,10 +635,12 @@ SOURCES += \
     TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TLuaInterpreterNetworking.cpp \
     TLuaInterpreterMapper.cpp \
     TMainConsole.cpp \
     TMap.cpp \
     TMapLabel.cpp \
+    TLuaInterpreterDiscord.cpp \
     TMedia.cpp \
     TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
