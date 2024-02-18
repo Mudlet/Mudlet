@@ -651,6 +651,7 @@ public:
     static int getBackgroundColor(lua_State*);
     static int getLabelStyleSheet(lua_State*);
     static int getLabelSizeHint(lua_State*);
+    static int moveMapLabel(lua_State*);
     static int announce(lua_State*);
     static int scrollTo(lua_State*);
     static int getScroll(lua_State*);
