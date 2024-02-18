@@ -14,10 +14,7 @@ class Host;
 
 class MMCPServer : public QTcpServer {
     Q_OBJECT
-    Q_PROPERTY(bool enabled READ enabled WRITE setEnabled)
     Q_PROPERTY(QString getChatName READ getChatName WRITE setChatName)
-    Q_PROPERTY(QString address READ address WRITE setAddress)
-    Q_PROPERTY(int port READ port WRITE setPort)
     
     public:
         inline static int MMCPDefaultHostPort = 4050;
@@ -64,20 +61,8 @@ class MMCPServer : public QTcpServer {
         void addConnectedClient(MMCPClient *);
         void disconnectClient(MMCPClient *);
         
-        
-        //Property Accessors/Mutators
-        
-        bool enabled() const { return m_enabled; }
-        void setEnabled(bool val) { m_enabled = val; }
-        
         QString getChatName() const { return m_chatName; }
         void setChatName(const QString &);
-        
-        QString address() const { return m_address; }
-        void setAddress(const QString &val) { m_address = val; }
-        
-        int port() { return m_port; }
-        void setPort(int val) { m_port = val; }
 
     signals:
         void serverStarted(int);
@@ -94,11 +79,7 @@ class MMCPServer : public QTcpServer {
     private:
 
         Host *mpHost = nullptr;
-        bool m_enabled;
         QString m_chatName;
-        QString m_address;
-        int m_port;
-        int mMessageBufferLimit = 0;
     
         QList<MMCPClient *> clients;
         int snoopCount;

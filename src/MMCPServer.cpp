@@ -1,10 +1,19 @@
 #include "MMCPServer.h"
 #include "Host.h"
-#include "mudlet.h"
+#include "MMCP.h"
 #include "MMCPClient.h"
+#include "mudlet.h"
+
+#include <string>
 
 #include "pre_guard.h"
+#include <QHostAddress>
+#include <QListIterator>
 #include <QMap>
+#include <QString>
+#include <QStringList>
+#include <QTcpServer>
+#include <QVariant>
 #include "post_guard.h"
 
 MMCPServer::MMCPServer(Host* pHost) :
@@ -48,11 +57,11 @@ void MMCPServer::sendSnoopData(std::string &line) {
 	//		ANSI color indices.  Don't ask me why. So I'll just use background BLACK
 	//		foreground WHITE, defined in MudMaster Colors.h
 	
-	QString outData = QString("%1%2%3\n%4%5")	.arg((char)SnoopData)
-												.arg(15, 2, 10)	//foreground color
-												.arg(0, 2, 10)		//background color
-												.arg(QString::fromStdString(line))
-												.arg((char)End);
+	const QString outData = QString("%1%2%3\n%4%5")	.arg((char)SnoopData)
+													.arg(15, 2, 10)	//foreground color
+													.arg(0, 2, 10)		//background color
+													.arg(QString::fromStdString(line))
+													.arg((char)End);
 
 	QListIterator<MMCPClient *> it(clients);
 	while (it.hasNext()) {
@@ -68,13 +77,13 @@ void MMCPServer::sendSnoopData(std::string &line) {
  * Return a pointer to a client given their client name or connection Id
  */
 MMCPClient *MMCPServer::clientByNameOrId(const QVariant &arg) {
-	MMCPClient *client = NULL;
+	MMCPClient *client = nullptr;
 
 	bool ok;
 	int id = arg.toInt(&ok);
 	
 	if (!ok) {
-		QString lowerName = arg.toString().toLower();
+		const QString lowerName = arg.toString().toLower();
 	
 		QListIterator<MMCPClient *> it(clients);
 		while (it.hasNext()) {
@@ -124,7 +133,7 @@ QPair<bool, QString> MMCPServer::call(const QString &line) {
  * Script command, attempt a connection to a new client
  */
 QPair<bool, QString> MMCPServer::call(const QString& host, int port) {
-	MMCPClient *client = NULL;
+	MMCPClient *client = nullptr;
 	
 	QListIterator<MMCPClient *> it(clients);
 	while (it.hasNext()) {
@@ -136,7 +145,7 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port) {
 	}
 
 	//Check if we're already connected to this person
-	if (client != NULL) {
+	if (client != nullptr) {
 		const QString infoMsg = tr("[ CHAT ]  - Already connected to %1:%2.").arg(host).arg(port);
         mpHost->postMessage(infoMsg);
 		
@@ -160,7 +169,7 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port) {
 QPair<bool, QString> MMCPServer::chat(const QVariant &target, const QString &msg) {
 	MMCPClient *client = clientByNameOrId(target);
 	
-	if (client != NULL) {
+	if (client != nullptr) {
 		client->sendChat(msg, TextPersonal);
 		
 		clientMessage(QString("You chat to %1, '%2'").arg(client->chatName()).arg(msg));
@@ -240,7 +249,7 @@ QPair<bool, QString> MMCPServer::chatName(const QString &name) {
 
     if (!clients.isEmpty()) {
 	
-        QString outMsg = QString("%1%2%3")
+        const QString outMsg = QString("%1%2%3")
                                 .arg((char)NameChange)
                                 .arg(name)
                                 .arg((char)End);
@@ -269,7 +278,7 @@ QPair<bool, QString> MMCPServer::chatRaw(const QString &msg) {
         return QPair<bool, QString>(false, qsl("no connected clients"));
 	}
 
-	QString outMsg = QString("%1%2%3")
+	const QString outMsg = QString("%1%2%3")
 							.arg((char)TextEveryone)
 							.arg(msg)
 							.arg((char)End);
@@ -296,7 +305,7 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString &msg) {
         return QPair<bool, QString>(false, qsl("no connected clients"));
 	}
 						
-	QString outMsg = QString("%1%2\n%3")
+	const QString outMsg = QString("%1%2\n%3")
 							.arg((char)TextEveryone)
 							.arg(msg)
 							.arg((char)End);
@@ -318,7 +327,7 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString &msg) {
 QPair<bool, QString> MMCPServer::ignore(const QString& target) {
 	MMCPClient *client = clientByNameOrId(target);
 
-	if (client != NULL) {	
+	if (client != nullptr) {	
 		if (client->isIgnored()) {
 			const QString infoMsg = tr("[ CHAT ]  - You are no longer ignoring %1.").arg(client->chatName());
         	mpHost->postMessage(infoMsg);
@@ -342,7 +351,7 @@ QPair<bool, QString> MMCPServer::ignore(const QString& target) {
 QPair<bool, QString> MMCPServer::ping(const QVariant &target) {
 	MMCPClient *client = clientByNameOrId(target);
 
-	if (client != NULL) {		
+	if (client != nullptr) {		
 		client->sendPingRequest();
 		return QPair<bool, QString>(true, qsl("command successful"));
 	}
@@ -356,7 +365,7 @@ QPair<bool, QString> MMCPServer::ping(const QVariant &target) {
 QPair<bool, QString> MMCPServer::peek(const QVariant &target) {
 	MMCPClient *client = clientByNameOrId(target);
 
-	if (client != NULL) {		
+	if (client != nullptr) {		
 		client->sendPeekRequest();
 		return QPair<bool, QString>(true, qsl("command successful"));
 	}
@@ -370,7 +379,7 @@ QPair<bool, QString> MMCPServer::peek(const QVariant &target) {
 QPair<bool, QString> MMCPServer::chatPrivate(const QVariant& target) {
 	MMCPClient *client = clientByNameOrId(target);
 
-	if (client != NULL) {		
+	if (client != nullptr) {		
 		if (client->isPrivate()) {
 			client->setPrivate(false);
 			const QString infoMsg = tr("[ CHAT ]  - %1 is no longer private.").arg(client->chatName());
@@ -392,7 +401,7 @@ QPair<bool, QString> MMCPServer::chatPrivate(const QVariant& target) {
 QPair<bool, QString> MMCPServer::serve(const QVariant &target) {
 	MMCPClient *client = clientByNameOrId(target);
 	
-	if (client != NULL) {
+	if (client != nullptr) {
 		if (client->isServed()) {
 			client->setServed(false);
 			client->sendMessage(QString("<CHAT> You are no longer being served by %1.").arg(m_chatName));
@@ -586,9 +595,9 @@ void MMCPServer::sendPublicConnections(MMCPClient *client) {
 	}
 	
 	if (!list.isEmpty()) {
-		QString cmdStr = QString("%1%2%3")	.arg((char)ConnectionList)
-											.arg(list)
-											.arg((char)End);
+		const QString cmdStr = QString("%1%2%3")	.arg((char)ConnectionList)
+													.arg(list)
+													.arg((char)End);
 											
 		client->writeData(cmdStr);
 	}
@@ -605,7 +614,6 @@ void MMCPServer::sendPublicPeek(MMCPClient *client) {
 		MMCPClient *cl = it.next();
 	
 		if (cl != client && !cl->isPrivate()) {
-			qDebug() << "peeking client" << cl->chatName();
 			list.append(QString("%1~%2~%3")
 				.arg(cl->host())
 				.arg(cl->port())
@@ -614,9 +622,9 @@ void MMCPServer::sendPublicPeek(MMCPClient *client) {
 	}
 	
 	if (!list.isEmpty()) {
-		QString cmdStr = QString("%1%2%3")	.arg((char)PeekList)
-											.arg(list)
-											.arg((char)End);
+		const QString cmdStr = QString("%1%2%3")	.arg((char)PeekList)
+													.arg(list)
+													.arg((char)End);
 
 		client->writeData(cmdStr);
 	} else {
@@ -628,9 +636,9 @@ void MMCPServer::sendPublicPeek(MMCPClient *client) {
  * Forward message to all clients.
  */
 void MMCPServer::sendServedMessage(MMCPClient *client, const QString &msg) {
-	QString cmdStr = QString("%1%2%3")	.arg((char)TextEveryone)
-										.arg(msg)
-										.arg((char)End);
+	const QString cmdStr = QString("%1%2%3")	.arg((char)TextEveryone)
+												.arg(msg)
+												.arg((char)End);
 
 	QListIterator<MMCPClient *> it(clients);
 	while (it.hasNext()) {
@@ -644,9 +652,9 @@ void MMCPServer::sendServedMessage(MMCPClient *client, const QString &msg) {
  * Forward message to all served clients.
  */
 void MMCPServer::sendMessageToServed(MMCPClient *client, const QString &msg) {
-	QString cmdStr = QString("%1%2%3")	.arg((char)TextEveryone)
-										.arg(msg)
-										.arg((char)End);
+	const QString cmdStr = QString("%1%2%3")	.arg((char)TextEveryone)
+												.arg(msg)
+												.arg((char)End);
 
 	QListIterator<MMCPClient *> it(clients);
 	while (it.hasNext()) {

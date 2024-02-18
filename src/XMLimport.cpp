@@ -1959,19 +1959,10 @@ void XMLimport::readStopWatchMap()
 void XMLimport::readMMCPOptions() {
 
     mpHost->mMMCPChatName = attributes().value(qsl("chatName")).toString();
-    qDebug() << "XMLImport::readMMCPOptions: chatName" << mpHost->mMMCPChatName;
-
     mpHost->mMMCPChatPort = attributes().value(qsl("chatPort")).toUShort();
-    qDebug() << "XMLImport::readMMCPOptions: chatPort" << mpHost->mMMCPChatPort;
-
     mpHost->mMMCPAutostartServer = attributes().value(qsl("autostartServer")) == YES;
-    qDebug() << "XMLImport::readMMCPOptions: autoStartServer" << mpHost->mMMCPAutostartServer;
-
     mpHost->mMMCPAllowConnectionRequests = attributes().value(qsl("allowConnectionRequests")) == YES;
-    qDebug() << "XMLImport::readMMCPOptions: allowConnectionRequests" << mpHost->mMMCPAllowConnectionRequests;
-
     mpHost->mMMCPAllowPeekRequests = attributes().value(qsl("allowPeekRequests")) == YES;
-    qDebug() << "XMLImport::readMMCPOptions: allowPeekRequests" << mpHost->mMMCPAllowPeekRequests;
 
     // MMCP is a self-closing tag, need to call readNext to move along..
     readNext();
