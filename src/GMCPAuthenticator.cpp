@@ -30,8 +30,8 @@ void GMCPAuthenticator::saveSupportsSet(const QString& data)
     auto jsonDoc = QJsonDocument::fromJson(data.toUtf8());
     auto jsonObj = jsonDoc.object();
 
-    if (jsonObj.contains("types")) {
-        QJsonArray typesArray = jsonObj["types"].toArray();
+    if (jsonObj.contains("type")) {
+        QJsonArray typesArray = jsonObj["type"].toArray();
         for (const auto& type : typesArray) {
             mSupportedAuthTypes.append(type.toString());
         }
@@ -50,7 +50,7 @@ void GMCPAuthenticator::sendCredentials()
     }
 
     QJsonObject credentials;
-    credentials["character"] = character;
+    credentials["account"] = character;
     credentials["password"] = password;
 
     QJsonDocument doc(credentials);
@@ -91,7 +91,8 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
     if (packageMessage == qsl("Client.Authenticate.Default")) {
         saveSupportsSet(data);
 
-        if (mSupportedAuthTypes.contains(qsl("credentials"))) {
+        if (mSupportedAuthTypes.contains(qsl("password-credentials"))) {
+            mpHost->mTelnet.cancelLoginTimers();
             sendCredentials();
         } else {
             qDebug() << "Server does not support credentials authentication and we don't support any other";
