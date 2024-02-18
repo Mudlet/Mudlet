@@ -3245,3 +3245,47 @@ int TLuaInterpreter::scrollingActive(lua_State* L)
     lua_pushboolean(L, console->getScrolling());
     return 1;
 }
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
+{
+    const QString labelName = getVerifiedString(L, funcName.toUtf8().constData(), 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
+    }
+    auto pN = LABEL(L, labelName);
+    auto movie = pN->movie();
+    if (!movie) {
+        return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
+    }
+
+    if (funcName == qsl("startMovie")) {
+        movie->start();
+    } else if (funcName == qsl("pauseMovie")) {
+        movie->setPaused(true);
+    } else if (funcName == qsl("setMovieFrame")) {
+        const int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
+        lua_pushboolean(L, movie->jumpToFrame(frame));
+        return 1;
+    } else if (funcName == qsl("setMovieSpeed")) {
+        const int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie playback speed in %");
+        movie->setSpeed(speed);
+    } else if (funcName == qsl("scaleMovie")) {
+        bool autoScale{true};
+        const int n = lua_gettop(L);
+        if (n > 1) {
+            autoScale = getVerifiedBool(L, funcName.toUtf8().constData(), 2, "activate/deactivate scaling movie", true);
+        }
+        movie->setScaledSize(pN->size());
+        if (autoScale) {
+            connect(pN, &TLabel::resized, pN, [=] { movie->setScaledSize(pN->size()); });
+        } else {
+            pN->disconnect(SIGNAL(resized()));
+        }
+    } else {
+        return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}

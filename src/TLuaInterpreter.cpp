@@ -91,11 +91,8 @@ static bool isMain(const QString& name)
     return false;
 }
 
-static const char *bad_window_type = "%s: bad argument #%d type (window name as string expected, got %s)!";
 static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
-static const char *bad_window_value = "window \"%s\" not found";
 static const char *bad_cmdline_value = "command line \"%s\" not found";
-static const char *bad_label_value = "label \"%s\" not found";
 
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
 const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
@@ -108,22 +105,6 @@ const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
 
-#define WINDOW_NAME(ARG_L, ARG_pos)                                                                      \
-    ({                                                                                                   \
-        int pos_ = (ARG_pos);                                                                            \
-        const char *res_;                                                                                \
-        if ((lua_gettop(ARG_L) < pos_) || lua_isnil(ARG_L, pos_)) {                                      \
-            res_ = "";                                                                                   \
-        } else {                                                                                         \
-            if (!lua_isstring(ARG_L, pos_)) {                                                            \
-                lua_pushfstring(ARG_L, bad_window_type, __FUNCTION__, pos_, luaL_typename(ARG_L, pos_)); \
-                return lua_error(ARG_L);                                                                 \
-            }                                                                                            \
-            res_ = lua_tostring(ARG_L, pos_);                                                            \
-        }                                                                                                \
-        res_;                                                                                            \
-    })
-
 #define CMDLINE_NAME(ARG_L, ARG_pos)                                                                 \
     ({                                                                                               \
         int pos_ = (ARG_pos);                                                                        \
@@ -132,25 +113,6 @@ const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a vali
             return lua_error(ARG_L);                                                                 \
         }                                                                                            \
         lua_tostring(ARG_L, pos_);                                                                   \
-    })
-
-#define CONSOLE_NIL(ARG_L, ARG_name)                                                           \
-    ({                                                                                         \
-        auto name_ = (ARG_name);                                                               \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
-        console_;                                                                              \
-    })
-
-#define CONSOLE(ARG_L, ARG_name)                                                               \
-    ({                                                                                         \
-        auto name_ = (ARG_name);                                                               \
-        auto console_ = getHostFromLua(ARG_L).findConsole(name_);                              \
-        if (!console_) {                                                                       \
-            lua_pushnil(ARG_L);                                                                \
-            lua_pushfstring(ARG_L, bad_window_value, name_.toUtf8().constData());              \
-            return 2;                                                                          \
-        }                                                                                      \
-        console_;                                                                              \
     })
 
 #define COMMANDLINE(ARG_L, ARG_name)                                                           \
@@ -165,19 +127,6 @@ const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a vali
             return 2;                                                                          \
         }                                                                                      \
         cmdLine_;                                                                              \
-    })
-
-#define LABEL(ARG_L, ARG_name)                                                                 \
-    ({                                                                                         \
-        const QString& name_ = (ARG_name);                                                     \
-        auto console_ = getHostFromLua(ARG_L).mpConsole;                                       \
-        auto label_ = console_->mLabelMap.value(name_);                                        \
-        if (!label_) {                                                                         \
-            lua_pushnil(ARG_L);                                                                \
-            lua_pushfstring(ARG_L, bad_label_value, name_.toUtf8().constData());               \
-            return 2;                                                                          \
-        }                                                                                      \
-        label_;                                                                                \
     })
 
 // variable names within these macros have trailing underscores because in
@@ -1622,50 +1571,6 @@ int TLuaInterpreter::setLabelCallback(lua_State* L, const QString& funcName)
     if (!lua_result) {
         return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
-    lua_pushboolean(L, true);
-    return 1;
-}
-
-// No documentation available in wiki - internal function
-int TLuaInterpreter::movieFunc(lua_State* L, const QString& funcName)
-{
-    const QString labelName = getVerifiedString(L, funcName.toUtf8().constData(), 1, "label name");
-    if (labelName.isEmpty()) {
-        return warnArgumentValue(L, __func__, "label name cannot be an empty string");
-    }
-    auto pN = LABEL(L, labelName);
-    auto movie = pN->movie();
-    if (!movie) {
-        return warnArgumentValue(L, __func__, qsl("no movie found at label '%1'").arg(labelName));
-    }
-
-    if (funcName == qsl("startMovie")) {
-        movie->start();
-    } else if (funcName == qsl("pauseMovie")) {
-        movie->setPaused(true);
-    } else if (funcName == qsl("setMovieFrame")) {
-        const int frame = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie frame number");
-        lua_pushboolean(L, movie->jumpToFrame(frame));
-        return 1;
-    } else if (funcName == qsl("setMovieSpeed")) {
-        const int speed = getVerifiedInt(L, funcName.toUtf8().constData(), 2, "movie playback speed in %");
-        movie->setSpeed(speed);
-    } else if (funcName == qsl("scaleMovie")) {
-        bool autoScale{true};
-        const int n = lua_gettop(L);
-        if (n > 1) {
-            autoScale = getVerifiedBool(L, funcName.toUtf8().constData(), 2, "activate/deactivate scaling movie", true);
-        }
-        movie->setScaledSize(pN->size());
-        if (autoScale) {
-            connect(pN, &TLabel::resized, pN, [=] { movie->setScaledSize(pN->size()); });
-        } else {
-            pN->disconnect(SIGNAL(resized()));
-        }
-    } else {
-        return warnArgumentValue(L, __func__, qsl("'%1' is not a known function name - bug in Mudlet, please report it").arg(funcName));
-    }
-
     lua_pushboolean(L, true);
     return 1;
 }
