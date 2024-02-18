@@ -53,7 +53,7 @@ MMCPClient::MMCPClient(Host* host, MMCPServer* serv) : m_state(Disconnected), tc
 #if QT_VERSION >= 0x051500
     connect(&tcpSocket, &QAbstractSocket::errorOccurred, this, &MMCPClient::slotDisplayError);
 #else
-	connect(&tcpSocket, &QAbstractSocket::error, this, &MMCPClient::slotDisplayError);
+	connect(&tcpSocket, static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error), this, &MMCPClient::slotDisplayError);
 #endif
     connect(this, &MMCPClient::clientDisconnected, server, &MMCPServer::slotClientDisconnected);
 }
