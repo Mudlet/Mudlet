@@ -1,0 +1,74 @@
+name: 📦 Build Mudlet Flatpak Repo
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *'  # Scheduled run, e.g., daily at midnight
+
+env:
+  APP_ID: org.mudlet.mudlet
+  DOCKER_REGISTRY: "docker.io/bilelmoussaoui/flatpak-github-actions"
+  RUNTIME_NAME: "kde"
+  RUNTIME_VERSION: "5.15-23.08"
+  GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+  GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+  GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+
+jobs:
+  build-flatpak:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/bilelmoussaoui/flatpak-github-actions:kde-5.15-23.08
+    steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+        fetch-depth: 0
+    - name: Setup Flatpak
+      run: |
+        flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    - name: Setup GPG
+      env:
+        GPG_KEY_GREP: ${{ secrets.GPG_KEY_GREP }}
+      run: |
+        gpg --list-keys --with-keygrip
+        echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
+        gpg-connect-agent reloadagent /bye
+        echo $GPG_PASSPHRASE | /usr/libexec/gpg-preset-passphrase --preset $GPG_KEY_GREP
+        echo -n "$GPG_PRIVATE_KEY" | base64 --decode | gpg --import --batchpinentry-version
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+      with:
+        bundle: mudlet.flatpak
+        manifest-path: CI/org.mudlet.mudlet.yml
+        cache-key: flatpak-builder-${{ github.sha }}
+        gpg-sign: ${{ secrets.GPG_KEY_ID }}
+        verbose: true
+
+    - name: Update Flatpak Repo
+      run: |
+        flatpak build-update-repo --gpg-sign=$GPG_KEY_ID --generate-static-deltas --prune repo/
+    - name: Upload Repo
+      uses: actions/upload-artifact@v4
+      with:
+        name: flatpak-repo
+        path: repo
+        retention-days: 7
+
+  deploy-to-github-pages:
+    needs: build-flatpak
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download Flatpak Repo Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: flatpak-repo
+    - name: Setup Deployment Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y rsync
+    - name: Prepare GitHub Pages Deployment
+      run: |
+        # mkdir public
+        # rsync -av --exclude='public' --exclude='.git' . public/
