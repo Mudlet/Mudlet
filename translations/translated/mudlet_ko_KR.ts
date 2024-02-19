@@ -2228,14 +2228,14 @@ recommended map version %2 for this version of Mudlet.</source>
       <source>[ ALERT ] - File does not seem to be a Mudlet Map file. The part that indicates
 its format version seems to be &quot;%1&quot; and that doesn&apos;t make sense. The file is:
 &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 경고 ] - 파일이 머드렛 맵 파일이 아닌 것 같습니다. 형식 버전을 나타내는 부분이 &quot;%1&quot; 로 되어 있습니다. 파일: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1536"/>
       <source>[ ALERT ] - Map file is too new. Its format version &quot;%1&quot; is higher than this version of
 Mudlet can handle (%2)! The file is:
 &quot;%3&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ 경고 ] - 맵 파일이 너무 새 파일입니다. 형식 버전 &quot;%1&quot; 은 이 버전의 Mudlet이 처리할 수 있는 것보다 높습니다(%2)! 파일: &quot;%3&quot;</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1543"/>
@@ -2247,7 +2247,8 @@ Mudlet can handle (%2)! The file is:
       <source>[ ALERT ] - Map file is really old. Its format version &quot;%1&quot; is so ancient that
 this version of Mudlet may not gain enough information from
 it but it will try! The file is: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[경고 ] - 지도 파일이 정말 오래되었습니다. 형식 버전인 &quot;%1&quot; 이 너무 오래되어 이 버전의 Mudlet에서 충분한 정보를 얻지 못할 수도 있지만 시도해 보겠습니다!
+파일: &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="1566"/>
@@ -2498,12 +2499,13 @@ exit to: %3 but that room does not exist.  The exit will
 be removed (but the destination room id will be stored in
 the room user data under a key:
 &quot;%4&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[경고 ] - ID가 %1인 방에 %2로 나가는 특수 출구 %3이(가) 있습니다. 방 %2가 존재하지 않습니다.  이 출구는
+제거됩니다(하지만 대상 방 ID는 사용자 데이터에 키: %4로 저장됩니다).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1203"/>
       <source>[ WARN ]  - Room has a special exit &quot;%1&quot; with an exit to: %2 but that room does not exist.  The exit will be removed (but the destination room id will be stored in the room user data under a key:&quot;%3&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>[ 경고 ] - 이 방은 %1로 나가는 특수 출구 %2가 있습니다만 해당 방이 존재하지 않습니다. 출구가 제거됩니다(하지만 대상 방 ID는 사용자 데이터에 키 %3 으로 저장됩니다).</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1242"/>
@@ -2606,7 +2608,7 @@ an exit to invalid room: %3 to now go to: %4.</source>
     <message>
       <location filename="../src/TRoom.cpp" line="1474"/>
       <source>[ INFO ]  - Correcting exit &quot;%1&quot; that was to invalid room id: %2 to now go to: %3.</source>
-      <translation type="unfinished"/>
+      <translation>[ 정보 ] - 잘못된 룸 ID: %2로 이동하는 %1 출구를 이제 %3으로 수정합니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1485"/>
@@ -2615,7 +2617,7 @@ does not exist.  The exit will be removed (but the destination room
 Id will be stored in the room user data under a key:
 &quot;%4&quot;)
 and the exit will be turned into a stub.</source>
-      <translation type="unfinished"/>
+      <translation>[ 경고 ] - 아이디가 %1인 방 %2에 %3으로 나가는 출구가 있습니다만 해당 방이 존재하지 않습니다. 출구가 제거되고(하지만 대상 회의실 ID는 회의실 사용자 데이터에 키: %4에 저장됩니다.) 출구가 스텁으로 바뀝니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1498"/>
@@ -2627,7 +2629,7 @@ and the exit will be turned into a stub.</source>
       <source>[ ALERT ] - Room with id: %1 has an exit &quot;%2&quot; to: %3 but also
 has a stub exit!  As a real exit precludes a stub, the latter will
 be removed.</source>
-      <translation type="unfinished"/>
+      <translation>[ 경고 ] - 아이디가 %1인 방에 %3로 가는 출구 %2가 있지만, 스텁 출구도 있습니다!  실제 출구가 스텁을 방지하므로 후자는 제거됩니다.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1552"/>
