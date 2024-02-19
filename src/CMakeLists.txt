@@ -542,6 +542,7 @@ endif()
 target_link_libraries(
         mudlet
         communi
+        sentry
         edbee-lib
         Boost::boost
         HUNSPELL::HUNSPELL

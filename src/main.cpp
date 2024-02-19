@@ -46,7 +46,10 @@
 #include "TAccessibleTextEdit.h"
 #include "Announcer.h"
 #include "FileOpenHandler.h"
-#include "sentry.h"
+
+extern "C" {
+    #include "sentry.h"
+}
 
 using namespace std::chrono_literals;
 
