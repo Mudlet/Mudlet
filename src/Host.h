@@ -332,6 +332,7 @@ public:
     bool getMMCPAutoStartServer();
     bool getMMCPAllowConnectionRequests();
     bool getMMCPAllowPeekRequests();
+    bool mmcpShouldAppendNewlineAfterOutgoingChats();
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -836,6 +837,7 @@ private:
     bool mMMCPAutostartServer;
     bool mMMCPAllowConnectionRequests;
     bool mMMCPAllowPeekRequests;
+    bool mMMCPAppendNewlineAfterChats;
 
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter

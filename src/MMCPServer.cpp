@@ -131,7 +131,7 @@ QPair<bool, QString> MMCPServer::call(const QString& line)
     int n = args.length();
 
     if (n < 1) {
-        const QString infoMsg = tr("[ CHAT ]  - You must specify a host");
+        const QString infoMsg = tr("[ CHAT ]  - You must specify a host.");
         mpHost->postMessage(infoMsg);
         return QPair<bool, QString>(false, qsl("must specify a host"));
     }
@@ -191,13 +191,19 @@ QPair<bool, QString> MMCPServer::chat(const QVariant& target, const QString& msg
     MMCPClient* client = clientByNameOrId(target);
 
     if (client != nullptr) {
-        client->sendChat(msg, TextPersonal);
+        const QString outMsg = QString("%1%2 chats to you, '%3'\n%4")
+                                        .arg(static_cast<char>(TextPersonal))
+                                        .arg(m_chatName)
+                                        .arg(msg)
+                                        .arg(static_cast<char>(End));
+
+        client->writeData(outMsg);
 
         clientMessage(QString("You chat to %1, '%2'").arg(client->chatName()).arg(msg));
         return QPair<bool, QString>(true, qsl("command successful"));
     }
 
-    const QString infoMsg = tr("[ CHAT ]  - Invalid client id.");
+    const QString infoMsg = tr("[ CHAT ]  - Invalid client id '%1'.").arg(target.toString());
     mpHost->postMessage(infoMsg);
     return QPair<bool, QString>(false, qsl("no client by that name or id"));
 }
@@ -212,18 +218,53 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
         return QPair<bool, QString>(false, qsl("no connected clients"));
     }
 
-    QString outMsg = QString("%1%2 chats to everybody, '%3'%4")
+    QString outMsg = QString("%1\n%2 chats to everybody, '%3'%4%5")
                             .arg(static_cast<char>(TextEveryone))
                             .arg(m_chatName).arg(msg)
+							.arg(mpHost->mmcpShouldAppendNewlineAfterOutgoingChats() ? "\n" : "")
                             .arg(static_cast<char>(End));
 
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        cl->sendChat(outMsg, TextEveryone);
+        cl->writeData(outMsg);
     }
 
     clientMessage(QString("You chat to everybody, '%1'").arg(msg));
+
+    return QPair<bool, QString>(true, qsl("command successful"));
+}
+
+/**
+ * Send a chat message to a specific group
+ */
+QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& message)
+{
+    if (clients.isEmpty()) {
+        return QPair<bool, QString>(false, qsl("no connected clients"));
+    }
+
+    using namespace AnsiColors;
+
+    QString outMsg = QString("%1%2\n%3%4 chats to the group, '%5'\n%6")
+                            .arg(static_cast<char>(TextGroup))
+                            .arg(group, -15)
+                            .arg(m_chatName)
+                            .arg(FBLDRED)
+                            .arg(message)
+                            .arg(static_cast<char>(End));
+
+    QListIterator<MMCPClient*> it(clients);
+    while (it.hasNext()) {
+        MMCPClient* cl = it.next();
+        if (cl->getGroup() == group) {
+            cl->writeData(outMsg);
+        }
+    }
+
+    clientMessage(QString("You chat to <%1%2%3>, '%4'")
+                            .arg(FBLDCYN).arg(group).arg(FBLDRED)
+                            .arg(message));
 
     return QPair<bool, QString>(true, qsl("command successful"));
 }
@@ -236,17 +277,23 @@ QPair<bool, QString> MMCPServer::chatList()
     using namespace AnsiColors;
 
     QString strMessage;
-    strMessage = "     Name                 Address              Port  Group           Flags    ChatClient\n";
+    strMessage = RST;
+    strMessage += "     Name                 Address              Port  Group           Flags    ChatClient\n";
     strMessage += "     ==================== ==================== ===== =============== ======== ================\n";
 
-    QString list;
     int i = 1;
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
         MMCPClient* client = it.next();
-        strMessage.append(QString("%1%2:%3 %4 %5\n").arg(FBLDWHT).arg(i++, 3).arg(RST).arg(client->getInfoString()).arg(client->getVersion()));
+        strMessage.append(QString("%1%2:%3 %4 %5\n")
+                            .arg(FBLDWHT)
+                            .arg(i++, 3)
+                            .arg(RST)
+                            .arg(client->getInfoString())
+                            .arg(client->getVersion()));
     }
 
+	strMessage.append("%1\n").arg(RST);
     strMessage += "Flags:  A - Allow Commands, F - Firewall, I - Ignore,  P - Private   n - Allow Snooping\n";
     strMessage += "        N - Being Snooped,  S - Serving,  T - Allows File Transfers, X - Serve Exclude\n";
 
@@ -300,7 +347,7 @@ QPair<bool, QString> MMCPServer::chatRaw(const QString& msg)
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        cl->sendChat(outMsg, TextEveryone);
+        cl->writeData(outMsg);
     }
 
     clientMessage(msg);
@@ -308,6 +355,34 @@ QPair<bool, QString> MMCPServer::chatRaw(const QString& msg)
     return QPair<bool, QString>(true, qsl("command successful"));
 }
 
+/**
+ * Assigns a client to a chat group
+ */
+QPair<bool, QString> MMCPServer::chatSetGroup(const QVariant& target, const QString& group)
+{
+    MMCPClient* client = clientByNameOrId(target);
+
+    if (client != nullptr) {
+        const QString currentGroup = client->getGroup();
+        bool assigned = client->setGroup(group);
+
+        QString infoMsg;
+        if (assigned) {
+            infoMsg = tr("[ CHAT ]  - Assigned '%1' to group '%2'.")
+                    .arg(m_chatName).arg(group);
+        } else {
+            infoMsg = tr("[ CHAT ]  - Removed '%1' from group '%2'.")
+                    .arg(m_chatName).arg(currentGroup);
+        }
+
+        mpHost->postMessage(infoMsg);
+        return QPair<bool, QString>(true, qsl("command successful"));
+    }
+
+    const QString infoMsg = tr("[ CHAT ]  - Invalid client id '%1'.").arg(target.toString());
+    mpHost->postMessage(infoMsg);
+    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+}
 
 /**
  * Script command, Send an emote message to everybody.
@@ -326,7 +401,7 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        cl->sendChat(outMsg, TextEveryone);
+        cl->writeData(outMsg);
     }
 
     clientMessage(msg);
@@ -353,7 +428,7 @@ QPair<bool, QString> MMCPServer::ignore(const QString& target)
         return QPair<bool, QString>(true, qsl("command successful"));
     }
 
-    const QString infoMsg = tr("[ CHAT ]  - Cannot find client identified by %1.").arg(target);
+    const QString infoMsg = tr("[ CHAT ]  - Cannot find client identified by '%1'.").arg(target);
     mpHost->postMessage(infoMsg);
 
     return QPair<bool, QString>(false, qsl("no client by that name or id"));
@@ -438,7 +513,7 @@ QPair<bool, QString> MMCPServer::serve(const QVariant& target)
         return QPair<bool, QString>(true, qsl("command successful"));
     }
 
-    return QPair<bool, QString>(false, qsl("no client by that name"));
+    return QPair<bool, QString>(false, qsl("no client by that name or id"));
 }
 
 /**

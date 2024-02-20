@@ -11387,6 +11387,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "chatAllowSnoop", TLuaInterpreter::chatAllowSnoop);
     lua_register(pGlobalLua, "chatCall", TLuaInterpreter::chatCall);
     lua_register(pGlobalLua, "chatEmoteAll", TLuaInterpreter::chatEmoteAll);
+    lua_register(pGlobalLua, "chatGroup", TLuaInterpreter::chatGroup);
     lua_register(pGlobalLua, "chatIgnore", TLuaInterpreter::chatIgnore);
     lua_register(pGlobalLua, "chatList", TLuaInterpreter::chatList);
     lua_register(pGlobalLua, "chatName", TLuaInterpreter::chatName);
@@ -11394,6 +11395,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "chatPing", TLuaInterpreter::chatPing);
     lua_register(pGlobalLua, "chatPrivate", TLuaInterpreter::chatPrivate);
     lua_register(pGlobalLua, "chatServe", TLuaInterpreter::chatServe);
+    lua_register(pGlobalLua, "chatSetGroup", TLuaInterpreter::chatSetGroup);
     lua_register(pGlobalLua, "chatSnoop", TLuaInterpreter::chatSnoop);
     lua_register(pGlobalLua, "chatStartServer", TLuaInterpreter::chatStartServer);
     lua_register(pGlobalLua, "chatStopServer", TLuaInterpreter::chatStopServer);

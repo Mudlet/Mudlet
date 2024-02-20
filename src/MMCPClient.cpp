@@ -23,10 +23,24 @@
 #include "mudlet.h"
 
 #include "pre_guard.h"
+#include <QHostAddress>
 #include <QTcpSocket>
 #include <QRegularExpression>
 #include <QtGlobal>
 #include "post_guard.h"
+
+QString convertToIPv4(QHostAddress addr)
+{
+    // Check if the address is an IPv4-mapped IPv6 address
+    if (addr.protocol() == QAbstractSocket::IPv6Protocol && addr.isInSubnet(QHostAddress::parseSubnet("::ffff:0:0/96"))) {
+        // Convert to IPv4
+        QHostAddress ipv4addr = QHostAddress(addr.toIPv4Address());
+        return ipv4addr.toString();
+    }
+    // Return the original address if it's not an IPv4-mapped IPv6 address
+    // or conversion is not applicable
+    return addr.toString();
+}
 
 MMCPClient::MMCPClient(Host* host, MMCPServer* serv) : m_state(Disconnected), tcpSocket(this), mpHost(host), server(serv)
 {
@@ -43,6 +57,7 @@ MMCPClient::MMCPClient(Host* host, MMCPServer* serv) : m_state(Disconnected), tc
     m_canSnoop = false;
     m_isSnooped = false;
     m_isSnooping = false;
+    m_group = tr("<none>");
 
     //Disable Nagle's algorithm
     tcpSocket.setSocketOption(QAbstractSocket::LowDelayOption, 1);
@@ -88,7 +103,7 @@ bool MMCPClient::incoming(qintptr socketDesc)
 
 QString MMCPClient::host()
 {
-    return tcpSocket.peerAddress().toString();
+    return convertToIPv4(tcpSocket.peerAddress());
 }
 
 quint16 MMCPClient::port()
@@ -102,7 +117,7 @@ quint16 MMCPClient::port()
  */
 void MMCPClient::slotConnected()
 {
-    m_host = tcpSocket.peerAddress().toString();
+    m_host = convertToIPv4(tcpSocket.peerAddress());
     m_port = tcpSocket.peerPort();
 
     QString str = QString("CHAT:%1\n%3%2").arg(server->getChatName()).arg(m_port, 5).arg(m_host);
@@ -144,8 +159,8 @@ void MMCPClient::slotReadData()
 
     switch (m_state) {
     case ConnectingIn: {
-        //QRegularExpression chatIncoming("CHAT:(.*)\n([0-9.]+)$");
-        QRegularExpression chatIncoming("CHAT:(.*)\n(.*)$");
+        QRegularExpression chatIncoming("^CHAT:(.*)\n(\\d{1,3}(?:\\.\\d{1,3}){3})(\\d{1,5})\\s*$");
+        //QRegularExpression chatIncoming("CHAT:(.*)\n(.*)$");
 
         QRegularExpressionMatch match = chatIncoming.match(buffer);
 
@@ -154,10 +169,16 @@ void MMCPClient::slotReadData()
             m_state = Connected;
 
             m_chatName = match.captured(1);
+            m_host = match.captured(2);
+            m_port = match.captured(3).toUInt();
 
             writeData(QString("YES:%1\n").arg(server->getChatName()));
 
-            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.").arg(m_chatName).arg(tcpSocket.peerAddress().toString()).arg(tcpSocket.peerPort());
+            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
+                                    .arg(m_chatName)
+                                    .arg(convertToIPv4(tcpSocket.peerAddress()))
+                                    .arg(tcpSocket.peerPort());
+
             mpHost->postMessage(infoMsg);
 
             server->addConnectedClient(this);
@@ -180,7 +201,11 @@ void MMCPClient::slotReadData()
             m_chatName = match.captured(1);
             m_state = Connected;
 
-            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.").arg(m_chatName).arg(tcpSocket.peerAddress().toString()).arg(tcpSocket.peerPort());
+            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
+                                    .arg(m_chatName)
+                                    .arg(convertToIPv4(tcpSocket.peerAddress()))
+                                    .arg(tcpSocket.peerPort());
+
             mpHost->postMessage(infoMsg);
 
             server->addConnectedClient(this);
@@ -193,7 +218,9 @@ void MMCPClient::slotReadData()
         } else {
             m_state = Disconnected;
 
-            const QString infoMsg = tr("[ CHAT ]  - Connection from %1:%2 refused.").arg(tcpSocket.peerPort()).arg(tcpSocket.peerAddress().toString());
+            const QString infoMsg = tr("[ CHAT ]  - Connection from %1:%2 refused.")
+                                    .arg(tcpSocket.peerPort())
+                                    .arg(convertToIPv4(tcpSocket.peerAddress()));
             mpHost->postMessage(infoMsg);
         }
 
@@ -236,30 +263,6 @@ void MMCPClient::slotDisplayError(QAbstractSocket::SocketError socketError)
     server->clientMessage(message);
 }
 
-
-/**
- * Send a chat message to this client, either Everyone or Personal.
- */
-void MMCPClient::sendChat(const QString& msg, MMCPChatCommands command)
-{
-    QString output;
-
-    switch (command) {
-    case TextEveryone:
-        output = msg;
-        break;
-
-    case TextPersonal:
-        output = QString("%1%2 chats to you, '%3'\n%4")
-                            .arg(static_cast<char>(command))
-                            .arg(server->getChatName())
-                            .arg(msg)
-                            .arg(static_cast<char>(End));
-        break;
-    }
-
-    writeData(output);
-}
 
 /**
  * Send a Message to the client socket
@@ -327,6 +330,22 @@ void MMCPClient::sendVersion()
 }
 
 /**
+ * Assign a client to a group.
+ * If supplied group is 'none' or empty string, remove from group. 
+ * Returns true if they were assigned to a group, false if they were removed.
+ */
+bool MMCPClient::setGroup(const QString& group)
+{
+    if ("none" == group.toLower() || group.length() == 0) {
+        m_group = "<none>";
+        return false;
+    }
+
+    m_group = group;
+    return true;
+}
+
+/**
  * Write to this client socket.
  */
 void MMCPClient::writeData(const QString& data)
@@ -382,6 +401,10 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
 
         case MMCPChatCommand::TextPersonal:
             handleIncomingChatPersonal(stringData);
+            break;
+
+        case MMCPChatCommand::TextGroup:
+            handleIncomingChatGroup(stringData);
             break;
 
         case MMCPChatCommand::Message:
@@ -481,6 +504,24 @@ void MMCPClient::handleIncomingChatEveryone(const QString& msg)
 void MMCPClient::handleIncomingChatPersonal(const QString& msg)
 {
     server->clientMessage(msg);
+}
+
+/**
+ * Display an incoming chat to a group
+ */
+void MMCPClient::handleIncomingChatGroup(const QString& msg)
+{
+    const QString groupStr = msg.left(15).trimmed();
+    const QString trimmedMsg = msg.right(msg.length() - 15);
+
+    using namespace AnsiColors;
+
+    const QString groupMsg = QString("%1%2(%3%4%5)%6")
+                                .arg(RST).arg(FBLDRED).arg(FBLDCYN)
+                                .arg(groupStr).arg(FBLDRED)
+                                .arg(trimmedMsg);
+
+    server->clientMessage(groupMsg);
 }
 
 /**
@@ -656,10 +697,9 @@ const QString MMCPClient::getFlagsString()
             .arg(m_isIgnored ? 'I' : ' ')
             .arg(m_isServed ? 'S' : ' ')
             //.arg(GetExcludeServe() ? 'X' : ' '),
-            //.arg(GetAddress() != GetReportedAddress() ? 'F' : ' '),
+            .arg(convertToIPv4(tcpSocket.peerAddress()) != m_host ? 'F' : ' ')
             .arg(m_isSnooping ? 'N' : (m_canSnoop ? 'n' : ' '))
             //.arg(' ')
-            .arg(' ')
             .arg(' ');
 }
 
@@ -687,5 +727,12 @@ const QString MMCPClient::getInfoString()
 	}
 	*/
 
-    return QString("%1 %2 %3 %4 %5").arg(m_chatName, 20).arg(tcpSocket.peerAddress().toString(), 20).arg(tcpSocket.peerPort(), 5).arg("               ", 15).arg(getFlagsString(), 8);
+    const QString groupStr = m_group == "<none>" ? "               " : m_group;
+
+    return QString("%1 %2 %3 %4 %5")
+                .arg(m_chatName, -20)
+                .arg(convertToIPv4(tcpSocket.peerAddress()), -20)
+                .arg(tcpSocket.peerPort(), -5)
+                .arg(groupStr, -15)
+                .arg(getFlagsString(), -8);
 }

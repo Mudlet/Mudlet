@@ -205,6 +205,7 @@ public:
     static int chatAllowSnoop(lua_State*);
     static int chatCall(lua_State*);
     static int chatEmoteAll(lua_State*);
+    static int chatGroup(lua_State*);
     static int chatIgnore(lua_State*);
     static int chatList(lua_State*);
     static int chatName(lua_State*);
@@ -212,6 +213,7 @@ public:
     static int chatPeek(lua_State*);
     static int chatPrivate(lua_State*);
     static int chatServe(lua_State*);
+    static int chatSetGroup(lua_State*);
     static int chatSnoop(lua_State*);
     static int chatStartServer(lua_State*);
     static int chatStopServer(lua_State*);

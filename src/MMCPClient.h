@@ -63,8 +63,6 @@ public:
 
     void disconnect();
 
-    void sendChat(const QString& msg, MMCPChatCommands);
-
     void snoop();
 
     const QString getInfoString();
@@ -100,6 +98,9 @@ public:
     bool isSnooping() { return m_isSnooping; }
     void setSnooping(bool val) { m_isSnooping = val; }
 
+    const QString& getGroup() { return m_group; }
+    bool setGroup(const QString&);
+
     int state() { return m_state; }
 
     MMCPServer* getServer() { return server; }
@@ -127,6 +128,7 @@ private:
     QString m_host;
     quint16 m_port;
     QByteArray buffer;
+    QString m_group;
 
     QTcpSocket tcpSocket;
     Host* mpHost;
@@ -138,6 +140,7 @@ private:
     void handleIncomingChannelData(const QString&);
     void handleIncomingChatEveryone(const QString&);
     void handleIncomingChatPersonal(const QString&);
+    void handleIncomingChatGroup(const QString&);
     void handleIncomingConnectionList(const QString&);
     void handleIncomingConnectionsRequest();
     void handleIncomingMessage(const QString&);

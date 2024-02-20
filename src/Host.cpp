@@ -335,6 +335,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMMCPAutostartServer(false)
 , mMMCPAllowConnectionRequests(false)
 , mMMCPAllowPeekRequests(false)
+, mMMCPAppendNewlineAfterChats(false)
 , mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
@@ -2760,6 +2761,10 @@ bool Host::getMMCPAllowConnectionRequests() {
 
 bool Host::getMMCPAllowPeekRequests() {
     return mMMCPAllowPeekRequests;
+}
+
+bool Host::mmcpShouldAppendNewlineAfterOutgoingChats() {
+    return mMMCPAppendNewlineAfterChats;
 }
 
 QString  Host::getSpellDic()

@@ -129,6 +129,26 @@ int TLuaInterpreter::chatEmoteAll(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::chatGroup(lua_State* L)
+{
+    const QString group = getVerifiedString(L, __func__, 1, "group");
+    const QString msg = getVerifiedString(L, __func__, 2, "message");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->chatGroup(group, msg);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 int TLuaInterpreter::chatIgnore(lua_State* L)
 {
     const QString target = getVerifiedString(L, __func__, 1, "target");
@@ -258,6 +278,26 @@ int TLuaInterpreter::chatServe(lua_State* L)
     }
 
     QPair<bool, QString> const result = pHost->mmcpServer->serve(target);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::chatSetGroup(lua_State* L)
+{
+    const QString target = getVerifiedString(L, __func__, 1, "target");
+    const QString group = getVerifiedString(L, __func__, 2, "group");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->chatSetGroup(target, group);
 
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());

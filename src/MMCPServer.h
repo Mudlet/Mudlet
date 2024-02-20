@@ -52,8 +52,10 @@ public:
     QPair<bool, QString> call(const QString&, int);
     QPair<bool, QString> chat(const QVariant&, const QString&);
     QPair<bool, QString> chatAll(const QString&);
+    QPair<bool, QString> chatGroup(const QString&, const QString&);
     QPair<bool, QString> chatName(const QString&);
     QPair<bool, QString> chatList();
+    QPair<bool, QString> chatSetGroup(const QVariant&, const QString&);
     QPair<bool, QString> chatRaw(const QString&);
     QPair<bool, QString> emoteAll(const QString&);
     QPair<bool, QString> ignore(const QString&);
