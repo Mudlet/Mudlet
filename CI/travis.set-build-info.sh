@@ -10,25 +10,19 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
   fi
 
   if [ -n "$TRAVIS_PULL_REQUEST" ]; then # building for a PR
-    BUILD_COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
-    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}-${BUILD_COMMIT}"
+    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}"
     PR_NUMBER=${TRAVIS_PULL_REQUEST}
     export PR_NUMBER
   elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-    BUILD_COMMIT=$(git rev-parse --short "${GITHUB_SHA}^2")
     PR_NUMBER=$(echo "$GITHUB_REF" | sed 's/refs\///' |sed 's/pull\///' | sed 's/\/merge//')
-    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${PR_NUMBER}-${BUILD_COMMIT}"
+    MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${PR_NUMBER}"
     echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
   else
     BUILD_COMMIT=$(git rev-parse --short HEAD)
 
     if [ "${MUDLET_VERSION_BUILD}" = "-ptb" ]; then
       DATE=$(date +'%Y-%m-%d')
-      # add a short commit to version for changelog generation know what was last released
-      SHORT_COMMIT=$(echo "${BUILD_COMMIT}" | cut -c1-5)
-      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}-${SHORT_COMMIT}"
-    else
-      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
+      MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-${DATE}"
     fi
   fi
 fi
