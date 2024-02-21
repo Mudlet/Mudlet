@@ -14,7 +14,9 @@ if (-not $(Test-Path "$workingBaseDir")) {
 }
 
 $64Bit = (Get-WmiObject Win32_OperatingSystem).OSArchitecture -eq "64-bit"
-if($64Bit){
+# Appveyor's CMake is in C:\Program Files\CMake
+
+if($64Bit -and ($Env:APPVEYOR -ne "True")){
   $CMakePath = "C:\Program Files (x86)\CMake\bin"
 } else {
   $CMakePath = "C:\Program Files\CMake\bin"
@@ -175,9 +177,9 @@ function CheckAndInstall([string] $dependencyName, [string] $signalFile, [script
 # installation functions
 function InstallSevenZ() {
   if($64Bit){
-    $downloadUrl = "https://www.7-zip.org/a/7z1900-x64.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z2301-x64.exe"
   } else {
-    $downloadUrl = "https://www.7-zip.org/a/7z1900.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z2301.exe"
   }
   DownloadFile "$downloadUrl" "7z-installer.exe"
   Step "installing 7z"
@@ -210,20 +212,28 @@ function InstallMsys() {
 }
 
 function InstallBoost([string] $outputLocation = "C:\Libraries\") {
-  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.71.0.beta1/boost_1_71_0_b1.tar.gz/download" "boost.tar.gz" $true
+  DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
     Step "Creating Boost path"
     New-Item -Path "C:\Libraries\" -ItemType "directory" >> "$logFile" 2>&1
   }
   ExtractTar "$workingBaseDir\boost.tar.gz" "$workingBaseDir"
   Step "Copying folder"
-  Move-Item "$workingBaseDir\boost_1_71_0" "$outputLocation" >> "$logFile" 2>&1
+  Move-Item "$workingBaseDir\boost_1_83_0" "$outputLocation" >> "$logFile" 2>&1
 }
 
 function InstallQt() {
-  DownloadFile "http://download.qt.io/official_releases/online_installers/qt-unified-windows-x86-online.exe" "qt-installer.exe"
-  Step "Installing"
-  exec ".\qt-installer.exe" @("--script=`"$(split-path -parent $script:MyInvocation.MyCommand.Path)\qt-silent-install.qs`"")
+  Step "Installing aqtinstall"
+  exec "pip" @("install", "aqtinstall")
+  New-Item -Path $Env:QT_BASE_DIR -ItemType Directory
+  cd $Env:QT_BASE_DIR
+  # go up to the root of Qt folder to start installation
+  cd ..
+  cd ..
+  Step "Installing Qt"
+  exec "aqt" @("install-qt", "windows", "desktop", "5.14.2", "win32_mingw73")
+  Step "Installing Mingw 7.3.0 Win32 tools"
+  exec "aqt" @("install-tool", "windows", "desktop", "tools_mingw", "qt.tools.win32_mingw730")
 }
 
 function InstallPython() {
@@ -236,7 +246,7 @@ function InstallPython() {
 
 function InstallOpenssl() {
   # needs to be from http://wiki.overbyte.eu/wiki/index.php/ICS_Download as it includes extra binaries not available on openssl.org
-  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1l-win32.zip" "openssl-win32.zip"
+  DownloadFile "http://wiki.overbyte.eu/arch/openssl-1.1.1n-win32.zip" "openssl-win32.zip"
   ExtractZip "openssl-win32.zip" "openssl"
   Step "installing"
   exec "XCOPY" @("/S", "/I", "/Q", "openssl", "$Env:MINGW_BASE_DIR\bin")
@@ -311,9 +321,9 @@ function InstallSqlite() {
 }
 
 function InstallZlib() {
-  DownloadFile "http://zlib.net/zlib-1.2.12.tar.gz" "zlib-1.2.12.tar.gz"
-  ExtractTar "$workingBaseDir\zlib-1.2.12.tar.gz" "$workingBaseDir\zlib"
-  Set-Location "$workingBaseDir\zlib\zlib-1.2.12"
+  DownloadFile "http://zlib.net/fossils/zlib-1.2.13.tar.gz" "zlib-1.2.13.tar.gz"
+  ExtractTar "$workingBaseDir\zlib-1.2.13.tar.gz" "$workingBaseDir\zlib"
+  Set-Location "$workingBaseDir\zlib\zlib-1.2.13"
   RunMake "win32/Makefile.gcc"
   $Env:INCLUDE_PATH = "$Env:MINGW_BASE_DIR\include"
   $Env:LIBRARY_PATH = "$Env:MINGW_BASE_DIR\lib"
@@ -325,16 +335,16 @@ function InstallZlib() {
 
 function InstallLibzip() {
   $Env:Path = $NoShPath
-  DownloadFile "https://libzip.org/download/libzip-1.7.3.tar.gz" "libzip.tar.gz"
+  DownloadFile "https://github.com/nih-at/libzip/releases/download/v1.10.1/libzip-1.10.1.tar.gz" "libzip.tar.gz"
   ExtractTar "$workingBaseDir\libzip.tar.gz" "$workingBaseDir\libzip"
-  Set-Location "$workingBaseDir\libzip\libzip-1.7.3"
+  Set-Location "$workingBaseDir\libzip\libzip-1.10.1"
   if (!(Test-Path -Path "build" -PathType Container)) {
     Step "Creating libzip build path"
     New-Item build -ItemType Directory >> "$logFile" 2>&1
   }
   Set-Location build
   Step "running cmake"
-  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "..")
+  exec "cmake" @("-G", "`"MinGW Makefiles`"", "-DCMAKE_INSTALL_PREFIX=`"$Env:MINGW_BASE_DIR`"", "-DENABLE_OPENSSL=OFF", "-DBUILD_REGRESS=OFF", "-DBUILD_EXAMPLES=OFF", "-DBUILD_DOC=OFF", "..")
   RunMake
   RunMakeInstall
   $Env:Path = $ShPath
@@ -435,6 +445,15 @@ function InstallLuaZip () {
   Copy-Item "zip.dll" "$Env:MINGW_BASE_DIR\lib\lua\5.1"
 }
 
+function InstallCcache() {
+    Step "installing ccache"
+    DownloadFile "https://github.com/ccache/ccache/releases/download/v4.6.1/ccache-4.6.1-windows-x86_64.zip" "ccache.zip"
+    ExtractZip "ccache.zip" "ccache"
+    Set-Location "ccache/ccache-4.6.1-windows-x86_64"
+    New-Item "C:\Program Files\ccache" -ItemType "directory" -Force
+    Copy-Item "ccache.exe" "C:\Program Files\ccache\ccache.exe" -Force
+}
+
 function InstallLuaModules(){
   CheckAndInstall "lfs" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\lfs.dll" { InstallLfs }
   CheckAndInstall "luasql.sqlite3" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\luasql\sqlite3.dll" { InstallLuasql }
@@ -444,6 +463,11 @@ function InstallLuaModules(){
   CheckAndInstall "luazip" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\zip.dll" { InstallLuaZip }
   CheckAndInstall "argparse" "$Env:MINGW_BASE_DIR\\lib\lua\5.1\argparse" { InstallLuaArgparse }
   CheckAndInstall "lunajson" "$Env:MINGW_BASE_DIR\\lib\luarocks\rocks-5.1\lunajson" { InstallLuaLunajson }
+}
+
+function CheckAndInstallCcache(){
+  CheckAndInstall "ccache" "C:\Program Files\ccache\ccache.exe" { InstallCcache }
+
 }
 
 function CheckAndInstall7z(){
@@ -463,7 +487,7 @@ function CheckAndInstallMsys(){
 }
 
 function CheckAndInstallBoost(){
-    CheckAndInstall "Boost" "C:\Libraries\boost_1_71_0\bootstrap.bat" { InstallBoost }
+    CheckAndInstall "Boost" "C:\Libraries\boost_1_83_0\bootstrap.bat" { InstallBoost }
 }
 
 function CheckAndInstallQt(){

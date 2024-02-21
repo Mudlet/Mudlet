@@ -26,6 +26,7 @@
 
 
 #include "pre_guard.h"
+#include <QDebug>
 #include <QPointer>
 #include <QTime>
 #include "post_guard.h"
@@ -42,21 +43,21 @@ class TTimer : public Tree<TTimer>
     friend class XMLimport;
 
 public:
-    ~TTimer();
+    ~TTimer() override;
     TTimer(TTimer* parent, Host* pHost);
     TTimer(const QString& name, QTime time, Host* pHost, bool repeating = false);
     void compileAll();
-    QString& getName() { return mName; }
+    const QString& getName() const { return mName; }
     void setName(const QString& name);
-    QTime& getTime() { return mTime; }
+    const QTime& getTime() const { return mTime; }
     void compile();
     bool checkRestart();
     bool compileScript();
     void execute();
     void setTime(QTime time);
-    QString getCommand() { return mCommand; }
+    const QString& getCommand() const { return mCommand; }
     void setCommand(const QString& cmd) { mCommand = cmd; }
-    QString getScript() { return mScript; }
+    const QString& getScript() const { return mScript; }
     bool setScript(const QString& script);
     bool canBeUnlocked();
     bool setIsActive(bool);
@@ -70,8 +71,28 @@ public:
     void disableTimer(int);
     void killTimer();
     int remainingTime();
+    // children of folder = regular timers
+    // children of timers = offset timers
+    //     offset timers: -> their time interval is interpreted as an offset to their parent timer
+    bool isOffsetTimer()
+    {
+        if (mpParent) {
+            return !mpParent->isFolder();
+        }
+        return false;
+    }
+    // Offset timers do not work correctly with the isAncestorsActive() base method
+    bool shouldAncestorsBeActive() const {
+        TTimer* node(mpParent);
+        while (node) {
+            if (node->isOffsetTimer() ? !node->shouldBeActive() : !node->isActive()) {
+                return false;
+            }
+            node = node->mpParent;
+        }
+        return true;
+    }
 
-    bool isOffsetTimer();
     QPointer<Host> getHost() { return mpHost; }
     QTimer* getQTimer() { return mpQTimer; }
     // Override the Tree version as we need to insert the id number as a
@@ -88,6 +109,9 @@ public:
     static const char* scmProperty_HostName;
     static const char* scmProperty_TTimerId;
 
+    // temporary timers are single-shot by default, unless repeating is set
+    bool mRepeating;
+
 private:
     TTimer() = default;
     QString mName;
@@ -99,8 +123,23 @@ private:
     bool mNeedsToBeCompiled;
     QTimer* mpQTimer;
     bool mModuleMember;
-    // temporary timers are single-shot by default, unless repeating is set
-    bool mRepeating;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug& operator<<(QDebug& debug, const TTimer* timer)
+{
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+    debug.nospace() << "TTimer("
+                    << "name= " << timer->getName()
+                    << " time= " << timer->getTime()
+                    << " command= " << timer->getCommand()
+                    << " script is in= " << (timer->mRegisteredAnonymousLuaFunction ? "string" : "Lua function")
+                    << " script= " << timer->getScript()
+                    << " repeating= " << timer->mRepeating
+                    << ")";
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TTIMER_H

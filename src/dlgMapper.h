@@ -49,20 +49,24 @@ public:
     GLWidget* glWidget = nullptr;
 #endif
     void updateAreaComboBox();
-    void setDefaultAreaShown(bool);
-    bool getDefaultAreaShown() { return mShowDefaultArea; }
     void resetAreaComboBoxToPlayerRoomArea();
+    // The button is the goto source for this bit of information:
+    bool isIn3DMode() const { return pushButton_3D->isDown(); }
     bool isFloatAndDockable() const;
 
 public slots:
     void slot_toggleRoundRooms(const bool);
-    void slot_toggleShowRoomIDs(int s);
-    void slot_toggleShowRoomNames(int s);
-    void slot_toggleStrongHighlight(int v);
+    void slot_toggleShowRoomIDs(int toggle);
+    void slot_toggleShowRoomNames(int toggle);
+    void slot_toggleStrongHighlight(int toggle);
     void slot_toggle3DView(const bool);
     void slot_togglePanel();
-    void slot_roomSize(int d);
-    void slot_exitSize(int d);
+    void slot_setMapperPanelVisible(bool panelVisible);
+    void slot_roomSize(int size);
+    void slot_exitSize(int size);
+    void slot_setRoomSize(int size);
+    void slot_setExitSize(int size);
+    void slot_setShowRoomIds(bool showRoomIds);
     void slot_updateInfoContributors();
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     // Only used in newer Qt versions
@@ -72,7 +76,6 @@ public slots:
 private:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
-    bool mShowDefaultArea = true;
 };
 
 #endif // MUDLET_DLGMAPPER_H

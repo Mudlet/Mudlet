@@ -23,8 +23,15 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QOpenGLWidget>
+// (2 of 2) This must be included before any Qt library tries to include
+// windows.h which pulls in winsock.h to avoid (multiple):
+// "#warning Please include winsock2.h before windows.h [-Wcpp]" warnings
+#if defined(INCLUDE_WINSOCK2)
+#include <winsock2.h>
+#endif
+
 #include "pre_guard.h"
+#include <QOpenGLWidget>
 #include <QPointer>
 #include "post_guard.h"
 
@@ -90,9 +97,9 @@ private:
 
     int mRID = 0;
     int mAID = 0;
-    int mOx = 0;
-    int mOy = 0;
-    int mOz = 0;
+    int mMapCenterX = 0;
+    int mMapCenterY = 0;
+    int mMapCenterZ = 0;
     bool mShiftMode = false;
 
     float xRot = 1.0;
@@ -106,7 +113,7 @@ private:
     int mShowBottomLevels = 999999;
 
     float mScale = 1.0;
-    int mTarget = 0;
+    int mTargetRoomId = 0;
 };
 
 #endif // MUDLET_GLWIDGET_H

@@ -1,3 +1,6 @@
+#ifndef MUDLET_MXPENTITYRESOLVER_H
+#define MUDLET_MXPENTITYRESOLVER_H
+
 /***************************************************************************
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
@@ -17,9 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLET_MXPENTITYRESOLVER_H
-#define MUDLET_MXPENTITYRESOLVER_H
-
 #include "pre_guard.h"
 #include <QHash>
 #include <QString>
@@ -28,8 +28,6 @@
 
 class TEntityResolver
 {
-    QHash<QString, QString> mEntititesMap;
-
 public:
     static const QHash<QString, QString> scmStandardEntites;
     static const TEntityResolver scmDefaultResolver;
@@ -50,6 +48,9 @@ public:
     static QString interpolate(const QString& input, std::function<QString(const QString&)> resolver);
 
     QString interpolate(const QString& input) const;
+
+private:
+    QHash<QString, QString> mEntititesMap;
 };
 
 #endif //MUDLET_MXPENTITYRESOLVER_H

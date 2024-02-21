@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2020-2021 by Stephen Lyons                        *
+ *   Copyright (C) 2018, 2020-2022 by Stephen Lyons                        *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -30,28 +30,14 @@
 
 TKey::TKey(TKey* parent, Host* pHost)
 : Tree<TKey>( parent )
-, exportItem(true)
-, mModuleMasterFolder(false)
-, mRegisteredAnonymousLuaFunction(false)
-, mKeyCode()
-, mKeyModifier()
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
-, mModuleMember(false)
 {
 }
 
 TKey::TKey(QString name, Host* pHost)
 : Tree<TKey>( nullptr )
-, exportItem(true)
-, mModuleMasterFolder(false)
-, mRegisteredAnonymousLuaFunction(false)
 , mName(name)
-, mKeyCode()
-, mKeyModifier()
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
-, mModuleMember(false)
 {
 }
 
@@ -144,7 +130,7 @@ void TKey::compileAll()
 {
     mNeedsToBeCompiled = true;
     if (!compileScript()) {
-        if (mudlet::debugMode) {
+        if (mudlet::smDebugMode) {
             TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
         }
         mOK_code = false;
@@ -158,7 +144,7 @@ void TKey::compile()
 {
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
-            if (mudlet::debugMode) {
+            if (mudlet::smDebugMode) {
                 TDebug(Qt::white, Qt::red) << "ERROR: Lua compile error. compiling script of key binding:" << mName << "\n" >> mpHost;
             }
             mOK_code = false;
@@ -179,10 +165,10 @@ bool TKey::setScript(const QString& script)
 
 bool TKey::compileScript()
 {
-    mFuncName = QString("Key") + QString::number(mID);
-    QString code = QString("function ") + mFuncName + QString("()\n") + mScript + QString("\nend\n");
+    mFuncName = qsl("Key%1").arg(QString::number(mID));
+    const QString code = qsl("function %1() %2\nend").arg(mFuncName, mScript);
     QString error;
-    if (mpHost->mLuaInterpreter.compile(code, error, QString("Key: ") + getName())) {
+    if (mpHost->mLuaInterpreter.compile(code, error, qsl("Key: %1").arg(getName()))) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         return true;
@@ -195,7 +181,7 @@ bool TKey::compileScript()
 
 void TKey::execute()
 {
-    if (mCommand.size() > 0) {
+    if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
     if (mNeedsToBeCompiled) {

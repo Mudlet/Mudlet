@@ -43,7 +43,9 @@ class TEncodingTable
 public:
     static const TEncodingTable csmDefaultInstance;
 
-    explicit TEncodingTable(const QMap<QByteArray, QVector<QChar>>& encodings) : mEncodingMap(encodings) {}
+    explicit TEncodingTable(const QMap<QByteArray, QVector<QChar>>& encodings)
+    : mEncodingMap(encodings)
+    {}
 
     const QMap<QByteArray, QVector<QChar>> getEncodings() const { return mEncodingMap; }
     QList<QByteArray> getEncodingNames() const;

@@ -29,26 +29,12 @@
 #include "pre_guard.h"
 #include <QApplication>
 #include <QColor>
+#include <QDebug>
 #include <QHash>
 #include <QMap>
 #include <QSet>
 #include <QVector3D>
 #include "post_guard.h"
-
-
-#define DIR_NORTH 1
-#define DIR_NORTHEAST 2
-#define DIR_NORTHWEST 3
-#define DIR_EAST 4
-#define DIR_WEST 5
-#define DIR_SOUTH 6
-#define DIR_SOUTHEAST 7
-#define DIR_SOUTHWEST 8
-#define DIR_UP 9
-#define DIR_DOWN 10
-#define DIR_IN 11
-#define DIR_OUT 12
-#define DIR_OTHER 13
 
 class XMLimport;
 class XMLexport;
@@ -83,40 +69,40 @@ public:
     void setExitWeight(const QString& cmd, int w);
     bool hasExitWeight(const QString& cmd);
     bool setDoor(const QString& cmd, int doorStatus); //0=no door, 1=open door, 2=closed, 3=locked
-    int getDoor(const QString& cmd);
+    int getDoor(const QString& cmd) const;
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);
     void calcRoomDimensions();
     bool setArea(int, bool isToDeferAreaRelatedRecalculations = false);
     int getExitWeight(const QString& cmd);
 
-    int getWeight() { return weight; }
-    int getNorth() { return north; }
+    int getWeight() const { return weight; }
+    int getNorth() const { return north; }
     void setNorth(int id) { north = id; }
-    int getNorthwest() { return northwest; }
+    int getNorthwest() const { return northwest; }
     void setNorthwest(int id) { northwest = id; }
-    int getNortheast() { return northeast; }
+    int getNortheast() const { return northeast; }
     void setNortheast(int id) { northeast = id; }
-    int getSouth() { return south; }
+    int getSouth() const { return south; }
     void setSouth(int id) { south = id; }
-    int getSouthwest() { return southwest; }
+    int getSouthwest() const { return southwest; }
     void setSouthwest(int id) { southwest = id; }
-    int getSoutheast() { return southeast; }
+    int getSoutheast() const { return southeast; }
     void setSoutheast(int id) { southeast = id; }
-    int getWest() { return west; }
+    int getWest() const { return west; }
     void setWest(int id) { west = id; }
-    int getEast() { return east; }
+    int getEast() const { return east; }
     void setEast(int id) { east = id; }
-    int getUp() { return up; }
+    int getUp() const { return up; }
     void setUp(int id) { up = id; }
-    int getDown() { return down; }
+    int getDown() const { return down; }
     void setDown(int id) { down = id; }
-    int getIn() { return in; }
+    int getIn() const { return in; }
     void setIn(int id) { in = id; }
-    int getOut() { return out; }
+    int getOut() const { return out; }
     void setOut(int id) { out = id; }
-    int getId() { return id; }
-    int getArea() { return area; }
+    int getId() const { return id; }
+    int getArea() const { return area; }
     void audit(QHash<int, int>, QHash<int, int>);
     void auditExits(QHash<int, int>);
     /*bool*/ void restore(QDataStream& ifs, int roomID, int version);
@@ -221,5 +207,100 @@ private:
     friend class XMLimport;
     friend class XMLexport;
 };
+
+#ifndef QT_NO_DEBUG_STREAM
+inline QDebug operator<<(QDebug debug, const TRoom* room)
+{
+    if (!room) {
+        return debug << "TRoom(0x0) ";
+    }
+    QDebugStateSaver saver(debug);
+    Q_UNUSED(saver);
+
+    debug.nospace() << "TRoom(" << room->getId() << ")";
+    debug.nospace() << ", name=" << room->name;
+    debug.nospace() << ", area=" << room->getArea();
+    debug.nospace() << ", pos=" << room->x << "," << room->y << "," << room->z;
+    
+    debug.nospace() << ", exits:";
+    if (room->getNorth() != -1) {
+        debug.nospace() << ", north=" << room->getNorth();
+    }
+    if (room->getNortheast() != -1) {
+        debug.nospace() << ", northeast=" << room->getNortheast();
+    }
+    if (room->getEast() != -1) {
+        debug.nospace() << ", east=" << room->getEast();
+    }
+    if (room->getSoutheast() != -1) {
+        debug.nospace() << ", southeast=" << room->getSoutheast();
+    }
+    if (room->getSouth() != -1) {
+        debug.nospace() << ", south=" << room->getSouth();
+    }
+    if (room->getSouthwest() != -1) {
+        debug.nospace() << ", southwest=" << room->getSouthwest();
+    }
+    if (room->getWest() != -1) {
+        debug.nospace() << ", west=" << room->getWest();
+    }
+    if (room->getNorthwest() != -1) {
+        debug.nospace() << ", northwest=" << room->getNorthwest();
+    }
+    if (room->getUp() != -1) {
+        debug.nospace() << ", up=" << room->getUp();
+    }
+    if (room->getDown() != -1) {
+        debug.nospace() << ", down=" << room->getDown();
+    }
+    if (room->getIn() != -1) {
+        debug.nospace() << ", in=" << room->getIn();
+    }
+    if (room->getOut() != -1) {
+        debug.nospace() << ", out=" << room->getOut();
+    }
+
+    QMap<QString, int> specialExits = room->getSpecialExits();
+    if (!specialExits.isEmpty()) {
+        debug.nospace() << ", specialExits=(";
+        for (QMap<QString, int>::const_iterator it = specialExits.begin(); it != specialExits.end(); ++it) {
+            debug.nospace() << it.key() << "." << it.value() << ", ";
+        }
+        debug.nospace() << ")";
+    }
+
+    QMap<QString, QList<QPointF>> customLines = room->customLines;
+    if (!customLines.isEmpty()) {
+        debug.nospace() << ", customLines=(";
+        for (QMap<QString, QList<QPointF>>::const_iterator it = customLines.begin(); it != customLines.end(); ++it) {
+            debug.nospace() << it.key() << ": " << it.value() << ", ";
+        }
+        debug.nospace() << ")";
+    }
+    
+    
+    int weight = room->getWeight();
+    if (weight != -1) {
+        debug.nospace() << ", weight=" << weight; 
+    }
+    
+    QString symbol = room->mSymbol;
+    if (!symbol.isEmpty()) {
+        debug.nospace() << ", symbol=" << symbol;
+    }
+    
+    auto exitWeights = room->getExitWeights();
+    if (!exitWeights.isEmpty()) {
+        debug.nospace() << ", exitWeights=(";
+        for (auto it = exitWeights.begin(); it != exitWeights.end(); ++it) {
+            auto exit = it.key();
+            auto weight = it.value();
+            debug.nospace() << exit << "." << weight << ", ";
+        }
+        debug.nospace() << ")";
+    }
+    return debug;
+}
+#endif // QT_NO_DEBUG_STREAM
 
 #endif // MUDLET_TROOM_H

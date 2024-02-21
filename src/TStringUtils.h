@@ -30,30 +30,18 @@
 #define CHAR_NEW_LINE '\n'
 #define CHAR_CARRIAGE_RETURN '\r'
 #define CHAR_END_OF_FILE '\xff'
-#define CHAR_END_OF_TEXT '\004'
+#define CHAR_END_OF_TEXT '\003'
+#define CHAR_END_OF_TRANSMISSION '\004'
 #define CHAR_ESC '\033'
 
-#define CHAR_IS_COMMIT_CHAR(ch) ((ch) == CHAR_NEW_LINE || (ch) == CHAR_CARRIAGE_RETURN || (ch) == CHAR_END_OF_FILE || (ch) == CHAR_END_OF_TEXT)
+#define CHAR_IS_COMMIT_CHAR(ch) ((ch) == CHAR_NEW_LINE || (ch) == CHAR_CARRIAGE_RETURN || (ch) == CHAR_END_OF_FILE || (ch) == CHAR_END_OF_TRANSMISSION)
 
 
 class TStringUtils
 {
 public:
     static bool isQuote(QChar ch);
-    static bool isOneOf(QChar ch, const QString &chars);
-
-    static QStringView strip(QStringView str, QChar start, QChar end);
-    static QStringView unquote(QStringView ref);
-
-    static bool isBetween(QStringView str, char first, char last);
-    static bool isQuoted(QStringView ref);
-
-    static void apply(QStringList& strList, const std::function<void(QString&)>& func)
-    {
-        for (auto& ptr : strList) {
-            func(ptr);
-        }
-    }
+    static bool isOneOf(QChar inputCharacter, const QString& characterSet);
 };
 
 #endif //MUDLET_TSTRINGUTILS_H

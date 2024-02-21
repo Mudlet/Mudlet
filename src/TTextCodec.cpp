@@ -195,7 +195,7 @@ QString TTextCodec_437::convertToUnicode(const char *in, int length, ConverterSt
         result += QChar::ByteOrderMark;
     }
     for (int i = 0; i < length; ++i) {
-        unsigned char ch = in[i];
+        unsigned char const ch = in[i];
         if (ch < 0x80) {
             // ASCII - which is the same as Latin1 when the MS Bit is not set:
             result += QLatin1Char(ch);
@@ -227,7 +227,7 @@ QString TTextCodec_667::convertToUnicode(const char *in, int length, ConverterSt
         result += QChar::ByteOrderMark;
     }
     for (int i = 0; i < length; ++i) {
-        unsigned char ch = in[i];
+        unsigned char const ch = in[i];
         if (ch < 0x80) {
             // ASCII - which is the same as Latin1 when the MS Bit is not set:
             result += QLatin1Char(ch);
@@ -259,7 +259,7 @@ QString TTextCodec_737::convertToUnicode(const char *in, int length, ConverterSt
         result += QChar::ByteOrderMark;
     }
     for (int i = 0; i < length; ++i) {
-        unsigned char ch = in[i];
+        unsigned char const ch = in[i];
         if (ch < 0x80) {
             // ASCII - which is the same as Latin1 when the MS Bit is not set:
             result += QLatin1Char(ch);
@@ -295,7 +295,7 @@ QString TTextCodec_869::convertToUnicode(const char *in, int length, ConverterSt
         result += QChar::ByteOrderMark;
     }
     for (int i = 0; i < length; ++i) {
-        unsigned char ch = in[i];
+        unsigned char const ch = in[i];
         if (ch < 0x80) {
             // ASCII - which is the same as Latin1 when the MS Bit is not set:
             result += QLatin1Char(ch);
@@ -335,7 +335,7 @@ QByteArray TTextCodec_437::convertFromUnicode(const QChar *in, int length, Conve
     int remainingChars = length;
     // Use '?' as replacement character (like some of Qt's own QTextCodec s)
     // unless we are told to use a NULL:
-    const char replacement = (state && (state->flags & ConversionFlag::ConvertInvalidToNull)) ? '\0' : '?';
+    const char replacement = (state && (state->flags & QTextCodec::ConvertInvalidToNull)) ? '\0' : '?';
     int i = 0;
     QByteArray result;
 
@@ -405,7 +405,7 @@ QByteArray TTextCodec_437::convertFromUnicode(const QChar *in, int length, Conve
         } else {
             // In range of Extended ASCII \x80 up to end of BMP \xffff so let's
             // find out if it is in the lookup table.
-            int pos = CptoUnicode.indexOf(in[i]);
+            const int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
             Q_ASSERT_X(pos < 128, "TTextCodec_437", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
@@ -439,7 +439,7 @@ QByteArray TTextCodec_667::convertFromUnicode(const QChar *in, int length, Conve
     int remainingChars = length;
     // Use '?' as replacement character (like some of Qt's own QTextCodec s)
     // unless we are told to use a NULL:
-    const char replacement = (state && (state->flags & ConversionFlag::ConvertInvalidToNull)) ? '\0' : '?';
+    const char replacement = (state && (state->flags & QTextCodec::ConvertInvalidToNull)) ? '\0' : '?';
     int i = 0;
     QByteArray result;
 
@@ -509,7 +509,7 @@ QByteArray TTextCodec_667::convertFromUnicode(const QChar *in, int length, Conve
         } else {
             // In range of Extended ASCII \x80 up to end of BMP \xffff so let's
             // find out if it is in the lookup table.
-            int pos = CptoUnicode.indexOf(in[i]);
+            const int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
             Q_ASSERT_X(pos < 128, "TTextCodec_667", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
@@ -543,7 +543,7 @@ QByteArray TTextCodec_737::convertFromUnicode(const QChar *in, int length, Conve
     int remainingChars = length;
     // Use '?' as replacement character (like some of Qt's own QTextCodec s)
     // unless we are told to use a NULL:
-    const char replacement = (state && (state->flags & ConversionFlag::ConvertInvalidToNull)) ? '\0' : '?';
+    const char replacement = (state && (state->flags & QTextCodec::ConvertInvalidToNull)) ? '\0' : '?';
     int i = 0;
     QByteArray result;
 
@@ -613,7 +613,7 @@ QByteArray TTextCodec_737::convertFromUnicode(const QChar *in, int length, Conve
         } else {
             // In range of Extended ASCII \x80 up to end of BMP \xffff so let's
             // find out if it is in the lookup table.
-            int pos = CptoUnicode.indexOf(in[i]);
+            const int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
             Q_ASSERT_X(pos < 128, "TTextCodec_737", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");
@@ -647,7 +647,7 @@ QByteArray TTextCodec_869::convertFromUnicode(const QChar *in, int length, Conve
     int remainingChars = length;
     // Use '?' as replacement character (like some of Qt's own QTextCodec s)
     // unless we are told to use a NULL:
-    const char replacement = (state && (state->flags & ConversionFlag::ConvertInvalidToNull)) ? '\0' : '?';
+    const char replacement = (state && (state->flags & QTextCodec::ConvertInvalidToNull)) ? '\0' : '?';
     int i = 0;
     QByteArray result;
 
@@ -717,7 +717,7 @@ QByteArray TTextCodec_869::convertFromUnicode(const QChar *in, int length, Conve
         } else {
             // In range of Extended ASCII \x80 up to end of BMP \xffff so let's
             // find out if it is in the lookup table.
-            int pos = CptoUnicode.indexOf(in[i]);
+            const int pos = CptoUnicode.indexOf(in[i]);
             // Protect against a bogus index that will break the use of an
             // quint8 afterwards:
             Q_ASSERT_X(pos < 128, "TTextCodec_869", "lookup table is malformed and oversized so that a bogus index of 128 or more was found");

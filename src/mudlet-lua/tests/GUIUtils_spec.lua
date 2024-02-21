@@ -100,6 +100,17 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals(expected, actual)
     end)
 
+    it("Should handle bold, before or after colours", function()
+      local sequences = {
+        {"\27[31m\27[1m", "<128,0,0><255,0,0>"},
+        {"\27[1m\27[31m", "<255,0,0>"},
+      }
+      for _, seq in ipairs(sequences) do
+          local actualResult = ansi2decho(seq[1])
+          assert.are.same(seq[2], actualResult)
+      end
+    end)
+
     it("Should leave normal text and other escape sequences alone", function()
       local sequences = {
         {"Hello World", "Hello World"},
@@ -143,7 +154,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local sequences = {
         {"\27[4z<PROMPT>\27[0;32;40m4876h, \27[0;1;33;40m3539m, \27[0;1;31;40m22200e, \27[0;1;32;40m21648w \27[0;37;40mcexkdb-\27[4z</PROMPT>", "\27[4z<PROMPT><r><0,128,0:0,0,0>4876h, <r><255,255,0:0,0,0>3539m, <r><255,0,0:0,0,0>22200e, <r><0,255,0:0,0,0>21648w <r><192,192,192:0,0,0>cexkdb-\27[4z</PROMPT>"},
         {'\27[0;1;36;40mYou say in a baritone voice, "Test."\27[0;37;40m', '<r><0,255,255:0,0,0>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'},
-        {'\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m', '<215,175,95:255,255,215>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'}
+        {'\27[38;5;179;48;5;230mYou say in a baritone voice, "Test."\27[0;37;40m', '<215,175,95:255,255,215>You say in a baritone voice, "Test."<r><192,192,192:0,0,0>'},
+        {'* \27[35m(a338f71)\27[m - \27[33m[Update release.yml]\27[m  \27[1;34m<TheLastDarkthorne>\27[m', '* <128,0,128>(a338f71)<r> - <128,128,0>[Update release.yml]<r>  <0,0,255><TheLastDarkthorne><r>'}
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
@@ -626,6 +638,39 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
   end)
 
+  describe("Test functionality of buffers", function()
+
+    before_each(function()
+      createBuffer("mybuffer")
+      -- clear the buffer in case it already exists
+      clearWindow("mybuffer")
+    end)
+
+    it("should append text to the buffer", function()
+      echo("mybuffer", "Hello, world!")
+      selectCurrentLine("mybuffer")
+      assert.are.equal("Hello, world!", getSelection("mybuffer"))
+    end)
+  
+    -- https://github.com/Mudlet/Mudlet/issues/6575
+    pending("should append multiple lines of text to the buffer", function()
+      echo("mybuffer", "Line 1\n")
+      echo("mybuffer", "Line 2\n")
+      echo("mybuffer", "Line 3\n")
+      moveCursorEnd()
+      selectCurrentLine("mybuffer")
+      assert.are.equal("Line 3", getSelection("mybuffer"))
+    end)
+  
+    it("should append new text to existing text in the buffer", function()
+      echo("mybuffer", "Hello")
+      echo("mybuffer", ", world!")
+      selectCurrentLine("mybuffer")
+      assert.are.equal("Hello, world!", getSelection("mybuffer"))
+    end)
+  
+  end)
+
   describe("Tests the functionality of getHTMLformat", function()
     local fmt
     before_each(function()
@@ -830,6 +875,83 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local ok,err = replace("]")
       assert.is_nil(ok)
       assert.equals("replace: nothing is selected to be replaced. Did selectString return -1?", err)
+    end)
+  end)
+  describe("Tests the functionality of the color echo transformation functions", function()
+    local cechoString = "<reset><ansi_light_red:ansi_010>This <b>is</b> <i>a</i> <:ansi_012><u>test</u> <ansi_010><s>of</s> <o>the</o><reset> echo transformations."
+    local dechoString = "<r><255,0,0:0,255,0>This <b>is</b> <i>a</i> <:0,0,255><u>test</u> <0,255,0><s>of</s> <o>the</o><r> echo transformations."
+    local hechoString = "#r#ff0000,00ff00This #bis#/b #ia#/i #,0000ff#utest#/u #00ff00#sof#/s #othe#/o#r echo transformations."
+    local htmlString = [[<span style="color: rgb(255, 255, 255);background-color: rgba(0, 0, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 255, 255);background-color: rgba(0, 0, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;">This <span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: bold; font-style: normal; text-decoration: none;">is<span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: italic; text-decoration: none;">a<span style="color: rgb(255, 0, 0);background-color: rgba(0, 255, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(255, 0, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 0, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: underline;">test<span style="color: rgb(255, 0, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: line-through;">of<span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"> <span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: overline;">the<span style="color: rgb(0, 255, 0);background-color: rgba(0, 0, 255, 255); font-weight: normal; font-style: normal; text-decoration: none;"><span style="color: rgb(255, 255, 255);background-color: rgba(0, 0, 0, 255); font-weight: normal; font-style: normal; text-decoration: none;"> echo transformations.]]
+    describe("Tests the functionality of cecho2decho", function()
+      it('can successfully convert a cecho string to a decho one', function()
+        local expected = dechoString
+        local actual = cecho2decho(cechoString)
+        assert.equal(expected, actual)
+      end)
+    end)
+
+    describe("Tests the functionality of cecho2hecho", function()
+      it('can successfully convert a cecho string to an hecho one', function()
+        local expected = hechoString
+        local actual = cecho2hecho(cechoString)
+        assert.equal(expected, actual)
+      end)
+    end)
+
+    describe("Tests the functionality of cecho2html", function()
+      it('can successfully convert a cecho string to an html one', function()
+        local expected = htmlString
+        local actual = cecho2html(cechoString)
+        assert.equal(expected, actual)
+      end)
+    end)
+
+    describe("Tests the functionality of decho2cecho", function()
+      it('can successfully convert a decho string to a cecho one', function()
+        local expected = cechoString
+        local actual = decho2cecho(dechoString)
+        assert.equal(expected, actual)
+      end)
+    end)
+
+    describe("Tests the functionality of decho2hecho", function()
+      it('can successfully convert a decho string to an hecho one', function()
+        local expected = hechoString
+        local actual = decho2hecho(dechoString)
+        assert.equal(expected, actual)
+      end)
+    end)
+
+    describe("Tests the functionality of decho2html", function()
+      it('can successfully convert a decho string to an html one', function()
+        local expected = htmlString
+        local actual = decho2html(dechoString)
+        assert.equal(expected, actual)
+      end)
+    end)
+
+    describe("Tests the functionality of hecho2cecho", function()
+      it('can successfully convert an hecho string to a cecho one', function()
+        local expected = cechoString
+        local actual = hecho2cecho(hechoString)
+        assert.equal(expected, actual)
+      end)
+    end)
+
+    describe("Tests the functionality of hecho2decho", function()
+      it('can successfully convert an hecho string to a decho one', function()
+        local expected = dechoString
+        local actual = hecho2decho(hechoString)
+        assert.equal(expected, actual)
+      end)
+    end)
+
+    describe("Tests the functionality of hecho2html", function()
+      it('can successfully convert an hecho string to an html one', function()
+        local expected = htmlString
+        local actual = hecho2html(hechoString)
+        assert.equal(expected, actual)
+      end)
     end)
   end)
 end)

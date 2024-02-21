@@ -26,42 +26,35 @@
 #include "Host.h"
 
 #include "pre_guard.h"
+#include "ui_package_manager.h"
 #include <QDialog>
 #include <QTableWidget>
 #include <QTextBrowser>
 #include "post_guard.h"
 
 class Host;
-namespace Ui {
-class package_manager;
-}
 
-class dlgPackageManager : public QDialog
+
+class dlgPackageManager : public QDialog, public Ui::package_manager
 {
     Q_OBJECT
 
 public:
     Q_DISABLE_COPY(dlgPackageManager)
     explicit dlgPackageManager(QWidget* parent, Host*);
-    ~dlgPackageManager();
+    ~dlgPackageManager() override;
     void resetPackageTable();
 
 private slots:
-    void slot_install_package();
-    void slot_remove_packages();
-    void slot_item_clicked(QTableWidgetItem*);
-    void slot_toggle_remove_button();
+    void slot_installPackage();
+    void slot_removePackages();
+    void slot_itemClicked(QTableWidgetItem*);
+    void slot_toggleRemoveButton();
 
 private:
     void fillAdditionalDetails(const QMap<QString, QString>&);
 
-    Ui::package_manager* ui = nullptr;
     Host* mpHost = nullptr;
-    QTableWidget* mPackageTable = nullptr;
-    QTableWidget* mDetailsTable = nullptr;
-    QTextBrowser* mDescription = nullptr;
-    QPushButton* mInstallButton = nullptr;
-    QPushButton* mRemoveButton = nullptr;
 };
 
 #endif

@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018, 2020, 2022 by Stephen Lyons                       *
+ *   Copyright (C) 2018, 2020, 2022-2023 by Stephen Lyons                  *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -26,6 +26,7 @@
 
 #include "pre_guard.h"
 #include <QMap>
+#include <QObject>
 #include <QPointer>
 #include <QString>
 #include "post_guard.h"
@@ -55,6 +56,7 @@ public:
     void removeAllTempKeys();
     void compileAll();
     TKey* findFirstKey(QString & name);
+    std::vector<int> findItems(const QString& name, const bool exactMatch, const bool caseSensitive);
     bool enableKey(const QString& name);
     bool disableKey(const QString& name);
     bool killKey(QString& name);

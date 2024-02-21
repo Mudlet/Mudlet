@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2018, 2022 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2020 by Gustavo Sousa - gustavocms@gmail.com            *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -30,7 +31,10 @@ class TMxpVarTagHandler : public TMxpTagHandler {
     MxpStartTag mCurrentStartTag;
     QString mCurrentVarContent;
 public:
-    TMxpVarTagHandler() : mCurrentStartTag(MxpStartTag("VAR")) {}
+    TMxpVarTagHandler()
+    : mCurrentStartTag(MxpStartTag("VAR"))
+    {}
+
     bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override;
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;

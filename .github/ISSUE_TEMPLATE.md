@@ -10,4 +10,4 @@
 #### Error output / Expected result of feature
 
 
-#### Extra information, such as Mudlet version, operating system and ideas for how to solve / implement:
+#### Extra information, such as the Mudlet version, operating system and ideas for how to solve / implement:

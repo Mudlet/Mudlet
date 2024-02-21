@@ -1,8 +1,9 @@
 ############################################################################
 #    Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       #
-#    Copyright (C) 2015-2018, 2020 by Stephen Lyons                        #
+#    Copyright (C) 2015-2018, 2020, 2023 by Stephen Lyons                  #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2018 by Huadong Qi - novload@outlook.com                #
+#    Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  #
 #    Copyright (C) 2022 by Piotr Wilczynski - delwing@gmail.com            #
 #                                                                          #
 #    This program is free software; you can redistribute it and/or modify  #
@@ -24,6 +25,10 @@
 set(mudlet_RCCS mudlet.qrc)
 configure_file("${mudlet_SOURCE_DIR}/translations/translated/qm.qrc" "${mudlet_BINARY_DIR}/translations/translated/qm.qrc" COPYONLY)
 
+if(USE_VARIABLE_SPLASH_SCREEN)
+  list(APPEND mudlet_RCCS additional_splash_screens.qrc)
+endif()
+
 if(USE_FONTS)
   list(APPEND mudlet_RCCS mudlet_fonts_common.qrc)
   if(CMAKE_SYSTEM_NAME STREQUAL Linux)
@@ -32,15 +37,17 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  # Neither BUILD nor APP_BUILD does not seem to be available?
+  # APP_BUILD should now be be available
 
-  # if(APP_BUILD matches "-ptb.+")
-  #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
-  #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  # else()
+  if(APP_BUILD matches "-ptb.+")
+    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+    # The above test may not be correct as it won't pick up builds where
+    # MUDLET_VERSION_BUILD has been set in the environment:
+    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
-  # endif()
+  endif()
 endif()
 
 set(mudlet_SRCS
@@ -66,7 +73,7 @@ set(mudlet_SRCS
     dlgPackageManager.cpp
     dlgProfilePreferences.cpp
     dlgRoomExits.cpp
-    dlgRoomSymbol.cpp
+    dlgRoomProperties.cpp
     dlgScriptsMainArea.cpp
     dlgSourceEditorArea.cpp
     dlgSourceEditorFindArea.cpp
@@ -79,6 +86,9 @@ set(mudlet_SRCS
     EAction.cpp
     exitstreewidget.cpp
     FontManager.cpp
+    FileOpenHandler.cpp
+    GifTracker.cpp
+    TrailingWhitespaceMarker.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -87,9 +97,11 @@ set(mudlet_SRCS
     main.cpp
     mapInfoContributorManager.cpp
     mudlet.cpp
+    MudletInstanceCoordinator.cpp
     ShortcutsManager.cpp
     ScriptUnit.cpp
     T2DMap.cpp
+    TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
     TArea.cpp
@@ -110,12 +122,17 @@ set(mudlet_SRCS
     TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
+    TLuaInterpreterNetworking.cpp
+    TLuaInterpreterMudletObjects.cpp
+    TLuaInterpreterMapper.cpp
     TMap.cpp
     TMapLabel.cpp
+    TLuaInterpreterDiscord.cpp
     TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
+    TLuaInterpreterTextToSpeech.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
@@ -155,6 +172,15 @@ set(mudlet_SRCS
     XMLexport.cpp
     XMLimport.cpp)
 
+if(APPLE)
+  list(APPEND mudlet_SRCS AnnouncerMac.mm)
+elseif(WIN32)
+  list(APPEND mudlet_SRCS AnnouncerWindows.cpp)
+  list(APPEND mudlet_SRCS uiawrapper.cpp)
+else()
+  list(APPEND mudlet_SRCS AnnouncerUnix.cpp)
+endif()
+
 # This is for compiled UI files, not those used at runtime
 set(mudlet_UIS
     ui/about_dialog.ui
@@ -174,7 +200,7 @@ set(mudlet_UIS
     ui/package_manager.ui
     ui/profile_preferences.ui
     ui/room_exits.ui
-    ui/room_symbol.ui
+    ui/room_properties.ui
     ui/scripts_main_area.ui
     ui/source_editor_area.ui
     ui/source_editor_find_area.ui
@@ -187,6 +213,7 @@ set(mudlet_UIS
 
 set(mudlet_HDRS
     ActionUnit.h
+    Announcer.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
     ctelnet.h
@@ -208,7 +235,7 @@ set(mudlet_HDRS
     dlgPackageManager.h
     dlgProfilePreferences.h
     dlgRoomExits.h
-    dlgRoomSymbol.h
+    dlgRoomProperties.h
     dlgScriptsMainArea.h
     dlgSourceEditorArea.h
     dlgSourceEditorFindArea.h
@@ -220,7 +247,10 @@ set(mudlet_HDRS
     dlgVarsMainArea.h
     EAction.h
     exitstreewidget.h
+    FileOpenHandler.h
     FontManager.h
+    GifTracker.h
+    TrailingWhitespaceMarker.h
     Host.h
     HostManager.h
     ircmessageformatter.h
@@ -228,11 +258,14 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    MudletInstanceCoordinator.h
     post_guard.h
     pre_guard.h
     ShortcutsManager.h
     ScriptUnit.h
     T2DMap.h
+    TAccessibleConsole.h
+    TAccessibleTextEdit.h
     TAction.h
     TAlias.h
     TArea.h
@@ -307,6 +340,10 @@ set(mudlet_HDRS
     XMLexport.h
     XMLimport.h)
 
+if(WIN32)
+  list(APPEND mudlet_HDRS uiawrapper.h)
+endif()
+
 if(USE_UPDATER)
   list(APPEND mudlet_SRCS updater.cpp)
   list(APPEND mudlet_HDRS updater.h)
@@ -337,24 +374,64 @@ endif()
 
 include(../3rdparty/cmake-scripts/sanitizers.cmake)
 
+if(WITH_QT6)
 find_package(
-  Qt5 5.11 REQUIRED
+  Qt6 6.2.0 REQUIRED
   COMPONENTS Core
              Multimedia
              Network
              OpenGL
              UiTools
              Widgets
-             Concurrent)
-find_package(Qt5 COMPONENTS Gamepad QUIET)
-find_package(Qt5 COMPONENTS TextToSpeech QUIET)
+             Concurrent
+             Core5Compat)
+  find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
-if(Qt5Core_VERSION VERSION_LESS 5.11)
-  message(
-    FATAL_ERROR "Mudlet requires Qt 5.11 or later, yours is ${Qt5Core_VERSION}")
+  message(STATUS "Qt version: ${Qt6Core_VERSION}")
+
+  set(QT_MAJOR_VERSION 6)
+  set(QT_LIBS Qt6::Concurrent
+              Qt6::Core
+              Qt6::Network
+              Qt6::Multimedia
+              Qt6::OpenGL
+              Qt6::UiTools
+              Qt6::Widgets
+              Qt6::Core5Compat
+              qt6keychain)
+
+  if(Qt6TextToSpeech_FOUND)
+    list(APPEND QT_LIBS Qt6::TextToSpeech)
+    message(STATUS "Using TextToSpeech module")
+  endif()
 else()
-  # Qt Speech (or at least the TTS part) was officially release in 5.10
+  find_package(
+          Qt5 5.14 REQUIRED
+          COMPONENTS Core
+          Multimedia
+          Network
+          OpenGL
+          UiTools
+          Widgets
+          Concurrent)
+  find_package(Qt5 COMPONENTS TextToSpeech QUIET)
+
   message(STATUS "Qt version: ${Qt5Core_VERSION}")
+
+  set(QT_MAJOR_VERSION 5)
+  set(QT_LIBS Qt5::Concurrent
+              Qt5::Core
+              Qt5::Network
+              Qt5::Multimedia
+              Qt5::OpenGL
+              Qt5::UiTools
+              Qt5::Widgets
+              qt5keychain)
+
+  if(Qt5TextToSpeech_FOUND)
+    list(APPEND QT_LIBS Qt5::TextToSpeech)
+    message(STATUS "Using TextToSpeech module")
+  endif()
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
@@ -367,13 +444,13 @@ find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
 
-if(NOT USE_OWN_QT5KEYCHAIN)
+if(NOT USE_OWN_QTKEYCHAIN)
   # Only use this when we are using a system package and NOT our own local build
-  find_package(Qt5Keychain REQUIRED)
+  find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
 
   # No need to test for it being found as the REQUIRED will make it error out
   # if it is NOT found!
-  message(STATUS "Using system QtKeyChain (Qt5) library (found version \"${Qt5Keychain_VERSION}\").")
+  message(STATUS "Using system QtKeyChain (Qt${QT_MAJOR_VERSION}) library (found version \"${Qt${QT_MAJOR_VERSION}Keychain_VERSION}\").")
 endif()
 
 if(USE_3DMAPPER)
@@ -386,6 +463,31 @@ endif()
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS})
+
+########################### Debugging code inclusions ##########################
+# Controls the include/selection of extra code to aide developers debug various
+# features of Mudlet, generally speaking they will not be '#define'd in
+# production builds - uncomment the
+# 'target_compile_definitions(mudlet PRIVATE DEBUG__XXX)'
+# line here to include the relevant code:
+#
+# Other DEFINES+=DEBUG_XXX expected here as a result of:
+# https://github.com/Mudlet/Mudlet/issues/6314
+#
+# * Produce a timestamped message on the OS's command line when an autosave of
+#   the map file gets requested and when such a request gets actioned (or
+#   rejected because the profile is being loaded):
+# target_compile_definitions(mudlet PRIVATE DEBUG_MAPAUTOSAVE)
+#
+# * Produce all the time the surprise that normally will only occur on the
+#   first day of the fourth month of the Gregorian calendar year:
+# target_compile_definitions(mudlet PRIVATE DEBUG_EASTER_EGGS)
+#
+# * Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
+# commands for suboptions - change the value to 2 to get a bit more detail
+# about the size or nature of the command:
+target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
+
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(mudlet PROPERTIES
@@ -407,46 +509,38 @@ endif(UNIX)
 target_compile_definitions(mudlet
   PRIVATE
     APP_VERSION="${APP_VERSION}"
-    APP_BUILD="${APP_BUILD}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
-if(USE_OWN_QT5KEYCHAIN)
+if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(mudlet PRIVATE INCLUDE_OWN_QT5_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
+endif()
+
+# Used to force an include of winsock2.h BEFORE Qt tries to include winsock.h
+# from windows.h - only needed on Windows builds but we cannot use Q_OS_WIN32
+# for an #ifdef because we need a symbol that is defined BEFORE we include
+# any Qt header file!
+if(WIN32)
+    target_compile_definitions(mudlet PRIVATE INCLUDE_WINSOCK2)
 endif()
 
 # One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
 target_compile_definitions(communi PUBLIC IRC_STATIC)
 
 target_link_libraries(
-  mudlet
-  communi
-  edbee-lib
-  Boost::boost
-  HUNSPELL::HUNSPELL
-  LUA51::LUA51
-  PCRE::PCRE
-  PUGIXML::PUGIXML
-  Qt5::Concurrent
-  Qt5::Core
-  Qt5::Network
-  Qt5::Multimedia
-  Qt5::OpenGL
-  Qt5::UiTools
-  Qt5::Widgets
-  ZIP::ZIP
-  ZLIB::ZLIB
-  qt5keychain)
-
-if(Qt5TextToSpeech_FOUND)
-  target_link_libraries(mudlet Qt5::TextToSpeech)
-  message(STATUS "Using TextToSpeech module")
-endif(Qt5TextToSpeech_FOUND)
-
-if(Qt5Gamepad_FOUND)
-  target_link_libraries(mudlet Qt5::Gamepad)
-  message(STATUS "Using Gamepad module")
-endif(Qt5Gamepad_FOUND)
+        mudlet
+        communi
+        edbee-lib
+        Boost::boost
+        HUNSPELL::HUNSPELL
+        LUA51::LUA51
+        PCRE::PCRE
+        PUGIXML::PUGIXML
+        ZIP::ZIP
+        ZLIB::ZLIB
+# PLACEMARKER: sample benchmarking code
+#       nanobench
+        ${QT_LIBS})
 
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
@@ -499,8 +593,10 @@ if(WIN32)
 endif()
 
 if(APPLE)
+  target_link_libraries(mudlet "-framework AppKit")
+
   if(USE_UPDATER)
-    target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
+    target_link_libraries(mudlet cocoa-qt-glue)
   endif(USE_UPDATER)
 
   set_target_properties(mudlet PROPERTIES
@@ -573,6 +669,24 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
+   install(
+    FILES "../mudlet.desktop"
+    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
+
+  install(
+    FILES "../mudlet.desktop"
+    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
+  install(
+    FILES "../mudlet.svg"
+    DESTINATION "share/icons/hicolor/scalable/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
+  install(
+    FILES "../mudlet.png"
+    DESTINATION "share/icons/hicolor/256x256/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
+
   install(
     TARGETS mudlet
     RUNTIME
