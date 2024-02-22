@@ -425,6 +425,10 @@ macx:LIBS += -lz
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 INCLUDEPATH += ../3rdparty/sentry-native/include
 
+win32 {
+    LIBS += -lwinhttp -ldbghelp
+}
+
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
 # platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
