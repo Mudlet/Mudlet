@@ -119,15 +119,23 @@ isEmpty( BUILD ) {
 # "-dev" for the development build
 # "-ptb" for the public test build
 # "" for the release build
-   BUILD = "-dev-"$${GIT_SHA1}
+# A core dev team member setting things up for a release should comment out the
+# following line - as the app-build.txt file must not contain anything (other
+# than whitespace) for a RELEASE build:
+#   BUILD = "-dev-"$${GIT_SHA1}
 } else {
    BUILD = $${BUILD}-$${GIT_SHA1}
 }
 
-!build_pass:message("Value written to app-build.txt file: " $${BUILD})
-
-# This does append a line-feed to the file which might be problematic!
+# This does append a line-feed to the file which would be problematic if it
+# wasn't trimmed off when read:
 write_file( app-build.txt, BUILD )
+
+isEmpty( BUILD ) {
+    !build_pass:message("Value written to app-build.txt file: {nothing}")
+} else {
+    !build_pass:message("Value written to app-build.txt file: " $${BUILD})
+}
 
 # As the above also modifies the splash screen image (so developers get reminded
 # what they are working with!) Packagers (e.g. for Linux distributions) will
@@ -141,7 +149,12 @@ isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
 # be automatically rebuilt so you will need to 'touch' them...!
-# Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
+# Use APP_VERSION and APP_TARGET defines in the source code if needed.
+# APP_BUILD is going away (it is not currently used in the source code now as
+# Mudlet instead reads it from the resource file) however until the CI/CB system
+# is cleaned up to not use it in any way in the
+# /CI/(travis|appveyor).validate_deployment.(sh|ps1) scripts we probably have to
+# leave it in place:
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
 

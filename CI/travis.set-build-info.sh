@@ -11,9 +11,11 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
 
   if [ -n "$TRAVIS_PULL_REQUEST" ]; then # building for a PR
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}"
+    BUILD_COMMIT=$(git rev-parse --short HEAD)
     PR_NUMBER=${TRAVIS_PULL_REQUEST}
     export PR_NUMBER
   elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+    BUILD_COMMIT=$(git rev-parse --short "${GITHUB_SHA}^2")
     PR_NUMBER=$(echo "$GITHUB_REF" | sed 's/refs\///' |sed 's/pull\///' | sed 's/\/merge//')
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${PR_NUMBER}"
     echo "PR_NUMBER=$PR_NUMBER" >> "$GITHUB_ENV"
@@ -29,6 +31,10 @@ fi
 
 VERSION=""
 
+# Q_OR_C_MAKE was an environmental variable assigned a value in the Travis CI
+# system - which is no longer used - as such we drop down to the third section
+# which extracts the value of VERSION from the "set(APP_VERSION x.y.z)" line
+# in the top level CMakeList.txt file:
 if [ "${Q_OR_C_MAKE}" = "cmake" ]; then
   VERSION=$(perl -lne 'print $1 if /^set\(APP_VERSION (.+)\)/' < "${TRAVIS_BUILD_DIR}/CMakeLists.txt")
 elif [ "${Q_OR_C_MAKE}" = "qmake" ]; then
@@ -50,5 +56,7 @@ if [ -n "$GITHUB_REPOSITORY" ]; then
 fi
 
 export VERSION
+# This no longer has a Git SHA1 appended, which it did previously for anything
+# other than a "Release" build:
 export MUDLET_VERSION_BUILD
 export BUILD_COMMIT

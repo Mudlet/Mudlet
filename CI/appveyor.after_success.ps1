@@ -30,8 +30,8 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
 
-  Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
-  Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.zip";
+  Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
+  Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
   Set-Variable -Name "outFile" -Value "upload-location.txt";
   Write-Output "=== Uploading the snapshot build ==="
   Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
@@ -125,7 +125,7 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
 
   if ($Script:PublicTestBuild) {
     Write-Output "=== Uploading public test build to make.mudlet.org ==="
-    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-windows.exe";
+    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.exe";
     Set-Variable -Name "inFile" -Value "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe";
     Set-Variable -Name "outFile" -Value "upload-location.txt";
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
@@ -195,10 +195,10 @@ if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
     Pop-Location
     Write-Output $Script:Changelog
     Write-Output "=== Creating release in Dblsqd ==="
-    dblsqd release -a mudlet -c public-test-build -m $Script:Changelog "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower()
+    dblsqd release -a mudlet -c public-test-build -m $Script:Changelog "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}-${Env:BUILD_COMMIT}".ToLower()
 
     Write-Output "=== Registering release with Dblsqd ==="
-    dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}".ToLower() -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
+    dblsqd push -a mudlet -c public-test-build -r "${Env:VERSION}${Env:MUDLET_VERSION_BUILD}-${Env:BUILD_COMMIT}".ToLower() -s mudlet --type "standalone" --attach win:x86 "${DEPLOY_URL}"
   }
   #  else {
   #   Write-Output "=== Registering release with Dblsqd ==="
@@ -213,7 +213,13 @@ if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
 echo ""
 echo "******************************************************"
 echo ""
-echo "Finished building Mudlet $Env:VERSION$Env:MUDLET_VERSION_BUILD"
+if ("$Env:MUDLET_VERSION_BUILD" -eq "") {
+  # A release build
+  echo "Finished building Mudlet $Env:VERSION$Env:MUDLET_VERSION_BUILD"
+} else {
+  # Not a release build so include the Git SHA1 in the message
+  echo "Finished building Mudlet $Env:VERSION$Env:MUDLET_VERSION_BUILD-$Env:BUILD_COMMIT"
+}
 if (Test-Path variable:DEPLOY_URL) {
     echo "Deployed the output to $DEPLOY_URL"
 }

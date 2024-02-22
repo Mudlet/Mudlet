@@ -104,10 +104,21 @@ message(STATUS "Git SHA1: ${GIT_SHA1}")
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It will not necessarily cause
 # those files to be automatically rebuilt so you may need to 'touch' those files
 # if the variables are changed and you are not doing a full, clean, rebuild! Use
-# APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
+# APP_VERSION and APP_TARGET defines in the source code if needed.
+#
+# APP_BUILD is going away (it is not currently used in the source code now as
+# Mudlet instead reads it from the resource file) however until the CI/CB system
+# is cleaned up to not use it in any way in the
+# /CI/(travis|appveyor).validate_deployment.(sh|ps1) scripts we probably have to
+# leave it in place:
+#
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
+# NOTE: the CI/CB build process examines the following line to determine the
+# underlying version of the Mudlet build for all our current CI/CB processes
+# even a Windows one that currently runs using qmake - so don't mess with it
+# unless you are a Core Developer adjusting the overall versioning:
 set(APP_VERSION 4.17.2)
 # We now make APP_BUILD a CACHE variable so it can be propagated to the ./src/
 # sub-directory build.
@@ -117,11 +128,16 @@ if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
   message(STATUS "Value written to app-build.txt file: $ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD} CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 else()
-  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev-${GIT_SHA1}")
-  message(STATUS "Value written to app-build.txt file: -dev-${GIT_SHA1}")
-  set(APP_BUILD "-dev" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
+#  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev-${GIT_SHA1}")
+#  message(STATUS "Value written to app-build.txt file: -dev-${GIT_SHA1}")
+#  set(APP_BUILD "-dev" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
+  # Core dev team setting things up for a release should comment out the above
+  # three lines and uncomment these below - note that the app-build.txt must not
+  # contain anything (other than whitespace) for a RELEASE build:
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
+  message(STATUS "Value written to app-build.txt file: {nothing}")
+  set(APP_BUILD "" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 endif()
-
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
