@@ -8,7 +8,10 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
     $Env:MUDLET_VERSION_BUILD = "-testing"
   }
   if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
-      $Env:BUILD_COMMIT = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
+      # APPVEYOR_PULL_REQUEST_HEAD_COMMIT is the development branch commit that
+      # a Pull-Request is merged onto - as such we do not want this for
+      # labelling a PR - instead we want APPVEYOR_REPO_COMMIT
+      $Env:BUILD_COMMIT = git rev-parse --short $Env:APPVEYOR_REPO_COMMIT
       $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER"
   } else {
     $Env:BUILD_COMMIT = git rev-parse --short HEAD
