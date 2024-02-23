@@ -98,11 +98,29 @@ TEMPLATE = app
 # Define a variable for the Git executable
 GIT_EXECUTABLE = git
 
-# Run the command to get the short SHA1 hash of the current HEAD
+# Run the command to get the short SHA1 hash of the current HEAD, unless running
+# a test/PR build on Mudlet's own CI/CB platforms on Windows (AppVeyor) and we
+# want the grandparent (the ~2) as it gets merged on top of the current
+# development branch (the ~1) for builds there:
 GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
+GIT_PARENT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD~1)
+GIT_GRANDPARENT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD~2)
+!build_pass{
+# Report the above, for debugging purposes:
+  message("Git HEAD SHA1: " $${GIT_SHA1})
+  message("Git HEAD~1 SHA1: " $${GIT_PARENT_SHA1})
+  message("Git HEAD~2 SHA1: " $${GIT_GRANDPARENT_SHA1})
+}
 
-# Use the result in your QMake project
-!build_pass:message("Git SHA1: " $${GIT_SHA1})
+APPVEYOR_TEST = upper($$(APPVEYOR))
+APPVEYOR_REPO_NAME_TEST = $$(APPVEYOR_REPO_NAME)
+!isEmpty( APPVEYOR_TEST ): !isEmpty( APPVEYOR_REPO_NAME_TEST ):equals(APPVEYOR_TEST, "TRUE" ):equals(APPVEYOR_REPO_NAME_TEST, "Mudlet/Mudlet" ) {
+  # Building in the AppVeyor environment of Mudlet's own repository, note
+  # that APPVEYOR is "true" on the Ubuntu (linux) platform (that we are not
+  # using), but "True" on Windows (and other platforms they provide)
+  !build_pass:message("Adjusting Git SHA1 for Mudlet's own Windows build on AppVeyor, to grandparent commit...")
+  GIT_SHA1 = $${GIT_GRANDPARENT_SHA1}
+}
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
@@ -112,7 +130,8 @@ VERSION = 4.17.2
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
 # variable (it should use '-' as the first character) to make identification of
-# the used version simple the qmake BUILD variable is NOT built-in
+# the used version simpler
+# Note: the qmake BUILD variable is NOT a built-in one
 BUILD = $$(MUDLET_VERSION_BUILD)
 isEmpty( BUILD ) {
 # Possible values are:

@@ -8,10 +8,11 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
     $Env:MUDLET_VERSION_BUILD = "-testing"
   }
   if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
-      # APPVEYOR_PULL_REQUEST_HEAD_COMMIT is the development branch commit that
-      # a Pull-Request is merged onto - as such we do not want this for
-      # labelling a PR - instead we want APPVEYOR_REPO_COMMIT
-      $Env:BUILD_COMMIT = git rev-parse --short $Env:APPVEYOR_REPO_COMMIT
+      # AppVeyor builds of PRs merge the PR head onto the current development
+      # branch creating a new commit - as such we need to refer to the
+      # grandparent (with the "~2" suffix) of the resulting commit to get the
+      # SHA1 we want:
+      $Env:BUILD_COMMIT = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT~2
       $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER"
   } else {
     $Env:BUILD_COMMIT = git rev-parse --short HEAD
