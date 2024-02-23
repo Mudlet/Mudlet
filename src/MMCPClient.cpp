@@ -439,6 +439,10 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
             handleIncomingSnoopData(data + cmdIdx + 1, (endIdx - cmdIdx) - 1);
             break;
 
+        case MMCPChatCommand::SideChannel:
+            handleIncomingSideChannelData(stringData);
+            break;
+
         default:
             qDebug() << "unknown command: " << cmd << stringData;
         }
@@ -679,6 +683,22 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
         qDebug() << "no CR";
         server->snoopMessage(ss.str());
     }
+}
+
+void MMCPClient::handleIncomingSideChannelData(const QString& stringData)
+{
+    //std::string channelData = stringData.toStdString();
+    mpHost->incomingStreamProcessor(stringData, 0);
+   // mpHost->mpConsole->printOnDisplay(channelData);
+
+    QRegularExpression chatChannel("^\\[(\\w+)\\](.*)$");
+
+    QRegularExpressionMatch match = chatChannel.match(stringData);
+
+    if (match.hasMatch()) {
+        mpHost->postChatChannelMessage(m_chatName, match.captured(1), match.captured(2));
+    }
+
 }
 
 const QString& MMCPClient::getVersion()

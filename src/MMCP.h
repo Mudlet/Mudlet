@@ -47,6 +47,7 @@ enum MMCPChatCommand {
     Snoop = 30,
     SnoopData = 31,
     SnoopColor = 32,
+    SideChannel = 33,
     ChannelData = 240,
     End = 255
 };

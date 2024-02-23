@@ -11396,6 +11396,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "chatPrivate", TLuaInterpreter::chatPrivate);
     lua_register(pGlobalLua, "chatServe", TLuaInterpreter::chatServe);
     lua_register(pGlobalLua, "chatSetGroup", TLuaInterpreter::chatSetGroup);
+    lua_register(pGlobalLua, "chatSideChannel", TLuaInterpreter::chatSideChannel);
     lua_register(pGlobalLua, "chatSnoop", TLuaInterpreter::chatSnoop);
     lua_register(pGlobalLua, "chatStartServer", TLuaInterpreter::chatStartServer);
     lua_register(pGlobalLua, "chatStopServer", TLuaInterpreter::chatStopServer);

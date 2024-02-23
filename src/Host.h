@@ -243,6 +243,7 @@ public:
     void incomingStreamProcessor(const QString& paragraph, int line);
     void postIrcMessage(const QString&, const QString&, const QString&);
     void postMMCPMessage(const QString&, const QString&, const QString&);
+    void postChatChannelMessage(const QString&, const QString&, const QString&);
     void enableTimer(const QString&);
     void disableTimer(const QString&);
     void enableTrigger(const QString&);

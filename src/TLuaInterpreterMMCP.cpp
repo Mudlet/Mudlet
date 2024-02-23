@@ -307,6 +307,26 @@ int TLuaInterpreter::chatSetGroup(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::chatSideChannel(lua_State* L)
+{
+    const QString channel = getVerifiedString(L, __func__, 1, "channel");
+    const QString message = getVerifiedString(L, __func__, 2, "message");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
+    }
+
+    QPair<bool, QString> const result = pHost->mmcpServer->chatSideChannel(channel, message);
+
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 int TLuaInterpreter::chatSnoop(lua_State* L)
 {
     const QString target = getVerifiedString(L, __func__, 1, "target");

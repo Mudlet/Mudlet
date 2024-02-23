@@ -328,6 +328,32 @@ QPair<bool, QString> MMCPServer::chatName(const QString& name)
     return QPair<bool, QString>(true, qsl("command successful"));
 }
 
+/**
+ * Script command, sends side channel data to all clients
+ */
+QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const QString& msg)
+{
+    if (clients.isEmpty()) {
+        return QPair<bool, QString>(false, qsl("no connected clients"));
+    }
+
+    const QString outMsg = QString("%1[%2]%3")
+                            .arg(static_cast<char>(SideChannel))
+                            .arg(channel)
+                            .arg(msg)
+                            .arg(static_cast<char>(End));
+
+    QListIterator<MMCPClient*> it(clients);
+    while (it.hasNext()) {
+        MMCPClient* cl = it.next();
+        cl->writeData(outMsg);
+    }
+
+    //clientMessage(msg);
+
+    return QPair<bool, QString>(true, qsl("command successful"));
+}
+
 
 /**
  * Script command, Sends an unformatted chat message to everyone.
@@ -354,6 +380,7 @@ QPair<bool, QString> MMCPServer::chatRaw(const QString& msg)
 
     return QPair<bool, QString>(true, qsl("command successful"));
 }
+
 
 /**
  * Assigns a client to a chat group

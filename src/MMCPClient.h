@@ -151,5 +151,6 @@ private:
     void handleIncomingPingResponse(const QString&);
     void handleIncomingSnoop();
     void handleIncomingSnoopData(const char*, quint16);
+    void handleIncomingSideChannelData(const QString&);
 };
 #endif

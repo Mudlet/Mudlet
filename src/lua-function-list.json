@@ -409,6 +409,7 @@
     "chatPrivate": "chatPrivate(target)",
     "chatServe": "chatServe(target)",
     "chatSetGroup": "chatSetGroup(target, group)",
+    "chatSideChannel": "chatSideChannel(channel, message)",
     "chatSnoop": "chatSnoop(target)",
     "chatStartServer": "chatStartServer([port])",
     "chatStopServer": "chatStopServer()",
