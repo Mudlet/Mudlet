@@ -2959,7 +2959,7 @@ area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1994"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** nieuwe sessie wordt gestart **</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2206"/>
@@ -3442,7 +3442,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TTextEdit.cpp" line="2737"/>
       <source>Visual</source>
       <extracomment>3rd Row heading for Text analyser output, table item is a visual representation of the character/part of the character or a &apos;{&apos;...&apos;}&apos; wrapped letter code if the character is whitespace or otherwise unshowable {this translation used 2 times}</extracomment>
-      <translation type="unfinished"/>
+      <translation>Visueel</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2676"/>
@@ -4116,17 +4116,17 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="253"/>
       <source>Red (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Rood (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="263"/>
       <source>Green (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Groen (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="273"/>
       <source>Blue (0-5)</source>
-      <translation type="unfinished"/>
+      <translation>Blauw (0-5)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="283"/>
@@ -4151,7 +4151,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="376"/>
       <source>Gray (0-23)</source>
-      <translation type="unfinished"/>
+      <translation>Grijs (0-23)</translation>
     </message>
     <message>
       <location filename="../src/ui/color_trigger.ui" line="383"/>
@@ -4189,7 +4189,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/composer.ui" line="102"/>
       <source>Save</source>
-      <translation type="unfinished"/>
+      <translation>Opslaan</translation>
     </message>
   </context>
   <context>
@@ -4207,7 +4207,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="367"/>
       <source>Remove</source>
-      <translation type="unfinished"/>
+      <translation>Verwijderen</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="386"/>
@@ -4217,7 +4217,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="411"/>
       <source>New</source>
-      <translation type="unfinished"/>
+      <translation>Nieuw</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="466"/>
@@ -4268,7 +4268,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="486"/>
       <source>Connect to</source>
-      <translation type="unfinished"/>
+      <translation>Maak verbinding aan</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="581"/>
@@ -4293,7 +4293,7 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="630"/>
       <source>Options</source>
-      <translation type="unfinished"/>
+      <translation>Instellingen</translation>
     </message>
     <message>
       <location filename="../src/ui/connection_profiles.ui" line="688"/>
@@ -4550,27 +4550,27 @@ error message was: &quot;%2&quot;.</source>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="357"/>
       <source>IN</source>
-      <translation type="unfinished"/>
+      <translation>IN</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="383"/>
       <source>OUT</source>
-      <translation type="unfinished"/>
+      <translation>UIT</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="393"/>
       <source>SW</source>
-      <translation type="unfinished"/>
+      <translation>ZW</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="403"/>
       <source>S</source>
-      <translation type="unfinished"/>
+      <translation>Z</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="413"/>
       <source>SE</source>
-      <translation type="unfinished"/>
+      <translation>ZO</translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="423"/>
@@ -4646,7 +4646,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="77"/>
       <source>Delete</source>
-      <translation type="unfinished"/>
+      <translation>Verwijderen</translation>
     </message>
     <message>
       <location filename="../src/ui/delete_profile_confirmation.ui" line="67"/>
@@ -4659,7 +4659,7 @@ If you are, please type in the profile name as a confirmation:</source>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="39"/>
       <source>Status</source>
-      <translation type="unfinished"/>
+      <translation>Status</translation>
     </message>
     <message>
       <location filename="../src/ui/glyph_usage.ui" line="44"/>
@@ -5211,7 +5211,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="77"/>
       <source>Black</source>
-      <translation type="unfinished"/>
+      <translation>Zwart</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="78"/>
@@ -5236,7 +5236,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="82"/>
       <source>Magenta</source>
-      <translation type="unfinished"/>
+      <translation>Magenta</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="83"/>
@@ -5246,47 +5246,47 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="84"/>
       <source>White (Light gray)</source>
-      <translation type="unfinished"/>
+      <translation>Wit (Lichtgrijs)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="86"/>
       <source>Light black (Dark gray)</source>
-      <translation type="unfinished"/>
+      <translation>Lichtzwart (Donkergrijs)</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="87"/>
       <source>Light red</source>
-      <translation type="unfinished"/>
+      <translation>Lichtrood</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="88"/>
       <source>Light green</source>
-      <translation type="unfinished"/>
+      <translation>Lichtgroen</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="89"/>
       <source>Light yellow</source>
-      <translation type="unfinished"/>
+      <translation>Lichtgeel</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="90"/>
       <source>Light blue</source>
-      <translation type="unfinished"/>
+      <translation>Lichtblauw</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="91"/>
       <source>Light magenta</source>
-      <translation type="unfinished"/>
+      <translation>Lichtmagenta</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="92"/>
       <source>Light cyan</source>
-      <translation type="unfinished"/>
+      <translation>Lichtcyaan</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="93"/>
       <source>Light white</source>
-      <translation type="unfinished"/>
+      <translation>Lichtwit</translation>
     </message>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="219"/>
@@ -5297,7 +5297,7 @@ Count</source>
     <message>
       <location filename="../src/dlgColorTrigger.cpp" line="373"/>
       <source>All color options are showing.</source>
-      <translation type="unfinished"/>
+      <translation>Alle kleuropties worden getoond.</translation>
     </message>
   </context>
   <context>
@@ -5548,7 +5548,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/dlgIRC.cpp" line="130"/>
       <source>$ Starting Mudlet IRC Client...</source>
-      <translation type="unfinished"/>
+      <translation>$ Mudlet IRC-client wordt gestart...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="131"/>
@@ -5578,7 +5578,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/dlgIRC.cpp" line="194"/>
       <source>Restarting IRC Client</source>
-      <translation type="unfinished"/>
+      <translation>IRC-client wordt opnieuw gestart</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="371"/>
@@ -7292,7 +7292,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="318"/>
       <source>*** starting new session ***</source>
-      <translation type="unfinished"/>
+      <translation>*** nieuwe sessie wordt gestart **</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="452"/>
@@ -7838,12 +7838,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7677"/>
       <source>Add Button</source>
-      <translation type="unfinished"/>
+      <translation>Knop Toevoegen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7678"/>
       <source>Add new button</source>
-      <translation type="unfinished"/>
+      <translation>Nieuwe knop toevoegen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7679"/>
@@ -7858,7 +7858,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7681"/>
       <source>Delete Button</source>
-      <translation type="unfinished"/>
+      <translation>Knop Verwijderen</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7682"/>
@@ -13773,13 +13773,13 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="216"/>
       <source>Set symbol color</source>
-      <translation type="unfinished"/>
+      <translation>Symboolkleur instellen</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="229"/>
       <source>Reset</source>
       <extracomment>This button is located next to the button &quot;Set symbol color&quot; and will reset the symbol color back to the original color.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Herstel</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
@@ -13837,7 +13837,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="184"/>
       <source>+</source>
-      <translation type="unfinished"/>
+      <translation>+</translation>
     </message>
   </context>
   <context>
@@ -13871,12 +13871,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="41"/>
       <source>Find</source>
-      <translation type="unfinished"/>
+      <translation>Zoek</translation>
     </message>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="87"/>
       <source>Replace</source>
-      <translation type="unfinished"/>
+      <translation>Vervang</translation>
     </message>
   </context>
   <context>
@@ -13894,12 +13894,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="186"/>
       <source>&lt;p&gt;milliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;milliseconden&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="220"/>
       <source>Time:</source>
-      <translation type="unfinished"/>
+      <translation>Tijd:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="39"/>
@@ -13969,7 +13969,7 @@ or LUA script</source>
       <location filename="../src/ui/trigger_editor.ui" line="428"/>
       <location filename="../src/ui/trigger_editor.ui" line="590"/>
       <source>1</source>
-      <translation type="unfinished"/>
+      <translation>1</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_editor.ui" line="436"/>
@@ -14066,12 +14066,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="578"/>
       <source>Choose file...</source>
-      <translation type="unfinished"/>
+      <translation>Kies bestand...</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="609"/>
       <source>no file</source>
-      <translation type="unfinished"/>
+      <translation>geen bestand</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="670"/>
@@ -14081,7 +14081,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="713"/>
       <source>Background</source>
-      <translation type="unfinished"/>
+      <translation>Achtergrond</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="729"/>
@@ -14093,12 +14093,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="703"/>
       <source>Foreground</source>
-      <translation type="unfinished"/>
+      <translation>Voorgrond</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="532"/>
       <source>play sound</source>
-      <translation type="unfinished"/>
+      <translation>speel geluid af</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="78"/>
@@ -14113,7 +14113,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst om naar het spel te sturen (optioneel)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="297"/>
@@ -14157,12 +14157,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="124"/>
       <source>Foreground color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Voorgrondkleur genegeerd</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="148"/>
       <source>Background color ignored</source>
-      <translation type="unfinished"/>
+      <translation>Achtergrondkleur genegeerd</translation>
     </message>
     <message>
       <location filename="../src/ui/trigger_pattern_edit.ui" line="175"/>
@@ -14244,7 +14244,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="176"/>
       <source>string</source>
-      <translation type="unfinished"/>
+      <translation>string</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="181"/>
@@ -14259,7 +14259,7 @@ from GUI)</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="196"/>
       <source>function</source>
-      <translation type="unfinished"/>
+      <translation>functie</translation>
     </message>
   </context>
 </TS>
