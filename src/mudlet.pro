@@ -118,6 +118,7 @@ APPVEYOR_PR_HEAD_COMMIT = $$lower($$APPVEYOR_PR_HEAD_COMMIT)
 !build_pass{
 # Report the above, for debugging purposes:
   message("Git SHA1 used: " $${GIT_SHA1})
+}
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
