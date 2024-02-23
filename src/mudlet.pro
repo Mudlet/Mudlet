@@ -103,10 +103,10 @@ GIT_EXECUTABLE = git
 # want the grandparent (the ~2) as it gets merged on top of the current
 # development branch (the ~1) for builds there:
 GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
-GIT_PARENTA_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD~1)
-GIT_PARENTB_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD^1)
-GIT_GRANDPARENTA_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD~2)
-GIT_GRANDPARENTB_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD^2)
+GIT_PARENTA_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --quiet --short HEAD~1)
+GIT_PARENTB_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --quiet --short HEAD^1)
+GIT_GRANDPARENTA_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --quiet --short HEAD~2)
+GIT_GRANDPARENTB_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --quiet --short HEAD^2)
 !build_pass{
 # Report the above, for debugging purposes:
   message("Git HEAD SHA1: " $${GIT_SHA1})
@@ -116,15 +116,13 @@ GIT_GRANDPARENTB_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD^2)
   message("Git HEAD^2 SHA1: " $${GIT_GRANDPARENTB_SHA1})
 }
 
-APPVEYOR_TEST = $$(APPVEYOR)
-APPVEYOR_TEST = upper( APPVEYOR_TEST )
 APPVEYOR_REPO_NAME_TEST = $$(APPVEYOR_REPO_NAME)
-!isEmpty( APPVEYOR_TEST ): !isEmpty( APPVEYOR_REPO_NAME_TEST ):equals(APPVEYOR_TEST, "TRUE" ):equals(APPVEYOR_REPO_NAME_TEST, "Mudlet/Mudlet" ) {
-  # Building in the AppVeyor environment of Mudlet's own repository, note
-  # that APPVEYOR is "true" on the Ubuntu (linux) platform (that we are not
-  # using), but "True" on Windows (and other platforms they provide)
-  !build_pass:message("Adjusting Git SHA1 for Mudlet's own Windows build on AppVeyor, to grandparent commit...")
-  GIT_SHA1 = $${GIT_GRANDPARENTB_SHA1}
+APPVEYOR_PR_HEAD_COMMIT = $$(APPVEYOR_PULL_REQUEST_HEAD_COMMIT)
+APPVEYOR_PR_HEAD_COMMIT = lower( APPVEYOR_PR_HEAD_COMMIT )
+!isEmpty( APPVEYOR_REPO_NAME_TEST ):!isEmpty( APPVEYOR_PR_HEAD_COMMIT ):equals(APPVEYOR_REPO_NAME_TEST, "Mudlet/Mudlet" ) {
+  # Building a PR in the AppVeyor environment of Mudlet's own repository
+  !build_pass:message("Adjusting Git SHA1 for Mudlet's own Windows build on AppVeyor, to provided commit...")
+  GIT_SHA1 = $${APPVEYOR_PR_HEAD_COMMIT}
 }
 
 ########################## Version and Build setting ###########################
