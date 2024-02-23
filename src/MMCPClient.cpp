@@ -120,7 +120,7 @@ void MMCPClient::slotConnected()
     m_host = convertToIPv4(tcpSocket.peerAddress());
     m_port = tcpSocket.peerPort();
 
-    QString str = QString("CHAT:%1\n%3%2").arg(server->getChatName()).arg(m_port, 5).arg(m_host);
+    QString str = QString("CHAT:%1\n%3%2").arg(server->getChatName()).arg(m_port, -5).arg(m_host);
 
     tcpSocket.write(str.toLatin1());
 
