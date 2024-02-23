@@ -99,22 +99,10 @@ TEMPLATE = app
 GIT_EXECUTABLE = git
 
 # Run the command to get the short SHA1 hash of the current HEAD, unless running
-# a test/PR build on Mudlet's own CI/CB platforms on Windows (AppVeyor) and we
-# want the grandparent (the ~2) as it gets merged on top of the current
-# development branch (the ~1) for builds there:
-GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
-GIT_PARENTA_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --quiet --short HEAD~1)
-GIT_PARENTB_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --quiet --short HEAD^1)
-GIT_GRANDPARENTA_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --quiet --short HEAD~2)
-GIT_GRANDPARENTB_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --quiet --short HEAD^2)
-!build_pass{
-# Report the above, for debugging purposes:
-  message("Git HEAD SHA1: " $${GIT_SHA1})
-  message("Git HEAD~1 SHA1: " $${GIT_PARENTA_SHA1})
-  message("Git HEAD^1 SHA1: " $${GIT_PARENTB_SHA1})
-  message("Git HEAD~2 SHA1: " $${GIT_GRANDPARENTA_SHA1})
-  message("Git HEAD^2 SHA1: " $${GIT_GRANDPARENTB_SHA1})
-}
+# a test/PR build on Mudlet's own CI/CB platforms on Windows (AppVeyor) as then
+# we have to use the value provided in APPVEYOR_PULL_REQUEST_HEAD_COMMIT as that
+# process does some local merging of the PR on top of the current development
+# branch and the resulting HEAD is NOT the value we want.
 
 APPVEYOR_REPO_NAME_TEST = $$(APPVEYOR_REPO_NAME)
 APPVEYOR_PR_HEAD_COMMIT = $$(APPVEYOR_PULL_REQUEST_HEAD_COMMIT)
@@ -122,8 +110,14 @@ APPVEYOR_PR_HEAD_COMMIT = $$lower($$APPVEYOR_PR_HEAD_COMMIT)
 !isEmpty( APPVEYOR_REPO_NAME_TEST ):!isEmpty( APPVEYOR_PR_HEAD_COMMIT ):equals(APPVEYOR_REPO_NAME_TEST, "Mudlet/Mudlet" ) {
   # Building a PR in the AppVeyor environment of Mudlet's own repository
   !build_pass:message("Adjusting Git SHA1 for Mudlet's own Windows build on AppVeyor, to provided commit...")
-  GIT_SHA1 = $${APPVEYOR_PR_HEAD_COMMIT}
+  GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short $${APPVEYOR_PR_HEAD_COMMIT})
+} else {
+  GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
 }
+
+!build_pass{
+# Report the above, for debugging purposes:
+  message("Git SHA1 used: " $${GIT_SHA1})
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
