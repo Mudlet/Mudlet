@@ -118,7 +118,7 @@ GIT_GRANDPARENTB_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --quiet --short HEAD
 
 APPVEYOR_REPO_NAME_TEST = $$(APPVEYOR_REPO_NAME)
 APPVEYOR_PR_HEAD_COMMIT = $$(APPVEYOR_PULL_REQUEST_HEAD_COMMIT)
-APPVEYOR_PR_HEAD_COMMIT = lower( APPVEYOR_PR_HEAD_COMMIT )
+APPVEYOR_PR_HEAD_COMMIT = $$lower($$APPVEYOR_PR_HEAD_COMMIT)
 !isEmpty( APPVEYOR_REPO_NAME_TEST ):!isEmpty( APPVEYOR_PR_HEAD_COMMIT ):equals(APPVEYOR_REPO_NAME_TEST, "Mudlet/Mudlet" ) {
   # Building a PR in the AppVeyor environment of Mudlet's own repository
   !build_pass:message("Adjusting Git SHA1 for Mudlet's own Windows build on AppVeyor, to provided commit...")

@@ -12,7 +12,7 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
       # branch creating a new commit - as such we need to refer to the
       # grandparent (with the "~2" suffix) of the resulting commit to get the
       # SHA1 we want:
-      $Env:BUILD_COMMIT = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT~2
+      $Env:BUILD_COMMIT = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
       $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER"
   } else {
     $Env:BUILD_COMMIT = git rev-parse --short HEAD
