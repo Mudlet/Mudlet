@@ -22,7 +22,7 @@ $Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_B
 if ("$Env:APPVEYOR_REPO_TAG" -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
   Rename-Item -Path "$Env:APPVEYOR_BUILD_FOLDER\src\release\mudlet.exe" -NewName "Mudlet.exe"
-  cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%%BUILD_COMMIT%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
+  cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-%BUILD_COMMIT%-windows.zip "%APPVEYOR_BUILD_FOLDER%\src\release\*"
 
   Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
   Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
