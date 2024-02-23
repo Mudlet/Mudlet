@@ -337,7 +337,7 @@ QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const Q
         return QPair<bool, QString>(false, qsl("no connected clients"));
     }
 
-    const QString outMsg = QString("%1[%2]%3")
+    const QString outMsg = QString("%1[%2]%3%4")
                             .arg(static_cast<char>(SideChannel))
                             .arg(channel)
                             .arg(msg)
