@@ -209,7 +209,7 @@ echo "******************************************************"
 echo ""
 if ("$Env:MUDLET_VERSION_BUILD" -eq "") {
   # A release build
-  echo "Finished building Mudlet $Env:VERSION$Env:MUDLET_VERSION_BUILD"
+  echo "Finished building Mudlet $Env:VERSION"
 } else {
   # Not a release build so include the Git SHA1 in the message
   echo "Finished building Mudlet $Env:VERSION$Env:MUDLET_VERSION_BUILD-$Env:BUILD_COMMIT"

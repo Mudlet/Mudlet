@@ -10,8 +10,8 @@ if [ -z "${TRAVIS_TAG}" ] && ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]]; then
   fi
 
   if [ -n "$TRAVIS_PULL_REQUEST" ]; then # building for a PR
+    BUILD_COMMIT=$(git rev-parse --short "${TRAVIS_PULL_REQUEST_SHA}")
     MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD}-PR${TRAVIS_PULL_REQUEST}"
-    BUILD_COMMIT=$(git rev-parse --short HEAD)
     PR_NUMBER=${TRAVIS_PULL_REQUEST}
     export PR_NUMBER
   elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
