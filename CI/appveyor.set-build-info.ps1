@@ -36,7 +36,7 @@ $Env:VERSION = $VersionRegex.Match($VersionLine).Groups[1].Value
 
 if ($Env:MUDLET_VERSION_BUILD -eq "") {
   # A release build maybe?
-  Write-Output "BUILDING MUDLET $Env:VERSION
+  Write-Output "BUILDING MUDLET $Env:VERSION"
 } else {
   # Otherwise we should report the Git SHA1 which is no longer in MUDLET_VERSION_BUILD:
   Write-Output "BUILDING MUDLET $Env:VERSION$Env:MUDLET_VERSION_BUILD-$Env:BUILD_COMMIT"
