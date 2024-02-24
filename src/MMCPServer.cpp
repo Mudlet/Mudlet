@@ -349,8 +349,6 @@ QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const Q
         cl->writeData(outMsg);
     }
 
-    //clientMessage(msg);
-
     return QPair<bool, QString>(true, qsl("command successful"));
 }
 
@@ -670,7 +668,7 @@ void MMCPServer::clientMessage(const QString& message)
 
     using namespace AnsiColors;
 
-    const QString coloredStr = QString("\n%1%2%3\n").arg(FBLDRED).arg(trimmed).arg(RST);
+    const QString coloredStr = QString("%1%2%3\n").arg(FBLDRED).arg(trimmed).arg(RST);
 
     std::string trimmedStdStr = coloredStr.toStdString();
     mpHost->mpConsole->printOnDisplay(trimmedStdStr, false);

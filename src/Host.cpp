@@ -1643,7 +1643,7 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
 void Host::postChatChannelMessage(const QString& from, const QString& channel, const QString& message)
 {
     TEvent event {};
-    event.mArgumentList << QLatin1String("sysChatChannelMessage");
+    event.mArgumentList << MMCPServer::MMCPChatSideChannelEvent;
     event.mArgumentList << from << channel << message;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
     raiseEvent(event);

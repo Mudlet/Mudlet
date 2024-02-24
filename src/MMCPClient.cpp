@@ -58,6 +58,7 @@ MMCPClient::MMCPClient(Host* host, MMCPServer* serv) : m_state(Disconnected), tc
     m_isSnooped = false;
     m_isSnooping = false;
     m_group = tr("<none>");
+    m_chatName = "";
 
     //Disable Nagle's algorithm
     tcpSocket.setSocketOption(QAbstractSocket::LowDelayOption, 1);
@@ -134,7 +135,10 @@ void MMCPClient::slotConnected()
  */
 void MMCPClient::slotDisconnected()
 {
-    const QString infoMsg = tr("[ CHAT ]  - You are now disconnected from %1:%2.").arg(m_host).arg(m_port);
+    const QString infoMsg = tr("[ CHAT ]  - You are now disconnected from %1 - %2:%3.")
+        .arg(m_chatName.length() > 0 ? m_chatName : "<Unknown>")
+        .arg(m_host).arg(m_port);
+
     mpHost->postMessage(infoMsg);
 
     if (isSnooping()) {
@@ -685,12 +689,13 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     }
 }
 
+/**
+ * Handle incoming side channel data from this client.
+ * Posts a sysChatChannelMessage event with arguments:
+ *     chatname, channel, message
+ */ 
 void MMCPClient::handleIncomingSideChannelData(const QString& stringData)
 {
-    //std::string channelData = stringData.toStdString();
-    mpHost->incomingStreamProcessor(stringData, 0);
-   // mpHost->mpConsole->printOnDisplay(channelData);
-
     QRegularExpression chatChannel("^\\[(\\w+)\\](.*)$");
 
     QRegularExpressionMatch match = chatChannel.match(stringData);

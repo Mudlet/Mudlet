@@ -39,6 +39,7 @@ class MMCPServer : public QTcpServer
 public:
     inline static int MMCPDefaultHostPort = 4050;
     inline static QString DefaultMMCPChatName = qsl("MudletMMCP");
+    inline static QLatin1String MMCPChatSideChannelEvent = QLatin1String("sysChatChannelMessage");
 
     explicit MMCPServer(Host*);
     ~MMCPServer();
