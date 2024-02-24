@@ -98,27 +98,25 @@ TEMPLATE = app
 # Define a variable for the Git executable
 GIT_EXECUTABLE = git
 
-# Run the command to get the short SHA1 hash of the current HEAD, unless running
-# a test/PR build on Mudlet's own CI/CB platforms on Windows (AppVeyor) as then
-# we have to use the value provided in APPVEYOR_PULL_REQUEST_HEAD_COMMIT as that
-# process does some local merging of the PR on top of the current development
-# branch and the resulting HEAD is NOT the value we want.
-
-APPVEYOR_REPO_NAME_TEST = $$(APPVEYOR_REPO_NAME)
-APPVEYOR_PR_HEAD_COMMIT = $$(APPVEYOR_PULL_REQUEST_HEAD_COMMIT)
-APPVEYOR_PR_HEAD_COMMIT = $$lower($$APPVEYOR_PR_HEAD_COMMIT)
-!isEmpty( APPVEYOR_REPO_NAME_TEST ):!isEmpty( APPVEYOR_PR_HEAD_COMMIT ):equals(APPVEYOR_REPO_NAME_TEST, "Mudlet/Mudlet" ) {
+# Run the command to get the short SHA1 hash of the current HEAD, UNLESS there
+# is a Git SHA1 in the BRANCH_COMMIT enviromental variable (which has been set
+# by Mudlet's own CI/CB build system. This is to account for the manipulation
+# that happens during a build of a PR on Mudlet's own GitHub repository which
+# combines the PR state with that of the currently development branch such that
+# the HEAD of that branch does not match what git rev-parse HEAD would return:
+BUILD_COMMIT_TEST = $$(BUILD_COMMIT)
+BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
+!isEmpty( BUILD_COMMIT_TEST ) {
   # Building a PR in the AppVeyor environment of Mudlet's own repository
-  !build_pass:message("Adjusting Git SHA1 for Mudlet's own Windows build on AppVeyor, to provided commit...")
-  GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short $${APPVEYOR_PR_HEAD_COMMIT})
+  GIT_SHA1 = $${BUILD_COMMIT_TEST}
+  # Report the above, for debugging purposes:
+  !build_pass:message("Git SHA1 set from the environment: " $${GIT_SHA1})
 } else {
   GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
+  # Report the above, for debugging purposes:
+  !build_pass:message("Git SHA1 used: " $${GIT_SHA1})
 }
 
-!build_pass{
-# Report the above, for debugging purposes:
-  message("Git SHA1 used: " $${GIT_SHA1})
-}
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests

@@ -10,8 +10,10 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
   if (Test-Path Env:APPVEYOR_PULL_REQUEST_NUMBER) {
       # AppVeyor builds of PRs merge the PR head onto the current development
       # branch creating a new commit - as such we need to refer to the
-      # grandparent (with the "~2" suffix) of the resulting commit to get the
-      # SHA1 we want:
+      # commit Git SHA1 supplied to us rather than trying to back track to the
+      # ancestor in the "working" tree (though it does mean the code state is
+      # not accurately described as it only reports PR's head without reference
+      # to the state of the development at the time of the build:
       $Env:BUILD_COMMIT = git rev-parse --short $Env:APPVEYOR_PULL_REQUEST_HEAD_COMMIT
       $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD-PR$Env:APPVEYOR_PULL_REQUEST_NUMBER"
   } else {
@@ -34,7 +36,7 @@ $Env:VERSION = $VersionRegex.Match($VersionLine).Groups[1].Value
 
 if ($Env:MUDLET_VERSION_BUILD -eq "") {
   # A release build maybe?
-  Write-Output "BUILDING MUDLET $Env:VERSION$Env:MUDLET_VERSION_BUILD"
+  Write-Output "BUILDING MUDLET $Env:VERSION
 } else {
   # Otherwise we should report the Git SHA1 which is no longer in MUDLET_VERSION_BUILD:
   Write-Output "BUILDING MUDLET $Env:VERSION$Env:MUDLET_VERSION_BUILD-$Env:BUILD_COMMIT"
