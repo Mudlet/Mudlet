@@ -230,7 +230,7 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
         cl->writeData(outMsg);
     }
 
-    clientMessage(QString("You chat to everybody, '%1'").arg(msg));
+    clientMessage(QString("\nYou chat to everybody, '%1'").arg(msg));
 
     return QPair<bool, QString>(true, qsl("command successful"));
 }
@@ -580,7 +580,7 @@ QPair<bool, QString> MMCPServer::allowSnoop(const QVariant& target)
 {
     MMCPClient* client = clientByNameOrId(target);
 
-    if (client != NULL) {
+    if (client != nullptr) {
         if (client->canSnoop()) {
             client->setCanSnoop(false);
             client->setSnooped(false);
@@ -714,10 +714,9 @@ void MMCPServer::sendPublicConnections(MMCPClient* client)
         MMCPClient* cl = it.next();
 
         if (cl != client && !cl->isPrivate()) {
-            list.append(QString("%1,%2").arg(cl->host()).arg(cl->port()));
-
-            if (it.hasNext())
-                list.append(",");
+            list.append(QString("%1,%2")
+                        .arg(cl->host()).arg(cl->port())
+                        .arg(it.hasNext() ? "," : ""));
         }
     }
 
@@ -743,7 +742,9 @@ void MMCPServer::sendPublicPeek(MMCPClient* client)
         MMCPClient* cl = it.next();
 
         if (cl != client && !cl->isPrivate()) {
-            list.append(QString("%1~%2~%3").arg(cl->host()).arg(cl->port()).arg(cl->chatName()));
+            list.append(QString("%1~%2~%3%4")
+                        .arg(cl->host()).arg(cl->port()).arg(cl->chatName())
+                        .arg(it.hasNext() ? "~" : ""));
         }
     }
 
