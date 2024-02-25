@@ -126,6 +126,7 @@ set(mudlet_SRCS
     TLinkStore.cpp
     TLuaInterpreter.cpp
     TLuaInterpreterNetworking.cpp
+    TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterMapper.cpp
     TMap.cpp
     TMapLabel.cpp
