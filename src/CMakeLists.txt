@@ -37,15 +37,17 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  # Neither BUILD nor APP_BUILD does not seem to be available?
+  # APP_BUILD should now be be available
 
-  # if(APP_BUILD matches "-ptb.+")
-  #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
-  #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  # else()
+  if(APP_BUILD matches "-ptb.+")
+    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+    # The above test may not be correct as it won't pick up builds where
+    # MUDLET_VERSION_BUILD has been set in the environment:
+    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
-  # endif()
+  endif()
 endif()
 
 set(mudlet_SRCS
@@ -84,6 +86,7 @@ set(mudlet_SRCS
     EAction.cpp
     exitstreewidget.cpp
     FontManager.cpp
+    FileOpenHandler.cpp
     GifTracker.cpp
     TrailingWhitespaceMarker.cpp
     Host.cpp
@@ -94,6 +97,7 @@ set(mudlet_SRCS
     main.cpp
     mapInfoContributorManager.cpp
     mudlet.cpp
+    MudletInstanceCoordinator.cpp
     ShortcutsManager.cpp
     ScriptUnit.cpp
     T2DMap.cpp
@@ -118,12 +122,17 @@ set(mudlet_SRCS
     TScrollBox.cpp
     TLinkStore.cpp
     TLuaInterpreter.cpp
+    TLuaInterpreterNetworking.cpp
+    TLuaInterpreterMudletObjects.cpp
+    TLuaInterpreterMapper.cpp
     TMap.cpp
     TMapLabel.cpp
+    TLuaInterpreterDiscord.cpp
     TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
+    TLuaInterpreterTextToSpeech.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
@@ -238,6 +247,7 @@ set(mudlet_HDRS
     dlgVarsMainArea.h
     EAction.h
     exitstreewidget.h
+    FileOpenHandler.h
     FontManager.h
     GifTracker.h
     TrailingWhitespaceMarker.h
@@ -248,6 +258,7 @@ set(mudlet_HDRS
     LuaInterface.h
     mapInfoContributorManager.h
     mudlet.h
+    MudletInstanceCoordinator.h
     post_guard.h
     pre_guard.h
     ShortcutsManager.h
@@ -471,6 +482,11 @@ add_executable(mudlet ${mudlet_SRCS} ${mudlet_RCCS} ${mudlet_HDRS} ${mudlet_UIS}
 # * Produce all the time the surprise that normally will only occur on the
 #   first day of the fourth month of the Gregorian calendar year:
 # target_compile_definitions(mudlet PRIVATE DEBUG_EASTER_EGGS)
+#
+# * Comment this to not get debugging messages about WILL/WONT/DO/DONT and other
+# commands for suboptions - change the value to 2 to get a bit more detail
+# about the size or nature of the command:
+target_compile_definitions(mudlet PRIVATE DEBUG_TELNET=1)
 
 target_sources(mudlet PRIVATE "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
@@ -493,7 +509,6 @@ endif(UNIX)
 target_compile_definitions(mudlet
   PRIVATE
     APP_VERSION="${APP_VERSION}"
-    APP_BUILD="${APP_BUILD}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
@@ -553,8 +568,10 @@ if(WIN32)
 endif()
 
 if(APPLE)
+  target_link_libraries(mudlet "-framework AppKit")
+
   if(USE_UPDATER)
-    target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
+    target_link_libraries(mudlet cocoa-qt-glue)
   endif(USE_UPDATER)
 
   set_target_properties(mudlet PROPERTIES
@@ -627,6 +644,24 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
+   install(
+    FILES "../mudlet.desktop"
+    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
+
+  install(
+    FILES "../mudlet.desktop"
+    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
+  install(
+    FILES "../mudlet.svg"
+    DESTINATION "share/icons/hicolor/scalable/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
+  install(
+    FILES "../mudlet.png"
+    DESTINATION "share/icons/hicolor/256x256/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
+
   install(
     TARGETS mudlet
     RUNTIME

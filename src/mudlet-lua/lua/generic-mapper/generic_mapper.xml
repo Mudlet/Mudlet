@@ -1298,9 +1298,9 @@ map.help = {[[
         &lt;link: find prompt&gt;find prompt&lt;/link&gt; - Instructs the script to look for a prompt that matches
             a known pattern.
         &lt;link: prompt&gt;map prompt &lt;pattern&gt;&lt;/link&gt; - Provides a specific pattern to the script that
-            matches your prompt, uses Lua string-library patterns.
+            matches your prompt, uses &lt;urllink: https://www.lua.org/pil/20.2.html&gt;Lua string-library patterns&lt;/urllink&gt;.
         &lt;link: ignore&gt;map ignore &lt;pattern&gt;&lt;/link&gt; - Provides a specific pattern for the script to
-            ignore, uses Lua string-library patterns.
+            ignore, uses &lt;urllink: https://www.lua.org/pil/20.2.html&gt;Lua string-library patterns&lt;/urllink&gt;.
         &lt;link: movemethod&gt;map movemethod &lt;word&gt;&lt;/link&gt; - Adds a movement method for the script to
             look for when mapping.
         &lt;link: debug&gt;map debug&lt;/link&gt; - Toggles on debug mode, in which extra messages are shown with
@@ -1558,6 +1558,10 @@ map.help.ignore = [[
 
         If the given pattern is already in the list of ignore patterns, that
         pattern will be removed from the list.
+
+        Example: &lt;yellow&gt;map ignore ^You are hungry%.$&lt;reset&gt; - match exactly one line
+                 &lt;yellow&gt;map ignore ^The clock strikes %d+%.$&lt;reset&gt; - match a number
+                 &lt;yellow&gt;map ignore ^You walk %a+%.$&lt;reset&gt; - match a word, e.g. east
 ]]
 map.help.movemethod = [[
     &lt;cyan&gt;Move Method&lt;reset&gt;
@@ -1972,7 +1976,7 @@ map.help.area_delete = [[
         it allows you to see a progress meter of how far it has gotten and gives
         you an ability to pause it at any time by doing 'cancel area deletion'.
 
-        Example: &lt;yellow&gt;area delete My City&lt;reset&gt; - create a new area called My City
+        Example: &lt;yellow&gt;area delete My City&lt;reset&gt; - delete an area called My City
 ]]
 map.help.area_cancel = [[
     &lt;cyan&gt;Cancel Area Deletion&lt;reset&gt;
@@ -2456,7 +2460,7 @@ function map.show_help(cmd)
             fg("yellow")
             setUnderline(true)
             if linktext == "urllink" then
-                echoLink(link, [[openWebPage("]]..target..[[")]], "Open Mudlet Discord", true)
+                echoLink(link, [[openWebPage("]]..target..[[")]], "Open webpage", true)
             elseif target ~= "1" then
                 echoLink(link,[[map.show_help("]]..target..[[")]],"View: map help " .. target,true)
             else
@@ -3185,7 +3189,7 @@ function map.export_area(name)
     tbl.rooms = {}
     tbl.exits = {}
     tbl.special = {}
-    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment
+    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment, roomChar
     for k,v in pairs(rooms) do
         rname = getRoomName(v)
         exits = getRoomExits(v)
@@ -3194,9 +3198,10 @@ function map.export_area(name)
         special = getSpecialExitsSwap(v)
         portals = getRoomUserData(v,"portals") or ""
 	environment = getRoomEnv(v)
+	roomChar = getRoomChar(v)
         coords = {getRoomCoordinates(v)}
         tbl.rooms[v] = {name = rname, coords = coords, exits = exits, stubs = stubs, doors = doors, door_up = door_up,
-            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment}
+            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment, roomChar = roomChar}
         tmp = {}
         for k1,v1 in pairs(exits) do
             if not table.contains(rooms,v1) then
@@ -3249,6 +3254,7 @@ function map.import_area(name)
         end
         setRoomUserData(ID,"portals",v.portals)
 	setRoomEnv(ID,v.environment)
+	setRoomChar(ID,v.roomChar)
     end
     for k,v in pairs(tbl.rooms) do
         for i,j in pairs(v.exits) do

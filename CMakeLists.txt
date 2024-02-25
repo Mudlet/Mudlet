@@ -38,8 +38,8 @@ cmake_minimum_required(VERSION 3.3)
 if(APPLE)
   # needed for fetching Sparkle
   cmake_minimum_required(VERSION 3.18)
-  # minimum supported version by Apple
-  set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "")
+  # minimum supported version by Qt6 for our Qt5/Qt6 build compatibility
+  set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "")
 endif()
 
 if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/vcpkg/scripts/buildsystems/vcpkg.cmake)
@@ -84,6 +84,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_package(Git REQUIRED)
+# Get Git SHA1 hash
+execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_SHA1
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+# Report it:
+message(STATUS "Git SHA1: ${GIT_SHA1}")
+
 # APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
@@ -97,12 +109,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # values are also assigned to the "VERSION" and "BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
 set(APP_VERSION 4.17.2)
+# We now make APP_BUILD a CACHE variable so it can be propagated to the ./src/
+# sub-directory build.
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
                                          STREQUAL "")
-  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD})
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "$ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+  message(STATUS "Value written to app-build.txt file: $ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
+  set(APP_BUILD $ENV{MUDLET_VERSION_BUILD} CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 else()
-  set(APP_BUILD "-dev")
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev-${GIT_SHA1}")
+  message(STATUS "Value written to app-build.txt file: -dev-${GIT_SHA1}")
+  set(APP_BUILD "-dev" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 endif()
+
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
@@ -230,5 +249,5 @@ if(USE_UPDATER)
 endif()
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)  
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE -O3)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG -O0)

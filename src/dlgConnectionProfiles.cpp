@@ -325,6 +325,29 @@ void dlgConnectionProfiles::slot_updateDescription()
     }
 }
 
+void dlgConnectionProfiles::indicatePackagesInstallOnConnect(QStringList packages)
+{
+    if (!packages.length()) {
+        return;
+    }
+
+    QWidget widget;
+    QGroupBox* packageGroupBox = new QGroupBox("Select and load a profile to install the following package(s) into:", this);
+    QVBoxLayout* packageInfoLayout = new QVBoxLayout(packageGroupBox);
+
+    packageInfoLayout->setContentsMargins(8, 8, 8, 8);
+    packageGroupBox->setStyleSheet("QGroupBox:title { padding-left: 8px; }");
+
+    for (const QString &package : packages) {
+        QFileInfo fileInfo(package);
+        QString packageName = fileInfo.baseName();
+        QLabel *packageLabel = new QLabel(packageName);
+        packageInfoLayout->addWidget(packageLabel);
+    }
+
+    layout()->addWidget(packageGroupBox);
+}
+
 // Not used:
 //void dlgConnectionProfiles::slot_updateWebsite(const QString& url)
 //{
@@ -592,7 +615,7 @@ void dlgConnectionProfiles::slot_addProfile()
 
     const QString newname = tr("new profile name");
 
-    auto pItem = new QListWidgetItem();
+    auto pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {
         return;
     }
@@ -1422,7 +1445,7 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         profile_name = profile_name2;
     }
 
-    pItem = new QListWidgetItem();
+    pItem = new (std::nothrow) QListWidgetItem();
     if (!pItem) {
         return false;
     }
