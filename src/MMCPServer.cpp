@@ -346,7 +346,10 @@ QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const Q
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        cl->writeData(outMsg);
+        //Only send to Mudlet clients
+        if (cl->getVersion().contains("Mudlet")) {
+            cl->writeData(outMsg);
+        }
     }
 
     return QPair<bool, QString>(true, qsl("command successful"));
