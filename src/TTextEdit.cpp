@@ -755,7 +755,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // character instead - and so it can be seen it need a space:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is unprintable, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -773,7 +773,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // or elsewhere) but we don't right now:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a non-character that Mudlet is not itself using, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -791,7 +791,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // error somewhere - so put in the replacement character
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -811,7 +811,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // what width to used - let's assume 1 for the moment:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Private Use Character, we cannot know how wide it is, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -828,7 +828,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // that our widechar_wcwidth(...) was built for - assume 1:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+"
                                                << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
