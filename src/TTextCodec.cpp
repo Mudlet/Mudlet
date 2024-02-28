@@ -391,8 +391,7 @@ QString TTextCodec_medievia::convertToUnicode(const char *in, int length, Conver
     bool headerDone = false;
     int invalidCharacters = 0;
     if (state) {
-        // zero is false:
-        if (!state->state_data[0]) {
+        if (state->state_data[0] == 0) {
             if (state->flags & QTextCodec::IgnoreHeader) {
                 headerDone = true;
             }
