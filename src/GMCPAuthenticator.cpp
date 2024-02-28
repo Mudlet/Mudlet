@@ -60,7 +60,7 @@ void GMCPAuthenticator::sendCredentials()
     output += TN_IAC;
     output += TN_SB;
     output += OPT_GMCP;
-    output += "Client.Authenticate.Credentials ";
+    output += "Char.Login.Credentials ";
     output += mpHost->mTelnet.encodeAndCookBytes(gmcpMessage.toStdString());
     output += TN_IAC;
     output += TN_SE;
@@ -88,7 +88,7 @@ void GMCPAuthenticator::handleAuthResult(const QString& data)
 // controller for GMCP authentication
 void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QString& data)
 {
-    if (packageMessage == qsl("Client.Authenticate.Default")) {
+    if (packageMessage == qsl("Char.Login.Default")) {
         saveSupportsSet(data);
 
         if (mSupportedAuthTypes.contains(qsl("password-credentials"))) {
@@ -98,7 +98,7 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
             qDebug() << "Server does not support credentials authentication and we don't support any other";
         }
 
-    } else if (packageMessage == qsl("Client.Authenticate.Result")) {
+    } else if (packageMessage == qsl("Char.Login.Result")) {
         handleAuthResult(data);
 
     } else {

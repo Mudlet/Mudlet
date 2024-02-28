@@ -1786,7 +1786,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1", "Client.Authenticate 1"])";
+            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1", "Char.Login 1"])";
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -2841,7 +2841,7 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
         mpHost->mpMedia->parseGMCP(packageMessage, data);
     }
 
-    if (packageMessage.startsWith(qsl("Client.Authenticate"), Qt::CaseInsensitive)) {
+    if (packageMessage.startsWith(qsl("Char.Login"), Qt::CaseInsensitive)) {
         mpHost->mpAuth->handleAuthGMCP(packageMessage, data);
     }
 
