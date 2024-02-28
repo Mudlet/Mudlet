@@ -106,7 +106,7 @@
           <enum>Qt::TabFocus</enum>
          </property>
          <property name="text">
-          <string>(optional) add icon, description, and more</string>
+          <string>Describe your package. Add a description, icons, assets and more.</string>
          </property>
          <property name="checkable">
           <bool>true</bool>
@@ -172,7 +172,7 @@
               <enum>Qt::StrongFocus</enum>
              </property>
              <property name="placeholderText">
-              <string>optional</string>
+              <string>For attribution, displayed in the Package Manager.</string>
              </property>
             </widget>
            </item>
@@ -265,7 +265,7 @@
               <number>140</number>
              </property>
              <property name="placeholderText">
-              <string>optional</string>
+              <string>One-line package description shown in the Package Manager.</string>
              </property>
             </widget>
            </item>
@@ -284,8 +284,31 @@
              <property name="tabChangesFocus">
               <bool>true</bool>
              </property>
-             <property name="placeholderText">
-              <string>optional. Markdown supported, and you can add images with drag and drop</string>
+             <property name="text">
+              <string>
+This package description is shown in the package manager.  The editor supports Commonmark markdown.  Follow the description below for a thorough example of what to include in your package description.
+
+### Description
+
+A full description of what this package achieves. If the package is game specific then mention that here.  Specify if the package has autoupdating or, if not, add a link in the See Also section below to the code repository.
+
+### Usage
+
+If this package uses aliases, show a few examples and expected output.
+
+`> alias_1`
+
+    output of alias_1  -- indent by four spaces
+    more output        -- for code blocks
+
+If this package is a GUI implementation consider adding screenshots by directly dragging and dropping images into this editor.
+
+### See Also
+
+Further reading material. e.g. a link to the Mudlet wiki, forums, Github package repository or webpage.
+
+* https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
+* [Link 2 might be a webpage](https://example.org)</string>
              </property>
             </widget>
            </item>
@@ -309,7 +332,7 @@
            <item row="5" column="0">
             <widget class="QLabel" name="label_requiredPackages">
              <property name="toolTip">
-              <string>Does this package make use of other packages? List them here as requirements</string>
+              <string>Does this package make use of other packages? List them here as requirements.</string>
              </property>
              <property name="text">
               <string>Required packages</string>
@@ -369,7 +392,7 @@
                  </sizepolicy>
                 </property>
                 <property name="toolTip">
-                 <string>Does this package make use of other packages? List them here as requirements. Press 'Delete' to remove a package</string>
+                 <string>Does this package make use of other packages? List them here as requirements. Press 'Delete' to remove a package.</string>
                 </property>
                </widget>
               </item>

@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -85,6 +85,7 @@
 #include <QToolTip>
 #include <QVariantHash>
 #include <QRandomGenerator>
+#include <memory>
 #include <zip.h>
 #include <QStyle>
 #if defined(Q_OS_WIN32)
@@ -132,9 +133,21 @@ mudlet::mudlet()
 {
     smFirstLaunch = !QFile::exists(mudlet::getMudletPath(mudlet::profilesPath));
 
+    QFile gitShaFile(":/app-build.txt");
+    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    const QString gitSha = QString::fromUtf8(gitShaFile.readAll()).trimmed();
+
+    mAppBuild = gitSha;
+    releaseVersion = mAppBuild.isEmpty();
+    publicTestVersion = mAppBuild.startsWith("-ptb");
+    developmentVersion = !releaseVersion && !publicTestVersion;
+
+    scmVersion = qsl("Mudlet ") + QString(APP_VERSION) + gitSha;
+
     mShowIconsOnMenuOriginally = !qApp->testAttribute(Qt::AA_DontShowIconsInMenus);
     mpSettings = getQSettings();
     readEarlySettings(*mpSettings);
+
     if (mShowIconsOnMenuCheckedState != Qt::PartiallyChecked) {
         // If the setting is not the "tri-state" one then force the setting,
         // have to invert the sense because the attribute is a negative one:
@@ -182,11 +195,11 @@ mudlet::mudlet()
     setAttribute(Qt::WA_DeleteOnClose);
     QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(scmVersion);
-    if (scmIsReleaseVersion) {
+    if (releaseVersion) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet.png")));
-    } else if (scmIsPublicTestVersion) {
+    } else if (publicTestVersion) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet_ptb_256px.png")));
-    } else { // scmIsDevelopmentVersion
+    } else { // developmentVersion
         setWindowIcon(QIcon(qsl(":/icons/mudlet_dev_256px.png")));
     }
     mpMainToolBar = new QToolBar(this);
@@ -315,19 +328,19 @@ mudlet::mudlet()
     mpActionMuteAPI->setIcon(QIcon(qsl(":/icons/mute.png")));
     mpActionMuteAPI->setIconText(tr("Mute Mudlet API (Triggers, Scripts, etc.)"));
     mpActionMuteAPI->setObjectName(qsl("muteAPI"));
-    mpActionMuteAPI->setCheckable(true); 
+    mpActionMuteAPI->setCheckable(true);
 
     mpActionMuteMCMP = new QAction(tr("Mute game MCMP (Mud Client Media Protocol)"), this);
     mpActionMuteMCMP->setIcon(QIcon(qsl(":/icons/mute.png")));
     mpActionMuteMCMP->setIconText(tr("Mute game MCMP (Mud Client Media Protocol)"));
     mpActionMuteMCMP->setObjectName(qsl("muteMCMP"));
-    mpActionMuteMCMP->setCheckable(true); 
+    mpActionMuteMCMP->setCheckable(true);
 
     mpActionMuteMSP = new QAction(tr("Mute game MSP (Mud Sound Protocol)"), this);
     mpActionMuteMSP->setIcon(QIcon(qsl(":/icons/mute.png")));
     mpActionMuteMSP->setIconText(tr("Mute game MSP (Mud Sound Protocol)"));
     mpActionMuteMSP->setObjectName(qsl("muteMSP"));
-    mpActionMuteMSP->setCheckable(true); 
+    mpActionMuteMSP->setCheckable(true);
 
     mpButtonMute->addAction(mpActionMuteMedia);
     mpButtonMute->addAction(mpActionMuteAPI);
@@ -439,7 +452,7 @@ mudlet::mudlet()
     mpMainToolBar->widgetForAction(mpActionMultiView)->setObjectName(mpActionMultiView->objectName());
 
 #if defined(INCLUDE_UPDATER)
-    if (scmIsPublicTestVersion) {
+    if (publicTestVersion) {
         mpActionReportIssue = new QAction(tr("Report issue"), this);
         const QStringList issueReportIcons {"face-uncertain.png", "face-surprise.png", "face-smile.png", "face-sad.png", "face-plain.png"};
         auto randomIcon = QRandomGenerator::global()->bounded(issueReportIcons.size());
@@ -531,13 +544,13 @@ mudlet::mudlet()
 #if defined(INCLUDE_UPDATER)
     // Show the update option if the code is present AND if this is a
     // release OR a public test version:
-    dactionUpdate->setVisible(scmIsReleaseVersion || scmIsPublicTestVersion);
+    dactionUpdate->setVisible(releaseVersion || publicTestVersion);
     // Show the report issue option if the updater code is present (as it is
     // less likely to be for: {Linux} distribution packaged versions of Mudlet
     // - or people hacking their own versions and neither of those types are
     // going to want the updater to change things for them) AND only for a
     // public test version:
-    if (scmIsPublicTestVersion) {
+    if (publicTestVersion) {
         dactionReportIssue->setVisible(true);
         connect(mpActionReportIssue.data(), &QAction::triggered, this, &mudlet::slot_reportIssue);
         connect(dactionReportIssue, &QAction::triggered, this, &mudlet::slot_reportIssue);
@@ -620,7 +633,7 @@ mudlet::mudlet()
     connect(mpMainToolBar, &QToolBar::visibilityChanged, this, &mudlet::slot_handleToolbarVisibilityChanged);
 
 #if defined(INCLUDE_UPDATER)
-    pUpdater = new Updater(this, mpSettings);
+    pUpdater = new Updater(this, mpSettings, publicTestVersion);
     connect(pUpdater, &Updater::signal_updateAvailable, this, &mudlet::slot_updateAvailable);
     connect(dactionUpdate, &QAction::triggered, this, &mudlet::slot_manualUpdateCheck);
 #if defined(Q_OS_MACOS)
@@ -1077,6 +1090,8 @@ void mudlet::loadMaps()
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"MACINTOSH", tr("MACINTOSH")},
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+                        {"M_MEDIEVIA",  qsl("m ") % tr("Medievia {Custom codec for that MUD}")},
+                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"WINDOWS-1250", tr("WINDOWS-1250 (Central European)")},
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"WINDOWS-1251", tr("WINDOWS-1251 (Cyrillic)")},
@@ -1200,6 +1215,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = qsl("Suomeksi");
             } else if (!languageCode.compare(QLatin1String("ar_SA"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = qsl("العربية");
+            } else if (!languageCode.compare(QLatin1String("ko_KR"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = qsl("한국어");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -1485,7 +1502,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     if (pH->mpConsole) {
         return;
     }
-    auto pConsole = new TMainConsole(pH);
+    auto pConsole = new (std::nothrow) TMainConsole(pH);
     if (!pConsole) {
         return;
     }
@@ -2127,6 +2144,9 @@ void mudlet::slot_showConnectionDialog()
     mpConnectionDialog = new dlgConnectionProfiles(this);
     connect(mpConnectionDialog, &dlgConnectionProfiles::signal_load_profile, this, &mudlet::slot_connectionDialogueFinished);
     mpConnectionDialog->fillout_form();
+
+    QStringList packagesToInstall = mInstanceCoordinator->readPackageQueue();
+    mpConnectionDialog->indicatePackagesInstallOnConnect(packagesToInstall);
 
     connect(mpConnectionDialog, &QDialog::accepted, this, [=]() { enableToolbarButtons(); });
     mpConnectionDialog->setAttribute(Qt::WA_DeleteOnClose);
@@ -3692,7 +3712,7 @@ QString mudlet::getMudletPath(const mudletPathType mode, const QString& extra1, 
 #if defined(INCLUDE_UPDATER)
 void mudlet::checkUpdatesOnStart()
 {
-    if (scmIsReleaseVersion || scmIsPublicTestVersion) {
+    if (releaseVersion || publicTestVersion) {
         // Only try and create an updater (which checks for updates online) if
         // this is a release/public test version:
         pUpdater->checkUpdatesOnStart();
@@ -4612,7 +4632,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
 {
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
 #if !defined(QT_NO_SSL)
     if (url.scheme() == qsl("https")) {
         QSslConfiguration const config(QSslConfiguration::defaultConfiguration());
@@ -4728,8 +4748,19 @@ void mudlet::activateProfile(Host* pHost)
     emit signal_profileActivated(pHost, newActiveTabIndex);
 
     mpCurrentActiveHost->setFocusOnHostActiveCommandLine();
+
+    mInstanceCoordinator->installPackagesToHost(mpCurrentActiveHost);
 }
 
+void mudlet::takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator> instanceCoordinator)
+{
+    mInstanceCoordinator = std::move(instanceCoordinator);
+}
+
+MudletInstanceCoordinator* mudlet::getInstanceCoordinator()
+{
+    return mInstanceCoordinator.get();
+}
 void mudlet::setGlobalStyleSheet(const QString& styleSheet)
 {
     mpMainToolBar->setStyleSheet(styleSheet);
@@ -4877,7 +4908,10 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
     }
 }
 
-/*static*/ QImage mudlet::getSplashScreen()
+// gets the splash screen image to display
+// flags releaseVersion and testVersion are passed as parameters since
+// mudlet::self() might not be initialised yet at all times this function will be called
+/*static*/ QImage mudlet::getSplashScreen(bool releaseVersion, bool testVersion)
 {
 #if defined(INCLUDE_VARIABLE_SPLASH_SCREEN)
     auto now = QDateTime::currentDateTime();
@@ -4897,16 +4931,16 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
             return QImage(eggFileName);
         } else {
             // For the zeroth case just rotate the picture 180 degrees:
-            QImage const original(mudlet::scmIsReleaseVersion
+            QImage const original(releaseVersion
                                     ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                                    : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                                    : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                      : qsl(":/splash/Mudlet_splashscreen_development.png"));
             return original.mirrored(true, true);
         }
     } else {
-        return QImage(mudlet::scmIsReleaseVersion
+        return QImage(releaseVersion
                               ? qsl(":/splash/Mudlet_splashscreen_main.png")
-                              : mudlet::scmIsPublicTestVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
+                              : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                : qsl(":/splash/Mudlet_splashscreen_development.png"));
     }
 #else

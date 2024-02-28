@@ -24,7 +24,7 @@
 
 #include "HostManager.h"
 #include "mudlet.h"
-
+#include "MudletInstanceCoordinator.h"
 #include "pre_guard.h"
 #include <chrono>
 #include <QCommandLineParser>
@@ -32,6 +32,7 @@
 #if defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
 #include <QMessageBox>
 #endif // defined(Q_OS_WIN32) && !defined(INCLUDE_UPDATER)
+#include <QCommandLineOption>
 #include <QPainter>
 #include <QPointer>
 #include <QScreen>
@@ -44,8 +45,10 @@
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "Announcer.h"
+#include "FileOpenHandler.h"
 
 using namespace std::chrono_literals;
+
 
 #if defined(_MSC_VER) && defined(_DEBUG)
 // Enable leak detection for MSVC debug builds. _DEBUG is MSVC specific and
@@ -224,15 +227,22 @@ int main(int argc, char* argv[])
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName(qsl("Mudlet"));
 
-    if (mudlet::scmIsPublicTestVersion) {
+    QFile gitShaFile(":/app-build.txt");
+    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
+
+    const bool releaseVersion = appBuild.isEmpty();
+    const bool publicTestVersion = appBuild.startsWith("-ptb");
+
+    if (publicTestVersion) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));
     } else {
         app->setApplicationName(qsl("Mudlet"));
     }
-    if (mudlet::scmIsReleaseVersion) {
+    if (releaseVersion) {
         app->setApplicationVersion(APP_VERSION);
     } else {
-        app->setApplicationVersion(APP_VERSION APP_BUILD);
+        app->setApplicationVersion(QString(APP_VERSION) + appBuild);
     }
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
@@ -243,25 +253,31 @@ int main(int argc, char* argv[])
     // other than that a non-null fourth argument maybe responsible for
     // making the option take a value that follows it - as such they do not
     // need to be passed to the translation system.
-    QCommandLineOption const profileToOpen(QStringList() << qsl("p") << qsl("profile"), qsl("Profile to open automatically"), qsl("profile"));
+    const QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), qsl("Profile to open automatically"), qsl("profile"));
     parser.addOption(profileToOpen);
 
-    QCommandLineOption const showHelp(QStringList() << qsl("h") << qsl("help"), qsl("Display help and exit"));
+    const QCommandLineOption showHelp(QStringList() << qsl("h") << qsl("help"), qsl("Display help and exit"));
     parser.addOption(showHelp);
 
-    QCommandLineOption const showVersion(QStringList() << qsl("v") << qsl("version"), qsl("Display version and exit"));
+    const QCommandLineOption showVersion(QStringList() << qsl("v") << qsl("version"), qsl("Display version and exit"));
     parser.addOption(showVersion);
 
-    QCommandLineOption const beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Don't show the splash screen when starting"));
-    parser.addOption(beQuiet);
+    const QCommandLineOption showSplashscreen(QStringList() << qsl("s") << qsl("splashscreen"), qsl("Show the splash screen when starting"));
+    parser.addOption(showSplashscreen);
 
-    QCommandLineOption const mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), qsl("Mirror output of all consoles to STDOUT"));
+    const QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"), qsl("Mirror output of all consoles to STDOUT"));
     parser.addOption(mirrorToStdout);
 
-    QCommandLineOption const onlyPredefinedProfileToShow(QStringList() << qsl("o") << qsl("only"),
+    QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Depricated option, previously used to disable showing the splash screen"));
+    beQuiet.setFlags(QCommandLineOption::HiddenFromHelp);
+    parser.addOption(beQuiet);
+
+    const QCommandLineOption onlyPredefinedProfileToShow(QStringList() << qsl("o") << qsl("only"),
                                                    qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."),
                                                    qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
+
+    parser.addPositionalArgument("package", "Path to .mpackage file");
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
 
@@ -283,13 +299,14 @@ int main(int argc, char* argv[])
 
     if (parser.isSet(showHelp)) {
         // Do "help" action
-        texts << appendLF.arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...]",
+        texts << appendLF.arg(QCoreApplication::translate("main", "Usage: %1 [OPTION...] [FILE] ",
                                                           // Comment to separate arguments
                                                           "%1 is the name of the executable as it is on this OS.")
                                          .arg(QLatin1String(APP_TARGET)));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Options:"));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -h, --help                   displays this message."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -v, --version                displays version information."));
-        texts << appendLF.arg(QCoreApplication::translate("main", "       -q, --quiet                  no splash screen on startup."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       -s, --splashscreen           show splashscreen on startup."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -p, --profile=<profile>      additional profile to open, may be\n"
                                                                   "                                    repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific\n"
@@ -321,6 +338,7 @@ int main(int argc, char* argv[])
                                                                   "                                    The value must be a path to a file that contains the\n"
                                                                   "                                    Style Sheet. Note: Relative URLs in the Style Sheet file\n"
                                                                   "                                    are relative to the Style Sheet file's path."));
+
         texts << appendLF.arg(QCoreApplication::translate("main", "       --stylesheet stylesheet      is the same as listed above."));
 // Not sure about MacOS case as that does not use X
 #if defined(Q_OS_UNIX) && (! defined(Q_OS_MACOS))
@@ -336,6 +354,8 @@ int main(int argc, char* argv[])
                                                                    "                                    specified port. The number is the port value and block is\n"
                                                                    "                                    optional and will make the application wait until a\n"
                                                                    "                                    debugger connects to it."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Arguments:"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "        [FILE]                       File to install as a package"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
@@ -347,9 +367,9 @@ int main(int argc, char* argv[])
 #if defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)",
                                                           "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD)));
+                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), appBuild));
 #else // ! defined(QT_DEBUG)
-        texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
+        texts << QString::fromStdString(APP_TARGET " " APP_VERSION " " + appBuild.toStdString() + " \n");
 #endif // ! defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
@@ -360,6 +380,38 @@ int main(int argc, char* argv[])
                                                                   "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
         return 0;
+    }
+
+
+
+    // Handles installing a package from a command line argument.
+    // Used when mudlet is used to open an .mpackage file on some operating systems.
+    //
+    // If Mudlet was already open:
+    // 1. Send the package path to the other process and exit.
+    // 2. The other process will take responsibility for installation.
+    // 3. If a profile is open, installation will occur in currently open profile.
+    // 4. If no profile is open, the package will be queued for install until a profile is selected.
+    //
+    // If no other mudlet process is found:
+    // 1. This current process will start as normal.
+    // 2. The package will be queued for install until a profile is selected.
+
+    std::unique_ptr<MudletInstanceCoordinator> instanceCoordinator = std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator");
+    const bool firstInstanceOfMudlet = instanceCoordinator->tryToStart();
+
+    const QStringList positionalArguments = parser.positionalArguments();
+    if (!positionalArguments.isEmpty()) {
+        const QString absPath = QDir(positionalArguments.first()).absolutePath();
+        instanceCoordinator->queuePackage(absPath);
+        if (!firstInstanceOfMudlet) {
+            const bool successful = instanceCoordinator->installPackagesRemotely();
+            if (successful) {
+                return 0;
+            } else {
+                return 1;
+            }
+        }
     }
 
     /*******************************************************************
@@ -374,13 +426,13 @@ int main(int argc, char* argv[])
     const QStringList cliProfiles = parser.values(profileToOpen);
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
 
-    const bool show_splash = !(parser.isSet(beQuiet)); // Not --quiet.
-    QImage splashImage = mudlet::getSplashScreen();
+    const bool showSplash = parser.isSet(showSplashscreen);
+    QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
-    if (show_splash) {
+    if (showSplash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
+        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION + appBuild));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
@@ -441,7 +493,7 @@ int main(int argc, char* argv[])
 #else
     QSplashScreen splash(pixmap);
 #endif
-    if (show_splash) {
+    if (showSplash) {
         splash.show();
     }
     app->processEvents();
@@ -563,6 +615,20 @@ int main(int argc, char* argv[])
 
     mudlet::start();
 
+#if defined(Q_OS_WIN)
+    // Associate mudlet with .mpackage files
+    QSettings settings("HKEY_CLASSES_ROOT", QSettings::NativeFormat);
+    settings.setValue(".mpackage", "MudletPackage");
+    settings.setValue("MudletPackage/.", "Mudlet Package");
+    settings.setValue("MudletPackage/shell/open/command/.", "mudlet %1");
+#endif
+
+    // Pass ownership of MudletInstanceCoordinator to mudlet.
+    mudlet::self()->takeOwnershipOfInstanceCoordinator(std::move(instanceCoordinator));
+
+    // Handle "QEvent::FileOpen" events.
+    FileOpenHandler fileOpenHandler;
+
     if (first_launch) {
         // give Mudlet window decent size - most of the screen on non-HiDPI
         // displays, on which ever screen it is started up on if it is a virtual
@@ -580,7 +646,7 @@ int main(int argc, char* argv[])
         mudlet::self()->move(geometry.left() + (availableSize.width() / 8), geometry.top() + availableSize.height() / 8);
     }
 
-    if (show_splash) {
+    if (showSplash) {
         splash.finish(mudlet::self());
     }
 

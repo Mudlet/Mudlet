@@ -40,14 +40,13 @@ dlgAboutDialog::dlgAboutDialog(QWidget* parent)
 {
     setupUi(this);
 
-    // Copied from main():
-    QImage splashImage = mudlet::getSplashScreen();
+    QImage splashImage = mudlet::getSplashScreen(mudlet::self()->releaseVersion, mudlet::self()->publicTestVersion);
 
     { // Brace code using painter to ensure it is freed at right time...
         QPainter painter(&splashImage);
 
         unsigned fontSize = 16;
-        QString sourceVersionText = QString("Version: " APP_VERSION APP_BUILD);
+        QString sourceVersionText = QString("Version: " + qsl(APP_VERSION) + mudlet::self()->mAppBuild);
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {

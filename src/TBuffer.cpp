@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018, 2020, 2022-2023 by Stephen Lyons             *
+ *   Copyright (C) 2014-2018, 2020, 2022-2024 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -423,6 +423,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         encodingTableToUse = "CP737";
     } else if (mEncoding == "M_CP869") {
         encodingTableToUse = "CP869";
+    } else if (mEncoding == "M_MEDIEVIA") {
+        encodingTableToUse = "MEDIEVIA";
     }
 
     const QVector<QChar> encodingLookupTable = csmEncodingTable.getLookupTable(encodingTableToUse);
@@ -2253,6 +2255,68 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, TChar form
     }
 }
 
+// Wraps text to max line length of mWrapAt
+// Applies indentation of mWrapIndent to wrapped lines
+// If wrapLength <= indentWidth, emits a warning and returns unmodified text
+QString TBuffer::wrapText(const QString& text) const
+{
+    if (mWrapAt <= mWrapIndent) {
+        qWarning() << "Wrap (" << mWrapAt << ") is too small to accommodate Indent (" << mWrapIndent << ")";
+        return text;
+    }
+
+    QString wrappedText;
+    qsizetype curIndent = 0;
+    QTextBoundaryFinder lineFinder(QTextBoundaryFinder::Line, text);
+    const QString indentText = QChar::LineFeed + QString(" ").repeated(mWrapIndent);
+
+    for (qsizetype curLineStart = 0; curLineStart < text.size(); curLineStart++) {
+        // Find where the next line break is.
+        // The end of the input text also counts as a line break.
+        qsizetype nextLineBreak = text.indexOf(QChar::LineFeed, curLineStart);
+        if (nextLineBreak == -1) {
+            nextLineBreak = text.size();
+        }
+
+        // Find where the wrap window ends
+        const qsizetype wrapWindowEnd = curLineStart + mWrapAt - curIndent;
+
+        // If linebreak happens within wrap window:
+        // Clear indentation, write the line, and skip the rest of the steps
+        if (nextLineBreak < wrapWindowEnd) {
+            curIndent = 0;
+            const qsizetype lineWidth = nextLineBreak - curLineStart + 1;
+            wrappedText += text.mid(curLineStart, lineWidth);
+            curLineStart = nextLineBreak;
+            continue;
+        }
+
+        // Find a good place to break up this line
+        lineFinder.setPosition(wrapWindowEnd + 1);
+        lineFinder.toPreviousBoundary();
+        qsizetype safeLineEnd = lineFinder.position();
+
+        // If a single word is too long to fit in the wrap window:
+        // Write as much of it as possible
+        if (safeLineEnd <= curLineStart) {
+            safeLineEnd = wrapWindowEnd;
+        }
+
+        // Move start point forward, set indention level
+        const qsizetype lineWidth = safeLineEnd - curLineStart;
+        wrappedText += text.mid(curLineStart, lineWidth);
+        curIndent = mWrapIndent;
+        curLineStart = safeLineEnd - 1;
+
+        // Apply indentation, unless we've reached the end of the text
+        if (curLineStart < text.size()) {
+            wrappedText += indentText;
+        }
+    }
+    return wrappedText;
+}
+
+
 void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID)
 {
     // CHECK: What about other Unicode line breaks, e.g. soft-hyphen:
@@ -2445,11 +2509,14 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         return slice;
     }
 
-    if ((x < 0) || (x >= static_cast<int>(buffer.at(y).size())) || (P2.x() < 0) || (P2.x() > static_cast<int>(buffer.at(y).size()))) {
-        x = 0;
+    // Ensure x starts within the valid range, and adjust P2.x() if it's out of bounds
+    if (x < 0 || x >= static_cast<int>(buffer.at(y).size())) {
+        x = 0; // Reset x to start of line if out of bounds
     }
+    int P2x_corrected = std::min(P2.x(), static_cast<int>(buffer.at(y).size()) - 1); // Correct P2.x() to prevent out-of-bounds
+
     int oldLinkId{}, id{};
-    for (const int total = P2.x(); x < total; ++x) {
+    for (; x <= P2x_corrected; ++x) {
         const int linkId = buffer.at(y).at(x).linkIndex();
         if (linkId && (linkId != oldLinkId)) {
             id = slice.mLinkStore.addLinks(mLinkStore.getLinksConst(linkId), mLinkStore.getHintsConst(linkId), mpHost);
@@ -2459,7 +2526,6 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         if (!linkId) {
             id = 0;
         }
-        // This is rather inefficient as s is only ever one QChar long
         const QString s(lineBuffer.at(y).at(x));
         slice.append(s, 0, 1, buffer.at(y).at(x).mFgColor, buffer.at(y).at(x).mBgColor, buffer.at(y).at(x).mFlags, id);
     }

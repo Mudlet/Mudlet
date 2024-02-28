@@ -1,4 +1,44 @@
 {
+  "AdjustableContainer.left": {
+    "message": "links",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.right": {
+    "message": "rechts",
+    "description": "one of the borders the container can be attached to"
+  },
+  "AdjustableContainer.custom": {
+    "message": "Aangepast:",
+    "description": "a menu item in the right click menu. it contains user/package made custom items"
+  },
+  "AdjustableContainer.lock": {
+    "message": "Vergrendel",
+    "description": "locks your container. Which means it's not movable/resizable anymore and changes some other properties depending on the Lockstyle (like hiding the borders)"
+  },
+  "AdjustableContainer.standard": {
+    "message": "standaard",
+    "description": "one of the Lockstyles. This Lockstyle is the standard setting, with a small margin on top to keep the right click menu usable"
+  },
+  "AdjustableContainer.light": {
+    "message": "licht",
+    "description": "one of the Lockstyles. Can also be translated as simple. It is only hiding the min/restore labels the borders and margin stay intact"
+  },
+  "AdjustableContainer.border": {
+    "message": "grens",
+    "description": "one of the Lockstyles which keeps the borders of the container visible."
+  },
+  "AdjustableContainer.save": {
+    "message": "Opslaan",
+    "description": "saves the containers settings"
+  },
+  "AdjustableContainer.load": {
+    "message": "Laad",
+    "description": "loads the previously saved settings of the container"
+  },
+  "AdjustableContainer.min_restore": {
+    "message": "Min/Herstel",
+    "description": "label to minimize/restore the container"
+  },
   "AdjustableContainer.disconnect": {
     "message": "Verbreek verbinding ",
     "description": "disconnect your container from the border frame"

@@ -169,7 +169,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::scmIsDevelopmentVersion) {
+    if (mudlet::self()->developmentVersion) {
         // tick the box and make it be "un-untickable" as automatic updates are
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
@@ -502,6 +502,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_blankLinesBehaviour->setEnabled(false);
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
+    checkBox_advertiseScreenReader->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -611,6 +612,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_blankLinesBehaviour->setEnabled(true);
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
+    checkBox_advertiseScreenReader->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
@@ -639,6 +641,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(pHost->mFORCE_MXP_NEGOTIATION_OFF);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(pHost->mFORCE_CHARSET_NEGOTIATION_OFF);
+    mForceNewEnvironNegotiationOff->setChecked(pHost->mForceNewEnvironNegotiationOff);
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
@@ -770,6 +773,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     need_reconnect_for_data_protocol->hide();
 
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
+    checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
+    connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
 
     // same with special connection warnings
     need_reconnect_for_specialoption->hide();
@@ -909,6 +914,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mEnableMSDP->setChecked(pHost->mEnableMSDP);
     mEnableMSSP->setChecked(pHost->mEnableMSSP);
     mEnableMSP->setChecked(pHost->mEnableMSP);
+    mEnableMTTS->setChecked(pHost->mEnableMTTS);
+    mEnableMNES->setChecked(pHost->mEnableMNES);
 
     groupBox_purgeMediaCache->setVisible(true);
     connect(buttonPurgeMediaCache, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_purgeMediaCache);
@@ -1232,6 +1239,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(mEnableMSDP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
     connect(mEnableMSP, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMTTS, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
+    connect(mEnableMNES, &QAbstractButton::clicked, need_reconnect_for_data_protocol, &QWidget::show);
 
     connect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
     connect(mFORCE_GA_OFF, &QAbstractButton::clicked, need_reconnect_for_specialoption, &QWidget::show);
@@ -1346,8 +1355,10 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
 
     disconnect(mEnableGMCP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSSP, &QAbstractButton::clicked, nullptr, nullptr);
-    disconnect(mEnableMSP, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mEnableMSDP, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableMSP, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableMTTS, &QAbstractButton::clicked, nullptr, nullptr);
+    disconnect(mEnableMNES, &QAbstractButton::clicked, nullptr, nullptr);
 
     disconnect(mFORCE_MCCP_OFF, &QAbstractButton::clicked, nullptr, nullptr);
     disconnect(mFORCE_GA_OFF, &QAbstractButton::clicked, nullptr, nullptr);
@@ -1380,6 +1391,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     mFORCE_MXP_NEGOTIATION_OFF->setChecked(false);
     mFORCE_CHARSET_NEGOTIATION_OFF->setChecked(false);
+    mForceNewEnvironNegotiationOff->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
     acceptServerGUI->setChecked(false);
@@ -1437,8 +1449,10 @@ void dlgProfilePreferences::clearHostDetails()
     mFORCE_SAVE_ON_EXIT->setChecked(false);
     mEnableGMCP->setChecked(false);
     mEnableMSSP->setChecked(false);
-    mEnableMSP->setChecked(false);
     mEnableMSDP->setChecked(false);
+    mEnableMSP->setChecked(false);
+    mEnableMTTS->setChecked(false);
+    mEnableMNES->setChecked(false);
 
     pushButton_chooseProfiles->setEnabled(false);
     pushButton_copyMap->setEnabled(false);
@@ -1478,6 +1492,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_announceIncomingText->setChecked(false);
+    checkBox_advertiseScreenReader->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
 
     groupBox_ssl_certificate->hide();
@@ -1852,6 +1867,14 @@ void dlgProfilePreferences::slot_setFontSize()
 {
     mFontSize = fontSize->currentIndex() + 1;
     slot_setDisplayFont();
+
+    Host* pHost = mpHost;
+
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
 }
 
 void dlgProfilePreferences::slot_setDisplayFont()
@@ -1899,6 +1922,8 @@ void dlgProfilePreferences::slot_setDisplayFont()
     config->beginChanges();
     config->setFont(newFont);
     config->endChanges();
+
+    pHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
 }
 
 // Currently UNUSED!
@@ -2798,7 +2823,14 @@ void dlgProfilePreferences::slot_saveAndClose()
         } else {
             pHost->setUserDictionaryOptions(true, false);
         }
+
+        const int priorWrapAt = pHost->mWrapAt;
         pHost->mWrapAt = wrap_at_spinBox->value();
+
+        if (priorWrapAt != pHost->mWrapAt) {
+            slot_changeWrapAt();
+        }
+
         pHost->updateDisplayDimensions();
         pHost->mWrapIndentCount = indent_wrapped_spinBox->value();
         pHost->mPrintCommand = show_sent_text_checkbox->isChecked();
@@ -2818,8 +2850,10 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mFORCE_SAVE_ON_EXIT = mFORCE_SAVE_ON_EXIT->isChecked();
         pHost->mEnableGMCP = mEnableGMCP->isChecked();
         pHost->mEnableMSSP = mEnableMSSP->isChecked();
-        pHost->mEnableMSP = mEnableMSP->isChecked();
         pHost->mEnableMSDP = mEnableMSDP->isChecked();
+        pHost->mEnableMSP = mEnableMSP->isChecked();
+        pHost->mEnableMTTS = mEnableMTTS->isChecked();
+        pHost->mEnableMNES = mEnableMNES->isChecked();
         pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         if (pHost->mpMap) {
@@ -2851,6 +2885,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
         pHost->mFORCE_CHARSET_NEGOTIATION_OFF = mFORCE_CHARSET_NEGOTIATION_OFF->isChecked();
+        pHost->mForceNewEnvironNegotiationOff = mForceNewEnvironNegotiationOff->isChecked();
         pHost->mIsNextLogFileInHtmlFormat = mIsToLogInHtml->isChecked();
         pHost->mIsLoggingTimestamps = mIsLoggingTimestamps->isChecked();
         pHost->mLogDir = mLogDirPath;
@@ -3047,6 +3082,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         }
 
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
+        pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
@@ -3079,7 +3115,7 @@ void dlgProfilePreferences::slot_saveAndClose()
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::scmIsReleaseVersion || mudlet::scmIsPublicTestVersion) {
+    if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
         pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
     }
 #endif
@@ -3382,7 +3418,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
 
     QUrl const url(themesURL);
     QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
     // github uses redirects
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     // load from cache if possible
@@ -4168,6 +4204,14 @@ void dlgProfilePreferences::slot_changeGuiLanguage(int languageIndex)
     auto languageCode = comboBox_guiLanguage->currentData().toString();
     mudlet::self()->setInterfaceLanguage(languageCode);
     label_languageChangeWarning->show();
+
+    Host* pHost = mpHost;
+
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mTelnet.sendInfoNewEnvironValue(qsl("LANGUAGE"));
 }
 
 void dlgProfilePreferences::slot_setAppearance(const mudlet::Appearance state)
@@ -4403,6 +4447,32 @@ void dlgProfilePreferences::slot_enableDarkEditor(const QString& link)
     }
 
     qWarning() << "unknown link clicked in profile preferences:" << link;
+}
+
+void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
+{
+    Host* pHost = mpHost;
+
+    if (!pHost) {
+        return;
+    }
+
+    if (pHost->mAdvertiseScreenReader != state) {
+        pHost->mAdvertiseScreenReader = state;
+        pHost->mTelnet.sendInfoNewEnvironValue(qsl("SCREEN_READER"));
+        pHost->mTelnet.sendInfoNewEnvironValue(qsl("MTTS"));
+    }
+}
+
+void dlgProfilePreferences::slot_changeWrapAt()
+{
+    Host* pHost = mpHost;
+
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
 }
 
 void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)

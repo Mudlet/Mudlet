@@ -67,7 +67,7 @@ function script:exec {
   param(
     [Parameter(Position=0,Mandatory=1)][string]$cmd,
     [Parameter(Position=1,Mandatory=0)][string[]]$parameter = @(),
-    [Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
+    [Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command '{0}' with {1} parameters: {2}" -f $cmd, $parameter.Length, ($parameter -join ', '))
   )
   # ignore standard error for external programs
   $global:ErrorActionPreference = "Continue"
@@ -177,9 +177,9 @@ function CheckAndInstall([string] $dependencyName, [string] $signalFile, [script
 # installation functions
 function InstallSevenZ() {
   if($64Bit){
-    $downloadUrl = "https://www.7-zip.org/a/7z1900-x64.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z2301-x64.exe"
   } else {
-    $downloadUrl = "https://www.7-zip.org/a/7z1900.exe"
+    $downloadUrl = "https://www.7-zip.org/a/7z2301.exe"
   }
   DownloadFile "$downloadUrl" "7z-installer.exe"
   Step "installing 7z"

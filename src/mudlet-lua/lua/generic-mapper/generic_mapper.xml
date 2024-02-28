@@ -466,7 +466,7 @@ end</script>
 			<Alias isActive="yes" isFolder="no">
 				<name>Map Rooms Alias</name>
 				<script>-- map rooms &lt;area&gt; - shows the list of rooms in an area
-map.echoRoomList(matches[2])</script>
+map.echoRoomList(matches[2] or getRoomArea(map.currentRoom))</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map rooms(?: (.+))?$</regex>
@@ -480,6 +480,15 @@ map.echoAreaList()</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map areas$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Room Find Alias</name>
+				<script>-- rf &lt;name&gt;, room find &lt;name&gt; - searches for a room of a given name
+
+map.roomFind(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^(?:rf|room find) (.+)$</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Room Look Alias</name>
@@ -674,15 +683,6 @@ map.doLockArea(matches[2])</script>
 				<regex>^set exit (.+) (\d+)</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
-				<name>Room Find Alias</name>
-				<script>-- rf &lt;name&gt;, room find &lt;name&gt; - searches for a room of a given name
-
-map.roomFind(matches[2])</script>
-				<command></command>
-				<packageName></packageName>
-				<regex>^(?:rf|room find) (.+)$</regex>
-			</Alias>
-			<Alias isActive="yes" isFolder="no">
 				<name>Move A Room Alias</name>
 				<script>-- rc or room coords [v&lt;id&gt;] &lt;option&gt;, where option will specify the new
 -- location of the room. The room ID is optional, it'll move the current
@@ -836,7 +836,7 @@ map.echo(string.format("Set the weight on the %d room going %s to %s. If it's a 
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>Create a Link Between Two Rooms Alias</name>
-				<script>-- rlk or room link &lt;option&gt; - where option will specify the room and exit
+				<script>-- rlk or room link &lt;option&gt; [one] - where option will specify the room and exit
 -- to link with. You can also tack on 'one' at the end to make it be a one-way link
 
 
@@ -1109,7 +1109,7 @@ map.roomLabel(matches[2])</script>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
 				<name>View/delete Area Labels Alias</name>
-				<script>-- area labels &lt;area name&gt;* will show the labels in the given area
+				<script>-- area labels &lt;area name&gt; - will show the labels in the given area
 map.areaLabels(matches[2])</script>
 				<command></command>
 				<packageName></packageName>
@@ -1218,7 +1218,12 @@ map.deleteMapFeature(matches[2]:trim())</script>
 			<regex></regex>
 			<Alias isActive="yes" isFolder="no">
 				<name>Save Map Alias</name>
-				<script>saveMap(getMudletHomeDir() .. "/map.dat")</script>
+				<script>if saveMap(getMudletHomeDir() .. "/map.dat") then
+  map.echo("Map saved.\n")
+else
+  map.echo("Error.  Map NOT saved.\n")
+end
+				</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map save$</regex>
@@ -1254,7 +1259,7 @@ map.deleteMapFeature(matches[2]:trim())</script>
 			<script>-- Jor'Mox's Generic Map Script
 -- the script self-updates, changing this value will bring an update to all installations
 -- make sure versions.lua has the latest version in it
-local version = "2.1.0"
+local version = "2.1.1"
 
     -- look into options for non-standard door usage for speedwalk
     -- come up with aliases to set translations and custom exits, add appropriate help info
@@ -1283,117 +1288,161 @@ map.help = {[[
     available in individual help files.
 
     &lt;cyan&gt;Fundamental Commands:&lt;reset&gt;
-        These are commands used to get the mapper functional on a basic level
+        These are commands used to get the mapper functional on a basic level.
 
-        &lt;link: show&gt;map show&lt;/link&gt; - Displays or hides a map window
+        &lt;link: show&gt;map show&lt;/link&gt; - Displays or hides a map window.
         &lt;link: quick start&gt;map basics&lt;/link&gt; - Shows a quick-start guide with some basic information to
-            help get the script working
-        &lt;link: 1&gt;map help &lt;optional command name&gt;&lt;/link&gt; - Shows either this help file or the
-            help file for the command given
+            help get the script working.
+        &lt;link: 1&gt;map help [command name]&lt;/link&gt; - Shows either this help file or the help file for the
+            command given.
         &lt;link: find prompt&gt;find prompt&lt;/link&gt; - Instructs the script to look for a prompt that matches
-            a known pattern
-        &lt;link: prompt&gt;map prompt&lt;/link&gt; - Provides a specific pattern to the script that matches
-            your prompt, uses Lua string-library patterns
-        &lt;link: ignore&gt;map ignore&lt;/link&gt; - Provides a specific pattern for the script to ignore,
-            uses Lua string-library patterns
-        &lt;link: movemethod&gt;map movemethod&lt;/link&gt; - Adds a movement method for the script to look for when mapping.
-        &lt;link: debug&gt;map debug&lt;/link&gt; - Toggles on debug mode, in which extra messages are shown
-            with the intent of assisting in troubleshooting getting the
-            script setup
-        &lt;link: me&gt;map me&lt;/link&gt; - Locates the user on the map, if possible
-        &lt;link: path&gt;map path &lt;room name&gt; &lt;; optional area name&gt;&lt;/link&gt; - Finds a walking path to
-            the named room, in the named area if specified
+            a known pattern.
+        &lt;link: prompt&gt;map prompt &lt;pattern&gt;&lt;/link&gt; - Provides a specific pattern to the script that
+            matches your prompt, uses &lt;urllink: https://www.lua.org/pil/20.2.html&gt;Lua string-library patterns&lt;/urllink&gt;.
+        &lt;link: ignore&gt;map ignore &lt;pattern&gt;&lt;/link&gt; - Provides a specific pattern for the script to
+            ignore, uses &lt;urllink: https://www.lua.org/pil/20.2.html&gt;Lua string-library patterns&lt;/urllink&gt;.
+        &lt;link: movemethod&gt;map movemethod &lt;word&gt;&lt;/link&gt; - Adds a movement method for the script to
+            look for when mapping.
+        &lt;link: debug&gt;map debug&lt;/link&gt; - Toggles on debug mode, in which extra messages are shown with
+            the intent of assisting in troubleshooting getting the script setup.
+        &lt;link: me&gt;map me&lt;/link&gt; - Locates the user on the map, if possible.
+        &lt;link: path&gt;map path &lt;room name&gt; [; area name]&lt;/link&gt; - Finds a walking path to the named
+            room, in the named area if specified.
         &lt;link: character&gt;map character &lt;name&gt;&lt;/link&gt; - Sets a given name as the current character for
-            the purposes of the script, used for different prompt patterns
-            and recall locations
+            the purposes of the script, used for different prompt patterns and
+            recall locations.
         &lt;link: recall&gt;map recall&lt;/link&gt; - Sets the current room as the recall location of the
             current character
-        &lt;link: config&gt;map config &lt;configuration&gt; &lt;optional value&gt;&lt;/link&gt; - Sets or toggles the
-            given configuration either turning it on or off, if no value is
-            given, or sets it to the given value
-        &lt;link: window&gt;map window &lt;configuration&gt; &lt;value&gt;&lt;/link&gt; - Sets the given configuration for
-            the map window to the given value
+        &lt;link: config&gt;map config &lt;configuration&gt; [value]&lt;/link&gt; - Sets or toggles the given
+            configuration either turning it on or off, if no value is given, or sets it to the given
+            value.
+        &lt;link: window&gt;map window &lt;configuration&gt; [value]&lt;/link&gt; - Sets the given configuration for the
+            map window to the given value.
         &lt;link: translate&gt;map translate &lt;english direction&gt; &lt;translated long direction&gt;&lt;/link&gt;
-            &lt;link: translate&gt;&lt;translated short direction&gt;&lt;/link&gt; - Sets the provided translations for
-            the given english direction word.
+        &lt;link: translate&gt;&lt;translated short direction&gt;&lt;/link&gt; - Sets the provided translations for the
+            given english direction word.
 
-    &lt;cyan&gt;Mapping Commands:&lt;reset&gt;
-        These are commands used in the process of actually creating a map
+    &lt;cyan&gt;Map Information Commands:&lt;reset&gt;
+        These commands show detailed information about your current map.
 
-        &lt;link: start mapping&gt;start mapping &lt;optional area name&gt;&lt;/link&gt; - Starts adding content to the
-            map, using either the area of the room the user is currently in,
-            or the area name provided
-        &lt;link: stop mapping&gt;stop mapping&lt;/link&gt; - Stops adding content to the map
-        &lt;link: set area&gt;set area &lt;area name&gt;&lt;/link&gt; - Moves the current room to the named area
+        &lt;link: areas&gt;map areas&lt;/link&gt; - Shows a list of all areas, with links to show a list of
+            rooms in the area.
+        &lt;link: rooms&gt;map rooms &lt;area name&gt;&lt;/link&gt; - Shows a list of rooms in the named area.
+        &lt;link: room_find&gt;room find|rf &lt;room name&gt;&lt;/link&gt; - Searches for a room of a given name.
+        &lt;link: room_look&gt;room look|rl [roomID]&lt;/link&gt; - Displays detailed information about a room.
+        &lt;link: showpath&gt;showpath &lt;roomID&gt;&lt;/link&gt; - Shows you a path from your current location to the
+            roomID.
+        &lt;link: showpath&gt;showpath &lt;fromID&gt; &lt;toID&gt;&lt;/link&gt; - Shows you a path from a given location to
+            another location.
+        &lt;link: spe_list&gt;spe list [filter]&lt;/link&gt; - Display a list of all known special exits.
+        &lt;link: feature_list&gt;feature list&lt;/link&gt; - Lists all map features created via feature create and
+            the associated room characters.
+
+    &lt;cyan&gt;Map Creation Commands:&lt;reset&gt;
+        These are commands used in the process of actually creating a map.
+
+        &lt;link: start mapping&gt;start mapping [area name]&lt;/link&gt; - Starts adding content to the map, using
+            either the area of the room the user is currently in or the area
+            name provided.
+        &lt;link: stop mapping&gt;stop mapping&lt;/link&gt; - Stops adding content to the map.
+        &lt;link: area_add&gt;area add &lt;area name&gt;&lt;/link&gt; - Creates a new area.
+        &lt;link: area_delete&gt;area delete &lt;area name&gt;&lt;/link&gt; - Deletes a given area and all rooms within.
+        &lt;link: area_cancel&gt;cancel area deletion&lt;/link&gt; - Pauses deletion of an area.  This will NOT
+            restore delete rooms.
+        &lt;link: area_rename&gt;area rename &lt;new area name&gt;&lt;/link&gt; - Renames the current area you're in.
+        &lt;link: set area&gt;set area &lt;area name&gt;&lt;/link&gt; - Moves the current room to the named area.
         &lt;link: mode&gt;map mode &lt;lazy, simple, normal or complex&gt;&lt;/link&gt; - Sets the mapping mode, which
             defines how new rooms are added to the map.
-        &lt;link: add door&gt;add door &lt;direction&gt; &lt;optional door status&gt; &lt;optional one way&gt;&lt;/link&gt; -
-            Creates a door in the given direction, with the given status
-            (default closed), in both directions, unless a one-direction door
-            is specified
-        &lt;link: add portal&gt;add portal &lt;entry command&gt;&lt;/link&gt; - Creates a portal in the current room,
-            using the given command for entry
-        &lt;link: shift&gt;shift &lt;direction&gt;&lt;/link&gt; - Moves the current room on the map in the given
-            direction
+        &lt;link: add door&gt;add door &lt;direction&gt; [door status] [one way]&lt;/link&gt; - Creates a door in
+            the given direction, with the given status(default closed), in both
+            directions, unless a one-direction door is specified.
+        &lt;link: add portal&gt;add portal [-f] &lt;entry command&gt;&lt;/link&gt; - Creates a portal in the current room,
+            using the given command for entry.
+        &lt;link: shift&gt;shift &lt;direction&gt;&lt;/link&gt; - Moves the current room on the map in the given direction.
         &lt;link: merge rooms&gt;merge rooms&lt;/link&gt; - Combines overlapping rooms that have the same name into
-            a single room
+            a single room.
         &lt;link: clear moves&gt;clear moves&lt;/link&gt; - Clears the list of movement commands maintained by the
-            script
+            script.
         &lt;link: set exit&gt;set exit &lt;direction&gt; &lt;roomID&gt;&lt;/link&gt; - Creates a one-way exit in the given
-            direction to the room with the specified roomID, can also be used
-            with portals
-        &lt;link: areas&gt;map areas&lt;/link&gt; - Shows a list of all area, with links to show a list of
-            rooms in the area
-        &lt;link: rooms&gt;map rooms &lt;area name&gt;&lt;/link&gt; - Shows a list of rooms in the named area
+            direction to the room with the specified roomID, can also be used with portals.
+        &lt;link: arealock&gt;arealock [area name]&lt;/link&gt; - Displays a list of areas you can lock/unlock.
+        &lt;link: room_coords&gt;room coords|rc [v&lt;roomID&gt;] &lt;x&gt; &lt;y&gt; &lt;z&gt;&lt;/link&gt; - Move a room to new map coordinates.
+        &lt;link: room_delete&gt;room delete|rld &lt;direction|roomID&gt;&lt;/link&gt; - Delete a room given a direction or roomID.
+        &lt;link: room_weight&gt;rw [direction|roomID] &lt;weight&gt;&lt;/link&gt; - Set a room weight given a direction or roomID.
+        &lt;link: room_weight_exit&gt;rwe [roomID] &lt;weight&gt; &lt;exit&gt;&lt;/link&gt; - Set the weight of a given exit in
+            the current room, or optional roomID.
+        &lt;link: room_link&gt;room link|rlk &lt;direction&gt; [one]&lt;/link&gt; - Create a link to a room given a direction.
+            Optional 'one' to create a one-way link.
+        &lt;link: room_unlink&gt;room unlink|urlk &lt;direction&gt;&lt;/link&gt; - Delete a link in the specified direction.
+        &lt;link: room_door&gt;rd [roomID] &lt;direction&gt; &lt;open|closed|locked|clear&gt;&lt;/link&gt; - Create or delete a door
+            from the current room, or optional location.
+        &lt;link: room_character&gt;rcc &lt;character&gt; [roomID]&lt;/link&gt; - Assign a single character, letter or
+            number to the current room, or optional location.
+        &lt;link: exit_special&gt;exit special|spe &lt;direction|roomID&gt; &lt;command&gt;&lt;/link&gt; - Add a special exit
+            to a room.
+        &lt;link: spev&gt;spev &lt;fromID&gt; &lt;toID&gt; &lt;command&gt;&lt;/link&gt; - Add a special exit to two remote rooms.
+        &lt;link: spe_clear&gt;exit special clear|spe clear &lt;direction|roomID&gt;&lt;/link&gt; - Delete a special exit.
+        &lt;link: room_area&gt;room area [v&lt;roomID&gt;] &lt;area name&gt;&lt;/link&gt; - Moves a room to the given area.
+        &lt;link: room_label&gt;room label [roomID] [fgColor] [bgColor] &lt;message&gt;&lt;/link&gt; - Adds a label to a room.
+        &lt;link: area_labels&gt;area labels &lt;area name&gt;&lt;/link&gt; - Display all labels in a given area with an
+            option to delete.
+        &lt;link: feature_create&gt;feature create &lt;feature&gt; [char &lt;room character&gt;]&lt;/link&gt; - Create a new
+            global map feature.
+        &lt;link: room_feature_create&gt;room create feature|rcf [v&lt;room id&gt;] &lt;feature&gt;&lt;/link&gt; - Adds a map
+            feature to the current room, or optional location.
+        &lt;link: room_feature_delete&gt;room delete feature|rdf [v&lt;room id&gt;] &lt;feature&gt;&lt;/link&gt; - Removes a
+            map feature from the current room or optional location.
+        &lt;link: feature_delete&gt;feature delete &lt;feature&gt;&lt;/link&gt; - Deletes a global map feature and
+            removes it from all rooms.
 
     &lt;cyan&gt;Sharing and Backup Commands:&lt;reset&gt;
 
-        &lt;link: save&gt;map save&lt;/link&gt; - Creates a backup of the map
+        &lt;link: save&gt;map save&lt;/link&gt; - Creates a backup of the map.
         &lt;link: load&gt;map load &lt;remote address&gt;&lt;/link&gt; - Loads a map backup, or a map file from a
-            remote address
+            remote address.
         &lt;link: export&gt;map export &lt;area name&gt;&lt;/link&gt; - Creates a file from the named area that can
-            be shared
-        &lt;link: import&gt;map import &lt;area name&gt;&lt;/link&gt; - Loads an area from a file
+            be shared.
+        &lt;link: import&gt;map import &lt;area name&gt;&lt;/link&gt; - Loads an area from a file.
 
     &lt;cyan&gt;Mapping Events:&lt;reset&gt;
-        These events are used by triggers to direct the script's behavior
+        These events are used by triggers to direct the script's behavior.
 
         &lt;link: onNewRoom&gt;onNewRoom&lt;/link&gt; - Signals that a room has been detected, optional exits
-            argument
-        &lt;link: onMoveFail&gt;onMoveFail&lt;/link&gt; - Signals that an attempted move failed
+            argument.
+        &lt;link: onMoveFail&gt;onMoveFail&lt;/link&gt; - Signals that an attempted move failed.
         &lt;link: onForcedMove&gt;onForcedMove&lt;/link&gt; - Signals that the character moved without a command
-            being entered, required direction argument
+            being entered, required direction argument.
         &lt;link: onRandomMove&gt;onRandomMove&lt;/link&gt; - Signals that the character moved in an unknown
-            direction without a command being entered
+            direction without a command being entered.
         &lt;link: onVisionFail&gt;onVisionFail&lt;/link&gt; - Signals that the character moved but some or all of
-            the room information was not able to be gathered
+            the room information was not able to be gathered.
 
     &lt;cyan&gt;Key Variables:&lt;reset&gt;
         These variables are used by the script to keep track of important
-            information
+            information.
 
-        &lt;yellow&gt;map.prompt.room&lt;reset&gt; - Can be set to specify the room name
-        &lt;yellow&gt;map.prompt.exits&lt;reset&gt; - Can be set to specify the room exits
-        &lt;yellow&gt;map.prompt.hash&lt;reset&gt; - Can be set to specify the room hash
+        &lt;yellow&gt;map.prompt.room&lt;reset&gt; - Can be set to specify the room name.
+        &lt;yellow&gt;map.prompt.exits&lt;reset&gt; - Can be set to specify the room exits.
+        &lt;yellow&gt;map.prompt.hash&lt;reset&gt; - Can be set to specify the room hash.
             Notice: if you set this, mapper will only find room by
             getRoomIDbyHash(hash)
-        &lt;yellow&gt;map.character&lt;reset&gt; - Contains the current character name
+        &lt;yellow&gt;map.character&lt;reset&gt; - Contains the current character name.
         &lt;yellow&gt;map.save.recall&lt;reset&gt; - Contains a table of recall roomIDs for all
-            characters
+            characters.
         &lt;yellow&gt;map.save.prompt_pattern&lt;reset&gt; - Contains a table of prompt patterns for all
-            characters
+            characters.
         &lt;yellow&gt;map.save.ignore_patterns&lt;reset&gt; - Contains a table of patterns of text the
-            script ignores
+            script ignores.
         &lt;yellow&gt;map.configs&lt;reset&gt; - Contains a number of different options that can be set
-            to modify script behavior
+            to modify script behavior.
         &lt;yellow&gt;map.currentRoom&lt;reset&gt; - Contains the roomID of the room your character is
-            in, according to the script
+            in, according to the script.
         &lt;yellow&gt;map.currentName&lt;reset&gt; - Contains the name of the room your character is in,
-            according to the script
+            according to the script.
         &lt;yellow&gt;map.currentExits&lt;reset&gt; - Contains a table of the exits of the room your
-            character is in, according to the script
+            character is in, according to the script.
         &lt;yellow&gt;map.currentArea&lt;reset&gt; - Contains the areaID of the area your character is
-            in, according to the script
+            in, according to the script.
 ]]}
 map.help.save = [[
     &lt;cyan&gt;Map Save&lt;reset&gt;
@@ -1445,7 +1494,7 @@ map.help.import = [[
 ]]
 map.help.start_mapping = [[
     &lt;cyan&gt;Start Mapping&lt;reset&gt;
-        syntax: &lt;yellow&gt;start mapping &lt;optional area name&gt;&lt;reset&gt;
+        syntax: &lt;yellow&gt;start mapping [area name]&lt;reset&gt;
 
         This command instructs the script to add new content to the map when it
         is seen. When first used, an area name is mandatory, so that an area is
@@ -1509,6 +1558,10 @@ map.help.ignore = [[
 
         If the given pattern is already in the list of ignore patterns, that
         pattern will be removed from the list.
+
+        Example: &lt;yellow&gt;map ignore ^You are hungry%.$&lt;reset&gt; - match exactly one line
+                 &lt;yellow&gt;map ignore ^The clock strikes %d+%.$&lt;reset&gt; - match a number
+                 &lt;yellow&gt;map ignore ^You walk %a+%.$&lt;reset&gt; - match a word, e.g. east
 ]]
 map.help.movemethod = [[
     &lt;cyan&gt;Move Method&lt;reset&gt;
@@ -1567,8 +1620,7 @@ map.help.mode = [[
 ]]
 map.help.add_door = [[
     &lt;cyan&gt;Add Door&lt;reset&gt;
-        syntax: &lt;yellow&gt;add door &lt;direction&gt; &lt;optional none, open, closed, or locked&gt;
-        &lt;optional yes or no&gt;&lt;reset&gt;
+        syntax: &lt;yellow&gt;add door &lt;direction&gt; [none|open|closed|locked] [yes|no]&lt;reset&gt;
 
         This command places a door on the exit in the given direction, or
         removes it if "none" is given as the second argument. The door status is
@@ -1577,7 +1629,7 @@ map.help.add_door = [[
 ]]
 map.help.add_portal = [[
     &lt;cyan&gt;Add Portal&lt;reset&gt;
-        syntax: &lt;yellow&gt;add portal &lt;optional -f&gt; &lt;entry command&gt;&lt;reset&gt;
+        syntax: &lt;yellow&gt;add portal [-f] &lt;entry command&gt;&lt;reset&gt;
 
         This command creates a special exit in the current room that is entered
         by using the given entry command. The given entry command is then sent,
@@ -1688,7 +1740,7 @@ map.help.me = [[
 ]]
 map.help.path = [[
     &lt;cyan&gt;Map Path&lt;reset&gt;
-        syntax: &lt;yellow&gt;map path &lt;room name&gt; &lt;; optional area name&gt;&lt;reset&gt;
+        syntax: &lt;yellow&gt;map path &lt;room name&gt; [; area name]&lt;reset&gt;
 
         This command tries to find a walking path from the current room to the
         named room. If an area name is given, only rooms within that area that
@@ -1866,6 +1918,338 @@ map.help.quick_start = [[
        This will bring up a more detailed help file, starting with the available
        help topics.
 ]]
+map.help.room_find = [[
+    &lt;cyan&gt;Room Find&lt;reset&gt;
+        syntax: &lt;yellow&gt;room find &lt;room name&gt;&lt;reset&gt;
+                &lt;yellow&gt;rf &lt;room name&gt;&lt;reset&gt;
+
+        This command will search all rooms and return a list of matches.
+]]
+map.help.room_look = [[
+    &lt;cyan&gt;Room Look&lt;reset&gt;
+        syntax: &lt;yellow&gt;room look [roomID]&lt;reset&gt;
+                &lt;yellow&gt;rl [roomID]&lt;reset&gt;
+
+        This command will display detailed information about the current room.
+        Optionally a roomID can be provided.
+]]
+map.help.showpath = [[
+    &lt;cyan&gt;Showpath&lt;reset&gt;
+        syntax: &lt;yellow&gt;showpath &lt;roomID&gt;&lt;reset&gt;
+                &lt;yellow&gt;showpath &lt;fromID&gt; &lt;toID&gt;&lt;reset&gt;
+
+        This command displays a path from your current room to the roomID specified.
+        If two roomID's are specifed it will display a path from a remote room to another room.
+]]
+map.help.spe_list = [[
+    &lt;cyan&gt;Special Exits List&lt;reset&gt;
+        syntax: &lt;yellow&gt;spe list [filter]&lt;reset&gt;
+
+        This command displays a list of all known special exits.  You can alternatively provide an
+        optional filter to return a list containing those words.
+
+        Example: &lt;yellow&gt;spe list worm warp&lt;reset&gt;
+]]
+map.help.feature_list = [[
+    &lt;cyan&gt;Feature List&lt;reset&gt;
+        syntax: &lt;yellow&gt;feature list&lt;reset&gt;
+
+        This command displays a list of all map features created via feature create and the associated room characters.
+]]
+map.help.area_add = [[
+    &lt;cyan&gt;Area Add&lt;reset&gt;
+        syntax: &lt;yellow&gt;area add &lt;area name&gt;&lt;reset&gt;
+
+        This command will create a new area and automatically give it an ID.
+
+        Example: &lt;yellow&gt;area add My City&lt;reset&gt; - create a new area called My City
+]]
+map.help.area_delete = [[
+    &lt;cyan&gt;Area Delete&lt;reset&gt;
+        syntax: &lt;yellow&gt;area delete &lt;area name&gt;&lt;reset&gt;
+
+        This command will delete the given area. If the area is really big
+        (thousands of rooms), deleting it at once would take a really long
+        while and freeze your Mudlet while doing so. To combat the unpleasant
+        experience, the script breaks up area deletion into batches of rooms
+        (100 by default). While this still heavily impacts Mudlets performance,
+        it allows you to see a progress meter of how far it has gotten and gives
+        you an ability to pause it at any time by doing 'cancel area deletion'.
+
+        Example: &lt;yellow&gt;area delete My City&lt;reset&gt; - delete an area called My City
+]]
+map.help.area_cancel = [[
+    &lt;cyan&gt;Cancel Area Deletion&lt;reset&gt;
+        syntax: &lt;yellow&gt;cancel area deletion&lt;reset&gt;
+
+        This comand will stop an area deletion that has started. This will NOT
+        restore deleted rooms - it merely pauses the process, so you can resume
+        it with 'area delete' later on. You can type this in while Mudlet is
+        deleting an area - it'll take a short while for letters to show up, but
+        they will eventually.
+]]
+map.help.area_rename = [[
+    &lt;cyan&gt;Area Rename&lt;reset&gt;
+        syntax: &lt;yellow&gt;area rename &lt;name&gt;&lt;reset&gt;
+
+        This command will rename the current area you're in to the new name.
+
+        Example: &lt;yellow&gt;area rename My City&lt;reset&gt; - call the area you're in My City from now on
+
+]]
+map.help.arealock = [[
+    &lt;cyan&gt;Arealock&lt;reset&gt;
+        syntax: &lt;yellow&gt;arealock [filter]&lt;reset&gt;
+
+        This command displays a list of areas you can lock/unlock, you can also
+        give it an area name to filter by. If an area is locked the mapper will
+        not attempt to speedwalk or go through any of the rooms in the area.
+
+        Example: &lt;yellow&gt;arealock City&lt;reset&gt;
+]]
+map.help.room_coords = [[
+    &lt;cyan&gt;Room Coordinates&lt;reset&gt;
+        syntax: &lt;yellow&gt;room coords [v&lt;roomID&gt;] &lt;x&gt; &lt;y&gt; &lt;z&gt;&lt;reset&gt;
+                &lt;yellow&gt;rc [v&lt;roomID&gt;] &lt;x&gt; &lt;y&gt; &lt;z&gt;&lt;reset&gt;
+
+        This command will move a room to the new map coordinates. x,y and z will
+        specify the new location of the room. The room ID is optional, it'll move
+        the current room if you don't provide one.
+
+        Example: &lt;yellow&gt;rc nw&lt;reset&gt; - move the room to be nw of the current location
+                 &lt;yellow&gt;rc v34 w&lt;reset&gt; - move the room ID 34 west, note the letter 'v' in the command
+                 &lt;yellow&gt;rc 1 -5 10&lt;reset&gt; - move the current room to those exact coordinates
+                 &lt;yellow&gt;rc v12 8 3 -8&lt;reset&gt; - move the room #12 to 8x, 3y and -8z
+                 &lt;yellow&gt;rc 14x 5y&lt;reset&gt; - move the current room to be at 14x and 5y, but the
+                    same z-level you're on. You can include all three of x, y, z coordinates
+                    or only one as you wish
+]]
+map.help.room_delete = [[
+    &lt;cyan&gt;Room Delete&lt;reset&gt;
+        syntax: &lt;yellow&gt;room delete &lt;direction|roomID&gt;&lt;reset&gt;
+                &lt;yellow&gt;rld &lt;direction|roomID&gt;&lt;reset&gt;
+
+        This command will delete a room given a relative direction or roomID.
+
+        Example: &lt;yellow&gt;rld&lt;reset&gt; - current room, will delete the room you're currently in
+                 &lt;yellow&gt;rld n&lt;reset&gt; - relative direction, will delete the room that's north of you
+                 &lt;yellow&gt;rld 513&lt;reset&gt; - using roomID, will delete the room with ID 513
+]]
+map.help.room_weight = [[
+    &lt;cyan&gt;Room Weight&lt;reset&gt;
+        syntax: &lt;yellow&gt;room weight [direction|roomID] &lt;weight&gt;&lt;reset&gt;
+                &lt;yellow&gt;rw [direction|roomID] &lt;weight&gt;&lt;reset&gt;
+
+        This command updates the weight of a room, making it more or less
+        desirable to travel through.  Direction or roomID is optional and
+        defaults to the current room.
+
+        Example: &lt;yellow&gt;rw 10&lt;reset&gt; - will set the room weight of the room you're standing in to 10
+                 &lt;yellow&gt;rw n 4&lt;reset&gt; - relative direction, will set the room weight of the room that's
+                    to the north of you to four
+                 &lt;yellow&gt;rw 2343 2&lt;reset&gt; - using roomID, will set the room weight of room 2343 to 2
+]]
+map.help.room_weight_exit = [[
+    &lt;cyan&gt;Room Weight Exit&lt;reset&gt;
+        syntax: &lt;yellow&gt;rwe [roomID] &lt;weight&gt; &lt;exit&gt;&lt;reset&gt;
+
+        This command updates the weight of a room exit, where weight is a
+        positive number (default for exits is 0). Setting a higher weight will
+        make the exit be less likely to be used. The exit can be a cardinal
+        direction of either n,e,s,w,ne,se,sw,ne,up,down,in,out or the exact
+        special exit text (including the script: part). This alias sets a weight
+        one way only, so if you want to set it both ways, use it on the opposite
+        side as well. Use 'rl' to check exit weights.
+
+        Example: &lt;yellow&gt;rwe 1 n&lt;reset&gt; -  will set the weight of the exit north to 1
+                 &lt;yellow&gt;rwe 2434 0 e&lt;reset&gt; - will reset the exit weight of an east exit that
+                    leads out from the 2434 room
+]]
+map.help.room_link = [[
+    &lt;cyan&gt;Room Link&lt;reset&gt;
+        syntax: &lt;yellow&gt;room link [roomID] &lt;direction&gt; [one]&lt;reset&gt;
+                &lt;yellow&gt;rlk [roomID] &lt;direction&gt; [one]&lt;reset&gt;
+
+        This command will link a room given a direction and optional roomID.
+        You can also add 'one' at the end of the command to make it be a one-way
+        link.
+
+        Example: &lt;yellow&gt;rlk n&lt;reset&gt; - relative direction, will link if exists
+                    a room to the north of this one to your current location
+                 &lt;yellow&gt;rlk 351 n&lt;reset&gt; - exact roomID and direction, will
+                    link the current room to room #351 via a north exit
+                 &lt;yellow&gt;rlk n one&lt;reset&gt; - will make an exit north one-way
+]]
+map.help.room_unlink = [[
+    &lt;cyan&gt;Room Unlink&lt;reset&gt;
+        syntax: &lt;yellow&gt;room unlink &lt;direction&gt;&lt;reset&gt;
+                &lt;yellow&gt;urlk &lt;direction&gt;&lt;reset&gt;
+
+                Unlink a room given a direction.  This function will unlink
+                exits both ways, or one way if there is no incoming exit.
+
+        Example: &lt;yellow&gt;urlk nw&lt;reset&gt; - relative direction, will unlink to the
+                    northwest, and from the northwest room to the southeast
+]]
+map.help.room_door = [[
+    &lt;cyan&gt;Room Door&lt;reset&gt;
+        syntax: &lt;yellow&gt;rd [roomID] &lt;direction&gt; &lt;open|closed|locked|clear&gt;&lt;reset&gt;
+
+                Will create a door from the current room to a direction
+                specified.  Door status can be open or o, closed or c, locked or
+                l, clear or gone. To delete a room, use clear or gone. Setting
+                doors is one-way - to set two-way doors, use the alias from the
+                opposite direction.
+
+
+        Example: &lt;yellow&gt;rd n&lt;reset&gt; - add a one-way door north from the current room
+                 &lt;yellow&gt;rd 23 w closed&lt;reset&gt; - add a closed door leading west in room 23
+                 &lt;yellow&gt;rd n clear&lt;reset&gt; - remove the door to the north from the current
+                    room on this side only
+]]
+map.help.room_character = [[
+    &lt;cyan&gt;Room Character&lt;reset&gt;
+        syntax: &lt;yellow&gt;rcc &lt;character|clear&gt; [roomID]&lt;reset&gt;
+
+        This command will assign a single character, letter or number to the
+        current room, or an optional given room.  Using clear will remove any
+        characters.
+
+        Example: &lt;yellow&gt;rcc $&lt;reset&gt; - put the dollar sign in the current room 
+                    (e.g. to indicate a shop or bank)
+                 &lt;yellow&gt;rcc C 234&lt;reset&gt; - put the letter C onto room 234
+                 &lt;yellow&gt;rcc clear&lt;reset&gt; - remove any letter from the current
+                 room
+]]
+map.help.exit_special = [[
+    &lt;cyan&gt;Special Exits&lt;reset&gt;
+        syntax: &lt;yellow&gt;exit special &lt;direction|roomID&gt; &lt;command&gt;&lt;reset&gt;
+                &lt;yellow&gt;spe &lt;direction|roomID&gt; &lt;command&gt;&lt;reset&gt;
+
+        This command will link two rooms via custom or special exit/script.
+
+        Example: &lt;yellow&gt;spe n push rock&lt;reset&gt; - relative direction, will go to
+                    the room that's north of you by doing 'push rock'
+                 &lt;yellow&gt;spe 125 pull lever&lt;reset&gt; - will go to room 125 from the
+                    current one by pulling a lever
+
+        You can also specify a script to do code for you, by starting the exit
+        command with script.
+
+        Example: &lt;yellow&gt;spe 125 script: sendAll("pull lever", "enter gate")&lt;reset&gt;
+
+
+]]
+map.help.spev = [[
+    &lt;cyan&gt;Remote Special Exits&lt;reset&gt;
+        syntax: &lt;yellow&gt;spev &lt;fromID&gt; &lt;toID&gt; &lt;command&gt;&lt;reset&gt;
+
+        This command will add a special exit between two remote rooms.
+
+        Example: &lt;yellow&gt;spe 125 560 push rock&lt;reset&gt; - will link room 125 to room 560 with
+                    the command 'push rock'
+]]
+map.help.spe_clear = [[
+    &lt;cyan&gt;Clear Special Exits&lt;reset&gt;
+        syntax: &lt;yellow&gt;exit special clear &lt;direction|roomID&gt;&lt;reset&gt;
+                &lt;yellow&gt;spe clear &lt;direction|roomID&gt;&lt;reset&gt;
+
+        This command will clear all special exits from the current, relative or
+        given roomID.
+
+        Example: &lt;yellow&gt;spe clear&lt;reset&gt; - delete all special exits in the room you're currently in
+                 &lt;yellow&gt;spe clear n&lt;reset&gt; - delete all special exits in the room that's north of you
+                 &lt;yellow&gt;spe clear 513&lt;reset&gt; - delete all special exits in room #513
+]]
+map.help.room_area = [[
+    &lt;cyan&gt;Room Area&lt;reset&gt;
+        syntax: &lt;yellow&gt;room area [v&lt;roomID&gt;] &lt;area name|areaID&gt;&lt;reset&gt;
+
+        This command moves the current room to another area or a given optional
+        room.
+
+        Example: &lt;yellow&gt;room area My New Area&lt;reset&gt; - move the room you're in to 'My New Area'.
+                 &lt;yellow&gt;room area v123 My New Area&lt;reset&gt; - move room 123 to My New Area
+                 &lt;yellow&gt;room area 44&lt;reset&gt; - move the current room to the area ID 44
+]]
+map.help.room_label = [[
+    &lt;cyan&gt;Room Label&lt;reset&gt;
+        syntax: &lt;yellow&gt;room label [roomID] [fgColor] [bgColor] &lt;message&gt;&lt;reset&gt;
+
+        This command adds a label to the current or specified room.  Foreground
+        and background color are optional.
+
+        Example: &lt;yellow&gt;room label My Label&lt;reset&gt; - adds a 'My Label' label to the current room
+                 &lt;yellow&gt;room label 342 My Label&lt;reset&gt; - adds a label to room #342
+                 &lt;yellow&gt;room label green My Label&lt;reset&gt; - adds a green label with a transparent
+                    background to the current room
+                 &lt;yellow&gt;room label green black My Label&lt;reset&gt; - adds a label with a green
+                    foreground and black background to the current room
+                 &lt;yellow&gt;room label 34 green black My Label&lt;reset&gt; - adds a label with a green
+                    foreground and black background to room #34
+]]
+map.help.area_labels = [[
+    &lt;cyan&gt;Area Labels&lt;reset&gt;
+        syntax: &lt;yellow&gt;area labels &lt;area name&gt;&lt;reset&gt;
+
+        This command displays all labels in a given area, with a link to delete.
+
+        Example: &lt;yellow&gt;area label My Area&lt;reset&gt;
+]]
+map.help.feature_create = [[
+    &lt;cyan&gt;Feature Create&lt;reset&gt;
+        syntax: &lt;yellow&gt;feature create &lt;feature&gt; [char &lt;room character&gt;]&lt;reset&gt;
+
+        This command will create a new map feature for use on rooms. You can
+        also optionally add a character mark to the feature, which will be set
+        when a map feature is added to a room. Note: Map feature names are not
+        allowed to contain numbers.
+
+        Example: &lt;yellow&gt;feature create A Nexus Point char N&lt;reset&gt; - creates a new feature
+                    'A Nexus Point' with an assigned room character 'N'
+]]
+map.help.room_feature_create = [[
+    &lt;cyan&gt;Room Create Feature&lt;reset&gt;
+        syntax: &lt;yellow&gt;room create feature [v&lt;room id&gt;] &lt;feature&gt;&lt;reset&gt;
+                &lt;yellow&gt;rcf [v&lt;room id&gt;] &lt;feature&gt;&lt;reset&gt;
+
+        This command will add a created map feature to the room. If the map
+        feature is associated with a character mark, it will be set on the room
+        and existing marks get overwritten. The room number to add the feature
+        to can be given with the optional argument (note: there is no space
+        between the v and the ID).
+
+        Example: &lt;yellow&gt;rcf A Nexus Point&lt;reset&gt; - add the feature 'A Nexus Point' to
+                    the current room
+                 &lt;yellow&gt;rcf v123 A Nexus Point&lt;reset&gt; - add the feature 'A Nexus Point'
+                    to room #123
+]]
+map.help.room_feature_delete = [[
+    &lt;cyan&gt;Room Delete Feature&lt;reset&gt;
+        syntax: &lt;yellow&gt;room delete feature [v&lt;room id&gt;] &lt;feature&gt;&lt;reset&gt;
+                &lt;yellow&gt;rdf [v&lt;room id&gt;] &lt;feature&gt;&lt;reset&gt;
+
+        This command removes a map feature from the room. If the map feature is
+        associated with a character mark and its set on the room, a random
+        character mark from the other map features on the room is chosen to
+        replace it. The room number to delete the feature from can be given with
+        the optional argument (note: there is no space between the v and the
+        ID).
+
+        Example: &lt;yellow&gt;rdf v123 A Nexus Point&lt;reset&gt; - removes the feature 'A Nexus Point'
+                    from the room #123
+]]
+map.help.feature_delete = [[
+    &lt;cyan&gt;Feature Delete&lt;reset&gt;
+        syntax: &lt;yellow&gt;feature delete &lt;feature&gt;&lt;reset&gt;
+
+        This command deletes a global map feature and removes it from all rooms.
+
+        Example: &lt;yellow&gt;feature delete A Nexus Point&lt;reset&gt; - removes the global feature
+                    'A Nexus Point' and removes it from all rooms
+]]
+
+
 
 map.character = map.character or ""
 map.prompt = map.prompt or {}
@@ -2076,7 +2460,7 @@ function map.show_help(cmd)
             fg("yellow")
             setUnderline(true)
             if linktext == "urllink" then
-                echoLink(link, [[openWebPage("]]..target..[[")]], "Open Mudlet Discord", true)
+                echoLink(link, [[openWebPage("]]..target..[[")]], "Open webpage", true)
             elseif target ~= "1" then
                 echoLink(link,[[map.show_help("]]..target..[[")]],"View: map help " .. target,true)
             else
@@ -2805,7 +3189,7 @@ function map.export_area(name)
     tbl.rooms = {}
     tbl.exits = {}
     tbl.special = {}
-    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment
+    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment, roomChar
     for k,v in pairs(rooms) do
         rname = getRoomName(v)
         exits = getRoomExits(v)
@@ -2814,9 +3198,10 @@ function map.export_area(name)
         special = getSpecialExitsSwap(v)
         portals = getRoomUserData(v,"portals") or ""
 	environment = getRoomEnv(v)
+	roomChar = getRoomChar(v)
         coords = {getRoomCoordinates(v)}
         tbl.rooms[v] = {name = rname, coords = coords, exits = exits, stubs = stubs, doors = doors, door_up = door_up,
-            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment}
+            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment, roomChar = roomChar}
         tmp = {}
         for k1,v1 in pairs(exits) do
             if not table.contains(rooms,v1) then
@@ -2869,6 +3254,7 @@ function map.import_area(name)
         end
         setRoomUserData(ID,"portals",v.portals)
 	setRoomEnv(ID,v.environment)
+	setRoomChar(ID,v.roomChar)
     end
     for k,v in pairs(tbl.rooms) do
         for i,j in pairs(v.exits) do
