@@ -377,16 +377,14 @@ int TLuaInterpreter::chatStartServer(lua_State* L)
 int TLuaInterpreter::chatStopServer(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mmcpServer) {
-        pHost->initMMCPServer();
-    }
+    if (pHost->mmcpServer) {
+        QPair<bool, QString> const result = pHost->mmcpServer->stopServer();
 
-    QPair<bool, QString> const result = pHost->mmcpServer->stopServer();
-
-    if (!result.first) {
-        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
-    }
-
+        if (!result.first) {
+            return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+        }
+    } 
+    
     lua_pushboolean(L, true);
     return 1;
 }
