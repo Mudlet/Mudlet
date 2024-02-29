@@ -159,6 +159,12 @@ void MMCPClient::slotReadData()
 {
     while (tcpSocket.bytesAvailable()) {
         buffer.append(tcpSocket.read(tcpSocket.bytesAvailable()));
+        /*
+        if (buffer.lastIndexOf('\xff') == -1) {
+            qDebug() << "Partial buffer received, waiting for the rest...";
+            return;
+        }
+        */
     }
 
     switch (m_state) {
@@ -233,8 +239,10 @@ void MMCPClient::slotReadData()
     }
 
     case Connected:
-        if (buffer.lastIndexOf('\xff') == -1)
+        if (buffer.lastIndexOf('\xff') == -1) {
+            qDebug() << "Partial buffer received, waiting for the rest...";
             return;
+        }
 
         handleConnectedState(buffer);
         break;
@@ -570,7 +578,6 @@ void MMCPClient::handleIncomingPeekConnections()
  */
 void MMCPClient::handleIncomingPeekList(const QString& list)
 {
-    server->clientMessage(list);
 
     QStringList parts = list.split("~");
 
@@ -591,7 +598,11 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
         const QString port = parts.at(i + 1);
         const QString name = parts.at(i + 2);
 
-        listOut.append(QString("%1%2:%3 %4 %5 %6\n").arg(FBLDWHT).arg(count++, 3, QChar('0')).arg(RST).arg(name).arg(host).arg(port));
+        listOut.append(QString("%1%2:%3 %4 %5 %6\n").arg(FBLDWHT)
+                                .arg(count++, 3, QChar('0'))
+                                .arg(RST).arg(name, -20)
+                                .arg(host, -15)
+                                .arg(port, -5));
     }
 
     server->clientMessage(listOut);
