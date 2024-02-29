@@ -158,13 +158,11 @@ void MMCPClient::slotDisconnected()
 void MMCPClient::slotReadData()
 {
     while (tcpSocket.bytesAvailable()) {
-        buffer.append(tcpSocket.read(tcpSocket.bytesAvailable()));
-        /*
-        if (buffer.lastIndexOf('\xff') == -1) {
-            qDebug() << "Partial buffer received, waiting for the rest...";
-            return;
+        if (buffer.length() > 0) {
+            qDebug() << "slotReadData() appending to previous partial buffer";
         }
-        */
+
+        buffer.append(tcpSocket.read(tcpSocket.bytesAvailable()));
     }
 
     switch (m_state) {
@@ -239,8 +237,8 @@ void MMCPClient::slotReadData()
     }
 
     case Connected:
-        if (buffer.lastIndexOf('\xff') == -1) {
-            qDebug() << "Partial buffer received, waiting for the rest...";
+        if (!buffer.endsWith(static_cast<char>(0xff))) {
+            qDebug() << "slotReadData() Partial buffer received, waiting for the rest...";
             return;
         }
 
@@ -386,10 +384,10 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
     while (cmdIdx < bytes.length()) {
         char cmd = data[cmdIdx];
 
-        int endIdx = bytes.indexOf(0xFF, cmdIdx);
+        int endIdx = bytes.indexOf(static_cast<char>(0xff), cmdIdx);
         if (endIdx == -1) {
-            qDebug() << "wtf?";
-            endIdx = bytes.length();
+            qDebug() << "handleConnectedState() partial buffer detected";
+            return;
         }
 
         QString stringData = QString::fromLatin1(data + cmdIdx + 1, (endIdx - cmdIdx) - 1);
