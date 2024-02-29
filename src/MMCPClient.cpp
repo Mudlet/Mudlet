@@ -576,8 +576,6 @@ void MMCPClient::handleIncomingPeekConnections()
  */
 void MMCPClient::handleIncomingPeekList(const QString& list)
 {
-server->clientMessage(list);
-
     QStringList parts = list.split("~");
 
     if (parts.size() % 3 != 0) {
@@ -597,7 +595,13 @@ server->clientMessage(list);
         const QString port = parts.at(i + 1);
         const QString name = parts.at(i + 2);
 
-        listOut.append(QString("%1%2:%3 %4 %5 %6\n").arg(FBLDWHT).arg(count++, 3, QChar('0')).arg(RST).arg(name).arg(host).arg(port));
+        listOut.append(QString("%1%2:%3 %4 %5 %6\n")
+                            .arg(FBLDWHT)
+                            .arg(count++, 3, QChar('0'))
+                            .arg(RST)
+                            .arg(name, -20)
+                            .arg(host, -15)
+                            .arg(port, -5));
     }
 
     server->clientMessage(listOut);
