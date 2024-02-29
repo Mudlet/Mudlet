@@ -230,7 +230,7 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
         cl->writeData(outMsg);
     }
 
-    clientMessage(QString("\nYou chat to everybody, '%1'").arg(msg));
+    clientMessage(QString("You chat to everybody, '%1'").arg(msg));
 
     return QPair<bool, QString>(true, qsl("command successful"));
 }
@@ -671,7 +671,7 @@ void MMCPServer::clientMessage(const QString& message)
 
     using namespace AnsiColors;
 
-    const QString coloredStr = QString("%1%2%3\n").arg(FBLDRED).arg(trimmed).arg(RST);
+    const QString coloredStr = QString("\n%1%2%3\n").arg(FBLDRED).arg(trimmed).arg(RST);
 
     std::string trimmedStdStr = coloredStr.toStdString();
     mpHost->mpConsole->printOnDisplay(trimmedStdStr, false);
