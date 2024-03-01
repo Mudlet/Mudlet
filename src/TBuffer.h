@@ -31,6 +31,7 @@
 #include <QChar>
 #include <QColor>
 #include <QDebug>
+#include <QFont>
 #include <QMap>
 #include <QQueue>
 #include <QPoint>
@@ -62,6 +63,16 @@ public:
         None = 0x0,
         // Replaces TCHAR_BOLD 2
         Bold = 0x1,                   // 0000 0000 0000 0000 0000 0000 0000 0001
+        Faint = 0x40000,              // 0000 0000 0000 0100 0000 0000 0000 0000
+        /*
+         * The above pair of values for our text attribute flags can be
+         * combined to produced four different QFont::weight values - note
+         * however that the numeric values assigned to the enum have changed
+         * between Qt 5 & 6:
+         * Note that both values with the Bold flag should be greater than the
+         * QFont::Medium (Qt5: 57, Qt6: 500) value so BOTH will produce a
+         * QFont::bold() value of true, whereas the other two will not.
+         */
         // Replaces TCHAR_ITALICS 1
         Italic = 0x2,                 // 0000 0000 0000 0000 0000 0000 0000 0010
         // Replaces TCHAR_UNDERLINE 4
@@ -104,7 +115,7 @@ public:
         // Mask for "any alternate font" - only the most significant one should
         // be used if more than one is set:
         AltFontMask = 0x1ff00,        // 0000 0000 0000 0001 1111 1111 0000 0000
-        TestMask = 0x3ffff,           // 0000 0000 0000 0011 1111 1111 1111 1111
+        TestMask = 0x7ffff,           // 0000 0000 0000 0111 1111 1111 1111 1111
         // The remainder are internal use ones that do not related to SGR codes
         // that have been parsed from the incoming text.
         // Has been found in a search operation (currently Main Console only)
@@ -153,6 +164,7 @@ public:
     bool isSelected() const { return mIsSelected; }
     int linkIndex () const { return mLinkIndex; }
     bool isBold() const { return mFlags & Bold; }
+    bool isFaint() const { return mFlags & Faint; }
     bool isItalic() const { return mFlags & Italic; }
     bool isUnderlined() const { return mFlags & Underline; }
     bool isOverlined() const { return mFlags & Overline; }
@@ -249,6 +261,66 @@ class TBuffer
 
 public:
     explicit TBuffer(Host* pH, TConsole* pConsole = nullptr);
+
+    /*
+     * From the Qt5 documentation:
+     * "Qt uses a weighting scale from 0 to 99 similar to, but not the same
+     * as, the scales used in Windows or CSS. A weight of 0 will be thin,
+     * whilst 99 will be extremely black."
+     * From the Qt6 documentation:
+     * "Qt uses a weighting scale from 1 to 1000 compatible with OpenType. A
+     * weight of 1 will be thin, whilst 1000 will be extremely black."
+     * In summary:
+     *                 enum QFont::Weight  Qt5  Qt6
+     *                 QFont::Thin           0  100
+     * Faint           QFont::ExtraLight    12  200
+     *                 QFont::Light         25  300
+     * Normal          QFont::Normal        50  400
+     *                 QFont::Medium        57  500
+     * Faint + Bold    QFont::DemiBold      63  600
+     *                 QFont::Bold          75  700
+     * Bold            QFont::ExtraBold     81  800
+     *                 QFont::Black         87  900
+     *
+     * Used in TTextEdit::drawGraphemeForeground(...) and
+     * dlgProfilePreferences::updateFontSampleDisplays(const QFont& newFont)
+     * and (for Qt 6.x or later) TBuffer::bufferToHtml(...):
+     */
+    static const QFont::Weight csmFontWeight_faint = QFont::ExtraLight;
+    static const QFont::Weight csmFontWeight_normal = QFont::Normal;
+    static const QFont::Weight csmFontWeight_boldAndFaint = QFont::DemiBold;
+    static const QFont::Weight csmFontWeight_bold = QFont::ExtraBold;
+#if QT_VERSION < QT_VERSION_CHECK(6 , 0, 0)
+    // Used in TBuffer::bufferToHtml(...) for Qt5 ONLY - the above and below
+    // values need to be kept in sync if changes are made - the Qt5 values below
+    // have to be the numeric equivalent to the enum values for the Qt6 ones:
+    static const int csmCssFontWeight_faint = 200;
+    static const int csmCssFontWeight_normal = 400;
+    static const int csmCssFontWeight_boldAndFaint = 600;
+    static const int csmCssFontWeight_bold = 800;
+#endif
+
+    // Used to record if some particular SGR codes have been received from the
+    // Game Server - only used in the TMainConsole instance
+    enum SgrCodeFlag {
+        Sgr_None = 0x0,
+        Sgr_Bold = 0x1, // May be combined with Sgr_30_37 (for original {?} 16 colors) or, more hopefully used for a font rendering effect
+        Sgr_Faint = 0x2, // Usage is probably rare, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
+        Sgr_Blinking = 0x4, // Either Blink or Fast Blink code has been seen - at present we convert them to italics
+        Sgr_Conceal = 0x8, // The hidden/concealed code has been seen - at present Mudlet does not handle it and shows the text
+        Sgr_30_37 = 0x10, // Basic 8 FG colors unless combined with Sgr_Bold for 16 colors
+        Sgr_90_97 = 0x20, // Basic 16 FG colors when combined with Sgr_30_37, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
+        Sgr_38_2 = 0x40, // 16M FG colors, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
+        Sgr_38_5 = 0x80, // 256 FG colors, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
+        Sgr_40_47 = 0x100, // Basic 8 BG colors might be combined with Sgr_Bold for 16 colors but that doesn't make much sense as it would also change the FG color as well
+        Sgr_100_107 = 0x200, // Basic 16 BG colors when combined with Sgr_30_37, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
+        Sgr_48_2 = 0x400, // 16M BG colors, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
+        Sgr_48_5 = 0x800, // 256 BG colors, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
+        Sgr_AltFont = 0x1000 // Any of the alternate font codes (SGR 11 to 19)
+    };
+    Q_DECLARE_FLAGS(SgrCodeFlags, SgrCodeFlag)
+
+
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -297,6 +369,8 @@ public:
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
     void clearSearchHighlights();
+    SgrCodeFlags getSgrCodesSeen() const { return mSgrCodesSeen; }
+    void resetSgrCodesSeen() { mSgrCodesSeen = Sgr_None; }
 
     static int lengthInGraphemes(const QString& text);
 
@@ -332,7 +406,7 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
-
+    void setSgrCodeSeenFlag(const SgrCodeFlag);
 
     QPointer<TConsole> mpConsole;
 
@@ -345,7 +419,6 @@ private:
     // Second stage in decoding OSC sequences - set true when we see the ASCII
     // ESC character followed by the ']' one:
     bool mGotOSC = false;
-    bool mIsDefaultColor = true;
 
 
     QColor mBlack;
@@ -364,12 +437,6 @@ private:
     QColor mMagenta;
     QColor mLightWhite;
     QColor mWhite;
-    // These three replace three sets of three integers that were used to hold
-    // colour components during the parsing of SGR sequences, they were called:
-    // fgColor{R|G|B}, fgColorLight{R|G|B} and bgColor{R|G|B} apart from
-    // anything else, the first and last sets had the same names as arguments
-    // to several of the methods which meant the latter shadowed and masked
-    // them off!
     QColor mForeGroundColor;
     QColor mForeGroundColorLight;
     QColor mBackGroundColor;
@@ -377,6 +444,7 @@ private:
     QPointer<Host> mpHost;
 
     bool mBold = false;
+    bool mFaint = false;
     bool mItalics = false;
     bool mOverline = false;
     bool mReverse = false;
@@ -388,6 +456,12 @@ private:
     bool mFastBlink = false;
     bool mConcealed = false;
     quint8 mAltFont = 0;
+    // If enabled by a per profile setting (Host::mBoldIsBright == true) this
+    // will cause the first 8 ANSI colors (set by direct <SGR>30m to <SGR>37m)
+    // to be converted to second 8 ANSI colors (equivalent to <SGR>90m to
+    // <SGR>97m) if the Bold attribute (<SGR>1m) is ALSO active -  was called
+    // mIsDefaultColor but used in an inverted sense:
+    bool mMayShift8ColorSet = false;
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;
@@ -406,7 +480,12 @@ private:
 
     QByteArray mEncoding;
     QTextCodec* mMainIncomingCodec = nullptr;
+
+    bool mProcessingServerText = false;
+    SgrCodeFlags mSgrCodesSeen = Sgr_None;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(TBuffer::SgrCodeFlags)
 
 #ifndef QT_NO_DEBUG_STREAM
 // Dumper for the TChar::AttributeFlags - so that qDebug gives a detailed broken
@@ -419,6 +498,9 @@ inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes
     QStringList presentAttributes;
     if (attributes & TChar::Bold) {
         presentAttributes << QLatin1String("Bold (0x01)");
+    }
+    if (attributes & TChar::Faint) {
+        presentAttributes << QLatin1String("Faint (0x40000)");
     }
     if (attributes & TChar::Italic) {
         presentAttributes << QLatin1String("Italic (0x02)");

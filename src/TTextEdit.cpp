@@ -701,8 +701,11 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
 
 void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor, const QRect& textRect, const QString& grapheme, TChar& charStyle) const
 {
-    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
+    const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
+    const bool isFaint = attributes & TChar::Faint;
+    const QFont::Weight fontWeight = (isBold ? (isFaint ? TBuffer::csmFontWeight_boldAndFaint : TBuffer::csmFontWeight_bold)
+                                             : (isFaint ? TBuffer::csmFontWeight_faint : TBuffer::csmFontWeight_normal));
     // At present we cannot display flashing text - and we just make it italic
     // (we ought to eventually add knobs for them so they can be shown in a user
     // preferred style - which might be static for some users) - anyhow Mudlet
@@ -713,14 +716,14 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isUnderline = attributes & TChar::Underline;
     // const bool isConcealed = attributes & TChar::Concealed;
     // const int altFontIndex = charStyle.alternateFont();
-    if ((painter.font().bold() != isBold)
+    if ((painter.font().weight() != fontWeight)
             || (painter.font().italic() != isItalics)
             || (painter.font().overline() != isOverline)
             || (painter.font().strikeOut() != isStrikeOut)
             || (painter.font().underline() != isUnderline)) {
 
         QFont font = painter.font();
-        font.setBold(isBold);
+        font.setWeight(fontWeight);
         font.setItalic(isItalics);
         font.setOverline(isOverline);
         font.setStrikeOut(isStrikeOut);
