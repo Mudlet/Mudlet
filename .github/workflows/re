@@ -1,0 +1,59 @@
+name: Automatic Release label
+
+on:
+  push:
+    branches:
+      - development
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Determine Current Version
+        id: version
+        run: |
+          current_version=$(grep -Po 'VERSION *= *\K[^#\n]*' mudlet.pro)
+          echo "::set-output name=current_version::$current_version"
+
+      - name: Bump Version
+        id: bump_version
+        run: |
+          new_version=$(semver bump minor ${{ steps.version.outputs.current_version }})
+          echo "::set-output name=new_version::$new_version"
+
+      - name: Tag Release
+        run: |
+          git tag -a "${{ steps.bump_version.outputs.new_version }}" -m "Release ${{ steps.bump_version.outputs.new_version }}"
+
+      - name: Push Tag
+        run: |
+          git push origin "${{ steps.bump_version.outputs.new_version }}"
+
+      - name: Update Version in Files and Strip BUILD
+        run: |
+          sed -i "s/^VERSION *=.*/VERSION = ${{ steps.bump_version.outputs.new_version }}/" mudlet.pro
+          sed -i "s/^PROJECT_VERSION *=.*/PROJECT_VERSION = ${{ steps.bump_version.outputs.new_version }}/" CMakeLists.txt
+          sed -i '/^BUILD *=.*/d' mudlet.pro
+          sed -i '/^set(BUILD.*/d' CMakeLists.txt
+
+      - name: Commit Changes
+        run: |
+          git add mudlet.pro CMakeLists.txt
+          git commit -m "Release ${{ steps.bump_version.outputs.new_version }}"
+          git push origin development
+
+      - name: Switch to Release Branch
+        run: |
+          git checkout -b release_branch "${{ steps.bump_version.outputs.new_version }}"
+
+      - name: Strip out BUILD in Release Branch
+        run: |
+          sed -i '/^BUILD *=.*/d' mudlet.pro
+          sed -i '/^set(BUILD.*/d' CMakeLists.txt
+          git add mudlet.pro CMakeLists.txt
+          git commit -m "Strip out BUILD in release branch"
+          git push origin release_branch
