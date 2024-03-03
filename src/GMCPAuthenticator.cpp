@@ -67,6 +67,7 @@ void GMCPAuthenticator::sendCredentials()
 
     // Send credentials to server
     mpHost->mTelnet.socketOutRaw(output);
+    qDebug() << "Sent GMCP credentials";
 }
 
 
