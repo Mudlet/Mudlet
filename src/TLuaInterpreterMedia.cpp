@@ -29,52 +29,10 @@
 
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
 #include "Host.h"
-#include "TAlias.h"
-#include "TArea.h"
-#include "TCommandLine.h"
-#include "TConsole.h"
-#include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
-#include "TForkedProcess.h"
-#include "TLabel.h"
-#include "TMapLabel.h"
 #include "TMedia.h"
-#include "TRoomDB.h"
-#include "TTabBar.h"
-#include "TTextEdit.h"
-#include "TTimer.h"
-#include "dlgComposer.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
-#include "mapInfoContributorManager.h"
 #include "mudlet.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget.h"
-#endif
-
-#include <limits>
-#include <math.h>
-
-#include "pre_guard.h"
-#include <QtConcurrent>
-#include <QCollator>
-#include <QCoreApplication>
-#include <QDesktopServices>
-#include <QFileDialog>
-#include <QTableWidget>
-#include <QToolTip>
-#include <QFileInfo>
-#include <QMovie>
-#include <QVector>
-#ifdef QT_TEXTTOSPEECH_LIB
-#include <QTextToSpeech>
-#endif // QT_TEXTTOSPEECH_LIB
-#include "post_guard.h"
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#receiveMSP
 int TLuaInterpreter::receiveMSP(lua_State* L)
