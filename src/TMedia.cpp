@@ -108,6 +108,112 @@ void TMedia::playMedia(TMediaData& mediaData)
     TMedia::play(mediaData);
 }
 
+QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
+{
+    QList<TMediaData> mMatchingTMediaDataList;
+
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+        return mMatchingTMediaDataList;
+    }
+
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+        return mMatchingTMediaDataList;
+    }
+
+    QList<TMediaPlayer> mTMediaPlayerList;
+
+    switch (mediaData.getMediaProtocol()) {
+    case TMediaData::MediaProtocolMSP:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mMSPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mMSPMusicList;
+            break;
+        }
+        break;
+
+    case TMediaData::MediaProtocolGMCP:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mGMCPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mGMCPMusicList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList);
+            break;
+        }
+        break;
+
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mAPISoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mAPIMusicList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mAPISoundList + mAPIMusicList);
+            break;
+        }
+        break;
+
+    default:
+        return mMatchingTMediaDataList;
+    }
+
+    if (!mediaData.getMediaFileName().isEmpty()) {
+        const bool fileRelative = TMedia::isFileRelative(mediaData);
+
+        if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
+            return mMatchingTMediaDataList; // MSP and MCMP files will not have absolute paths. Something is wrong.
+        }
+
+        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
+        if (!fileRelative) {
+            mediaData.setMediaFileName(mediaData.getMediaFileName().section('/', -1));
+        }
+    }
+
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
+
+        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolAPI) {
+            if (pPlayer.getPlaybackState() != QMediaPlayer::PlayingState && pPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+                continue;
+            }
+
+            if (!mediaData.getMediaKey().isEmpty() && !pPlayer.getMediaData().getMediaKey().isEmpty() && pPlayer.getMediaData().getMediaKey() != mediaData.getMediaKey()) {
+                continue;
+            }
+
+            if (!mediaData.getMediaFileName().isEmpty() && !pPlayer.getMediaData().getMediaFileName().isEmpty() && pPlayer.getMediaData().getMediaFileName() != mediaData.getMediaFileName()) {
+                continue;
+            }
+
+            if (!mediaData.getMediaTag().isEmpty() && !pPlayer.getMediaData().getMediaTag().isEmpty() && pPlayer.getMediaData().getMediaTag() != mediaData.getMediaTag()) {
+                continue;
+            }
+
+            if (mediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer.getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet
+                && pPlayer.getMediaData().getMediaPriority() >= mediaData.getMediaPriority()) {
+                continue;
+            }
+       }
+
+        mMatchingTMediaDataList.append(pPlayer.getMediaData());
+    }
+
+    return mMatchingTMediaDataList;
+}
+
 void TMedia::stopMedia(TMediaData& mediaData)
 {
     if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
