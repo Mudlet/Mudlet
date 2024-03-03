@@ -659,13 +659,14 @@ SOURCES += \
     TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
-    TLuaInterpreterNetworking.cpp \
-    TLuaInterpreterMudletObjects.cpp \
+    TLuaInterpreterDiscord.cpp \
     TLuaInterpreterMapper.cpp \
+    TLuaInterpreterMudletObjects.cpp \
+    TLuaInterpreterNetworking.cpp \
+    TLuaInterpreterUI.cpp \
     TMainConsole.cpp \
     TMap.cpp \
     TMapLabel.cpp \
-    TLuaInterpreterDiscord.cpp \
     TMedia.cpp \
     TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
