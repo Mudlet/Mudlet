@@ -203,7 +203,7 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
             }
 
             if (mediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer.getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet
-                && pPlayer.getMediaData().getMediaPriority() >= mediaData.getMediaPriority()) {
+                && pPlayer.getMediaData().getMediaPriority() > mediaData.getMediaPriority()) {
                 continue;
             }
        }
