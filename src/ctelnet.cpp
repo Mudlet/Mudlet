@@ -3349,7 +3349,7 @@ void cTelnet::postData()
     if (mpHost->mpConsole) {
         mpHost->mpConsole->printOnDisplay(mMudData, true);
     }
-    if (mpHost->mmcpServer /*&& !mpHost->mIsRemoteEchoingActive*/) {
+    if (mpHost->mmcpServer && !mpHost->mIsRemoteEchoingActive) {
         mpHost->mmcpServer->receiveFromPlayer(mMudData);
     }
     if (mAlertOnNewData) {
