@@ -348,15 +348,12 @@ int TLuaInterpreter::chatSnoop(lua_State* L)
 
 int TLuaInterpreter::chatStartServer(lua_State* L)
 {
-    int port;
-    const int n = lua_gettop(L);
-    if (n > 1) {
-        port = getVerifiedInt(L, __func__, 2, "port number {default = 4050}", true);
+    int port = 4050;
+    if (lua_gettop(L) > 0) {
+        port = getVerifiedInt(L, __func__, 1, "port number {default = 4050}", true);
         if (port > 65535 || port < 1) {
             return warnArgumentValue(L, __func__, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
-    } else {
-        port = 4050;
     }
 
     Host* pHost = &getHostFromLua(L);
