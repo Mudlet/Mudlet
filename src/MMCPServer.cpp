@@ -658,16 +658,16 @@ void MMCPServer::slotClientDisconnected(MMCPClient* client)
 
 /**
  * Send a message to the terminal pane.
- * This converts a normal QString into an AttributedString, prepends a carriage return,
- * and encapsulates the string in the default chat color before sending the result inward.
  */
 void MMCPServer::clientMessage(const QString& message)
 {
-    QString trimmed = message;
+    QString trimmed = message.trimmed();
+    /*
     int idx = message.lastIndexOf('\n');
     int escIdx = message.lastIndexOf('\x1b');
     if (idx != -1 && escIdx != -1 && idx > escIdx)
         trimmed.replace(idx, 1, "");
+    */
 
     using namespace AnsiColors;
 
