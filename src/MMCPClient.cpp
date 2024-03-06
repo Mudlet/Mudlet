@@ -66,7 +66,7 @@ MMCPClient::MMCPClient(Host* host, MMCPServer* serv) : m_state(Disconnected), tc
     connect(&tcpSocket, &QTcpSocket::connected, this, &MMCPClient::slotConnected);
     connect(&tcpSocket, &QTcpSocket::disconnected, this, &MMCPClient::slotDisconnected);
     connect(&tcpSocket, &QTcpSocket::readyRead, this, &MMCPClient::slotReadData);
-#if QT_VERSION >= 0x051500
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     connect(&tcpSocket, &QAbstractSocket::errorOccurred, this, &MMCPClient::slotDisplayError);
 #else
 	connect(&tcpSocket, static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error), this, &MMCPClient::slotDisplayError);
@@ -167,46 +167,69 @@ void MMCPClient::slotReadData()
 
     switch (m_state) {
     case ConnectingIn: {
-        QRegularExpression chatIncoming("^CHAT:(.*)\n(\\d{1,3}(?:\\.\\d{1,3}){3})(\\d{1,5})\\s*$");
-        //QRegularExpression chatIncoming("CHAT:(.*)\n(.*)$");
 
-        QRegularExpressionMatch match = chatIncoming.match(buffer);
-
-        if (match.hasMatch()) {
-            //Check auto accept?
-            m_state = Connected;
-
-            m_chatName = match.captured(1);
-            m_host = match.captured(2);
-            m_port = match.captured(3).toUInt();
-
-            writeData(QString("YES:%1\n").arg(server->getChatName()));
-
-            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
-                                    .arg(m_chatName)
-                                    .arg(convertToIPv4(tcpSocket.peerAddress()))
-                                    .arg(tcpSocket.peerPort());
-
-            mpHost->postMessage(infoMsg);
-
-            server->addConnectedClient(this);
-
-            sendVersion();
-        } else {
+        const int nlPos = buffer.indexOf('\n');
+        if (!buffer.startsWith("CHAT:") || nlPos == -1) {
             m_state = Disconnected;
         }
+
+        const QByteArray playerName = buffer.mid(5, nlPos - 5);
+        const QByteArray ipAndPort = buffer.mid(nlPos + 1);
+        // Exclude the last 5 characters for the IP address
+        const QByteArray ipAddress = ipAndPort.left(ipAndPort.size() - 5);
+        // Last 5 characters for the port
+        const QByteArray port = ipAndPort.right(5);
+
+        QHostAddress host(QString::fromUtf8(ipAddress));
+        if (host.isNull()) {
+            m_state = Disconnected;
+        }
+
+        //Check auto accept?
+        m_state = Connected;
+
+        m_chatName = QString::fromUtf8(playerName);
+        m_host = convertToIPv4(host);
+        bool ok;
+        m_port = QString::fromUtf8(port).toUInt(&ok);
+        if (!ok) {
+            m_state = Disconnected;
+        }
+
+        writeData(QString("YES:%1\n").arg(server->getChatName()));
+
+        const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
+                                .arg(m_chatName)
+                                .arg(convertToIPv4(tcpSocket.peerAddress()))
+                                .arg(tcpSocket.peerPort());
+
+        mpHost->postMessage(infoMsg);
+
+        server->addConnectedClient(this);
+
+        sendVersion();
 
         break;
     }
 
     case ConnectingOut: {
         //Should receive either YES or NO
-        QRegularExpression chatAccepted("^YES:(.*)\n(.*)$");
+        const int colonPos = buffer.indexOf(':');
+        const int nlPos = buffer.indexOf('\n');
 
-        QRegularExpressionMatch match = chatAccepted.match(buffer);
+        if (!(buffer.startsWith("YES:") || buffer.startsWith("NO:")) || nlPos == -1 || colonPos == -1) {
+            m_state = Disconnected;
 
-        if (match.hasMatch()) {
-            m_chatName = match.captured(1);
+            const QString infoMsg = tr("[ CHAT ]  - Connection from %1:%2 refused.")
+                                    .arg(tcpSocket.peerPort())
+                                    .arg(convertToIPv4(tcpSocket.peerAddress()));
+            mpHost->postMessage(infoMsg);
+        } else {
+
+            const QByteArray playerName = buffer.mid(colonPos + 1, nlPos - colonPos - 1);
+            const QByteArray cmdData = buffer.right(buffer.size() - nlPos - 1);
+
+            m_chatName = QString::fromUtf8(playerName);
             m_state = Connected;
 
             const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
@@ -219,19 +242,12 @@ void MMCPClient::slotReadData()
             server->addConnectedClient(this);
             sendVersion();
 
-            if (chatAccepted.captureCount() > 2) {
+            if (cmdData.length() > 0) {
+                qDebug() << "cmd at connect: " << cmdData;
                 //A command was tacked on the end of the accept string
-                handleConnectedState(match.captured(2).toLatin1());
+                handleConnectedState(cmdData);
             }
-        } else {
-            m_state = Disconnected;
-
-            const QString infoMsg = tr("[ CHAT ]  - Connection from %1:%2 refused.")
-                                    .arg(tcpSocket.peerPort())
-                                    .arg(convertToIPv4(tcpSocket.peerAddress()));
-            mpHost->postMessage(infoMsg);
-        }
-
+        } 
 
         break;
     }
@@ -261,16 +277,16 @@ void MMCPClient::slotDisplayError(QAbstractSocket::SocketError socketError)
     case QAbstractSocket::RemoteHostClosedError:
         break;
     case QAbstractSocket::HostNotFoundError:
-        message = tr("The host was not found. Please check the host name and port settings.");
+        message = tr("[ CHAT ] - The host was not found. Please check the host name and port settings.");
         break;
     case QAbstractSocket::ConnectionRefusedError:
-        message = tr("The connection was refused by the peer.");
+        message = tr("[ CHAT ] - The connection was refused by the peer.");
         break;
     default:
-        message = tr("The following error occurred: %1.").arg(tcpSocket.errorString());
+        message = tr("[ CHAT ] - The following error occurred: %1.").arg(tcpSocket.errorString());
     }
 
-    server->clientMessage(message);
+    mpHost->postMessage(message);
 }
 
 
