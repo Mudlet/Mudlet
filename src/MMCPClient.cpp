@@ -146,8 +146,9 @@ void MMCPClient::slotDisconnected()
         server->decrementSnoopCount();
     }
 
-    if (isSnooped())
+    if (isSnooped()) {
         setSnooped(false);
+    }
 
     emit clientDisconnected(this);
 }
@@ -498,8 +499,9 @@ void MMCPClient::handleIncomingConnectionsRequest()
  */
 void MMCPClient::handleIncomingChatEveryone(const QString& msg)
 {
-    if (m_isIgnored)
+    if (m_isIgnored) {
         return;
+    }
 
     server->clientMessage(msg);
 
@@ -677,8 +679,9 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
     for (; inScan < inEnd; inScan++) {
         char c = *inScan;
 
-        if (c == '\r')
+        if (c == '\r') {
             continue;
+        }
 
         if (c == '\n') {
             ss.clear();

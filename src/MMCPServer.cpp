@@ -113,8 +113,9 @@ MMCPClient* MMCPServer::clientByNameOrId(const QVariant& arg)
         }
 
     } else {
-        if (id > 0 && id <= clients.size())
+        if (id > 0 && id <= clients.size()) {
             client = clients[id - 1];
+        }
     }
 
     return client;
@@ -666,8 +667,9 @@ void MMCPServer::clientMessage(const QString& message)
     QString trimmed = message;
     int idx = message.lastIndexOf('\n');
     int escIdx = message.lastIndexOf('\x1b');
-    if (idx != -1 && escIdx != -1 && idx > escIdx)
+    if (idx != -1 && escIdx != -1 && idx > escIdx) {
         trimmed.replace(idx, 1, "");
+    }
 
     using namespace AnsiColors;
 
@@ -776,8 +778,9 @@ void MMCPServer::sendServedMessage(MMCPClient* client, const QString& msg)
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        if (cl != client)
+        if (cl != client) {
             cl->writeData(cmdStr);
+        }
     }
 }
 
@@ -794,8 +797,9 @@ void MMCPServer::sendMessageToServed(MMCPClient* client, const QString& msg)
     QListIterator<MMCPClient*> it(clients);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        if (cl != client && cl->isServed())
+        if (cl != client && cl->isServed()) {
             cl->writeData(cmdStr);
+        }
     }
 }
 
