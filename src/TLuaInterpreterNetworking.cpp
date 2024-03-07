@@ -399,8 +399,7 @@ int TLuaInterpreter::sendIrc(lua_State* L)
         return warnArgumentValue(L, __func__, "not ready to send just yet");
     }
 
-    QPair<bool, QString> const result = pHost->mpDlgIRC->sendMsg(target, msg);
-
+    const auto result = pHost->mpDlgIRC->sendMsg(target, msg);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
