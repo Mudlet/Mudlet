@@ -34,8 +34,7 @@ int TLuaInterpreter::chat(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->chat(target, msg);
-
+    const auto result = pHost->mmcpServer->chat(target, msg);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -53,8 +52,7 @@ int TLuaInterpreter::chatAll(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->chatAll(msg);
-
+    const auto result = pHost->mmcpServer->chatAll(msg);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -72,8 +70,7 @@ int TLuaInterpreter::chatAllowSnoop(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->allowSnoop(target);
-
+    const auto result = pHost->mmcpServer->allowSnoop(target);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -100,8 +97,7 @@ int TLuaInterpreter::chatCall(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->call(host, port);
-
+    const auto result = pHost->mmcpServer->call(host, port);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -119,8 +115,7 @@ int TLuaInterpreter::chatEmoteAll(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->emoteAll(msg);
-
+    const auto result = pHost->mmcpServer->emoteAll(msg);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -139,8 +134,7 @@ int TLuaInterpreter::chatGroup(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->chatGroup(group, msg);
-
+    const auto result = pHost->mmcpServer->chatGroup(group, msg);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -158,8 +152,7 @@ int TLuaInterpreter::chatIgnore(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->ignore(target);
-
+    const auto result = pHost->mmcpServer->ignore(target);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -175,8 +168,7 @@ int TLuaInterpreter::chatList(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->chatList();
-
+    const auto result = pHost->mmcpServer->chatList();
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -193,11 +185,10 @@ int TLuaInterpreter::chatName(lua_State* L)
     }
 
     const int n = lua_gettop(L);
-    QPair<bool, QString> result;
     QString name;
     if (n > 0) {
         name = getVerifiedString(L, __func__, 1, "name");
-        result = pHost->mmcpServer->chatName(name);
+        const auto result = pHost->mmcpServer->chatName(name);
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
         }
@@ -220,8 +211,7 @@ int TLuaInterpreter::chatPing(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->ping(target);
-
+    const auto result = pHost->mmcpServer->ping(target);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -239,8 +229,7 @@ int TLuaInterpreter::chatPeek(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->peek(target);
-
+    const auto result = pHost->mmcpServer->peek(target);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -258,8 +247,7 @@ int TLuaInterpreter::chatPrivate(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->chatPrivate(target);
-
+    const auto result = pHost->mmcpServer->chatPrivate(target);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -277,8 +265,7 @@ int TLuaInterpreter::chatServe(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->serve(target);
-
+    const auto result = pHost->mmcpServer->serve(target);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -297,8 +284,7 @@ int TLuaInterpreter::chatSetGroup(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->chatSetGroup(target, group);
-
+    const auto result = pHost->mmcpServer->chatSetGroup(target, group);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -317,8 +303,7 @@ int TLuaInterpreter::chatSideChannel(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->chatSideChannel(channel, message);
-
+    const auto result = pHost->mmcpServer->chatSideChannel(channel, message);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -336,8 +321,7 @@ int TLuaInterpreter::chatSnoop(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->snoop(target);
-
+    const auto result = pHost->mmcpServer->snoop(target);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -361,8 +345,7 @@ int TLuaInterpreter::chatStartServer(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->startServer(port);
-
+    const auto result = pHost->mmcpServer->startServer(port);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -375,8 +358,7 @@ int TLuaInterpreter::chatStopServer(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (pHost->mmcpServer) {
-        QPair<bool, QString> const result = pHost->mmcpServer->stopServer();
-
+        const auto result = pHost->mmcpServer->stopServer();
         if (!result.first) {
             return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
         }
@@ -395,8 +377,7 @@ int TLuaInterpreter::chatUnChat(lua_State* L)
         pHost->initMMCPServer();
     }
 
-    QPair<bool, QString> const result = pHost->mmcpServer->unChat(target);
-
+    const auto result = pHost->mmcpServer->unChat(target);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
