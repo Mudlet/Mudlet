@@ -134,7 +134,7 @@ QPair<bool, QString> MMCPServer::call(const QString& line)
     if (n < 1) {
         const QString infoMsg = tr("[ CHAT ]  - You must specify a host.");
         mpHost->postMessage(infoMsg);
-        return QPair<bool, QString>(false, qsl("must specify a host"));
+        return {false, qsl("must specify a host")};
     }
 
     quint16 port = 4050;
@@ -146,7 +146,7 @@ QPair<bool, QString> MMCPServer::call(const QString& line)
     }
 
     call(args[0], port);
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 /**
@@ -170,7 +170,7 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port)
         const QString infoMsg = tr("[ CHAT ]  - Already connected to %1:%2.").arg(host).arg(port);
         mpHost->postMessage(infoMsg);
 
-        return QPair<bool, QString>(false, qsl("already connected to that client"));
+        return {false, qsl("already connected to that client")};
     }
 
     const QString infoMsg = tr("[ CHAT ]  - Connecting to %1:%2...").arg(host).arg(port);
@@ -180,7 +180,7 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port)
 
     client->tryConnect(host, port);
 
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 
@@ -201,12 +201,12 @@ QPair<bool, QString> MMCPServer::chat(const QVariant& target, const QString& msg
         client->writeData(outMsg);
 
         clientMessage(QString("You chat to %1, '%2'").arg(client->chatName()).arg(msg));
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
     const QString infoMsg = tr("[ CHAT ]  - Invalid client id '%1'.").arg(target.toString());
     mpHost->postMessage(infoMsg);
-    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+    return {false, qsl("no client by that name or id")};
 }
 
 
@@ -216,7 +216,7 @@ QPair<bool, QString> MMCPServer::chat(const QVariant& target, const QString& msg
 QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
 {
     if (clients.isEmpty()) {
-        return QPair<bool, QString>(false, qsl("no connected clients"));
+        return {false, qsl("no connected clients")};
     }
 
     QString outMsg = QString("%1\n%2 chats to everybody, '%3'%4%5")
@@ -233,7 +233,7 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
 
     clientMessage(QString("You chat to everybody, '%1'").arg(msg));
 
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 /**
@@ -242,7 +242,7 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
 QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& message)
 {
     if (clients.isEmpty()) {
-        return QPair<bool, QString>(false, qsl("no connected clients"));
+        return {false, qsl("no connected clients")};
     }
 
     using namespace AnsiColors;
@@ -267,7 +267,7 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
                             .arg(FBLDCYN).arg(group).arg(FBLDRED)
                             .arg(message));
 
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 /**
@@ -300,7 +300,7 @@ QPair<bool, QString> MMCPServer::chatList()
 
     clientMessage(strMessage);
 
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 /**
@@ -326,7 +326,7 @@ QPair<bool, QString> MMCPServer::chatName(const QString& name)
     const QString infoMsg = tr("[ CHAT ]  - You are now known as %1.").arg(name);
     mpHost->postMessage(infoMsg);
 
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 /**
@@ -335,7 +335,7 @@ QPair<bool, QString> MMCPServer::chatName(const QString& name)
 QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const QString& msg)
 {
     if (clients.isEmpty()) {
-        return QPair<bool, QString>(false, qsl("no connected clients"));
+        return {false, qsl("no connected clients")};
     }
 
     const QString outMsg = QString("%1[%2]%3%4")
@@ -353,7 +353,7 @@ QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const Q
         }
     }
 
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 
@@ -364,7 +364,7 @@ QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const Q
 QPair<bool, QString> MMCPServer::chatRaw(const QString& msg)
 {
     if (clients.isEmpty()) {
-        return QPair<bool, QString>(false, qsl("no connected clients"));
+        return {false, qsl("no connected clients")};
     }
 
     const QString outMsg = QString("%1%2%3")
@@ -380,7 +380,7 @@ QPair<bool, QString> MMCPServer::chatRaw(const QString& msg)
 
     clientMessage(msg);
 
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 
@@ -405,12 +405,12 @@ QPair<bool, QString> MMCPServer::chatSetGroup(const QVariant& target, const QStr
         }
 
         mpHost->postMessage(infoMsg);
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
     const QString infoMsg = tr("[ CHAT ]  - Invalid client id '%1'.").arg(target.toString());
     mpHost->postMessage(infoMsg);
-    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+    return {false, qsl("no client by that name or id")};
 }
 
 /**
@@ -419,7 +419,7 @@ QPair<bool, QString> MMCPServer::chatSetGroup(const QVariant& target, const QStr
 QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
 {
     if (clients.isEmpty()) {
-        return QPair<bool, QString>(false, qsl("no connected clients"));
+        return {false, qsl("no connected clients")};
     }
 
     const QString outMsg = QString("%1%2\n%3")
@@ -435,7 +435,7 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
 
     clientMessage(msg);
 
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 /**
@@ -454,13 +454,13 @@ QPair<bool, QString> MMCPServer::ignore(const QString& target)
             mpHost->postMessage(infoMsg);
         }
         client->setIgnore(!client->isIgnored());
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
     const QString infoMsg = tr("[ CHAT ]  - Cannot find client identified by '%1'.").arg(target);
     mpHost->postMessage(infoMsg);
 
-    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+    return {false, qsl("no client by that name or id")};
 }
 
 /**
@@ -472,10 +472,10 @@ QPair<bool, QString> MMCPServer::ping(const QVariant& target)
 
     if (client != nullptr) {
         client->sendPingRequest();
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
-    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+    return {false, qsl("no client by that name or id")};
 }
 
 /**
@@ -487,10 +487,10 @@ QPair<bool, QString> MMCPServer::peek(const QVariant& target)
 
     if (client != nullptr) {
         client->sendPeekRequest();
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
-    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+    return {false, qsl("no client by that name or id")};
 }
 
 /**
@@ -510,10 +510,10 @@ QPair<bool, QString> MMCPServer::chatPrivate(const QVariant& target)
             const QString infoMsg = tr("[ CHAT ]  - %1 is now set as private.").arg(client->chatName());
             mpHost->postMessage(infoMsg);
         }
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
-    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+    return {false, qsl("no client by that name or id")};
 }
 
 /**
@@ -539,10 +539,10 @@ QPair<bool, QString> MMCPServer::serve(const QVariant& target)
             mpHost->postMessage(infoMsg);
         }
 
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
-    return QPair<bool, QString>(false, qsl("no client by that name or id"));
+    return {false, qsl("no client by that name or id")};
 }
 
 /**
@@ -553,14 +553,14 @@ QPair<bool, QString> MMCPServer::startServer(quint16 port)
     if (!listen(QHostAddress::Any, port)) {
         const QString infoMsg = tr("[ CHAT ]  - Unable to start server: %1.").arg(errorString());
         mpHost->postMessage(infoMsg);
-        return QPair<bool, QString>(false, qsl("unable to start server"));
+        return {false, qsl("unable to start server")};
     }
 
     const QString infoMsg = tr("[ CHAT ]  - Started server on port %1.").arg(port);
     mpHost->postMessage(infoMsg);
     emit serverStarted(port);
 
-    return QPair<bool, QString>(true, qsl("command successful"));
+    return {true, QString()};
 }
 
 /**
@@ -570,10 +570,10 @@ QPair<bool, QString> MMCPServer::stopServer()
 {
     if (isListening()) {
         close();
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
-    return QPair<bool, QString>(false, qsl("unable to stop server, it is not listening"));
+    return {false, qsl("unable to stop server, it is not listening")};
 }
 
 
@@ -601,10 +601,10 @@ QPair<bool, QString> MMCPServer::allowSnoop(const QVariant& target)
             mpHost->postMessage(infoMsg);
         }
 
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
-    return QPair<bool, QString>(false, qsl("no client by that name"));
+    return {false, qsl("no client by that name")};
 }
 
 /**
@@ -621,10 +621,10 @@ QPair<bool, QString> MMCPServer::snoop(const QVariant& target)
             client->snoop();
         }
 
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
-    return QPair<bool, QString>(false, qsl("no client by that name"));
+    return {false, qsl("no client by that name")};
 }
 
 /**
@@ -636,10 +636,10 @@ QPair<bool, QString> MMCPServer::unChat(const QVariant& target)
 
     if (client != NULL) {
         client->disconnect();
-        return QPair<bool, QString>(true, qsl("command successful"));
+        return {true, QString()};
     }
 
-    return QPair<bool, QString>(false, qsl("no client by that name"));
+    return {false, qsl("no client by that name")};
 }
 
 
