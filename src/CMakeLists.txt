@@ -127,6 +127,7 @@ set(mudlet_SRCS
     TLuaInterpreter.cpp
     TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
+    TLuaInterpreterMedia.cpp
     TLuaInterpreterMudletObjects.cpp
     TLuaInterpreterNetworking.cpp
     TLuaInterpreterTextToSpeech.cpp

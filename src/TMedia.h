@@ -95,6 +95,7 @@ public:
     ~TMedia() = default;
 
     void playMedia(TMediaData& mediaData);
+    QList<TMediaData> playingMedia(TMediaData& mediaData);
     void stopMedia(TMediaData& mediaData);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     bool purgeMediaCache();
