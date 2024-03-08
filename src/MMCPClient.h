@@ -1,5 +1,8 @@
+#ifndef MUDLET_MMCPCLIENT_H
+#define MUDLET_MMCPCLIENT_H
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
+ *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,8 +20,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _MMCPCLIENT_H_
-#define _MMCPCLIENT_H_
 
 #include "pre_guard.h"
 #include <QtNetwork>
@@ -45,10 +46,15 @@ class MMCPClient : public QObject
     Q_PROPERTY(bool isSnooped READ isSnooped WRITE setSnooped)
     Q_PROPERTY(bool isSnooping READ isSnooping WRITE setSnooping)
     Q_PROPERTY(int state READ state)
-    Q_PROPERTY(QString host READ host);
-    Q_PROPERTY(quint16 port READ port);
+    Q_PROPERTY(QString host READ host)
+    Q_PROPERTY(quint16 port READ port)
 
-    enum ClientState { Disconnected = 0, ConnectingIn, ConnectingOut, Connected };
+    enum ClientState {
+        Disconnected = 0,
+        ConnectingIn,
+        ConnectingOut,
+        Connected
+    };
 
 public:
     MMCPClient(Host*, MMCPServer*);
@@ -67,73 +73,79 @@ public:
 
     const QString getInfoString();
     const QString getFlagsString();
-    const QString& getVersion();
+    const QString& getVersion() const { return mPeerVersion; }
     QString host();
     quint16 port();
 
     //Property Accessors/Mutators
-    int id() { return m_id; }
-    void setId(int val) { m_id = val; }
+    int id() const { return mId; }
+    void setId(const int val) { mId = val; }
 
-    bool canSnoop() { return m_canSnoop; }
-    void setCanSnoop(bool val) { m_canSnoop = val; }
+    bool canSnoop() const { return mEnableSnooping; }
+    void setCanSnoop(const bool val) { mEnableSnooping = val; }
 
-    const QString& chatName() { return m_chatName; }
+    const QString& chatName() const { return mPeerName; }
 
-    bool isIgnored() { return m_isIgnored; }
-    void setIgnore(bool val) { m_isIgnored = val; }
+    bool isIgnored() const { return mIsIgnored; }
+    void setIgnore(const bool val) { mIsIgnored = val; }
 
-    bool isPrivate() { return m_isPrivate; }
-    void setPrivate(bool val) { m_isPrivate = val; }
+    bool isPrivate() const { return mIsPrivate; }
+    void setPrivate(const bool val) { mIsPrivate = val; }
 
-    bool isServed() { return m_isServed; }
-    void setServed(bool val) { m_isServed = val; }
+    bool isServed() const { return mIsServed; }
+    void setServed(const bool val) { mIsServed = val; }
 
-    bool isServing() { return m_isServing; }
-    void setServing(bool val) { m_isServing = val; }
+    bool isServing() const { return mIsServing; }
+    void setServing(const bool val) { mIsServing = val; }
 
-    bool isSnooped() { return m_isSnooped; }
-    void setSnooped(bool val) { m_isSnooped = val; }
+    bool isSnooped() const { return mIsSnooped; }
+    void setSnooped(const bool val) { mIsSnooped = val; }
 
-    bool isSnooping() { return m_isSnooping; }
-    void setSnooping(bool val) { m_isSnooping = val; }
+    bool isSnooping() const { return mIsSnooping; }
+    void setSnooping(const bool val) { mIsSnooping = val; }
 
-    const QString& getGroup() { return m_group; }
+    const QString& getGroup() const { return mGroup; }
     bool setGroup(const QString&);
 
-    int state() { return m_state; }
+    ClientState state() const { return mState; }
 
-    MMCPServer* getServer() { return server; }
+    MMCPServer* getServer() { return mpMMCPServer; }
 
 signals:
-    void clientDisconnected(MMCPClient*);
+    void signal_clientDisconnected(MMCPClient*);
 
 private slots:
-    void slotConnected();
-    void slotDisconnected();
-    void slotReadData();
-    void slotDisplayError(QAbstractSocket::SocketError socketError);
+    void slot_connected();
+    void slot_disconnected();
+    void slot_readData();
+    void slot_displayError(QAbstractSocket::SocketError socketError);
 
 private:
-    int m_id;
-    bool m_canSnoop;
-    QString m_chatName;
-    bool m_isIgnored;
-    bool m_isPrivate;
-    bool m_isServed;
-    bool m_isServing;  // do we actually know this?
-    bool m_isSnooped;  // are we snooping THEM?
-    bool m_isSnooping; // is this client snooping US?
-    int m_state;
-    QString m_host;
-    quint16 m_port;
-    QByteArray buffer;
-    QString m_group;
+    Host* mpHost = nullptr;
+    MMCPServer* mpMMCPServer = nullptr;
+    ClientState mState = Disconnected;
+    QTcpSocket mTcpSocket;
+    QString mGroup = csDefaultMMCPGroupName;
+    int mId;
+    bool mEnableSnooping = false;
+    QString mPeerName;
+    //auto ignore or ignorelist match?
+    bool mIsIgnored = false;
+    //auto private or privatelist match?
+    bool mIsPrivate = false;
+    //auto serve or servelist match?
+    bool mIsServed = false;
+    // do we actually know this?
+    bool mIsServing = false;
+    // are we snooping THEM?
+    bool mIsSnooped = false;
+    // is this client snooping US?
+    bool mIsSnooping = false;
+    QString mPeerAddress;
+    quint16 mPeerPort;
+    QByteArray mPeerBuffer;
+    QString mPeerVersion;
 
-    QTcpSocket tcpSocket;
-    Host* mpHost;
-    MMCPServer* server;
-    QString version;
 
     void sendVersion();
     void handleConnectedState(const QByteArray&);
@@ -153,4 +165,4 @@ private:
     void handleIncomingSnoopData(const char*, quint16);
     void handleIncomingSideChannelData(const QString&);
 };
-#endif
+#endif // MUDLET_MMCPCLIENT_H

@@ -1,5 +1,8 @@
+#ifndef MUDLET_MMCP_H
+#define MUDLET_MMCP_H
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
+ *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,12 +20,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef _MMCP_H_
-#define _MMCP_H_
-
 #include "pre_guard.h"
 #include <QFlags>
 #include "post_guard.h"
+
+inline static uint16_t csDefaultMMCPHostPort{4050};
+inline static QLatin1String csDefaultMMCPChatName{"Mudlet"};
+inline static QLatin1String csDefaultMMCPGroupName{"<none>"};
+inline static QLatin1String csMMCPChatSideChannelEvent{"sysChatChannelMessage"};
 
 enum MMCPChatCommand {
     NameChange = 1,
@@ -83,4 +88,4 @@ constexpr char const* BCYN = "\x1b[46m";
 constexpr char const* BWHT = "\x1b[47m";
 } // namespace AnsiColors
 
-#endif
+#endif // MUDLET_MMCP_H

@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
+ *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -42,36 +43,23 @@ QString convertToIPv4(QHostAddress addr)
     return addr.toString();
 }
 
-MMCPClient::MMCPClient(Host* host, MMCPServer* serv) : m_state(Disconnected), tcpSocket(this), mpHost(host), server(serv)
+MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
+: mpHost(pHost)
+, mpMMCPServer(pServer)
+, mTcpSocket(this)
 {
-    //auto ignore or ignorelist match?
-    m_isIgnored = (1 == 0 ? true : false);
-
-    //auto private or privatelist match?
-    m_isPrivate = (1 == 0 ? true : false);
-
-    //auto serve or servelist match?
-    m_isServed = (1 == 0 ? true : false);
-
-    m_isServing = false;
-    m_canSnoop = false;
-    m_isSnooped = false;
-    m_isSnooping = false;
-    m_group = tr("<none>");
-    m_chatName = "";
-
     //Disable Nagle's algorithm
-    tcpSocket.setSocketOption(QAbstractSocket::LowDelayOption, 1);
+    mTcpSocket.setSocketOption(QAbstractSocket::LowDelayOption, 1);
 
-    connect(&tcpSocket, &QTcpSocket::connected, this, &MMCPClient::slotConnected);
-    connect(&tcpSocket, &QTcpSocket::disconnected, this, &MMCPClient::slotDisconnected);
-    connect(&tcpSocket, &QTcpSocket::readyRead, this, &MMCPClient::slotReadData);
+    connect(&mTcpSocket, &QTcpSocket::connected, this, &MMCPClient::slot_connected);
+    connect(&mTcpSocket, &QTcpSocket::disconnected, this, &MMCPClient::slot_disconnected);
+    connect(&mTcpSocket, &QTcpSocket::readyRead, this, &MMCPClient::slot_readData);
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
-    connect(&tcpSocket, &QAbstractSocket::errorOccurred, this, &MMCPClient::slotDisplayError);
+    connect(&mTcpSocket, &QAbstractSocket::errorOccurred, this, &MMCPClient::slot_displayError);
 #else
-	connect(&tcpSocket, static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error), this, &MMCPClient::slotDisplayError);
+    connect(&mTcpSocket, static_cast<void (QTcpSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error), this, &MMCPClient::slot_displayError);
 #endif
-    connect(this, &MMCPClient::clientDisconnected, server, &MMCPServer::slotClientDisconnected);
+    connect(this, &MMCPClient::signal_clientDisconnected, mpMMCPServer, &MMCPServer::slot_clientDisconnected);
 }
 
 /**
@@ -79,8 +67,8 @@ MMCPClient::MMCPClient(Host* host, MMCPServer* serv) : m_state(Disconnected), tc
  */
 void MMCPClient::tryConnect(const QString& host, quint16 port)
 {
-    m_state = ConnectingOut;
-    tcpSocket.connectToHost(host, port);
+    mState = ConnectingOut;
+    mTcpSocket.connectToHost(host, port);
 }
 
 
@@ -89,7 +77,7 @@ void MMCPClient::tryConnect(const QString& host, quint16 port)
  */
 void MMCPClient::disconnect()
 {
-    tcpSocket.disconnectFromHost();
+    mTcpSocket.disconnectFromHost();
 }
 
 
@@ -98,34 +86,35 @@ void MMCPClient::disconnect()
  */
 bool MMCPClient::incoming(qintptr socketDesc)
 {
-    m_state = ConnectingIn;
-    return tcpSocket.setSocketDescriptor(socketDesc);
+    mState = ConnectingIn;
+    return mTcpSocket.setSocketDescriptor(socketDesc);
 }
 
 QString MMCPClient::host()
 {
-    return convertToIPv4(tcpSocket.peerAddress());
+    return convertToIPv4(mTcpSocket.peerAddress());
 }
 
 quint16 MMCPClient::port()
 {
-    return tcpSocket.peerPort();
+    return mTcpSocket.peerPort();
 }
 
 
 /**
  * Outgoing connection established, send chat request.
  */
-void MMCPClient::slotConnected()
+void MMCPClient::slot_connected()
 {
-    m_host = convertToIPv4(tcpSocket.peerAddress());
-    m_port = tcpSocket.peerPort();
+    mPeerAddress = convertToIPv4(mTcpSocket.peerAddress());
+    mPeerPort = mTcpSocket.peerPort();
 
-    QString str = QString("CHAT:%1\n%3%2").arg(server->getChatName()).arg(m_port, -5).arg(m_host);
+    // The arguments are out of order so we can specify a width for the third one:
+    QString str = qsl("CHAT:%1\n%3%2").arg(mpMMCPServer->getChatName(), mPeerAddress).arg(mPeerPort, -5);
 
-    tcpSocket.write(str.toLatin1());
+    mTcpSocket.write(str.toLatin1());
 
-    const QString infoMsg = tr("[ CHAT ]  - Waiting for response from %1:%2.").arg(m_host).arg(m_port);
+    const QString infoMsg = tr("[ CHAT ]  - Waiting for response from %1:%2...").arg(mPeerAddress, QString::number(mPeerPort));
     mpHost->postMessage(infoMsg);
 }
 
@@ -133,49 +122,58 @@ void MMCPClient::slotConnected()
  * A client has been disconected.
  * Clear snoop flags if we were snooping or they were snooping us.
  */
-void MMCPClient::slotDisconnected()
+void MMCPClient::slot_disconnected()
 {
-    const QString infoMsg = tr("[ CHAT ]  - You are now disconnected from %1 - %2:%3.")
-        .arg(m_chatName.length() > 0 ? m_chatName : "<Unknown>")
-        .arg(m_host).arg(m_port);
-
+    /*: This message is used when a MMCP peer without a name disconnects,
+     * %1 is the peer's IP address (numbers or URL), %2 is the port they are
+     * listening on. Should be similiar to the one when we do have a name.
+     */
+    const QString infoMsg = mPeerName.isEmpty() ? tr("[ CHAT ]  - You are now disconnected from <unknown> - %1:%2.").arg(mPeerAddress, QString::number(mPeerPort))
+    /*: This message is used when a MMCP peer with a name disconnects,
+     * %1 is the peer's name, %2 is the peer's IP address (numbers or URL),
+     * %3 is the port they are listening on. Should be similiar to the one when
+     * we do not have a name.
+     */
+                                                : tr("[ CHAT ]  - You are now disconnected from %1 - %2:%3.").arg(mPeerName, mPeerAddress, QString::number(mPeerPort));
     mpHost->postMessage(infoMsg);
 
     if (isSnooping()) {
         setSnooping(false);
-        server->decrementSnoopCount();
+        mpMMCPServer->decrementSnoopCount();
     }
 
     if (isSnooped()) {
         setSnooped(false);
     }
 
-    emit clientDisconnected(this);
+    emit signal_clientDisconnected(this);
 }
 
 /**
  * Process incoming data from the client socket
  */
-void MMCPClient::slotReadData()
+void MMCPClient::slot_readData()
 {
-    while (tcpSocket.bytesAvailable()) {
-        if (buffer.length() > 0) {
-            qDebug() << "slotReadData() appending to previous partial buffer";
+    while (mTcpSocket.bytesAvailable()) {
+        if (mPeerBuffer.length() > 0) {
+            qDebug().noquote().nospace() << "MMCPCLient::slot_readData() INFO - appending to previous partial buffer.";
         }
 
-        buffer.append(tcpSocket.read(tcpSocket.bytesAvailable()));
+        mPeerBuffer.append(mTcpSocket.read(mTcpSocket.bytesAvailable()));
     }
 
-    switch (m_state) {
+    switch (mState) {
     case ConnectingIn: {
 
-        const int nlPos = buffer.indexOf('\n');
-        if (!buffer.startsWith("CHAT:") || nlPos == -1) {
-            m_state = Disconnected;
+        const int nlPos = mPeerBuffer.indexOf('\n');
+        // As mPeerBuffer is a QByteArray we do not need to "wrap" a const char*
+        // to test against it:
+        if (!mPeerBuffer.startsWith("CHAT:") || nlPos == -1) {
+            mState = Disconnected;
         }
 
-        const QByteArray playerName = buffer.mid(5, nlPos - 5);
-        const QByteArray ipAndPort = buffer.mid(nlPos + 1);
+        const QByteArray peerName = mPeerBuffer.mid(5, nlPos - 5);
+        const QByteArray ipAndPort = mPeerBuffer.mid(nlPos + 1);
         // Exclude the last 5 characters for the IP address
         const QByteArray ipAddress = ipAndPort.left(ipAndPort.size() - 5);
         // Last 5 characters for the port
@@ -183,30 +181,30 @@ void MMCPClient::slotReadData()
 
         QHostAddress host(QString::fromUtf8(ipAddress));
         if (host.isNull()) {
-            m_state = Disconnected;
+            mState = Disconnected;
         }
 
         //Check auto accept?
-        m_state = Connected;
+        mState = Connected;
 
-        m_chatName = QString::fromUtf8(playerName);
-        m_host = convertToIPv4(host);
+        mPeerName = QString::fromUtf8(peerName);
+        mPeerAddress = convertToIPv4(host);
         bool ok;
-        m_port = QString::fromUtf8(port).toUInt(&ok);
+        mPeerPort = QString::fromUtf8(port).toUInt(&ok);
         if (!ok) {
-            m_state = Disconnected;
+            mState = Disconnected;
         }
 
-        writeData(QString("YES:%1\n").arg(server->getChatName()));
+        writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
 
         const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
-                                .arg(m_chatName)
-                                .arg(convertToIPv4(tcpSocket.peerAddress()))
-                                .arg(tcpSocket.peerPort());
+                                .arg(mPeerName)
+                                .arg(convertToIPv4(mTcpSocket.peerAddress()))
+                                .arg(mTcpSocket.peerPort());
 
         mpHost->postMessage(infoMsg);
 
-        server->addConnectedClient(this);
+        mpMMCPServer->addConnectedClient(this);
 
         sendVersion();
 
@@ -215,36 +213,39 @@ void MMCPClient::slotReadData()
 
     case ConnectingOut: {
         //Should receive either YES or NO
-        const int colonPos = buffer.indexOf(':');
-        const int nlPos = buffer.indexOf('\n');
+        const int colonPos = mPeerBuffer.indexOf(':');
+        const int nlPos = mPeerBuffer.indexOf('\n');
 
-        if (!(buffer.startsWith("YES:") || buffer.startsWith("NO:")) || nlPos == -1 || colonPos == -1) {
-            m_state = Disconnected;
+        if (!(mPeerBuffer.startsWith("YES:") || mPeerBuffer.startsWith("NO:")) || nlPos == -1 || colonPos == -1) {
+            mState = Disconnected;
 
+            // In this case we do not get details of the connection from the
+            // other end - instead we can only report the apparent details from
+            // the socket:
             const QString infoMsg = tr("[ CHAT ]  - Connection from %1:%2 refused.")
-                                    .arg(tcpSocket.peerPort())
-                                    .arg(convertToIPv4(tcpSocket.peerAddress()));
+                                    .arg(mTcpSocket.peerPort())
+                                    .arg(convertToIPv4(mTcpSocket.peerAddress()));
             mpHost->postMessage(infoMsg);
         } else {
+            // We have got a "YES:" - yippee!
+            const QByteArray peerName = mPeerBuffer.mid(colonPos + 1, nlPos - colonPos - 1);
+            const QByteArray cmdData = mPeerBuffer.right(mPeerBuffer.size() - nlPos - 1);
 
-            const QByteArray playerName = buffer.mid(colonPos + 1, nlPos - colonPos - 1);
-            const QByteArray cmdData = buffer.right(buffer.size() - nlPos - 1);
-
-            m_chatName = QString::fromUtf8(playerName);
-            m_state = Connected;
+            mPeerName = QString::fromUtf8(peerName);
+            mState = Connected;
 
             const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
-                                    .arg(m_chatName)
-                                    .arg(convertToIPv4(tcpSocket.peerAddress()))
-                                    .arg(tcpSocket.peerPort());
+                                    .arg(mPeerName)
+                                    .arg(convertToIPv4(mTcpSocket.peerAddress()))
+                                    .arg(mTcpSocket.peerPort());
 
             mpHost->postMessage(infoMsg);
 
-            server->addConnectedClient(this);
+            mpMMCPServer->addConnectedClient(this);
             sendVersion();
 
             if (cmdData.length() > 0) {
-                qDebug() << "cmd at connect: " << cmdData;
+                qDebug().noquote().nospace() << "MMCPClient::slot_readData() INFO - additional cmd at connect: \"" << cmdData << "\".";
                 //A command was tacked on the end of the accept string
                 handleConnectedState(cmdData);
             }
@@ -254,23 +255,23 @@ void MMCPClient::slotReadData()
     }
 
     case Connected:
-        if (!buffer.endsWith(static_cast<char>(0xff))) {
-            qDebug() << "slotReadData() Partial buffer received, waiting for the rest...";
+        if (!mPeerBuffer.endsWith(static_cast<char>(0xff))) {
+            qDebug().noquote().nospace() << "MMCPClient::slot_readData() INFO - partial buffer received, waiting for the rest...";
             return;
         }
 
-        handleConnectedState(buffer);
+        handleConnectedState(mPeerBuffer);
         break;
 
     default:
         qDebug("unknown client state");
     }
 
-    buffer.clear();
+    mPeerBuffer.clear();
 }
 
 
-void MMCPClient::slotDisplayError(QAbstractSocket::SocketError socketError)
+void MMCPClient::slot_displayError(QAbstractSocket::SocketError socketError)
 {
     QString message;
 
@@ -284,7 +285,7 @@ void MMCPClient::slotDisplayError(QAbstractSocket::SocketError socketError)
         message = tr("[ CHAT ] - The connection was refused by the peer.");
         break;
     default:
-        message = tr("[ CHAT ] - The following error occurred: %1.").arg(tcpSocket.errorString());
+        message = tr("[ CHAT ] - The following error occurred: %1.").arg(mTcpSocket.errorString());
     }
 
     mpHost->postMessage(message);
@@ -313,7 +314,7 @@ void MMCPClient::sendPingRequest()
                 .arg(QDateTime::currentMSecsSinceEpoch())
                 .arg(static_cast<char>(End)));
 
-    const QString infoMsg = tr("[ CHAT ]  - Pinging %1...").arg(m_chatName);
+    const QString infoMsg = tr("[ CHAT ]  - Pinging %1...").arg(mPeerName);
     mpHost->postMessage(infoMsg);
 }
 
@@ -326,7 +327,7 @@ void MMCPClient::sendPeekRequest()
                 .arg(static_cast<char>(PeekConnections))
                 .arg(static_cast<char>(End)));
 
-    const QString infoMsg = tr("[ CHAT ]  - Attempting to peek at %1's public connections...").arg(m_chatName);
+    const QString infoMsg = tr("[ CHAT ]  - Attempting to peek at %1's public connections...").arg(mPeerName);
     mpHost->postMessage(infoMsg);
 }
 
@@ -339,7 +340,7 @@ void MMCPClient::sendRequestConnections()
                 .arg(static_cast<char>(RequestConnections))
                 .arg(static_cast<char>(End)));
 
-    const QString infoMsg = tr("[ CHAT ]  - Requested connections from %1").arg(m_chatName);
+    const QString infoMsg = tr("[ CHAT ]  - Requested connections from %1").arg(mPeerName);
     mpHost->postMessage(infoMsg);
 }
 
@@ -358,17 +359,17 @@ void MMCPClient::sendVersion()
 
 /**
  * Assign a client to a group.
- * If supplied group is 'none' or empty string, remove from group. 
+ * If supplied group is "none", "<none" or empty string, remove from group.
  * Returns true if they were assigned to a group, false if they were removed.
  */
 bool MMCPClient::setGroup(const QString& group)
 {
-    if ("none" == group.toLower() || group.length() == 0) {
-        m_group = "<none>";
+    if (group.isEmpty() || !group.compare(qsl("none"), Qt::CaseInsensitive) || !group.compare(csDefaultMMCPGroupName, Qt::CaseInsensitive)) {
+        mGroup = csDefaultMMCPGroupName;
         return false;
     }
 
-    m_group = group;
+    mGroup = group;
     return true;
 }
 
@@ -377,7 +378,7 @@ bool MMCPClient::setGroup(const QString& group)
  */
 void MMCPClient::writeData(const QString& data)
 {
-    tcpSocket.write(data.toLatin1());
+    mTcpSocket.write(data.toLatin1());
 }
 
 /**
@@ -399,15 +400,15 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
     const char* data = bytes.data();
     int cmdIdx = 0;
     while (cmdIdx < bytes.length()) {
-        char cmd = data[cmdIdx];
+        const char cmd = data[cmdIdx];
 
-        int endIdx = bytes.indexOf(static_cast<char>(0xff), cmdIdx);
+        const int endIdx = bytes.indexOf(MMCPChatCommand::End, cmdIdx);
         if (endIdx == -1) {
-            qDebug() << "handleConnectedState() partial buffer detected";
+            qDebug().noquote().nospace() << "MMCPClient::handleConnectedState(...) INFO - partial buffer detected...";
             return;
         }
 
-        QString stringData = QString::fromLatin1(data + cmdIdx + 1, (endIdx - cmdIdx) - 1);
+        const QString stringData = QString::fromLatin1(data + cmdIdx + 1, (endIdx - cmdIdx) - 1);
 
         switch (cmd) {
         case MMCPChatCommand::NameChange:
@@ -435,11 +436,11 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
             break;
 
         case MMCPChatCommand::Message:
-            server->clientMessage(stringData);
+            mpMMCPServer->clientMessage(stringData);
             break;
 
         case MMCPChatCommand::Version:
-            version = stringData;
+            mPeerVersion = stringData;
             break;
 
         case MMCPChatCommand::PingRequest:
@@ -471,7 +472,7 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
             break;
 
         default:
-            qDebug() << "unknown command: " << cmd << stringData;
+            qDebug().noquote().nospace() << "MMCPClient::handleConnectedState(...) INFO - unknown command: 0x" << QString::number(static_cast<char>(cmd), 16).toUpper() << ": \"" << stringData << "\".";
         }
 
         cmdIdx = endIdx + 1;
@@ -485,7 +486,7 @@ void MMCPClient::handleConnectedState(const QByteArray& bytes)
 void MMCPClient::handleIncomingConnectionList(const QString& list)
 {
     // Maybe check option if we want to auto call everyone in this list
-    server->clientMessage(list);
+    mpMMCPServer->clientMessage(list);
 }
 
 /**
@@ -493,19 +494,19 @@ void MMCPClient::handleIncomingConnectionList(const QString& list)
  */
 void MMCPClient::handleIncomingConnectionsRequest()
 {
-    if (m_isIgnored) {
-        const QString infoMsg = tr("[ CHAT ]  - %1 is trying to request your connections!").arg(m_chatName);
+    if (mIsIgnored) {
+        const QString infoMsg = tr("[ CHAT ]  - %1 is trying to request your connections!").arg(mPeerName);
         mpHost->postMessage(infoMsg);
         return;
     }
 
     if (mpHost->getMMCPAllowConnectionRequests()) {
-        const QString infoMsg = tr("[ CHAT ]  - %1 has requested your public connections...").arg(m_chatName);
+        const QString infoMsg = tr("[ CHAT ]  - %1 has requested your public connections...").arg(mPeerName);
         mpHost->postMessage(infoMsg);
 
-        server->sendPublicConnections(this);
+        mpMMCPServer->sendPublicConnections(this);
     } else {
-        const QString infoMsg = tr("[ CHAT ]  - %1 has requested your public connections, but you're ignoring connection requests...").arg(m_chatName);
+        const QString infoMsg = tr("[ CHAT ]  - %1 has requested your public connections, but you're ignoring connection requests...").arg(mPeerName);
         mpHost->postMessage(infoMsg);
     }
 }
@@ -515,18 +516,18 @@ void MMCPClient::handleIncomingConnectionsRequest()
  */
 void MMCPClient::handleIncomingChatEveryone(const QString& msg)
 {
-    if (m_isIgnored) {
+    if (mIsIgnored) {
         return;
     }
 
-    server->clientMessage(msg);
+    mpMMCPServer->clientMessage(msg);
 
-    if (m_isServed) {
+    if (mIsServed) {
         //Echo this message to
-        server->sendServedMessage(this, msg);
+        mpMMCPServer->sendServedMessage(this, msg);
     } else {
         //Echo message to other clients we might be serving
-        server->sendMessageToServed(this, msg);
+        mpMMCPServer->sendMessageToServed(this, msg);
     }
 }
 
@@ -535,7 +536,7 @@ void MMCPClient::handleIncomingChatEveryone(const QString& msg)
  */
 void MMCPClient::handleIncomingChatPersonal(const QString& msg)
 {
-    server->clientMessage(msg);
+    mpMMCPServer->clientMessage(msg);
 }
 
 /**
@@ -553,7 +554,7 @@ void MMCPClient::handleIncomingChatGroup(const QString& msg)
                                 .arg(groupStr).arg(FBLDRED)
                                 .arg(trimmedMsg);
 
-    server->clientMessage(groupMsg);
+    mpMMCPServer->clientMessage(groupMsg);
 }
 
 /**
@@ -561,9 +562,9 @@ void MMCPClient::handleIncomingChatGroup(const QString& msg)
  */
 void MMCPClient::handleIncomingNameChange(const QString& newName)
 {
-    const QString infoMsg = tr("[ CHAT ]  - %1 is now known as %2.").arg(m_chatName).arg(newName);
+    const QString infoMsg = tr("[ CHAT ]  - %1 is now known as %2.").arg(mPeerName).arg(newName);
     mpHost->postMessage(infoMsg);
-    m_chatName = newName;
+    mPeerName = newName;
 }
 
 /**
@@ -572,19 +573,19 @@ void MMCPClient::handleIncomingNameChange(const QString& newName)
 void MMCPClient::handleIncomingPeekConnections()
 {
     //check if this client is ignored before doing anything drastic
-    if (m_isIgnored) {
-        const QString infoMsg = tr("[ CHAT ]  - %1 is trying to peek your connections!").arg(m_chatName);
+    if (mIsIgnored) {
+        const QString infoMsg = tr("[ CHAT ]  - %1 is trying to peek your connections!").arg(mPeerName);
         mpHost->postMessage(infoMsg);
         return;
     }
 
     if (mpHost->getMMCPAllowPeekRequests()) {
-        const QString infoMsg = tr("[ CHAT ]  - %1 is peeking at your connections...").arg(m_chatName);
+        const QString infoMsg = tr("[ CHAT ]  - %1 is peeking at your connections...").arg(mPeerName);
         mpHost->postMessage(infoMsg);
 
-        server->sendPublicPeek(this);
+        mpMMCPServer->sendPublicPeek(this);
     } else {
-        const QString infoMsg = tr("[ CHAT ]  - %1 is trying to peek your connections, but you're ignoring peek requests...").arg(m_chatName);
+        const QString infoMsg = tr("[ CHAT ]  - %1 is trying to peek your connections, but you're ignoring peek requests...").arg(mPeerName);
         mpHost->postMessage(infoMsg);
     }
 }
@@ -597,7 +598,7 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
     QStringList parts = list.split("~");
 
     if (parts.size() % 3 != 0) {
-        const QString infoMsg = tr("[ CHAT ]  - Badly formatted peek list from %1").arg(m_chatName);
+        const QString infoMsg = tr("[ CHAT ]  - Badly formatted peek list from %1").arg(mPeerName);
         mpHost->postMessage(infoMsg);
         return;
     }
@@ -622,7 +623,7 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
                             .arg(port, -5));
     }
 
-    server->clientMessage(listOut);
+    mpMMCPServer->clientMessage(listOut);
 }
 
 /**
@@ -645,10 +646,10 @@ void MMCPClient::handleIncomingPingResponse(const QString& data)
     qint64 returnTime = data.toLongLong(&ok);
 
     if (ok) {
-        const QString infoMsg = tr("[ CHAT ]  - Ping returned from %1: %2 ms").arg(m_chatName).arg(QDateTime::currentMSecsSinceEpoch() - returnTime);
+        const QString infoMsg = tr("[ CHAT ]  - Ping returned from %1: %2 ms").arg(mPeerName).arg(QDateTime::currentMSecsSinceEpoch() - returnTime);
         mpHost->postMessage(infoMsg);
     } else {
-        const QString infoMsg = tr("[ CHAT ]  - Bad Ping response from %1: %2").arg(m_chatName).arg(data);
+        const QString infoMsg = tr("[ CHAT ]  - Bad Ping response from %1: %2").arg(mPeerName).arg(data);
         mpHost->postMessage(infoMsg);
     }
 }
@@ -661,25 +662,25 @@ void MMCPClient::handleIncomingPingResponse(const QString& data)
 void MMCPClient::handleIncomingSnoop()
 {
     if (!canSnoop()) {
-        sendMessage(QString("<CHAT> You do not have permission to snoop %1.").arg(server->getChatName()));
+        sendMessage(QString("<CHAT> You do not have permission to snoop %1.").arg(mpMMCPServer->getChatName()));
         return;
     }
 
     if (isSnooping()) {
         setSnooping(false);
-        server->decrementSnoopCount();
+        mpMMCPServer->decrementSnoopCount();
 
-        const QString infoMsg = tr("[ CHAT ]  - %1 has stopped snooping you.").arg(m_chatName);
+        const QString infoMsg = tr("[ CHAT ]  - %1 has stopped snooping you.").arg(mPeerName);
         mpHost->postMessage(infoMsg);
-        sendMessage(QString("<CHAT> You have stopped snooping %1.").arg(server->getChatName()));
+        sendMessage(QString("<CHAT> You have stopped snooping %1.").arg(mpMMCPServer->getChatName()));
 
     } else {
         setSnooping(true);
-        server->incrementSnoopCount();
+        mpMMCPServer->incrementSnoopCount();
 
-        const QString infoMsg = tr("[ CHAT ]  - %1 has begun snooping you.").arg(m_chatName);
+        const QString infoMsg = tr("[ CHAT ]  - %1 has begun snooping you.").arg(mPeerName);
         mpHost->postMessage(infoMsg);
-        sendMessage(QString("<CHAT> You have stopped snooping %1.").arg(server->getChatName()));
+        sendMessage(QString("<CHAT> You have stopped snooping %1.").arg(mpMMCPServer->getChatName()));
     }
 }
 
@@ -714,7 +715,7 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
 
     if (ss.tellp() > 0) {
         qDebug() << "no CR";
-        server->snoopMessage(ss.str());
+        mpMMCPServer->snoopMessage(ss.str());
     }
 }
 
@@ -730,14 +731,9 @@ void MMCPClient::handleIncomingSideChannelData(const QString& stringData)
     QRegularExpressionMatch match = chatChannel.match(stringData);
 
     if (match.hasMatch()) {
-        mpHost->postChatChannelMessage(m_chatName, match.captured(1), match.captured(2));
+        mpHost->postChatChannelMessage(mPeerName, match.captured(1), match.captured(2));
     }
 
-}
-
-const QString& MMCPClient::getVersion()
-{
-    return version;
 }
 
 const QString MMCPClient::getFlagsString()
@@ -747,12 +743,12 @@ const QString MMCPClient::getFlagsString()
             .arg(' ')
             //.arg(GetTransfers() ? 'T' : ' '),
             .arg(' ')
-            .arg(m_isPrivate ? 'P' : ' ')
-            .arg(m_isIgnored ? 'I' : ' ')
-            .arg(m_isServed ? 'S' : ' ')
+            .arg(mIsPrivate ? 'P' : ' ')
+            .arg(mIsIgnored ? 'I' : ' ')
+            .arg(mIsServed ? 'S' : ' ')
             //.arg(GetExcludeServe() ? 'X' : ' '),
-            .arg(convertToIPv4(tcpSocket.peerAddress()) != m_host ? 'F' : ' ')
-            .arg(m_isSnooping ? 'N' : (m_canSnoop ? 'n' : ' '))
+            .arg(convertToIPv4(mTcpSocket.peerAddress()) != mPeerAddress ? 'F' : ' ')
+            .arg(mIsSnooping ? 'N' : (mEnableSnooping ? 'n' : ' '))
             //.arg(' ')
             .arg(' ');
 }
@@ -781,12 +777,12 @@ const QString MMCPClient::getInfoString()
 	}
 	*/
 
-    const QString groupStr = m_group == "<none>" ? "               " : m_group;
+    const QString groupStr = (mGroup == csDefaultMMCPGroupName) ? QString(QChar::Space).repeated(15) : mGroup;
 
     return QString("%1 %2 %3 %4 %5")
-                .arg(m_chatName, -20)
-                .arg(convertToIPv4(tcpSocket.peerAddress()), -20)
-                .arg(tcpSocket.peerPort(), -5)
+                .arg(mPeerName, -20)
+                .arg(convertToIPv4(mTcpSocket.peerAddress()), -20)
+                .arg(mTcpSocket.peerPort(), -5)
                 .arg(groupStr, -15)
                 .arg(getFlagsString(), -8);
 }
