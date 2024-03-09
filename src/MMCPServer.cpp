@@ -664,6 +664,8 @@ void MMCPServer::clientMessage(const QString& message)
 {
     QString trimmed = message.trimmed();
 
+    mpHost->postMMCPMessage(trimmed);
+
     using namespace AnsiColors;
 
     const QString coloredStr = QString("\n%1%2%3\n").arg(FBLDRED).arg(trimmed).arg(RST);

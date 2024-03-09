@@ -2725,11 +2725,11 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
     }
 }
 
-void Host::postMMCPMessage(const QString& a, const QString& b, const QString& c) {
+void Host::postMMCPMessage(const QString& a) {
     TEvent event {};
     event.mArgumentList << QLatin1String("sysMMCPMessage");
     event.mArgumentList << a << b << c;
-    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
     raiseEvent(event);
 }
 
