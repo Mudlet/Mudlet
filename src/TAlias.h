@@ -38,6 +38,8 @@ class Host;
 
 #define MAX_CAPTURE_GROUPS 33
 
+using NameGroupMatches = QVector<QPair<QString, QString>>;
+
 class TAlias : public Tree<TAlias>
 {
     Q_DECLARE_TR_FUNCTIONS(TAlias) // Needed so we can use tr() even though TAlias is NOT derived from QObject
@@ -78,6 +80,7 @@ public:
     QString mFuncName;
     bool exportItem = true;
     bool mRegisteredAnonymousLuaFunction = false;
+    QVector<NameGroupMatches> nameCaptures;
 
 private:
     bool mNeedsToBeCompiled = true;
