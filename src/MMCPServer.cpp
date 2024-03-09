@@ -398,10 +398,10 @@ QPair<bool, QString> MMCPServer::chatSetGroup(const QVariant& target, const QStr
         QString infoMsg;
         if (assigned) {
             infoMsg = tr("[ CHAT ]  - Assigned '%1' to group '%2'.")
-                    .arg(m_chatName).arg(group);
+                    .arg(client->chatName()).arg(group);
         } else {
             infoMsg = tr("[ CHAT ]  - Removed '%1' from group '%2'.")
-                    .arg(m_chatName).arg(currentGroup);
+                    .arg(client->chatName()).arg(currentGroup);
         }
 
         mpHost->postMessage(infoMsg);
