@@ -5150,7 +5150,6 @@ function map.renameArea(name, exact)
   if not (map.currentroom or getRoomArea(map.currentRoom)) then
     map.echo("Don't know what area are we in at the moment, to rename it.")
   else
-    setAreaName(getRoomArea(map.currentRoom), name)
     map.echo(
       string.format(
         "Renamed %s to %s (%d).",
@@ -5159,6 +5158,7 @@ function map.renameArea(name, exact)
         getRoomArea(map.currentRoom)
       )
     )
+    setAreaName(getRoomArea(map.currentRoom), name)			
     centerview(map.currentRoom)
   end
 end
