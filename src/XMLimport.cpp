@@ -889,22 +889,17 @@ void XMLimport::readHost(Host* pHost)
     }
 
     if (attributes().hasAttribute(QLatin1String("mRequiredDiscordUserDiscriminator"))) {
-        pHost->mRequiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
-        if (!pHost->mRequiredDiscordUserDiscriminator.isEmpty() && pHost->mRequiredDiscordUserDiscriminator.compare(QLatin1String("0"))) {
+        const auto requiredDiscordUserDiscriminator = attributes().value(QLatin1String("mRequiredDiscordUserDiscriminator")).toString();
+        if (requiredDiscordUserDiscriminator.isEmpty() && requiredDiscordUserDiscriminator.compare(QLatin1String("0"))) {
             // We have a discriminator which won't work after the 2023/05
             // Discord user name changes
-            QString warningMessage{tr("[ WARN ]  - A Discord-RPC discriminator has been specified in the preferences\n"
+            QString warningMessage{tr("[ WARN ]  - A Discord-RPC 'discriminator' has been specified in the preferences\n"
                                       "for this profile of: \"%1\" however, from May 2023, Discord is removing this\n"
-                                      "and changing the user name format to be a unique string for each user. So when\n"
-                                      "your Discord name is updated to the new format you will also need to remove\n"
-                                      "or set to a single '0' (which is what Discord will use during the change-over)\n"
-                                      "this value in the \"Chat\" tab of the settings otherwise the Discord-RPC\n"
-                                      "integration for this profile will stop working.")
-                        .arg(pHost->mRequiredDiscordUserDiscriminator)};
+                                      "and changing the user name format to be a unique string for each user. Mudlet\n"
+                                      "is no longer using this setting and will forget it when you save this session.\n")
+                        .arg(requiredDiscordUserDiscriminator)};
             pHost->postMessage(warningMessage);
         }
-    } else {
-        pHost->mRequiredDiscordUserDiscriminator.clear();
     }
 
     if (attributes().hasAttribute(QLatin1String("playerRoomStyle"))) {

@@ -174,7 +174,6 @@ private slots:
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
-    void slot_validateDiscordDiscriminator();
 
 
 signals:
@@ -226,8 +225,6 @@ private:
     // Host::mEnableUserDictionary: - although, following review THAT has been
     // disallowed...
     bool mUseSharedDictionary = false;
-
-    inline static QRegularExpression csmDiscordDiscriminatorRegEx{qsl("^(0|\\d{4,4})$")};
 };
 
 #endif // MUDLET_DLGPROFILEPREFERENCES_H

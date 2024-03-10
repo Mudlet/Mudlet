@@ -3070,41 +3070,6 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
               </widget>
              </item>
-             <item>
-              <widget class="QLabel" name="label_discordUserDiscriminator">
-               <property name="toolTip">
-                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
-               </property>
-               <property name="text">
-                <string notr="true"> # </string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="lineEdit_discordUserDiscriminator">
-               <property name="maximumSize">
-                <size>
-                 <width>75</width>
-                 <height>16777215</height>
-                </size>
-               </property>
-               <property name="toolTip">
-                <string>&lt;p&gt;Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). Leave empty to show it for any Discord account you log in to.&lt;/p&gt;</string>
-               </property>
-               <property name="inputMethodHints">
-                <set>Qt::ImhDigitsOnly</set>
-               </property>
-               <property name="inputMask">
-                <string notr="true">9000;#</string>
-               </property>
-               <property name="maxLength">
-                <number>4</number>
-               </property>
-               <property name="clearButtonEnabled">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
             </layout>
            </widget>
           </item>
@@ -4305,7 +4270,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_discordServerAccessToDetail</tabstop>
   <tabstop>checkBox_discordServerAccessToState</tabstop>
   <tabstop>checkBox_discordServerAccessToTimerInfo</tabstop>
-  <tabstop>lineEdit_discordUserDiscriminator</tabstop>
   <tabstop>groupBox_ssl</tabstop>
   <tabstop>checkBox_self_signed</tabstop>
   <tabstop>checkBox_ignore_all</tabstop>

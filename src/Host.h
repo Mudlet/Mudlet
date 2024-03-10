@@ -324,7 +324,7 @@ public:
     void waitForProfileSave();
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
-    bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
+    bool discordUserIdMatch(const QString& userName) const;
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -813,11 +813,10 @@ private:
 
     // Will be null/empty if we are not concerned to check the use of Discord
     // Rich Presence against the local user currently logged into Discord -
-    // these two will be checked against the values from the Discord instance
+    // this will be checked against the values from the Discord instance
     // with which we are linked to by the RPC library - and if they do not match
     // we won't use Discord functions.
     QString mRequiredDiscordUserName;
-    QString mRequiredDiscordUserDiscriminator;
 
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter
