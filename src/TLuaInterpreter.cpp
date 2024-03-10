@@ -7186,9 +7186,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         const auto behaviour = getVerifiedString(L, __func__, 2, "value");
 
         if (!behaviours.contains(behaviour)) {
-            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
-                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"",
+                            lua_tostring(L, 2), behaviours.join(qsl("\", \"")).toUtf8().constData());
+            return 2;
         }
 
         if (behaviour == qsl("show")) {
@@ -7201,23 +7202,24 @@ int TLuaInterpreter::setConfig(lua_State * L)
         return success();
     }
     if (key == qsl("caretShortcut")) {
-        static const QStringList keys{"none", "tab", "ctrltab", "f6"};
-        const auto key = getVerifiedString(L, __func__, 2, "value");
+        static const QStringList values{"none", "tab", "ctrltab", "f6"};
+        const auto value = getVerifiedString(L, __func__, 2, "value");
 
-        if (!keys.contains(key)) {
-            lua_pushfstring(L, "%s: bad argument #%d type (key should be one of %s, got %s!)",
-                __func__, 2, keys.join(qsl(", ")).toUtf8().constData(), key.toUtf8().constData());
-            return lua_error(L);
+        if (!values.contains(value)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid caretShortcut string \"%s\", it should be one of \"%s\"",
+                            lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
+            return 2;
         }
 
-        if (key == qsl("none")) {
-            host.mCaretShortcut = Host::CaretShortcut::None;
-        } else if (key == qsl("tab")) {
+        if (value == qsl("tab")) {
             host.mCaretShortcut = Host::CaretShortcut::Tab;
-        } else if (key == qsl("ctrltab")) {
+        } else if (value == qsl("ctrltab")) {
             host.mCaretShortcut = Host::CaretShortcut::CtrlTab;
-        } else if (key == qsl("f6")) {
+        } else if (value == qsl("f6")) {
             host.mCaretShortcut = Host::CaretShortcut::F6;
+        } else {
+            host.mCaretShortcut = Host::CaretShortcut::None;
         }
         return success();
     }
@@ -7238,14 +7240,33 @@ int TLuaInterpreter::setConfig(lua_State * L)
             // Use the original argument as a string, not what the
             // getVerifiedInt(...) returns in case it is not a pure integer to
             // start with:
-            lua_pushfstring(L, "invalid commandLineHistorySaveSize value '%s', it should be one of %s",
+            lua_pushfstring(L, "invalid commandLineHistorySaveSize number %s, it should be one of %s",
                             lua_tostring(L, 2), valuesAsStrings.join(qsl(", ")).toUtf8().constData());
             return 2;
         }
         host.setCommandLineHistorySaveSize(value);
         return success();
     }
+    if (key == qsl("controlCharacterHandling")) {
+        static const QStringList values{"asis", "oem", "picture"};
+        const auto value = getVerifiedString(L, __func__, 2, "value");
 
+        if (!values.contains(value)) {
+            lua_pushnil(L);
+            lua_pushfstring(L, "invalid commandLineHistorySaveSize string \"%s\", it should be one of \"%s\"",
+                            lua_tostring(L, 2), values.join(qsl("\", \"")).toUtf8().constData());
+            return 2;
+        }
+
+        if (value == qsl("oem")) {
+            host.setControlCharacterMode(ControlCharacterMode::OEM);
+        } else if (value == qsl("picture")) {
+            host.setControlCharacterMode(ControlCharacterMode::Picture);
+        } else {
+            host.setControlCharacterMode(ControlCharacterMode::AsIs);
+        }
+        return success();
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7341,6 +7362,19 @@ int TLuaInterpreter::getConfig(lua_State *L)
             }
         } },
         { qsl("commandLineHistorySaveSize"), [&](){ lua_pushnumber(L, host.getCommandLineHistorySaveSize()); } },
+        { qsl("controlCharacterHandling"), [&](){
+            const auto controlCharacterMode = host.getControlCharacterMode();
+            switch (controlCharacterMode) {
+            case ControlCharacterMode::Picture:
+                lua_pushstring(L, "picture");
+                break;
+            case ControlCharacterMode::OEM:
+                lua_pushstring(L, "oem");
+                break;
+            default:
+                lua_pushstring(L, "asis");
+            }
+        } } //, <- not needed until another one is added
     };
 
     auto it = configMap.find(key);
