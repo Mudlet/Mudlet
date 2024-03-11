@@ -97,11 +97,11 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     setAttribute(Qt::WA_DeleteOnClose);
     setAttribute(Qt::WA_OpaquePaintEvent); //was disabled
 
-    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    QSizePolicy const sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    QSizePolicy const sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    QSizePolicy const sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Expanding);
-    QSizePolicy const sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy3(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy2(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    const QSizePolicy sizePolicy4(QSizePolicy::Fixed, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy5(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
     mpMainFrame->setContentsMargins(0, 0, 0, 0);
 
@@ -566,7 +566,7 @@ Host* TConsole::getHost()
 
 void TConsole::resizeConsole()
 {
-    QSize const size = QSize(width(), height());
+    const QSize size = QSize(width(), height());
     QResizeEvent event(size, size);
     QApplication::sendEvent(this, &event);
 }
@@ -700,7 +700,7 @@ void TConsole::refresh()
     mpMainDisplay->move(mBorders.left(), mBorders.top());
     x = width();
     y = height();
-    QSize const s = QSize(x, y);
+    const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(this, &event);
 }
@@ -1359,7 +1359,7 @@ std::list<int> TConsole::getFgColor()
     auto line = buffer.buffer.at(y);
     const int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        QColor const color(line.at(x).foreground());
+        const QColor color(line.at(x).foreground());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
@@ -1386,7 +1386,7 @@ std::list<int> TConsole::getBgColor()
     auto line = buffer.buffer.at(y);
     const int len = static_cast<int>(line.size());
     if (len - 1 >= x) {
-        QColor const color(line.at(x).background());
+        const QColor color(line.at(x).background());
         result.push_back(color.red());
         result.push_back(color.green());
         result.push_back(color.blue());
@@ -1462,7 +1462,7 @@ bool TConsole::resetConsoleBackgroundImage()
 
 void TConsole::setCmdVisible(bool isVisible)
 {
-    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     // create MiniConsole commandline if it's not existing
     if (!mpCommandLine) {
         if (!isVisible) {
@@ -1958,7 +1958,7 @@ QSize TConsole::getMainWindowSize() const
     if (isHidden()) {
         return mOldSize;
     }
-    QSize const consoleSize = size();
+    const QSize consoleSize = size();
     const int toolbarWidth = mpLeftToolBar->width() + mpRightToolBar->width();
     const int toolbarHeight = mpTopToolBar->height();
     const int commandLineHeight = mpCommandLine->height();
@@ -2031,7 +2031,7 @@ void TConsole::dropEvent(QDropEvent* e)
         }
     }
     if (e->mimeData()->hasText()) {
-        if (QUrl const url(e->mimeData()->text()); url.isValid()) {
+        if (const QUrl url(e->mimeData()->text()); url.isValid()) {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
             const QPoint pos = e->pos();
 #else

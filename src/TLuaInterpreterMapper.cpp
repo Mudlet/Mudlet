@@ -3452,7 +3452,7 @@ int TLuaInterpreter::setMapUserData(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapZoom
 int TLuaInterpreter::setMapZoom(lua_State* L)
 {
-    qreal const zoom = getVerifiedDouble(L, __func__, 1, "zoom");
+    const qreal zoom = getVerifiedDouble(L, __func__, 1, "zoom");
     int areaID = 0;
     if (lua_gettop(L) > 1) {
         areaID = getVerifiedInt(L, __func__, 2, "area id", true);

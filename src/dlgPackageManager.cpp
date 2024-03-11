@@ -113,10 +113,10 @@ void dlgPackageManager::slot_installPackage()
 
 void dlgPackageManager::slot_removePackages()
 {
-    QModelIndexList const selection = packageTable->selectionModel()->selectedRows();
+    const QModelIndexList selection = packageTable->selectionModel()->selectedRows();
     QStringList removePackages;
     for (int i = 0; i < selection.count(); i++) {
-        QModelIndex const index = selection.at(i);
+        const QModelIndex index = selection.at(i);
         auto package = packageTable->item(index.row(), 0);
         removePackages << package->text();
     }
@@ -228,7 +228,7 @@ void dlgPackageManager::fillAdditionalDetails(const QMap<QString, QString>& pack
 
 void dlgPackageManager::slot_toggleRemoveButton()
 {
-    QModelIndexList const selection = packageTable->selectionModel()->selectedRows();
+    const QModelIndexList selection = packageTable->selectionModel()->selectedRows();
     const int selectionCount = selection.count();
     removeButton->setEnabled(selectionCount);
     if (selectionCount) {

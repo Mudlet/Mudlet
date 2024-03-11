@@ -198,7 +198,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         // Remove the marker:
         cursor.removeSelectedText();
         // Insert the current icon image into the same place:
-        QImage const image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
+        const QImage image_new(QPixmap(icon_new.pixmap(new_profile_button->iconSize())).toImage());
         cursor.insertImage(image_new);
         cursor.clearSelection();
 
@@ -207,7 +207,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
                    "dlgConnectionProfiles::dlgConnectionProfiles(...)",
                    "CONNECT_PROFILE_ICON text marker not found in welcome_message text for when icons are shown on dialogue buttons");
         cursor.removeSelectedText();
-        QImage const image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
+        const QImage image_connect(QPixmap(icon_connect.pixmap(connect_button->iconSize())).toImage());
         cursor.insertImage(image_connect);
         cursor.clearSelection();
     } else {
@@ -903,8 +903,8 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
     const QStringList entries = dir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
 
     for (const auto& entry : entries) {
-        QRegularExpression const rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
-        QRegularExpressionMatch const match = rx.match(entry);
+        const QRegularExpression rx(qsl("(\\d+)\\-(\\d+)\\-(\\d+)#(\\d+)\\-(\\d+)\\-(\\d+).xml"));
+        const QRegularExpressionMatch match = rx.match(entry);
 
         if (match.capturedStart() != -1) {
             QString day;
@@ -1090,7 +1090,7 @@ void dlgConnectionProfiles::fillout_form()
         const auto fileinfo = QFileInfo(mudlet::getMudletPath(mudlet::profileXmlFilesPath, profileName));
         if (fileinfo.exists()) {
             firstMudletLaunch = false;
-            QDateTime const profile_lastRead = fileinfo.lastModified();
+            const QDateTime profile_lastRead = fileinfo.lastModified();
             // Since Qt 5.x null QTimes and QDateTimes are invalid - and might not
             // work as expected - so test for validity of the test_date value as well
             if ((!test_date.isValid()) || profile_lastRead > test_date) {
@@ -1922,7 +1922,7 @@ void dlgConnectionProfiles::setupMudProfile(QListWidgetItem* pItem, const QStrin
 
     profiles_tree_widget->addItem(pItem);
     if (!hasCustomIcon(mudServer)) {
-        QPixmap const pixmap(iconFileName);
+        const QPixmap pixmap(iconFileName);
         if (pixmap.isNull()) {
             qWarning() << mudServer << "doesn't have a valid icon";
             return;
@@ -1944,26 +1944,26 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional
 {
     QPixmap background(120, 30);
 
-    QColor const color = backgroundColor.value_or(mCustomIconColors.at(static_cast<int>((qHash(text) * 8131) % mCustomIconColors.count())));
+    const QColor color = backgroundColor.value_or(mCustomIconColors.at(static_cast<int>((qHash(text) * 8131) % mCustomIconColors.count())));
     background.fill(color);
 
     // Set to one larger than wanted so that do loop can contain the decrementor
     int fontSize = 30;
     QFont font(qsl("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
     // For an icon of size 120x30 allow 89x29 for the text:
-    QRect const textRectangle(0, 0, 89, 29);
+    const QRect textRectangle(0, 0, 89, 29);
     QRect testRect;
     // Really long names will be drawn very small (font size 6) with the ends clipped off:
     do {
         font.setPointSize(--fontSize);
-        QFontMetrics const metrics(font);
+        const QFontMetrics metrics(font);
         testRect = metrics.boundingRect(textRectangle, Qt::AlignCenter | Qt::TextWordWrap, text);
     } while (fontSize > 6 && !textRectangle.contains(testRect));
 
     { // Enclosed in braces to limit lifespan of QPainter:
         QPainter painter(&background);
         painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-        QPixmap const pixmap(qsl(":/icons/mudlet_main_32px.png"));
+        const QPixmap pixmap(qsl(":/icons/mudlet_main_32px.png"));
         painter.drawPixmap(QRect(5, 5, 20, 20), pixmap);
         if (color.lightness() > 127) {
             painter.setPen(Qt::black);

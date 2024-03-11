@@ -158,7 +158,7 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
 {
     const auto loggingPath = mudlet::getMudletPath(mudlet::profileDataItemPath, mpHost->getName(), qsl("autolog"));
     QFile file(loggingPath);
-    QDateTime const logDateTime = QDateTime::currentDateTime();
+    const QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
         file.open(QIODevice::WriteOnly | QIODevice::Text);
         QTextStream out(&file);
@@ -657,11 +657,11 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
 
     auto pL = mLabelMap.value(name);
     if (pL) {
-        QPixmap const cursor_pixmap = QPixmap(pixMapLocation);
+        const QPixmap cursor_pixmap = QPixmap(pixMapLocation);
         if (cursor_pixmap.isNull()) {
             return {false, qsl("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
         }
-        QCursor const custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
+        const QCursor custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
         pL->setCursor(custom_cursor);
         return {true, QString()};
     }
@@ -696,7 +696,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         mpHost->mpMap->mpMapper = mpMapper;
         qDebug() << "TConsole::createMapper() - restore map case 2.";
         mpHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(2) report"), true);
-        QDateTime const now(QDateTime::currentDateTime());
+        const QDateTime now(QDateTime::currentDateTime());
 
         if (mpHost->mpMap->restore(QString())) {
             mpHost->mpMap->audit();
@@ -765,7 +765,7 @@ bool TMainConsole::setBackgroundImage(const QString& name, const QString& path)
 {
     auto pL = mLabelMap.value(name);
     if (pL) {
-        QPixmap const bgPixmap(path);
+        const QPixmap bgPixmap(path);
         pL->setPixmap(bgPixmap);
         return true;
     } else {
@@ -926,7 +926,7 @@ QSize TMainConsole::getUserWindowSize(const QString& windowname) const
 {
     auto pW = mDockWidgetMap.value(windowname);
     if (pW){
-        QSize const windowSize = pW->widget()->size();
+        const QSize windowSize = pW->widget()->size();
         QSize userWindowSize(windowSize.width(), windowSize.height());
         return userWindowSize;
     }
@@ -1165,7 +1165,7 @@ void TMainConsole::printOnDisplay(std::string& incomingSocketData, const bool is
         mpHost->mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions);
     }
 
-    double const processT = mProcessingTimer.elapsed() / 1000.0;
+    const double processT = mProcessingTimer.elapsed() / 1000.0;
     if (mpHost->mTelnet.mGA_Driver) {
         /*:
         The first argument 'N' represents the 'N'etwork latency; the second 'S' the
@@ -1279,7 +1279,7 @@ bool TMainConsole::loadMap(const QString& location)
 
     qDebug() << "TMainConsole::loadMap() - restore map case 1.";
     pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map loading(1) report"), true);
-    QDateTime const now(QDateTime::currentDateTime());
+    const QDateTime now(QDateTime::currentDateTime());
 
     bool result = false;
     if (pHost->mpMap->restore(location)) {
@@ -1343,7 +1343,7 @@ bool TMainConsole::importMap(const QString& location, QString* errMsg)
     // been logged...
     qDebug() << "TMainConsole::importingMap() - importing map case 1.";
     pHost->mpMap->pushErrorMessagesToFile(tr("Pre-Map importing(1) report"), true);
-    QDateTime const now(QDateTime::currentDateTime());
+    const QDateTime now(QDateTime::currentDateTime());
 
     bool result = false;
 

@@ -86,7 +86,7 @@ void TMedia::playMedia(TMediaData& mediaData)
         }
 
         const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
-        QFile const mediaFile(absolutePathFileName);
+        const QFile mediaFile(absolutePathFileName);
 
         if (!mediaFile.exists()) {
             if (fileRelative) {
@@ -441,7 +441,7 @@ void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
         qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
     } else {
         const QString mediaFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', -1));
-        QFile const mediaFile(mediaFilePath);
+        const QFile mediaFile(mediaFilePath);
 
         if (!mediaFile.exists() && !QFile::copy(mediaData.getMediaFileName(), mediaFilePath)) {
             qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to copy file %1 to a directory %2 failed.").arg(mediaData.getMediaFileName(), mediaFilePath);
@@ -761,7 +761,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 #if !defined(QT_NO_SSL)
         if (fileUrl.scheme() == qsl("https")) {
-            QSslConfiguration const config(QSslConfiguration::defaultConfiguration());
+            const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
             request.setSslConfiguration(config);
         }
 #endif
@@ -866,7 +866,7 @@ void TMedia::connectMediaPlayer(TMediaPlayer& player)
         } else {
             if (fadeInUsed) {
                 if (progress < relativeFadeInPosition) {
-                    double const fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((relativeFadeInPosition - startPosition) * 1.0);
+                    const double fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((relativeFadeInPosition - startPosition) * 1.0);
 
                     player.setVolume(qRound(fadeInVolume));
                     actionTaken = true;
@@ -878,7 +878,7 @@ void TMedia::connectMediaPlayer(TMediaPlayer& player)
 
             if (!actionTaken && fadeOutUsed && progress > 0) {
                 if (progress > relativeFadeOutPosition) {
-                    double const fadeOutVolume = static_cast<double>(volume * (relativeDuration - progress)) / static_cast<double>(fadeOutDuration * 1.0);
+                    const double fadeOutVolume = static_cast<double>(volume * (relativeDuration - progress)) / static_cast<double>(fadeOutDuration * 1.0);
 
                     player.setVolume(qRound(fadeOutVolume));
                     actionTaken = true;
@@ -1009,9 +1009,9 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         TEvent mediaFinished{};
         mediaFinished.mArgumentList.append("sysMediaFinished");
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        QUrl const mediaUrl = pPlayer.getMediaPlayer()->media().request().url();
+        const QUrl mediaUrl = pPlayer.getMediaPlayer()->media().request().url();
 #else
-        QUrl mediaUrl = pPlayer.getMediaPlayer()->source();
+        const QUrl mediaUrl = pPlayer.getMediaPlayer()->source();
 #endif
         mediaFinished.mArgumentList.append(mediaUrl.fileName());
         mediaFinished.mArgumentList.append(mediaUrl.path());
@@ -1185,7 +1185,7 @@ void TMedia::play(TMediaData& mediaData)
             TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
         }
 
-        QUrl const mediaSource = QUrl::fromLocalFile(absolutePathFileName);
+        const QUrl mediaSource = QUrl::fromLocalFile(absolutePathFileName);
         pPlayer.getMediaPlayer()->setMedia(mediaSource);
     } else {
         if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
@@ -1556,7 +1556,7 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
 
     const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
 
-    QFile const mediaFile(absolutePathFileName);
+    const QFile mediaFile(absolutePathFileName);
 
     if (!mediaFile.exists()) {
         TMedia::downloadFile(mediaData);
