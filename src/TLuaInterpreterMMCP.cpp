@@ -106,6 +106,19 @@ int TLuaInterpreter::chatCall(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::chatDoNotDisturb(lua_State*)
+{
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
+    }
+
+    pHost->mmcpServer->toggleDoNotDisturb();
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 int TLuaInterpreter::chatEmoteAll(lua_State* L)
 {
     const QString msg = getVerifiedString(L, __func__, 1, "message");

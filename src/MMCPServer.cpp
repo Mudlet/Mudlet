@@ -35,10 +35,10 @@
 #include <QVariant>
 #include "post_guard.h"
 
-MMCPServer::MMCPServer(Host* pHost) : QTcpServer(), mpHost(pHost), snoopCount(0)
+MMCPServer::MMCPServer(Host* pHost) : QTcpServer(), mpHost(pHost), snoopCount(0), m_DoNotDisturb(false)
 {
     m_chatName = pHost->getMMCPChatName();
-};
+}
 
 MMCPServer::~MMCPServer() {}
 
@@ -48,6 +48,9 @@ MMCPServer::~MMCPServer() {}
  */
 void MMCPServer::incomingConnection(qintptr socketDescriptor)
 {
+
+    if (m_DoNotDisturb)
+
     MMCPClient* client = new MMCPClient(mpHost, this);
     if (!client->incoming(socketDescriptor)) {
         client->deleteLater();
@@ -576,6 +579,20 @@ QPair<bool, QString> MMCPServer::stopServer()
     return {false, qsl("unable to stop server, it is not listening")};
 }
 
+/**
+ * Toggle the server's Do Not Disturb
+ */
+void MMCPServer::toggleDoNotDisturb()
+{
+    m_DoNotDisturb = !m_DoNotDisturb;
+
+    if (m_DoNotDisturb) {
+        mpHost->postMessage(tr("[ CHAT ]  - DoNotDisturb enabled"));
+    } else {
+        mpHost->postMessage(tr("[ CHAT ]  - DoNotDisturb disabled"));
+    }
+}
+
 
 /**
  * Allow a client to snoop you (the user).
@@ -664,11 +681,11 @@ void MMCPServer::clientMessage(const QString& message)
 {
     QString trimmed = message.trimmed();
 
-    mpHost->postMMCPMessage(trimmed);
-
     using namespace AnsiColors;
 
     const QString coloredStr = QString("\n%1%2%3\n").arg(FBLDRED).arg(trimmed).arg(RST);
+
+    mpHost->postMMCPMessage(coloredStr);
 
     std::string trimmedStdStr = coloredStr.toStdString();
     mpHost->mpConsole->printOnDisplay(trimmedStdStr, false);

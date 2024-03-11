@@ -204,6 +204,7 @@ public:
     static int chatAll(lua_State*);
     static int chatAllowSnoop(lua_State*);
     static int chatCall(lua_State*);
+    static int chatDoNotDisturb(lua_State*);
     static int chatEmoteAll(lua_State*);
     static int chatGroup(lua_State*);
     static int chatIgnore(lua_State*);

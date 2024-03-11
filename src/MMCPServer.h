@@ -88,6 +88,9 @@ public:
     QString getChatName() const { return m_chatName; }
     void setChatName(const QString&);
 
+    bool isDoNotDisturb() { return m_DoNotDisturb; }
+    void toggleDoNotDisturb();
+
 signals:
     void serverStarted(int);
     void clientConnected(MMCPClient*);
@@ -106,6 +109,7 @@ private:
 
     QList<MMCPClient*> clients;
     int snoopCount;
+    bool m_DoNotDisturb;
 
     void sendSnoopData(std::string&);
 

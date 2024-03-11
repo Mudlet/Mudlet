@@ -186,29 +186,43 @@ void MMCPClient::slotReadData()
             m_state = Disconnected;
         }
 
-        //Check auto accept?
-        m_state = Connected;
-
-        m_chatName = QString::fromUtf8(playerName);
-        m_host = convertToIPv4(host);
-        bool ok;
-        m_port = QString::fromUtf8(port).toUInt(&ok);
-        if (!ok) {
+        if (server->isDoNotDisturb()) {
             m_state = Disconnected;
-        }
 
-        writeData(QString("YES:%1\n").arg(server->getChatName()));
+            writeData(QString("NO:%1\n").arg(server->getChatName()));
 
-        const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
+            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 denied (DoNotDisturb).")
                                 .arg(m_chatName)
                                 .arg(convertToIPv4(tcpSocket.peerAddress()))
                                 .arg(tcpSocket.peerPort());
 
-        mpHost->postMessage(infoMsg);
+            mpHost->postMessage(infoMsg);
+        } else {
 
-        server->addConnectedClient(this);
+            //Check auto accept?
+            m_state = Connected;
 
-        sendVersion();
+            m_chatName = QString::fromUtf8(playerName);
+            m_host = convertToIPv4(host);
+            bool ok;
+            m_port = QString::fromUtf8(port).toUInt(&ok);
+            if (!ok) {
+                m_state = Disconnected;
+            }
+
+            writeData(QString("YES:%1\n").arg(server->getChatName()));
+
+            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
+                                    .arg(m_chatName)
+                                    .arg(convertToIPv4(tcpSocket.peerAddress()))
+                                    .arg(tcpSocket.peerPort());
+
+            mpHost->postMessage(infoMsg);
+
+            server->addConnectedClient(this);
+
+            sendVersion();
+        }
 
         break;
     }
