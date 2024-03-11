@@ -744,12 +744,9 @@ void TLuaInterpreter::processPlayingMediaTable(lua_State* L, TMediaData& mediaDa
 // Private
 int TLuaInterpreter::getPlayingMusicAsOrderedArguments(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
     const int numArgs = lua_gettop(L);
     QString stringValue;
-    bool boolValue;
-    int intValue;
 
     // values as ordered args: name[,key][,tag]
     for (int i = 1; i <= numArgs; i++) {
@@ -790,7 +787,6 @@ int TLuaInterpreter::getPlayingMusicAsOrderedArguments(lua_State* L)
 // Private
 int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
 
     lua_pushnil(L);
@@ -832,7 +828,6 @@ int TLuaInterpreter::getPlayingMusicAsTableArgument(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPlayingMusic
 int TLuaInterpreter::getPlayingMusic(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
 
     if (lua_gettop(L)) {
@@ -854,11 +849,9 @@ int TLuaInterpreter::getPlayingMusic(lua_State* L)
 // Private
 int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
     const int numArgs = lua_gettop(L);
     QString stringValue;
-    bool boolValue;
     int intValue = 0;
 
     // values as ordered args: name[,key][,tag][,priority])
@@ -911,7 +904,6 @@ int TLuaInterpreter::getPlayingSoundsAsOrderedArguments(lua_State* L)
 // Private
 int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
 
     lua_pushnil(L);
@@ -964,7 +956,6 @@ int TLuaInterpreter::getPlayingSoundsAsTableArgument(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getPlayingSounds
 int TLuaInterpreter::getPlayingSounds(lua_State* L)
 {
-    const Host& host = getHostFromLua(L);
     TMediaData mediaData{};
 
     if (lua_gettop(L)) {
