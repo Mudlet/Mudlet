@@ -126,18 +126,21 @@ set(mudlet_SRCS
     TLabel.cpp
     TScrollBox.cpp
     TLinkStore.cpp
+
     TLuaInterpreter.cpp
-    TLuaInterpreterNetworking.cpp
-    TLuaInterpreterMudletObjects.cpp
+    TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
+    TLuaInterpreterMedia.cpp
+    TLuaInterpreterMudletObjects.cpp
+    TLuaInterpreterNetworking.cpp
+    TLuaInterpreterTextToSpeech.cpp
+    TLuaInterpreterUI.cpp
+    TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
-    TLuaInterpreterDiscord.cpp
-    TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
-    TLuaInterpreterTextToSpeech.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
