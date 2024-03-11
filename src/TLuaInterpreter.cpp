@@ -1133,13 +1133,13 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
                         luaL_typename(L, 1));
         return lua_error(L);
     }
-    QByteArray const data{lua_tostring(L, 1)};
+    const QByteArray data{lua_tostring(L, 1)};
     bool dataIsUtf8Encoded = true;
     if (lua_gettop(L) > 1) {
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
 
-    QByteArray const currentEncoding = host.mTelnet.getEncoding();
+    const QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {
         // We can convert the data from a QByteArray to a QString:
         if (currentEncoding == "UTF-8") {
@@ -2466,7 +2466,7 @@ int TLuaInterpreter::setMergeTables(lua_State* L)
 int TLuaInterpreter::getMudletVersion(lua_State* L)
 {
     QByteArray version = QByteArray(APP_VERSION).trimmed();
-    QByteArray const build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
+    const QByteArray build = mudlet::self()->mAppBuild.trimmed().toLocal8Bit();
 
     QList<QByteArray> const versionData = version.split('.');
     if (versionData.size() != 3) {
@@ -2578,13 +2578,13 @@ int TLuaInterpreter::getTime(lua_State* L)
             format = getVerifiedString(L, __func__, 2, "custom time format");
         }
     }
-    QDateTime const time = QDateTime::currentDateTime();
+    const QDateTime time = QDateTime::currentDateTime();
     if (return_string) {
         tm = time.toString(format);
         lua_pushstring(L, tm.toUtf8().constData());
     } else {
-        QDate const dt = time.date();
-        QTime const tm = time.time();
+        const QDate dt = time.date();
+        const QTime tm = time.time();
         lua_createtable(L, 0, 4);
         lua_pushstring(L, "hour");
         lua_pushinteger(L, tm.hour());
@@ -3015,7 +3015,7 @@ int TLuaInterpreter::setServerEncoding(lua_State* L)
         lua_pushfstring(L, "setServerEncoding: bad argument #1 type (newEncoding as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    QByteArray const newEncoding = lua_tostring(L, 1);
+    const QByteArray newEncoding = lua_tostring(L, 1);
     QPair<bool, QString> const results = host.mTelnet.setEncoding(newEncoding);
 
     if (!results.first) {
@@ -3597,13 +3597,13 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
     }
     // auto-detect IRE composer
     if (tokenList.size() == 3 && tokenList.at(0).toLower() == "ire" && tokenList.at(1).toLower() == "composer" && tokenList.at(2).toLower() == "edit") {
-        QRegularExpression const rx(qsl(R"lit(\{ ?"title": ?"(.*)", ?"text": ?"(.*)" ?\})lit"));
-        QRegularExpressionMatch const match = rx.match(string_data);
+        const QRegularExpression rx(qsl(R"lit(\{ ?"title": ?"(.*)", ?"text": ?"(.*)" ?\})lit"));
+        const QRegularExpressionMatch match = rx.match(string_data);
 
         if (match.capturedStart() != -1) {
             const QString title = match.captured(1);
             QString initialText = match.captured(2);
-            QRegularExpression const codeRegex(qsl(R"lit(\\n|\\t|\\"|\\\\|\\u[0-9a-cA-C][0-9a-fA-F]{3}|\\u[dD][0-7][0-9a-fA-F]{2}|\\u[efEF][0-9a-fA-F]{3}|\\u[dD][89abAB][0-9a-fA-F]{2}\\u[dD][c-fC-F][0-9a-fA-F]{2})lit"));
+            const QRegularExpression codeRegex(qsl(R"lit(\\n|\\t|\\"|\\\\|\\u[0-9a-cA-C][0-9a-fA-F]{3}|\\u[dD][0-7][0-9a-fA-F]{2}|\\u[efEF][0-9a-fA-F]{3}|\\u[dD][89abAB][0-9a-fA-F]{2}\\u[dD][c-fC-F][0-9a-fA-F]{2})lit"));
             // We are about to search for 8 escape code strings within the initial text that the game gave us, patterns are:
             // \n  \t  \"  \\ - new line, tab, quote, backslash
             // Then there are three patterns for \uXXXX where XXXX is a 4-digit hexadecimal value
@@ -3730,7 +3730,7 @@ void TLuaInterpreter::parseMSSP(const QString& string_data)
 void TLuaInterpreter::msdp2Lua(const char* src)
 {
     Host& host = getHostFromLua(pGlobalLua);
-    QByteArray const transcodedSrc = host.mTelnet.decodeBytes(src);
+    const QByteArray transcodedSrc = host.mTelnet.decodeBytes(src);
     QStringList varList;
     QByteArray lastVar;
     const int textLength = transcodedSrc.length();
@@ -4609,7 +4609,7 @@ int TLuaInterpreter::performHttpRequest(lua_State *L, const char* functionName, 
     }
 
     const QString urlString = getVerifiedString(L, functionName, pos + 2, "remote url");
-    QUrl const url = QUrl::fromUserInput(urlString);
+    const QUrl url = QUrl::fromUserInput(urlString);
 
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1.").arg(url.errorString()));
@@ -4691,7 +4691,7 @@ int TLuaInterpreter::unzipAsync(lua_State *L)
     const QString zipLocation = getVerifiedString(L, __func__, 1, "zip location");
     QString extractLocation = getVerifiedString(L, __func__, 2, "extract location");
 
-    QTemporaryDir const temporaryDir;
+    const QTemporaryDir temporaryDir;
     if (!temporaryDir.isValid()) {
         return warnArgumentValue(L, __func__, "couldn't create temporary directory to extract the zip into");
     }
@@ -6001,7 +6001,7 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
 // No documentation available in wiki - internal function
 std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, const QString& parent, double timeout, const QString& function)
 {
-    QTime const time = QTime(0, 0, 0, 0).addMSecs(qRound(timeout * 1000));
+    const QTime time = QTime(0, 0, 0, 0).addMSecs(qRound(timeout * 1000));
     TTimer* pT;
     if (parent.isEmpty()) {
         pT = new TTimer(qsl("newPermTimerWithoutAnId"), time, mpHost);
@@ -6039,7 +6039,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
 // No documentation available in wiki - internal function
 QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QString& function, const bool repeating)
 {
-    QTime const time = QTime(0,0,0,0).addMSecs(qRound(timeout * 1000));
+    const QTime time = QTime(0,0,0,0).addMSecs(qRound(timeout * 1000));
     auto* pT = new TTimer(qsl("newTempTimerWithoutAnId"), time, mpHost, repeating);
     pT->setTime(time);
     pT->setIsFolder(false);
@@ -6869,7 +6869,7 @@ void TLuaInterpreter::createHttpHeadersTable(lua_State* L, QNetworkReply* reply)
 
     // Parse headers, add them as key-value pairs to the empty table
     const QList<QByteArray> headerList = reply->rawHeaderList();
-    for (QByteArray const header : headerList) {
+    for (const QByteArray header : headerList) {
         // Push header key onto stack
         lua_pushstring(L, header.constData());
         // Push header value onto stack
@@ -6900,8 +6900,8 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
     // Parse cookies, add them as key-value pairs to the empty table
     const Host& host = getHostFromLua(L);
     QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
-    QList<QNetworkCookie> const cookies = cookieJar->cookiesForUrl(reply->url());
-    for (QNetworkCookie const cookie : cookies) {
+    const QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
+    for (const QNetworkCookie cookie : cookies) {
         // Push cookie name onto stack
         lua_pushstring(L, cookie.name().constData());
         // Push cookie value onto stack

@@ -695,7 +695,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     // QRegularExpression rex(qsl(R"(\.dic$)"));
     // Use the affix file as that may eliminate supplimental dictionaries:
-    QRegularExpression const rex(qsl(R"(\.aff$)"));
+    const QRegularExpression rex(qsl(R"(\.aff$)"));
     entries = entries.filter(rex);
     // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
     // while populating the widget, it reduces noise about:
@@ -1088,7 +1088,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 #if !defined(QT_NO_SSL)
     if (QSslSocket::supportsSsl() && pHost->mSslTsl) {
-        QSslCertificate const cert = pHost->mTelnet.getPeerCertificate();
+        const QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
         if (cert.isNull()) {
             groupBox_ssl_certificate->hide();
         } else {
@@ -2279,7 +2279,7 @@ void dlgProfilePreferences::fillOutMapHistory()
     mapSaveDir.setSorting(QDir::Time);
     const QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (const auto& entry : mapSaveEntries) {
-        QRegularExpressionMatch const match = mapSaveRegularExpression.match(entry);
+        const QRegularExpressionMatch match = mapSaveRegularExpression.match(entry);
         const QString mapPathFileName = mapSaveDir.absoluteFilePath(entry);
         if (match.capturedStart() != -1) {
             // A recognised date-time stamp file name of any Mudlet map file type:
@@ -2297,7 +2297,7 @@ void dlgProfilePreferences::fillOutMapHistory()
                 year = match.captured(3);
             }
             const QString extension = match.captured(7);
-            QDateTime const datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
+            const QDateTime datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
             const QString itemText = locale.toString(datetime, dateTimeFormat);
             longestMapHistoryLength = qMax(longestMapHistoryLength, itemText.size());
             if (!extension.compare(QLatin1String("xml"), Qt::CaseInsensitive)) {
@@ -2882,7 +2882,7 @@ void dlgProfilePreferences::slot_saveAndClose()
                 pHost->mpMap->mpMapper->update();
             }
         }
-        QMargins const newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
+        const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
         pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
@@ -3012,7 +3012,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         if (console) {
             const int x = console->width();
             const int y = console->height();
-            QSize const s = QSize(x, y);
+            const QSize s = QSize(x, y);
             QResizeEvent event(s, s);
             QApplication::sendEvent(console, &event);
         }
@@ -3426,7 +3426,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
     manager->setCache(diskCache);
 
 
-    QUrl const url(themesURL);
+    const QUrl url(themesURL);
     QNetworkRequest request(url);
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
     // github uses redirects
@@ -3459,7 +3459,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
                             return;
                         }
 
-                        QByteArray const downloadedArchive = reply->readAll();
+                        const QByteArray downloadedArchive = reply->readAll();
 
                         tempThemesArchive = new QTemporaryFile();
                         if (!tempThemesArchive->open()) {
@@ -3468,7 +3468,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
                         tempThemesArchive->write(downloadedArchive);
                         tempThemesArchive->close();
 
-                        QTemporaryDir const temporaryDir;
+                        const QTemporaryDir temporaryDir;
                         if (!temporaryDir.isValid()) {
                             return;
                         }
@@ -3710,13 +3710,13 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         pSymbolAnyFont->setToolTip(utils::richText(tr("The room symbol will appear like this if symbols (glyphs) from any font can be used.")));
         pSymbolAnyFont->setFont(anyFont);
 
-        QFontMetrics const SymbolInFontMetrics(selectedFont);
-        QFontMetrics const SymbolAnyFontMetrics(anyFont);
+        const QFontMetrics SymbolInFontMetrics(selectedFont);
+        const QFontMetrics SymbolAnyFontMetrics(anyFont);
 
         // pCodePoints is the sequence of UTF-32 codepoints in the symbol and
         // this ought to be what is needed to check that a font or set of fonts
         // can render the codepoints:
-        QVector<quint32> const pCodePoints = symbol.toUcs4();
+        const QVector<quint32> pCodePoints = symbol.toUcs4();
         // These can be used to flag symbols that cannot be reproduced
         bool isSingleFontUsable = true;
         bool isAllFontUsable = true;
@@ -4067,7 +4067,7 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
             return;
         }
 
-        QColor const disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness(), color.alpha());
+        const QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness(), color.alpha());
         if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
 
             // These two buttons show a color that may have transparency; so,

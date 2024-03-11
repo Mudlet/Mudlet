@@ -131,7 +131,7 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     Host& host = getHostFromLua(L);
     const QString localFile = getVerifiedString(L, __func__, 1, "local filename");
     const QString urlString = getVerifiedString(L, __func__, 2, "remote url");
-    QUrl const url = QUrl::fromUserInput(urlString);
+    const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
     }
@@ -300,7 +300,7 @@ int TLuaInterpreter::sendATCP(lua_State* L)
         lua_pushfstring(L, "sendATCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    std::string const msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
+    const std::string msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
 
     std::string what;
     if (lua_gettop(L) > 1) {
@@ -344,7 +344,7 @@ int TLuaInterpreter::sendGMCP(lua_State* L)
         lua_pushfstring(L, "sendGMCP: bad argument #1 type (message as string expected, got %1!)", luaL_typename(L, 1));
         return lua_error(L);
     }
-    std::string const msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
+    const std::string msg = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
 
     std::string what;
     if (lua_gettop(L) > 1) {
@@ -426,7 +426,7 @@ int TLuaInterpreter::sendMSDP(lua_State* L)
         }
     }
 
-    std::string const variable = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
+    const std::string variable = host.mTelnet.encodeAndCookBytes(lua_tostring(L, 1));
 
     std::string output;
     output += TN_IAC;
@@ -456,7 +456,7 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
                         luaL_typename(L, 1));
         return lua_error(L);
     }
-    std::string const msg = lua_tostring(L, 1);
+    const std::string msg = lua_tostring(L, 1);
     if (msg.length() != 2) {
         return warnArgumentValue(L, __func__, qsl(
             "invalid message of length %1 supplied, it should be two bytes (may use lua \\### for each byte where ### is a number between 1 and 254)")
@@ -547,7 +547,7 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     int secure = false;
     int port = 6667;
     QString password;
-    std::string const addr = getVerifiedString(L, __func__, 1, "hostname").toStdString();
+    const std::string addr = getVerifiedString(L, __func__, 1, "hostname").toStdString();
     if (addr.empty()) {
         return warnArgumentValue(L, __func__, "hostname must not be empty");
     }
@@ -595,7 +595,7 @@ int TLuaInterpreter::getHTTP(lua_State* L)
 {
     auto& host = getHostFromLua(L);
     const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
-    QUrl const url = QUrl::fromUserInput(urlString);
+    const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
     }
@@ -654,7 +654,7 @@ int TLuaInterpreter::deleteHTTP(lua_State *L)
 {
     auto& host = getHostFromLua(L);
     const QString urlString = getVerifiedString(L, __func__, 1, "remote url");
-    QUrl const url = QUrl::fromUserInput(urlString);
+    const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
     }
