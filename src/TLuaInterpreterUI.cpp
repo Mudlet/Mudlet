@@ -1101,7 +1101,7 @@ int TLuaInterpreter::getProfileTabNumber(lua_State* L)
 int TLuaInterpreter::getMainWindowSize(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    QSize const mainWindowSize = host.mpConsole->getMainWindowSize();
+    const QSize mainWindowSize = host.mpConsole->getMainWindowSize();
 
     lua_pushnumber(L, mainWindowSize.width());
     lua_pushnumber(L, mainWindowSize.height());
@@ -1213,7 +1213,7 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     lua_pushboolean(L, format & TChar::Underline);
     lua_settable(L, -3);
 
-    QColor const foreground(result.second.foreground());
+    const QColor foreground(result.second.foreground());
     lua_pushstring(L, "foreground");
     lua_newtable(L);
     lua_pushnumber(L, 1);
@@ -1229,7 +1229,7 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
     lua_settable(L, -3);
     lua_settable(L, -3);
 
-    QColor const background(result.second.background());
+    const QColor background(result.second.background());
     lua_pushstring(L, "background");
     lua_newtable(L);
     lua_pushnumber(L, 1);
@@ -1254,7 +1254,7 @@ int TLuaInterpreter::getUserWindowSize(lua_State* L)
     const QString windowName {WINDOW_NAME(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    QSize const userWindowSize = host.mpConsole->getUserWindowSize(windowName);
+    const QSize userWindowSize = host.mpConsole->getUserWindowSize(windowName);
     lua_pushnumber(L, userWindowSize.width());
     lua_pushnumber(L, userWindowSize.height());
 
@@ -1661,8 +1661,8 @@ int TLuaInterpreter::moveCursorEnd(lua_State* L)
 int TLuaInterpreter::moveWindow(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "name");
-    double const x1 = getVerifiedDouble(L, __func__, 2, "x");
-    double const y1 = getVerifiedDouble(L, __func__, 3, "y");
+    const double x1 = getVerifiedDouble(L, __func__, 2, "x");
+    const double y1 = getVerifiedDouble(L, __func__, 3, "y");
     Host& host = getHostFromLua(L);
     host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1));
     return 0;
@@ -1837,8 +1837,8 @@ int TLuaInterpreter::resetFormat(lua_State* L)
 int TLuaInterpreter::resizeWindow(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "windowName");
-    double const x1 = getVerifiedDouble(L, __func__, 2, "width");
-    double const y1 = getVerifiedDouble(L, __func__, 3, "height");
+    const double x1 = getVerifiedDouble(L, __func__, 2, "width");
+    const double y1 = getVerifiedDouble(L, __func__, 3, "height");
     Host& host = getHostFromLua(L);
     host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1));
     return 0;
@@ -3202,7 +3202,7 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrolling
 int TLuaInterpreter::enableScrolling(lua_State* L)
 {
-    QString const windowName {WINDOW_NAME(L, 1)};
+    const QString windowName {WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
         lua_pushnil(L);
         lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
@@ -3218,7 +3218,7 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableScrolling
 int TLuaInterpreter::disableScrolling(lua_State* L)
 {
-    QString const windowName {WINDOW_NAME(L, 1)};
+    const QString windowName {WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
         lua_pushnil(L);
         lua_pushfstring(L, "scrolling cannot be enabled/disabled for the 'main' window", windowName.toUtf8().constData());
@@ -3234,7 +3234,7 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#scrollingActive
 int TLuaInterpreter::scrollingActive(lua_State* L)
 {
-    QString const windowName {WINDOW_NAME(L, 1)};
+    const QString windowName {WINDOW_NAME(L, 1)};
     if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
         // Handle the main console case:
         lua_pushboolean(L, true);

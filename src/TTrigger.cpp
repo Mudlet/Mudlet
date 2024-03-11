@@ -453,7 +453,7 @@ void TTrigger::processRegexMatch(const char* haystackC, const QString& haystack,
             auto iti = posList.begin();
             for (int position = 1; iti != posList.end(); ++iti, ++its, position++) {
                 const int begin = *iti;
-                std::string const& s = *its;
+                const std::string& s = *its;
                 const int length = QString::fromStdString(s).size();
                 if (total > 1) {
                     // skip complete match in Perl /g option type of triggers
@@ -543,7 +543,7 @@ void TTrigger::processBeginOfLine(const QString& needle, int patternNumber, int 
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
-            std::string const& s = *its;
+            const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
@@ -681,7 +681,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
-            std::string const& s = *its;
+            const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
@@ -801,7 +801,7 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
             //                qDebug() << "TTrigger::match_color_pattern(" << line << "," << patternNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
-            std::string const& s = *its;
+            const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
@@ -944,7 +944,7 @@ void TTrigger::processExactMatch(const QString& line, int patternNumber, int pos
         auto its = captureList.begin();
         for (auto iti = posList.begin(); iti != posList.end(); ++iti, ++its) {
             const int begin = *iti;
-            std::string const& s = *its;
+            const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
             pC->selectSection(begin, length);
             if (mBgColor != QColorConstants::Transparent) {
@@ -1207,8 +1207,8 @@ TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
      * 16 dark white          ->  7
      */
 
-    QColor const fgColor = mpHost->getAnsiColor(ansiFg, false);
-    QColor const bgColor = mpHost->getAnsiColor(ansiBg, true);
+    const QColor fgColor = mpHost->getAnsiColor(ansiFg, false);
+    const QColor bgColor = mpHost->getAnsiColor(ansiBg, true);
 
     // If BOTH ansiFg AND ansiBg are scmIgnored then the color pattern is
     // totally unset
@@ -1468,9 +1468,9 @@ void TTrigger::decodeColorPatternText(const QString& patternText, int& fgColorCo
 {
     // The numbers used for the text have changed - see table in:
     // TColorTable* TTrigger::createColorPattern(int ansiFg, int ansiBg)
-    QRegularExpression const regex = QRegularExpression(qsl("^ANSI_COLORS_F{(\\d+|DEFAULT|IGNORE)}_B{(\\d+|DEFAULT|IGNORE)}$"));
+    const QRegularExpression regex = QRegularExpression(qsl("^ANSI_COLORS_F{(\\d+|DEFAULT|IGNORE)}_B{(\\d+|DEFAULT|IGNORE)}$"));
     // Was QRegularExpression regex = QRegularExpression(qsl(R"(FG(\d+)BG(\d+))"));
-    QRegularExpressionMatch const match = regex.match(patternText);
+    const QRegularExpressionMatch match = regex.match(patternText);
     // scmDefault is the new code for "default" colour (as 0 is a valid ANSI color number!)
     // scmIgnored is the new code for "reset" i.e. NOT set color trigger (i.e. don't
     // bother with checking this part of the colour)
