@@ -3138,9 +3138,6 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="toolTip">
              <string>Port to use when connecting to another client without specifying a port along with the IP address. This is also the default port that listened for incoming connections when running a local server.</string>
             </property>
-            <property name="text">
-             <string>4050</string>
-            </property>
            </widget>
           </item>
           <item row="1" column="5">
