@@ -48,9 +48,6 @@ MMCPServer::~MMCPServer() {}
  */
 void MMCPServer::incomingConnection(qintptr socketDescriptor)
 {
-
-    if (m_DoNotDisturb)
-
     MMCPClient* client = new MMCPClient(mpHost, this);
     if (!client->incoming(socketDescriptor)) {
         client->deleteLater();

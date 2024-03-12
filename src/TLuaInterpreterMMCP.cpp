@@ -106,7 +106,7 @@ int TLuaInterpreter::chatCall(lua_State* L)
     return 1;
 }
 
-int TLuaInterpreter::chatDoNotDisturb(lua_State*)
+int TLuaInterpreter::chatDoNotDisturb(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mmcpServer) {
