@@ -399,6 +399,7 @@
     "chatAll": "chatAll(message)",
     "chatAllowSnoop": "chatAllowSnoop(target)",
     "chatCall": "chatCall(host[, port])",
+    "chatDoNotDisturb": "chatDoNotDisturb()",
     "chatEmoteAll": "chatEmoteAll(message)",
     "chatGroup": "chatGroup(group, message)",
     "chatIgnore": "chatIgnore(target)",
