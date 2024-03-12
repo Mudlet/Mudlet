@@ -175,8 +175,37 @@ void Announcer::announce(const QString& text, const QString& processing)
         Q_ASSERT_X(false, "Announcer::announce(...)", "invalid processing value given");
     }
 
+    this->setFocus(Qt::OtherFocusReason); // Ensure the output window has focus
+
     UiaWrapper::self()->raiseNotificationEvent(uiaProvider, NotificationKind_ItemAdded, processingvalue, displayString, activityId);
 
     SysFreeString(displayString);
     SysFreeString(activityId);
+}
+
+void Announcer::handleNavigation(const QKeyEvent* event) {
+    if (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down ||
+        event->key() == Qt::Key_Left || event->key() == Qt::Key_Right) {
+        // Handle arrow key navigation
+        QTextCursor cursor = outputWindow->textCursor();
+        if (event->key() == Qt::Key_Up) {
+            cursor.movePosition(QTextCursor::PreviousBlock);
+        } else if (event->key() == Qt::Key_Down) {
+            cursor.movePosition(QTextCursor::NextBlock);
+        }
+        outputWindow->setTextCursor(cursor);
+
+        // Read the selected text aloud using text-to-speech
+        QString selectedText = cursor.selectedText();
+        QTextToSpeech::speech(selectedText, QSpeechInput::PlainText);
+    }
+}
+
+void Announcer::keyPressEvent(QKeyEvent* event) {
+    // Call handleNavigation method for arrow key events
+    if (event->type() == QEvent::KeyPress) {
+        handleNavigation(event);
+    }
+    // Forward other key events to the base class implementation
+    QWidget::keyPressEvent(event);
 }
