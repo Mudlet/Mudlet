@@ -610,7 +610,7 @@ void Host::reloadModules()
         if (otherHost == this || !otherHost->mpConsole) {
             continue;
         }
-        QMap<QString, int> const& modulePri = otherHost->mModulePriorities;
+        const QMap<QString, int>& modulePri = otherHost->mModulePriorities;
         QMap<int, QStringList> moduleOrder;
 
         auto modulePrioritiesIt = modulePri.constBegin();
@@ -971,7 +971,7 @@ void Host::thankForUsingPTB()
 
 void Host::setMediaLocationGMCP(const QString& mediaUrl)
 {
-    QUrl const url = QUrl(mediaUrl);
+    const QUrl url = QUrl(mediaUrl);
 
     if (!url.isValid()) {
         return;
@@ -987,7 +987,7 @@ QString Host::getMediaLocationGMCP() const
 
 void Host::setMediaLocationMSP(const QString& mediaUrl)
 {
-    QUrl const url = QUrl(mediaUrl);
+    const QUrl url = QUrl(mediaUrl);
 
     if (!url.isValid()) {
         return;
@@ -1803,7 +1803,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         }
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
-        QFileInfoList const entries = _dir.entryInfoList(_filterList, QDir::Files);
+        const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             file2.open(QFile::ReadOnly | QFile::Text);
@@ -1909,7 +1909,7 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     bool result = true;
     const QDir dir(dirName);
     if (dir.exists(dirName)) {
-        for (QFileInfo  const&info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
+        for (QFileInfo const& info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
             // prevent recursion outside of the original branch
             if (info.isDir() && info.absoluteFilePath().startsWith(originalPath)) {
                 result = removeDir(info.absoluteFilePath(), originalPath);
@@ -3942,7 +3942,7 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
 
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
-        QPixmap const bgPixmap(imgPath);
+        const QPixmap bgPixmap(imgPath);
         pL->setPixmap(bgPixmap);
         return true;
     }
@@ -4061,7 +4061,7 @@ void Host::createMapper(const bool loadDefaultMap)
     if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
         pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
-        QDateTime const now(QDateTime::currentDateTime());
+        const QDateTime now(QDateTime::currentDateTime());
         if (pMap->restore(QString())) {
             pMap->audit();
             pMap->mpMapper->mp2dMap->init();
@@ -4334,7 +4334,7 @@ void Host::setBorders(QMargins borders)
     }
     auto x = mpConsole->width();
     auto y = mpConsole->height();
-    QSize const s = QSize(x, y);
+    const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpConsole, &event);
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);

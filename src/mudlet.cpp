@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -207,7 +207,7 @@ mudlet::mudlet()
     menuAbout->setToolTipsVisible(true);
 
     setAttribute(Qt::WA_DeleteOnClose);
-    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(scmVersion);
     if (releaseVersion) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet.png")));
@@ -238,7 +238,7 @@ mudlet::mudlet()
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->addWidget(mpTabBar);
     mpWidget_profileContainer = new QWidget(frame);
-    QPalette const mainPalette;
+    const QPalette mainPalette;
     mpWidget_profileContainer->setPalette(mainPalette);
     mpWidget_profileContainer->setContentsMargins(0, 0, 0, 0);
     mpWidget_profileContainer->setSizePolicy(sizePolicy);
@@ -497,7 +497,7 @@ mudlet::mudlet()
         connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
     }
 
-    QFont const mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
 
@@ -719,7 +719,7 @@ QSettings* mudlet::getQSettings()
         For compatibility with older settings, if no config is loaded
         from the config directory "mudlet", application "Mudlet", we try to load from the config
         directory "Mudlet", application "Mudlet 1.0". */
-    QSettings const settings_new("mudlet", "Mudlet");
+    const QSettings settings_new("mudlet", "Mudlet");
     return new QSettings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 }
 
@@ -1111,6 +1111,8 @@ void mudlet::loadMaps()
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"MACINTOSH", tr("MACINTOSH")},
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+                        {"M_MEDIEVIA",  qsl("m ") % tr("Medievia {Custom codec for that MUD}")},
+                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"WINDOWS-1250", tr("WINDOWS-1250 (Central European)")},
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"WINDOWS-1251", tr("WINDOWS-1251 (Cyrillic)")},
@@ -1168,8 +1170,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
     if (path == qsl(":/lang")) {
         QFile file(qsl(":/translation-stats.json"));
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QByteArray const saveData = file.readAll();
-            QJsonDocument const loadDoc(QJsonDocument::fromJson(saveData));
+            const QByteArray saveData = file.readAll();
+            const QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
             translationStats = loadDoc.object();
             file.close();
         } else {
@@ -1234,6 +1236,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
                 currentTranslation.mNativeName = qsl("Suomeksi");
             } else if (!languageCode.compare(QLatin1String("ar_SA"), Qt::CaseInsensitive)) {
                 currentTranslation.mNativeName = qsl("العربية");
+            } else if (!languageCode.compare(QLatin1String("ko_KR"), Qt::CaseInsensitive)) {
+                currentTranslation.mNativeName = qsl("한국어");
             } else {
                 currentTranslation.mNativeName = languageCode;
             }
@@ -1349,7 +1353,7 @@ bool mudlet::openWebPage(const QString& path)
     if (path.isEmpty() || path.isNull()) {
         return false;
     }
-    QUrl const url(path, QUrl::TolerantMode);
+    const QUrl url(path, QUrl::TolerantMode);
     if (!url.isValid()) {
         return false;
     }
@@ -1519,7 +1523,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
     if (pH->mpConsole) {
         return;
     }
-    auto pConsole = new TMainConsole(pH);
+    auto pConsole = new (std::nothrow) TMainConsole(pH);
     if (!pConsole) {
         return;
     }
@@ -1590,7 +1594,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     const int x = pH->mpConsole->width();
     const int y = pH->mpConsole->height();
-    QSize const s = QSize(x, y);
+    const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     updateDiscordNamedIcon();
     QApplication::sendEvent(pH->mpConsole, &event);
@@ -1733,7 +1737,7 @@ bool mudlet::saveWindowLayout()
         // revert update markers to ready objects for saving.
         commitLayoutUpdates();
 
-        QByteArray const layoutData = saveState();
+        const QByteArray layoutData = saveState();
         QDataStream ofs(&layoutFile);
         if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             ofs.setVersion(scmQDataStreamFormat_5_12);
@@ -1807,7 +1811,7 @@ void mudlet::hideEvent(QHideEvent* event)
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
-    QImage const image(imageLocation);
+    const QImage image(imageLocation);
 
     if (image.isNull()) {
         return {};
@@ -1939,7 +1943,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mEnableFullScreenMode = settings.value(qsl("enableFullScreenMode"), QVariant(false)).toBool();
     } else {
         // We do not have a QSettings value stored so check for the sentinel file:
-        QFile const file_use_smallscreen(getMudletPath(mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
+        const QFile file_use_smallscreen(getMudletPath(mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
 
@@ -1966,7 +1970,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
 void mudlet::readLateSettings(const QSettings& settings)
 {
     const QPoint pos = settings.value(qsl("pos"), QPoint(0, 0)).toPoint();
-    QSize const size = settings.value(qsl("size"), QSize(750, 550)).toSize();
+    const QSize size = settings.value(qsl("size"), QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
     // a netbook or not before this gets called so only change if there is a
     // setting stored:
@@ -3487,7 +3491,7 @@ bool mudlet::loadLuaFunctionList()
         return false;
     }
 
-    QJsonObject const json_obj = json_doc.object();
+    const QJsonObject json_obj = json_doc.object();
 
     if (json_obj.isEmpty()) {
         return false;
@@ -3901,7 +3905,7 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
 
 QStringList mudlet::getAvailableFonts()
 {
-    QFontDatabase const database;
+    const QFontDatabase database;
 
     return database.families(QFontDatabase::Any);
 }
@@ -3925,7 +3929,7 @@ void mudlet::setEnableFullScreenMode(const bool state)
         QSaveFile file(filePath);
         if (state) {
             file.open(QIODevice::WriteOnly | QIODevice::Text);
-            QTextStream const out(&file);
+            const QTextStream out(&file);
             Q_UNUSED(out);
             if (!file.commit()) {
                 qDebug() << "mudlet::setEnableFullScreenMode: error saving fullscreen state: " << file.errorString();
@@ -4652,7 +4656,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
 #if !defined(QT_NO_SSL)
     if (url.scheme() == qsl("https")) {
-        QSslConfiguration const config(QSslConfiguration::defaultConfiguration());
+        const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
         request.setSslConfiguration(config);
     }
 #endif
@@ -4740,7 +4744,7 @@ void mudlet::activateProfile(Host* pHost)
     // Tell the new profile's main window that it might be resize via a Qt event:
     const int x = mpCurrentActiveHost->mpConsole->width();
     const int y = mpCurrentActiveHost->mpConsole->height();
-    QSize const s = QSize(x, y);
+    const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 
@@ -4948,7 +4952,7 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
             return QImage(eggFileName);
         } else {
             // For the zeroth case just rotate the picture 180 degrees:
-            QImage const original(releaseVersion
+            const QImage original(releaseVersion
                                     ? qsl(":/splash/Mudlet_splashscreen_main.png")
                                     : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                      : qsl(":/splash/Mudlet_splashscreen_development.png"));
