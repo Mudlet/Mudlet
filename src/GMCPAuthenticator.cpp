@@ -44,15 +44,11 @@ void GMCPAuthenticator::sendCredentials()
 {
     auto character = mpHost->getLogin();
     auto password = mpHost->getPass();
-    if (character.isEmpty() || password.isEmpty()) {
-        qDebug() << "No login or password set in connection settings. Cannot authenticate with GMCP.";
-        return;
-    }
-
     QJsonObject credentials;
-    credentials["account"] = character;
-    credentials["password"] = password;
-
+    if (!character.isEmpty() && !password.isEmpty()) {
+        credentials["account"] = character;
+        credentials["password"] = password;
+    }
     QJsonDocument doc(credentials);
     QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
 
