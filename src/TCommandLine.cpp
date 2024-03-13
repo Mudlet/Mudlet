@@ -1064,9 +1064,9 @@ void TCommandLine::handleTabCompletion(bool direction)
             if (mTabCompletionCount < 0) {
                 mTabCompletionCount = 0;
             }
-            const QString proposal = filterList[mTabCompletionCount];
-            const QString userWords = mTabCompletionTyped.left(typePosition);
-            setPlainText(QString(userWords + proposal));
+            const QString newText = filterList[mTabCompletionCount] + mTabCompletionTyped.left(typePosition);
+            setPlainText(newText);
+            mudlet::self()->announce(newText);
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
         }
@@ -1084,6 +1084,7 @@ void TCommandLine::handleAutoCompletion()
     QString neu = toPlainText();
     neu.chop(textCursor().selectedText().size());
     setPlainText(neu);
+    mudlet::self()->announce(neu);
     mTabCompletionOld = neu;
     const int oldLength = toPlainText().size();
     if (mAutoCompletionCount >= mHistoryList.size()) {
@@ -1098,6 +1099,7 @@ void TCommandLine::handleAutoCompletion()
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
             setPlainText(mHistoryList[i]);
+            mudlet::self()->announce(mHistoryList[i]);
             moveCursor(QTextCursor::Start);
             for (int k = 0; k < oldLength; k++) {
                 moveCursor(QTextCursor::Right, QTextCursor::MoveAnchor);
@@ -1130,6 +1132,7 @@ void TCommandLine::historyMove(MoveDirection direction)
             mHistoryBuffer = 0;
         }
         setPlainText(mHistoryList[mHistoryBuffer]);
+        mudlet::self()->announce(mHistoryList[mHistoryBuffer]);
         if (mpHost->mHighlightHistory) {
             selectAll();
         } else {
