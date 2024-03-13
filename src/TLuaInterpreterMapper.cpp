@@ -3517,19 +3517,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     // Can set the room to an area which does not have a TArea instance but does
     // appear in the TRoomDB::areaNamesMap...
     const bool result = host.mpMap->setRoomArea(id, areaId, false);
-    if (result) {
-        // As a successful result WILL change the area a room is in then the map
-        // should be updated.  The GUI code that modifies room(s) areas already
-        // includes such a call to update the mapper.
-        if (host.mpMap->mpMapper) {
-            host.mpMap->mpMapper->mp2dMap->update();
-        }
-#if defined(INCLUDE_3DMAPPER)
-        if (host.mpMap->mpM) {
-            host.mpMap->mpM->update();
-        }
-#endif
-    }
+
     lua_pushboolean(L, result);
     return 1;
 }
