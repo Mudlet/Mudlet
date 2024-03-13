@@ -222,10 +222,9 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
         return {false, qsl("no connected clients")};
     }
 
-    QString outMsg = QString("%1\n%2 chats to everybody, '%3'%4%5")
+    QString outMsg = QString("%1\n%2 chats to everybody, '%3'%4")
                             .arg(static_cast<char>(TextEveryone))
                             .arg(mChatName).arg(msg)
-                            .arg(mpHost->mmcpShouldAppendNewlineAfterOutgoingChats() ? "\n" : "")
                             .arg(static_cast<char>(End));
 
     QListIterator<MMCPClient*> it(mPeersList);
