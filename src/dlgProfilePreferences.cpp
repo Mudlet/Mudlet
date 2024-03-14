@@ -3082,6 +3082,8 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
 
+        pHost->setCustomLoginId(comboBox_customLoginText->currentData().toInt());
+
         if (widget_playerRoomStyle->isVisible()) {
             // Although the controls have been interactively modifying the
             // TMap cached values for these, they were not being committed to
@@ -4267,13 +4269,11 @@ void dlgProfilePreferences::generateLoginTexts()
     }
 
     comboBox_customLoginText->blockSignals(true);
-    // TODO: If/when mudlet::htmlWrapper gets revised to just put in a pair of "<p>"..."</p>" tags (pending in another PR I {SlySven} have not yet published) also revise this to use it - https://github.com/Mudlet/Mudlet/issues/5691 :
-    comboBox_customLoginText->setToolTip(QStringLiteral("<p>%1</p>")
-                                                 .arg(tr("Provides a means to send both of the character name and the password in a single "
-                                                         "line to the Game server for those that have a requirement that cannot be met by "
-                                                         "sending each of them on their own shortly after a connection has been made.</p>"
-                                                         "<p>For further information refer to <tt>sendCustomLoginText()</tt> in the "
-                                                         "Mudlet Wiki.")));
+    comboBox_customLoginText->setToolTip(utils::richText(tr("Provides a means to send both of the character name and the password in a single "
+                                                            "line to the Game server for those that have a requirement that cannot be met by "
+                                                            "sending each of them on their own shortly after a connection has been made.</p>"
+                                                            "<p>For further information refer to <tt>sendCustomLoginText()</tt> in the "
+                                                            "Mudlet Wiki.")));
     int selection = 0;
     if (!comboBox_customLoginText->count()) {
         // Empty - this is the first time this method has been called, so read
@@ -4292,9 +4292,9 @@ void dlgProfilePreferences::generateLoginTexts()
         itTranslatedLoginText.next();
         if (!itTranslatedLoginText.key()) {
             // Disable (zero) case
-            comboBox_customLoginText->addItem(QStringLiteral("%1: %2").arg(QString::number(itTranslatedLoginText.key()), itTranslatedLoginText.value()), itTranslatedLoginText.key());
+            comboBox_customLoginText->addItem(qsl("%1: %2").arg(QString::number(itTranslatedLoginText.key()), itTranslatedLoginText.value()), itTranslatedLoginText.key());
         } else {
-            comboBox_customLoginText->addItem(QStringLiteral("%1: \"%2\"").arg(QString::number(itTranslatedLoginText.key()), itTranslatedLoginText.value()), itTranslatedLoginText.key());
+            comboBox_customLoginText->addItem(qsl("%1: \"%2\"").arg(QString::number(itTranslatedLoginText.key()), itTranslatedLoginText.value()), itTranslatedLoginText.key());
         }
     }
 

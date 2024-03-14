@@ -469,7 +469,7 @@ void cTelnet::sendCharacterPassword()
 std::pair<bool, QString> cTelnet::sendCustomLogin(const int loginId)
 {
     if (!loginId) {
-        return {false, QStringLiteral("custom login is disabled (login id is zero)")};
+        return {false, qsl("custom login is disabled (login id is zero)")};
     }
 
     int actualLoginId = loginId;
@@ -478,7 +478,7 @@ std::pair<bool, QString> cTelnet::sendCustomLogin(const int loginId)
     }
 
     if (!mudlet::self()->mCustomLoginTexts.contains(actualLoginId)) {
-        return {false, QStringLiteral("custom login %1 does not exist in this version of Mudlet").arg(actualLoginId)};
+        return {false, qsl("custom login %1 does not exist in this version of Mudlet").arg(actualLoginId)};
     }
 
     QString loginString{mudlet::self()->mCustomLoginTexts.value(actualLoginId)};
@@ -486,17 +486,17 @@ std::pair<bool, QString> cTelnet::sendCustomLogin(const int loginId)
     if (loginString.contains(QLatin1String("{character name}"), Qt::CaseSensitive)) {
         const QString characterName = mpHost->getLogin();
         if (characterName.isEmpty()) {
-            return {false, QStringLiteral("custom login %1 requires the character name and that is not currently defined for this profile").arg(actualLoginId)};
+            return {false, qsl("custom login %1 requires the character name and that is not currently defined for this profile").arg(actualLoginId)};
         }
         if (password.isEmpty()) {
-            return {false, QStringLiteral("custom login %1 requires the password and that is not currently defined for this profile").arg(actualLoginId)};
+            return {false, qsl("custom login %1 requires the password and that is not currently defined for this profile").arg(actualLoginId)};
         }
         loginString.replace(QLatin1String("{character name}"), QLatin1String("%1"));
         loginString.replace(QLatin1String("{password}"), QLatin1String("%2"));
         loginString = loginString.arg(characterName, password);
     } else {
         if (password.isEmpty()) {
-            return {false, QStringLiteral("custom login %1 requires the password and that is not currently defined for this profile").arg(actualLoginId)};
+            return {false, qsl("custom login %1 requires the password and that is not currently defined for this profile").arg(actualLoginId)};
         }
         loginString.replace(QLatin1String("{password}"), QLatin1String("%1"));
         loginString = loginString.arg(password);
@@ -523,7 +523,7 @@ void cTelnet::slot_socketConnected()
     }
     msg.append(qsl("\n    \n    "));
     postMessage(msg);
-    QString func{QStringLiteral("onConnect")};
+    QString func{qsl("onConnect")};
     QString nothing;
     mpHost->mLuaInterpreter.call(func, nothing);
     mConnectionTimer.start();
@@ -536,7 +536,7 @@ void cTelnet::slot_socketConnected()
     // LuaGlobal.lua which can be replaced by a user function to do things in
     // a MUD specific way - or replaced by an empty function to do it via
     // permanent (or temporary) triggers - or via a sysConnctionEvent handler:
-    func = QStringLiteral("doLogin");
+    func = qsl("doLogin");
     mpHost->mLuaInterpreter.call(func, nothing);
 
     TEvent event {};
