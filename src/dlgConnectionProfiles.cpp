@@ -305,10 +305,7 @@ dlgConnectionProfiles::~dlgConnectionProfiles()
 void dlgConnectionProfiles::accept()
 {
     if (validName && validUrl && validPort) {
-        setVisible(false);
-        // This is needed to make the above take effect as fast as possible:
-        qApp->processEvents();
-        loadProfile(true);
+        connectToServer();
         QDialog::accept();
     }
 }
@@ -1540,14 +1537,16 @@ void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pug
 
 void dlgConnectionProfiles::slot_load()
 {
-    setVisible(false);
-    // This is needed to make the above take effect as fast as possible:
-    qApp->processEvents();
-    loadProfile(false);
+    loadProfile(false, login_entry->text(), character_password_entry->text());
     QDialog::accept();
 }
 
-void dlgConnectionProfiles::loadProfile(bool alsoConnect)
+void dlgConnectionProfiles::connectToServer()
+{
+    loadProfile(true, login_entry->text(), character_password_entry->text());
+}
+
+void dlgConnectionProfiles::loadProfile(bool alsoConnect, const QString& playerName, const QString& playerPassword)
 {
     const QString profile_name = profile_name_entry->text().trimmed();
 
@@ -1566,7 +1565,7 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
     }
     // load an old profile if there is any
     // PLACEMARKER: Host creation (1) - normal case
-    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), QString(), QString())) {
+    if (hostManager.addHost(profile_name, port_entry->text().trimmed(), playerName, playerPassword)) {
         pHost = hostManager.getHost(profile_name);
         if (!pHost) {
             return;
@@ -1626,18 +1625,6 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
         }
 
         pHost->mSslTsl = port_ssl_tsl->isChecked();
-
-        if (!character_password_entry->text().trimmed().isEmpty()) {
-            pHost->setPass(character_password_entry->text().trimmed());
-        } else {
-            slot_updatePassword(pHost->getPass());
-        }
-
-        if (!login_entry->text().trimmed().isEmpty()) {
-            pHost->setLogin(login_entry->text().trimmed());
-        } else {
-            slot_updateLogin(pHost->getLogin());
-        }
 
         // This settings also need to be configured, note that the only time not to
         // save the setting is on profile loading:

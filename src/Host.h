@@ -209,6 +209,8 @@ public:
     ControlCharacterMode  getControlCharacterMode() const { return mControlCharacter; }
     bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void            setLargeAreaExitArrows(const bool);
+    void            setCustomLoginId(const int value);
+    int             getCustomLoginId() const { return mCustomLoginId; }
 
     void closingDown();
     bool isClosingDown();
@@ -667,6 +669,7 @@ public:
     std::unique_ptr<QNetworkProxy> mpDownloaderProxy;
     QString mProfileStyleSheet;
     dlgTriggerEditor::SearchOptions mSearchOptions;
+    static const std::chrono::seconds csmLuaSendPasswordTimeout;
     TConsole::SearchOptions mBufferSearchOptions;
     QPointer<dlgIRC> mpDlgIRC;
     QPointer<dlgProfilePreferences> mpDlgProfilePreferences;
@@ -865,6 +868,10 @@ private:
 
     // Now a per profile option this one represents the state of this profile:
     bool mCompactInputLine;
+
+    // If greater than 0 (the default, disabled case) then use the indicated
+    // custom login text of QMap<int, QString> mudlet::mCustomLoginTexts:
+    int mCustomLoginId;
 
     QTimer purgeTimer;
 
