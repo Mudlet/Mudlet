@@ -595,10 +595,9 @@ void MMCPClient::handleIncomingPeekConnections()
  */
 void MMCPClient::handleIncomingPeekList(const QString& list)
 {
-    QStringList parts = list.split("~");
-
-    if (parts.size() % 3 != 0) {
-        const QString infoMsg = tr("[ CHAT ]  - Badly formatted peek list from %1").arg(mPeerName);
+    const QStringList parts = list.split("~");
+    if (parts.size() % 3 != 1) {
+        const QString infoMsg = tr("[ CHAT ]  - Badly formatted peek list from %1.").arg(mPeerName);
         mpHost->postMessage(infoMsg);
         return;
     }
@@ -609,7 +608,7 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
     using namespace AnsiColors;
 
     quint16 count = 1;
-    for (int i = 0; i < parts.size(); i += 3) {
+    for (int i = 0; (i + 1) < parts.size(); i += 3) {
         const QString host = parts.at(i);
         const QString port = parts.at(i + 1);
         const QString name = parts.at(i + 2);
