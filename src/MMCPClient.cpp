@@ -236,7 +236,7 @@ void MMCPClient::slot_readData()
             // In this case we do not get details of the connection from the
             // other end - instead we can only report the apparent details from
             // the socket:
-            const QString infoMsg = tr("[ CHAT ]  - Connection from %1:%2 refused.")
+            const QString infoMsg = tr("[ CHAT ]  - Connection to %1:%2 refused.")
                                     .arg(mTcpSocket.peerPort())
                                     .arg(convertToIPv4(mTcpSocket.peerAddress()));
             mpHost->postMessage(infoMsg);
@@ -248,7 +248,7 @@ void MMCPClient::slot_readData()
             mPeerName = QString::fromUtf8(peerName);
             mState = Connected;
 
-            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
+            const QString infoMsg = tr("[ CHAT ]  - Connection to %1 at %2:%3 accepted.")
                                     .arg(mPeerName)
                                     .arg(convertToIPv4(mTcpSocket.peerAddress()))
                                     .arg(mTcpSocket.peerPort());
