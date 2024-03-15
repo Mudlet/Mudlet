@@ -3536,7 +3536,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
 
     const bool result = std::all_of(roomIds.begin(), roomIds.end(), [&](int id) {
         // defer area recalculation on all rooms until the last room (.back())
-        return host.mpMap->setRoomArea(id, areaId, id == roomIds.back());
+        return host.mpMap->setRoomArea(id, areaId, id != roomIds.back());
     });
 
     lua_pushboolean(L, result);

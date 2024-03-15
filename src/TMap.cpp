@@ -129,8 +129,9 @@ void TMap::logError(QString& msg)
 //    mpHost->mLuaInterpreter.compileAndExecuteScript( script );
 //}
 
-bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations)
+bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
 {
+    // qDebug() << "Setting room" << id << "to area" << area << "with " << deferAreaRecalculations;
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
         QString msg = tr("RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!").arg(id).arg(area);
@@ -155,7 +156,7 @@ bool TMap::setRoomArea(int id, int area, bool isToDeferAreaRelatedRecalculations
         // to retain the API for the lua subsystem...
     }
 
-    const bool result = pR->setArea(area, isToDeferAreaRelatedRecalculations);
+    const bool result = pR->setArea(area, deferAreaRecalculations);
     if (result) {
         mMapGraphNeedsUpdate = true;
         setUnsaved(__func__);
