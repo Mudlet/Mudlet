@@ -5257,6 +5257,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "chatAll", TLuaInterpreter::chatAll);
     lua_register(pGlobalLua, "chatAllowSnoop", TLuaInterpreter::chatAllowSnoop);
     lua_register(pGlobalLua, "chatCall", TLuaInterpreter::chatCall);
+    lua_register(pGlobalLua, "chatDoNotDisturb", TLuaInterpreter::chatDoNotDisturb);
     lua_register(pGlobalLua, "chatEmoteAll", TLuaInterpreter::chatEmoteAll);
     lua_register(pGlobalLua, "chatGroup", TLuaInterpreter::chatGroup);
     lua_register(pGlobalLua, "chatIgnore", TLuaInterpreter::chatIgnore);
