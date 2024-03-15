@@ -206,20 +206,20 @@ void MMCPClient::slot_readData()
             mPeerPort = QString::fromUtf8(port).toUInt(&ok);
             if (!ok) {
                 mState = Disconnected;
+            } else {
+                 writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
+
+                const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
+                                        .arg(mPeerName)
+                                        .arg(convertToIPv4(mTcpSocket.peerAddress()))
+                                        .arg(mTcpSocket.peerPort());
+
+                mpHost->postMessage(infoMsg);
+
+                mpMMCPServer->addConnectedClient(this);
+
+                sendVersion();
             }
-
-            writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
-
-            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
-                                    .arg(mPeerName)
-                                    .arg(convertToIPv4(mTcpSocket.peerAddress()))
-                                    .arg(mTcpSocket.peerPort());
-
-            mpHost->postMessage(infoMsg);
-
-            mpMMCPServer->addConnectedClient(this);
-
-            sendVersion();
         }
 
         break;
