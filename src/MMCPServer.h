@@ -84,6 +84,8 @@ public:
     QString getChatName() const { return mChatName; }
     void setChatName(const QString&);
 
+    bool isDoNotDisturb() { return mDoNotDisturb; }
+    void toggleDoNotDisturb();
 
 public slots:
     void slot_clientDisconnected(MMCPClient*);
@@ -102,5 +104,6 @@ private:
     QString mChatName;
     QList<MMCPClient*> mPeersList;
     int mSnoopCount = 0;
+    bool mDoNotDisturb;
 };
 #endif // MUDLET_MCPSERVER_H

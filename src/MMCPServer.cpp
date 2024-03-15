@@ -40,6 +40,7 @@ MMCPServer::MMCPServer(Host* pHost)
 : QTcpServer()
 , mpHost(pHost)
 , mChatName(pHost->getMMCPChatName())
+, mDoNotDisturb(false)
 {
 }
 
@@ -583,9 +584,9 @@ QPair<bool, QString> MMCPServer::stopServer()
  */
 void MMCPServer::toggleDoNotDisturb()
 {
-    m_DoNotDisturb = !m_DoNotDisturb;
+    mDoNotDisturb = !mDoNotDisturb;
 
-    if (m_DoNotDisturb) {
+    if (mDoNotDisturb) {
         mpHost->postMessage(tr("[ CHAT ]  - DoNotDisturb enabled"));
     } else {
         mpHost->postMessage(tr("[ CHAT ]  - DoNotDisturb disabled"));

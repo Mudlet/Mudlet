@@ -184,40 +184,40 @@ void MMCPClient::slot_readData()
             mState = Disconnected;
         }
 
-        if (server->isDoNotDisturb()) {
-            m_state = Disconnected;
+        if (mpMMCPServer->isDoNotDisturb()) {
+            mState = Disconnected;
 
-            writeData(QString("NO:%1\n").arg(server->getChatName()));
+            writeData(QString("NO:%1\n").arg(mpMMCPServer->getChatName()));
 
             const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 denied (DoNotDisturb).")
-                                .arg(m_chatName)
-                                .arg(convertToIPv4(tcpSocket.peerAddress()))
-                                .arg(tcpSocket.peerPort());
-
-            mpHost->postMessage(infoMsg);
-        } else {
-
-        //Check auto accept?
-        mState = Connected;
-
-        mPeerName = QString::fromUtf8(peerName);
-        mPeerAddress = convertToIPv4(host);
-        bool ok;
-        mPeerPort = QString::fromUtf8(port).toUInt(&ok);
-        if (!ok) {
-            mState = Disconnected;
-        }
-
-        writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
-
-        const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
                                 .arg(mPeerName)
                                 .arg(convertToIPv4(mTcpSocket.peerAddress()))
                                 .arg(mTcpSocket.peerPort());
 
             mpHost->postMessage(infoMsg);
+        } else {
 
-        mpMMCPServer->addConnectedClient(this);
+            //Check auto accept?
+            mState = Connected;
+
+            mPeerName = QString::fromUtf8(peerName);
+            mPeerAddress = convertToIPv4(host);
+            bool ok;
+            mPeerPort = QString::fromUtf8(port).toUInt(&ok);
+            if (!ok) {
+                mState = Disconnected;
+            }
+
+            writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
+
+            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
+                                    .arg(mPeerName)
+                                    .arg(convertToIPv4(mTcpSocket.peerAddress()))
+                                    .arg(mTcpSocket.peerPort());
+
+            mpHost->postMessage(infoMsg);
+
+            mpMMCPServer->addConnectedClient(this);
 
             sendVersion();
         }
