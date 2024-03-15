@@ -1,4 +1,4 @@
-#ifndef MUDLET_MCPSERVER_H
+#ifndef MUDLET_MMCPSERVER_H
 #define MUDLET_MMCPSERVER_H
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
@@ -103,4 +103,4 @@ private:
     QList<MMCPClient*> mPeersList;
     int mSnoopCount = 0;
 };
-#endif // MUDLET_MCPSERVER_H
+#endif // MUDLET_MMCPSERVER_H
