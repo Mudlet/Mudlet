@@ -1,0 +1,26 @@
+# Automatically creates a PR to development for every new `release-` branch
+name: Create Release PR
+
+on: create
+
+jobs:
+  create-pr:
+    name: Create Pull Request
+    runs-on: ubuntu-latest
+
+    # Ensure this job only runs for branches matching the desired pattern
+    # if: startsWith(github.ref_name, 'release-')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Create Pull Request
+        uses: repo-sync/pull-request@v2
+        with:
+          destination_branch: "development" # your target branch
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          pr_title: "Infrastructure: update development with ${{ github.ref_name }}"
+          pr_body: "Automated PR to bring changes from the new release branch into the development branch."
