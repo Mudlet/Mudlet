@@ -1,8 +1,8 @@
-#ifndef _MMCPSERVER_H_
-#define _MMCPSERVER_H_
-
+#ifndef MUDLET_MCPSERVER_H
+#define MUDLET_MMCPSERVER_H
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
+ *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -37,12 +37,8 @@ class MMCPServer : public QTcpServer
     Q_PROPERTY(QString getChatName READ getChatName WRITE setChatName)
 
 public:
-    inline static int MMCPDefaultHostPort = 4050;
-    inline static QString DefaultMMCPChatName = qsl("MudletMMCP");
-    inline static QLatin1String MMCPChatSideChannelEvent = QLatin1String("sysChatChannelMessage");
-
     explicit MMCPServer(Host*);
-    ~MMCPServer();
+    ~MMCPServer() = default;
 
     void receiveFromPlayer(std::string&);
 
@@ -72,10 +68,10 @@ public:
     void clientMessage(const QString&);
     void snoopMessage(const std::string&);
 
-    QList<MMCPClient*>* getClients() { return &clients; }
+    QList<MMCPClient*>* getClients() { return &mPeersList; }
 
-    void decrementSnoopCount() { snoopCount--; }
-    void incrementSnoopCount() { snoopCount++; }
+    void decrementSnoopCount() { --mSnoopCount; }
+    void incrementSnoopCount() { ++mSnoopCount; }
 
     void sendPublicConnections(MMCPClient*);
     void sendPublicPeek(MMCPClient*);
@@ -85,37 +81,26 @@ public:
     void addConnectedClient(MMCPClient*);
     void disconnectClient(MMCPClient*);
 
-    QString getChatName() const { return m_chatName; }
+    QString getChatName() const { return mChatName; }
     void setChatName(const QString&);
 
-    bool isDoNotDisturb() { return m_DoNotDisturb; }
-    void toggleDoNotDisturb();
-
-signals:
-    void serverStarted(int);
-    void clientConnected(MMCPClient*);
-    void clientDisconnected(MMCPClient*);
-    void printStatusMessage(const QString&);
 
 public slots:
-    void slotClientDisconnected(MMCPClient*);
+    void slot_clientDisconnected(MMCPClient*);
+
 
 protected:
     void incomingConnection(qintptr) override;
 
+
 private:
-    Host* mpHost = nullptr;
-    QString m_chatName;
-
-    QList<MMCPClient*> clients;
-    int snoopCount;
-    bool m_DoNotDisturb;
-
-    void sendSnoopData(std::string&);
-
     MMCPClient* clientByNameOrId(const QVariant&);
-
+    void sendSnoopData(std::string&);
     void sendAll(QString&);
-};
 
-#endif
+    Host* mpHost = nullptr;
+    QString mChatName;
+    QList<MMCPClient*> mPeersList;
+    int mSnoopCount = 0;
+};
+#endif // MUDLET_MCPSERVER_H

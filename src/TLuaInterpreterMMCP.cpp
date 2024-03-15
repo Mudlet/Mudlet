@@ -1,5 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
+ *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -21,6 +22,7 @@
 // for convenience and to keep TLuaInterpreter.cpp size reasonable
 
 #include "Host.h"
+#include "MMCP.h"
 #include "MMCPServer.h"
 #include "TLuaInterpreter.h"
 
@@ -82,11 +84,11 @@ int TLuaInterpreter::chatAllowSnoop(lua_State* L)
 int TLuaInterpreter::chatCall(lua_State* L)
 {
     const QString host = getVerifiedString(L, __func__, 1, "host");
-    int port = MMCPServer::MMCPDefaultHostPort;
+    int port = csDefaultMMCPHostPort;
 
     const int n = lua_gettop(L);
     if (n > 1) {
-        port = getVerifiedInt(L, __func__, 2, "port number {default = 4050}", true);
+        port = getVerifiedInt(L, __func__, 2, qsl("port number {default = %1}").arg(csDefaultMMCPHostPort).toUtf8().constData(), true);
         if (port > 65535 || port < 1) {
             return warnArgumentValue(L, __func__, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }
@@ -345,9 +347,9 @@ int TLuaInterpreter::chatSnoop(lua_State* L)
 
 int TLuaInterpreter::chatStartServer(lua_State* L)
 {
-    int port = 4050;
+    int port = csDefaultMMCPHostPort;
     if (lua_gettop(L) > 0) {
-        port = getVerifiedInt(L, __func__, 1, "port number {default = 4050}", true);
+        port = getVerifiedInt(L, __func__, 1, qsl("port number {default = %1}").arg(csDefaultMMCPHostPort).toUtf8().constData(), true);
         if (port > 65535 || port < 1) {
             return warnArgumentValue(L, __func__, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
         }

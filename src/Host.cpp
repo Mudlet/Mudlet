@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
@@ -51,6 +51,7 @@
 #include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
+#include "MMCP.h"
 #include "MMCPServer.h"
 
 #include "pre_guard.h"
@@ -331,7 +332,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpDlgIRC(nullptr)
 , mmcpServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
-, mMMCPChatPort(4050)
+, mMMCPChatPort(csDefaultMMCPHostPort)
 , mMMCPAutostartServer(false)
 , mMMCPAllowConnectionRequests(false)
 , mMMCPAllowPeekRequests(false)
@@ -1643,7 +1644,7 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
 void Host::postChatChannelMessage(const QString& from, const QString& channel, const QString& message)
 {
     TEvent event {};
-    event.mArgumentList << MMCPServer::MMCPChatSideChannelEvent;
+    event.mArgumentList << csMMCPChatSideChannelEvent;
     event.mArgumentList << from << channel << message;
     event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
     raiseEvent(event);
@@ -1922,7 +1923,7 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     bool result = true;
     const QDir dir(dirName);
     if (dir.exists(dirName)) {
-        for (QFileInfo  const&info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
+        for (QFileInfo const& info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
             // prevent recursion outside of the original branch
             if (info.isDir() && info.absoluteFilePath().startsWith(originalPath)) {
                 result = removeDir(info.absoluteFilePath(), originalPath);
