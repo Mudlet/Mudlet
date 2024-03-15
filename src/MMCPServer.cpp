@@ -426,8 +426,9 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
         return {false, qsl("no connected clients")};
     }
 
-    const QString outMsg = QString("%1%2\n%3")
+    const QString outMsg = QString("%1%2 %3\n%4")
                             .arg(static_cast<char>(TextEveryone))
+                            .arg(getChatName())
                             .arg(msg)
                             .arg(static_cast<char>(End));
 
@@ -437,7 +438,8 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
         cl->writeData(outMsg);
     }
 
-    clientMessage(msg);
+    const QString clientMsg = QString("%1 %2").arg(getChatName()).arg(msg);
+    clientMessage(clientMsg);
 
     return {true, QString()};
 }
