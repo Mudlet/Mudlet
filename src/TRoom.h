@@ -73,7 +73,7 @@ public:
     bool hasExitStub(int direction);
     void setExitStub(int direction, bool status);
     void calcRoomDimensions();
-    bool setArea(int, bool isToDeferAreaRelatedRecalculations = false);
+    bool setArea(int, bool deferAreaRecalculations = false);
     int getExitWeight(const QString& cmd);
 
     int getWeight() const { return weight; }
@@ -221,7 +221,7 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     debug.nospace() << ", name=" << room->name;
     debug.nospace() << ", area=" << room->getArea();
     debug.nospace() << ", pos=" << room->x << "," << room->y << "," << room->z;
-    
+
     debug.nospace() << ", exits:";
     if (room->getNorth() != -1) {
         debug.nospace() << ", north=" << room->getNorth();
@@ -277,18 +277,18 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
         }
         debug.nospace() << ")";
     }
-    
-    
+
+
     int weight = room->getWeight();
     if (weight != -1) {
-        debug.nospace() << ", weight=" << weight; 
+        debug.nospace() << ", weight=" << weight;
     }
-    
+
     QString symbol = room->mSymbol;
     if (!symbol.isEmpty()) {
         debug.nospace() << ", symbol=" << symbol;
     }
-    
+
     auto exitWeights = room->getExitWeights();
     if (!exitWeights.isEmpty()) {
         debug.nospace() << ", exitWeights=(";

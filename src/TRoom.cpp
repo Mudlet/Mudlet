@@ -297,7 +297,7 @@ void TRoom::setId(const int roomId)
 // There IS a theoretical risk that if the last called room "doesn't exist" then
 // the area related recalculations won't get done - so had better provide an
 // alternative means to do them as a fault recovery
-bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
+bool TRoom::setArea(int areaID, bool deferAreaRecalculations)
 {
     static QSet<TArea*> dirtyAreas;
     TArea* pA = mpRoomDB->getArea(areaID);
@@ -316,7 +316,7 @@ bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
     //remove from the old area
     TArea* pA2 = mpRoomDB->getArea(area);
     if (pA2) {
-        pA2->removeRoom(id, isToDeferAreaRelatedRecalculations);
+        pA2->removeRoom(id, deferAreaRecalculations);
         // Ah, all rooms in the OLD area that led to the room now become area
         // exits for that OLD area {so must run determineAreaExits() for the
         // old area after the room has moved to the new area see other
@@ -339,7 +339,7 @@ bool TRoom::setArea(int areaID, bool isToDeferAreaRelatedRecalculations)
     dirtyAreas.insert(pA);
     pA->mIsDirty = true;
 
-    if (!isToDeferAreaRelatedRecalculations) {
+    if (!deferAreaRecalculations) {
         QSetIterator<TArea*> itpArea = dirtyAreas;
         while (itpArea.hasNext()) {
             TArea* pArea = itpArea.next();
