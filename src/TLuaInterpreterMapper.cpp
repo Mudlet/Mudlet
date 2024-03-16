@@ -583,7 +583,7 @@ int TLuaInterpreter::addRoom(lua_State* L)
         if (lua_gettop(L) >= 2) {
             areaID = getVerifiedInt(L, __func__, 2, "areaID");
         }
-        host.mpMap->setRoomArea(id, areaID, false);
+        host.mpMap->setRoomArea(id, areaID, true);
         host.mpMap->setUnsaved(__func__);
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
