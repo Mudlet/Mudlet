@@ -131,7 +131,6 @@ void TMap::logError(QString& msg)
 
 bool TMap::setRoomArea(int id, int area, bool deferAreaRecalculations)
 {
-    // qDebug() << "Setting room" << id << "to area" << area << "with " << deferAreaRecalculations;
     TRoom* pR = mpRoomDB->getRoom(id);
     if (!pR) {
         QString msg = tr("RoomID=%1 does not exist, can not set AreaID=%2 for non-existing room!").arg(id).arg(area);
