@@ -3509,7 +3509,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         return lua_error(L);
     }
 
-    int areaId;
+    int areaId = -1;
     QString areaName;
     if (lua_isnumber(L, 2)) {
         areaId = lua_tonumber(L, 2);
