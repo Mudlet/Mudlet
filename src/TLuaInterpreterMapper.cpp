@@ -500,12 +500,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
     pR->calcRoomDimensions();
 
     host.mpMap->setUnsaved(__func__);
-
-    // Better refresh the 2D map to show the new line:
-    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-        host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
-        host.mpMap->mpMapper->mp2dMap->update();
-    }
+    host.mpMap->update();
 
     lua_pushboolean(L, true);
     return 1;
@@ -926,7 +921,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
     }
 
     host.mpMap->mMapGraphNeedsUpdate = true;
-    // equivalent to a call to updateMap(L):
+
     host.mpMap->update();
     lua_pushboolean(L, true);
     return 1;
@@ -2370,11 +2365,7 @@ int TLuaInterpreter::highlightRoom(lua_State* L)
         pR->highlightColor2 = bg;
         pR->highlightRadius = radius;
 
-        if (host.mpMap->mpMapper) {
-            if (host.mpMap->mpMapper->mp2dMap) {
-                host.mpMap->mpMapper->mp2dMap->update();
-            }
-        }
+        host.mpMap->update();
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -2655,11 +2646,8 @@ int TLuaInterpreter::removeCustomLine(lua_State* L)
     // Need to update the TRoom {min|max}_{x|y} settings as they are used during
     // the painting process:
     pR->calcRoomDimensions();
-    // Better refresh the 2D map to show the new line:
-    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-        host.mpMap->mpMapper->mp2dMap->mNewMoveAction = true;
-        host.mpMap->mpMapper->mp2dMap->update();
-    }
+    host.mpMap->update();
+
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2764,17 +2752,7 @@ int TLuaInterpreter::resetRoomArea(lua_State* L)
     }
     const bool result = host.mpMap->setRoomArea(id, -1, false);
     if (result) {
-        // As a successful result WILL change the area a room is in then the map
-        // should be updated.  The GUI code that modifies room(s) areas already
-        // includes such a call to update the mapper.
-        if (host.mpMap->mpMapper) {
-            host.mpMap->mpMapper->mp2dMap->update();
-        }
-#if defined(INCLUDE_3DMAPPER)
-        if (host.mpMap->mpM) {
-            host.mpMap->mpM->update();
-        }
-#endif
+        host.mpMap->update();
     }
     lua_pushboolean(L, result);
     return 1;
@@ -3313,9 +3291,7 @@ int TLuaInterpreter::setDoor(lua_State* L)
     const bool result = pR->setDoor(exitCmd, doorStatus);
     if (result) {
         host.mpMap->setUnsaved(__func__);
-        if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-            host.mpMap->mpMapper->mp2dMap->update();
-        }
+        host.mpMap->update();
     }
     lua_pushboolean(L, result);
     return 1;
@@ -3414,15 +3390,7 @@ int TLuaInterpreter::setGridMode(lua_State* L)
     } else {
         pA->gridMode = gridMode;
         pA->calcSpan();
-        if (host.mpMap->mpMapper) {
-            if (host.mpMap->mpMapper->mp2dMap) {
-                // Not needed IMHO - Slysven
-                //                host.mpMap->mpMapper->mp2dMap->init();
-                //                cout << "NEW GRID MAP: init" << endl;
-                // But this is:
-                host.mpMap->mpMapper->update();
-            }
-        }
+        host.mpMap->update();
     }
     host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
@@ -3518,17 +3486,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
     // appear in the TRoomDB::areaNamesMap...
     const bool result = host.mpMap->setRoomArea(id, areaId, false);
     if (result) {
-        // As a successful result WILL change the area a room is in then the map
-        // should be updated.  The GUI code that modifies room(s) areas already
-        // includes such a call to update the mapper.
-        if (host.mpMap->mpMapper) {
-            host.mpMap->mpMapper->mp2dMap->update();
-        }
-#if defined(INCLUDE_3DMAPPER)
-        if (host.mpMap->mpM) {
-            host.mpMap->mpM->update();
-        }
-#endif
+        host.mpMap->update();
     }
     lua_pushboolean(L, result);
     return 1;
@@ -3586,9 +3544,7 @@ int TLuaInterpreter::setRoomCharColor(lua_State* L)
     }
 
     pR->mSymbolColor = QColor(r, g, b);
-    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-        host.mpMap->mpMapper->mp2dMap->update();
-    }
+    host.mpMap->update();
     host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
@@ -3713,11 +3669,7 @@ int TLuaInterpreter::unHighlightRoom(lua_State* L)
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (pR) {
         pR->highlight = false;
-        if (host.mpMap) {
-            if (host.mpMap->mpMapper) {
-                host.mpMap->mpMapper->mp2dMap->update();
-            }
-        }
+        host.mpMap->update();
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -3738,11 +3690,18 @@ int TLuaInterpreter::unsetRoomCharColor(lua_State* L)
 
     // Reset it to the default (and invalid) QColor:
     pR->mSymbolColor = {};
-    if (host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-        host.mpMap->mpMapper->mp2dMap->update();
-    }
+    host.mpMap->update();
     host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateMap
+int TLuaInterpreter::updateMap(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (host.mpMap) {
+        host.mpMap->update();
+    }
+    return 0;
+}
