@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2018, 2020, 2022-2023 by Stephen Lyons             *
+ *   Copyright (C) 2014-2018, 2020, 2022-2024 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -387,7 +387,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     }
 
     // Check this each packet
-    QByteArray const usedEncoding = mpHost->mTelnet.getEncoding();
+    const QByteArray usedEncoding = mpHost->mTelnet.getEncoding();
     if (mEncoding != usedEncoding) {
         encodingChanged(usedEncoding);
         // Will have to dump any stored bytes as they will be in the old
@@ -423,6 +423,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         encodingTableToUse = "CP737";
     } else if (mEncoding == "M_CP869") {
         encodingTableToUse = "CP869";
+    } else if (mEncoding == "M_MEDIEVIA") {
+        encodingTableToUse = "MEDIEVIA";
     }
 
     const QVector<QChar> encodingLookupTable = csmEncodingTable.getLookupTable(encodingTableToUse);
@@ -571,7 +573,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     // Needed for mud.durismud.com see forum message topic:
                     // https://forums.mudlet.org/viewtopic.php?f=9&t=22887
                     const int dataLength = spanEnd - spanStart;
-                    QByteArray const temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
+                    const QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
                     bool isOk = false;
                     const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
@@ -614,7 +616,7 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                      *   scrollback buffer - which is again a NWIH for us...!
                      */
                     const int dataLength = spanEnd - spanStart;
-                    QByteArray const temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
+                    const QByteArray temp = QByteArray::fromRawData(localBuffer.substr(localBufferPosition, dataLength).c_str(), dataLength);
                     bool isOk = false;
                     const int argValue = temp.toInt(&isOk);
                     if (isOk) {

@@ -43,7 +43,9 @@ if(WIN32)
     list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
   elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
     # The above test may not be correct as it won't pick up builds where
-    # MUDLET_VERSION_BUILD has been set in the environment:
+    # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
+    # "Packagers" they will likely want the original icon anyhow for their
+    # modified for their system packages of Mudlet:
     list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
   else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
@@ -121,18 +123,21 @@ set(mudlet_SRCS
     TLabel.cpp
     TScrollBox.cpp
     TLinkStore.cpp
+
     TLuaInterpreter.cpp
-    TLuaInterpreterNetworking.cpp
-    TLuaInterpreterMudletObjects.cpp
+    TLuaInterpreterDiscord.cpp
     TLuaInterpreterMapper.cpp
+    TLuaInterpreterMedia.cpp
+    TLuaInterpreterMudletObjects.cpp
+    TLuaInterpreterNetworking.cpp
+    TLuaInterpreterTextToSpeech.cpp
+    TLuaInterpreterUI.cpp
+    TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
-    TLuaInterpreterDiscord.cpp
-    TMainConsole.cpp
     TMedia.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
-    TLuaInterpreterTextToSpeech.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp

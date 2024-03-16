@@ -165,6 +165,7 @@ static bool isMain(const QString& name)
         }                                                                                      \
         label_;                                                                                \
     })
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCmdLineSuggestion
 int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
 {
@@ -193,7 +194,7 @@ int TLuaInterpreter::adjustStopWatch(lua_State* L)
         return 2;
     }
 
-    double const adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
+    const double adjustment = getVerifiedDouble(L, __func__, 2, "modification in seconds");
     const bool result = host.adjustStopWatch(watchId, qRound(adjustment * 1000.0));
     // This is only likely to fail when a numeric first argument was given:
     if (!result) {
@@ -1225,7 +1226,7 @@ int TLuaInterpreter::permTimer(lua_State* L)
 {
     const QString name = getVerifiedString(L, __func__, 1, "timer name");
     const QString parent = getVerifiedString(L, __func__, 2, "timer parent name");
-    double const time = getVerifiedDouble(L, __func__, 3, "time in seconds");
+    const double time = getVerifiedDouble(L, __func__, 3, "time in seconds");
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (auto [validationResult, validationMessage] = pLuaInterpreter->validateLuaCodeParam(4); !validationResult) {
@@ -1655,7 +1656,7 @@ int TLuaInterpreter::setTriggerStayOpen(lua_State* L)
     if (lua_gettop(L) > 1) {
         windowName = WINDOW_NAME(L, s++);
     }
-    double const b = getVerifiedDouble(L, __func__, s, "number of lines");
+    const double b = getVerifiedDouble(L, __func__, s, "number of lines");
     Host& host = getHostFromLua(L);
     host.getTriggerUnit()->setTriggerStayOpen(windowName, static_cast<int>(b));
     return 0;
@@ -2463,7 +2464,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
 int TLuaInterpreter::tempTimer(lua_State* L)
 {
     bool repeating{};
-    double const time = getVerifiedDouble(L, __func__, 1, "time in seconds {maybe decimal}");
+    const double time = getVerifiedDouble(L, __func__, 1, "time in seconds {maybe decimal}");
     const int n = lua_gettop(L);
 
     Host& host = getHostFromLua(L);

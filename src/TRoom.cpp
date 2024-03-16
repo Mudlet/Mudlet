@@ -663,8 +663,8 @@ void TRoom::calcRoomDimensions()
             continue;
         }
         for (auto pointInLine : pointsInLine) {
-            qreal const pointX = pointInLine.x();
-            qreal const pointY = pointInLine.y();
+            const qreal pointX = pointInLine.x();
+            const qreal pointY = pointInLine.y();
             if (pointX < min_x) {
                 min_x = pointX;
             }
@@ -1693,7 +1693,7 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
     roomObj.insert(QLatin1String("id"), static_cast<double>(id));
 
     if (!name.isEmpty()) {
-        QJsonValue const nameValue{name};
+        const QJsonValue nameValue{name};
         roomObj.insert(QLatin1String("name"), nameValue);
     }
 
@@ -2143,16 +2143,16 @@ void TRoom::readJsonCustomExitLine(const QJsonObject& exitObj, const QString& di
         return;
     }
 
-    QJsonArray const customLinePointsArray = customLineObj.value(QLatin1String("coordinates")).toArray();
+    const QJsonArray customLinePointsArray = customLineObj.value(QLatin1String("coordinates")).toArray();
     if (customLinePointsArray.isEmpty()) {
         return;
     }
 
     QList<QPointF> points;
     for (int i = 0, total = customLinePointsArray.count(); i < total; ++i) {
-        QJsonArray const customLinePointCoordinateArray = customLinePointsArray.at(i).toArray();
+        const QJsonArray customLinePointCoordinateArray = customLinePointsArray.at(i).toArray();
         if (customLinePointCoordinateArray.size() == 2 && customLinePointCoordinateArray.at(0).isDouble() && customLinePointCoordinateArray.at(1).isDouble()) {
-            QPointF const point{customLinePointCoordinateArray.at(0).toDouble(), customLinePointCoordinateArray.at(1).toDouble()};
+            const QPointF point{customLinePointCoordinateArray.at(0).toDouble(), customLinePointCoordinateArray.at(1).toDouble()};
 
             // We might wish to consider if there is a z in the future to
             // accommodate 3D custom lines...!
@@ -2314,7 +2314,7 @@ void TRoom::writeJsonHighlight(QJsonObject& obj) const
     }
 
     highlightObj.insert(QLatin1String("radius"), static_cast<double>(highlightRadius));
-    QJsonValue const highlightValue{highlightObj};
+    const QJsonValue highlightValue{highlightObj};
     obj.insert(QLatin1String("highlight"), highlightValue);
 }
 
@@ -2358,7 +2358,7 @@ void TRoom::readJsonSymbol(const QJsonObject& roomObj)
         mSymbol = symbolObj.value(QLatin1String("text")).toString();
     }
 
-    QColor const color = TMap::readJsonColor(symbolObj);
+    const QColor color = TMap::readJsonColor(symbolObj);
     if (color.isValid()) {
         mSymbolColor = color;
     }

@@ -223,7 +223,7 @@ void GLWidget::slot_setCameraPositionZ(int angle)
 
 void GLWidget::initializeGL()
 {
-    QColor const color(QColorConstants::Black);
+    const QColor color(QColorConstants::Black);
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     xRot = 1;
     yRot = 5;
@@ -503,8 +503,8 @@ void GLWidget::paintGL()
                     auto ex = static_cast<float>(pExit->x);
                     auto ey = static_cast<float>(pExit->y);
                     auto ez = static_cast<float>(pExit->z);
-                    QVector3D const p1(ex, ey, ez);
-                    QVector3D const p2(rx, ry, rz);
+                    const QVector3D p1(ex, ey, ez);
+                    const QVector3D p2(rx, ry, rz);
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
@@ -804,7 +804,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor const& _c = mpMap->mCustomEnvColors[env];
+                            const QColor& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 25);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -915,8 +915,8 @@ void GLWidget::paintGL()
                     auto ex = static_cast<float>(pExit->x);
                     auto ey = static_cast<float>(pExit->y);
                     auto ez = static_cast<float>(pExit->z);
-                    QVector3D const p1(ex, ey, ez);
-                    QVector3D const p2(rx, ry, rz);
+                    const QVector3D p1(ex, ey, ez);
+                    const QVector3D p2(rx, ry, rz);
                     glLoadIdentity();
                     gluLookAt(px * 0.1 + xRot, py * 0.1 + yRot, pz * 0.1 + zRot, px * 0.1, py * 0.1, pz * 0.1, 0.0, 1.0, 0.0);
                     glScalef(0.1, 0.1, 0.1);
@@ -1214,7 +1214,7 @@ void GLWidget::paintGL()
                                 }
                                 break;
                             }
-                            QColor const& _c = mpMap->mCustomEnvColors[env];
+                            const QColor& _c = mpMap->mCustomEnvColors[env];
                             glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                             mc3[0] = _c.redF();
                             mc3[1] = _c.greenF();
@@ -1608,7 +1608,7 @@ void GLWidget::paintGL()
                         }
                         break;
                     }
-                    QColor const& _c = mpMap->mCustomEnvColors[env];
+                    const QColor& _c = mpMap->mCustomEnvColors[env];
                     glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                     mc3[0] = _c.redF();
                     mc3[1] = _c.greenF();
@@ -1911,7 +1911,7 @@ void GLWidget::paintGL()
                     }
                     break;
                 }
-                QColor const& _c = mpMap->mCustomEnvColors[env];
+                const QColor& _c = mpMap->mCustomEnvColors[env];
                 glColor4ub(_c.red(), _c.green(), _c.blue(), 255);
                 mc3[0] = _c.redF();
                 mc3[1] = _c.greenF();

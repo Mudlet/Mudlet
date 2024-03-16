@@ -38,7 +38,7 @@ then
 #    exit
 #  fi
 
-  # get commit date now before we check out and change into another git repository
+  # We refer to $BUILD_COMMIT in the environment to get the commit data now
   COMMIT_DATE=$(git show -s --format="%cs" | tr -d '-')
   YESTERDAY_DATE=$(date -d "yesterday" '+%F' | tr -d '-')
 
@@ -53,20 +53,20 @@ then
 
   if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
-    ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}"
+    ./make-installer.sh "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
     cd "${BUILD_DIR}/../installers/generic-linux"
 
-    chmod +x "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
-    tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.AppImage"
+    chmod +x "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}.AppImage"
+    tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar" "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}.AppImage"
 
 
     echo "=== ... later, via Github ==="
     # Move the finished file into a folder of its own, because we ask Github to upload contents of a folder
     mkdir "upload/"
-    mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "upload/"
+    mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar" "upload/"
     {
       echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
-      echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-linux-x64"
+      echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64"
     } >> "$GITHUB_ENV"
     DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
 
@@ -84,7 +84,7 @@ then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}"
+      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
     else
       ./make-installer.sh -r "${VERSION}"
     fi
@@ -96,7 +96,7 @@ then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "Mudlet PTB.AppImage"
+      tar -cvf "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar" "Mudlet PTB.AppImage"
     else
       tar -cvf "Mudlet-${VERSION}-linux-x64.AppImage.tar" "Mudlet.AppImage"
     fi
@@ -104,10 +104,10 @@ then
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir "upload/"
-      mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-linux-x64.AppImage.tar" "upload/"
+      mv "Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-linux-x64.AppImage.tar" "upload/"
       {
         echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
-        echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-linux-x64"
+        echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-${BUILD_COMMIT}-linux-x64"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else
@@ -145,7 +145,7 @@ then
       changelog=$(lua "${SOURCE_DIR}/CI/generate-changelog.lua" --mode ptb --releasefile "${downloadedfeed}")
 
       echo "=== Creating release in Dblsqd ==="
-      dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
+      dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}" || true
 
       # release registration and uploading will be manual for the time being
     else
