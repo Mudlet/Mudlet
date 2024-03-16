@@ -3405,32 +3405,35 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     return mpProgressDialog->wasCanceled();
 }
 
+/**
+ * Update the the 2D and 3D map visually.
+ *
+ * It ensures debouncing internally to ensure that bulk calls are efficient.
+ */
 void TMap::update()
 {
     static bool debounce;
-    if (debounce) {
-        qDebug() << "TMap::update() - debounce";
-        return;
-    }
+    if (!debounce) {
+        debounce = true;
+        QTimer::singleShot(0, this, [this]() {
+            debounce = false;
 
-    debounce = true;
-    QTimer::singleShot(0, this, [this]() {
-        qDebug() << "TMap::update() - debounce done";
 #if defined(INCLUDE_3DMAPPER)
-        if (mpM) {
-            mpM->update();
-        }
-#endif
-        if (mpMapper) {
-            mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
-            mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
-
-            if (mpMapper->mp2dMap) {
-                mpMapper->mp2dMap->mNewMoveAction = true;
-                mpMapper->mp2dMap->update();
+            if (mpM) {
+                mpM->update();
             }
-        }
-    });
+#endif
+            if (mpMapper) {
+                mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
+                mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
+
+                if (mpMapper->mp2dMap) {
+                    mpMapper->mp2dMap->mNewMoveAction = true;
+                    mpMapper->mp2dMap->update();
+                }
+            }
+        });
+    }
 }
 
 QColor TMap::getColor(int id)
