@@ -74,6 +74,11 @@ endif()
 
 if(WIN32)
   set(APP_TARGET mudlet.exe)
+  if (DEFINED $ENV{MINGW_BASE_DIR})
+    set(MINGW_BASE_DIR $ENV{MINGW_BASE_DIR})
+  else()
+    set(MINGW_BASE_DIR C:\\Qt\\Tools\\mingw730_32)
+  endif()
 elseif(APPLE)
   set(APP_TARGET Mudlet)
 else()
@@ -146,6 +151,8 @@ else()
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
+set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/src")
+set(RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/src")
 
 include(IncludeOptionalModule)
 
