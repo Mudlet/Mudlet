@@ -65,13 +65,12 @@ bool TRoomDB::addRoom(int id)
         rooms[id]->setId(id);
         // there is no point in updating the entranceMap here, as the room has no exit information
         return true;
-    } else {
-        if (id <= 0) {
-            QString error = qsl("addRoom: illegal room id=%1. roomID must be > 0").arg(id);
-            mpMap->logError(error);
-        }
-        return false;
     }
+    if (id <= 0) {
+        QString error = qsl("addRoom: illegal room id=%1. roomID must be > 0").arg(id);
+        mpMap->logError(error);
+    }
+    return false;
 }
 
 bool TRoomDB::addRoom(int id, TRoom* pR, bool isMapLoading)
@@ -81,9 +80,8 @@ bool TRoomDB::addRoom(int id, TRoom* pR, bool isMapLoading)
         pR->setId(id);
         updateEntranceMap(pR, isMapLoading);
         return true;
-    } else {
-        return false;
     }
+    return false;
 }
 
 void TRoomDB::deleteValuesFromEntranceMap(int value)
