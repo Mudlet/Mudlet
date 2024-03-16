@@ -575,8 +575,13 @@ QPair<bool, QString> MMCPServer::stopServer()
 {
     if (isListening()) {
         close();
+
+        mpHost->postMessage(tr("[ CHAT ]  - Stopped server"));
+
         return {true, QString()};
     }
+        
+    mpHost->postMessage(tr("[ CHAT ]  - Unable to stop server, it is not running"));
 
     return {false, qsl("unable to stop server, it is not listening")};
 }

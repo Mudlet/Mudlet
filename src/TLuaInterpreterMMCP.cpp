@@ -347,17 +347,17 @@ int TLuaInterpreter::chatSnoop(lua_State* L)
 
 int TLuaInterpreter::chatStartServer(lua_State* L)
 {
-    int port = csDefaultMMCPHostPort;
-    if (lua_gettop(L) > 0) {
-        port = getVerifiedInt(L, __func__, 1, qsl("port number {default = %1}").arg(csDefaultMMCPHostPort).toUtf8().constData(), true);
-        if (port > 65535 || port < 1) {
-            return warnArgumentValue(L, __func__, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
-        }
-    }
-
     Host* pHost = &getHostFromLua(L);
     if (!pHost->mmcpServer) {
         pHost->initMMCPServer();
+    }
+
+    int port = pHost->getMMCPPort();
+    if (lua_gettop(L) > 0) {
+        port = getVerifiedInt(L, __func__, 1, qsl("port number {default = %1}").arg(pHost->getMMCPPort()).toUtf8().constData(), true);
+        if (port > 65535 || port < 1) {
+            return warnArgumentValue(L, __func__, qsl("invalid port number %1 given, if supplied it must be in range 1 to 65535").arg(port));
+        }
     }
 
     const auto result = pHost->mmcpServer->startServer(port);
