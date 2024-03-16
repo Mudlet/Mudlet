@@ -817,8 +817,7 @@ int TLuaInterpreter::clearSpecialExits(lua_State* L)
     host.mpMap->update();
     return 0;
 }
-
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeMapWidget
 int TLuaInterpreter::closeMapWidget(lua_State* L)
 {
     Host& host = getHostFromLua(L);
@@ -1125,7 +1124,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     return 1;
 }
 
-
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deleteMap
 int TLuaInterpreter::deleteMap(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
