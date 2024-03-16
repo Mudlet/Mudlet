@@ -1,5 +1,5 @@
 /***************************************************************************
- *   Copyright (C) 2023-2024 by Adam Robinson - seldon1951@hotmail.com     *
+ *   Copyright (C) 2024-2024 by Adam Robinson - seldon1951@hotmail.com     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -17,38 +17,14 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#ifndef MUDLETINSTANCECOORDINATOR_H
-#define MUDLETINSTANCECOORDINATOR_H
 
-#include "Host.h"
-#include <QLocalServer>
-#include <QStringList>
+#ifndef DEFAULTCLIENTUTILS_H
+#define DEFAULTCLIENTUTILS_H
+#include <QString>
 
-class MudletInstanceCoordinator : public QLocalServer
-{
-    Q_OBJECT
+QString getCurrentTelnetOpenCommand();
+void setCurrentExecutableAsTelnetOpenCommand();
+QString commandForCurrentExecutable();
+bool isCurrentExecutableDefault();
 
-public:
-    explicit MudletInstanceCoordinator(const QString& serverName, QObject* parent = nullptr);
-    bool tryToStart();
-    void queueUriOrFile(const QString& uri);
-    void queueUri(const QUrl& uri);
-    void openUrisLocally();
-    bool openUrisRemotely();
-    QStringList listUrisWithSchemes(const QStringList schemes);
-    QStringList readUriQueue();
-
-protected:
-    void incomingConnection(quintptr socketDescriptor) override;
-
-private slots:
-    void handleReadyRead();
-    void handleDisconnected();
-
-private:
-    QMutex mMutex;
-    QString mServerName;
-    QStringList mQueuedUris;
-};
-
-#endif // MUDLETINSTANCECOORDINATOR_H
+#endif //DEFAULTCLIENTUTILS_H

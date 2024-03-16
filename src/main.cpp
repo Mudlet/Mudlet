@@ -277,7 +277,7 @@ int main(int argc, char* argv[])
                                                    qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
 
-    parser.addPositionalArgument("package", "Path to .mpackage file");
+    parser.addPositionalArgument(qsl("URI or file path"), qsl("Any URI or file path that Mudlet should open"));
 
     const bool parsedCommandLineOk = parser.parse(app->arguments());
 
@@ -355,7 +355,7 @@ int main(int argc, char* argv[])
                                                                    "                                    optional and will make the application wait until a\n"
                                                                    "                                    debugger connects to it."));
         texts << appendLF.arg(QCoreApplication::translate("main", "Arguments:"));
-        texts << appendLF.arg(QCoreApplication::translate("main", "        [FILE]                       File to install as a package"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "        [URI/FILE]                   Package path or telnet URI"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Report bugs to: https://github.com/Mudlet/Mudlet/issues"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Project home page: http://www.mudlet.org/"));
         std::cout << texts.join(QString()).toStdString();
@@ -383,34 +383,29 @@ int main(int argc, char* argv[])
     }
 
 
-
-    // Handles installing a package from a command line argument.
-    // Used when mudlet is used to open an .mpackage file on some operating systems.
+    // Handles opening a URI from a command line argument.
+    // Used when mudlet is used to open an .mpackage file or telnet URI on some operating systems.
     //
     // If Mudlet was already open:
-    // 1. Send the package path to the other process and exit.
-    // 2. The other process will take responsibility for installation.
-    // 3. If a profile is open, installation will occur in currently open profile.
-    // 4. If no profile is open, the package will be queued for install until a profile is selected.
+    // 1. Send the URI to the other process and exit.
+    // 2. The other process will take responsibility for opening.
+    // 3. If a profile is open, package installations will occur in currently open profile.
+    // 4. If no profile is open, package installations will be queued for install until a profile is selected.
     //
     // If no other mudlet process is found:
     // 1. This current process will start as normal.
-    // 2. The package will be queued for install until a profile is selected.
+    // 2. Any telnet URIs will be used to open a profile.
+    // 3. Any package will be queued for install until a profile has been opened.
 
     std::unique_ptr<MudletInstanceCoordinator> instanceCoordinator = std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator");
     const bool firstInstanceOfMudlet = instanceCoordinator->tryToStart();
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
-        const QString absPath = QDir(positionalArguments.first()).absolutePath();
-        instanceCoordinator->queuePackage(absPath);
+        instanceCoordinator->queueUriOrFile(positionalArguments.first());
         if (!firstInstanceOfMudlet) {
-            const bool successful = instanceCoordinator->installPackagesRemotely();
-            if (successful) {
-                return 0;
-            } else {
-                return 1;
-            }
+            const bool successful = instanceCoordinator->openUrisRemotely();
+            return !successful; // return 0 if successful, 1 if unsuccessful
         }
     }
 
@@ -656,7 +651,14 @@ int main(int argc, char* argv[])
     }
     mudlet::self()->show();
 
-    mudlet::self()->startAutoLogin(cliProfiles);
+    // Do auto login if no profile-opening URIs are supplied
+    QStringList telnetUris = mudlet::self()->getInstanceCoordinator()->listUrisWithSchemes(QStringList{qsl("telnet"), qsl("mudlet")});
+    bool willOpenProfileWithUri = telnetUris.length();
+    if (willOpenProfileWithUri) {
+        mudlet::self()->getInstanceCoordinator()->openUrisLocally();
+    } else {
+        mudlet::self()->startAutoLogin(cliProfiles);
+    }
 
 #if defined(INCLUDE_UPDATER)
     mudlet::self()->checkUpdatesOnStart();

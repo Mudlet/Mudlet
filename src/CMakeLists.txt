@@ -100,6 +100,7 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
+    DefaultClientUtils.cpp
     ShortcutsManager.cpp
     ScriptUnit.cpp
     T2DMap.cpp
@@ -264,6 +265,7 @@ set(mudlet_HDRS
     mapInfoContributorManager.h
     mudlet.h
     MudletInstanceCoordinator.h
+    DefaultClientUtils.h
     post_guard.h
     pre_guard.h
     ShortcutsManager.h

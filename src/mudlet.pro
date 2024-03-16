@@ -633,6 +633,7 @@ SOURCES += \
     mapInfoContributorManager.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
+    DefaultClientUtils.cpp \
     MxpTag.cpp \
     ScriptUnit.cpp \
     ShortcutsManager.cpp \
@@ -758,6 +759,7 @@ HEADERS += \
     mapInfoContributorManager.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
+    DefaultClientUtils.cpp \
     MxpTag.h \
     pre_guard.h \
     post_guard.h \
@@ -865,6 +867,7 @@ FORMS += \
     ui/about_dialog.ui \
     ui/actions_main_area.ui \
     ui/aliases_main_area.ui \
+    ui/check_default_client.ui \
     ui/color_trigger.ui \
     ui/composer.ui \
     ui/connection_profiles.ui \

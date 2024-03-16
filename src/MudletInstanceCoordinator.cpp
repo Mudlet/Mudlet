@@ -21,27 +21,63 @@
 #include "Host.h"
 #include "mudlet.h"
 #include <QLocalSocket>
+#include <qnamespace.h>
 
 const int WAIT_FOR_RESPONSE_MS = 500;
 
 MudletInstanceCoordinator::MudletInstanceCoordinator(const QString& serverName, QObject* parent) : QLocalServer(parent), mServerName(serverName) {}
 
-void MudletInstanceCoordinator::queuePackage(const QString& packageName)
+void MudletInstanceCoordinator::queueUriOrFile(const QString& uriOrFile)
 {
-    mQueuedPackagePaths << packageName;
+    QUrl uri(uriOrFile);
+    if (uri.isValid() && !uri.scheme().isEmpty()) {
+        // It's a URI if it has a valid scheme.
+        queueUri(uri.toString());
+        return;
+    }
+
+    QString file = uriOrFile;
+    if (file.startsWith("~/")) {
+        // Need to expand home directory
+        file = QDir::homePath() + file.mid(1);
+    }
+
+    if (QFile::exists(file)) {
+        // Comfirm file exists before adding to queue
+        queueUri(QUrl::fromLocalFile(file));
+        return;
+    }
+
+    qWarning() << "Tried to queue invalid URI or file:" << uriOrFile;
+}
+void MudletInstanceCoordinator::queueUri(const QUrl& uri)
+{
+    mQueuedUris << uri.toString();
 }
 
-// Install the package queue on another instance of Mudlet.
-// Returns true on success
-bool MudletInstanceCoordinator::installPackagesRemotely()
+QStringList MudletInstanceCoordinator::listUrisWithSchemes(const QStringList schemes)
 {
-    // Pass the absolute path of the package to the active Mudlet Server
+    QStringList matchingUris;
+
+    for (const QString& uri : mQueuedUris) {
+        if (schemes.contains(QUrl(uri).scheme(), Qt::CaseInsensitive)) {
+            matchingUris << uri;
+        }
+    }
+    return matchingUris;
+}
+
+// Open queued URIs on another instance of Mudlet.
+// Returns true on success
+bool MudletInstanceCoordinator::openUrisRemotely()
+{
+    // Pass the URIs to the active Mudlet Server
     // The Mudlet Server may be owned by this process or another process.
     QLocalSocket socket;
     socket.connectToServer(mServerName);
 
     if (socket.waitForConnected(WAIT_FOR_RESPONSE_MS)) {
-        const QString packagePathsData = mQueuedPackagePaths.join(QChar::LineFeed);
+        const QString packagePathsData = mQueuedUris.join(QChar::LineFeed);
         socket.write(packagePathsData.toUtf8());
         socket.waitForBytesWritten(WAIT_FOR_RESPONSE_MS);
         socket.disconnectFromServer();
@@ -67,18 +103,6 @@ bool MudletInstanceCoordinator::tryToStart()
     return false;
 }
 
-// Install all queued packages to a specified profile/host.
-// Mudlet will call this function whenever a profile is activated.
-void MudletInstanceCoordinator::installPackagesToHost(Host* activeProfile)
-{
-    mMutex.lock();
-    for (const QString& path : mQueuedPackagePaths) {
-        auto ret = activeProfile->installPackage(path, 0);
-    }
-    mQueuedPackagePaths.clear();
-    mMutex.unlock();
-}
-
 void MudletInstanceCoordinator::incomingConnection(quintptr socketDescriptor)
 {
     QLocalSocket* socket = new QLocalSocket(this);
@@ -88,7 +112,7 @@ void MudletInstanceCoordinator::incomingConnection(quintptr socketDescriptor)
     connect(socket, &QLocalSocket::disconnected, this, &MudletInstanceCoordinator::handleDisconnected);
 }
 
-// Receive package paths and install them
+// Receive URIs and open them
 void MudletInstanceCoordinator::handleReadyRead()
 {
     QLocalSocket* socket = qobject_cast<QLocalSocket*>(sender());
@@ -100,31 +124,63 @@ void MudletInstanceCoordinator::handleReadyRead()
     // Receive package paths and add them the install queue.
     QByteArray data = socket->readAll();
     const QStringList packagePaths = QString::fromUtf8(data).split(QChar::LineFeed, Qt::SkipEmptyParts);
-    mQueuedPackagePaths << packagePaths;
+    mQueuedUris << packagePaths;
     mMutex.unlock();
 
-    installPackagesLocally();
+    openUrisLocally();
 }
 
-// Find the active host and install queued packages to it
-void MudletInstanceCoordinator::installPackagesLocally()
+// Try to open queued URIs
+// This is called when:
+// - after a profile has been opened
+// - after another instance of Mudlet has transmitted a list of URIs to this instance
+void MudletInstanceCoordinator::openUrisLocally()
 {
+    mMutex.lock();
     QTimer::singleShot(0, this, [this]() {
         mudlet* mudletApp = mudlet::self();
         Q_ASSERT(mudletApp);
-        Host* activeHost = mudletApp->getActiveHost();
-        if (activeHost) {
-            installPackagesToHost(activeHost);
-        } else {
-            mudletApp->slot_showConnectionDialog();
+
+        // Process queued URIs until we have to wait for a profile to be selected or loaded
+        for (qsizetype i = mQueuedUris.length() - 1; i >= 0; i--) {
+            QUrl url = QUrl(mQueuedUris[i]);
+            const bool isTelnet = url.scheme() == qsl("telnet") || url.scheme() == qsl("mudlet");
+            const bool isPackage = url.scheme() == qsl("file");
+            if (isTelnet) {
+                // Telnet URI is found, so we need to handle it and open a profile.
+                // Progress on uri queue will resume after the profile has been opened.
+                mQueuedUris.removeLast();
+                mMutex.unlock();
+                mudletApp->handleTelnetUri(url);
+                break;
+            }
+            if (isPackage) {
+                Host* activeHost = mudletApp->getActiveHost();
+                if (!activeHost) {
+                    // Ask the user to choose a profile, since none are active.
+                    // Progress on uri queue will resume after the profile has been opened.
+                    mudletApp->slot_showConnectionDialog();
+                    mMutex.unlock();
+                    break;
+                }
+                // Install the package to the active host
+                // Keep our lock on the mutex since the loop continues
+                mQueuedUris.removeLast();
+                activeHost->installPackage(url.toLocalFile(), 0);
+
+                // If this loop won't run again, unlock the mutex
+                if (i == 0) {
+                    mMutex.unlock();
+                }
+            }
         }
     });
 }
 
 
-QStringList MudletInstanceCoordinator::readPackageQueue()
+QStringList MudletInstanceCoordinator::readUriQueue()
 {
-    return mQueuedPackagePaths;
+    return mQueuedUris;
 }
 
 void MudletInstanceCoordinator::handleDisconnected()

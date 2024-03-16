@@ -209,6 +209,7 @@
         <file>splash/Mudlet_splashscreen_main.png</file>
         <file>run-lua-code-v4.xml</file>
         <file>run-tests.xml</file>
+        <file>ui/check_default_client.ui</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>
         <file>ui/delete_profile_confirmation.ui</file>

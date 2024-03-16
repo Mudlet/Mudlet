@@ -27,12 +27,13 @@
  ***************************************************************************/
 
 #include "Announcer.h"
-#include "MudletInstanceCoordinator.h"
-#include "discord.h"
+#include "DefaultClientUtils.h"
 #include "FontManager.h"
 #include "HostManager.h"
+#include "MudletInstanceCoordinator.h"
 #include "ShortcutsManager.h"
 #include "TMediaData.h"
+#include "discord.h"
 #include "utils.h"
 #include <memory>
 
@@ -320,7 +321,10 @@ public:
     void commitLayoutUpdates(bool flush = false);
     void deleteProfileData(const QString &profile, const QString &item);
     void disableToolbarButtons();
+    void startAutoLogin();
     void doAutoLogin(const QString&);
+    void handleTelnetUri(const QUrl& telnetUri);
+    void openConnectionsWindow();
     void enableToolbarButtons();
     void forceClose();
     Host* getActiveHost();
@@ -369,6 +373,7 @@ public:
 #if defined(Q_OS_WIN32)
     void sanitizeUtf8Path(QString& originalLocation, const QString& fileName) const;
 #endif
+    void generateUniqueProfileName(QString& profile_name);
     // This will save and replace the .dic file with just the words in the
     // supplied second argument and update the .aff file as appropriate. It is
     // to be used at the end of a session to store away the user's changes:
@@ -450,6 +455,8 @@ public:
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
     int mReplaySpeed = 1;
+    QPointer<QDialog> mpDefaultClientDlg;
+
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
     // does use them - use this flag to determine whether we should apply our
@@ -482,6 +489,8 @@ public:
     std::unique_ptr<MudletInstanceCoordinator> mInstanceCoordinator;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
+    // perform check on startup if Mudlet is the default application for handling telnet:// links
+    bool mAlwaysCheckDefault = true;
 
 #if defined(INCLUDE_UPDATER)
     Updater* pUpdater = nullptr;
@@ -598,6 +607,11 @@ private:
     void loadMaps();
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
+    QString addProfile(const QString& host, const int port, const QString& login, const QString& password);
+    bool mudletIsDefault();
+    void openDefaultCheck();
+    void setMudletAsDefault();
+    void installDefaultPackages(Host* pHost);
     bool overwriteAffixFile(const QString& affixPath, const QHash<QString, unsigned int>&);
     bool overwriteDictionaryFile(const QString& dictionaryPath, const QStringList&);
     bool scanDictionaryFile(const QString& dictionaryPath, int&, QHash<QString, unsigned int>&, QStringList&);

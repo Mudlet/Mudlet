@@ -32,11 +32,22 @@ bool FileOpenHandler::eventFilter(QObject* obj, QEvent* event)
         QFileOpenEvent* openEvent = static_cast<QFileOpenEvent*>(event);
         Q_ASSERT(mudlet::self());
         MudletInstanceCoordinator* instanceCoordinator = mudlet::self()->getInstanceCoordinator();
-        const QString absPath = QDir(openEvent->file()).absolutePath();
-        instanceCoordinator->queuePackage(absPath);
-        instanceCoordinator->installPackagesLocally();
-        return true;
+
+        if (openEvent->url().isValid()) {
+            QUrl url = openEvent->url();
+            if (url.scheme() == qsl("telnet") || url.scheme() == qsl("mudlet")) {
+                // Handle telnet url
+                instanceCoordinator->queueUriOrFile(url.toString());
+                instanceCoordinator->openUrisLocally();
+                return true;
+            }
+        } else if (!openEvent->file().isEmpty()) {
+            // Handle file
+            instanceCoordinator->queueUriOrFile(openEvent->file());
+            instanceCoordinator->openUrisLocally();
+            return true;
+        }
     }
+
     return QObject::eventFilter(obj, event);
 }
-

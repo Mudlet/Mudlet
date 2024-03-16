@@ -299,8 +299,28 @@
             </property>
            </widget>
           </item>
+          <item row="4" column="0">
+             <widget class="QCheckBox" name="checkBox_checkMudletDefault">
+               <property name="toolTip">
+                 <string>&lt;p&gt;Open &lt;code&gt;telnet://&lt;/code&gt; links with Mudlet&lt;/p&gt;</string>
+               </property>
+               <property name="text">
+                 <string>Always check if Mudlet is your default client</string>
+               </property>
+             </widget>
+           </item>
          </layout>
         </widget>
+       </item>
+       <item>
+         <widget class="QCheckBox" name="checkBox_checkMudletDefault">
+           <property name="toolTip">
+             <string>&lt;p&gt;Open &lt;code&gt;telnet://&lt;/code&gt; links with Mudlet&lt;/p&gt;</string>
+           </property>
+           <property name="text">
+             <string>Always check if Mudlet is your default client</string>
+           </property>
+         </widget>
        </item>
        <item>
         <widget class="QGroupBox" name="groupBox_protocols">
