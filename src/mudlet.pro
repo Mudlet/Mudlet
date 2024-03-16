@@ -661,6 +661,7 @@ SOURCES += \
     TLuaInterpreter.cpp \
     TLuaInterpreterDiscord.cpp \
     TLuaInterpreterMapper.cpp \
+    TLuaInterpreterMedia.cpp \
     TLuaInterpreterMudletObjects.cpp \
     TLuaInterpreterNetworking.cpp \
     TLuaInterpreterUI.cpp \
