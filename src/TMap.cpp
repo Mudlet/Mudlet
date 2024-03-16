@@ -3407,20 +3407,30 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
 
 void TMap::update()
 {
-#if defined(INCLUDE_3DMAPPER)
-    if (mpM) {
-        mpM->update();
+    static bool debounce;
+    if (debounce) {
+        qDebug() << "TMap::update() - debounce";
+        return;
     }
-#endif
-    if (mpMapper) {
-        mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
-        mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
 
-        if (mpMapper->mp2dMap) {
-            mpMapper->mp2dMap->mNewMoveAction = true;
-            mpMapper->mp2dMap->update();
+    debounce = true;
+    QTimer::singleShot(0, this, [this]() {
+        qDebug() << "TMap::update() - debounce done";
+#if defined(INCLUDE_3DMAPPER)
+        if (mpM) {
+            mpM->update();
         }
-    }
+#endif
+        if (mpMapper) {
+            mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
+            mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
+
+            if (mpMapper->mp2dMap) {
+                mpMapper->mp2dMap->mNewMoveAction = true;
+                mpMapper->mp2dMap->update();
+            }
+        }
+    });
 }
 
 QColor TMap::getColor(int id)
