@@ -1992,12 +1992,12 @@ void T2DMap::paintEvent(QPaintEvent* e)
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-            ankerl::nanobench::Bench benchmark;
-            benchmark.title("Room painting code").minEpochIterations(5000).warmup(200).relative(true);
+            // ankerl::nanobench::Bench benchmark;
+            // benchmark.title("Room painting code").minEpochIterations(5000).warmup(200).relative(true);
 
-            benchmark.run("old drawRoom", [&] { drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
+            // benchmark.run("old drawRoom", [&] { drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
 
-            benchmark.run("new drawRoom", [&] { drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
+            // benchmark.run("new drawRoom", [&] { drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
 
         drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
 
