@@ -1449,7 +1449,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         lc = QColorConstants::White;
     }
     pen.setColor(lc);
-    painter.save();
 
     QBrush innerBrush = painter.brush();
     innerBrush.setStyle(Qt::NoBrush);
@@ -1639,7 +1638,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         }
     }
 
-    painter.restore();
     if (!isGridMode) {
         QMapIterator<int, QPointF> it(areaExitsMap);
         while (it.hasNext()) {
