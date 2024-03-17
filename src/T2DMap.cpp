@@ -44,7 +44,7 @@
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QtUiTools>
-#include <nanobench.h>
+// #include <nanobench.h>
 #include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
