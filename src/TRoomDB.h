@@ -51,6 +51,7 @@ public:
     explicit TRoomDB(TMap*);
 
     TRoom* getRoom(int id);
+    TRoom* getRoomNew(int id);
     TArea* getArea(int id);
     TArea* getRawArea(int, bool*);
     bool addRoom(int id);
