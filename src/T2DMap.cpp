@@ -1239,27 +1239,28 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
 
     const bool roomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
 
-    QPen roomPen(Qt::transparent);
-    roomPen.setWidth(borderWidth);
+    pen.setColor(Qt::transparent);
+    pen.setWidth(borderWidth);
     painter.setBrush(roomColor);
 
     if (shouldDrawBorder && mRoomWidth >= 12) {
-        roomPen.setColor(mpHost->mRoomBorderColor);
+        pen.setColor(mpHost->mRoomBorderColor);
     } else if (shouldDrawBorder) {
         auto fadingColor = QColor(mpHost->mRoomBorderColor);
         fadingColor.setAlpha(255 * (mRoomWidth / 12));
-        roomPen.setColor(fadingColor);
+        pen.setColor(fadingColor);
     }
 
     if (roomSelected) {
         QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
         selectionBg.setColorAt(0.2, roomColor);
         selectionBg.setColorAt(1, Qt::blue);
-        roomPen.setColor(QColor(255, 50, 50));
+        pen.setColor(QColor(255, 50, 50));
         painter.setBrush(selectionBg);
     }
 
-    painter.setPen(roomPen);
+    // delete this call if pen is the same
+    painter.setPen(pen);
 
     if (mBubbleMode) {
         const float roomRadius = 0.5 * rSize * mRoomWidth;
@@ -1298,10 +1299,11 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
             gradient.setColorAt(0.799, QColor(150, 100, 100, 100));
             gradient.setColorAt(0.7, QColor(255, 0, 0, 200));
             gradient.setColorAt(0, Qt::white);
-            const QPen transparentPen(Qt::transparent);
+            pen.setColor(Qt::transparent);
             QPainterPath diameterPath;
             painter.setBrush(gradient);
-            painter.setPen(transparentPen);
+            // delete this call if pen is the same
+            painter.setPen(pen);
             diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
             painter.drawPath(diameterPath);
 
@@ -1367,10 +1369,9 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         QRadialGradient gradient(roomCenter, roomRadius);
         gradient.setColorAt(0.85, pRoom->highlightColor);
         gradient.setColorAt(0, pRoom->highlightColor2);
-        const QPen transparentPen(Qt::transparent);
+        pen.setColor(Qt::transparent);
         QPainterPath diameterPath;
         painter.setBrush(gradient);
-        painter.setPen(transparentPen);
         diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
         painter.drawPath(diameterPath);
     }
@@ -1384,7 +1385,9 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         } else {
             roomIdColor = QColor(Qt::white);
         }
-        painter.setPen(QPen(roomIdColor));
+        pen.setColor(roomIdColor);
+        // delete this call if pen is the same
+        painter.setPen(pen);
         painter.setFont(roomVNumFont);
         painter.drawText(roomRectangle, Qt::AlignCenter, QString::number(currentRoomId));
         painter.restore();
