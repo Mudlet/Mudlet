@@ -1239,7 +1239,7 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
 
     const bool roomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
 
-    pen.setColor(Qt::transparent);
+
     pen.setWidth(borderWidth);
     painter.setBrush(roomColor);
 
@@ -1249,17 +1249,16 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         auto fadingColor = QColor(mpHost->mRoomBorderColor);
         fadingColor.setAlpha(255 * (mRoomWidth / 12));
         pen.setColor(fadingColor);
-    }
-
-    if (roomSelected) {
+    } else if (roomSelected) {
         QLinearGradient selectionBg(roomRectangle.topLeft(), roomRectangle.bottomRight());
         selectionBg.setColorAt(0.2, roomColor);
         selectionBg.setColorAt(1, Qt::blue);
         pen.setColor(QColor(255, 50, 50));
         painter.setBrush(selectionBg);
+    } else {
+        pen.setColor(Qt::transparent);
     }
 
-    // delete this call if pen is the same
     painter.setPen(pen);
 
     if (mBubbleMode) {
@@ -1302,8 +1301,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
             pen.setColor(Qt::transparent);
             QPainterPath diameterPath;
             painter.setBrush(gradient);
-            // delete this call if pen is the same
-            painter.setPen(pen);
             diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
             painter.drawPath(diameterPath);
 
@@ -1386,8 +1383,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
             roomIdColor = QColor(Qt::white);
         }
         pen.setColor(roomIdColor);
-        // delete this call if pen is the same
-        painter.setPen(pen);
         painter.setFont(roomVNumFont);
         painter.drawText(roomRectangle, Qt::AlignCenter, QString::number(currentRoomId));
         painter.restore();
@@ -1428,7 +1423,7 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         }
         auto roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127)
                                     ? Qt::black : Qt::white);
-        painter.setPen(QPen(roomNameColor));
+        pen.setColor(roomNameColor);
         painter.setFont(mapNameFont);
         painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
         painter.restore();
@@ -1491,7 +1486,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
             innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
             brush.setStyle(Qt::DiagCrossPattern);
         }
-        painter.setPen(pen);
         painter.setBrush(brush);
         painter.drawPolygon(poly_up);
         if (isDoor) {
