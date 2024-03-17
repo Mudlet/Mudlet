@@ -1143,6 +1143,7 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
                              QFont& roomVNumFont,
                              QFont& mapNameFont,
                              QPen& pen,
+                             QPen& innerPen,
                              TRoom* pRoom,
                              const bool isGridMode,
                              const bool areRoomIdsLegible,
@@ -1449,12 +1450,7 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
     } else {
         lc = QColorConstants::White;
     }
-    pen = painter.pen();
     pen.setColor(lc);
-    pen.setCosmetic(mMapperUseAntiAlias);
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    QPen innerPen = pen;
     painter.save();
 
     QBrush innerBrush = painter.brush();
@@ -1963,6 +1959,14 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     QPointF playerRoomOnWidgetCoordinates;
     bool isPlayerRoomVisible = false;
+
+    // keep two pens around for drawing all rooms in bulk
+    QPen roomPen = pen;
+    roomPen.setCosmetic(mMapperUseAntiAlias);
+    roomPen.setCapStyle(Qt::RoundCap);
+    roomPen.setJoinStyle(Qt::RoundJoin);
+    QPen innerRoomPen = roomPen;
+
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -1988,7 +1992,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoomNew(painter, roomVNumFont, mapNameFont, pen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
+            drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
         }
     } // End of while loop for each room in area
 
@@ -1998,9 +2002,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
             benchmark.run("old drawRoom", [&] { drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
 
-            benchmark.run("new drawRoom", [&] { drawRoomNew(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
+            benchmark.run("new drawRoom", [&] { drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
 
-        drawRoomNew(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
+        drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
+
         painter.save();
         const QPen transparentPen(Qt::transparent);
         QPainterPath myPath;
