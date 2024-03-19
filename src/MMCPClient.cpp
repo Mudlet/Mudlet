@@ -110,7 +110,7 @@ void MMCPClient::slot_connected()
     mPeerPort = mTcpSocket.peerPort();
 
     // The arguments are out of order so we can specify a width for the third one:
-    QString str = qsl("CHAT:%1\n%3%2").arg(mpMMCPServer->getChatName(), mPeerAddress).arg(mPeerPort, -5);
+    QString str = qsl("CHAT:%1\n%2%3").arg(mpMMCPServer->getChatName()).arg(mPeerAddress).arg(mPeerPort, -5);
 
     mTcpSocket.write(str.toLatin1());
 
