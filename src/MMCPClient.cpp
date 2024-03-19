@@ -276,15 +276,18 @@ void MMCPClient::slot_displayError(QAbstractSocket::SocketError socketError)
 
     switch (socketError) {
     case QAbstractSocket::RemoteHostClosedError:
+        // This will be hit if a TinTin++ client is in DND mode and is not
+        // accepting connections.
+        message = tr("[ CHAT ]  - The peer closed or refused the connection.");
         break;
     case QAbstractSocket::HostNotFoundError:
-        message = tr("[ CHAT ] - The host was not found. Please check the host name and port settings.");
+        message = tr("[ CHAT ]  - The peer was not found. Please check the host name and port settings.");
         break;
     case QAbstractSocket::ConnectionRefusedError:
-        message = tr("[ CHAT ] - The connection was refused by the peer.");
+        message = tr("[ CHAT ]  - The connection was refused by the peer.");
         break;
     default:
-        message = tr("[ CHAT ] - The following error occurred: %1.").arg(mTcpSocket.errorString());
+        message = tr("[ CHAT ]  - The following error occurred: %1.").arg(mTcpSocket.errorString());
     }
 
     mpHost->postMessage(message);
