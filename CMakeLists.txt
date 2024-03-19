@@ -215,13 +215,13 @@ git_submodule_init(
   READABLE_NAME "lua code formatter source code")
 
 # PLACEMARKER: sample benchmarking code
-# include(FetchContent)
-# FetchContent_Declare(
-#     nanobench
-#     GIT_REPOSITORY https://github.com/martinus/nanobench.git
-#     GIT_TAG v4.3.11
-#     GIT_SHALLOW TRUE)
-# FetchContent_MakeAvailable(nanobench)
+include(FetchContent)
+FetchContent_Declare(
+    nanobench
+    GIT_REPOSITORY https://github.com/martinus/nanobench.git
+    GIT_TAG v4.3.11
+    GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(nanobench)
 
 if(USE_UPDATER)
   git_submodule_init(CHECK_FILE "3rdparty/dblsqd/CMakeLists.txt" SUBMODULE_PATH

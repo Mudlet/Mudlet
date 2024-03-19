@@ -58,6 +58,14 @@ TRoom* TRoomDB::getRoom(int id)
     return nullptr;
 }
 
+TRoom* TRoomDB::getRoomNew(int id)
+{
+    if (id < 0) {
+        return nullptr;
+    }
+    return rooms.value(id, nullptr);
+}
+
 bool TRoomDB::addRoom(int id)
 {
     if (!rooms.contains(id) && id > 0) {
