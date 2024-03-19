@@ -1144,6 +1144,8 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
                              QFont& mapNameFont,
                              QPen& pen,
                              QPen& innerPen,
+                             QBrush& brush,
+                             QBrush& innerBrush,
                              TRoom* pRoom,
                              const bool isGridMode,
                              const bool areRoomIdsLegible,
@@ -1450,7 +1452,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
     }
     pen.setColor(lc);
 
-    QBrush innerBrush = painter.brush();
     innerBrush.setStyle(Qt::NoBrush);
     if (pRoom->getUp() > 0 || pRoom->exitStubs.contains(DIR_UP)) {
         QPolygonF poly_up;
@@ -1458,7 +1459,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         poly_up.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor)));
         poly_up.append(QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor)));
         bool isDoor = true;
-        QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_up)) {
         case 1:
             brush.setColor(mOpenDoorColor);
@@ -1503,7 +1503,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         poly_down.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
         poly_down.append(QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
         bool isDoor = true;
-        QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_down)) {
         case 1:
             brush.setColor(mOpenDoorColor);
@@ -1550,7 +1549,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry + (mRoomHeight * rSize * inUpDownYFactor)));
         poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry - (mRoomHeight * rSize * inUpDownYFactor)));
         bool isDoor = true;
-        QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_in)) {
         case 1:
             brush.setColor(mOpenDoorColor);
@@ -1599,7 +1597,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
         poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry + (mRoomHeight * rSize * outUpDownYFactor)));
         poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry - (mRoomHeight * rSize * outUpDownYFactor)));
         bool isDoor = true;
-        QBrush brush = painter.brush();
         switch (pRoom->doors.value(key_out)) {
         case 1:
             brush.setColor(mOpenDoorColor);
@@ -1955,12 +1952,19 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QPointF playerRoomOnWidgetCoordinates;
     bool isPlayerRoomVisible = false;
 
-    // keep two pens around for drawing all rooms in bulk
+    // keep two pens and two brushes around for drawing all rooms in bulk
     QPen roomPen = pen;
     roomPen.setCosmetic(mMapperUseAntiAlias);
     roomPen.setCapStyle(Qt::RoundCap);
     roomPen.setJoinStyle(Qt::RoundJoin);
     QPen innerRoomPen = roomPen;
+
+    QPen roomBorderPen = roomPen;
+    auto fadingColor = QColor(mpHost->mRoomBorderColor);
+    fadingColor.setAlpha(255 * (mRoomWidth / 12));
+    roomBorderPen.setColor(fadingColor);
+
+    QBrush brush, innerBrush;
 
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
@@ -1987,19 +1991,19 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
+            drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, brush, innerBrush, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
         }
     } // End of while loop for each room in area
 
     if (isPlayerRoomVisible) {
-            // ankerl::nanobench::Bench benchmark;
-            // benchmark.title("Room painting code").minEpochIterations(5000).warmup(200).relative(true);
+            ankerl::nanobench::Bench benchmark;
+            benchmark.title("Room painting code").minEpochIterations(5000).warmup(200).relative(true);
 
-            // benchmark.run("old drawRoom", [&] { drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
+            benchmark.run("old drawRoom", [&] { drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
 
-            // benchmark.run("new drawRoom", [&] { drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
+            benchmark.run("new drawRoom", [&] { drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, brush, innerBrush, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
 
-        drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
+        drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, brush, innerBrush, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
 
         painter.save();
         const QPen transparentPen(Qt::transparent);
