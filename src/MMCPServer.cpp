@@ -636,7 +636,7 @@ QPair<bool, QString> MMCPServer::allowSnoop(const QVariant& target)
         return {true, QString()};
     }
 
-    return {false, qsl("no client by that name")};
+    return {false, qsl("no client by that name or id")};
 }
 
 /**
@@ -656,7 +656,7 @@ QPair<bool, QString> MMCPServer::snoop(const QVariant& target)
         return {true, QString()};
     }
 
-    return {false, qsl("no client by that name")};
+    return {false, qsl("no client by that name or id")};
 }
 
 /**
@@ -671,7 +671,7 @@ QPair<bool, QString> MMCPServer::unChat(const QVariant& target)
         return {true, QString()};
     }
 
-    return {false, qsl("no client by that name")};
+    return {false, qsl("no client by that name or id")};
 }
 
 
