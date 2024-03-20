@@ -246,8 +246,8 @@ void MMCPClient::slot_readData()
             // other end - instead we can only report the apparent details from
             // the socket:
             const QString infoMsg = tr("[ CHAT ]  - Connection to %1:%2 refused.")
-                                            .arg(mTcpSocket.peerPort(),
-                                                 QString::number(convertToIPv4(mTcpSocket.peerAddress()));
+                                            .arg(convertToIPv4(mTcpSocket.peerAddress()),
+                                                 QString::number(mTcpSocket.peerPort()));
             mpHost->postMessage(infoMsg);
         } else {
             // We have got a "YES:" - yippee!

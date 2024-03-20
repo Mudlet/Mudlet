@@ -137,7 +137,8 @@ isEmpty( BUILD ) {
 # A core dev team member setting things up for a release should comment out the
 # following line - as the app-build.txt file must not contain anything (other
 # than whitespace) for a RELEASE build:
-   BUILD = "-dev-"$${GIT_SHA1}
+# PLACEMARKER: revert "MMCP" back to "dev" before merging this code into the main development branch:
+   BUILD = "-MMCP-"$${GIT_SHA1}
 } else {
    BUILD = $${BUILD}-$${GIT_SHA1}
 }
