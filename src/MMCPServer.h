@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
+#include <QPointer>
 #include <QTcpServer>
 #include "post_guard.h"
 
@@ -68,7 +69,7 @@ public:
     void clientMessage(const QString&);
     void snoopMessage(const std::string&);
 
-    QList<MMCPClient*>* getClients() { return &mPeersList; }
+    QList<QPointer<MMCPClient>>* getClients() { return &mPeersList; }
 
     void decrementSnoopCount() { --mSnoopCount; }
     void incrementSnoopCount() { ++mSnoopCount; }
@@ -100,7 +101,7 @@ private:
 
     Host* mpHost = nullptr;
     QString mChatName;
-    QList<MMCPClient*> mPeersList;
+    QList<QPointer<MMCPClient>> mPeersList;
     int mSnoopCount = 0;
 };
 #endif // MUDLET_MMCPSERVER_H

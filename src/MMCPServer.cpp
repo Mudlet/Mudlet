@@ -80,10 +80,10 @@ void MMCPServer::sendSnoopData(std::string& line)
                                     .arg(0, 2, 10)  //background color
                                     .arg(QString::fromStdString(line), static_cast<char>(End));
 
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        if (cl->isSnooping()) {
+        if (cl && cl->isSnooping()) {
             cl->writeData(outData);
             break;
         }
@@ -103,10 +103,10 @@ MMCPClient* MMCPServer::clientByNameOrId(const QVariant& arg)
     if (!ok) {
         // Arg does NOT appear to be an integer so it is probably a name:
         const QString name = arg.toString();
-        QListIterator<MMCPClient*> it(mPeersList);
+        QListIterator<QPointer<MMCPClient>> it(mPeersList);
         while (it.hasNext()) {
             MMCPClient* cl = it.next();
-            if (!name.compare(cl->chatName(), Qt::CaseInsensitive)) {
+            if (cl && !name.compare(cl->chatName(), Qt::CaseInsensitive)) {
                 pClient = cl;
                 break;
             }
@@ -160,10 +160,10 @@ QPair<bool, QString> MMCPServer::call(const QString& host, int port)
 {
     MMCPClient* pClient = nullptr;
 
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        if (cl->host() == host && pClient->port() == port) {
+        if (cl && cl->host() == host && pClient->port() == port) {
             pClient = cl;
             break;
         }
@@ -232,10 +232,12 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
                                    .arg(msg)
                                    .arg(static_cast<char>(End));
 
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        cl->writeData(outMsg);
+        if (cl) {
+            cl->writeData(outMsg);
+        }
     }
 
     using namespace AnsiColors;
@@ -264,10 +266,10 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
                             .arg(mChatName, FBLDRED, message)
                             .arg(static_cast<char>(End));
 
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        if (cl->getGroup() == group) {
+        if (cl && cl->getGroup() == group) {
             cl->writeData(outMsg);
         }
     }
@@ -293,7 +295,7 @@ QPair<bool, QString> MMCPServer::chatList()
 
     QStringList peersList;
     int peerCount = 0;
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* pClient = it.next();
         peersList << qsl("%1%2 %3 %4 %5")
@@ -327,10 +329,12 @@ QPair<bool, QString> MMCPServer::chatName(const QString& name)
                                        .arg(name)
                                        .arg(static_cast<char>(End));
 
-        QListIterator<MMCPClient*> it(mPeersList);
+        QListIterator<QPointer<MMCPClient>> it(mPeersList);
         while (it.hasNext()) {
             MMCPClient* cl = it.next();
-            cl->writeData(outMsg);
+            if (cl) {
+                cl->writeData(outMsg);
+            }
         }
     }
 
@@ -353,11 +357,11 @@ QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const Q
                                    .arg(static_cast<char>(SideChannel))
                                    .arg(channel, msg)
                                    .arg(static_cast<char>(End));
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
         //Only send to Mudlet clients
-        if (cl->getVersion().contains("Mudlet", Qt::CaseInsensitive)) {
+        if (cl && cl->getVersion().contains("Mudlet", Qt::CaseInsensitive)) {
             cl->writeData(outMsg);
         }
     }
@@ -378,10 +382,12 @@ QPair<bool, QString> MMCPServer::chatSideChannel(const QString& channel, const Q
 //     }
 
 //     const QString outMsg = qsl("%1%2%3").arg(static_cast<char>(TextEveryone), msg, static_cast<char>(End));
-//     QListIterator<MMCPClient*> it(mPeersList);
+//     QListIterator<QPointer<MMCPClient>> it(mPeersList);
 //     while (it.hasNext()) {
 //         MMCPClient* cl = it.next();
-//         cl->writeData(outMsg);
+//         if (cl) {
+//             cl->writeData(outMsg);
+//         }
 //     }
 
 //     clientMessage(tr("<CHAT>%1")
@@ -434,10 +440,12 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
                                    .arg(static_cast<char>(TextEveryone))
                                    .arg(mChatName, msg)
                                    .arg(static_cast<char>(End));
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        cl->writeData(outMsg);
+        if (cl) {
+            cl->writeData(outMsg);
+        }
     }
 
     using namespace AnsiColors;
@@ -712,10 +720,12 @@ void MMCPServer::snoopMessage(const std::string& message)
 
 void MMCPServer::sendAll(QString& msg)
 {
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        cl->writeData(msg);
+        if (cl) {
+            cl->writeData(msg);
+        }
     }
 }
 
@@ -725,11 +735,11 @@ void MMCPServer::sendAll(QString& msg)
 void MMCPServer::sendPublicConnections(MMCPClient* pClient)
 {
     QStringList peerList;
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
 
-        if (cl != pClient && !cl->isPrivate()) {
+        if (cl && cl != pClient && !cl->isPrivate()) {
             peerList << qsl("%1,%2").arg(cl->host(), QString::number(cl->port()));
         }
     }
@@ -752,11 +762,11 @@ void MMCPServer::sendPublicPeek(MMCPClient* pClient)
 {
     QStringList peerList;
 
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
 
-        if (cl != pClient && !cl->isPrivate()) {
+        if (cl && cl != pClient && !cl->isPrivate()) {
             peerList << qsl("%1~%2~%3").arg(cl->host(), QString::number(cl->port()), cl->chatName());
         }
     }
@@ -781,10 +791,10 @@ void MMCPServer::sendServedMessage(MMCPClient* pClient, const QString& msg)
                                    .arg(msg)
                                    .arg(static_cast<char>(End));
 
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        if (cl != pClient) {
+        if (cl && cl != pClient) {
             cl->writeData(cmdStr);
         }
     }
@@ -801,10 +811,10 @@ void MMCPServer::sendMessageToServed(MMCPClient* pClient, const QString& msg)
                                    .arg(msg)
                                    .arg(static_cast<char>(End));
 
-    QListIterator<MMCPClient*> it(mPeersList);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
-        if (cl != pClient && cl->isServed()) {
+        if (cl && cl != pClient && cl->isServed()) {
             cl->writeData(cmdStr);
         }
     }
