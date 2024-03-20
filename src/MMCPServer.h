@@ -1,4 +1,4 @@
-#ifndef MUDLET_MCPSERVER_H
+#ifndef MUDLET_MMCPSERVER_H
 #define MUDLET_MMCPSERVER_H
 /***************************************************************************
  *   Copyright (C) 2024 by John McKisson - john.mckisson@gmail.com         *
@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include "pre_guard.h"
+#include <QPointer>
 #include <QTcpServer>
 #include "post_guard.h"
 
@@ -54,7 +55,7 @@ public:
     QPair<bool, QString> chatList();
     QPair<bool, QString> chatSetGroup(const QVariant&, const QString&);
     QPair<bool, QString> chatSideChannel(const QString&, const QString&);
-    QPair<bool, QString> chatRaw(const QString&);
+// Not currently used:    QPair<bool, QString> chatRaw(const QString&);
     QPair<bool, QString> emoteAll(const QString&);
     QPair<bool, QString> ignore(const QString&);
     QPair<bool, QString> ping(const QVariant&);
@@ -68,7 +69,7 @@ public:
     void clientMessage(const QString&);
     void snoopMessage(const std::string&);
 
-    QList<MMCPClient*>* getClients() { return &mPeersList; }
+    QList<QPointer<MMCPClient>>* getClients() { return &mPeersList; }
 
     void decrementSnoopCount() { --mSnoopCount; }
     void incrementSnoopCount() { ++mSnoopCount; }
@@ -102,8 +103,8 @@ private:
 
     Host* mpHost = nullptr;
     QString mChatName;
-    QList<MMCPClient*> mPeersList;
+    QList<QPointer<MMCPClient>> mPeersList;
     int mSnoopCount = 0;
-    bool mDoNotDisturb;
+    bool mDoNotDisturb = false;
 };
-#endif // MUDLET_MCPSERVER_H
+#endif // MUDLET_MMCPSERVER_H

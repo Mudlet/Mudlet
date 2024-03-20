@@ -1014,8 +1014,7 @@ QString cTelnet::getNewEnvironCharset()
 
 QString cTelnet::getNewEnvironClientName()
 {
-    //return qsl("MUDLET");
-    return mudlet::self()->scmVersion;
+    return qsl("MUDLET");
 }
 
 QString cTelnet::getNewEnvironClientVersion()
