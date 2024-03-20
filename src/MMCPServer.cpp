@@ -142,7 +142,7 @@ QPair<bool, QString> MMCPServer::call(const QString& line)
     quint16 port = csDefaultMMCPHostPort;
 
     if (n == 2) {
-        bool ok;
+        bool ok = false;
         quint16 tempPort = args[1].toUInt(&ok, 10);
         if (ok) {
             port = tempPort;
@@ -266,10 +266,12 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
                             .arg(mChatName, FBLDRED, message)
                             .arg(static_cast<char>(End));
 
+    bool groupNotEmpty = false;
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* cl = it.next();
         if (cl && cl->getGroup() == group) {
+            groupNotEmpty = true;
             cl->writeData(outMsg);
         }
     }
@@ -281,9 +283,21 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
      * back to "normal". Please try and reproduce the positioning of those codes
      * around the translation.
      */
-    clientMessage(tr("%1<CHAT>You chat to <%2%3%1>, '%4'%5")
+    if (groupNotEmpty) {
+        clientMessage(tr("%1<CHAT>You chat to <%2%3%1>, '%4'%5")
+                              .arg(FBLDCYN, FBLDRED, group, message, RST));
+        return {true, QString()};
+    }
+
+    /*: %1 and %2 are ASCII ESC color codes that need to be included BEFORE a
+     * portion of text (the main message %4) and (the group name %4)
+     * respectively and %5 is another code at the very end to reset the colors
+     * back to "normal". Please try and reproduce the positioning of those codes
+     * around the translation.
+     */
+    clientMessage(tr("%1<CHAT>You try to chat to <%2%3%1> but it is empty and no-one hears you say: '%4'%5")
                           .arg(FBLDCYN, FBLDRED, group, message, RST));
-    return {true, QString()};
+    return {false, qsl("nobody in group '%1' now").arg(group)};
 }
 
 /**
