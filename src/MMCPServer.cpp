@@ -278,14 +278,14 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
 
     using namespace AnsiColors;
     /*: %1 and %2 are ASCII ESC color codes that need to be included BEFORE a
-     * portion of text (the main message %4) and (the group name %4)
+     * portion of text (the main message %4) and (the group name %3)
      * respectively and %5 is another code at the very end to reset the colors
      * back to "normal". Please try and reproduce the positioning of those codes
      * around the translation.
      */
     if (groupNotEmpty) {
-        clientMessage(tr("%1<CHAT>You chat to <%2%3%1>, '%4'%5")
-                              .arg(FBLDCYN, FBLDRED, group, message, RST));
+        clientMessage(tr("%1<CHAT>You chat to %2<%3>%1, '%4'%5")
+                              .arg(FBLDRED, FBLDCYN, group, message, RST));
         return {true, QString()};
     }
 
@@ -312,16 +312,16 @@ QPair<bool, QString> MMCPServer::chatList()
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
         MMCPClient* pClient = it.next();
-        peersList << qsl("%1%2 %3 %4 %5")
+        peersList << qsl("%1%2 %3%4 %5")
                              .arg(FBLDWHT)
-                             .arg(++peerCount, 3, 10, QLatin1Char('0'))
+                             .arg(++peerCount, 4)
                              .arg(RST, pClient->getInfoString(), pClient->getVersion());
     }
 
-    const QString strMessage = tr("%1     Name                 Address              Port  Group           Flags    ChatClient\n"
-                                  "     ==================== ==================== ===== =============== ======== ================\n"
+    const QString strMessage = tr("%1Id   Name                 Address              Port  Group           Flags    ChatClient\n"
+                                  "==== ==================== ==================== ===== =============== ======== ================\n"
                                   "%2"
-                                  "     ==================== ==================== ===== =============== ======== ================\n"
+                                  "==== ==================== ==================== ===== =============== ======== ================\n"
                                   "Flags:  A - Allow Commands, F - Firewall, I - Ignore,  P - Private   n - Allow Snooping\n"
                                   "        N - Being Snooped,  S - Serving,  T - Allows File Transfers, X - Serve Exclude%1")
                                        .arg(RST, peersList.join(QChar::LineFeed).append(peersList.isEmpty() ? QChar::Null : QChar::LineFeed));
@@ -463,9 +463,9 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
     }
 
     using namespace AnsiColors;
-    //: %1 is emote message sent to everyone
-    clientMessage(tr("<CHAT>You emote to everyone: '%1'")
-                          .arg(msg)
+    //: %1 is player's name,  %2 is the emote message sent to everyone
+    clientMessage(tr("<CHAT>You emote to everyone: '%1 %2'")
+                          .arg(mChatName, msg)
                           .prepend(FBLDRED)
                           .append(RST));
     return {true, QString()};
@@ -713,6 +713,12 @@ void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
  */
 void MMCPServer::clientMessage(const QString& message)
 {
+    if (!mpHost || mpHost->isClosingDown()) {
+        // Don't try to process any messages if the profile is dying - otherwise
+        // we can get seg. faults when we try to use
+        // TMainConsole::printOnDisplay(...) - I found this the hard way! Slysven
+        return;
+    }
     // This uses a UTF-8 encoding:
     std::string trimmedStdStr = message.trimmed().toStdString();
     // The message sent to TMainConsole::printOnDisplay(...) MUST be in the

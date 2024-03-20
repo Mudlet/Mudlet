@@ -635,19 +635,21 @@ void MMCPClient::handleIncomingPeekList(const QString& list)
 
     quint16 count = 0;
     for (int i = 0; (i + 1) < parts.size(); i += 3) {
-        messageList << qsl("%1 %2%3 %4 %5 %6\n")
+        messageList << qsl("%1%2 %3%4 %5 %6")
                                .arg(FBLDWHT)
-                               .arg(++count, 3, 10, QLatin1Char('0'))
+                               .arg(++count, 4)
                                .arg(RST)
                                .arg(parts.at(i + 2), -20) // Peer name
                                .arg(parts.at(i), -15) // Peer address
-                               .arg(parts.at(i + 1), -5); // Peer port
+                               .arg(parts.at(i + 1), 5); // Peer port
     }
 
-    const QString listOut = tr("     Name                 Address         Port\n"
-                               "     ==================== =============== =====\n"
+    // We need to include ID here as otherwise any leading spaces get trimmed
+    // off inside MMCPServer::clientMessage(...)!
+    const QString listOut = tr("Id   Name                 Address         Port\n"
+                               "==== ==================== =============== =====\n"
                                "%1\n"
-                               "     ==================== =============== =====\n")
+                               "==== ==================== =============== =====\n")
                                     .arg(messageList.join(QChar::LineFeed));
     mpMMCPServer->clientMessage(listOut);
 }
@@ -809,7 +811,7 @@ const QString MMCPClient::getInfoString()
     return qsl("%1 %2 %3 %4 %5")
             .arg(mPeerName, -20)
             .arg(convertToIPv4(mTcpSocket.peerAddress()), -20)
-            .arg(mTcpSocket.peerPort(), -5)
+            .arg(mTcpSocket.peerPort(), 5)
             .arg(groupStr, -15)
             .arg(getFlagsString(), -8);
 }
