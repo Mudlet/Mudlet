@@ -44,7 +44,8 @@
 #include "pre_guard.h"
 #include <QtEvents>
 #include <QtUiTools>
-// #include <nanobench.h>
+#include <QDebug>
+#include <nanobench.h>
 #include "post_guard.h"
 
 #include "mapInfoContributorManager.h"
@@ -1144,6 +1145,7 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
                              QFont& mapNameFont,
                              QPen& pen,
                              QPen& innerPen,
+                             QPen& roomBorderPen,
                              QBrush& brush,
                              QBrush& innerBrush,
                              TRoom* pRoom,
@@ -1241,8 +1243,6 @@ inline void T2DMap::drawRoomNew(QPainter& painter,
 
     const bool roomSelected = (mPick && roomClickTestRectangle.contains(mPHighlight)) || mMultiSelectionSet.contains(currentRoomId);
 
-
-    pen.setWidth(borderWidth);
     painter.setBrush(roomColor);
 
     if (shouldDrawBorder && mRoomWidth >= 12) {
@@ -1959,10 +1959,19 @@ void T2DMap::paintEvent(QPaintEvent* e)
     roomPen.setJoinStyle(Qt::RoundJoin);
     QPen innerRoomPen = roomPen;
 
+    const bool shouldDrawBorder = mpHost->mMapperShowRoomBorders && !pDrawnArea->gridMode;
+    const int borderWidth = 1 / eSize * mRoomWidth * rSize;
     QPen roomBorderPen = roomPen;
-    auto fadingColor = QColor(mpHost->mRoomBorderColor);
-    fadingColor.setAlpha(255 * (mRoomWidth / 12));
-    roomBorderPen.setColor(fadingColor);
+
+    if (shouldDrawBorder && mRoomWidth >= 12) {
+        roomBorderPen.setColor(mpHost->mRoomBorderColor);
+    } else if (shouldDrawBorder) {
+        auto fadingColor = QColor(mpHost->mRoomBorderColor);
+        fadingColor.setAlpha(255 * (mRoomWidth / 12));
+        roomBorderPen.setColor(fadingColor);
+    }
+    roomBorderPen.setWidth(borderWidth);
+
 
     QBrush brush, innerBrush;
 
@@ -1991,7 +2000,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             playerRoomOnWidgetCoordinates = QPointF(static_cast<qreal>(rx), static_cast<qreal>(ry));
         } else {
             // Not the player's room:
-            drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, brush, innerBrush, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
+            drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, roomBorderPen, brush, innerBrush, room, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, rx, ry, areaExitsMap);
         }
     } // End of while loop for each room in area
 
@@ -2001,9 +2010,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
             benchmark.run("old drawRoom", [&] { drawRoom(painter, roomVNumFont, mapNameFont, pen, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
 
-            benchmark.run("new drawRoom", [&] { drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, brush, innerBrush, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
+            benchmark.run("new drawRoom", [&] { drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, roomBorderPen, brush, innerBrush, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap); });
 
-        drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, brush, innerBrush, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
+        drawRoomNew(painter, roomVNumFont, mapNameFont, roomPen, innerRoomPen, roomBorderPen, brush, innerBrush, pPlayerRoom, pDrawnArea->gridMode, isFontBigEnoughToShowRoomVnum, showRoomNames, playerRoomId, static_cast<float>(playerRoomOnWidgetCoordinates.x()), static_cast<float>(playerRoomOnWidgetCoordinates.y()), areaExitsMap);
 
         painter.save();
         const QPen transparentPen(Qt::transparent);
