@@ -79,6 +79,12 @@ void GMCPAuthenticator::handleAuthResult(const QString& data)
         qDebug() << "GMCP login successful";
     } else {
         qDebug() << "GMCP login failed:" << message;
+        if (message.isEmpty()) {
+            mpHost->postMessage(tr("[ WARN ]  - Could not log in to the game, is the login information correct?"));
+        } else {
+            mpHost->postMessage(tr("[ WARN ]  - Could not log in to the game: %1").arg(message));
+        }
+
     }
 }
 
