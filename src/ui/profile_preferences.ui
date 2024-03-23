@@ -3116,31 +3116,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <string>MudMaster Chat options</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
-          <item row="0" column="5">
-           <widget class="QCheckBox" name="checkBox_mmcpAutostartServer">
-            <property name="toolTip">
-             <string>Automatically start a chat server when your profile loads. Uses the default port setting.</string>
-            </property>
-            <property name="text">
-             <string>Auto-Start Server</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="5">
-           <widget class="QCheckBox" name="checkBox_mmcpAllowPeekReq">
-            <property name="text">
-             <string>Allow Peek Requests</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QLineEdit" name="lineEdit_mmcpPort">
-            <property name="toolTip">
-             <string>Port to use when connecting to another client without specifying a port along with the IP address. This is also the default port that listened for incoming connections when running a local server.</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="5">
+          <item row="2" column="5">
            <widget class="QCheckBox" name="checkBox_mmcpLuaAPI">
             <property name="toolTip">
              <string>&lt;p&gt;Allow Lua to control MMCP connections&lt;/p&gt;</string>
@@ -3150,13 +3126,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="checked">
              <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="lblMMCPPort">
-            <property name="text">
-             <string>Default Port:</string>
             </property>
            </widget>
           </item>
@@ -3170,24 +3139,34 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="lblMMCPName">
-            <property name="text">
-             <string>Chatname:</string>
+          <item row="4" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAllowPeekReq">
+            <property name="toolTip">
+             <string>Allow others to peek your public connections</string>
             </property>
-            <property name="buddy">
-             <cstring>lineEdit_mmcpChatName</cstring>
+            <property name="text">
+             <string>Allow Peek Requests</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="5">
-           <widget class="QCheckBox" name="checkBox_mmcpAllowConnReq">
-            <property name="text">
-             <string>Allow Connection Requests</string>
+          <item row="2" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpPort">
+            <property name="toolTip">
+             <string>Port to use when connecting to another client without specifying a port along with the IP address. This is also the default port that listened for incoming connections when running a local server.</string>
             </property>
            </widget>
           </item>
-          <item row="0" column="6">
+          <item row="0" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAutostartServer">
+            <property name="toolTip">
+             <string>Automatically start a chat server when your profile loads. Uses the default port setting.</string>
+            </property>
+            <property name="text">
+             <string>Auto-Start Server</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="7">
            <spacer name="horizontalSpacer_2">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
@@ -3199,6 +3178,76 @@ you can use it but there could be issues with aligning columns of text</string>
              </size>
             </property>
            </spacer>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblMMCPPort">
+            <property name="text">
+             <string>Default Port:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblMMCPName">
+            <property name="text">
+             <string>Chatname:</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+            <property name="buddy">
+             <cstring>lineEdit_mmcpChatName</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="5">
+           <widget class="QCheckBox" name="checkBox_mmcpAllowConnReq">
+            <property name="toolTip">
+             <string>Allow others to request your public connections</string>
+            </property>
+            <property name="text">
+             <string>Allow Connection Requests</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="6">
+           <widget class="QCheckBox" name="checkBox_mmcpAddChatMessageNewline">
+            <property name="text">
+             <string>Add Newline to Chat Messages</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="6">
+           <widget class="QCheckBox" name="checkBox_mmcpPrefixEmotes">
+            <property name="toolTip">
+             <string>Prefix own EmoteAll messages with 'You emote to everybody'</string>
+            </property>
+            <property name="text">
+             <string>Prefix Emote Messages</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lblMMCPChatMsgPrefix">
+            <property name="text">
+             <string>Chat Message Prefix:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="2">
+           <widget class="QLineEdit" name="lineEdit_mmcpChatMessagePrefix">
+            <property name="toolTip">
+             <string>Text to display in front of chat messages</string>
+            </property>
+            <property name="text">
+             <string>&lt;CHAT&gt;</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
