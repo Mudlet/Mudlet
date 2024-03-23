@@ -333,9 +333,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mmcpServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
 , mMMCPChatPort(csDefaultMMCPHostPort)
+, mMMCPChatPrefix(qsl("<CHAT>"))
 , mMMCPAutostartServer(false)
 , mMMCPAllowConnectionRequests(false)
 , mMMCPAllowPeekRequests(false)
+, mMMCPPrefixEmotes(false)
+, mMMCPAddChatMessageNewline(true)
 , mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
@@ -2760,6 +2763,10 @@ quint16 Host::getMMCPPort() {
     return mMMCPChatPort;
 }
 
+QString Host::getMMCPChatPrefix() {
+    return mMMCPChatPrefix;
+}
+
 bool Host::getMMCPAutoStartServer() {
     return mMMCPAutostartServer;
 }
@@ -2770,6 +2777,14 @@ bool Host::getMMCPAllowConnectionRequests() {
 
 bool Host::getMMCPAllowPeekRequests() {
     return mMMCPAllowPeekRequests;
+}
+
+bool Host::getMMCPPrefixEmotes() {
+    return mMMCPPrefixEmotes;
+}
+
+bool Host::getMMCPAddChatMessageNewline() {
+    return mMMCPAddChatMessageNewline;
 }
 
 QString  Host::getSpellDic()

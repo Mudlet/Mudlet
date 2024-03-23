@@ -330,9 +330,12 @@ public:
     bool discordUserIdMatch(const QString& userName, const QString& userDiscriminator) const;
     QString getMMCPChatName();
     quint16 getMMCPPort();
+    QString getMMCPChatPrefix();
     bool getMMCPAutoStartServer();
     bool getMMCPAllowConnectionRequests();
     bool getMMCPAllowPeekRequests();
+    bool getMMCPPrefixEmotes();
+    bool getMMCPAddChatMessageNewline();
     void setMmpMapLocation(const QString& data);
     QString getMmpMapLocation() const;
     void setMediaLocationGMCP(const QString& mediaUrl);
@@ -833,10 +836,13 @@ private:
     QString mRequiredDiscordUserDiscriminator;
 
     QString mMMCPChatName;
+    QString mMMCPChatPrefix;
     quint16 mMMCPChatPort;
     bool mMMCPAutostartServer;
     bool mMMCPAllowConnectionRequests;
     bool mMMCPAllowPeekRequests;
+    bool mMMCPPrefixEmotes;
+    bool mMMCPAddChatMessageNewline;
 
     // Handles whether to treat 16M-Colour ANSI SGR codes which only use
     // semi-colons as separator have the initial Colour Space Id parameter

@@ -27,6 +27,7 @@
 inline static uint16_t csDefaultMMCPHostPort{4050};
 inline static QLatin1String csDefaultMMCPChatName{"Mudlet"};
 inline static QLatin1String csDefaultMMCPGroupName{"<none>"};
+inline static QLatin1String csDefaultChatPrefix{"<CHAT>"};
 inline static QLatin1String csMMCPChatSideChannelEvent{"sysChatChannelMessage"};
 
 enum MMCPChatCommand {

@@ -252,6 +252,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
                                              "propagate everywhere until Mudlet is restarted.</i></p>"));
     lineEdit_mmcpPort->setPlaceholderText(QString::number(csDefaultMMCPHostPort));
     lineEdit_mmcpChatName->setPlaceholderText(csDefaultMMCPChatName);
+    lineEdit_mmcpChatMessagePrefix->setPlaceholderText(csDefaultChatPrefix);
 
     connect(checkBox_showSpacesAndTabs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowSpacesAndTabs);
     connect(checkBox_showLineFeedsAndParagraphs, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_changeShowLineFeedsAndParagraphs);
@@ -859,9 +860,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     lineEdit_mmcpChatName->setText(pHost->getMMCPChatName());
     lineEdit_mmcpPort->setText(QString::number(pHost->getMMCPPort()));
+    lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
     checkBox_mmcpAutostartServer->setChecked(pHost->mMMCPAutostartServer);
     checkBox_mmcpAllowConnReq->setChecked(pHost->mMMCPAllowConnectionRequests);
     checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
+    checkBox_mmcpAddChatMessageNewline->setChecked(pHost->getMMCPAddChatMessageNewline());
+    checkBox_mmcpPrefixEmotes->setChecked(pHost->getMMCPPrefixEmotes());
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
@@ -3083,8 +3087,9 @@ void dlgProfilePreferences::slot_saveAndClose()
             pHost->mRequiredDiscordUserDiscriminator.clear();
         }
 
-        // Save chat options so they be written to XML upon export
+        // Save chat options so they are written to XML upon export
         pHost->mMMCPChatName = lineEdit_mmcpChatName->text().trimmed();
+        pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
         bool ok;
         quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
         pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
@@ -3092,6 +3097,9 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
         pHost->mMMCPAllowConnectionRequests = checkBox_mmcpAllowConnReq->isChecked();
         pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
+        pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
+        pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
+
 
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();
         pHost->mAdvertiseScreenReader = checkBox_advertiseScreenReader->isChecked();

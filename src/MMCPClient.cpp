@@ -109,7 +109,6 @@ void MMCPClient::slot_connected()
     mPeerAddress = convertToIPv4(mTcpSocket.peerAddress());
     mPeerPort = mTcpSocket.peerPort();
 
-    // The arguments are out of order so we can specify a width for the third one:
     QString str = qsl("CHAT:%1\n%2%3").arg(mpMMCPServer->getChatName()).arg(mPeerAddress).arg(mPeerPort, -5);
 
     mTcpSocket.write(str.toLatin1());
@@ -198,15 +197,6 @@ void MMCPClient::slot_readData()
 
             mpHost->postMessage(infoMsg);
         } else {
-            writeData(qsl("YES:%1\n").arg(mpMMCPServer->getChatName()));
-
-            const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
-                                            .arg(mPeerName,
-                                                 convertToIPv4(mTcpSocket.peerAddress()),
-                                                 QString::number(mTcpSocket.peerPort()));
-            mpHost->postMessage(infoMsg);
-
-            mState = Connected;
 
             mPeerName = QString::fromUtf8(peerName);
             mPeerAddress = convertToIPv4(host);
@@ -215,7 +205,8 @@ void MMCPClient::slot_readData()
             if (!ok) {
                 mState = Disconnected;
             } else {
-                 writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
+                mState = Connected;
+                writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
 
                 const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
                                                  .arg(mPeerName,

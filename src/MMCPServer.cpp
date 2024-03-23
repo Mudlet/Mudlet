@@ -204,10 +204,12 @@ QPair<bool, QString> MMCPServer::chat(const QVariant& target, const QString& msg
 
         using namespace AnsiColors;
         //: %1 is the name of the peer receiving the message %2
-        clientMessage(tr("<CHAT>You chat to %1, '%2'")
+
+        clientMessage(tr("You chat to %1, '%2'")
                               .arg(pClient->chatName(), msg)
-                              .prepend(FBLDRED)
+                              .prepend(FBLDRED + mpHost->getMMCPChatPrefix())
                               .append(RST));
+
         return {true, QString()};
     }
 
@@ -242,10 +244,12 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
 
     using namespace AnsiColors;
     //: %1 is message sent to everyone
-    clientMessage(tr("<CHAT>You chat to everybody, '%1'")
+
+    clientMessage(tr("You chat to everybody, '%1'")
                           .arg(msg)
-                          .prepend(FBLDRED)
+                          .prepend(FBLDRED + mpHost->getMMCPChatPrefix())
                           .append(RST));
+
     return {true, QString()};
 }
 
@@ -277,26 +281,26 @@ QPair<bool, QString> MMCPServer::chatGroup(const QString& group, const QString& 
     }
 
     using namespace AnsiColors;
-    /*: %1 and %2 are ASCII ESC color codes that need to be included BEFORE a
-     * portion of text (the main message %4) and (the group name %3)
-     * respectively and %5 is another code at the very end to reset the colors
-     * back to "normal". Please try and reproduce the positioning of those codes
-     * around the translation.
+    /*: %1 and %3 are ASCII ESC color codes that need to be included BEFORE a
+     * portion of text (the main message %5) and (the group name %4)
+     * respectively and %6 is another code at the very end to reset the colors
+     * back to "normal". %2 is the prefix added to all chat messages display to us.
+     * Please try and reproduce the positioning of those codes around the translation.
      */
     if (groupNotEmpty) {
-        clientMessage(tr("%1<CHAT>You chat to %2<%3>%1, '%4'%5")
-                              .arg(FBLDRED, FBLDCYN, group, message, RST));
+        clientMessage(tr("%1%2You chat to %3<%4>%1, '%5'%6")
+                              .arg(FBLDRED, mpHost->getMMCPChatPrefix(), FBLDCYN, group, message, RST));
         return {true, QString()};
     }
 
-    /*: %1 and %2 are ASCII ESC color codes that need to be included BEFORE a
-     * portion of text (the main message %4) and (the group name %4)
+    /*: %1 and %3 are ASCII ESC color codes that need to be included BEFORE a
+     * portion of text (the main message %5) and (the group name %4)
      * respectively and %5 is another code at the very end to reset the colors
-     * back to "normal". Please try and reproduce the positioning of those codes
-     * around the translation.
+     * back to "normal". %2 is the prefix added to all chat messages display to us.
+     * Please try and reproduce the positioning of those codes around the translation.
      */
-    clientMessage(tr("%1<CHAT>You try to chat to <%2%3%1> but it is empty and no-one hears you say: '%4'%5")
-                          .arg(FBLDCYN, FBLDRED, group, message, RST));
+    clientMessage(tr("%1%2You try to chat to <%3%4%1> but it is empty and no-one hears you say: '%5'%6")
+                          .arg(FBLDRED, mpHost->getMMCPChatPrefix(), FBLDCYN, group, message, RST));
     return {false, qsl("nobody in group '%1' now").arg(group)};
 }
 
@@ -464,10 +468,19 @@ QPair<bool, QString> MMCPServer::emoteAll(const QString& msg)
 
     using namespace AnsiColors;
     //: %1 is player's name,  %2 is the emote message sent to everyone
-    clientMessage(tr("<CHAT>You emote to everyone: '%1 %2'")
+
+    if (mpHost->getMMCPPrefixEmotes()) {
+        clientMessage(tr("You emote to everyone: '%1 %2'")
                           .arg(mChatName, msg)
-                          .prepend(FBLDRED)
+                          .prepend(FBLDRED + mpHost->getMMCPChatPrefix())
                           .append(RST));
+    } else {
+        clientMessage(tr("%1 %2")
+                          .arg(mChatName, msg)
+                          .prepend(FBLDRED + mpHost->getMMCPChatPrefix())
+                          .append(RST));
+    }
+
     return {true, QString()};
 }
 
@@ -719,8 +732,22 @@ void MMCPServer::clientMessage(const QString& message)
         // TMainConsole::printOnDisplay(...) - I found this the hard way! Slysven
         return;
     }
+
+    using namespace AnsiColors;
+
+    // We need to encapsulate displayed string in the default chat color because
+    // many people are terrible at writing custom chat scripts and do not terminate
+    // their chats with a RESET, this avoids color bleeding
+    // Additionally I suppose that we need to provide a setting for COMPACT, but until then
+    // we need to prepend a carriage return so multiple chat messages have spacing between them.
+    const QString coloredStr = QString("%1%2%3")
+        .arg(FBLDRED)
+        .arg(message.trimmed())
+        .arg(RST)
+        .prepend(mpHost->getMMCPAddChatMessageNewline() ? "\n" : "");
+
     // This uses a UTF-8 encoding:
-    std::string trimmedStdStr = message.trimmed().toStdString();
+    std::string trimmedStdStr = coloredStr.toStdString();
     // The message sent to TMainConsole::printOnDisplay(...) MUST be in the
     // current Game Server Encoding - so we are going to have to transcode the
     // data if it is anything other than ASCII. Given that the primary usage for
