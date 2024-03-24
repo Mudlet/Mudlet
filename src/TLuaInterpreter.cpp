@@ -6021,7 +6021,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
 // No documentation available in wiki - internal function
 QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QString& function, const bool repeating)
 {
-    const QTime time = QTime(0,0,0,0).addMSecs(qRound(timeout * 1000));
+    const QTime time = QTime(0, 0, 0, 0).addMSecs(qRound(timeout * 1000));
     auto* pT = new TTimer(qsl("newTempTimerWithoutAnId"), time, mpHost, repeating);
     pT->setTime(time);
     pT->setIsFolder(false);
@@ -7179,7 +7179,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         if (!behaviours.contains(behaviour)) {
             lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
                 __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);; // Return false indicating error to be handled by caller
+            return lua_error(L);
         }
 
         if (behaviour == qsl("optout")) {
@@ -7199,7 +7199,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         if (!behaviours.contains(behaviour)) {
             lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
                 __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);; // Return false indicating error to be handled by caller
+            return lua_error(L);
         }
 
         if (behaviour == qsl("optout")) {
@@ -7219,7 +7219,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         if (!behaviours.contains(behaviour)) {
             lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
                 __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);; // Return false indicating error to be handled by caller
+            return lua_error(L);
         }
 
         if (behaviour == qsl("optout")) {
@@ -7239,7 +7239,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         if (!behaviours.contains(behaviour)) {
             lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
                 __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);; // Return false indicating error to be handled by caller
+            return lua_error(L);
         }
 
         if (behaviour == qsl("optout")) {
@@ -7259,7 +7259,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         if (!behaviours.contains(behaviour)) {
             lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
                 __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);; // Return false indicating error to be handled by caller
+            return lua_error(L);
         }
 
         if (behaviour == qsl("optout")) {
@@ -7279,7 +7279,7 @@ int TLuaInterpreter::setConfig(lua_State * L)
         if (!behaviours.contains(behaviour)) {
             lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
                 __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
-            return lua_error(L);; // Return false indicating error to be handled by caller
+            return lua_error(L);
         }
 
         if (behaviour == qsl("optout")) {

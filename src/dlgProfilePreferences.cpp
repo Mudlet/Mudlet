@@ -789,6 +789,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
+    connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader);
 
     comboBox_shareFont->setCurrentIndex(static_cast<int>(pHost->mShareFont));
     connect(comboBox_shareFont, qOverload<int>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_changeShareFont);

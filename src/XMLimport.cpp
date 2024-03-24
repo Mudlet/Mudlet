@@ -900,7 +900,7 @@ void XMLimport::readHost(Host* pHost)
         const QStringView shareSystemType(attributes().value(qsl("shareSystemType")));
 
         if (shareSystemType == qsl("OptIn")) {
-            pHost->mShareSystemType= Host::DataSharingBehaviour::OptIn;
+            pHost->mShareSystemType = Host::DataSharingBehaviour::OptIn;
         } else if (shareSystemType == qsl("OptOut")) {
             pHost->mShareSystemType = Host::DataSharingBehaviour::OptOut;
         } else if (shareSystemType == qsl("Block")) {
