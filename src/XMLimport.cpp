@@ -848,6 +848,78 @@ void XMLimport::readHost(Host* pHost)
         }
     }
 
+    if (attributes().hasAttribute("shareFont")) {
+        const QStringView shareFont(attributes().value(qsl("shareFont")));
+
+        if (shareFont == qsl("OptIn")) {
+            pHost->mShareFont = Host::DataSharingBehaviour::OptIn;
+        } else if (shareFont == qsl("OptOut")) {
+            pHost->mShareFont = Host::DataSharingBehaviour::OptOut;
+        } else if (shareFont == qsl("Block")) {
+            pHost->mShareFont = Host::DataSharingBehaviour::Block;
+        }
+    }
+
+    if (attributes().hasAttribute("shareFontSize")) {
+        const QStringView shareFontSize(attributes().value(qsl("shareFontSize")));
+
+        if (shareFontSize == qsl("OptIn")) {
+            pHost->mShareFontSize = Host::DataSharingBehaviour::OptIn;
+        } else if (shareFontSize == qsl("OptOut")) {
+            pHost->mShareFontSize = Host::DataSharingBehaviour::OptOut;
+        } else if (shareFontSize == qsl("Block")) {
+            pHost->mShareFontSize = Host::DataSharingBehaviour::Block;
+        }
+    }
+
+    if (attributes().hasAttribute("shareLanguage")) {
+        const QStringView shareLanguage(attributes().value(qsl("shareLanguage")));
+
+        if (shareLanguage == qsl("OptIn")) {
+            pHost->mShareLanguage = Host::DataSharingBehaviour::OptIn;
+        } else if (shareLanguage == qsl("OptOut")) {
+            pHost->mShareLanguage = Host::DataSharingBehaviour::OptOut;
+        } else if (shareLanguage == qsl("Block")) {
+            pHost->mShareLanguage = Host::DataSharingBehaviour::Block;
+        }
+    }
+
+    if (attributes().hasAttribute("shareScreenReader")) {
+        const QStringView shareScreenReader(attributes().value(qsl("shareScreenReader")));
+
+        if (shareScreenReader == qsl("OptIn")) {
+            pHost->mShareScreenReader = Host::DataSharingBehaviour::OptIn;
+        } else if (shareScreenReader == qsl("OptOut")) {
+            pHost->mShareScreenReader = Host::DataSharingBehaviour::OptOut;
+        } else if (shareScreenReader == qsl("Block")) {
+            pHost->mShareScreenReader = Host::DataSharingBehaviour::Block;
+        }
+    }
+
+    if (attributes().hasAttribute("shareSystemType")) {
+        const QStringView shareSystemType(attributes().value(qsl("shareSystemType")));
+
+        if (shareSystemType == qsl("OptIn")) {
+            pHost->mShareSystemType= Host::DataSharingBehaviour::OptIn;
+        } else if (shareSystemType == qsl("OptOut")) {
+            pHost->mShareSystemType = Host::DataSharingBehaviour::OptOut;
+        } else if (shareSystemType == qsl("Block")) {
+            pHost->mShareSystemType = Host::DataSharingBehaviour::Block;
+        }
+    }
+
+    if (attributes().hasAttribute("shareUser")) {
+        const QStringView shareUser(attributes().value(qsl("shareUser")));
+
+        if (shareUser == qsl("OptIn")) {
+            pHost->mShareUser = Host::DataSharingBehaviour::OptIn;
+        } else if (shareUser == qsl("OptOut")) {
+            pHost->mShareUser = Host::DataSharingBehaviour::OptOut;
+        } else if (shareUser == qsl("Block")) {
+            pHost->mShareUser = Host::DataSharingBehaviour::Block;
+        }
+    }
+
     if (attributes().hasAttribute(QLatin1String("mSearchEngineName"))) {
         pHost->mSearchEngineName = attributes().value(QLatin1String("mSearchEngineName")).toString();
     } else {

@@ -5423,6 +5423,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "getMapRoomExitsColor", TLuaInterpreter::getMapRoomExitsColor);
     lua_register(pGlobalLua, "setMapRoomExitsColor", TLuaInterpreter::setMapRoomExitsColor);
     lua_register(pGlobalLua, "showNotification", TLuaInterpreter::showNotification);
+    lua_register(pGlobalLua, "showSettingsTab", TLuaInterpreter::showSettingsTab);
     lua_register(pGlobalLua, "saveJsonMap", TLuaInterpreter::saveJsonMap);
     lua_register(pGlobalLua, "loadJsonMap", TLuaInterpreter::loadJsonMap);
     lua_register(pGlobalLua, "registerMapInfo", TLuaInterpreter::registerMapInfo);
@@ -6991,6 +6992,15 @@ int TLuaInterpreter::showNotification(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showSettingsTab
+int TLuaInterpreter::showSettingsTab(lua_State* L)
+{
+    const QString tab = getVerifiedString(L, __func__, 1, "tab");
+    mudlet::self()->showOptionsDialog(tab);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addFileWatch
 int TLuaInterpreter::addFileWatch(lua_State * L)
 {
@@ -7160,6 +7170,126 @@ int TLuaInterpreter::setConfig(lua_State * L)
     }
     if (key == qsl("advertiseScreenReader")) {
         host.mAdvertiseScreenReader = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
+    if (key == qsl("shareFont")) {
+        static const QStringList behaviours{"optout", "optin", "block"};
+        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
+
+        if (!behaviours.contains(behaviour)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
+                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
+            return lua_error(L);; // Return false indicating error to be handled by caller
+        }
+
+        if (behaviour == qsl("optout")) {
+            host.mShareFont = Host::DataSharingBehaviour::OptOut;
+        } else if (behaviour == qsl("optin")) {
+            host.mShareFont = Host::DataSharingBehaviour::OptIn;
+        } else if (behaviour == qsl("block")) {
+            host.mShareFont = Host::DataSharingBehaviour::Block;
+        }
+
+        return success();
+    }
+    if (key == qsl("shareFontSize")) {
+        static const QStringList behaviours{"optout", "optin", "block"};
+        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
+
+        if (!behaviours.contains(behaviour)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
+                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
+            return lua_error(L);; // Return false indicating error to be handled by caller
+        }
+
+        if (behaviour == qsl("optout")) {
+            host.mShareFontSize = Host::DataSharingBehaviour::OptOut;
+        } else if (behaviour == qsl("optin")) {
+            host.mShareFontSize = Host::DataSharingBehaviour::OptIn;
+        } else if (behaviour == qsl("block")) {
+            host.mShareFontSize = Host::DataSharingBehaviour::Block;
+        }
+
+        return success();
+    }
+    if (key == qsl("shareLanguage")) {
+        static const QStringList behaviours{"optout", "optin", "block"};
+        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
+
+        if (!behaviours.contains(behaviour)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
+                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
+            return lua_error(L);; // Return false indicating error to be handled by caller
+        }
+
+        if (behaviour == qsl("optout")) {
+            host.mShareLanguage = Host::DataSharingBehaviour::OptOut;
+        } else if (behaviour == qsl("optin")) {
+            host.mShareLanguage = Host::DataSharingBehaviour::OptIn;
+        } else if (behaviour == qsl("block")) {
+            host.mShareLanguage = Host::DataSharingBehaviour::Block;
+        }
+
+        return success();
+    }
+    if (key == qsl("shareScreenReader")) {
+        static const QStringList behaviours{"optout", "optin", "block"};
+        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
+
+        if (!behaviours.contains(behaviour)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
+                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
+            return lua_error(L);; // Return false indicating error to be handled by caller
+        }
+
+        if (behaviour == qsl("optout")) {
+            host.mShareScreenReader = Host::DataSharingBehaviour::OptOut;
+        } else if (behaviour == qsl("optin")) {
+            host.mShareScreenReader = Host::DataSharingBehaviour::OptIn;
+        } else if (behaviour == qsl("block")) {
+            host.mShareScreenReader = Host::DataSharingBehaviour::Block;
+        }
+
+        return success();
+    }
+    if (key == qsl("shareSystemType")) {
+        static const QStringList behaviours{"optout", "optin", "block"};
+        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
+
+        if (!behaviours.contains(behaviour)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
+                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
+            return lua_error(L);; // Return false indicating error to be handled by caller
+        }
+
+        if (behaviour == qsl("optout")) {
+            host.mShareSystemType = Host::DataSharingBehaviour::OptOut;
+        } else if (behaviour == qsl("optin")) {
+            host.mShareSystemType = Host::DataSharingBehaviour::OptIn;
+        } else if (behaviour == qsl("block")) {
+            host.mShareSystemType = Host::DataSharingBehaviour::Block;
+        }
+
+        return success();
+    }
+    if (key == qsl("shareUser")) {
+        static const QStringList behaviours{"optout", "optin", "block"};
+        const auto behaviour = getVerifiedString(L, __func__, 2, "value");
+
+        if (!behaviours.contains(behaviour)) {
+            lua_pushfstring(L, "%s: bad argument #%d type (behaviour should be one of %s, got %s!)",
+                __func__, 2, behaviours.join(qsl(", ")).toUtf8().constData(), behaviour.toUtf8().constData());
+            return lua_error(L);; // Return false indicating error to be handled by caller
+        }
+
+        if (behaviour == qsl("optout")) {
+            host.mShareUser = Host::DataSharingBehaviour::OptOut;
+        } else if (behaviour == qsl("optin")) {
+            host.mShareUser = Host::DataSharingBehaviour::OptIn;
+        } else if (behaviour == qsl("block")) {
+            host.mShareUser = Host::DataSharingBehaviour::Block;
+        }
+
         return success();
     }
     if (key == qsl("blankLinesBehaviour")) {

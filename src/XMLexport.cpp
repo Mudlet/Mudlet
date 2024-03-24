@@ -470,6 +470,18 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
     host.append_attribute("announceIncomingText") = pHost->mAnnounceIncomingText ? "yes" : "no";
     host.append_attribute("advertiseScreenReader") = pHost->mAdvertiseScreenReader ? "yes" : "no";
+    host.append_attribute("shareFont") = QMetaEnum::fromType<Host::DataSharingBehaviour>().valueToKey(
+            static_cast<int>(pHost->mShareFont));
+    host.append_attribute("shareFontSize") = QMetaEnum::fromType<Host::DataSharingBehaviour>().valueToKey(
+            static_cast<int>(pHost->mShareFontSize));
+    host.append_attribute("shareLanguage") = QMetaEnum::fromType<Host::DataSharingBehaviour>().valueToKey(
+            static_cast<int>(pHost->mShareLanguage));
+    host.append_attribute("shareScreenReader") = QMetaEnum::fromType<Host::DataSharingBehaviour>().valueToKey(
+            static_cast<int>(pHost->mShareScreenReader));
+    host.append_attribute("shareSystemType") = QMetaEnum::fromType<Host::DataSharingBehaviour>().valueToKey(
+            static_cast<int>(pHost->mShareSystemType));
+    host.append_attribute("shareUser") = QMetaEnum::fromType<Host::DataSharingBehaviour>().valueToKey(
+            static_cast<int>(pHost->mShareUser));
     host.append_attribute("caretShortcut") = QMetaEnum::fromType<Host::CaretShortcut>().valueToKey(
             static_cast<int>(pHost->mCaretShortcut));
     host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(

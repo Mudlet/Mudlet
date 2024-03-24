@@ -633,6 +633,7 @@ public:
     static int getMapRoomExitsColor(lua_State*);
     static int setMapRoomExitsColor(lua_State*);
     static int showNotification(lua_State*);
+    static int showSettingsTab(lua_State*);
     static int saveJsonMap(lua_State*);
     static int loadJsonMap(lua_State*);
     static int registerMapInfo(lua_State*);

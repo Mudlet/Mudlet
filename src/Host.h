@@ -59,6 +59,7 @@ class QDockWidget;
 class QPushButton;
 class QListWidget;
 
+class TClientVariables;
 class TEvent;
 class TArea;
 class LuaInterface;
@@ -482,6 +483,7 @@ public:
     bool mNoAntiAlias;
 
     dlgTriggerEditor* mpEditorDialog;
+    QScopedPointer<TClientVariables> mpClientVariables;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
     dlgNotepad* mpNotePad;
@@ -683,6 +685,21 @@ public:
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
+
+    enum class DataSharingBehaviour {
+        OptOut,
+        OptIn,
+        Block
+    };
+    Q_ENUM(DataSharingBehaviour)
+
+    DataSharingBehaviour mShareFont = DataSharingBehaviour::OptOut;
+    DataSharingBehaviour mShareFontSize = DataSharingBehaviour::OptOut;
+    DataSharingBehaviour mShareLanguage = DataSharingBehaviour::OptOut;
+    DataSharingBehaviour mShareScreenReader = DataSharingBehaviour::OptOut;
+    DataSharingBehaviour mShareSystemType = DataSharingBehaviour::OptOut;
+    DataSharingBehaviour mShareUser = DataSharingBehaviour::OptOut;
+
     enum class BlankLineBehaviour {
         Show,
         Hide,
