@@ -31,6 +31,7 @@
 #include "TDebug.h"
 #include "TMainConsole.h"
 #include "TCommandLine.h"
+#include "TClientVariables.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -240,6 +241,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mIsProfileLoadingSequence(false)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
+, mpClientVariables(new TClientVariables(this))
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
 , mpNotePad(nullptr)

@@ -108,6 +108,7 @@ set(mudlet_SRCS
     TAlias.cpp
     TArea.cpp
     TBuffer.cpp
+    TClientVariables.cpp
     TCommandLine.cpp
     TConsole.cpp
     TDebug.cpp
@@ -276,6 +277,7 @@ set(mudlet_HDRS
     TArea.h
     TAstar.h
     TBuffer.h
+    TClientVariables.h
     TCommandLine.h
     TConsole.h
     TDebug.h

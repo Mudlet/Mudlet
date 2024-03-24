@@ -3763,6 +3763,272 @@ you can use it but there could be issues with aligning columns of text</string>
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab_sharing">
+      <attribute name="title">
+       <string>Sharing</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vBoxLayout_tab_sharing">
+       <item>
+        <widget class="QGroupBox" name="groupBox_sharing">
+         <property name="title">
+          <string>Given consent, the game server may request then receive the following data via NEW-ENVIRON, MNES, MTTS, and GMCP protocols</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_groupBox_sharing">
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_shareFont">
+            <property name="text">
+             <string>FONT</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_shareFont</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1" colspan="2">
+           <widget class="QLabel" name="label_detailFont">
+            <property name="text">
+             <string>'Arial', 'Courier New', etc.</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_detailFont</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="3">
+           <widget class="QComboBox" name="comboBox_shareFont">
+            <item>
+             <property name="text">
+              <string>Opt Out / Do Not Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Opt In / Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Block Requests</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_shareFontSize">
+            <property name="text">
+             <string>FONT_SIZE</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_shareFontSize</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1" colspan="2">
+           <widget class="QLabel" name="label_detailFontSize">
+            <property name="text">
+             <string>'8', '12', etc.</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_detailFontSize</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QComboBox" name="comboBox_shareFontSize">
+            <item>
+             <property name="text">
+              <string>Opt Out / Do Not Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Opt In / Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Block Requests</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="label_shareLanguage">
+            <property name="text">
+             <string>LANGUAGE</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_shareLanguage</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1" colspan="2">>
+           <widget class="QLabel" name="label_detailLanguage">
+            <property name="text">
+             <string>'en_US' for English (American), 'de' for Deutsch, etc.</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_detailLanguage</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QComboBox" name="comboBox_shareLanguage">
+            <item>
+             <property name="text">
+              <string>Opt Out / Do Not Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Opt In / Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Block Requests</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="label_shareScreenReader">
+            <property name="text">
+             <string>SCREEN_READER</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_shareScreenReader</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1" colspan="2">>
+           <widget class="QLabel" name="label_detailScreenReader">
+            <property name="text">
+             <string>'0' for not advertised, '1' for advertised (see Accessibility tab)</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_detailScreenReader</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QComboBox" name="comboBox_shareScreenReader">
+            <item>
+             <property name="text">
+              <string>Opt Out / Do Not Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Opt In / Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Block Requests</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_shareSystemType">
+            <property name="text">
+             <string>SYSTEMTYPE</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_shareSystemType</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1" colspan="2">>
+           <widget class="QLabel" name="label_detailSystemType">
+            <property name="text">
+             <string>'WIN32' for Windows, 'MACOS' for Mac, etc.</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_detailSystemType</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="3">
+           <widget class="QComboBox" name="comboBox_shareSystemType">
+            <item>
+             <property name="text">
+              <string>Opt Out / Do Not Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Opt In / Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Block Requests</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="label_shareUser">
+            <property name="text">
+             <string>USER</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_shareUser</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="1" colspan="2">
+           <widget class="QLabel" name="label_detailUser">
+            <property name="text">
+             <string>'Character name' from the Options tab in Connect</string>
+            </property>
+            <property name="buddy">
+             <cstring>label_detailUser</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="3">
+           <widget class="QComboBox" name="comboBox_shareUser">
+            <item>
+             <property name="text">
+              <string>Opt Out / Do Not Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Opt In / Share</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Block Requests</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer_sharing">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Expanding</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
      <widget class="QWidget" name="tab_specialOptions">
       <attribute name="title">
        <string>Special Options</string>
@@ -4321,6 +4587,12 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_advertiseScreenReader</tabstop>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
+  <tabstop>comboBox_shareFont</tabstop>
+  <tabstop>comboBox_shareFontSize</tabstop>
+  <tabstop>comboBox_shareLanguage</tabstop>
+  <tabstop>comboBox_shareScreenReader</tabstop>
+  <tabstop>comboBox_shareSystemType</tabstop>
+  <tabstop>comboBox_shareUser</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>mFORCE_CHARSET_NEGOTIATION_OFF</tabstop>

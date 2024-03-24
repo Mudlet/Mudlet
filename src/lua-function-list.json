@@ -508,6 +508,7 @@
     "showGauge": "showGauge(gaugeName)",
     "showMultimatches": "showMultimatches()",
     "showNotification": "showNotification(title, [content], [expiryTimeInSeconds])",
+    "showSettingsTab": "showSettingsTab(tab)",
     "showToolBar": "showToolBar(name)",
     "showWindow": "showWindow(name)",
     "spairs": "spairs(tbl, sortFunction)",

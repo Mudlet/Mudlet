@@ -32,6 +32,7 @@
 
 #include "Host.h"
 #include "TBuffer.h"
+#include "TClientVariables.h"
 #include "TConsole.h"
 #include "TEvent.h"
 #include "TMainConsole.h"
@@ -1001,7 +1002,7 @@ QString cTelnet::getNewEnvironValueSystemType()
     systemType = qsl("UNIX");
 #endif
 
-    return systemType.isEmpty() ? QString(): systemType;
+    return systemType.isEmpty() ? QString() : systemType;
 }
 
 QString cTelnet::getNewEnvironCharset()
@@ -1063,8 +1064,8 @@ QString cTelnet::getNewEnvironMTTS()
         terminalStandards |= MTTS_STD_UTF_8;
     }
 
-    if (mpHost->mAdvertiseScreenReader) {
-        terminalStandards |= MTTS_STD_SCREEN_READER;
+    if (mpHost->mShareScreenReader == Host::DataSharingBehaviour::OptIn && mpHost->mAdvertiseScreenReader) {
+        terminalStandards |= MTTS_STD_SCREEN_READER;  // Needs an OPT-IN to be enabled
     }
 
     if (mpHost->mEnableMNES && !mpHost->mForceNewEnvironNegotiationOff) {
@@ -1105,7 +1106,7 @@ QString cTelnet::getNewEnvironOSCColorPalette()
 
 QString cTelnet::getNewEnvironScreenReader()
 {
-    return mpHost->mAdvertiseScreenReader ? qsl("1") : QString("0");
+    return mpHost->mAdvertiseScreenReader ? qsl("1") : qsl("0");
 }
 
 QString cTelnet::getNewEnvironTruecolor()
@@ -1118,7 +1119,7 @@ QString cTelnet::getNewEnvironTLS()
 #if !defined(QT_NO_SSL)
     return qsl("1");
 #else
-    return QString("0");
+    return qsl("0");
 #endif
 }
 
@@ -1161,23 +1162,41 @@ QMap<QString, QPair<bool, QString>> cTelnet::getNewEnvironDataMap()
         return newEnvironDataMap;
     }
 
-    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" and "SYSTEMTYPE" are well-known and will be requested with NEW_ENVIRON_VAR
-    //newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserVar, getNewEnvironValueUser())); // Needs an OPT-IN to be enabled, next PR
-    //newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserVar, getNewEnvironValueSystemType())); // Needs an OPT-IN to be enabled, next PR
-
-    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, others will be requested with NEW_ENVIRON_USERVAR
+    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, these will be requested with NEW_ENVIRON_USERVAR
     newEnvironDataMap.insert(qsl("ANSI"), qMakePair(isUserVar, getNewEnvironANSI()));
     newEnvironDataMap.insert(qsl("VT100"), qMakePair(isUserVar, getNewEnvironVT100()));
     newEnvironDataMap.insert(qsl("256_COLORS"), qMakePair(isUserVar, getNewEnviron256Colors()));
     newEnvironDataMap.insert(qsl("UTF-8"), qMakePair(isUserVar, getNewEnvironUTF8()));
     newEnvironDataMap.insert(qsl("OSC_COLOR_PALETTE"), qMakePair(isUserVar, getNewEnvironOSCColorPalette()));
-    newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
     newEnvironDataMap.insert(qsl("TRUECOLOR"), qMakePair(isUserVar, getNewEnvironTruecolor()));
     newEnvironDataMap.insert(qsl("TLS"), qMakePair(isUserVar, getNewEnvironTLS()));
-    //newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getNewEnvironLanguage())); // Needs an OPT-IN to be enabled, next PR
-    //newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getNewEnvironFont())); // Needs an OPT-IN to be enabled, next PR
-    //newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getNewEnvironFontSize())); // Needs an OPT-IN to be enabled, next PR
     newEnvironDataMap.insert(qsl("WORD_WRAP"), qMakePair(isUserVar, getNewEnvironWordWrap()));
+
+    if (mpHost->mShareFont == Host::DataSharingBehaviour::OptIn) {
+        newEnvironDataMap.insert(qsl("FONT"), qMakePair(isUserVar, getNewEnvironFont()));
+    }
+
+    if (mpHost->mShareFontSize == Host::DataSharingBehaviour::OptIn) {
+        newEnvironDataMap.insert(qsl("FONT_SIZE"), qMakePair(isUserVar, getNewEnvironFontSize()));
+    }
+
+    if (mpHost->mShareLanguage == Host::DataSharingBehaviour::OptIn) {
+        newEnvironDataMap.insert(qsl("LANGUAGE"), qMakePair(isUserVar, getNewEnvironLanguage()));
+    }
+
+    if (mpHost->mShareScreenReader == Host::DataSharingBehaviour::OptIn) {
+        newEnvironDataMap.insert(qsl("SCREEN_READER"), qMakePair(isUserVar, getNewEnvironScreenReader()));
+    }
+
+    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "SYSTEMTYPE" is well-known and will be requested with NEW_ENVIRON_VAR
+    if (mpHost->mShareSystemType == Host::DataSharingBehaviour::OptIn) {
+        newEnvironDataMap.insert(qsl("SYSTEMTYPE"), qMakePair(!isUserVar, getNewEnvironValueSystemType()));
+    }
+
+    // Per https://www.rfc-editor.org/rfc/rfc1572.txt, "USER" is well-known and will be requested with NEW_ENVIRON_VAR
+    if (mpHost->mShareUser == Host::DataSharingBehaviour::OptIn) {
+        newEnvironDataMap.insert(qsl("USER"), qMakePair(!isUserVar, getNewEnvironValueUser()));
+    }
 
     return newEnvironDataMap;
 }
@@ -1774,7 +1793,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1"])";
+            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Variables 1", "Client.Media 1"])";
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -2823,6 +2842,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     if (packageMessage.startsWith(QLatin1String("External.Discord.Status"), Qt::CaseInsensitive)
         || packageMessage.startsWith(QLatin1String("External.Discord.Info"), Qt::CaseInsensitive)) {
         mpHost->processDiscordGMCP(packageMessage, data);
+    }
+
+    if (packageMessage.startsWith(qsl("Client.Variables"), Qt::CaseInsensitive)) {
+        mpHost->mpClientVariables->handleClientVariablesGMCP(packageMessage, data);
     }
 
     if (mpHost->mAcceptServerMedia && packageMessage.startsWith(qsl("Client.Media"), Qt::CaseInsensitive)) {
