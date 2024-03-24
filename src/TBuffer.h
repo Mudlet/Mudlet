@@ -414,7 +414,7 @@ private:
 // Note "inline" is REQUIRED:
 inline QDebug& operator<<(QDebug& debug, const TChar::AttributeFlags& attributes)
 {
-    QDebugStateSaver const saver(debug);
+    const QDebugStateSaver saver(debug);
     QString result = QLatin1String("TChar::AttributeFlags(");
     QStringList presentAttributes;
     if (attributes & TChar::Bold) {

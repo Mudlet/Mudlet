@@ -67,14 +67,14 @@ void TAlias::setName(const QString& name)
     mpHost->getAliasUnit()->mLookupTable.insert(name, this);
 }
 
-bool TAlias::match(const QString& toMatch)
+bool TAlias::match(const QString& haystack)
 {
+    bool matchCondition = false;
     if (!isActive()) {
         if (isFolder()) {
             if (shouldBeActive()) {
-                bool matchCondition = false;
                 for (auto alias : *mpMyChildrenList) {
-                    if (alias->match(toMatch)) {
+                    if (alias->match(haystack)) {
                         matchCondition = true;
                     }
                 }
@@ -84,9 +84,6 @@ bool TAlias::match(const QString& toMatch)
         return false;
     }
 
-    bool matchCondition = false;
-    //bool ret = false;
-    //bool conditionMet = false;
     QSharedPointer<pcre> re = mpRegex;
     if (re == nullptr) {
         return false; //regex compile error
@@ -94,26 +91,31 @@ bool TAlias::match(const QString& toMatch)
 
 #if defined(Q_OS_WIN32)
     // strndup(3) - a safe strdup(3) does not seem to be available on mingw32 with GCC-4.9.2
-    char* subject = static_cast<char*>(malloc(strlen(toMatch.toUtf8().constData()) + 1));
-    strcpy(subject, toMatch.toUtf8().constData());
+    char* haystackC = static_cast<char*>(malloc(strlen(haystack.toUtf8().constData()) + 1));
+    strcpy(haystackC, haystack.toUtf8().constData());
 #else
-    char* subject = strndup(toMatch.toUtf8().constData(), strlen(toMatch.toUtf8().constData()));
+    char* haystackC = strndup(haystack.toUtf8().constData(), strlen(haystack.toUtf8().constData()));
 #endif
-    unsigned char* name_table;
-    int namecount;
-    int name_entry_size;
 
-    int subject_length = strlen(subject);
-    int rc, i;
+    // These must be initialised before any goto so the latter does not jump
+    // over them:
+    int namecount = 0;
+    char* tabptr = nullptr;
+    NameGroupMatches nameGroups;
+    QMap<QString, QPair<int, int>> namePositions;
     std::list<std::string> captureList;
     std::list<int> posList;
-    int ovector[MAX_CAPTURE_GROUPS * 3];
+    int name_entry_size = 0;
+    int haystackCLength = strlen(haystackC);
+    int rc = 0;
+    int i = 0;
+    int ovector[MAX_CAPTURE_GROUPS * 3] = {0};
 
-    //cout <<" LINE="<<subject<<endl;
     if (mRegexCode.isEmpty()) {
         goto MUD_ERROR;
     }
-    rc = pcre_exec(re.data(), nullptr, subject, subject_length, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
+
+    rc = pcre_exec(re.data(), nullptr, haystackC, haystackCLength, 0, 0, ovector, MAX_CAPTURE_GROUPS * 3);
 
     if (rc < 0) {
         goto MUD_ERROR;
@@ -136,7 +138,7 @@ bool TAlias::match(const QString& toMatch)
     matchCondition = true; // alias has matched
 
     for (i = 0; i < rc; i++) {
-        char* substring_start = subject + ovector[2 * i];
+        char* substring_start = haystackC + ovector[2 * i];
         int substring_length = ovector[2 * i + 1] - ovector[2 * i];
 
         std::string match;
@@ -153,35 +155,37 @@ bool TAlias::match(const QString& toMatch)
             TDebug(Qt::darkMagenta, Qt::black) << TDebug::csmContinue << "<" << match.c_str() << ">\n" >> mpHost;
         }
     }
+
     pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMECOUNT, &namecount);
 
-    if (namecount <= 0) {
-        //cout << "no named substrings detected" << endl;
-    } else {
-        unsigned char* tabptr;
-        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &name_table);
-
+    if (namecount > 0) {
+        pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMETABLE, &tabptr);
         pcre_fullinfo(re.data(), nullptr, PCRE_INFO_NAMEENTRYSIZE, &name_entry_size);
-
-        tabptr = name_table;
-        for (i = 0; i < namecount; i++) {
-            //int n = (tabptr[0] << 8) | tabptr[1];
+        for (i = 0; i < namecount; ++i) {
+            const int n = (tabptr[0] << 8) | tabptr[1];
+            auto name = QString::fromUtf8(&tabptr[2]).trimmed();
+            auto* substring_start = haystackC + ovector[2*n];
+            auto substring_length = ovector[2*n+1] - ovector[2*n];
+            auto utf16_pos = haystack.indexOf(QString(substring_start));
+            auto capture = QString::fromUtf8(substring_start, substring_length);
+            nameGroups << qMakePair(name, capture);
             tabptr += name_entry_size;
+            namePositions.insert(name, qMakePair(utf16_pos, substring_length));
         }
     }
-    //TODO: add named groups separately later as Lua::namedGroups
+
     for (;;) {
         int options = 0;
         int start_offset = ovector[1];
 
         if (ovector[0] == ovector[1]) {
-            if (ovector[0] >= subject_length) {
+            if (ovector[0] >= haystackCLength) {
                 goto END;
             }
             options = PCRE_NOTEMPTY | PCRE_ANCHORED;
         }
 
-        rc = pcre_exec(re.data(), nullptr, subject, subject_length, start_offset, options, ovector, MAX_CAPTURE_GROUPS * 3);
+        rc = pcre_exec(re.data(), nullptr, haystackC, haystackCLength, start_offset, options, ovector, MAX_CAPTURE_GROUPS * 3);
         if (rc == PCRE_ERROR_NOMATCH) {
             if (options == 0) {
                 break;
@@ -201,7 +205,7 @@ bool TAlias::match(const QString& toMatch)
         }
 
         for (i = 0; i < rc; i++) {
-            char* substring_start = subject + ovector[2 * i];
+            char* substring_start = haystackC + ovector[2 * i];
             int substring_length = ovector[2 * i + 1] - ovector[2 * i];
             std::string match;
             if (substring_length < 1) {
@@ -222,6 +226,7 @@ bool TAlias::match(const QString& toMatch)
 END : {
         TLuaInterpreter* pL = mpHost->getLuaInterpreter();
         pL->setCaptureGroups(captureList, posList);
+        pL->setCaptureNameGroups(nameGroups, namePositions);
         // call lua trigger function with number of matches and matches itselves as arguments
         execute();
         pL->clearCaptureGroups();
@@ -229,12 +234,12 @@ END : {
 
 MUD_ERROR:
     for (auto childAlias : *mpMyChildrenList) {
-        if (childAlias->match(toMatch)) {
+        if (childAlias->match(haystack)) {
             matchCondition = true;
         }
     }
 
-    free(subject);
+    free(haystackC);
     return matchCondition;
 }
 

@@ -935,7 +935,7 @@ void dlgTriggerEditor::slot_setToolBarIconSize(const int s)
         toolBar2->setToolButtonStyle(Qt::ToolButtonIconOnly);
     }
 
-    QSize const newSize(s * 8, s * 8);
+    const QSize newSize(s * 8, s * 8);
     toolBar->setIconSize(newSize);
     toolBar2->setIconSize(newSize);
 }
@@ -946,7 +946,7 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
         return;
     }
 
-    QSize const newSize(s * 8, s * 8);
+    const QSize newSize(s * 8, s * 8);
     treeWidget_triggers->setIconSize(newSize);
     treeWidget_aliases->setIconSize(newSize);
     treeWidget_timers->setIconSize(newSize);
@@ -970,11 +970,11 @@ void dlgTriggerEditor::readSettings()
        For compatibility with older settings, if no config is loaded
        from the config directory "mudlet", application "Mudlet", we try to load from the config
        directory "Mudlet", application "Mudlet 1.0". */
-    QSettings const settings_new("mudlet", "Mudlet");
-    QSettings const settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
+    const QSettings settings_new("mudlet", "Mudlet");
+    const QSettings settings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 
     const QPoint pos = settings.value("script_editor_pos", QPoint(10, 10)).toPoint();
-    QSize const size = settings.value("script_editor_size", QSize(600, 400)).toSize();
+    const QSize size = settings.value("script_editor_size", QSize(600, 400)).toSize();
     resize(size);
     move(pos);
 
@@ -3830,7 +3830,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
         name = tr("New timer");
     }
     const QString command = "";
-    QTime const time;
+    const QTime time;
     const QString script = "";
     QStringList nameL;
     nameL << name;
@@ -4645,7 +4645,7 @@ void dlgTriggerEditor::saveTimer()
         const int minutes = mpTimersMainArea->timeEdit_timer_minutes->time().minute();
         const int secs = mpTimersMainArea->timeEdit_timer_seconds->time().second();
         const int msecs = mpTimersMainArea->timeEdit_timer_msecs->time().msec();
-        QTime const time(hours, minutes, secs, msecs);
+        const QTime time(hours, minutes, secs, msecs);
         pT->setTime(time);
         pT->setCommand(command);
         pT->setName(name);
@@ -4757,8 +4757,8 @@ void dlgTriggerEditor::saveAlias()
     }
     const QString substitution = mpAliasMainArea->lineEdit_alias_command->text();
     //check if sub will trigger regex, ignore if there's nothing in regex - could be an alias group
-    QRegularExpression const rx(regex);
-    QRegularExpressionMatch const match = rx.match(substitution);
+    const QRegularExpression rx(regex);
+    const QRegularExpressionMatch match = rx.match(substitution);
 
     QString itemDescription;
     if (!regex.isEmpty() && match.capturedStart() != -1) {
@@ -5809,8 +5809,8 @@ void dlgTriggerEditor::slot_triggerSelected(QTreeWidgetItem* pItem)
         mpTriggersMainArea->toolButton_clearSoundFile->setEnabled(!mpTriggersMainArea->lineEdit_soundFile->text().isEmpty());
         mpTriggersMainArea->groupBox_triggerColorizer->setChecked(pT->isColorizerTrigger());
 
-        QColor const fgColor(pT->getFgColor());
-        QColor const bgColor(pT->getBgColor());
+        const QColor fgColor(pT->getFgColor());
+        const QColor bgColor(pT->getBgColor());
         const bool transparentFg = fgColor == QColorConstants::Transparent;
         const bool transparentBg = bgColor == QColorConstants::Transparent;
         mpTriggersMainArea->pushButtonFgColor->setStyleSheet(generateButtonStyleSheet(fgColor, pT->isColorizerTrigger()));
@@ -6464,7 +6464,7 @@ void dlgTriggerEditor::slot_timerSelected(QTreeWidgetItem* pItem)
         mpTimersMainArea->lineEdit_timer_command->setText(command);
         mpTimersMainArea->lineEdit_timer_name->setText(name);
         mpTimersMainArea->label_idNumber->setText(QString::number(ID));
-        QTime const time = pT->getTime();
+        const QTime time = pT->getTime();
         mpTimersMainArea->timeEdit_timer_hours->setTime(QTime(time.hour(), 0, 0, 0));
         mpTimersMainArea->timeEdit_timer_minutes->setTime(QTime(0, time.minute(), 0, 0));
         mpTimersMainArea->timeEdit_timer_seconds->setTime(QTime(0, 0, time.second(), 0));
@@ -9518,7 +9518,7 @@ void dlgTriggerEditor::slot_colorTriggerFg()
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
 
-    QColor const color = pT->mColorTriggerFgColor;
+    const QColor color = pT->mColorTriggerFgColor;
     // The above will be an invalid colour if the colour has been reset/ignored
     // The dialogue should have changed pT->mColorTriggerFgAnsi
     QString styleSheet;
@@ -9581,7 +9581,7 @@ void dlgTriggerEditor::slot_colorTriggerBg()
     pD->setWindowModality(Qt::ApplicationModal);
     pD->exec();
 
-    QColor const color = pT->mColorTriggerBgColor;
+    const QColor color = pT->mColorTriggerBgColor;
     // The above will be an invalid colour if the colour has been reset/ignored
     QString styleSheet;
     if (color.isValid()) {
@@ -9825,7 +9825,7 @@ QString dlgTriggerEditor::generateButtonStyleSheet(const QColor& color, const bo
                          color.name());
         }
 
-        QColor const disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
+        const QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness());
         return mudlet::self()->mTEXT_ON_BG_STYLESHEET
                 .arg(QLatin1String("darkGray"), disabledColor.name());
     } else {
