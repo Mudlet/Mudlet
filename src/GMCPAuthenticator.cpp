@@ -104,11 +104,13 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
         } else {
             qDebug() << "Server does not support credentials authentication and we don't support any other";
         }
-
-    } else if (packageMessage == qsl("Char.Login.Result")) {
-        handleAuthResult(data);
-
-    } else {
-        qDebug() << "Unknown GMCP auth package:" << packageMessage;
+        return;
     }
+
+    if (packageMessage == qsl("Char.Login.Result")) {
+        handleAuthResult(data);
+        return;
+    }
+    
+    qDebug() << "Unknown GMCP auth package:" << packageMessage;
 }
