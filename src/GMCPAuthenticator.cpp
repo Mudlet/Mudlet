@@ -23,7 +23,9 @@
 #include "ctelnet.h"
 #include <QDebug>
 
-GMCPAuthenticator::GMCPAuthenticator(Host* pHost) : mpHost(pHost) {}
+GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
+: mpHost(pHost)
+{}
 
 void GMCPAuthenticator::saveSupportsSet(const QString& data)
 {
@@ -37,7 +39,9 @@ void GMCPAuthenticator::saveSupportsSet(const QString& data)
         }
     }
 
+#if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Supported auth types:" << mSupportedAuthTypes;
+#endif // DEBUG_GMCP_AUTHENTICATION
 }
 
 void GMCPAuthenticator::sendCredentials()
@@ -72,8 +76,8 @@ void GMCPAuthenticator::handleAuthResult(const QString& data)
     auto doc = QJsonDocument::fromJson(data.toUtf8());
     auto obj = doc.object();
 
-    bool success = obj["success"].toBool();
-    auto message = obj["message"].toString();
+    bool success = obj[qsl("success")].toBool();
+    auto message = obj[qsl("message")].toString();
 
     if (success) {
         qDebug() << "GMCP login successful";
