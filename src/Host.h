@@ -63,6 +63,7 @@ class TEvent;
 class TArea;
 class LuaInterface;
 class TMedia;
+class GMCPAuthenticator;
 class TRoom;
 class TConsole;
 class TMainConsole;
@@ -72,6 +73,7 @@ class dlgIRC;
 class dlgPackageManager;
 class dlgModuleManager;
 class dlgProfilePreferences;
+class cTelnet;
 
 class stopWatch {
     friend class XMLimport;
@@ -484,6 +486,7 @@ public:
     dlgTriggerEditor* mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
+    QScopedPointer<GMCPAuthenticator> mpAuth;
     dlgNotepad* mpNotePad;
 
     // This is set when we want commands we typed to be shown on the main
