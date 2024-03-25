@@ -41,7 +41,7 @@ void GMCPAuthenticator::saveSupportsSet(const QString& data)
 
 #if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Supported auth types:" << mSupportedAuthTypes;
-#endif // DEBUG_GMCP_AUTHENTICATION
+#endif
 }
 
 void GMCPAuthenticator::sendCredentials()
@@ -67,7 +67,9 @@ void GMCPAuthenticator::sendCredentials()
 
     // Send credentials to server
     mpHost->mTelnet.socketOutRaw(output);
+#if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Sent GMCP credentials";
+#endif
 }
 
 
@@ -80,9 +82,13 @@ void GMCPAuthenticator::handleAuthResult(const QString& data)
     auto message = obj[qsl("message")].toString();
 
     if (success) {
+#if defined(DEBUG_GMCP_AUTHENTICATION)
         qDebug() << "GMCP login successful";
+#endif
     } else {
+#if defined(DEBUG_GMCP_AUTHENTICATION)
         qDebug() << "GMCP login failed:" << message;
+#endif
         if (message.isEmpty()) {
             mpHost->postMessage(tr("[ WARN ]  - Could not log in to the game, is the login information correct?"));
         } else {
@@ -111,6 +117,6 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
         handleAuthResult(data);
         return;
     }
-    
+
     qDebug() << "Unknown GMCP auth package:" << packageMessage;
 }
