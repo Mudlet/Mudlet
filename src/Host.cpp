@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
@@ -51,6 +51,8 @@
 #include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
 #include "mudlet.h"
+#include "MMCP.h"
+#include "MMCPServer.h"
 
 #include "pre_guard.h"
 #include <chrono>
@@ -328,7 +330,16 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSearchOptions(dlgTriggerEditor::SearchOption::SearchOptionNone)
 , mBufferSearchOptions(TConsole::SearchOption::SearchOptionNone)
 , mpDlgIRC(nullptr)
+, mmcpServer(nullptr)
 , mpDlgProfilePreferences(nullptr)
+, mMMCPChatPort(csDefaultMMCPHostPort)
+, mMMCPChatPrefix(qsl("<CHAT>"))
+, mMMCPAutostartServer(false)
+, mMMCPAllowConnectionRequests(false)
+, mMMCPAllowPeekRequests(false)
+, mMMCPPrefixEmotes(false)
+, mMMCPAddChatMessageNewline(true)
+, mMMCPAutoAcceptCalls(true)
 , mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
@@ -1633,6 +1644,16 @@ void Host::postIrcMessage(const QString& a, const QString& b, const QString& c)
     raiseEvent(event);
 }
 
+void Host::postChatChannelMessage(const QString& from, const QString& channel, const QString& message)
+{
+    TEvent event {};
+    event.mArgumentList << csMMCPChatSideChannelEvent;
+    event.mArgumentList << from << channel << message;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    raiseEvent(event);
+}
+
+
 void Host::enableTimer(const QString& name)
 {
     mTimerUnit.enableTimer(name);
@@ -2706,6 +2727,69 @@ bool Host::discordUserIdMatch(const QString& userName, const QString& userDiscri
     } else {
         return true;
     }
+}
+
+void Host::postMMCPMessage(const QString& a) {
+    TEvent event {};
+    event.mArgumentList << QLatin1String("sysMMCPMessage");
+    event.mArgumentList << a;
+    event.mArgumentTypeList << ARGUMENT_TYPE_STRING << ARGUMENT_TYPE_STRING;
+    raiseEvent(event);
+}
+
+void Host::initMMCPServer() {
+    if (mmcpServer) {
+        return;
+    }
+
+    mmcpServer = new MMCPServer(this);
+}
+
+/**
+ * Get the current chat name from the MMCPServer if it exists, otherwise
+ * read it from our saved profile information
+ * There is also the mMMCPChatname read from the xml package, where should we
+ * use that?
+ */
+QString Host::getMMCPChatName() {
+    return mMMCPChatName;
+}
+
+void Host::setMMCPChatName(const QString& name) {
+    mMMCPChatName = name;
+    emit mmcpChatNameChanged(name);
+}
+
+quint16 Host::getMMCPPort() {
+    return mMMCPChatPort;
+}
+
+QString Host::getMMCPChatPrefix() {
+    return mMMCPChatPrefix;
+}
+
+bool Host::getMMCPAutoStartServer() {
+    return mMMCPAutostartServer;
+}
+
+bool Host::getMMCPAllowConnectionRequests() {
+    return mMMCPAllowConnectionRequests;
+}
+
+bool Host::getMMCPAllowPeekRequests() {
+    return mMMCPAllowPeekRequests;
+}
+
+bool Host::getMMCPPrefixEmotes() {
+    return mMMCPPrefixEmotes;
+}
+
+bool Host::getMMCPAddChatMessageNewline() {
+    return mMMCPAddChatMessageNewline;
+}
+
+bool Host::getMMCPAutoAcceptCalls() {
+    return mMMCPAutoAcceptCalls;
 }
 
 QString  Host::getSpellDic()

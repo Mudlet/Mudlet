@@ -29,7 +29,6 @@
 
 
 #include "EAction.h"
-#include "Host.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
@@ -55,6 +54,7 @@
 #if defined(INCLUDE_3DMAPPER)
 #include "glwidget.h"
 #endif
+
 
 #include <limits>
 #include <math.h>
@@ -5253,6 +5253,28 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setMainWindowSize", TLuaInterpreter::setMainWindowSize);
     lua_register(pGlobalLua, "setAppStyleSheet", TLuaInterpreter::setAppStyleSheet);
     lua_register(pGlobalLua, "setProfileStyleSheet", TLuaInterpreter::setProfileStyleSheet);
+    lua_register(pGlobalLua, "chat", TLuaInterpreter::chat);
+    lua_register(pGlobalLua, "chatAccept", TLuaInterpreter::chatAccept);
+    lua_register(pGlobalLua, "chatAll", TLuaInterpreter::chatAll);
+    lua_register(pGlobalLua, "chatAllowSnoop", TLuaInterpreter::chatAllowSnoop);
+    lua_register(pGlobalLua, "chatCall", TLuaInterpreter::chatCall);
+    lua_register(pGlobalLua, "chatDeny", TLuaInterpreter::chatDeny);
+    lua_register(pGlobalLua, "chatDoNotDisturb", TLuaInterpreter::chatDoNotDisturb);
+    lua_register(pGlobalLua, "chatEmoteAll", TLuaInterpreter::chatEmoteAll);
+    lua_register(pGlobalLua, "chatGroup", TLuaInterpreter::chatGroup);
+    lua_register(pGlobalLua, "chatIgnore", TLuaInterpreter::chatIgnore);
+    lua_register(pGlobalLua, "chatList", TLuaInterpreter::chatList);
+    lua_register(pGlobalLua, "chatName", TLuaInterpreter::chatName);
+    lua_register(pGlobalLua, "chatPeek", TLuaInterpreter::chatPeek);
+    lua_register(pGlobalLua, "chatPing", TLuaInterpreter::chatPing);
+    lua_register(pGlobalLua, "chatPrivate", TLuaInterpreter::chatPrivate);
+    lua_register(pGlobalLua, "chatServe", TLuaInterpreter::chatServe);
+    lua_register(pGlobalLua, "chatSetGroup", TLuaInterpreter::chatSetGroup);
+    lua_register(pGlobalLua, "chatSideChannel", TLuaInterpreter::chatSideChannel);
+    lua_register(pGlobalLua, "chatSnoop", TLuaInterpreter::chatSnoop);
+    lua_register(pGlobalLua, "chatStartServer", TLuaInterpreter::chatStartServer);
+    lua_register(pGlobalLua, "chatStopServer", TLuaInterpreter::chatStopServer);
+    lua_register(pGlobalLua, "chatUnChat", TLuaInterpreter::chatUnChat);
     lua_register(pGlobalLua, "sendIrc", TLuaInterpreter::sendIrc);
     lua_register(pGlobalLua, "getIrcNick", TLuaInterpreter::getIrcNick);
     lua_register(pGlobalLua, "getIrcServer", TLuaInterpreter::getIrcServer);
@@ -5488,7 +5510,7 @@ void TLuaInterpreter::initLuaGlobals()
     additionalLuaPaths << qsl("%1/.luarocks/share/lua/5.1/?.lua;%1/.luarocks/share/lua/5.1/?/init.lua").arg(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first());
 #elif defined(Q_OS_WIN32) && defined(INCLUDE_MAIN_BUILD_SYSTEM)
     // For CI builds or users/developers using the setup-windows-sdk.ps1 method:
-    additionalCPaths << qsl("C:\\Qt\\Tools\\mingw730_32\\lib\\lua\\5.1\\?.dll");
+    additionalCPaths << qsl("C:\\Qt6\\Tools\\mingw1120_64\\lib\\lua\\5.1\\?.dll");
 #endif
 
     insertNativeSeparatorsFunction(pGlobalLua);

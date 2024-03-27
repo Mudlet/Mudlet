@@ -618,6 +618,36 @@ qsl("<a href='https://abandonedrealms.com'>Website</a><br>"
                  "Unsere freundliche Spielerschaft hilft Dir gerne bei Deinen ersten Schritten."
                  "\n\n"
                  "Spiel jetzt oder nie!")},
+
+            {qsl("Medievia"),
+             qsl("medievia.com"),
+             4000,
+             false,
+             qsl("<a href='http://medievia.com/'>Medievia</a>"),
+             qsl(":/icons/medievia.png"),
+             qsl("If you take the deepest and most advanced game possible, and mix it with the best "
+                 "chat world around, what you have is Medievia.\n\n"
+                 "Imagine...\n"
+                 "    Endless player-created areas to explore for the first time.\n"
+                 "    Ships you can take out to sea. You can go crabbing, kill monsters, "
+                 "attack other ships, explore new islands, etc.\n"
+                 "    Dragons that hunt you, good dragons that fly you places, dragon lairs "
+                 "you can defeat, etc.\n"
+                 "    Trading for gold where you take goods via covered wagon/mules across "
+                 "the wilderness through adventure after adventure from trade post to "
+                 "trade post. Now you can even go right under the ocean to undersea trading posts.\n"
+                 "    Player vs Player action in zones, ships, wilderness, herobattles, arenas, "
+                 "CPK, NPK, LPK, etc.\n"
+                 "    Joining a clan, the clan can join a town, or go ahead and make their own "
+                 "town in the wilderness.\n"
+                 "    Giving birth and creating your own bloodline. If your bloodline gets big enough "
+                 "you can build homes and castles.\n"
+                 "    A game that has the intuition to track your happiness, pride, sadness, and fear "
+                 "while changing itself to fit your needs!\n"
+                 "    Weather, storms, wind, fire, floods, disease, even asteroids. This may be text "
+                 "but it is the most dynamic game ever attempted. The wind affects the ships, where "
+                 "fire spreads, and even how some critters smell you if you are upwind from them.\n\n"
+                 "Do you dare enter?")}
             };
     // clang-format on
 };

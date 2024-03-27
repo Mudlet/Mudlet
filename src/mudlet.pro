@@ -137,7 +137,8 @@ isEmpty( BUILD ) {
 # A core dev team member setting things up for a release should comment out the
 # following line - as the app-build.txt file must not contain anything (other
 # than whitespace) for a RELEASE build:
-   BUILD = "-dev-"$${GIT_SHA1}
+# PLACEMARKER: revert "MMCP" back to "dev" before merging this code into the main development branch:
+   BUILD = "-MMCP-"$${GIT_SHA1}
 } else {
    BUILD = $${BUILD}-$${GIT_SHA1}
 }
@@ -185,7 +186,9 @@ macx {
 # executables with an ".exe" extension!
 DEFINES += APP_TARGET=\\\"$${TARGET}$${TARGET_EXT}\\\"
 
+
 ################## DejuVu and Ubuntu Fonts inclusion detection #################
+
 # To skip bundling Bitstream Vera Sans and Ubuntu Mono fonts with Mudlet,
 # set the environment WITH_FONTS variable to "NO"
 # ie: export WITH_UPDATER="NO" qmake
@@ -393,7 +396,7 @@ unix:!macx {
             -llibhunspell-1.7
 
         INCLUDEPATH += \
-             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+            $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
              $${MINGW_BASE_DIR_TEST}/include/pugixml
     }
 
@@ -631,6 +634,9 @@ SOURCES += \
     LuaInterface.cpp \
     main.cpp \
     mapInfoContributorManager.cpp \
+	MMCPServer.cpp \
+	MMCPClient.cpp \
+    TLuaInterpreterMMCP.cpp \
     mudlet.cpp \
     MudletInstanceCoordinator.cpp \
     MxpTag.cpp \
@@ -756,6 +762,9 @@ HEADERS += \
     KeyUnit.h \
     LuaInterface.h \
     mapInfoContributorManager.h \
+	MMCP.h \
+	MMCPServer.h \
+	MMCPClient.h \
     mudlet.h \
     MudletInstanceCoordinator.h \
     MxpTag.h \
