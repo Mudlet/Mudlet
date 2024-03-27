@@ -53,7 +53,8 @@ class MMCPClient : public QObject
         Disconnected = 0,
         ConnectingIn,
         ConnectingOut,
-        Connected
+        Connected,
+        Pending
     };
 
 public:
@@ -66,6 +67,7 @@ public:
     void sendPingRequest();
     void sendPeekRequest();
     void sendRequestConnections();
+    bool isPending() { return mState == Pending; }
 
     void disconnect();
 
@@ -108,6 +110,9 @@ public:
     bool setGroup(const QString&);
 
     ClientState state() const { return mState; }
+
+    void acceptCall();
+    void denyCall();
 
     MMCPServer* getServer() { return mpMMCPServer; }
 

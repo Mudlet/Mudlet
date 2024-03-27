@@ -866,6 +866,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
     checkBox_mmcpAddChatMessageNewline->setChecked(pHost->getMMCPAddChatMessageNewline());
     checkBox_mmcpPrefixEmotes->setChecked(pHost->getMMCPPrefixEmotes());
+    checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
 
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
@@ -3099,6 +3100,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
         pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
         pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
+        pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
 
 
         pHost->mAnnounceIncomingText = checkBox_announceIncomingText->isChecked();

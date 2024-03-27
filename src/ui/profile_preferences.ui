@@ -3249,6 +3249,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="3" column="6">
+           <widget class="QCheckBox" name="checkBox_mmcpAutoAcceptCalls">
+            <property name="toolTip">
+             <string>Automatically accept incoming calls from chat clients</string>
+            </property>
+            <property name="text">
+             <string>Auto-Accept Incoming Calls</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>

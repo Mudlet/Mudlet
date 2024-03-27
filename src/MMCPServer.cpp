@@ -114,10 +114,20 @@ MMCPClient* MMCPServer::clientByNameOrId(const QVariant& arg)
 
     } else {
         // It is an integer
+        QListIterator<QPointer<MMCPClient>> it(mPeersList);
+        while (it.hasNext()) {
+            MMCPClient* cl = it.next();
+            if (cl && cl->id() == id) {
+                pClient = cl;
+                break;
+            }
+        }
+        /*
         if (id > 0 && id <= mPeersList.size()) {
             // And it is in range
             pClient = mPeersList[id - 1];
         }
+        */
     }
 
     return pClient;
@@ -253,6 +263,38 @@ QPair<bool, QString> MMCPServer::chatAll(const QString& msg)
     return {true, QString()};
 }
 
+QPair<bool, QString> MMCPServer::chatAccept(const QVariant& target)
+{
+    if (mPeersList.isEmpty()) {
+        return {false, qsl("no connected clients")};
+    }
+
+    MMCPClient* pClient = clientByNameOrId(target);
+
+    if (pClient && pClient->isPending()) {
+        pClient->acceptCall();
+        return {true, QString()};
+    }
+
+    return {false, qsl("accepted incoming call")};
+}
+
+QPair<bool, QString> MMCPServer::chatDeny(const QVariant& target)
+{
+    if (mPeersList.isEmpty()) {
+        return {false, qsl("no connected clients")};
+    }
+
+    MMCPClient* pClient = clientByNameOrId(target);
+
+    if (pClient && pClient->isPending()) {
+        pClient->denyCall();
+        return {true, QString()};
+    }
+
+    return {false, qsl("denied incoming call")};
+}
+
 /**
  * Send a chat message to a specific group
  */
@@ -312,27 +354,33 @@ QPair<bool, QString> MMCPServer::chatList()
     using namespace AnsiColors;
 
     QStringList peersList;
-    int peerCount = 0;
+    //int peerCount = 0;
     QListIterator<QPointer<MMCPClient>> it(mPeersList);
     while (it.hasNext()) {
+        //peerCount++;
         MMCPClient* pClient = it.next();
+       
         peersList << qsl("%1%2 %3%4 %5")
-                             .arg(FBLDWHT)
-                             .arg(++peerCount, 4)
-                             .arg(RST, pClient->getInfoString(), pClient->getVersion());
+                            .arg(pClient->isPending() ? FBLDYEL : FBLDGRN)
+                            .arg(pClient->id(), 4)
+                            .arg(RST, pClient->getInfoString(), pClient->getVersion());
     }
 
     const QString strMessage = tr("%1Id   Name                 Address              Port  Group           Flags    ChatClient\n"
                                   "==== ==================== ==================== ===== =============== ======== ================\n"
                                   "%2"
                                   "==== ==================== ==================== ===== =============== ======== ================\n"
+                                  "Color Key: %3Connected  %4Pending%1\n"
                                   "Flags:  A - Allow Commands, F - Firewall, I - Ignore,  P - Private   n - Allow Snooping\n"
                                   "        N - Being Snooped,  S - Serving,  T - Allows File Transfers, X - Serve Exclude%1")
-                                       .arg(RST, peersList.join(QChar::LineFeed).append(peersList.isEmpty() ? QChar::Null : QChar::LineFeed));
+                                       .arg(RST,
+                                            peersList.join(QChar::LineFeed).append(peersList.isEmpty() ? QChar::Null : QChar::LineFeed),
+                                            FBLDGRN, FBLDYEL);
 
     clientMessage(strMessage);
     return {true, QString()};
 }
+
 
 /**
  * Script Command, Set our chat name to name, and tell connected chat clients
@@ -707,15 +755,22 @@ QPair<bool, QString> MMCPServer::unChat(const QVariant& target)
 }
 
 
-void MMCPServer::addConnectedClient(MMCPClient* pClient)
+quint16 MMCPServer::addConnectedClient(MMCPClient* pClient)
 {
     mPeersList.append(pClient);
-    pClient->setId(mPeersList.indexOf(pClient));
+    pClient->setId(mPeersList.indexOf(pClient) + 1);
+    return pClient->id();
 }
+
 
 void MMCPServer::slot_clientDisconnected(MMCPClient* pClient)
 {
     mPeersList.removeOne(pClient);
+    QListIterator<QPointer<MMCPClient>> it(mPeersList);
+    while (it.hasNext()) {
+        MMCPClient* cl = it.next();
+        cl->setId(mPeersList.indexOf(cl) + 1);
+    }
 }
 
 

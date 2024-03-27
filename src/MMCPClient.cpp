@@ -171,6 +171,8 @@ void MMCPClient::slot_readData()
         // to test against it:
         if (!mPeerBuffer.startsWith("CHAT:") || nlPos == -1) {
             mState = Disconnected;
+            disconnect();
+            return;
         }
 
         const QByteArray peerName = mPeerBuffer.mid(5, nlPos - 5);
@@ -183,12 +185,14 @@ void MMCPClient::slot_readData()
         QHostAddress host(QString::fromUtf8(ipAddress));
         if (host.isNull()) {
             mState = Disconnected;
+            disconnect();
+            return;
         }
 
-        // Check auto accept?
         if (mpMMCPServer->isDoNotDisturb()) {
             mState = Disconnected;
             writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
+            disconnect();
 
             const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 denied (DoNotDisturb).")
                                             .arg(mPeerName,
@@ -204,20 +208,25 @@ void MMCPClient::slot_readData()
             mPeerPort = QString::fromUtf8(port).toUInt(&ok);
             if (!ok) {
                 mState = Disconnected;
+                disconnect();
             } else {
-                mState = Connected;
-                writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
 
-                const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
-                                                 .arg(mPeerName,
-                                                      convertToIPv4(mTcpSocket.peerAddress()),
-                                                      QString::number(mTcpSocket.peerPort()));
+                quint16 clientId = mpMMCPServer->addConnectedClient(this);
 
-                mpHost->postMessage(infoMsg);
+                if (mpHost->getMMCPAutoAcceptCalls()) {
+                    acceptCall();
 
-                mpMMCPServer->addConnectedClient(this);
+                } else {
+                    mState = Pending;
 
-                sendVersion();
+                    const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 is pending, use chatAccept(%4) or chatDeny(%4) to accept or deny.")
+                                                    .arg(mPeerName,
+                                                        convertToIPv4(mTcpSocket.peerAddress()),
+                                                        QString::number(mTcpSocket.peerPort()))
+                                                    .arg(clientId);
+
+                    mpHost->postMessage(infoMsg);
+                }
             }
         }
 
@@ -254,10 +263,9 @@ void MMCPClient::slot_readData()
                                                  QString::number(mTcpSocket.peerPort()));
 
             mpHost->postMessage(infoMsg);
-
             mpMMCPServer->addConnectedClient(this);
             sendVersion();
-
+            
             if (cmdData.length() > 0) {
                 qDebug().noquote().nospace() << "MMCPClient::slot_readData() INFO - additional cmd at connect: \"" << cmdData << "\".";
                 //A command was tacked on the end of the accept string
@@ -277,11 +285,53 @@ void MMCPClient::slot_readData()
         handleConnectedState(mPeerBuffer);
         break;
 
+    case Pending:
+        // We got something from a pending peer, dont do anything with it
+        break;
+
     default:
         qDebug("unknown client state");
     }
 
     mPeerBuffer.clear();
+}
+
+/**
+ * Accepts an incoming chat connection
+ * Set's the client state to Connected, sends the success handshake response
+ * and our client version to the new peer
+ */
+void MMCPClient::acceptCall() {
+    mState = Connected;
+    writeData(QString("YES:%1\n").arg(mpMMCPServer->getChatName()));
+
+    const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 accepted.")
+                                    .arg(mPeerName,
+                                        convertToIPv4(mTcpSocket.peerAddress()),
+                                        QString::number(mTcpSocket.peerPort()));
+
+    mpHost->postMessage(infoMsg);
+
+    sendVersion();
+}
+
+/**
+ * Denies an incoming chat connection
+ * 
+ */
+void MMCPClient::denyCall() {
+    mState = Disconnected;
+
+    writeData(qsl("NO:%1\n").arg(mpMMCPServer->getChatName()));
+
+    disconnect();
+
+    const QString infoMsg = tr("[ CHAT ]  - Connection from %1 at %2:%3 denied.")
+                                    .arg(mPeerName,
+                                            convertToIPv4(mTcpSocket.peerAddress()),
+                                            QString::number(mTcpSocket.peerPort()));
+
+    mpHost->postMessage(infoMsg);
 }
 
 
@@ -797,12 +847,15 @@ const QString MMCPClient::getInfoString()
 	}
 	*/
 
+    using namespace AnsiColors;
+
     const QString groupStr = (mGroup == csDefaultMMCPGroupName) ? QString(QChar::Space).repeated(15) : mGroup;
 
-    return qsl("%1 %2 %3 %4 %5")
+    return qsl("%1%6 %2 %3 %4 %5")
             .arg(mPeerName, -20)
             .arg(convertToIPv4(mTcpSocket.peerAddress()), -20)
             .arg(mTcpSocket.peerPort(), 5)
             .arg(groupStr, -15)
-            .arg(getFlagsString(), -8);
+            .arg(getFlagsString(), -8)
+            .arg(RST);
 }

@@ -1966,6 +1966,7 @@ void XMLimport::readMMCPOptions() {
     mpHost->mMMCPAllowPeekRequests = attributes().value(qsl("allowPeekRequests")) == YES;
     mpHost->mMMCPPrefixEmotes = attributes().value(qsl("prefixEmotes")) == YES;
     mpHost->mMMCPAddChatMessageNewline = attributes().value(qsl("chatMessageNewline")) == YES;
+    mpHost->mMMCPAutoAcceptCalls = attributes().value(qsl("autoAcceptCalls")) == YES;
 
     // MMCP is a self-closing tag, need to call readNext to move along..
     readNext();

@@ -50,6 +50,8 @@ public:
     QPair<bool, QString> call(const QString&, int);
     QPair<bool, QString> chat(const QVariant&, const QString&);
     QPair<bool, QString> chatAll(const QString&);
+    QPair<bool, QString> chatAccept(const QVariant&);
+    QPair<bool, QString> chatDeny(const QVariant&);
     QPair<bool, QString> chatGroup(const QString&, const QString&);
     QPair<bool, QString> chatName(const QString&);
     QPair<bool, QString> chatList();
@@ -79,7 +81,8 @@ public:
     void sendServedMessage(MMCPClient*, const QString&);
     void sendMessageToServed(MMCPClient*, const QString&);
 
-    void addConnectedClient(MMCPClient*);
+    bool autoAcceptIncomingCalls();
+    quint16 addConnectedClient(MMCPClient*);
     void disconnectClient(MMCPClient*);
 
     QString getChatName() const { return mChatName; }

@@ -339,6 +339,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mMMCPAllowPeekRequests(false)
 , mMMCPPrefixEmotes(false)
 , mMMCPAddChatMessageNewline(true)
+, mMMCPAutoAcceptCalls(true)
 , mTutorialForCompactLineAlreadyShown(false)
 , mDisplayFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mLuaInterface(nullptr)
@@ -2785,6 +2786,10 @@ bool Host::getMMCPPrefixEmotes() {
 
 bool Host::getMMCPAddChatMessageNewline() {
     return mMMCPAddChatMessageNewline;
+}
+
+bool Host::getMMCPAutoAcceptCalls() {
+    return mMMCPAutoAcceptCalls;
 }
 
 QString  Host::getSpellDic()

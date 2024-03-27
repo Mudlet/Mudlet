@@ -45,6 +45,24 @@ int TLuaInterpreter::chat(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::chatAccept(lua_State* L)
+{
+    const QString target = getVerifiedString(L, __func__, 1, "target");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
+    }
+
+    const auto result = pHost->mmcpServer->chatAccept(target);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 int TLuaInterpreter::chatAll(lua_State* L)
 {
     const QString msg = getVerifiedString(L, __func__, 1, "message");
@@ -100,6 +118,24 @@ int TLuaInterpreter::chatCall(lua_State* L)
     }
 
     const auto result = pHost->mmcpServer->call(host, port);
+    if (!result.first) {
+        return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+int TLuaInterpreter::chatDeny(lua_State* L)
+{
+    const QString target = getVerifiedString(L, __func__, 1, "target");
+
+    Host* pHost = &getHostFromLua(L);
+    if (!pHost->mmcpServer) {
+        pHost->initMMCPServer();
+    }
+
+    const auto result = pHost->mmcpServer->chatDeny(target);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second.toUtf8().constData());
     }
@@ -216,6 +252,7 @@ int TLuaInterpreter::chatName(lua_State* L)
 
     return 1;
 }
+
 
 int TLuaInterpreter::chatPing(lua_State* L)
 {
