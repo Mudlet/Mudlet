@@ -1,3 +1,6 @@
+#ifndef MUDLET_AUTHENTICATOR_H
+#define MUDLET_AUTHENTICATOR_H
+
 /***************************************************************************
  *   Copyright (C) 2024 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
@@ -16,8 +19,6 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-
-#pragma once
 
 #include "Host.h"
 #include "utils.h"
@@ -49,3 +50,5 @@ private:
     Host* mpHost;
     QStringList mSupportedAuthTypes;
 };
+
+#endif // MUDLET_AUTHENTICATOR_H

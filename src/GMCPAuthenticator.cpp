@@ -108,7 +108,9 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
             mpHost->mTelnet.cancelLoginTimers();
             sendCredentials();
         } else {
+#if defined(DEBUG_GMCP_AUTHENTICATION)
             qDebug() << "Server does not support credentials authentication and we don't support any other";
+#endif
         }
         return;
     }
@@ -118,5 +120,7 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
         return;
     }
 
+#if defined(DEBUG_GMCP_AUTHENTICATION)
     qDebug() << "Unknown GMCP auth package:" << packageMessage;
+#endif
 }
