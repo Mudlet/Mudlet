@@ -36,7 +36,7 @@
     "clearCmdLine": "clearCmdLine([name])",
     "clearCmdLineSuggestions": "clearCmdLineSuggestions([name])",
     "clearMapSelection": "clearMapSelection()",
-    "clearMapUserData": "clearMapUserData()",
+    "clearMapUserData": "Example",
     "clearMapUserDataItem": "clearMapUserDataItem(mapID, key)",
     "clearRoomUserData": "clearRoomUserData(roomID)",
     "clearRoomUserDataItem": "clearRoomUserDataItem(roomID, key)",
