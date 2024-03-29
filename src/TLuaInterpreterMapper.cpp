@@ -1042,7 +1042,6 @@ int TLuaInterpreter::createMapper(lua_State* L)
         return warnArgumentValue(L, __func__, message);
     }
 
-    host.mpMap->update();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2459,7 +2458,6 @@ int TLuaInterpreter::loadMap(lua_State* L)
         isOk = host.mpConsole->loadMap(location);
     }
     lua_pushboolean(L, isOk);
-    host.mpMap->update();
     return 1;
 }
 
@@ -3419,7 +3417,6 @@ int TLuaInterpreter::setGridMode(lua_State* L)
         host.mpMap->update();
     }
     host.mpMap->setUnsaved(__func__);
-    host.mpMap->update();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3624,7 +3621,6 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     }
     host.mpMap->mpRoomDB->hashToRoomID[hash] = id;
     host.mpMap->mpRoomDB->roomIDToHash[id] = hash;
-    host.mpMap->update();
     return 0;
 }
 
@@ -3708,7 +3704,6 @@ int TLuaInterpreter::unHighlightRoom(lua_State* L)
     } else {
         lua_pushboolean(L, false);
     }
-    host.mpMap->update();
     return 1;
 }
 
