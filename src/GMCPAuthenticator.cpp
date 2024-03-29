@@ -89,6 +89,7 @@ void GMCPAuthenticator::handleAuthResult(const QString& data)
 #if defined(DEBUG_GMCP_AUTHENTICATION)
         qDebug() << "GMCP login failed:" << message;
 #endif
+        mpHost->mTelnet.setDontReconnect(true);
         if (message.isEmpty()) {
             mpHost->postMessage(tr("[ WARN ]  - Could not log in to the game, is the login information correct?"));
         } else {

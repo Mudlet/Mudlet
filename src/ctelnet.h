@@ -194,6 +194,7 @@ public:
     void setAutoReconnect(bool status);
     void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
+    void setDontReconnect(bool b) { mDontReconnect = b; }
     void recordReplay();
     bool loadReplay(const QString&, QString* pErrMsg = nullptr);
     void loadReplayChunk();
