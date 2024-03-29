@@ -1389,7 +1389,10 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QPointF playerRoomOnWidgetCoordinates;
     bool isPlayerRoomVisible = false;
 
-    // keep two pens and two brushes around for drawing all rooms in bulk
+    // keep a few brushes and pens around for drawing all rooms in bulk
+    // re-creating the objects on a million-room map is costly, as is changing their properties
+    QBrush brush, innerBrush;
+
     QPen roomPen = pen;
     roomPen.setCosmetic(mMapperUseAntiAlias);
     roomPen.setCapStyle(Qt::RoundCap);
@@ -1410,7 +1413,6 @@ void T2DMap::paintEvent(QPaintEvent* e)
     roomBorderPen.setWidth(borderWidth);
 
 
-    QBrush brush, innerBrush;
 
     // Draw the rooms:
     QSetIterator<int> itRoom(pDrawnArea->getAreaRooms());
