@@ -801,6 +801,8 @@ void MMCPServer::clientMessage(const QString& message)
         .arg(RST)
         .prepend(mpHost->getMMCPAddChatMessageNewline() ? "\n" : "");
 
+    mpHost->postMMCPMessage(coloredStr);
+
     // This uses a UTF-8 encoding:
     std::string trimmedStdStr = coloredStr.toStdString();
     // The message sent to TMainConsole::printOnDisplay(...) MUST be in the
