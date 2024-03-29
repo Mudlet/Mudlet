@@ -254,15 +254,12 @@ private:
     std::pair<int, int> getMousePosition();
     bool checkButtonIsForGivenDirection(const QPushButton*, const QString&, const int&);
     bool sizeFontToFitTextInRect(QFont&, const QRectF&, const QString&, const quint8 percentageMargin = 10, const qreal minFontSize = 7.0);
-    void drawRoom(QPainter&, QFont&, QFont&, QPen&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&);
-    void drawRoomNew(QPainter&, QFont&, QFont&, QPen&, QPen&, QPen&, QBrush&, QBrush&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&);
+    void drawRoom(QPainter&, QFont&, QFont&, QPen&, QPen&, QPen&, QBrush&, QBrush&, TRoom*, const bool isGridMode, const bool areRoomIdsLegible, const bool showRoomNames, const int, const float, const float, const QMap<int, QPointF>&);
     void paintMapInfo(const QElapsedTimer& renderTimer, QPainter& painter, const int displayAreaId, QColor& infoColor);
     int paintMapInfoContributor(QPainter&, int xOffset, int yOffset, const MapInfoProperties& properties);
-    void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&);
-    void paintRoomExitsNew(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&) const;
+    void paintRoomExits(QPainter&, QPen&, QList<int>& exitList, QList<int>& oneWayExits, const TArea*, int, float, QMap<int, QPointF>&) const;
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
-    inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
-    inline void drawDoorNew(QPainter&, const TRoom&, const QString&, const QLineF&) const;
+    inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&) const;
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
 
     bool mDialogLock = false;
