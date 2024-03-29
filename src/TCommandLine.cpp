@@ -1068,7 +1068,7 @@ void TCommandLine::handleTabCompletion(bool direction)
             const QString proposal = filterList[mTabCompletionCount];
             const QString userWords = mTabCompletionTyped.left(typePosition);
             setPlainText(QString(userWords + proposal));
-            mudlet::self()->announce(QString(userWords + proposal));
+            mudlet::self()->announce(proposal);
             moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
             mTabCompletionOld = toPlainText();
         }
