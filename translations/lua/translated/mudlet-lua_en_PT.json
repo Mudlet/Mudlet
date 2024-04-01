@@ -1,10 +1,10 @@
 {
   "AdjustableContainer.bottom": {
-    "message": "bow",
+    "message": "stern",
     "description": "one of the borders the container can be attached to"
   },
   "AdjustableContainer.top": {
-    "message": "stern",
+    "message": "bow",
     "description": "one of the borders the container can be attached to"
   },
   "AdjustableContainer.left": {
