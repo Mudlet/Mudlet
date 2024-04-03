@@ -54,9 +54,8 @@ jobs:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v4
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
-        recursive: true
 
     - name: (Windows) Install Qt
       uses: jurplel/install-qt-action@v3
