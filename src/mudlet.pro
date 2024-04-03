@@ -98,11 +98,25 @@ TEMPLATE = app
 # Define a variable for the Git executable
 GIT_EXECUTABLE = git
 
-# Run the command to get the short SHA1 hash of the current HEAD
-GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
+# Run the command to get the short SHA1 hash of the current HEAD, UNLESS there
+# is a Git SHA1 in the BRANCH_COMMIT enviromental variable (which has been set
+# by Mudlet's own CI/CB build system. This is to account for the manipulation
+# that happens during a build of a PR on Mudlet's own GitHub repository which
+# combines the PR state with that of the currently development branch such that
+# the HEAD of that branch does not match what git rev-parse HEAD would return:
+BUILD_COMMIT_TEST = $$(BUILD_COMMIT)
+BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
+!isEmpty( BUILD_COMMIT_TEST ) {
+  # Building a PR in the AppVeyor environment of Mudlet's own repository
+  GIT_SHA1 = $${BUILD_COMMIT_TEST}
+  # Report the above, for debugging purposes:
+  !build_pass:message("Git SHA1 set from the environment: " $${GIT_SHA1})
+} else {
+  GIT_SHA1 = $$system($$GIT_EXECUTABLE rev-parse --short HEAD)
+  # Report the above, for debugging purposes:
+  !build_pass:message("Git SHA1 used: " $${GIT_SHA1})
+}
 
-# Use the result in your QMake project
-message("Git SHA1: " $$GIT_SHA1)
 
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
@@ -111,19 +125,32 @@ VERSION = 4.17.2
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
-# variable to make identification of the used version simple
-# the qmake BUILD variable is NOT built-in
-BUILD_TEST = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD_TEST ) {
+# variable (it should use '-' as the first character) to make identification of
+# the used version simpler
+# Note: the qmake BUILD variable is NOT a built-in one
+BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( BUILD ) {
 # Possible values are:
 # "-dev" for the development build
 # "-ptb" for the public test build
 # "" for the release build
-   BUILD_TEST = "-dev-"$${GIT_SHA1}
+# A core dev team member setting things up for a release should comment out the
+# following line - as the app-build.txt file must not contain anything (other
+# than whitespace) for a RELEASE build:
+   BUILD = "-dev-"$${GIT_SHA1}
 } else {
-   BUILD_TEST = $${GIT_SHA1}
+   BUILD = $${BUILD}-$${GIT_SHA1}
 }
-write_file( app-build.txt, BUILD_TEST )
+
+# This does append a line-feed to the file which would be problematic if it
+# wasn't trimmed off when read:
+write_file( app-build.txt, BUILD )
+
+isEmpty( BUILD ) {
+    !build_pass:message("Value written to app-build.txt file: {nothing}")
+} else {
+    !build_pass:message("Value written to app-build.txt file: " $${BUILD})
+}
 
 # As the above also modifies the splash screen image (so developers get reminded
 # what they are working with!) Packagers (e.g. for Linux distributions) will
@@ -137,7 +164,12 @@ isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
 # Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
 # be automatically rebuilt so you will need to 'touch' them...!
-# Use APP_VERSION, APP_BUILD and APP_TARGET defines in the source code if needed.
+# Use APP_VERSION and APP_TARGET defines in the source code if needed.
+# APP_BUILD is going away (it is not currently used in the source code now as
+# Mudlet instead reads it from the resource file) however until the CI/CB system
+# is cleaned up to not use it in any way in the
+# /CI/(travis|appveyor).validate_deployment.(sh|ps1) scripts we probably have to
+# leave it in place:
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
 
@@ -635,6 +667,12 @@ SOURCES += \
     TScrollBox.cpp \
     TLinkStore.cpp \
     TLuaInterpreter.cpp \
+    TLuaInterpreterDiscord.cpp \
+    TLuaInterpreterMapper.cpp \
+    TLuaInterpreterMedia.cpp \
+    TLuaInterpreterMudletObjects.cpp \
+    TLuaInterpreterNetworking.cpp \
+    TLuaInterpreterUI.cpp \
     TMainConsole.cpp \
     TMap.cpp \
     TMapLabel.cpp \
@@ -643,6 +681,7 @@ SOURCES += \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
     TMxpEntityTagHandler.cpp \
+    TLuaInterpreterTextToSpeech.cpp \
     TMxpFormattingTagsHandler.cpp \
     TMxpColorTagHandler.cpp \
     TMxpCustomElementTagHandler.cpp \

@@ -133,7 +133,7 @@ void removeOldNoteColorEmojiFonts()
 
 QTranslator* loadTranslationsForCommandLine()
 {
-    QSettings const settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
+    const QSettings settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
     auto pSettings = new QSettings((settings_new.contains(QLatin1String("pos")) ? QLatin1String("mudlet") : QLatin1String("Mudlet")),
                                    (settings_new.contains(QLatin1String("pos")) ? QLatin1String("Mudlet") : QLatin1String("Mudlet 1.0")));
     auto interfaceLanguage = pSettings->value(QLatin1String("interfaceLanguage")).toString();
@@ -256,7 +256,6 @@ int main(int argc, char* argv[])
 
     const bool releaseVersion = appBuild.isEmpty();
     const bool publicTestVersion = appBuild.startsWith("-ptb");
-    const bool developmentVersion = !releaseVersion && !publicTestVersion;
 
     if (publicTestVersion) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));
@@ -460,7 +459,7 @@ int main(int argc, char* argv[])
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont const font("Bitstream Vera Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            const QFont font("Bitstream Vera Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -472,11 +471,11 @@ int main(int argc, char* argv[])
             //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
             versionTextline.setPosition(QPointF(0, 0));
             // Only pretend, so we can see how much space it will take
-            QTextLine const dummy = versionTextLayout.createLine();
+            const QTextLine dummy = versionTextLayout.createLine();
             if (!dummy.isValid()) {
                 // No second line so have got all text in first so can do it
                 isWithinSpace = true;
-                qreal const versionTextWidth = versionTextline.naturalTextWidth();
+                const qreal versionTextWidth = versionTextline.naturalTextWidth();
                 // This is the ACTUAL width of the created text
                 versionTextline.setPosition(QPointF((320 - versionTextWidth) / 2.0, 270));
                 // And now we can place it centred horizontally
@@ -495,19 +494,19 @@ int main(int argc, char* argv[])
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
         const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
-        QFont const font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        const QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
         copyrightTextline.setLineWidth(280);
         copyrightTextline.setPosition(QPointF(1, 1));
-        qreal const copyrightTextWidth = copyrightTextline.naturalTextWidth();
+        const qreal copyrightTextWidth = copyrightTextline.naturalTextWidth();
         copyrightTextline.setPosition(QPointF((320 - copyrightTextWidth) / 2.0, 340));
         copyrightTextLayout.endLayout();
         painter.setPen(QColor(112, 16, 0, 255)); // #701000
         copyrightTextLayout.draw(&painter, QPointF(0, 0));
     }
-    QPixmap const pixmap = QPixmap::fromImage(splashImage);
+    const QPixmap pixmap = QPixmap::fromImage(splashImage);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     // Specifying the screen here seems to help to put the splash screen on the
     // same monitor that the main application window will be put upon on first
@@ -631,7 +630,7 @@ int main(int argc, char* argv[])
         }
     }
 #else
-    QFile const linkFile(homeLink);
+    const QFile linkFile(homeLink);
     if (!linkFile.exists() && first_launch) {
         QFile::link(homeDirectory, homeLink);
     }

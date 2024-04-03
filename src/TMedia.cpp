@@ -86,7 +86,7 @@ void TMedia::playMedia(TMediaData& mediaData)
         }
 
         const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
-        QFile const mediaFile(absolutePathFileName);
+        const QFile mediaFile(absolutePathFileName);
 
         if (!mediaFile.exists()) {
             if (fileRelative) {
@@ -106,6 +106,112 @@ void TMedia::playMedia(TMediaData& mediaData)
     }
 
     TMedia::play(mediaData);
+}
+
+QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
+{
+    QList<TMediaData> mMatchingTMediaDataList;
+
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP && !mpHost->mEnableMSP) {
+        return mMatchingTMediaDataList;
+    }
+
+    if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP && !mpHost->mAcceptServerMedia) {
+        return mMatchingTMediaDataList;
+    }
+
+    QList<TMediaPlayer> mTMediaPlayerList;
+
+    switch (mediaData.getMediaProtocol()) {
+    case TMediaData::MediaProtocolMSP:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mMSPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mMSPMusicList;
+            break;
+        }
+        break;
+
+    case TMediaData::MediaProtocolGMCP:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mGMCPSoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mGMCPMusicList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mGMCPSoundList + mGMCPMusicList);
+            break;
+        }
+        break;
+
+
+    case TMediaData::MediaProtocolAPI:
+        switch (mediaData.getMediaType()) {
+        case TMediaData::MediaTypeSound:
+            mTMediaPlayerList = mAPISoundList;
+            break;
+        case TMediaData::MediaTypeMusic:
+            mTMediaPlayerList = mAPIMusicList;
+            break;
+        case TMediaData::MediaTypeNotSet:
+            mTMediaPlayerList = (mAPISoundList + mAPIMusicList);
+            break;
+        }
+        break;
+
+    default:
+        return mMatchingTMediaDataList;
+    }
+
+    if (!mediaData.getMediaFileName().isEmpty()) {
+        const bool fileRelative = TMedia::isFileRelative(mediaData);
+
+        if (!fileRelative && (mediaData.getMediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP)) {
+            return mMatchingTMediaDataList; // MSP and MCMP files will not have absolute paths. Something is wrong.
+        }
+
+        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
+        if (!fileRelative) {
+            mediaData.setMediaFileName(mediaData.getMediaFileName().section('/', -1));
+        }
+    }
+
+    QListIterator<TMediaPlayer> itTMediaPlayer(mTMediaPlayerList);
+
+    while (itTMediaPlayer.hasNext()) {
+        TMediaPlayer const pPlayer = itTMediaPlayer.next();
+
+        if (mediaData.getMediaProtocol() == TMediaData::MediaProtocolGMCP || mediaData.getMediaProtocol() == TMediaData::MediaProtocolAPI) {
+            if (pPlayer.getPlaybackState() != QMediaPlayer::PlayingState && pPlayer.getMediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+                continue;
+            }
+
+            if (!mediaData.getMediaKey().isEmpty() && !pPlayer.getMediaData().getMediaKey().isEmpty() && pPlayer.getMediaData().getMediaKey() != mediaData.getMediaKey()) {
+                continue;
+            }
+
+            if (!mediaData.getMediaFileName().isEmpty() && !pPlayer.getMediaData().getMediaFileName().isEmpty() && pPlayer.getMediaData().getMediaFileName() != mediaData.getMediaFileName()) {
+                continue;
+            }
+
+            if (!mediaData.getMediaTag().isEmpty() && !pPlayer.getMediaData().getMediaTag().isEmpty() && pPlayer.getMediaData().getMediaTag() != mediaData.getMediaTag()) {
+                continue;
+            }
+
+            if (mediaData.getMediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer.getMediaData().getMediaPriority() != TMediaData::MediaPriorityNotSet
+                && pPlayer.getMediaData().getMediaPriority() > mediaData.getMediaPriority()) {
+                continue;
+            }
+       }
+
+        mMatchingTMediaDataList.append(pPlayer.getMediaData());
+    }
+
+    return mMatchingTMediaDataList;
 }
 
 void TMedia::stopMedia(TMediaData& mediaData)
@@ -335,7 +441,7 @@ void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
         qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()));
     } else {
         const QString mediaFilePath = qsl("%1/%2").arg(mudlet::getMudletPath(mudlet::profileMediaPath, mpHost->getName()), mediaData.getMediaFileName().section('/', -1));
-        QFile const mediaFile(mediaFilePath);
+        const QFile mediaFile(mediaFilePath);
 
         if (!mediaFile.exists() && !QFile::copy(mediaData.getMediaFileName(), mediaFilePath)) {
             qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to copy file %1 to a directory %2 failed.").arg(mediaData.getMediaFileName(), mediaFilePath);
@@ -655,7 +761,7 @@ void TMedia::downloadFile(TMediaData& mediaData)
         request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
 #if !defined(QT_NO_SSL)
         if (fileUrl.scheme() == qsl("https")) {
-            QSslConfiguration const config(QSslConfiguration::defaultConfiguration());
+            const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
             request.setSslConfiguration(config);
         }
 #endif
@@ -760,7 +866,7 @@ void TMedia::connectMediaPlayer(TMediaPlayer& player)
         } else {
             if (fadeInUsed) {
                 if (progress < relativeFadeInPosition) {
-                    double const fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((relativeFadeInPosition - startPosition) * 1.0);
+                    const double fadeInVolume = static_cast<double>(volume * (progress - startPosition)) / static_cast<double>((relativeFadeInPosition - startPosition) * 1.0);
 
                     player.setVolume(qRound(fadeInVolume));
                     actionTaken = true;
@@ -772,7 +878,7 @@ void TMedia::connectMediaPlayer(TMediaPlayer& player)
 
             if (!actionTaken && fadeOutUsed && progress > 0) {
                 if (progress > relativeFadeOutPosition) {
-                    double const fadeOutVolume = static_cast<double>(volume * (relativeDuration - progress)) / static_cast<double>(fadeOutDuration * 1.0);
+                    const double fadeOutVolume = static_cast<double>(volume * (relativeDuration - progress)) / static_cast<double>(fadeOutDuration * 1.0);
 
                     player.setVolume(qRound(fadeOutVolume));
                     actionTaken = true;
@@ -903,9 +1009,9 @@ void TMedia::handlePlayerPlaybackStateChanged(QMediaPlayerPlaybackState playback
         TEvent mediaFinished{};
         mediaFinished.mArgumentList.append("sysMediaFinished");
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        QUrl const mediaUrl = pPlayer.getMediaPlayer()->media().request().url();
+        const QUrl mediaUrl = pPlayer.getMediaPlayer()->media().request().url();
 #else
-        QUrl mediaUrl = pPlayer.getMediaPlayer()->source();
+        const QUrl mediaUrl = pPlayer.getMediaPlayer()->source();
 #endif
         mediaFinished.mArgumentList.append(mediaUrl.fileName());
         mediaFinished.mArgumentList.append(mediaUrl.path());
@@ -1079,7 +1185,7 @@ void TMedia::play(TMediaData& mediaData)
             TMedia::matchMediaKeyAndStopMediaVariants(mediaData, absolutePathFileName); // If mediaKey matches, check for uniqueness.
         }
 
-        QUrl const mediaSource = QUrl::fromLocalFile(absolutePathFileName);
+        const QUrl mediaSource = QUrl::fromLocalFile(absolutePathFileName);
         pPlayer.getMediaPlayer()->setMedia(mediaSource);
     } else {
         if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
@@ -1450,7 +1556,7 @@ void TMedia::parseJSONForMediaLoad(QJsonObject& json)
 
     const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
 
-    QFile const mediaFile(absolutePathFileName);
+    const QFile mediaFile(absolutePathFileName);
 
     if (!mediaFile.exists()) {
         TMedia::downloadFile(mediaData);
