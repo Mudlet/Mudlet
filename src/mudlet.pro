@@ -514,7 +514,7 @@ win32 {
         }
     }
 } else {
-    system("cd $${PWD}\.. & git submodule update --init --recursive 3rdparty/sentry-native")
+    system("cd $${PWD}/.. ; git submodule update --init --recursive 3rdparty/sentry-native")
 
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
