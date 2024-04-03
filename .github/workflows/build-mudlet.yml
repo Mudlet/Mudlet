@@ -56,6 +56,7 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
+        recursive: true
 
     - name: (Windows) Install Qt
       uses: jurplel/install-qt-action@v3
