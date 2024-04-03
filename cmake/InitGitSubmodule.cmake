@@ -68,7 +68,7 @@ function(git_submodule_init)
         "git submodule for ${GIT_SM_READABLE_NAME} missing from source code, will attempt to get it..."
     )
     execute_process(
-      COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+      COMMAND ${GIT_EXECUTABLE} submodule update --init
               "${GIT_SM_SUBMODULE_PATH}"
       TIMEOUT 30
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
