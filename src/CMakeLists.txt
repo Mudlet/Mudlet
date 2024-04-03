@@ -429,6 +429,7 @@ endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
+find_package(sentry REQUIRED)
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -520,29 +521,10 @@ endif()
 # One of IRC_STATIC or IRC_SHARED must be defined for the communi IRC library
 target_compile_definitions(communi PUBLIC IRC_STATIC)
 
-if(ANDROID)
-    set(SENTRY_PLATFORM_LIBS "dl log")
-elseif(LINUX) 
-    set(SENTRY_PLATFORM_LIBS "dl rt")
-
-    option(SENTRY_LINK_PTHREAD "Link Sentry with pthread" ON)
-    if(SENTRY_LINK_PTHREAD)
-        set(SENTRY_PLATFORM_LIBS "${SENTRY_PLATFORM_LIBS} pthread")
-    endif()
-elseif(WIN32)
-     set(SENTRY_PLATFORM_LIBS "dbghelp version")
-endif()
-
-if(SENTRY_LIBRARY_TYPE STREQUAL "static")
-    target_link_libraries(sentry PUBLIC ${SENTRY_PLATFORM_LIBS}) 
-else()
-    target_link_libraries(sentry PRIVATE ${SENTRY_PLATFORM_LIBS})
-endif()
-
 target_link_libraries(
         mudlet
         communi
-        sentry
+        sentry::sentry
         edbee-lib
         Boost::boost
         HUNSPELL::HUNSPELL
