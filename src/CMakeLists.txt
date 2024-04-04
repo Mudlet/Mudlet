@@ -441,7 +441,10 @@ endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
-find_package(sentry REQUIRED)
+if(APPLE)
+  find_package(sentry REQUIRED)
+endif()
+
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)
 find_package(ZLIB REQUIRED)
@@ -536,7 +539,6 @@ target_compile_definitions(communi PUBLIC IRC_STATIC)
 target_link_libraries(
         mudlet
         communi
-        sentry::sentry
         edbee-lib
         Boost::boost
         HUNSPELL::HUNSPELL
@@ -553,6 +555,10 @@ if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
   target_compile_definitions(mudlet PRIVATE INCLUDE_UPDATER)
 endif(USE_UPDATER)
+
+if(APPLE)
+  target_link_libraries(mudlet sentry::sentry)
+endif()
 
 if(USE_3DMAPPER)
   target_link_libraries(mudlet OpenGL::GLU)

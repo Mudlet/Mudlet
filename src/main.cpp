@@ -46,9 +46,11 @@
 #include "Announcer.h"
 #include "FileOpenHandler.h"
 
+#if defined(Q_OS_MACOS)
 extern "C" {
     #include "sentry.h"
 }
+#endif
 
 using namespace std::chrono_literals;
 
@@ -156,11 +158,18 @@ QTranslator* loadTranslationsForCommandLine()
 }
 
 void initSentry() {
+#ifdef Q_OS_MACOS
   sentry_options_t *options = sentry_options_new();
   sentry_options_set_dsn(options, "");
   sentry_options_set_handler_path(options, "./crashpad_handler");
   sentry_options_set_debug(options, 1);
   sentry_init(options);
+
+  sentry_value_t mudlet_info = sentry_value_new_object();
+  sentry_value_set_by_key(mudlet_info, "Version", sentry_value_new_string(APP_VERSION));
+  sentry_set_context("Mudlet", mudlet_info);
+
+  sentry_set_tag("mudlet-version", APP_VERSION);
 
     /*
     sentry_capture_event(sentry_value_new_message_event(
@@ -169,15 +178,17 @@ void initSentry() {
         "Working as expected!"
     ));
     */
+#endif
 }
 
 int main(int argc, char* argv[])
 {
     // print stdout to console if Mudlet is started in a console in Windows
     // credit to https://stackoverflow.com/a/41701133 for the workaround
-    
-    initSentry();
 
+#ifdef Q_OS_MACOS
+    initSentry();
+#endif
 #ifdef Q_OS_WIN32
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
         freopen("CONOUT$", "w", stdout);
