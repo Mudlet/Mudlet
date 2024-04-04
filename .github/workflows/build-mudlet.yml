@@ -97,8 +97,8 @@ jobs:
       shell: bash
 
     # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
-    - name: Use CMake 3.16.3
-      uses: lukka/get-cmake@v3.16.3
+    - name: Use CMake 3.22.2
+      uses: lukka/get-cmake@v3.22.2
 
     - name: (macOS) Install non-vcpkg dependencies (1/2)
       if: runner.os == 'macOS'
