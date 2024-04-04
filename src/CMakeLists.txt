@@ -441,8 +441,6 @@ endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
-set(sentry_DIR "../3rdparty/sentry-native")
-
 find_package(sentry REQUIRED)
 find_package(ZIP REQUIRED)
 find_package(Lua51 REQUIRED)

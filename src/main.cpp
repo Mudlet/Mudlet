@@ -21,7 +21,6 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#define SENTRY_BUILD_STATIC 1
 #include "HostManager.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
