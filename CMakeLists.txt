@@ -260,6 +260,8 @@ if(CCACHE_FOUND)
 endif(CCACHE_FOUND)
 
 set(SENTRY_BACKEND "crashpad")
+set(SENTRY_INCLUDE_DIR "3rdparty/sentry-native/include")
+set(SENTRY_LIBRARIES "3rdparty/sentry-native")
 
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 add_subdirectory(3rdparty/communi)
