@@ -688,3 +688,12 @@ if(UNIX AND NOT APPLE)
         WORLD_READ
         WORLD_EXECUTE)
 endif()
+
+if(APPLE)
+  add_custom_command(
+      TARGET mudlet POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy
+              ${mudlet_BINARY_DIR}/3rdparty/sentry-native/crashpad_build/handler/crashpad_handler
+              ${mudlet_BINARY_DIR}/src
+  )
+endif()
