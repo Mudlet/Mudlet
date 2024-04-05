@@ -690,10 +690,26 @@ if(UNIX AND NOT APPLE)
 endif()
 
 if(APPLE)
+  set(SENTRY_ORG "")
+  set(SENTRY_PROJECT "")
+  set(SENTRY_AUTH_TOKEN "")
+
   add_custom_command(
       TARGET mudlet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy
               ${mudlet_BINARY_DIR}/3rdparty/sentry-native/crashpad_build/handler/crashpad_handler
               ${mudlet_BINARY_DIR}/src
   )
+  
+  if(NOT SENTRY_AUTH_TOKEN STREQUAL "" AND NOT SENTRY_ORG STREQUAL "" AND NOT SENTRY_PROJECT STREQUAL "")
+    add_custom_command(
+        TARGET mudlet POST_BUILD
+        COMMAND sentry-cli login --auth-token ${SENTRY_AUTH_TOKEN}
+        COMMAND sentry-cli debug-files upload -o ${SENTRY_ORG} -p ${SENTRY_PROJECT}  ${mudlet_BINARY_DIR} --wait 
+        WORKING_DIRECTORY ${mudlet_BINARY_DIR}
+        COMMENT "Uploading debug files to Sentry"
+    )
+  else()
+    message(STATUS "Some Sentry variables are not defined or empty. Skipping Sentry upload.")
+  endif()
 endif()
