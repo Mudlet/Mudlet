@@ -78,7 +78,9 @@ void GMCPAuthenticator::handleAuthResult(const QString& data)
     auto doc = QJsonDocument::fromJson(data.toUtf8());
     auto obj = doc.object();
 
-    bool success = obj[qsl("success")].toBool();
+    // some game drivers can parse JSON for true or false, but may not be able to write booleans back
+    auto result = obj[qsl("success")];
+    bool success = (result.isBool() && result.toBool()) || (result.isString() && result.toString() == "true");
     auto message = obj[qsl("message")].toString();
 
     if (success) {
