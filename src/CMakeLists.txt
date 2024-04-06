@@ -694,6 +694,10 @@ if(APPLE)
   set(SENTRY_PROJECT "")
   set(SENTRY_AUTH_TOKEN "")
 
+  execute_process(
+    COMMAND curl -sL https://sentry.io/get-cli/ | sh
+  )
+
   add_custom_command(
       TARGET mudlet POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy
