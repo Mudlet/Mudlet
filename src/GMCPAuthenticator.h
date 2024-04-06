@@ -32,12 +32,12 @@
 #include "post_guard.h"
 
 
-class GMCPAuthenticator : public QObject
+class GMCPAuthenticator
 {
-    Q_OBJECT
+    Q_DECLARE_TR_FUNCTIONS(GMCPAuthenticator)
 
 public:
-    Q_DISABLE_COPY(GMCPAuthenticator)
+
     explicit GMCPAuthenticator(Host* pHost);
     ~GMCPAuthenticator() = default;
 
