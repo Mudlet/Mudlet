@@ -159,8 +159,12 @@ QTranslator* loadTranslationsForCommandLine()
 
 void initSentry() {
 #ifdef Q_OS_MACOS
+  QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
+  QString sentryDsn = systemEnvironment.value(qsl("SENTRY_DSN"), QString());
+  const char* sentryDsnCStr = sentryDsn.toUtf8().constData();
+
   sentry_options_t *options = sentry_options_new();
-  sentry_options_set_dsn(options, "");
+  sentry_options_set_dsn(options, sentryDsnCStr);
   sentry_options_set_handler_path(options, "./crashpad_handler");
   sentry_options_set_debug(options, 1);
   sentry_init(options);
@@ -178,6 +182,8 @@ void initSentry() {
         "Working as expected!"
     ));
     */
+
+   throw std::runtime_error("This is a test runtime error!");
 #endif
 }
 
