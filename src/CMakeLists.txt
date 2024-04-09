@@ -706,23 +706,6 @@ if(APPLE)
               ${mudlet_BINARY_DIR}/3rdparty/sentry-native/crashpad_build/handler/crashpad_handler
               ${mudlet_SOURCE_DIR}
   )
-
-  add_custom_command(
-      TARGET mudlet POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy
-              ${mudlet_BINARY_DIR}/3rdparty/sentry-native/crashpad_build/handler/crashpad_handler
-              ${mudlet_SOURCE_DIR}/src
-  )
-
-  add_custom_command(
-    TARGET mudlet POST_BUILD
-    COMMAND ls -R ${mudlet_BINARY_DIR}
-  )
-
-  add_custom_command(
-    TARGET mudlet POST_BUILD
-    COMMAND ls -R ${mudlet_SOURCE_DIR}
-  )
   
   if(DEFINED ENV{SENTRY_AUTH_TOKEN} AND NOT $ENV{SENTRY_AUTH_TOKEN} STREQUAL "" AND DEFINED ENV{SENTRY_ORG} AND NOT $ENV{SENTRY_ORG} STREQUAL "" AND DEFINED ENV{SENTRY_PROJECT} AND NOT $ENV{SENTRY_PROJECT} STREQUAL "")
     add_custom_command(
