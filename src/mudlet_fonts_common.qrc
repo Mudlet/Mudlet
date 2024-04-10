@@ -34,5 +34,6 @@
         <file>fonts/ubuntu-font-family-0.83/Ubuntu-MI.ttf</file>
         <file>fonts/ubuntu-font-family-0.83/Ubuntu-R.ttf</file>
         <file>fonts/ubuntu-font-family-0.83/Ubuntu-RI.ttf</file>
+        <file>fonts/ttf-medievia-sans-mono-1.03/MedieviaSansMono.ttf</file>
     </qresource>
 </RCC>

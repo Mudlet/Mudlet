@@ -515,6 +515,10 @@ int main(int argc, char* argv[])
     if (!dir.exists(ubuntuFontDirectory)) {
         dir.mkpath(ubuntuFontDirectory);
     }
+    const QString medieviaFontDirectory(qsl("%1/ttf-medievia-sans-mono-1.03").arg(mudlet::getMudletPath(mudlet::mainFontsPath)));
+    if (!dir.exists(medieviaFontDirectory)) {
+        dir.mkpath(medieviaFontDirectory);
+    }
 #if defined(Q_OS_LINUX)
     // Only needed/works on Linux to provide color emojis:
     removeOldNoteColorEmojiFonts();
@@ -574,6 +578,7 @@ int main(int argc, char* argv[])
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-R.ttf"));
     copyFont(ubuntuFontDirectory, QLatin1String("fonts/ubuntu-font-family-0.83"), QLatin1String("UbuntuMono-RI.ttf"));
 
+    copyFont(medieviaFontDirectory, QLatin1String("fonts/ttf-medievia-sans-mono-1.03"), QLatin1String("MedieviaSansMono.ttf"));
 #if defined(Q_OS_LINUX)
     // PLACEMARKER: current Noto Color Emoji font version file extraction
     copyFont(notoFontDirectory, qsl("fonts/noto-color-emoji-2022-09-16-v2.038"), qsl("NotoColorEmoji.ttf"));
