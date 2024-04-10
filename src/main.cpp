@@ -166,7 +166,6 @@ void initSentry() {
   sentry_options_t *options = sentry_options_new();
   sentry_options_set_dsn(options, sentryDsnCStr);
   sentry_options_set_handler_path(options, "./crashpad_handler");
-  sentry_options_set_release(options, "Mudlet@" + APP_VERSION);
   sentry_options_set_debug(options, 1);
   sentry_init(options);
 
