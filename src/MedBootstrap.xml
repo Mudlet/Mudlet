@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<ScriptPackage>
+		<Script isActive="yes" isFolder="no">
+			<name>MedBootstrap</name>
+			<packageName></packageName>
+			<script>MedBootstrap = MedBootstrap or {}
+
+function MedBootstrap.eventHandler(event, ...)
+  if event == "sysConnectionEvent" then
+    
+    local packages = getPackages()
+    if not table.contains(packages, "MDK") then
+      installPackage("https://github.com/demonnic/MDK/releases/download/v2.10.0/MDK.mpackage")
+    end
+    
+    if not table.contains(packages, "EMCOChat") then
+      installPackage("https://github.com/demonnic/EMCO/releases/latest/download/EMCOChat.mpackage")
+    end
+    
+    if not table.contains(packages, "MedUI") then
+      installPackage("https://github.com/jmckisson/MedScripts/blob/master/MedUI/MedUI.mpackage")
+    end
+    
+  end
+end
+
+MedBootstrap.registeredEvents = {
+  registerAnonymousEventHandler("sysConnectionEvent", "MedBootstrap.eventHandler")
+}</script>
+			<eventHandlerList />
+		</Script>
+	</ScriptPackage>
+</MudletPackage>
