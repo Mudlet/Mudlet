@@ -15,8 +15,6 @@ $Env:PATH = "$CMakePath;C:\MinGW\bin;C:\MinGW\msys\1.0\bin;C:\Program Files\7-Zi
 CheckAndInstall7z
 CheckAndInstallCcache
 CheckAndInstallCmake
-CheckAndInstallMingwGet
-CheckAndInstallMsys
 CheckAndInstallBoost
 CheckAndInstallQt
 CheckAndInstallPython
