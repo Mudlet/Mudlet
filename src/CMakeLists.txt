@@ -716,7 +716,8 @@ if(APPLE)
     add_custom_command(
         TARGET mudlet POST_BUILD
         COMMAND curl -sL https://sentry.io/get-cli/ | sh
-        COMMAND sentry-cli login --auth-token $ENV{SENTRY_AUTH_TOKEN}
+        COMMAND sentry-cli login --auth-token $ENV{SENTRY_AUTH_TOKEN}        
+        COMMAND sentry-cli debug-files upload --include-sources -o $ENV{SENTRY_ORG} -p $ENV{SENTRY_PROJECT}  /usr/lib --wait 
         COMMAND sentry-cli debug-files upload --include-sources -o $ENV{SENTRY_ORG} -p $ENV{SENTRY_PROJECT}  ${mudlet_BINARY_DIR} --wait 
         WORKING_DIRECTORY ${mudlet_BINARY_DIR}
         COMMENT "Uploading debug files to Sentry"
