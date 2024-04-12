@@ -37,6 +37,7 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
@@ -184,6 +185,17 @@ cTelnet::~cTelnet()
         mpComposer->deleteLater();
     }
     socket.deleteLater();
+}
+
+void cTelnet::cancelLoginTimers()
+{
+    if (mTimerLogin) {
+        mTimerLogin->stop();
+    }
+
+    if (mTimerPass) {
+        mTimerPass->stop();
+    }
 }
 
 // This configures two out of three of the QTextCodec used by this profile:
@@ -1775,7 +1787,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1"])";
+            output += R"(Core.Supports.Set [ "Char 1", "Char.Skills 1", "Char.Items 1", "Room 1", "IRE.Rift 1", "IRE.Composer 1", "External.Discord 1", "Client.Media 1", "Char.Login 1"])";
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -2828,6 +2840,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
     if (mpHost->mAcceptServerMedia && packageMessage.startsWith(qsl("Client.Media"), Qt::CaseInsensitive)) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
+    }
+
+    if (packageMessage.startsWith(qsl("Char.Login"), Qt::CaseInsensitive)) {
+        mpHost->mpAuth->handleAuthGMCP(packageMessage, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);

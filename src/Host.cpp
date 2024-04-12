@@ -25,16 +25,24 @@
 
 #include "Host.h"
 
-
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgModuleManager.h"
+#include "dlgNotepad.h"
+#include "dlgPackageManager.h"
+#include "dlgProfilePreferences.h"
+#include "GifTracker.h"
+#include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
+#include "mudlet.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
-#include "TMainConsole.h"
-#include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -42,7 +50,6 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
-#include "GifTracker.h"
 #include "XMLimport.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
@@ -244,6 +251,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
+, mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
 , mIsRemoteEchoingActive(false)
