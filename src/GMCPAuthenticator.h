@@ -1,7 +1,8 @@
+#ifndef MUDLET_AUTHENTICATOR_H
+#define MUDLET_AUTHENTICATOR_H
+
 /***************************************************************************
- *   Copyright (C) 2008-2010 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2022 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2024 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -19,38 +20,35 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
-#include "dlgComposer.h"
-
-
 #include "Host.h"
+#include "utils.h"
+
+#include "pre_guard.h"
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QString>
+#include <QVariantMap>
+#include "post_guard.h"
 
 
-dlgComposer::dlgComposer(Host* pH)
-: mpHost(pH)
+class GMCPAuthenticator
 {
-    setupUi(this);
-    const QFont font = QFont(qsl("Bitstream Vera Sans Mono"), 10, QFont::Normal);
-    edit->setFont(font);
-    connect(saveButton, &QAbstractButton::clicked, this, &dlgComposer::slot_save);
-    connect(cancelButton, &QAbstractButton::clicked, this, &dlgComposer::slot_cancel);
-    setAttribute(Qt::WA_DeleteOnClose);
-}
+    Q_DECLARE_TR_FUNCTIONS(GMCPAuthenticator)
 
-void dlgComposer::slot_cancel()
-{
-    mpHost->mTelnet.atcpComposerCancel();
-    this->hide();
-}
+public:
 
-void dlgComposer::slot_save()
-{
-    mpHost->mTelnet.atcpComposerSave(edit->toPlainText());
-    this->hide();
-}
+    explicit GMCPAuthenticator(Host* pHost);
+    ~GMCPAuthenticator() = default;
 
-void dlgComposer::init(const QString &newTitle, const QString &newText)
-{
-    title->setText(newTitle);
-    edit->setPlainText(newText);
-}
+    void saveSupportsSet(const QString& data);
+    void sendCredentials();
+    void handleAuthResult(const QString& data);
+    void handleAuthGMCP(const QString& packageMessage, const QString& data);
+
+private:
+    Host* mpHost;
+    QStringList mSupportedAuthTypes;
+};
+
+#endif // MUDLET_AUTHENTICATOR_H
