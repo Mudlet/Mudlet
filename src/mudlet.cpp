@@ -4860,3 +4860,14 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
     return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
 #endif // INCLUDE_VARIABLE_SPLASH_SCREEN
 }
+
+// The Lua interpreter cannot call mudlet::forceClose() directly as the latter
+// will destroy the former before a direct call has completed which has bad
+// effects (like the Lua API resetProfile() once did). Instead arrange for it
+// to be done by a "zero" timer:
+void mudlet::armForceClose()
+{
+    QTimer::singleShot(0, this, [this]() {
+        forceClose();
+    });
+}

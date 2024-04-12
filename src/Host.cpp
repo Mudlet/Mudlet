@@ -546,9 +546,11 @@ void Host::closeChildren()
 
     stopAllTriggers();
 
-    mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-    mpEditorDialog->close();
-    mpEditorDialog = nullptr;
+    if (mpEditorDialog) {
+        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+        mpEditorDialog->close();
+        mpEditorDialog = nullptr;
+    }
 
     for (const QString& consoleName : mpConsole->mSubConsoleMap.keys()) {
         // Only user-windows will be in this map:
