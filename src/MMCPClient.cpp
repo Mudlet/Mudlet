@@ -795,7 +795,7 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, quint16 len)
  */ 
 void MMCPClient::handleIncomingSideChannelData(const QString& stringData)
 {
-    QRegularExpression chatChannel("^\\[(\\w+)\\](.*)$");
+    QRegularExpression chatChannel("^(\\w+),(.*)$");
 
     QRegularExpressionMatch match = chatChannel.match(stringData);
 
