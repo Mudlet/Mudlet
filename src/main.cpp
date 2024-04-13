@@ -183,7 +183,7 @@ void initSentry() {
     ));
     */
 
-   throw std::runtime_error("This is a test runtime error!");
+//    throw std::runtime_error("This is a test runtime error!");
 #endif
 }
 
