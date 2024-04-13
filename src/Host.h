@@ -212,12 +212,10 @@ public:
     bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void            setLargeAreaExitArrows(const bool);
 
-    void            closingDown() { mIsClosingDown = true; }
-    bool            isClosingDown() const { return mIsClosingDown; }
-    bool            requestClose();
     void            forceClose();
+    bool            isClosingDown() const { return mIsClosingDown; }
     bool            isClosingForced() const { return mForcedClose; }
-
+    bool            requestClose();
 
     unsigned int assemblePath();
     bool checkForMappingScript();

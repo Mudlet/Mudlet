@@ -495,14 +495,8 @@ void Host::forceClose()
     // Ensure the above is displayed before proceeding...
     qApp->processEvents();
 
-    // Because we have set the mForcedClose flag above this WILL succeed - but
-    // whilst debugging lets confirm this - it does the profile and map saving:
-    bool closeResult = mpConsole->close();
-
-    // Get rid of any dialogs we might have open:
-    closeChildren();
-
-    Q_ASSERT_X(closeResult, "Host::forceClose()", "TMainConsole::forceClose() call did not succeed!");
+    // Because we have set the mForcedClose flag above a requestClose()
+    // afterwards WILL succeed
 }
 
 // Returns true if we are closing down
@@ -535,7 +529,7 @@ bool Host::requestClose()
 
 void Host::closeChildren()
 {
-    closingDown();
+    mIsClosingDown = true;
     std::list<QPointer<TToolBar>> const hostToolBarMap = getActionUnit()->getToolBarList();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
     if (mSslTsl) {
