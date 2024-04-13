@@ -456,7 +456,7 @@ macx:LIBS += -lz
 
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 
-macx {
+macx|win32 {
     INCLUDEPATH += ../3rdparty/sentry-native/include
 }
 
@@ -492,6 +492,8 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # lua packages used via the luarocks sub-system, most specifically "utf8".  This
 # method has NOT been checked thoroughly though, so YMMV.
 win32 {
+    system("cd $${PWD}\.. & git submodule update --init --recursive 3rdparty/sentry-native")
+
     # Use a check explicitly based on where the project file is in the sources
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
@@ -852,7 +854,7 @@ HEADERS += \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
     
-macx {
+macx|win32 {
     HEADERS += ../3rdparty/sentry-native/include/sentry.h
 }
 

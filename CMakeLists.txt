@@ -202,7 +202,7 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-if(APPLE)
+if(APPLE OR WIN32)
   git_submodule_init(
     CHECK_FILE "3rdparty/sentry-native/CMakeLists.txt" SUBMODULE_PATH
     "3rdparty/sentry-native" READABLE_NAME "sentry-native")
@@ -266,7 +266,7 @@ set(SENTRY_INTEGRATION_QT "ON")
 set(SENTRY_INCLUDE_DIR "3rdparty/sentry-native/include")
 set(SENTRY_LIBRARIES "3rdparty/sentry-native")
 
-if(APPLE)
+if(APPLE OR WIN32)
   add_subdirectory(3rdparty/sentry-native)
 endif()
 

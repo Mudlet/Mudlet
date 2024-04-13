@@ -46,7 +46,7 @@
 #include "Announcer.h"
 #include "FileOpenHandler.h"
 
-#if defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN32)
 extern "C" {
     #include "sentry.h"
 }
@@ -158,7 +158,7 @@ QTranslator* loadTranslationsForCommandLine()
 }
 
 void initSentry() {
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN32)
   QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
   QString sentryDsn = systemEnvironment.value(qsl("SENTRY_DSN"), QString());
   const char* sentryDsnCStr = sentryDsn.toUtf8().constData();
@@ -183,7 +183,7 @@ void initSentry() {
     ));
     */
 
-//    throw std::runtime_error("This is a test runtime error!");
+   throw std::runtime_error("This is a test runtime error!");
 #endif
 }
 
@@ -192,7 +192,7 @@ int main(int argc, char* argv[])
     // print stdout to console if Mudlet is started in a console in Windows
     // credit to https://stackoverflow.com/a/41701133 for the workaround
 
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN32)
     initSentry();
 #endif
 #ifdef Q_OS_WIN32
