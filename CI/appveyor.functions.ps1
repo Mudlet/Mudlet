@@ -196,7 +196,7 @@ function InstallCmake() {
 }
 
 function InstallMingwGet() {
-  DownloadFile "https://osdn.net/frs/redir.php?m=xtom&f=mingw%2F68260%2Fmingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" "mingw-get.zip"
+  DownloadFile "https://osdn.net/frs/redir.php?m=princeton&f=mingw%2F68260%2Fmingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" "mingw-get.zip"
   if (!(Test-Path -Path "C:\MinGW" -PathType Container)) {
     Step "Creating MinGW path"
     New-Item -Path "C:\MinGW" -ItemType "directory" >> "$logFile" 2>&1
