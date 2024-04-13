@@ -7,6 +7,8 @@
 			<packageName></packageName>
 			<script>MedBootstrap = MedBootstrap or {}
 
+MedBotstrap.version = "1.0.0"
+
 function MedBootstrap.eventHandler(event, ...)
   if event == "sysConnectionEvent" then
     
