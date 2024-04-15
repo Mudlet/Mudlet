@@ -913,7 +913,7 @@ private:
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
 
-    // Set when the mudlet singleton demands that we close - used to force a
+    // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:
     bool mForcedClose = false;
 };

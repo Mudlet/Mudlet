@@ -941,9 +941,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
         // This is likely to be the save as the profile is closed
-        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for "
+        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '"
                                      << mHostName
-                                     << " so assuming it is a end of session save and the TCommandLines' histories need saving...";
+                                     << "' so assuming it is a end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
 
