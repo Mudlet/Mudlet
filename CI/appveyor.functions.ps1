@@ -205,10 +205,10 @@ function InstallMingwGet() {
 }
 
 function InstallMsys() {
-  Step "Updating mingw-get info"
-  exec "mingw-get" @("update")
-  Step "Installing mingw32-autotools"
-  exec "mingw-get" @("install", "mingw32-autotools")
+  Step "Installing autotools for mingw"
+  exec "pacman -S `"${MINGW_PACKAGE_PREFIX}-autotools`"
+  Step "Installing autotools for msys"
+  exec "pacman -S autotools"
 }
 
 function InstallBoost([string] $outputLocation = "C:\Libraries\") {
