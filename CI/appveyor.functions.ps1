@@ -206,9 +206,9 @@ function InstallMingwGet() {
 
 function InstallMsys() {
   Step "Installing autotools for mingw"
-  exec "pacman -S `"${MINGW_PACKAGE_PREFIX}-autotools`"
+  iex "pacman -S ${env:MINGW_PACKAGE_PREFIX}-autotools"
   Step "Installing autotools for msys"
-  exec "pacman -S autotools"
+  iex "pacman -S autotools"
 }
 
 function InstallBoost([string] $outputLocation = "C:\Libraries\") {
