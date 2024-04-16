@@ -16,7 +16,7 @@ CheckAndInstall7z
 CheckAndInstallCcache
 CheckAndInstallCmake
 CheckAndInstallMingwGet
-# CheckAndInstallMsys currently broken due to bad mirror
+CheckAndInstallMsys
 CheckAndInstallBoost
 CheckAndInstallQt
 CheckAndInstallPython
