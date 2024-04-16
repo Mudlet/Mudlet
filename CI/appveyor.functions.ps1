@@ -206,6 +206,12 @@ function InstallMingwGet() {
 
 function InstallMsys() {
   Step "Installing autotools for mingw"
+  
+  if ($env:platform -eq "x86_64") {
+    $env:MSYSTEM = "MINGW64"
+    $env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
+  }
+
   iex "pacman -S ${env:MINGW_PACKAGE_PREFIX}-autotools"
   Step "Installing autotools for msys"
   iex "pacman -S autotools"
