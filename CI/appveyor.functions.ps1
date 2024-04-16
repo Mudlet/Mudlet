@@ -212,9 +212,9 @@ function InstallMsys() {
     $env:PATH = "C:\msys64\mingw64\bin;$env:PATH"
   }
 
-  iex "pacman -S ${env:MINGW_PACKAGE_PREFIX}-autotools"
+  bash -lc  "pacman -S ${env:MINGW_PACKAGE_PREFIX}-autotools"
   Step "Installing autotools for msys"
-  iex "pacman -S autotools"
+  bash -lc  "pacman -S autotools"
 }
 
 function InstallBoost([string] $outputLocation = "C:\Libraries\") {
