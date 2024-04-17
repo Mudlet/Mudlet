@@ -7,30 +7,45 @@
 			<packageName></packageName>
 			<script>MedBootstrap = MedBootstrap or {}
 
-MedBotstrap.version = "1.0.1"
+MedBootstrap.version = "1.1.0"
+
+MedBootstrap.installList = {
+  [1] = {pkg="MedUI", url="https://github.com/jmckisson/MedScripts/raw/master/MedUI/MedUI.mpackage"},
+  [2] = {pkg="MDK", url="https://github.com/demonnic/MDK/releases/download/v2.10.0/MDK.mpackage"},
+}
 
 function MedBootstrap.eventHandler(event, ...)
-  if event == "sysConnectionEvent" then
-    
-    local packages = getPackages()
-    if not table.contains(packages, "MDK") then
-      installPackage("https://github.com/demonnic/MDK/releases/download/v2.10.0/MDK.mpackage")
-    end
-    
-    if not table.contains(packages, "EMCOChat") then
-      installPackage("https://github.com/demonnic/EMCO/releases/latest/download/EMCOChat.mpackage")
-    end
-    
-    if not table.contains(packages, "MedUI") then
-      installPackage("https://github.com/jmckisson/MedScripts/blob/master/MedUI/MedUI.mpackage")
+
+  if event == "sysInstallPackage" then
+  
+    MedBootstrap.checkInstalledPackages()
+  end
+end
+
+function MedBootstrap.checkInstalledPackages()
+  local packages = getPackages()
+
+  for i = #MedBootstrap.installList, 1, -1 do
+    local v = MedBootstrap.installList[i]
+
+    if not table.contains(packages, v.pkg) then
+      tempTimer(.05, function() installPackage(v.url) end)
+      table.remove(MedBootstrap.installList, i)
+      break
     end
     
   end
 end
 
 MedBootstrap.registeredEvents = {
-  registerAnonymousEventHandler("sysConnectionEvent", "MedBootstrap.eventHandler")
-}</script>
+  registerAnonymousEventHandler("sysInstallPackage", "MedBootstrap.eventHandler")
+}
+
+MedBootstrap.loginTrigId = tempRegexTrigger("^You are the (.*) person to connect since",
+  function()
+    MedBootstrap.checkInstalledPackages()
+    killTrigger(MedBootstrap.loginTrigId)
+  end)</script>
 			<eventHandlerList />
 		</Script>
 	</ScriptPackage>
