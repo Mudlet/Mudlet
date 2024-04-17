@@ -270,9 +270,6 @@ if(APPLE AND USE_SENTRY)
   set(SENTRY_INTEGRATION_QT "ON")
   set(SENTRY_INCLUDE_DIR "3rdparty/sentry-native/include")
   set(SENTRY_LIBRARIES "3rdparty/sentry-native")
-endif()
-
-if(APPLE AND USE_SENTRY)
   add_subdirectory(3rdparty/sentry-native)
 endif()
 

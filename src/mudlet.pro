@@ -243,9 +243,11 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
 # To remove the sentry, set the environment WITH_SENTRY variable to "NO"
 # ie: export WITH_SENTRY="NO" qmake
 #
-SENTRY_TEST = $$upper($$(WITH_SENTRY))
-isEmpty( SENTRY_TEST ) | !equals(SENTRY_TEST, "NO" ) {
-    DEFINES += INCLUDE_SENTRY
+macx {
+    SENTRY_TEST = $$upper($$(WITH_SENTRY))
+    isEmpty( SENTRY_TEST ) | !equals(SENTRY_TEST, "NO" ) {
+        DEFINES += INCLUDE_SENTRY
+    }
 }
 
 ######################## System QtKeyChain library #############################
@@ -466,7 +468,9 @@ macx:LIBS += -lz
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 
 macx {
-    INCLUDEPATH += ../3rdparty/sentry-native/include
+    contains( DEFINES, INCLUDE_SENTRY ) {
+        INCLUDEPATH += ../3rdparty/sentry-native/include
+    }
 }
 
 # Define a preprocessor symbol with the default fallback location from which
@@ -521,7 +525,12 @@ win32 {
     }
 } else {
     macx {
-        system("cd $${PWD}/.. ; git submodule update --init --recursive 3rdparty/sentry-native")
+        contains( DEFINES, INCLUDE_SENTRY ) {
+            !exists("$${PWD}/../3rdparty/sentry-native/sentry-config.cmake.in") {
+                message("git submodule for required sentry-native missing from source code, executing 'git submodule update --init --recursive' to get it...")
+                system("cd $${PWD}/.. ; git submodule update --init --recursive 3rdparty/sentry-native")
+            }
+        }
     }
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
@@ -860,9 +869,16 @@ HEADERS += \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
-    
+
 macx {
-    HEADERS += ../3rdparty/sentry-native/include/sentry.h
+    contains( DEFINES, INCLUDE_SENTRY ) {
+        # sentry-native is needed for MacOS builds with crash-reporting
+        exists("$${PWD}/../3rdparty/sentry-native/sentry-config.cmake.in") {
+            HEADERS += ../3rdparty/sentry-native/include/sentry.h
+        } else {
+            error("Cannot locate sentry-native submodule source code, build abandoned!")
+        }
+    }
 }
 
 macx|win32 {

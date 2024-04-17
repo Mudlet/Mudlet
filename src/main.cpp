@@ -175,15 +175,15 @@ void initSentry() {
 
     sentry_set_tag("mudlet-version", APP_VERSION);
 
-        /*
-        sentry_capture_event(sentry_value_new_message_event(
-            SENTRY_LEVEL_INFO,
-            "Testing",
-            "Working as expected!"
-        ));
-        */
+        
+    sentry_capture_event(sentry_value_new_message_event(
+        SENTRY_LEVEL_INFO,
+        "Testing",
+        "Working as expected!"
+    ));
+        
 
-        throw std::runtime_error("This is a test runtime error!");
+    // throw std::runtime_error("This is a test runtime error!");
 #endif
 }
 
