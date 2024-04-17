@@ -102,20 +102,6 @@ else()
     message(STATUS "Git SHA1 used: ${GIT_SHA1}")
 endif()
 
-# This is used for enabling / disabling sentry QT
-if(DEFINED ENV{ENABLE_SENTRY})
-    if($ENV{ENABLE_SENTRY} STREQUAL "true")
-        set(ENABLE_SENTRY_FLAG TRUE)
-        message(STATUS "Sentry integration is enabled")
-    else()
-        set(ENABLE_SENTRY_FLAG FALSE)
-        message(STATUS "Sentry integration is disabled")
-    endif()
-else()
-    set(ENABLE_SENTRY_FLAG FALSE)
-    message(STATUS "ENABLE_SENTRY environment variable is not defined")
-endif()
-
 # APP_BUILD should only be empty/null in official "release" builds, developers
 # may like to set the MUDLET_VERSION_BUILD environment variable to their user
 # and branch names to make it easier to tell different builds apart!
@@ -189,6 +175,10 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_MAIN_BUILD_SYSTEM
 include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
                         OPTION_VARIABLE USE_QT6
                         READABLE_NAME "build with Qt6 (if installed)")
+include_optional_module(ENVIRONMENT_VARIABLE WITH_SENTRY
+                        OPTION_VARIABLE USE_SENTRY
+                        READABLE_NAME "sentry integration"
+                        SUPPORTED_SYSTEMS "Darwin")
 
 if(USE_QT6)
   find_package(
@@ -216,7 +206,7 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-if(APPLE AND ENABLE_SENTRY_FLAG)
+if(APPLE AND USE_SENTRY)
   git_submodule_init(
     CHECK_FILE "3rdparty/sentry-native/CMakeLists.txt" SUBMODULE_PATH
     "3rdparty/sentry-native" READABLE_NAME "sentry-native")
@@ -275,14 +265,14 @@ if(CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
 
-if(APPLE AND ENABLE_SENTRY_FLAG)
+if(APPLE AND USE_SENTRY)
   set(SENTRY_BACKEND "crashpad")
   set(SENTRY_INTEGRATION_QT "ON")
   set(SENTRY_INCLUDE_DIR "3rdparty/sentry-native/include")
   set(SENTRY_LIBRARIES "3rdparty/sentry-native")
 endif()
 
-if(APPLE AND ENABLE_SENTRY_FLAG)
+if(APPLE AND USE_SENTRY)
   add_subdirectory(3rdparty/sentry-native)
 endif()
 

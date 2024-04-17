@@ -239,6 +239,15 @@ isEmpty( 3DMAPPER_TEST ) | !equals(3DMAPPER_TEST, "NO" ) {
     DEFINES += INCLUDE_3DMAPPER
 }
 
+############################### Sentry QT toggle ###############################
+# To remove the sentry, set the environment WITH_SENTRY variable to "NO"
+# ie: export WITH_SENTRY="NO" qmake
+#
+SENTRY_TEST = $$upper($$(WITH_SENTRY))
+isEmpty( SENTRY_TEST ) | !equals(SENTRY_TEST, "NO" ) {
+    DEFINES += INCLUDE_SENTRY
+}
+
 ######################## System QtKeyChain library #############################
 # To use a system provided QtKeyChain library set the environmental variable
 # WITH_OWN_QTKEYCHAIN variable to "NO". Note that this is only likely to be

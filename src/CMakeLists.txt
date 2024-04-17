@@ -446,7 +446,7 @@ endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
-if(APPLE AND ${ENABLE_SENTRY_FLAG})
+if(APPLE AND USE_SENTRY)
   find_package(sentry REQUIRED)
 endif()
 
@@ -513,6 +513,10 @@ if(USE_FONTS)
   target_compile_definitions(mudlet PRIVATE INCLUDE_FONTS)
 endif()
 
+if(USE_SENTRY)
+  target_compile_definitions(mudlet PRIVATE INCLUDE_SENTRY)
+endif()
+
 if(UNIX)
   set(LUA_DEFAULT_DIR "${CMAKE_INSTALL_PREFIX}/share/mudlet/lua")
 endif(UNIX)
@@ -561,7 +565,7 @@ if(USE_UPDATER)
   target_compile_definitions(mudlet PRIVATE INCLUDE_UPDATER)
 endif(USE_UPDATER)
 
-if(APPLE AND ${ENABLE_SENTRY_FLAG})
+if(APPLE AND USE_SENTRY)
   target_link_libraries(mudlet sentry::sentry)
 endif()
 
@@ -694,7 +698,7 @@ if(UNIX AND NOT APPLE)
         WORLD_EXECUTE)
 endif()
 
-if(APPLE AND ${ENABLE_SENTRY_FLAG})
+if(APPLE AND USE_SENTRY)
   message(STATUS "mudlet_SOURCE_DIR : ${mudlet_SOURCE_DIR}")
   message(STATUS "mudlet_BINARY_DIR : ${mudlet_BINARY_DIR}")
 

@@ -46,7 +46,7 @@
 #include "Announcer.h"
 #include "FileOpenHandler.h"
 
-#if defined(Q_OS_MACOS)
+#if defined(Q_OS_MACOS) && defined(INCLUDE_SENTRY)
 extern "C" {
     #include "sentry.h"
 }
@@ -132,12 +132,6 @@ void removeOldNoteColorEmojiFonts()
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
-bool isSentryEnabled() {
-    QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
-    QString enableSentry = systemEnvironment.value(qsl("ENABLE_SENTRY"), QString());
-    return (enableSentry.toLower() == "true");
-}
-
 QTranslator* loadTranslationsForCommandLine()
 {
     const QSettings settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
@@ -164,34 +158,32 @@ QTranslator* loadTranslationsForCommandLine()
 }
 
 void initSentry() {
-#ifdef Q_OS_MACOS
-    if (isSentryEnabled()) {
-        QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
-        QString sentryDsn = systemEnvironment.value(qsl("SENTRY_DSN"), QString());
-        const char* sentryDsnCStr = sentryDsn.toUtf8().constData();
+#if defined(Q_OS_MACOS) && defined(INCLUDE_SENTRY)
+    QProcessEnvironment systemEnvironment = QProcessEnvironment::systemEnvironment();
+    QString sentryDsn = systemEnvironment.value(qsl("SENTRY_DSN"), QString());
+    const char* sentryDsnCStr = sentryDsn.toUtf8().constData();
 
-        sentry_options_t *options = sentry_options_new();
-        sentry_options_set_dsn(options, sentryDsnCStr);
-        sentry_options_set_handler_path(options, "./crashpad_handler");
-        sentry_options_set_debug(options, 1);
-        sentry_init(options);
+    sentry_options_t *options = sentry_options_new();
+    sentry_options_set_dsn(options, sentryDsnCStr);
+    sentry_options_set_handler_path(options, "./crashpad_handler");
+    sentry_options_set_debug(options, 1);
+    sentry_init(options);
 
-        sentry_value_t mudlet_info = sentry_value_new_object();
-        sentry_value_set_by_key(mudlet_info, "Version", sentry_value_new_string(APP_VERSION));
-        sentry_set_context("Mudlet", mudlet_info);
+    sentry_value_t mudlet_info = sentry_value_new_object();
+    sentry_value_set_by_key(mudlet_info, "Version", sentry_value_new_string(APP_VERSION));
+    sentry_set_context("Mudlet", mudlet_info);
 
-        sentry_set_tag("mudlet-version", APP_VERSION);
+    sentry_set_tag("mudlet-version", APP_VERSION);
 
-            /*
-            sentry_capture_event(sentry_value_new_message_event(
-                SENTRY_LEVEL_INFO,
-                "Testing",
-                "Working as expected!"
-            ));
-            */
+        /*
+        sentry_capture_event(sentry_value_new_message_event(
+            SENTRY_LEVEL_INFO,
+            "Testing",
+            "Working as expected!"
+        ));
+        */
 
-           throw std::runtime_error("This is a test runtime error!");
-    }
+        throw std::runtime_error("This is a test runtime error!");
 #endif
 }
 
@@ -200,10 +192,8 @@ int main(int argc, char* argv[])
     // print stdout to console if Mudlet is started in a console in Windows
     // credit to https://stackoverflow.com/a/41701133 for the workaround
 
-#ifdef Q_OS_MACOS
-    if(isSentryEnabled()) {
-        initSentry();
-    }
+#if defined(Q_OS_MACOS) && defined(INCLUDE_SENTRY)
+    initSentry();
 #endif
 #ifdef Q_OS_WIN32
     if (AttachConsole(ATTACH_PARENT_PROCESS)) {
