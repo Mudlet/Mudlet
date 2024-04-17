@@ -446,7 +446,7 @@ endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
 
-if(APPLE)
+if(APPLE AND ${ENABLE_SENTRY_FLAG})
   find_package(sentry REQUIRED)
 endif()
 
@@ -561,7 +561,7 @@ if(USE_UPDATER)
   target_compile_definitions(mudlet PRIVATE INCLUDE_UPDATER)
 endif(USE_UPDATER)
 
-if(APPLE)
+if(APPLE AND ${ENABLE_SENTRY_FLAG})
   target_link_libraries(mudlet sentry::sentry)
 endif()
 
@@ -694,7 +694,7 @@ if(UNIX AND NOT APPLE)
         WORLD_EXECUTE)
 endif()
 
-if(APPLE)
+if(APPLE AND ${ENABLE_SENTRY_FLAG})
   message(STATUS "mudlet_SOURCE_DIR : ${mudlet_SOURCE_DIR}")
   message(STATUS "mudlet_BINARY_DIR : ${mudlet_BINARY_DIR}")
 
