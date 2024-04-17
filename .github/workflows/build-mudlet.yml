@@ -49,6 +49,7 @@ jobs:
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2/download
+      WITH_SENTRY: NO
       SENTRY_ORG: mehul-mathur
       SENTRY_PROJECT: native-qt-mac
       SENTRY_AUTH_TOKEN: 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
