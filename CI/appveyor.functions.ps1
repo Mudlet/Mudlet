@@ -200,22 +200,6 @@ function InstallAutoTools {
   exec "C:\msys64\usr\bin\pacman.exe" @("-S", "--noconfirm", "--needed", "autotools")
 }
 
-function InstallMingwGet() {
-  DownloadFile "https://osdn.net/frs/redir.php?m=ipconnect&f=mingw%2F68260%2Fmingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" "mingw-get.zip"
-  if (!(Test-Path -Path "C:\MinGW" -PathType Container)) {
-    Step "Creating MinGW path"
-    New-Item -Path "C:\MinGW" -ItemType "directory" >> "$logFile" 2>&1
-  }
-  ExtractZip "mingw-get.zip" "C:\MinGW"
-}
-
-function InstallMsys() {
-  Step "Updating mingw-get info"
-  exec "mingw-get" @("update")
-  Step "Installing mingw32-autotools"
-  exec "mingw-get" @("install", "mingw32-autotools")
-}
-
 function InstallBoost([string] $outputLocation = "C:\Libraries\") {
   DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
@@ -484,7 +468,7 @@ function CheckAndInstallCmake(){
 }
 
 function CheckAndInstallAutoTools(){
-    CheckAndInstall "autotools" "" { InstallAutoTools }
+    CheckAndInstall "autotools" "C:\msys64\usr\bin\pacman.exe" { InstallAutoTools }
 }
 
 function CheckAndInstallBoost(){
