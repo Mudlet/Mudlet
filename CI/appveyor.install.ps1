@@ -16,6 +16,7 @@ CheckAndInstall7z
 CheckAndInstallCcache
 CheckAndInstallCmake
 CheckAndInstallAutoTools
+CheckAndInstallGettextDevel
 CheckAndInstallBoost
 CheckAndInstallQt
 CheckAndInstallPython

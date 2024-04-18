@@ -200,6 +200,11 @@ function InstallAutoTools {
   exec "C:\msys64\usr\bin\pacman.exe" @("-S", "--noconfirm", "--needed", "autotools")
 }
 
+function InstallGettextDevel {
+  Step "Installing gettext development package"
+  exec "C:\msys64\usr\bin\pacman.exe" @("-S", "--noconfirm", "--needed", "gettext-devel")
+}
+
 function InstallBoost([string] $outputLocation = "C:\Libraries\") {
   DownloadFile "https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz/download" "boost.tar.gz" $true
   if (!(Test-Path -Path "C:\Libraries\" -PathType Container)) {
@@ -485,6 +490,10 @@ function CheckAndInstallPython(){
 
 function CheckAndInstallOpenSSL(){
     CheckAndInstall "openssl" "$Env:MINGW_BASE_DIR\bin\libssl-1_1.dll" { InstallOpenssl }
+}
+
+function CheckAndInstallGettextDevel(){
+    CheckAndInstall "gettext-devel" "C:\msys64\usr\share\gettext\archive.dir.tar.xz" { InstallGettextDevel }
 }
 
 function CheckAndInstallHunspell(){
