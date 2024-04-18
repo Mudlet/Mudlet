@@ -133,7 +133,7 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
 
 function RunAutoReconfig(){
   Step "Running autoreconf"
-  exec "bash" @("-c", "`"autoreconf -i`"")
+  exec "bash" @("-c", "`"/c/msys64/usr/bin/autoreconf -i`"")
 }
 
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
