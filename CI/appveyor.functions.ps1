@@ -468,7 +468,7 @@ function CheckAndInstallCmake(){
 }
 
 function CheckAndInstallAutoTools(){
-    CheckAndInstall "autotools" "C:\msys64\usr\bin\pacman.exe" { InstallAutoTools }
+    CheckAndInstall "autotools" "C:\msys64\usr\bin\autoreconf" { InstallAutoTools }
 }
 
 function CheckAndInstallBoost(){
