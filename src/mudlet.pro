@@ -526,7 +526,7 @@ win32 {
 } else {
     macx {
         contains( DEFINES, INCLUDE_SENTRY ) {
-            !exists("$${PWD}/../3rdparty/sentry-native/sentry-config.cmake.in") {
+            !exists("$${PWD}/../3rdparty/sentry-native/include/sentry.h") {
                 message("git submodule for required sentry-native missing from source code, executing 'git submodule update --init --recursive' to get it...")
                 system("cd $${PWD}/.. ; git submodule update --init --recursive 3rdparty/sentry-native")
             }
@@ -873,7 +873,7 @@ HEADERS += \
 macx {
     contains( DEFINES, INCLUDE_SENTRY ) {
         # sentry-native is needed for MacOS builds with crash-reporting
-        exists("$${PWD}/../3rdparty/sentry-native/sentry-config.cmake.in") {
+        exists("$${PWD}/../3rdparty/sentry-native/include/sentry.h") {
             HEADERS += ../3rdparty/sentry-native/include/sentry.h
         } else {
             error("Cannot locate sentry-native submodule source code, build abandoned!")
