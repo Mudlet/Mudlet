@@ -67,7 +67,7 @@ function script:exec {
   param(
     [Parameter(Position=0,Mandatory=1)][string]$cmd,
     [Parameter(Position=1,Mandatory=0)][string[]]$parameter = @(),
-    [Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command: {0}" -f $cmd)
+    [Parameter(Position=2,Mandatory=0)][string]$errorMessage = ("Error executing command '{0}' with {1} parameters: {2}" -f $cmd, $parameter.Length, ($parameter -join ', '))
   )
   # ignore standard error for external programs
   $global:ErrorActionPreference = "Continue"
@@ -196,7 +196,7 @@ function InstallCmake() {
 }
 
 function InstallMingwGet() {
-  DownloadFile "https://osdn.net/frs/redir.php?m=rwthaachen&f=mingw%2F68260%2Fmingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" "mingw-get.zip"
+  DownloadFile "https://osdn.net/frs/redir.php?m=ipconnect&f=mingw%2F68260%2Fmingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" "mingw-get.zip"
   if (!(Test-Path -Path "C:\MinGW" -PathType Container)) {
     Step "Creating MinGW path"
     New-Item -Path "C:\MinGW" -ItemType "directory" >> "$logFile" 2>&1
