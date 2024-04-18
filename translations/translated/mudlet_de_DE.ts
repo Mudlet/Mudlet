@@ -2756,7 +2756,14 @@ Arbeitsspeicher frei?</translation>
 Look for further messages related to the rooms that are supposed
 to be in this/these area(s)...</source>
       <comment>Making use of %n to allow quantity dependent message form 8-) !</comment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>[ ACHTUNG ] - %n fehlendes Gebiet in der Karte entdeckt und ergänzt.
+Achte auf weitere Nachrichten zu Räumen, die in diesem Gebiet
+sein sollten...</numerusform>
+        <numerusform>[ ACHTUNG ] - %n fehlende Gebiete in der Karte entdeckt und ergänzt.
+Achte auf weitere Nachrichten zu Räumen, die in diesen Gebieten
+sein sollten...</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="733"/>

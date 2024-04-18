@@ -34,6 +34,7 @@
 #include "ShortcutsManager.h"
 #include "TMediaData.h"
 #include "utils.h"
+#include <memory>
 
 #if defined(INCLUDE_UPDATER)
 #include "updater.h"
@@ -307,7 +308,7 @@ public:
 
 
     void activateProfile(Host*);
-    void registerInstanceCoordinator(MudletInstanceCoordinator*);
+    void takeOwnershipOfInstanceCoordinator(std::unique_ptr<MudletInstanceCoordinator>);
     MudletInstanceCoordinator* getInstanceCoordinator();
     void addConsoleForNewHost(Host*);
     QPair<bool, bool> addWordToSet(const QString&);
@@ -478,7 +479,7 @@ public:
     QSystemTrayIcon mTrayIcon;
     bool mUsingMudletDictionaries = false;
     bool mWindowMinimized = false;
-    MudletInstanceCoordinator* mInstanceCoordinator;
+    std::unique_ptr<MudletInstanceCoordinator> mInstanceCoordinator;
     // How many graphemes do we need before we run the spell checker on a "word" in the command line:
     int mMinLengthForSpellCheck = 3;
 
