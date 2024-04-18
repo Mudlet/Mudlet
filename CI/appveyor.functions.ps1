@@ -195,6 +195,11 @@ function InstallCmake() {
   }
 }
 
+function InstallAutoTools {
+  Step "Installing MSYS2 AutoTools package"
+  exec "C:\msys64\usr\bin\pacman.exe" @("-S", "--noconfirm", "--needed", "autotools")
+}
+
 function InstallMingwGet() {
   DownloadFile "https://osdn.net/frs/redir.php?m=ipconnect&f=mingw%2F68260%2Fmingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" "mingw-get.zip"
   if (!(Test-Path -Path "C:\MinGW" -PathType Container)) {
@@ -478,12 +483,8 @@ function CheckAndInstallCmake(){
     CheckAndInstall "cmake" "$CMakePath\cmake.exe" { InstallCmake }
 }
 
-function CheckAndInstallMingwGet(){
-    CheckAndInstall "mingw-get" "C:\MinGW\bin\mingw-get.exe" { InstallMingwGet }
-}
-
-function CheckAndInstallMsys(){
-    CheckAndInstall "MSYS and autotools" "C:\MinGW\bin\autoconf" { InstallMsys }
+function CheckAndInstallAutoTools(){
+    CheckAndInstall "autotools" "" { InstallAutoTools }
 }
 
 function CheckAndInstallBoost(){
