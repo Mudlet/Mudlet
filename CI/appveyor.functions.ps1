@@ -131,6 +131,11 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
   exec "7z" @("-o$outputPath", "x", "$zipFile", "-y")
 }
 
+function RunAutoUpdate(){
+  Step "Running autoupdate"
+  exec "bash" @("-c", "`"/c/msys64/usr/bin/autoupdate -f -i -v`"")
+}
+
 function RunAutoReconfig(){
   Step "Running autoreconf"
   exec "bash" @("-c", "`"/c/msys64/usr/bin/autoreconf -f -i -v`"")
@@ -252,6 +257,7 @@ function InstallHunspell() {
   Set-Location "hunspell\hunspell-1.7.2"
   Step "Changing src\tools\Makefile.am"
   (Get-Content src\tools\Makefile.am -Raw) -replace 'hzip ', '' | Out-File -encoding ASCII src\tools\Makefile.am >> "$logFile" 2>&1
+  RunAutoUpdate()
   RunAutoReconfig
   RunConfigure
   RunMake
