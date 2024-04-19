@@ -146,6 +146,28 @@ function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_D
   exec "bash" @("-c", "`"./configure $configureArguments MAKE=mingw32-make`"")
 }
 
+function RunNativeMake([string] $makefile = "Makefile"){
+For ($retries=1; $retries -le 3; $retries++){
+  Step "Running MSYS2 make"
+  try{
+    exec "C:\msys64\usr\bin\make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
+    break
+  }Catch{
+    Write-Output "Attempt $retries failed." | Tee-Object -File "$logFile" -Append
+    if ($retries -lt 3) {
+      Write-Output "Retrying..." | Tee-Object -File "$logFile" -Append
+    }else{
+      throw $_.Exception
+    }
+  }
+}
+}
+
+function RunNativeMakeInstall([string] $makefile = "Makefile"){
+  Step "Running MSYS2 make install"
+  exec "C:\msys64\usr\bin\make" @("install", "-f", "$makefile")
+}
+
 function RunMake([string] $makefile = "Makefile"){
   For ($retries=1; $retries -le 3; $retries++){
     Step "Running make"
@@ -260,8 +282,8 @@ function InstallHunspell() {
   RunAutoUpdate
   RunAutoReconfig
   RunConfigure
-  RunMake
-  RunMakeInstall
+  RunNativeMake
+  RunNativeMakeInstall
 }
 
 function InstallYajl() {
