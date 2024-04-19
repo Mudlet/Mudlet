@@ -133,7 +133,7 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
 
 function RunAutoUpdate(){
   Step "Running autoupdate"
-  exec "bash" @("-c", "`"/c/msys64/usr/bin/autoupdate -f -i -v`"")
+  exec "bash" @("-c", "`"/c/msys64/usr/bin/autoupdate -f -v`"")
 }
 
 function RunAutoReconfig(){
