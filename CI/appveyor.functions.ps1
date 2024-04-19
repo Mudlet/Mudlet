@@ -257,7 +257,7 @@ function InstallHunspell() {
   Set-Location "hunspell\hunspell-1.7.2"
   Step "Changing src\tools\Makefile.am"
   (Get-Content src\tools\Makefile.am -Raw) -replace 'hzip ', '' | Out-File -encoding ASCII src\tools\Makefile.am >> "$logFile" 2>&1
-  RunAutoUpdate()
+  RunAutoUpdate
   RunAutoReconfig
   RunConfigure
   RunMake
