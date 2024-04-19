@@ -131,14 +131,46 @@ function ExtractZip([string] $zipFile, [string] $outputPath) {
   exec "7z" @("-o$outputPath", "x", "$zipFile", "-y")
 }
 
+function RunAutoUpdate(){
+  Step "Running autoupdate"
+  exec "bash" @("-c", "`"/c/msys64/usr/bin/autoupdate -f -v`"")
+}
+
 function RunAutoReconfig(){
   Step "Running autoreconf"
-  exec "bash" @("-c", "`"autoreconf -i`"")
+  exec "bash" @("-c", "`"/c/msys64/usr/bin/autoreconf -f -i -v`"")
+}
+
+function RunMsys2Configure([string] $configureArguments = "--prefix=/c/msys64/usr") {
+  Step "Running configure"
+  exec "bash" @("-c", "`"./configure $configureArguments MAKE=/c/msys64/usr/bin/make`"")
 }
 
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
   Step "Running configure"
   exec "bash" @("-c", "`"./configure $configureArguments MAKE=mingw32-make`"")
+}
+
+function RunNativeMake([string] $makefile = "Makefile"){
+For ($retries=1; $retries -le 3; $retries++){
+  Step "Running MSYS2 make"
+  try{
+    exec "C:\msys64\usr\bin\make" @("-f", "$makefile", "-j", $(Get-WmiObject win32_processor | Select -ExpandProperty "NumberOfLogicalProcessors"))
+    break
+  }Catch{
+    Write-Output "Attempt $retries failed." | Tee-Object -File "$logFile" -Append
+    if ($retries -lt 3) {
+      Write-Output "Retrying..." | Tee-Object -File "$logFile" -Append
+    }else{
+      throw $_.Exception
+    }
+  }
+}
+}
+
+function RunNativeMakeInstall([string] $makefile = "Makefile"){
+  Step "Running MSYS2 make install"
+  exec "C:\msys64\usr\bin\make" @("install", "-f", "$makefile")
 }
 
 function RunMake([string] $makefile = "Makefile"){
@@ -195,20 +227,14 @@ function InstallCmake() {
   }
 }
 
-function InstallMingwGet() {
-  DownloadFile "https://osdn.net/frs/redir.php?m=ipconnect&f=mingw%2F68260%2Fmingw-get-0.6.3-mingw32-pre-20170905-1-bin.zip" "mingw-get.zip"
-  if (!(Test-Path -Path "C:\MinGW" -PathType Container)) {
-    Step "Creating MinGW path"
-    New-Item -Path "C:\MinGW" -ItemType "directory" >> "$logFile" 2>&1
-  }
-  ExtractZip "mingw-get.zip" "C:\MinGW"
+function InstallAutoTools {
+  Step "Installing MSYS2 AutoTools package"
+  exec "C:\msys64\usr\bin\pacman.exe" @("-S", "--noconfirm", "--needed", "autotools")
 }
 
-function InstallMsys() {
-  Step "Updating mingw-get info"
-  exec "mingw-get" @("update")
-  Step "Installing mingw32-autotools"
-  exec "mingw-get" @("install", "mingw32-autotools")
+function InstallGettextDevel {
+  Step "Installing gettext development package"
+  exec "C:\msys64\usr\bin\pacman.exe" @("-S", "--noconfirm", "--needed", "gettext-devel")
 }
 
 function InstallBoost([string] $outputLocation = "C:\Libraries\") {
@@ -253,15 +279,16 @@ function InstallOpenssl() {
 }
 
 function InstallHunspell() {
-  DownloadFile "https://github.com/hunspell/hunspell/archive/v1.6.2.tar.gz" "hunspell.tar.gz"
+  DownloadFile "https://github.com/hunspell/hunspell/archive/v1.7.2.tar.gz" "hunspell.tar.gz"
   ExtractTar "hunspell.tar.gz" "hunspell"
-  Set-Location "hunspell\hunspell-1.6.2"
+  Set-Location "hunspell\hunspell-1.7.2"
   Step "Changing src\tools\Makefile.am"
   (Get-Content src\tools\Makefile.am -Raw) -replace 'hzip ', '' | Out-File -encoding ASCII src\tools\Makefile.am >> "$logFile" 2>&1
+  RunAutoUpdate
   RunAutoReconfig
-  RunConfigure
-  RunMake
-  RunMakeInstall
+  RunMsys2Configure
+  RunNativeMake
+  RunNativeMakeInstall
 }
 
 function InstallYajl() {
@@ -478,12 +505,8 @@ function CheckAndInstallCmake(){
     CheckAndInstall "cmake" "$CMakePath\cmake.exe" { InstallCmake }
 }
 
-function CheckAndInstallMingwGet(){
-    CheckAndInstall "mingw-get" "C:\MinGW\bin\mingw-get.exe" { InstallMingwGet }
-}
-
-function CheckAndInstallMsys(){
-    CheckAndInstall "MSYS and autotools" "C:\MinGW\bin\autoconf" { InstallMsys }
+function CheckAndInstallAutoTools(){
+    CheckAndInstall "autotools" "C:\msys64\usr\bin\autoreconf" { InstallAutoTools }
 }
 
 function CheckAndInstallBoost(){
@@ -502,8 +525,12 @@ function CheckAndInstallOpenSSL(){
     CheckAndInstall "openssl" "$Env:MINGW_BASE_DIR\bin\libssl-1_1.dll" { InstallOpenssl }
 }
 
+function CheckAndInstallGettextDevel(){
+    CheckAndInstall "gettext-devel" "C:\msys64\usr\share\gettext\archive.dir.tar.xz" { InstallGettextDevel }
+}
+
 function CheckAndInstallHunspell(){
-    CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.6-0.dll" { InstallHunspell }
+    CheckAndInstall "hunspell" "$Env:MINGW_BASE_DIR\bin\libhunspell-1.7-2.dll" { InstallHunspell }
 }
 
 function CheckAndInstallYajl(){
