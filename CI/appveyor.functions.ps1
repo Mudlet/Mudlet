@@ -141,6 +141,11 @@ function RunAutoReconfig(){
   exec "bash" @("-c", "`"/c/msys64/usr/bin/autoreconf -f -i -v`"")
 }
 
+function RunMsys2Configure([string] $configureArguments = "--prefix=/c/msys64/usr") {
+  Step "Running configure"
+  exec "bash" @("-c", "`"./configure $configureArguments MAKE=/c/msys64/usr/bin/make`"")
+}
+
 function RunConfigure([string] $configureArguments = "--prefix=$Env:MINGW_BASE_DIR_BASH") {
   Step "Running configure"
   exec "bash" @("-c", "`"./configure $configureArguments MAKE=mingw32-make`"")
@@ -281,7 +286,7 @@ function InstallHunspell() {
   (Get-Content src\tools\Makefile.am -Raw) -replace 'hzip ', '' | Out-File -encoding ASCII src\tools\Makefile.am >> "$logFile" 2>&1
   RunAutoUpdate
   RunAutoReconfig
-  RunConfigure
+  RunMsys2Configure
   RunNativeMake
   RunNativeMakeInstall
 }
