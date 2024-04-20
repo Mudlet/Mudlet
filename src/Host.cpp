@@ -477,9 +477,11 @@ Host::~Host()
     }
     mErrorLogStream.flush();
     mErrorLogFile.close();
-    // We are in the destructor - so it is not a good idea for anything we call
-    // to refer to our members, given that we want the name of the profile in
-    // the following pass it in as a value so we don't need to access the member
+    // Since this is a destructor, it's risky to rely on member variables within the destructor itself.
+    // To avoid this, we can pass the profile name as an argument instead of accessing it
+    // directly as a member variable. This ensures the destructor doesn't depend on the 
+    // object's state being valid.
+
     TDebug::removeHost(this, mHostName);
 }
 
@@ -511,12 +513,12 @@ bool Host::requestClose()
     // the close() method called here to return a true if the event was
     // accepted:
     if (!mpConsole->close()) {
-        // Nope the user doesn't want this to close - and it won't have set it's
+        // Nope the user doesn't want this to close - and it won't have set its
         // mEnableClose flag:
         return false;
     }
 
-    // The above will have initiated a save of the profile (and it's map) if it
+    // The above will have initiated a save of the profile (and its map) if it
     // got a true returned from the TMainConsole::close() call.
 
     // Get rid of any dialogs we might have open:
@@ -530,7 +532,7 @@ bool Host::requestClose()
 void Host::closeChildren()
 {
     mIsClosingDown = true;
-    std::list<QPointer<TToolBar>> const hostToolBarMap = getActionUnit()->getToolBarList();
+    const auto hostToolBarMap = getActionUnit()->getToolBarList();
     // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
     if (mSslTsl) {
         mTelnet.abortConnection();
@@ -943,7 +945,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         // This is likely to be the save as the profile is closed
         qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '"
                                      << mHostName
-                                     << "' so assuming it is a end of session save and the TCommandLines' histories need saving...";
+                                     << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
 
