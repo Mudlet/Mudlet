@@ -4864,7 +4864,7 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 // The Lua interpreter cannot call mudlet::forceClose() directly as the latter
 // will destroy the former before a direct call has completed which has bad
 // effects (like the Lua API resetProfile() once did). Instead arrange for it
-// to be done by a "zero" timer:
+// to be done on the next Qt event loop iteration:
 void mudlet::armForceClose()
 {
     QTimer::singleShot(0, this, [this]() {
