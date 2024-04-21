@@ -853,7 +853,7 @@ void TMedia::connectMediaPlayer(TMediaPlayer& player)
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
                     player.getMediaPlayer()->setMedia(player.playlist()->currentMedia());
 #else
-                    player.getMediaPlayer()->setSourceplayer.playlist()->currentMedia());
+                    player.getMediaPlayer()->setSource(player.playlist()->currentMedia());
 #endif
                     player.getMediaPlayer()->play();
                 }
@@ -1175,9 +1175,6 @@ void TMedia::play(TMediaData& mediaData)
         return;
     }
 
-    //auto playlist = !sameMusicIsPlaying ? new QMediaPlaylist : (pPlayer.getMediaPlayer()->playlist() != nullptr ? pPlayer.getMediaPlayer()->playlist() : new QMediaPlaylist);
-    //auto playlist = !sameMusicIsPlaying ? new TMediaPlaylist : (pPlayer.playlist() != nullptr ? pPlayer.playlist() : new TMediaPlaylist);
-
     TMediaPlaylist* playlist = pPlayer.playlist();
 
     if (!sameMusicIsPlaying) {
@@ -1188,7 +1185,6 @@ void TMedia::play(TMediaData& mediaData)
     QString absolutePathFileName;
 
     if (mediaData.getMediaLoops() == TMediaData::MediaLoopsDefault) { // Play once
-        //playlist->setPlaybackMode(QMediaPlaylist::Sequential);
         playlist->setPlaybackMode(TMediaPlaylist::Sequential);
 
         if (sameMusicIsPlaying) {
@@ -1229,7 +1225,6 @@ void TMedia::play(TMediaData& mediaData)
 #endif
     } else {
         if (mediaData.getMediaLoops() == TMediaData::MediaLoopsRepeat) { // Repeat indefinitely
-            //playlist->setPlaybackMode(QMediaPlaylist::Loop);
             playlist->setPlaybackMode(TMediaPlaylist::Loop);
 
             if (sameMusicIsPlaying) {
@@ -1260,7 +1255,6 @@ void TMedia::play(TMediaData& mediaData)
 
             playlist->addMedia(QUrl::fromLocalFile(absolutePathFileName));
         } else {
-            //playlist->setPlaybackMode(QMediaPlaylist::Sequential);
             playlist->setPlaybackMode(TMediaPlaylist::Sequential);
 
             if (sameMusicIsPlaying) {
@@ -1304,8 +1298,6 @@ void TMedia::play(TMediaData& mediaData)
             return;
         }
 
-        //playlist->setCurrentIndex(1);
-        //pPlayer.getMediaPlayer()->setPlaylist(playlist);
         playlist->setCurrentIndex(0);
         pPlayer.setPlaylist(playlist);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
