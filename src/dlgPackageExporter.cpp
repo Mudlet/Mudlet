@@ -1471,6 +1471,8 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
     if (!debounce) {
         debounce = true;
         QTimer::singleShot(0, this, [this]() {
+            debounce = false;
+            
             const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
                 //: This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.
@@ -1479,7 +1481,6 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
                 //: This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.
                 mpSelectionText->setTitle(tr("Select what to export"));
             }
-            debounce = false;
         });
     }
 }
