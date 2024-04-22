@@ -73,13 +73,15 @@ MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
 export PATH
-PACKAGE_DIR="${GITHUB_WORKSPACE}/package-${MSYSTEM}-${BUILD_CONFIG}"
+GITHUB_WORKSPACE_UNIX_PATH=$(echo ${GITHUB_WORKSPACE} | sed 's|\\|/|g' | sed 's|D:|/d|g')
+PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-${BUILD_CONFIG}"
+
 echo "MSYSTEM is: ${MSYSTEM}"
 echo "PATH is now:"
 echo "${PATH}"
 echo ""
 
-cd $GITHUB_WORKSPACE || exit 1
+cd $GITHUB_WORKSPACE_UNIX_PATH || exit 1
 
 if [ -d "${PACKAGE_DIR}" ]; then
   # The wanted packaging dir exists - as is wanted
@@ -105,15 +107,15 @@ echo ""
 echo "Copying wanted compiled files from ${GITHUB_WORKSPACE}/build-${MSYSTEM} to ${GITHUB_WORKSPACE}/package-${MSYSTEM} ..."
 echo ""
 
-if [ ! -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" ]; then
+if [ ! -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" ]; then
   echo "ERROR: no Mudlet executable found - did the previous build"
   echo "complete sucessfully?"
   exit 6
 fi
 
-cp "${GITHUB_WORKSPACE}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
-if [ -f "${GITHUB_WORKSPACE}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
-  cp "${GITHUB_WORKSPACE}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
+cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
+if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
+  cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
 # Since Qt 5.14 using the --release switch is broken (it now seems to be
@@ -253,9 +255,9 @@ fi
 echo ""
 echo "Copying discord-rpc library in..."
 if [ "${MSYSTEM}" = "MINGW32" ]; then
-    cp -v -p "${GITHUB_WORKSPACE}/3rdparty/discord/rpc/lib/discord-rpc32.dll"  .
+    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc32.dll"  .
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
-    cp -v -p "${GITHUB_WORKSPACE}/3rdparty/discord/rpc/lib/discord-rpc64.dll"  .
+    cp -v -p "${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/discord/rpc/lib/discord-rpc64.dll"  .
 fi
 echo ""
 
@@ -286,25 +288,25 @@ echo "Copying Mudlet & Geyser Lua files and the Generic Mapper in..."
 
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR ${GITHUB_WORKSPACE}/src/mudlet-lua/./* ./mudlet-lua/
+rsync -avR ${GITHUB_WORKSPACE_UNIX_PATH}/src/mudlet-lua/./* ./mudlet-lua/
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR ${GITHUB_WORKSPACE}/3rdparty/lcf/./* ./lcf/
+rsync -avR ${GITHUB_WORKSPACE_UNIX_PATH}/3rdparty/lcf/./* ./lcf/
 echo ""
 
 echo "Copying Lua translation files in..."
 mkdir -p ./translations/lua/translated
 cp -v -p -t ./translations/lua/translated \
-    ${GITHUB_WORKSPACE}/translations/lua/translated/mudlet-lua_??_??.json
+    ${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/translated/mudlet-lua_??_??.json
 echo ""
 
 echo "Copying Hunspell dictionaries in..."
 cp -v -p -t . \
-    ${GITHUB_WORKSPACE}/src/*.aff \
-    ${GITHUB_WORKSPACE}/src/*.dic
+    ${GITHUB_WORKSPACE_UNIX_PATH}/src/*.aff \
+    ${GITHUB_WORKSPACE_UNIX_PATH}/src/*.dic
 
 echo ""
 
