@@ -1762,7 +1762,7 @@ void mudlet::closeEvent(QCloseEvent* event)
     bool abortClose = false;
     // Due to the way that Hosts are stored we cannot do a closeHost(hostName)
     // within the following loop as it fatally messes with what mHostManager
-    // contains - this is STL iterator stuff! Slysven 2024/04
+    // contains - this is STL iterator stuff!
     for (auto pHost : mHostManager) {
         if (pHost->requestClose()) {
             // If we get here then the user has agreed to close it and the
