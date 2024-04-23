@@ -493,7 +493,7 @@ void Host::forceClose()
     }
 
     mForcedClose = true;
-    postMessage(tr("[ ALERT ] - this profile is being forced to save and close."));
+    postMessage(tr("[ ALERT ] - This profile will now save and close."));
     // Ensure the above is displayed before proceeding...
     qApp->processEvents();
 
