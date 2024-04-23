@@ -40,11 +40,11 @@ jobs:
             qt: '5.14.2'
             deploy: 'deploy'
             run_tests: 'true'
-#           - os: windows-2019
-#             buildname: 'windows'
-#             triplet: x64-mingw-dynamic
-#             # compiler: flag not used in windows pipeline
-#             qt: '5.14.2'
+          - os: windows-2019
+            buildname: 'windows'
+            triplet: x64-mingw-dynamic
+            # compiler: flag not used in windows pipeline
+            qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
@@ -56,15 +56,60 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
-
-    - name: (Windows) Install Qt
-      uses: jurplel/install-qt-action@v3
-      if: runner.os == 'Windows'
+        
+    - name: (Windows) Setup MSYS2
+        if: matrix.os == 'windows-2019'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW32
+          update: true
+          #install: >-
+          #  base-devel
+          #  mingw-w64-i686-toolchain
+          #  mingw-w64-i686-qt5
+          
+    - name: (Windows) Build Environment Setup
+      if: matrix.os == 'windows-2019'
+      shell: msys2 {0}
+      run: $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh base
+    - name: (Windows) Build
+      if: matrix.os == 'windows-2019'
+      shell: msys2 {0}
+      run: |
+        export BUILD_CONFIG=release
+        $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+    - name: (Windows) Package
+      if: matrix.os == 'windows-2019'
+      shell: msys2 {0}
+      run: |
+        export BUILD_CONFIG=release
+        $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
+    - name: (Windows) Deploy
+      if: matrix.os == 'windows-2019'
+      shell: powershell
+      run: |
+        $Env:BUILD_CONFIG=release
+        $Env:GITHUB_REPO_NAME = ${{ github.repository }}
+        $Env:GITHUB_REPO_TAG = ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        $Env:GITHUB_SCHEDULED_BUILD = ${{ github.event_name == 'schedule' }}
+        $Env:GITHUB_PULL_REQUEST_NUMBER = ${{ github.event.pull_request.number }}
+        $Env:GITHUB_PULL_REQUEST_HEAD_SHA = ${{ github.event.pull_request.head.sha }}
+        $Env:GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.ps1
+    - name: (Windows) Upload Artifact
+      if: matrix.os == 'windows-2019' && env.PUBLIC_TEST_BUILD == 'false'
+      uses: actions/upload-artifact@v2
       with:
-        version: ${{matrix.qt}}
-        dir: ${{runner.workspace}}
-        arch: win64_mingw73
-        cache: true
+        name: Mudlet-${{ env.VERSION }}-windows-installer.exe
+        path: ${{ github.workspace }}/src/release/Setup.exe
+
+    #- name: (Windows) Install Qt
+    #  uses: jurplel/install-qt-action@v3
+    #  if: runner.os == 'Windows'
+    #  with:
+    #    version: ${{matrix.qt}}
+    #    dir: ${{runner.workspace}}
+    #    arch: win64_mingw73
+    #    cache: true
 
     - name: (Linux/macOS) Install Qt
       uses: jurplel/install-qt-action@v3
