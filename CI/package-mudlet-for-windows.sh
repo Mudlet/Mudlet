@@ -318,10 +318,6 @@ echo ""
 FINAL_DIR=$(/usr/bin/cygpath --windows "${PACKAGE_DIR}")
 echo "${FINAL_DIR} should contain everything needed to run Mudlet!"
 echo ""
-echo "Zipping everything up into an archive that can be moved to another machine:"
-echo ""
-/usr/bin/zip -rv9 "${ZIP_FILE_NAME}" ./*
-echo ""
 echo "   ... package-mudlet-for-windows.sh shell script finished."
 echo ""
 echo "   You may now run the mudlet.exe file in ${FINAL_DIR} or take the file"
