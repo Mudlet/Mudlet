@@ -3405,21 +3405,34 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     return mpProgressDialog->wasCanceled();
 }
 
+/**
+ * Update the the 2D and 3D map visually.
+ *
+ * It ensures debouncing internally to ensure that bulk calls are efficient.
+ */
 void TMap::update()
 {
-#if defined(INCLUDE_3DMAPPER)
-    if (mpM) {
-        mpM->update();
-    }
-#endif
-    if (mpMapper) {
-        mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
-        mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
+    static bool debounce;
+    if (!debounce) {
+        debounce = true;
+        QTimer::singleShot(0, this, [this]() {
+            debounce = false;
 
-        if (mpMapper->mp2dMap) {
-            mpMapper->mp2dMap->mNewMoveAction = true;
-            mpMapper->mp2dMap->update();
-        }
+#if defined(INCLUDE_3DMAPPER)
+            if (mpM) {
+                mpM->update();
+            }
+#endif
+            if (mpMapper) {
+                mpMapper->checkBox_showRoomNames->setVisible(getRoomNamesPresent());
+                mpMapper->checkBox_showRoomNames->setChecked(getRoomNamesShown());
+
+                if (mpMapper->mp2dMap) {
+                    mpMapper->mp2dMap->mNewMoveAction = true;
+                    mpMapper->mp2dMap->update();
+                }
+            }
+        });
     }
 }
 
