@@ -97,12 +97,6 @@ jobs:
         $Env:GITHUB_PULL_REQUEST_NUMBER = ${{ github.event.pull_request.number }}
         $Env:GITHUB_PULL_REQUEST_HEAD_SHA = "${{ github.event.pull_request.head.sha }}"
         & $Env:GITHUB_WORKSPACE\CI\deploy-mudlet-for-windows.ps1
-    - name: (Windows) Upload Artifact
-      if: matrix.os == 'windows-2019' && env.PUBLIC_TEST_BUILD == 'false'
-      uses: actions/upload-artifact@v2
-      with:
-        name: Mudlet-${{ env.VERSION }}-windows-installer.exe
-        path: ${{ github.workspace }}/src/release/Setup.exe
 
     #- name: (Windows) Install Qt
     #  uses: jurplel/install-qt-action@v3

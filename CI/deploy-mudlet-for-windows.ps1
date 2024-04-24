@@ -26,13 +26,26 @@ if ($Env:GITHUB_REPO_TAG -eq "false" -and -Not $Script:PublicTestBuild) {
   Rename-Item -Path "$Env:GITHUB_WORKSPACE\package-MINGW32-release\mudlet.exe" -NewName "Mudlet.exe"
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-%BUILD_COMMIT%-windows.zip "%GITHUB_WORKSPACE%\package-MINGW32-release\*"
 
-  Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
-  Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
-  Set-Variable -Name "outFile" -Value "upload-location.txt";
-  Write-Output "=== Uploading the snapshot build ==="
-  Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
+  #Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
+  #Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
+  $uploadFilename = "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip"
+  #Set-Variable -Name "outFile" -Value "upload-location.txt";
+  #Write-Output "=== Uploading the snapshot build ==="
+  #Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 
-  $DEPLOY_URL = Get-Content -Path $outFile -Raw
+  #$DEPLOY_URL = Get-Content -Path $outFile -Raw
+  Write-Output "=== Setting up upload directory ==="
+  $uploadDir = "$Env:GITHUB_WORKSPACE\upload"
+
+  if (-not $(Test-Path "$uploadDir")) {
+    New-Item "$uploadDir" -ItemType "directory"
+  }
+
+  Write-Output "=== Moving files to upload directory ==="
+  Move-Item $Env:GITHUB_WORKSPACE\package-MINGW32-release\$uploadFilename $uploadDir
+  
+  echo "FOLDER_TO_UPLOAD=$uploadDir" | Out-File -Append -FilePath $Env:GITHUB_ENV
+  echo "UPLOAD_FILENAME=$uploadFilename" | Out-File -Append -FilePath $Env:GITHUB_ENV
 } else {
   if ($Script:PublicTestBuild) {
 
