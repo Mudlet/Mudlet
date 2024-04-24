@@ -1,8 +1,10 @@
 cd $Env:GITHUB_WORKSPACE
 
 if ($Env:GITHUB_REPO_TAG -eq "false") {
+  Write-Output "=== GITHUB_REPO_TAG is FALSE ==="
   # The only scheduled Appveyor builds are public test builds
-  if ("${Env:GITHUB_SCHEDULED_BUILD}") {
+  if ($Env:GITHUB_SCHEDULED_BUILD -eq "true") {
+    Write-Output "=== GITHUB_SCHEDULED_BUILD is TRUE ==="
     $Env:MUDLET_VERSION_BUILD = "-ptb"
   } else {
     $Env:MUDLET_VERSION_BUILD = "-testing"
