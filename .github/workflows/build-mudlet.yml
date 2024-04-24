@@ -42,7 +42,7 @@ jobs:
             run_tests: 'true'
           - os: windows-2019
             buildname: 'windows'
-            triplet: x64-mingw-dynamic
+            triplet: i686-w64-mingw32
             # compiler: flag not used in windows pipeline
             qt: '5.14.2'
 
@@ -58,34 +58,34 @@ jobs:
         fetch-depth: 0
         
     - name: (Windows) Setup MSYS2
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW32
-          update: true
+      if: matrix.os == 'windows-2019'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW32
+        update: true
           #install: >-
           #  base-devel
           #  mingw-w64-i686-toolchain
           #  mingw-w64-i686-qt5
           
     - name: (Windows) Build Environment Setup
-      if: runner.os == 'Windows'
+      if: matrix.os == 'windows-2019'
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh base
     - name: (Windows) Build
-      if: runner.os == 'Windows'
+      if: matrix.os == 'windows-2019'
       shell: msys2 {0}
       run: |
         export BUILD_CONFIG=release
         $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
     - name: (Windows) Package
-      if: runner.os == 'Windows'
+      if: matrix.os == 'windows-2019'
       shell: msys2 {0}
       run: |
         export BUILD_CONFIG=release
         $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
     - name: (Windows) Deploy
-      if: runner.os == 'Windows'
+      if: matrix.os == 'windows-2019'
       shell: powershell
       run: |
         $Env:BUILD_CONFIG=release
@@ -96,7 +96,7 @@ jobs:
         $Env:GITHUB_PULL_REQUEST_HEAD_SHA = ${{ github.event.pull_request.head.sha }}
         $Env:GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.ps1
     - name: (Windows) Upload Artifact
-      if: runner.os == 'Windows' && env.PUBLIC_TEST_BUILD == 'false'
+      if: matrix.os == 'windows-2019' && env.PUBLIC_TEST_BUILD == 'false'
       uses: actions/upload-artifact@v2
       with:
         name: Mudlet-${{ env.VERSION }}-windows-installer.exe
