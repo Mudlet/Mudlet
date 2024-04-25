@@ -115,15 +115,16 @@ jobs:
         dir: ${{runner.workspace}}
         cache: true
 
-    - name: Restore Boost cache
+    - name: (Linux/macOS) Restore Boost cache
+      if: matrix.os != 'windows-2019'
       uses: actions/cache@v4
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
         key: boost
 
-    - name: Install Boost
-      if: steps.cache-boost.outputs.cache-hit != 'true'
+    - name: (Linux/macOS) Install Boost
+      if: matrix.os != 'windows-2019' && steps.cache-boost.outputs.cache-hit != 'true'
       run: |
         if [ "$OS" == "Windows_NT" ]; then
           # fix up paths to be forward slashes consistently
@@ -138,7 +139,8 @@ jobs:
       shell: bash
 
     # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
-    - name: Use CMake 3.20.1
+    - name: (Linux/macOS) Use CMake 3.20.1
+      if: matrix.os != 'windows-2019'
       uses: lukka/get-cmake@v3.20.1
 
     - name: (macOS) Install non-vcpkg dependencies (1/2)
@@ -158,7 +160,7 @@ jobs:
         # gettext is needed for vcpkg
         sudo apt-get install gettext -y
 
-    - name: Restore from cache and run vcpkg
+    - name: (Linux/macOS) Restore from cache and run vcpkg
       if: matrix.os != 'windows-2019'
       uses: lukka/run-vcpkg@v7
       env:
@@ -249,27 +251,6 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-    #- name: (Windows) Install non-vcpkg dependencies
-    #  if: runner.os == 'Windows'
-    #  shell: powershell
-    #  run: |
-    #    # Install dependencies not available on machine
-    #    $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
-    #    $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
-    #    echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $env:GITHUB_ENV
-    #    . ${{github.workspace}}\CI\appveyor.functions.ps1
-
-    #    # Libzip install complains when \bin is missing
-    #    New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin"
-
-    #    SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
-    #    SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
-    #    SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
-    #    $NoShPath = filterPathForSh
-
-    #    CheckAndInstallZlib
-    #    CheckAndInstallLibzip
-
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
@@ -280,6 +261,7 @@ jobs:
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
+      if: matrix.os != 'windows-2019'
       uses: actions/cache@v4
       with:
         path: ${{runner.workspace}}/ccache
@@ -308,7 +290,7 @@ jobs:
       if: runner.os == 'Linux' || runner.os == 'macOS'
       run: ccache --zero-stats --show-stats
 
-    - name: Build Mudlet
+    - name: (Linux/macOS) Build Mudlet
       if: matrix.os != 'windows-2019'
       uses: lukka/run-cmake@v3
       with:
