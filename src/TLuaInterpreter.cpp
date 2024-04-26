@@ -1310,7 +1310,7 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
 int TLuaInterpreter::closeMudlet(lua_State* L)
 {
     Q_UNUSED(L)
-    mudlet::self()->forceClose();
+    mudlet::self()->armForceClose();
     return 0;
 }
 
