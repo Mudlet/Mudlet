@@ -133,6 +133,13 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 
     //: Title of the window. The %1 will be replaced by the current profile's name
     setWindowTitle(tr("Package Exporter - %1").arg(mpHost->getName()));
+
+    // Ensure this dialog goes away if the Host (profile) is closed while we are
+    // open - as this is parented to the mudlet instance rather than the Host
+    // of the profile it would otherwise be left around if only the profile was
+    // being closed:
+    connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::slot_cancelExport);
+    connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::close);
 }
 
 dlgPackageExporter::~dlgPackageExporter()

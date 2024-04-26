@@ -722,14 +722,14 @@ void TConsole::closeEvent(QCloseEvent* event)
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
             event->accept();
             return;
-        } else {
-            hide();
-            mudlet::smpDebugArea->setVisible(false);
-            mudlet::smDebugMode = false;
-            mudlet::self()->refreshTabBar();
-            event->ignore();
-            return;
         }
+
+        hide();
+        mudlet::smpDebugArea->setVisible(false);
+        mudlet::smDebugMode = false;
+        mudlet::self()->refreshTabBar();
+        event->ignore();
+        return;
     }
 
     if (mType & (SubConsole|Buffer)) {
@@ -745,11 +745,11 @@ void TConsole::closeEvent(QCloseEvent* event)
 
             event->accept();
             return;
-        } else {
-            hide();
-            event->ignore();
-            return;
         }
+
+        hide();
+        event->ignore();
+        return;
     }
 
     if (mType == UserWindow) {
@@ -763,112 +763,26 @@ void TConsole::closeEvent(QCloseEvent* event)
                 mUpperPane->close();
                 mLowerPane->close();
             }
-            if (!pD) {
+            if (pD) {
+                pD->setAttribute(Qt::WA_DeleteOnClose);
+                pD->deleteLater();
+            } else {
                 qDebug() << "TConsole::closeEvent(QCloseEvent*) INFO - closing a UserWindow but the TDockWidget pointer was not found to be removed...";
             }
 
+            // This will also cause the QWidget to be automatically hidden:
             event->accept();
             return;
-        } else {
-            hide();
-            event->ignore();
-            return;
         }
-    }
 
-    TEvent conCloseEvent{};
-    conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
-    conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    mpHost->raiseEvent(conCloseEvent);
-
-    if (mpHost->mFORCE_SAVE_ON_EXIT) {
-        mudlet::self()->saveWindowLayout();
-        mpHost->modulesToWrite.clear();
-        mpHost->saveProfile();
-
-        if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
-            // There is a map loaded - but it *could* have no rooms at all!
-            const QDir dir_map;
-            const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-            const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString("yyyy-MM-dd#HH-mm-ss"));
-            if (!dir_map.exists(directory_map)) {
-                dir_map.mkpath(directory_map);
-            }
-            QSaveFile file(filename_map);
-            if (file.open(QIODevice::WriteOnly)) {
-                QDataStream out(&file);
-                if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                    out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-                }
-                // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
-                mpHost->mpMap->serialize(out);
-                if (!file.commit()) {
-                    qDebug() << "TConsole::closeEvent: error saving map: " << file.errorString();
-                }
-            }
-        }
-        mpHost->waitForProfileSave();
-        event->accept();
+        hide();
+        event->ignore();
         return;
     }
 
-    if (!mUserAgreedToCloseConsole) {
-    ASK:
-        const int choice = QMessageBox::question(this, tr("Save profile?"), tr("Do you want to save the profile %1?").arg(mProfileName), QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
-        if (choice == QMessageBox::Cancel) {
-            event->setAccepted(false);
-            event->ignore();
-            return;
-        }
-        if (choice == QMessageBox::Yes) {
-            mudlet::self()->saveWindowLayout();
-
-            mpHost->modulesToWrite.clear();
-            auto [ok, filename, error] = mpHost->saveProfile();
-
-            if (!ok) {
-                QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));
-                goto ASK;
-            } else if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
-                // There is a map loaded - but it *could* have no rooms at all!
-                const QDir dir_map;
-                const QString directory_map = mudlet::getMudletPath(mudlet::profileMapsPath, mProfileName);
-                const QString filename_map = mudlet::getMudletPath(mudlet::profileDateTimeStampedMapPathFileName, mProfileName, QDateTime::currentDateTime().toString(qsl("yyyy-MM-dd#HH-mm-ss")));
-                if (!dir_map.exists(directory_map)) {
-                    dir_map.mkpath(directory_map);
-                }
-                QSaveFile file(filename_map);
-                if (file.open(QIODevice::WriteOnly)) {
-                    QDataStream out(&file);
-                    if (mudlet::scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
-                        out.setVersion(mudlet::scmQDataStreamFormat_5_12);
-                    }
-                    // FIXME: https://github.com/Mudlet/Mudlet/issues/6316 - unchecked return value - we are not handling a failure to save the map!
-                    mpHost->mpMap->serialize(out);
-                    if (!file.commit()) {
-                        qDebug() << "TConsole::closeEvent: error saving map: " << file.errorString();
-                    }
-                }
-            }
-            mpHost->waitForProfileSave();
-            event->accept();
-            return;
-
-        } else if (choice == QMessageBox::No) {
-            mudlet::self()->saveWindowLayout();
-
-            event->accept();
-            return;
-        } else {
-            if (!mudlet::self()->isGoingDown()) {
-                QMessageBox::warning(this, "Aborting exit", "Session exit aborted on user request.");
-                event->ignore();
-                return;
-            } else {
-                event->accept();
-                return;
-            }
-        }
+    if (mType == MainConsole) {
+        // The event should have been handled by the override in the TMainConsole
+        Q_ASSERT_X(false, "TConsole::closeEvent()", "Close event not handled by TMainConsole override.");
     }
 }
 

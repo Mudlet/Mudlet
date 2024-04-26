@@ -2750,8 +2750,13 @@ inline int TBuffer::wrap(int startLine)
     return insertedLines > 0 ? insertedLines : 0;
 }
 
+// This only works on the Main Console for a profile
 void TBuffer::log(int fromLine, int toLine)
 {
+    if (mpHost.isNull()) {
+        return;
+    }
+
     TBuffer* pB = &mpHost->mpConsole->buffer;
     if (pB != this || !mpHost->mpConsole->mLogToLogFile) {
         return;

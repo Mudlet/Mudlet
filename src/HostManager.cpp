@@ -25,16 +25,18 @@
 #include "dlgMapper.h"
 #include "mudlet.h"
 
-bool HostManager::deleteHost(const QString& hostname)
+void HostManager::deleteHost(const QString& hostname)
 {
-    // make sure this is really a new host
+    // make sure this is really an existing host
     if (!mHostPool.contains(hostname)) {
         qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: not a member of host pool... aborting!";
-        return false;
-    } else {
-        const int ret = mHostPool.remove(hostname);
-        return ret;
+        return;
     }
+
+    // As this pulls the QSharedPointer that hostname identifies out of the pool
+    // the Host goes out of scope when execution leaves this method and thus
+    // gets destroyed:
+    mHostPool.remove(hostname);
 }
 
 bool HostManager::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)

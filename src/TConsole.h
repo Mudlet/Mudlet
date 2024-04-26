@@ -286,7 +286,6 @@ public:
     bool mIsPromptLine = false;
     QToolButton* logButton = nullptr;
     QToolButton* timeStampButton = nullptr;
-    bool mUserAgreedToCloseConsole = false;
     QLineEdit* mpBufferSearchBox = nullptr;
     QAction* mpAction_searchCaseSensitive = nullptr;
     QToolButton* mpBufferSearchUp = nullptr;
