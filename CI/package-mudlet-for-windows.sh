@@ -191,7 +191,7 @@ if [ "${BUILD_CONFIG}" = "debug" ]; then
     cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/texttospeech/${libname}.debug" ./texttospeech/
   done
 else
-  "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt" --release --no-virtualkeyboard ./mudlet.exe
+  "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" --release --no-virtualkeyboard ./mudlet.exe
   ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 fi
 

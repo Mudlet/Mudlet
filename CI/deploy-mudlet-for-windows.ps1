@@ -4,18 +4,7 @@ if ($Env:GITHUB_REPO_NAME -ne "Mudlet/Mudlet") {
   exit 0
 }
 
-cd "$Env:GITHUB_WORKSPACE\package-MINGW32-release"
-
-#$Script:QtVersionRegex = [regex]'\\([\d\.]+)\\mingw'
-#$Script:QtVersion = $QtVersionRegex.Match($Env:QT_BASE_DIR).Groups[1].Value
-#if ([version]$Script:QtVersion -ge [version]'5.14.0') {
-#  windeployqt.exe mudlet.exe
-#}
-#else {
-#  windeployqt.exe --release mudlet.exe
-#}
-
-#. "$Env:APPVEYOR_BUILD_FOLDER\CI\copy-non-qt-win-dependencies.ps1"
+cd "$Env:GITHUB_WORKSPACE\package-MINGW64-release"
 
 Remove-Item * -include *.cpp, *.o
 
@@ -23,17 +12,11 @@ $Script:PublicTestBuild = if ($Env:MUDLET_VERSION_BUILD) { $Env:MUDLET_VERSION_B
 
 if ($Env:GITHUB_REPO_TAG -eq "false" -and -Not $Script:PublicTestBuild) {
   Write-Output "=== Creating a snapshot build ==="
-  Rename-Item -Path "$Env:GITHUB_WORKSPACE\package-MINGW32-release\mudlet.exe" -NewName "Mudlet.exe"
-  cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-%BUILD_COMMIT%-windows.zip "%GITHUB_WORKSPACE%\package-MINGW32-release\*"
+  Rename-Item -Path "$Env:GITHUB_WORKSPACE\package-MINGW64-release\mudlet.exe" -NewName "Mudlet.exe"
+  cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-%BUILD_COMMIT%-windows.zip "%GITHUB_WORKSPACE%\package-MINGW64-release\*"
 
-  #Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
-  #Set-Variable -Name "inFile" -Value "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip";
   $uploadFilename = "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip"
-  #Set-Variable -Name "outFile" -Value "upload-location.txt";
-  #Write-Output "=== Uploading the snapshot build ==="
-  #Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 
-  #$DEPLOY_URL = Get-Content -Path $outFile -Raw
   Write-Output "=== Setting up upload directory ==="
   $uploadDir = "$Env:GITHUB_WORKSPACE\upload"
 
@@ -42,7 +25,7 @@ if ($Env:GITHUB_REPO_TAG -eq "false" -and -Not $Script:PublicTestBuild) {
   }
 
   Write-Output "=== Moving files to upload directory ==="
-  Move-Item $Env:GITHUB_WORKSPACE\package-MINGW32-release\$uploadFilename $uploadDir
+  Move-Item $Env:GITHUB_WORKSPACE\package-MINGW64-release\$uploadFilename $uploadDir
   
   echo "FOLDER_TO_UPLOAD=$uploadDir" | Out-File -Append -FilePath $Env:GITHUB_ENV
   echo "UPLOAD_FILENAME=$uploadFilename" | Out-File -Append -FilePath $Env:GITHUB_ENV
@@ -58,12 +41,12 @@ if ($Env:GITHUB_REPO_TAG -eq "false" -and -Not $Script:PublicTestBuild) {
 
     Write-Output "=== Creating a public test build ==="
     # Squirrel takes Start menu name from the binary
-    Rename-Item -Path "$Env:GITHUB_WORKSPACE\package-MINGW32-release\mudlet.exe" -NewName "Mudlet PTB.exe"
+    Rename-Item -Path "$Env:GITHUB_WORKSPACE\package-MINGW64-release\mudlet.exe" -NewName "Mudlet PTB.exe"
     # ensure sha part always starts with a character due to https://github.com/Squirrel/Squirrel.Windows/issues/1394
     $Script:VersionAndSha = "$Env:VERSION-ptb-$Env:BUILD_COMMIT"
   } else {
     Write-Output "=== Creating a release build ==="
-    Rename-Item -Path "$Env:GITHUB_WORKSPACE\package-MINGW32-release\mudlet.exe" -NewName "Mudlet.exe"
+    Rename-Item -Path "$Env:GITHUB_WORKSPACE\package-MINGW64-release\mudlet.exe" -NewName "Mudlet.exe"
     $Script:VersionAndSha = "$Env:VERSION"
   }
 
@@ -84,8 +67,8 @@ if ($Env:GITHUB_REPO_TAG -eq "false" -and -Not $Script:PublicTestBuild) {
   }
 
   Write-Output "=== Moving things to where Squirrel expects them ==="
-  # move everything into package-MINGW32-release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
-  Move-Item $Env:GITHUB_WORKSPACE\package-MINGW32-release\* $SQUIRRELWINBIN
+  # move everything into package-MINGW64-release\squirrel.windows\lib\net45\ as that's where Squirrel would like to see it
+  Move-Item $Env:GITHUB_WORKSPACE\package-MINGW64-release\* $SQUIRRELWINBIN
 
   $Script:NuSpec = "${Env:GITHUB_WORKSPACE}\installers\windows\mudlet.nuspec"
   Write-Output "=== Creating Nuget package ==="
@@ -115,11 +98,11 @@ if ($Env:GITHUB_REPO_TAG -eq "false" -and -Not $Script:PublicTestBuild) {
   # fails silently if the nupkg file is not found
   .\squirrel.windows\tools\Squirrel --releasify $nupkg_path --releaseDir ${Env:GITHUB_WORKSPACE}\squirreloutput --loadingGif ${Env:GITHUB_WORKSPACE}\installers\windows\splash-installing-2x.png --no-msi --setupIcon $InstallerIconFile -n "/a /f ${Env:GITHUB_WORKSPACE}\installers\windows\code-signing-certificate.p12 /p $Env:signing_password /fd sha256 /tr http://timestamp.digicert.com /td sha256"
   Write-Output "=== Removing old directory content of release folder ==="
-  Remove-Item -Recurse -Force $Env:GITHUB_WORKSPACE\package-MINGW32-release\*
+  Remove-Item -Recurse -Force $Env:GITHUB_WORKSPACE\package-MINGW64-release\*
   Write-Output "=== Copying installer over ==="
-  Move-Item $Env:GITHUB_WORKSPACE\squirreloutput\* $Env:GITHUB_WORKSPACE\package-MINGW32-release
+  Move-Item $Env:GITHUB_WORKSPACE\squirreloutput\* $Env:GITHUB_WORKSPACE\package-MINGW64-release
 
-  if (-not (Test-Path -Path "${Env:GITHUB_WORKSPACE}\package-MINGW32-release\Setup.exe" -PathType Leaf)) {
+  if (-not (Test-Path -Path "${Env:GITHUB_WORKSPACE}\package-MINGW64-release\Setup.exe" -PathType Leaf)) {
     Write-Output "=== ERROR: Squirrel failed to generate the installer! Build aborted. Squirrel log is:"
     if (Test-Path -Path ".\squirrel.windows\tools\SquirrelSetup.log" -PathType Leaf) {
       echo "SquirrelSetup.log: "
@@ -135,7 +118,7 @@ if ($Env:GITHUB_REPO_TAG -eq "false" -and -Not $Script:PublicTestBuild) {
   if ($Script:PublicTestBuild) {
     Write-Output "=== Uploading public test build to make.mudlet.org ==="
     Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.exe";
-    Set-Variable -Name "inFile" -Value "${GITHUB_WORKSPACE}\package-MINGW32-release\Setup.exe";
+    Set-Variable -Name "inFile" -Value "${GITHUB_WORKSPACE}\package-MINGW64-release\Setup.exe";
     Set-Variable -Name "outFile" -Value "upload-location.txt";
     Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 

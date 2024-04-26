@@ -137,10 +137,10 @@ echo ""
 # We do not use QtQuick so there is no need for those features:
 if [ "${BUILD_CONFIG}" = "debug" ]; then
 #  qmake ../src/mudlet.pro -spec win32-g++ "${QMAKE_OPTIONS}" "CONFIG+=debug" "CONFIG+=separate_debug_info"
-  qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" "CONFIG+=debug" "CONFIG+=separate_debug_info"
+  qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" "CONFIG+=debug" "CONFIG+=separate_debug_info"
 else
 #  qmake ../src/mudlet.pro -spec win32-g++ "${QMAKE_OPTIONS}"
-  qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
+  qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
 fi
 
 echo " ... qmake done."

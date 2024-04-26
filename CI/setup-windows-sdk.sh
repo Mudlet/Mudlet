@@ -138,13 +138,13 @@ if [ "${LEVEL}" = "full" ]; then
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar man
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar rsync
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-toolchain
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt5-base
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt5-multimedia
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt5-svg
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt5-speech
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt5-imageformats
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt5-winextras
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt5-tools
+    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-base
+    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-multimedia
+    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-svg
+    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-speech
+    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-imageformats
+    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-tools
+    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-5compat
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-pcre
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-libzip
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-ntldd

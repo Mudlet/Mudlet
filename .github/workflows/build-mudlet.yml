@@ -12,7 +12,7 @@ jobs:
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    if: ${{ github.repository_owner == 'Mudlet' }}
+    if: ${{ github.repository_owner == 'jmckisson' }}
     strategy:
       fail-fast: false
       matrix:
@@ -42,9 +42,8 @@ jobs:
             run_tests: 'true'
           - os: windows-2019
             buildname: 'windows'
-            triplet: i686-w64-mingw32
+            triplet: x86_64-w64-mingw32
             # compiler: flag not used in windows pipeline
-            qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
@@ -61,29 +60,28 @@ jobs:
       if: matrix.os == 'windows-2019'
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW32
+        msystem: MINGW64
         update: true
-          #install: >-
-          #  base-devel
-          #  mingw-w64-i686-toolchain
-          #  mingw-w64-i686-qt5
           
     - name: (Windows) Build Environment Setup
       if: matrix.os == 'windows-2019'
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh base
+      
     - name: (Windows) Build
       if: matrix.os == 'windows-2019'
       shell: msys2 {0}
       run: |
         export BUILD_CONFIG=release
         $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+        
     - name: (Windows) Package
       if: matrix.os == 'windows-2019'
       shell: msys2 {0}
       run: |
         export BUILD_CONFIG=release
         $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
+        
     - name: (Windows) Deploy
       if: matrix.os == 'windows-2019'
       shell: powershell
@@ -97,15 +95,6 @@ jobs:
         $Env:GITHUB_PULL_REQUEST_NUMBER = ${{ github.event.pull_request.number }}
         $Env:GITHUB_PULL_REQUEST_HEAD_SHA = "${{ github.event.pull_request.head.sha }}"
         & $Env:GITHUB_WORKSPACE\CI\deploy-mudlet-for-windows.ps1
-
-    #- name: (Windows) Install Qt
-    #  uses: jurplel/install-qt-action@v3
-    #  if: runner.os == 'Windows'
-    #  with:
-    #    version: ${{matrix.qt}}
-    #    dir: ${{runner.workspace}}
-    #    arch: win64_mingw73
-    #    cache: true
 
     - name: (Linux/macOS) Install Qt
       uses: jurplel/install-qt-action@v3
@@ -268,7 +257,6 @@ jobs:
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
         save-always: true
-      if: matrix.os != 'windows-latest'
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -307,7 +295,7 @@ jobs:
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
-    - name: Upload GitHub Actions artifact of vcpkg build logs
+    - name: (Linux/macOS) Upload GitHub Actions artifact of vcpkg build logs
       if: matrix.os != 'windows-2019' && failure()
       uses: actions/upload-artifact@v4
       with:
@@ -434,7 +422,7 @@ jobs:
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
 
-    - name: Passed Lua tests
+    - name: (Linux/macOS) Passed Lua tests
       if: matrix.os != 'windows-2019' && matrix.run_tests == 'true'
       run: |
         if [ -e /tmp/busted-tests-failed ]
@@ -442,20 +430,3 @@ jobs:
           echo "Lua tests failed - see the action above for detailed output."
           exit 1
         fi
-
-    #- name: (windows) Show relevant setup logs
-    #  if: failure() && runner.os == 'Windows'
-    #  run: |
-    #    $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
-    #    if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
-    #      echo "Standard error log from non-vcpkg dependencies: "
-    #      cat $env:WORKING_BASE_DIR\stderr.log
-    #    }
-    #    if (Test-Path -Path "$env:WORKING_BASE_DIR\stdout.log") {
-    #      echo "Standard output log from non-vcpkg dependencies: "
-    #      cat $env:WORKING_BASE_DIR\stdout.log
-    #    }
-    #    if (Test-Path -Path "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log") {
-    #      echo "CMakeOutput.log: "
-    #      cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
-    #    }
