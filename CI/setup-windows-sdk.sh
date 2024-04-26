@@ -144,7 +144,6 @@ if [ "${LEVEL}" = "full" ]; then
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-speech
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-imageformats
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-tools
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-5compat
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-pcre
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-libzip
     /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-ntldd
@@ -169,11 +168,11 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
     # Qt creator is only available to be run in a MINGW64 environment but it
     # can be used to run the MINGW32 components - which are needed to do that
     /usr/bin/pacman -S --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt5" \
+      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6" \
       "mingw-w64-${BUILDCOMPONENT}-qt-creator"
   else
     /usr/bin/pacman -S --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt5"
+      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"
   fi
   echo "    Completed"
 else
