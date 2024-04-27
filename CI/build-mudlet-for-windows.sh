@@ -58,6 +58,8 @@ else
   exit 2
 fi
 
+MINGW_BASE_DIR="${GHCUP_MSYS2}\mingw32"
+export MINGW_BASE_DIR
 MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
@@ -107,6 +109,8 @@ export WITH_MAIN_BUILD_SYSTEM="NO"
 
 echo "Running qmake to make MAKEFILE ..."
 echo ""
+
+
 qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
 
 echo " ... qmake done."
