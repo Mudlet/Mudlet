@@ -40,12 +40,6 @@
 # 2 - Unsupported MSYS2/MINGGW shell type
 # 3 - Unsupported build type
 
-if [ "${BUILD_CONFIG}" != "release" ] && [ "${BUILD_CONFIG}" != "debug" ]; then
-  echo "Please set the environmental variable BUILD_CONFIG to one of \"release\" or"
-  echo "\"debug\" to specify which type of build you wish this to be."
-  exit 3
-fi
-
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
   echo "to the bitness you want to work on. You may do this once for each of them should"
@@ -64,8 +58,6 @@ else
   exit 2
 fi
 
-MINGW_BASE_DIR="C:/msys64/mingw${BUILD_BITNESS}"
-export MINGW_BASE_DIR
 MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
@@ -74,24 +66,6 @@ export PATH
 echo "MSYSTEM is: ${MSYSTEM}"
 echo "PATH is now:"
 echo "${PATH}"
-echo ""
-
-#### Qt Creator note ####
-# It doesn't seem possible to configure ccache to work like this in a direct
-# call of qmake - though it does inside the Qt Creator qmake additional
-# arguments field:
-echo "Checking for ccache..."
-echo ""
-if [ -f "${MINGW_INTERNAL_BASE_DIR}/bin/ccache" ]; then
-  echo "  ... ccache has been found and it will try to be used for this build by"
-  echo "    adjusting the Makefile."
-  WITH_CCACHE="true"
-  # QMAKE_OPTIONS="QMAKE_CC=\"ccache gcc\" QMAKE_CXX=\"ccache g++\" \"CONFIG-=qml_debug\" \"CONFIG-=qtquickcompiler\""
-else
-  echo "  ... ccache NOT found."
-  WITH_CCACHE="false"
-  # QMAKE_OPTIONS="\"CONFIG-=qml_debug\" \"CONFIG-=qtquickcompiler\""
-fi
 echo ""
 
 cd $GITHUB_WORKSPACE || exit 1
@@ -133,32 +107,10 @@ export WITH_MAIN_BUILD_SYSTEM="NO"
 
 echo "Running qmake to make MAKEFILE ..."
 echo ""
-
-# We do not use QtQuick so there is no need for those features:
-if [ "${BUILD_CONFIG}" = "debug" ]; then
-#  qmake ../src/mudlet.pro -spec win32-g++ "${QMAKE_OPTIONS}" "CONFIG+=debug" "CONFIG+=separate_debug_info"
-  qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" "CONFIG+=debug" "CONFIG+=separate_debug_info"
-else
-#  qmake ../src/mudlet.pro -spec win32-g++ "${QMAKE_OPTIONS}"
-  qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
-fi
+qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
 
 echo " ... qmake done."
 echo ""
-
-if [ "${WITH_CCACHE}" = "true" ]; then
-  if [ "${BUILD_CONFIG}" = "debug" ]; then
-    echo "  Tweaking Makefile.Debug to use ccache..."
-	sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Debug
-	sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Debug
-  else
-    echo "  Tweaking Makefile.Release to use ccache..."
-	sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Release
-	sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Release
-  fi
-  echo ""
-fi
-
 echo "Running make to build project ..."
 echo ""
 

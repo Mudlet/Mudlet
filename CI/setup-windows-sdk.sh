@@ -47,21 +47,6 @@
 # 5 - Invalid command line argument
 # 6 - One or more Luarocks could not be installed
 
-if [ $# -lt 1 ]; then
-  echo "Usage: $0 base|full"
-  echo ""
-  echo "base = install sufficient packages to build Mudlet"
-  echo "full = install additional packages to also work on code and develop it"
-  echo ""
-  exit 5
-fi
-
-if [ "$1" = "base" -o "$1" = "full" ]; then
-  LEVEL=$1
-else
-  echo "Please provide either base or full as a command line option"
-  exit 5
-fi
 
 if [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
@@ -103,89 +88,35 @@ echo ""
 echo "    This could take a long time if it is needed to fetch everything, so feel free"
 echo "    to go and have a cup of tea (other beverages are available) in the meantime...!"
 echo ""
-if [ "${LEVEL}" = "full" ]; then
-  /usr/bin/pacman -S --needed --noconfirm \
-    git \
-    man \
-    rsync \
-    "mingw-w64-${BUILDCOMPONENT}-toolchain" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-base-debug" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia-debug" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-svg-debug" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-speech-debug" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats-debug" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-winextras-debug" \
-    "mingw-w64-${BUILDCOMPONENT}-pcre" \
-    "mingw-w64-${BUILDCOMPONENT}-libzip" \
-    "mingw-w64-${BUILDCOMPONENT}-ntldd" \
-    "mingw-w64-${BUILDCOMPONENT}-pugixml" \
-    "mingw-w64-${BUILDCOMPONENT}-lua51" \
-    "mingw-w64-${BUILDCOMPONENT}-lua51-lpeg" \
-    "mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3" \
-    "mingw-w64-${BUILDCOMPONENT}-hunspell" \
-    "mingw-w64-${BUILDCOMPONENT}-zlib" \
-    "mingw-w64-${BUILDCOMPONENT}-boost" \
-    "mingw-w64-${BUILDCOMPONENT}-yajl" \
-    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
-    "mingw-w64-${BUILDCOMPONENT}-ccache" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-doc" \
-    "mingw-w64-${BUILDCOMPONENT}-cmake" \
-    "mingw-w64-${BUILDCOMPONENT}-clang" \
-    "mingw-w64-${BUILDCOMPONENT}-ninja"
- else
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar git
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar man
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar rsync
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-toolchain
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-base
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-multimedia
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-svg
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-speech
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-imageformats
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-tools
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-5compat
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-pcre
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-libzip
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-ntldd
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-pugixml
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua51
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua51-lpeg
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-hunspell
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-zlib
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-boost
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-yajl
-    /usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua-luarocks
-fi
+
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar git
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar man
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar rsync
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-toolchain
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-base
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-multimedia
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-svg
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-speech
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-imageformats
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-tools
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-5compat
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-pcre
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-libzip
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-ntldd
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-pugixml
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua51
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua51-lpeg
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-hunspell
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-zlib
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-boost
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-yajl
+/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua-luarocks
+
 
 echo ""
 echo "    Completed"
-echo ""
-# This package is not available for the 32-bit case:
-echo "  Additional packages specifically for ${MSYSTEM}:"
-if [ "${MSYSTEM}" = "MINGW64" ]; then
-  if [ "${LEVEL}" = "full" ]; then
-    # Qt creator is only available to be run in a MINGW64 environment but it
-    # can be used to run the MINGW32 components - which are needed to do that
-    /usr/bin/pacman -S --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6" \
-      "mingw-w64-${BUILDCOMPONENT}-qt-creator"
-  else
-    /usr/bin/pacman -S --needed --noconfirm \
-      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"
-  fi
-  echo "    Completed"
-else
-  if [ "${LEVEL}" = "full" ]; then
-    # Qt creator is only available to be run in a MINGW64 environment but it
-    # can be used to run the MINGW32 components - which are needed to do that
-    echo "    You WILL need have also run the full setup mode for the MINGW64 case"
-    echo "    in order to have the Qt Creator IDE to develop MINGW32 builds as well"
-  else
-    echo "    None"
-  fi
-fi
 echo ""
 
 
@@ -280,22 +211,6 @@ for ROCK in "${WANTED_ROCKS[@]}"; do
 done
 echo ""
 echo "    ... luarocks installation completed"
-echo ""
-#echo "  Making a ${HOME}/src directory (if it does not exist)"
-#echo "  - so there is a place to put a local Mudlet git repository for"
-#echo "  you to build and work on the project..."
-#echo ""
-#mkdir -p ~/src
-#cd ~/src || exit 1
-#if [ ! -d "./mudlet" ]; then
-#    echo "    Cloning the Mudlet project's source code..."
-#    echo ""
-#    git clone https://github.com/Mudlet/Mudlet.git mudlet
-#else
-#    echo "    There is already a ${HOME}/src/mudlet"
-#    echo "    directory so it seems that there is no need to clone the Mudlet"
-#    echo "    project's source code..."
-#fi
 echo ""
 if [ "${success}" = "true" ]; then
   echo "    ... Completed, all rocks installed."

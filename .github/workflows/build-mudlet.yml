@@ -66,21 +66,17 @@ jobs:
     - name: (Windows) Build Environment Setup
       if: matrix.os == 'windows-2019'
       shell: msys2 {0}
-      run: $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh base
+      run: $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
       
     - name: (Windows) Build
       if: matrix.os == 'windows-2019'
       shell: msys2 {0}
-      run: |
-        export BUILD_CONFIG=release
-        $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+      run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
         
     - name: (Windows) Package
       if: matrix.os == 'windows-2019'
       shell: msys2 {0}
-      run: |
-        export BUILD_CONFIG=release
-        $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
+      run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
         
     - name: (Windows) Deploy
       if: matrix.os == 'windows-2019'

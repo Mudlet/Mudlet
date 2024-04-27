@@ -43,12 +43,6 @@
 # 4 - Directory to be used to assemble the package is NOT empty
 # 6 - No Mudlet.exe file found to work with
 
-if [ "${BUILD_CONFIG}" != "release" ] && [ "${BUILD_CONFIG}" != "debug" ]; then
-  echo "Please set the environmental variable BUILD_CONFIG to one of \"release\" or"
-  echo "\"debug\" to specify which type of build you wish this to be."
-  exit 3
-fi
-
 if [ "${MSYSTEM}" = "MSYS" ]; then
   echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
   echo "to the bitness you want to work on. You may do this once for each of them should"
@@ -67,8 +61,6 @@ else
   exit 2
 fi
 
-MINGW_BASE_DIR="C:/msys64/mingw${BUILD_BITNESS}"
-export MINGW_BASE_DIR
 MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
@@ -118,82 +110,9 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
   cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
-# Since Qt 5.14 using the --release switch is broken (it now seems to be
-# assumed), --debug still seems to work - sort of - it doesn't copy the
-# MINGW .debug files for the Qt libraries.
-# https://bugreports.qt.io/browse/QTBUG-80806 seems relevant.
-echo "Running windeployqt..."
-if [ "${BUILD_CONFIG}" = "debug" ]; then
-  "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt" --debug --no-virtualkeyboard ./mudlet.exe
-  ZIP_FILE_NAME="Mudlet-${MSYSTEM}-debug"
-  # Stupidly windeployqt does not copy the .debug files that actually contains
-  # the debug information for the Qt library files - so copy them manually:
-  # They have been deduced by looking for matching 'Xxxx.dll.debug' files for
-  # each 'Xxxx.dll' one so A) they may not be complete and B) are only for
-  # the Qt libraries - other third party ones are not necessarily covered
-  # so far:
-  libnames_core=("Qt5Core.dll" "Qt5Gui.dll" "Qt5Multimedia.dll" "Qt5Network.dll" "Qt5Svg.dll" "Qt5Widgets.dll" "Qt5TextToSpeech.dll")
-  libnames_plugins_audio=("qtaudio_windows.dll")
-  libnames_plugins_bearer=("qgenericbearer.dll")
-  libnames_plugins_iconengines=("qsvgicon.dll")
-  if [ "${MSYSTEM}" = "MINGW64" ]; then
-    libnames_plugins_imageformats=("qgif.dll" "qicns.dll" "qico.dll" "qjp2.dll" "qjpeg.dll" "qmng.dll" "qsvg.dll" "qtga.dll" "qtiff.dll" "qwbmp.dll" "qwebp.dll")
-  elif [ "${MSYSTEM}" = "MINGW32" ]; then
-    # The library for the "multiple network graphics" file format is not
-    # included in the MINGW32 environment!
-    libnames_plugins_imageformats=("qgif.dll" "qicns.dll" "qico.dll" "qjp2.dll" "qjpeg.dll" "qsvg.dll" "qtga.dll" "qtiff.dll" "qwbmp.dll" "qwebp.dll")
-  fi
-  libnames_plugins_mediaservice=("dsengine.dll" "qtmedia_audioengine.dll" "wmfengine.dll")
-  libnames_plugins_platforms=("qwindows.dll")
-  libnames_plugins_playlistformats=("qtmultimedia_m3u.dll")
-  libnames_plugins_styles=("qwindowsvistastyle.dll")
-  libnames_plugins_texttospeech=("qtexttospeech_sapi.dll")
+"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" ./mudlet.exe
+ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 
-  # The core library files are located in a bin directory rather than a Qt
-  # share one:
-  for libname in "${libnames_core[@]}"; do
-    cp -v -p "${MINGW_BASE_DIR}/bin/${libname}.debug" .
-  done
-
-  for libname in "${libnames_plugins_audio[@]}"; do
-	cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/audio/${libname}.debug" ./audio/
-  done
-
-  for libname in "${libnames_plugins_bearer[@]}"; do
-    cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/bearer/${libname}.debug" ./bearer/
-  done
-
-  for libname in "${libnames_plugins_iconengines[@]}"; do
-    cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/iconengines/${libname}.debug" ./iconengines/
-  done
-
-  for libname in "${libnames_plugins_imageformats[@]}"; do
-    cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/imageformats/${libname}.debug" ./imageformats/
-  done
-
-  for libname in "${libnames_plugins_mediaservice[@]}"; do
-    cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/mediaservice/${libname}.debug" ./mediaservice/
-  done
-
-  for libname in "${libnames_plugins_platforms[@]}"; do
-    cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/platforms/${libname}.debug" ./platforms/
-  done
-
-  for libname in "${libnames_plugins_playlistformats[@]}"; do
-    cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/playlistformats/${libname}.debug" ./playlistformats/
-  done
-
-  for libname in "${libnames_plugins_styles[@]}"; do
-    cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/styles/${libname}.debug" ./styles/
-  done
-
-  for libname in "${libnames_plugins_texttospeech[@]}"; do
-    cp -v -p "${MINGW_BASE_DIR}/share/qt5/plugins/texttospeech/${libname}.debug" ./texttospeech/
-  done
-else
-  "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" ./mudlet.exe
-  ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
-fi
 
 
 # To determine which system libraries have to be copied in it requires
@@ -320,9 +239,6 @@ echo "${FINAL_DIR} should contain everything needed to run Mudlet!"
 echo ""
 echo "   ... package-mudlet-for-windows.sh shell script finished."
 echo ""
-echo "   You may now run the mudlet.exe file in ${FINAL_DIR} or take the file"
-echo "   there: ${ZIP_FILE_NAME}.zip to somewhere else - even a different PC - unzip"
-echo "   everything and run the mudlet.exe file extracted from it..."
 cd ~ || exit 1
 
 exit 0
