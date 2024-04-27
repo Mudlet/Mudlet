@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -193,7 +193,7 @@ mudlet::mudlet()
     menuAbout->setToolTipsVisible(true);
 
     setAttribute(Qt::WA_DeleteOnClose);
-    QSizePolicy const sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    const QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     setWindowTitle(scmVersion);
     if (releaseVersion) {
         setWindowIcon(QIcon(qsl(":/icons/mudlet.png")));
@@ -224,7 +224,7 @@ mudlet::mudlet()
     layoutTopLevel->setContentsMargins(0, 0, 0, 0);
     layoutTopLevel->addWidget(mpTabBar);
     mpWidget_profileContainer = new QWidget(frame);
-    QPalette const mainPalette;
+    const QPalette mainPalette;
     mpWidget_profileContainer->setPalette(mainPalette);
     mpWidget_profileContainer->setContentsMargins(0, 0, 0, 0);
     mpWidget_profileContainer->setSizePolicy(sizePolicy);
@@ -483,7 +483,7 @@ mudlet::mudlet()
         connect(actionFullScreeniew, &QAction::triggered, this, &mudlet::slot_toggleFullScreenView);
     }
 
-    QFont const mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
+    const QFont mainFont = QFont(qsl("Bitstream Vera Sans Mono"), 8, QFont::Normal);
     mpWidget_profileContainer->setFont(mainFont);
     mpWidget_profileContainer->show();
 
@@ -705,7 +705,7 @@ QSettings* mudlet::getQSettings()
         For compatibility with older settings, if no config is loaded
         from the config directory "mudlet", application "Mudlet", we try to load from the config
         directory "Mudlet", application "Mudlet 1.0". */
-    QSettings const settings_new("mudlet", "Mudlet");
+    const QSettings settings_new("mudlet", "Mudlet");
     return new QSettings((settings_new.contains("pos") ? "mudlet" : "Mudlet"), (settings_new.contains("pos") ? "Mudlet" : "Mudlet 1.0"));
 }
 
@@ -1090,6 +1090,8 @@ void mudlet::loadMaps()
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"MACINTOSH", tr("MACINTOSH")},
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+                        {"M_MEDIEVIA",  qsl("m ") % tr("Medievia {Custom codec for that MUD}")},
+                        //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"WINDOWS-1250", tr("WINDOWS-1250 (Central European)")},
                         //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
                         {"WINDOWS-1251", tr("WINDOWS-1251 (Cyrillic)")},
@@ -1147,8 +1149,8 @@ void mudlet::scanForMudletTranslations(const QString& path)
     if (path == qsl(":/lang")) {
         QFile file(qsl(":/translation-stats.json"));
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QByteArray const saveData = file.readAll();
-            QJsonDocument const loadDoc(QJsonDocument::fromJson(saveData));
+            const QByteArray saveData = file.readAll();
+            const QJsonDocument loadDoc(QJsonDocument::fromJson(saveData));
             translationStats = loadDoc.object();
             file.close();
         } else {
@@ -1330,7 +1332,7 @@ bool mudlet::openWebPage(const QString& path)
     if (path.isEmpty() || path.isNull()) {
         return false;
     }
-    QUrl const url(path, QUrl::TolerantMode);
+    const QUrl url(path, QUrl::TolerantMode);
     if (!url.isValid()) {
         return false;
     }
@@ -1381,87 +1383,31 @@ void mudlet::slot_closeCurrentProfile()
 void mudlet::slot_closeProfileRequested(int tab)
 {
     const QString name = mpTabBar->tabData(tab).toString();
-    closeHost(name);
-}
-
-void mudlet::closeHost(const QString& name)
-{
     Host* pH = mHostManager.getHost(name);
     if (!pH) {
         return;
     }
 
-    std::list<QPointer<TToolBar>> const hostToolBarMap = pH->getActionUnit()->getToolBarList();
-    QMap<QString, TDockWidget*>& dockWindowMap = pH->mpConsole->mDockWidgetMap;
-    QMap<QString, TConsole*>& hostConsoleMap = pH->mpConsole->mSubConsoleMap;
-
-    if (!pH->mpConsole->close()) {
+    if (!pH->requestClose()) {
         return;
     }
 
-    pH->mpConsole->mUserAgreedToCloseConsole = true;
-    pH->closingDown();
+    closeHost(name);
+}
 
-    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    if (pH->mSslTsl) {
-        pH->mTelnet.abortConnection();
-    } else {
-        pH->mTelnet.disconnectIt();
-    }
-
-    pH->stopAllTriggers();
-    pH->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-    pH->mpEditorDialog->close();
-    pH->mpEditorDialog = nullptr;
-
-    for (auto consoleName : hostConsoleMap.keys()) {
-        if (dockWindowMap.contains(consoleName)) {
-            dockWindowMap[consoleName]->setAttribute(Qt::WA_DeleteOnClose);
-            dockWindowMap[consoleName]->close();
-            removeDockWidget(dockWindowMap[consoleName]);
-            dockWindowMap.remove(consoleName);
-        }
-
-        hostConsoleMap[consoleName]->close();
-        hostConsoleMap.remove(consoleName);
-    }
-
-    if (pH->mpNotePad) {
-        pH->mpNotePad->save();
-        pH->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-        pH->mpNotePad->close();
-        pH->mpNotePad = nullptr;
-    }
-
-    for (TToolBar* pTB : hostToolBarMap) {
-        if (pTB) {
-            pTB->setAttribute(Qt::WA_DeleteOnClose);
-            pTB->deleteLater();
-        }
-    }
-
-    // close IRC client window if it is open.
-    if (pH->mpDlgIRC) {
-        pH->mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-        pH->mpDlgIRC->deleteLater();
-    }
-
+// This removes the Host (profile) from this class's QMainWindow and related
+// structures:
+void mudlet::closeHost(const QString& name)
+{
+    Host* pH = mHostManager.getHost(name);
     migrateDebugConsole(pH);
 
-    pH->mpConsole->close();
-
     mpTabBar->removeTab(name);
-    // PLACEMARKER: Host destruction (1) - from close button on tab bar
-    // Unfortunately the spaghetti nature of the code means that the profile
-    // is also (maybe) saved (or not) in the TConsole::close() call prior to
-    // here but because that is optional we cannot only force a "save"
-    // operation in the profile preferences dialog for the Host specific
-    // details BEFORE the save (so any changes make it into the save) -
-    // instead we just have to accept that any profile changes will not be
-    // saved if the preferences dialog is not closed before the profile is...
+    // PLACEMARKER: Host destruction (1) - from all sources
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
-    mHostManager.deleteHost(pH->getName());
+    // This is what kills the Host instance:
+    mHostManager.deleteHost(name);
     emit signal_adjustAccessibleNames();
     updateMultiViewControls();
 }
@@ -1571,7 +1517,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     const int x = pH->mpConsole->width();
     const int y = pH->mpConsole->height();
-    QSize const s = QSize(x, y);
+    const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     updateDiscordNamedIcon();
     QApplication::sendEvent(pH->mpConsole, &event);
@@ -1714,7 +1660,7 @@ bool mudlet::saveWindowLayout()
         // revert update markers to ready objects for saving.
         commitLayoutUpdates();
 
-        QByteArray const layoutData = saveState();
+        const QByteArray layoutData = saveState();
         QDataStream ofs(&layoutFile);
         if (scmRunTimeQtVersion >= QVersionNumber(5, 13, 0)) {
             ofs.setVersion(scmQDataStreamFormat_5_12);
@@ -1788,7 +1734,7 @@ void mudlet::hideEvent(QHideEvent* event)
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
-    QImage const image(imageLocation);
+    const QImage image(imageLocation);
 
     if (image.isNull()) {
         return {};
@@ -1801,34 +1747,53 @@ Host* mudlet::getActiveHost()
 {
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
         return mpCurrentActiveHost;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
+// Received when the OS/DE/WM tells Mudlet to close (or we force the close
+// ourselves):
 void mudlet::closeEvent(QCloseEvent* event)
 {
-    QVector<QString> closingHosts;
+    qDebug() << "mudlet::closeEvent(...) INFO - called!";
 
+    QStringList hostsToDestroy;
+    bool abortClose = false;
+    // Due to the way that Hosts are stored we cannot do a closeHost(hostName)
+    // within the following loop as it fatally messes with what mHostManager
+    // contains - this is STL iterator stuff!
     for (auto pHost : mHostManager) {
-        const auto console = pHost->mpConsole;
-        if (!console) {
+        if (pHost->requestClose()) {
+            // If we get here then the user has agreed to close it and the
+            // profile has been saved - if required - or both have happened
+            // automatically - and the main console has been told to close:
+
+            hostsToDestroy.append(pHost->getName());
             continue;
         }
-        if (!console->close()) {
-            // close out any profiles that we have agreed to close so far
-            for (const auto& hostName : qAsConst(closingHosts)) {
-                closeHost(hostName);
-            }
 
-            event->ignore();
-            return;
-        } else {
-            console->mUserAgreedToCloseConsole = true;
-            closingHosts.append(pHost->getName());
-        }
+        // This profile is not to be closed or the user has cancelled the close,
+        // in either case the application close cannot proceed - so give up,
+        // but we cannot just ignore() the event and return as there may be
+        // previously closed profiles to clean up:
+        abortClose = true;
+        // Stop the iteration
+        break;
     }
 
+    // Clean up the profiles that are being closed
+    for (auto const& hostName : hostsToDestroy) {
+        closeHost(hostName);
+    }
+
+    // Now we bail out if the close is cancelled:
+    if (abortClose) {
+        event->ignore();
+        return;
+    }
+
+    // Since we are here the close is to be completed:
     writeSettings();
 
     goingDown();
@@ -1837,18 +1802,8 @@ void mudlet::closeEvent(QCloseEvent* event)
         smpDebugArea->close();
     }
 
-    for (auto pHost : mHostManager) {
-        pHost->close();
-    }
-
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
-
-    for (auto pHost : mHostManager) {
-        if (pHost->currentlySavingProfile()) {
-            pHost->waitForProfileSave();
-        }
-    }
 
     // pass the event on so dblsqd can perform an update
     // if automatic updates have been disabled
@@ -1858,50 +1813,10 @@ void mudlet::closeEvent(QCloseEvent* event)
 void mudlet::forceClose()
 {
     for (auto pHost : mHostManager) {
-        auto console = pHost->mpConsole;
-        if (!console) {
-            continue;
-        }
-        pHost->saveProfile();
-        console->mUserAgreedToCloseConsole = true;
-
-        if (pHost->mSslTsl) {
-            pHost->mTelnet.abortConnection();
-        } else {
-            pHost->mTelnet.disconnectIt();
-        }
-
-        // close script-editor
-        if (pHost->mpEditorDialog) {
-            pHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-            pHost->mpEditorDialog->close();
-        }
-
-        if (pHost->mpNotePad) {
-            pHost->mpNotePad->save();
-            pHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-            pHost->mpNotePad->close();
-            pHost->mpNotePad = nullptr;
-        }
-
-        if (pHost->mpDlgIRC) {
-            pHost->mpDlgIRC->close();
-        }
-
-        console->close();
+        pHost->forceClose();
     }
 
-    // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
-    hide();
-
-    for (auto pHost : mHostManager) {
-        if (pHost->currentlySavingProfile()) {
-            pHost->waitForProfileSave();
-        }
-    }
-
-    writeSettings();
-
+    // This will fire the closeEvent(...)
     close();
 }
 
@@ -1920,7 +1835,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mEnableFullScreenMode = settings.value(qsl("enableFullScreenMode"), QVariant(false)).toBool();
     } else {
         // We do not have a QSettings value stored so check for the sentinel file:
-        QFile const file_use_smallscreen(getMudletPath(mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
+        const QFile file_use_smallscreen(getMudletPath(mainDataItemPath, qsl("mudlet_option_use_smallscreen")));
         mEnableFullScreenMode = file_use_smallscreen.exists();
     }
 
@@ -1947,7 +1862,7 @@ void mudlet::readEarlySettings(const QSettings& settings)
 void mudlet::readLateSettings(const QSettings& settings)
 {
     const QPoint pos = settings.value(qsl("pos"), QPoint(0, 0)).toPoint();
-    QSize const size = settings.value(qsl("size"), QSize(750, 550)).toSize();
+    const QSize size = settings.value(qsl("size"), QSize(750, 550)).toSize();
     // A sensible default has already been set up according to whether we are on
     // a netbook or not before this gets called so only change if there is a
     // setting stored:
@@ -3468,7 +3383,7 @@ bool mudlet::loadLuaFunctionList()
         return false;
     }
 
-    QJsonObject const json_obj = json_doc.object();
+    const QJsonObject json_obj = json_doc.object();
 
     if (json_obj.isEmpty()) {
         return false;
@@ -3882,7 +3797,7 @@ void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPrior
 
 QStringList mudlet::getAvailableFonts()
 {
-    QFontDatabase const database;
+    const QFontDatabase database;
 
     return database.families(QFontDatabase::Any);
 }
@@ -3906,7 +3821,7 @@ void mudlet::setEnableFullScreenMode(const bool state)
         QSaveFile file(filePath);
         if (state) {
             file.open(QIODevice::WriteOnly | QIODevice::Text);
-            QTextStream const out(&file);
+            const QTextStream out(&file);
             Q_UNUSED(out);
             if (!file.commit()) {
                 qDebug() << "mudlet::setEnableFullScreenMode: error saving fullscreen state: " << file.errorString();
@@ -4633,7 +4548,7 @@ void mudlet::setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request
     request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
 #if !defined(QT_NO_SSL)
     if (url.scheme() == qsl("https")) {
-        QSslConfiguration const config(QSslConfiguration::defaultConfiguration());
+        const QSslConfiguration config(QSslConfiguration::defaultConfiguration());
         request.setSslConfiguration(config);
     }
 #endif
@@ -4721,7 +4636,7 @@ void mudlet::activateProfile(Host* pHost)
     // Tell the new profile's main window that it might be resize via a Qt event:
     const int x = mpCurrentActiveHost->mpConsole->width();
     const int y = mpCurrentActiveHost->mpConsole->height();
-    QSize const s = QSize(x, y);
+    const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
 
@@ -4929,7 +4844,7 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
             return QImage(eggFileName);
         } else {
             // For the zeroth case just rotate the picture 180 degrees:
-            QImage const original(releaseVersion
+            const QImage original(releaseVersion
                                     ? qsl(":/splash/Mudlet_splashscreen_main.png")
                                     : testVersion ? qsl(":/splash/Mudlet_splashscreen_ptb.png")
                                                                      : qsl(":/splash/Mudlet_splashscreen_development.png"));
@@ -4944,4 +4859,15 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 #else
     return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
 #endif // INCLUDE_VARIABLE_SPLASH_SCREEN
+}
+
+// The Lua interpreter cannot call mudlet::forceClose() directly as the latter
+// will destroy the former before a direct call has completed which has bad
+// effects (like the Lua API resetProfile() once did). Instead arrange for it
+// to be done on the next Qt event loop iteration:
+void mudlet::armForceClose()
+{
+    QTimer::singleShot(0, this, [this]() {
+        forceClose();
+    });
 }

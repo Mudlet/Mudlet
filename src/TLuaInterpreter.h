@@ -26,6 +26,7 @@
  ***************************************************************************/
 
 #include "TMap.h"
+#include "TMediaData.h"
 #include "TTextCodec.h"
 #include "TTrigger.h"
 #include "utils.h"
@@ -451,6 +452,8 @@ public:
     static int loadSoundFile(lua_State*);
     static int playMusicFile(lua_State*);
     static int playSoundFile(lua_State*);
+    static int getPlayingMusic(lua_State*);
+    static int getPlayingSounds(lua_State*);
     static int stopMusic(lua_State*);
     static int stopSounds(lua_State*);
     static int purgeMediaCache(lua_State*);
@@ -741,6 +744,11 @@ private:
     static int playMusicFileAsTableArgument(lua_State*);
     static int playSoundFileAsOrderedArguments(lua_State*);
     static int playSoundFileAsTableArgument(lua_State*);
+    static void processPlayingMediaTable(lua_State*, TMediaData&);
+    static int getPlayingMusicAsOrderedArguments(lua_State*);
+    static int getPlayingMusicAsTableArgument(lua_State*);
+    static int getPlayingSoundsAsOrderedArguments(lua_State*);
+    static int getPlayingSoundsAsTableArgument(lua_State*);
     static int stopMusicAsOrderedArguments(lua_State*);
     static int stopMusicAsTableArgument(lua_State*);
     static int stopSoundsAsOrderedArguments(lua_State*);
