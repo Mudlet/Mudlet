@@ -1,9 +1,9 @@
 const {danger, fail, message, warn} = require('danger');
-const SOURCE_REGEX = /.*\.(cpp|c|h|lua)$/i
-const TITLE_REGEX = /^(fix|improve|add|infra)/i
-const touched_files = [...danger.git.created_files, ...danger.git.modified_files]
-const sourcefiles = touched_files.filter(item => item.match(SOURCE_REGEX))
-const pr_title = danger.github.pr.title
+const SOURCE_REGEX = /.*\.(cpp|c|h|lua)$/i;
+const TITLE_REGEX = /^(fix|improve|add|infra)/i;
+const touched_files = [...danger.git.created_files, ...danger.git.modified_files];
+const sourcefiles = touched_files.filter(item => item.match(SOURCE_REGEX));
+const pr_title = danger.github.pr.title;
 
 // Checks the title to make sure it matches expectations
 const title_type = pr_title.match(TITLE_REGEX)
