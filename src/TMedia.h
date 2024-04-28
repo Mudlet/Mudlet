@@ -28,6 +28,7 @@
 #include "TEvent.h"
 #include "mudlet.h"
 #include "TMediaData.h"
+#include "TMediaPlaylist.h"
 
 #include "pre_guard.h"
 #include <QAudioOutput>
@@ -50,6 +51,7 @@ public:
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
     : mpHost(pHost)
     , mMediaData(mediaData)
+    , mPlaylist(new TMediaPlaylist())
     , mMediaPlayer(new QMediaPlayer(pHost))
     , initialized(true)
     {
@@ -77,11 +79,21 @@ public:
         return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
 #endif
     }
+    TMediaPlaylist* playlist() const {
+        return mPlaylist;
+    }
+    void setPlaylist(TMediaPlaylist* playlist) {
+        if (mPlaylist != playlist) {
+            delete mPlaylist;
+            mPlaylist = playlist;
+        }
+    }
 
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer = nullptr;
+    TMediaPlaylist* mPlaylist;
     bool initialized = false;
 };
 
