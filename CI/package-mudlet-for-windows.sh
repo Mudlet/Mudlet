@@ -61,6 +61,7 @@ else
   exit 2
 fi
 
+BUILD_CONFIG="release"
 MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
