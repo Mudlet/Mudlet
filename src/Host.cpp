@@ -26,12 +26,14 @@
 #include "Host.h"
 
 
+#include "dlgIRC.h"
 #include "dlgMapper.h"
 #include "dlgModuleManager.h"
 #include "dlgNotepad.h"
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
-#include "dlgIRC.h"
+#include "GifTracker.h"
+#include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
@@ -49,7 +51,6 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
-#include "GifTracker.h"
 #include "XMLimport.h"
 
 #include "pre_guard.h"
