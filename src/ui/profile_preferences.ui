@@ -833,23 +833,24 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="3" column="0" colspan="5">
            <widget class="QGroupBox" name="groupBox_fontSamples">
+            <property name="toolTip">
+             <string>&lt;p&gt;Mudlet can display text in multiple &quot;weights&quot; (&quot;Normal&quot;, &quot;Bold&quot;, &quot;Faint&quot; and &quot;Faint+Bold&quot;) &lt;u&gt;provided that the font chosen actually has those multiple weights&lt;/u&gt;. This can be checked by comparing the results of something typed into the &quot;Normal&quot; box and seeing how it is presented for the others.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The Game Server can control the weight that is used for any text by combinations of the ANSI &quot;Set Graphics Redition&quot; codes &lt;tt&gt;1&lt;/tt&gt; (bold) and &lt;tt&gt;2&lt;/tt&gt; (faint), however the bold code is also used in some Games to select the second eight of the sixteeen colors in one type of &quot;16-color&quot; mode and if that is the case (which can now be controlled by the checkbox option &lt;tt&gt;BOLD is Bright&lt;/tt&gt;  in the &quot;Color view&quot; tab) it will interfere with using the bold option to make text &lt;b&gt;bold&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</string>
+            </property>
             <property name="title">
              <string>Font sample:</string>
             </property>
             <layout class="QGridLayout" name="gridLayout_fontSamples">
-             <property name="leftMargin">
-              <number>0</number>
-             </property>
-             <property name="topMargin">
-              <number>0</number>
-             </property>
-             <property name="rightMargin">
-              <number>0</number>
-             </property>
-             <property name="bottomMargin">
-              <number>0</number>
-             </property>
-             <item row="0" column="0">
+             <item row="0" column="0" colspan="4">
+              <widget class="QCheckBox" name="checkBox_toggleExtraFontSamplesVisibilty">
+               <property name="text">
+                <string>Show samples in all the weights that Mudlet might use</string>
+               </property>
+               <property name="checked">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
               <widget class="QLabel" name="label_fontSample_normal">
                <property name="text">
                 <string>Normal:</string>
@@ -859,7 +860,7 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="1">
+             <item row="1" column="1">
               <widget class="QLineEdit" name="lineEdit_fontSample_normal">
                <property name="font">
                 <font>
@@ -871,14 +872,14 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="2">
+             <item row="1" column="2">
               <widget class="QLabel" name="label_fontSample_bold">
                <property name="text">
                 <string>Bold:</string>
                </property>
               </widget>
              </item>
-             <item row="0" column="3">
+             <item row="1" column="3">
               <widget class="QLineEdit" name="lineEdit_fontSample_bold">
                <property name="font">
                 <font>
@@ -902,14 +903,14 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="0">
+             <item row="2" column="0">
               <widget class="QLabel" name="label_fontSample_faint">
                <property name="text">
                 <string>Faint:</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="1">
+             <item row="2" column="1">
               <widget class="QLineEdit" name="lineEdit_fontSample_faint">
                <property name="font">
                 <font>
@@ -933,14 +934,14 @@ you can use it but there could be issues with aligning columns of text</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="2">
+             <item row="2" column="2">
               <widget class="QLabel" name="label_fontSample_boldAndFaint">
                <property name="text">
                 <string>Bold + Faint:</string>
                </property>
               </widget>
              </item>
-             <item row="1" column="3">
+             <item row="2" column="3">
               <widget class="QLineEdit" name="lineEdit_fontSample_boldAndFaint">
                <property name="font">
                 <font>
@@ -2129,7 +2130,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <bool>false</bool>
             </property>
             <property name="text">
-             <string>Alterate Font ('11' to '19')</string>
+             <string>Alternate Font ('11' to '19')</string>
             </property>
            </widget>
           </item>
@@ -2142,7 +2143,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string extracomment="The text 'BOLD is Bright' mentioned here should be the same as the text appearing for the 'checkbox_boldIsBright' control.">&lt;p&gt;Basic eight foreground colors using '&lt;tt&gt;3?&lt;/tt&gt;' where ? is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;7&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;&lt;i&gt;If only this box for &lt;b&gt;foreground&lt;/b&gt; colors is checked &lt;u&gt;and so is the &lt;tt&gt;Bold&lt;/tt&gt; one&lt;/u&gt; then it is likely that the Game Server is using the latter to indicated that it wants Mudlet to operate in the &quot;BOLD is Bright&quot; mode where that attribute is used to select a second set of eight colors (the right column of colours in the box above) and you should activate that option in the box above.&lt;/i&gt;&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Basic 8 foreground colors</string>
+             <string>Basic 8 foreground colors ('30' to '37')</string>
             </property>
            </widget>
           </item>
@@ -2155,7 +2156,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>&lt;p&gt;Basic eight background colors using '&lt;tt&gt;4?&lt;/tt&gt;' where ? is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;7&lt;/tt&gt;.&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Basic 8 background colors</string>
+             <string>Basic 8 background colors ('40' to '47')</string>
             </property>
            </widget>
           </item>
@@ -2168,7 +2169,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>&lt;p&gt;Second eight of sixteen foreground colors using '&lt;tt&gt;9?&lt;/tt&gt;' where ? is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;7&lt;/tt&gt;.&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Additional 8 foreground colors for 16 in total</string>
+             <string>Additional 8 foreground colors for 16 in total ('90' to '97')</string>
             </property>
            </widget>
           </item>
@@ -2181,7 +2182,7 @@ you can use it but there could be issues with aligning columns of text</string>
              <string>&lt;p&gt;Second eight of sixteen background colors using '&lt;tt&gt;10?&lt;/tt&gt;' where ? is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;7&lt;/tt&gt;.&lt;/p&gt;</string>
             </property>
             <property name="text">
-             <string>Additional 8 background colors for 16 in total</string>
+             <string>Additional 8 background colors for 16 in total ('100' to '107')</string>
             </property>
            </widget>
           </item>
@@ -2239,9 +2240,6 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="7" column="0" colspan="2" alignment="Qt::AlignHCenter">
            <widget class="QToolButton" name="toolButton_resetSgrCodeDetection">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
             <property name="text">
              <string>Reset detection</string>
             </property>
@@ -4534,6 +4532,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>fontComboBox</tabstop>
   <tabstop>fontSize</tabstop>
   <tabstop>checkBox_antiAlias</tabstop>
+  <tabstop>checkBox_toggleExtraFontSamplesVisibilty</tabstop>
   <tabstop>lineEdit_fontSample_normal</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
@@ -4672,17 +4671,17 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>timeEdit_timerDebugOutputMinimumInterval</tabstop>
   <tabstop>doubleSpinBox_networkPacketTimeout</tabstop>
   <tabstop>checkBox_bold</tabstop>
-  <tabstop>checkBox_faint</tabstop>
   <tabstop>checkBox_blinking</tabstop>
-  <tabstop>checkBox_concealed</tabstop>
   <tabstop>checkBox_altFont</tabstop>
   <tabstop>checkBox_basic8FgColors</tabstop>
-  <tabstop>checkBox_basic8BgColors</tabstop>
   <tabstop>checkBox_additional8FgColors</tabstop>
-  <tabstop>checkBox_additional8BgColors</tabstop>
   <tabstop>checkBox_256FgColors</tabstop>
-  <tabstop>checkBox_256BgColors</tabstop>
   <tabstop>checkBox_16MFgColors</tabstop>
+  <tabstop>checkBox_faint</tabstop>
+  <tabstop>checkBox_concealed</tabstop>
+  <tabstop>checkBox_basic8BgColors</tabstop>
+  <tabstop>checkBox_additional8BgColors</tabstop>
+  <tabstop>checkBox_256BgColors</tabstop>
   <tabstop>checkBox_16MBgColors</tabstop>
  </tabstops>
  <resources>

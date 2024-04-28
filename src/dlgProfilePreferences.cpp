@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2023 by Stephen Lyons             *
+ *   Copyright (C) 2014, 2016-2018, 2020-2024 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -348,6 +348,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     groupBox_sgrCodesSeen->setChecked(false);
     slot_toggleSgrCodesSeenVisibilty(false);
     connect(groupBox_sgrCodesSeen, &QGroupBox::toggled, this, &dlgProfilePreferences::slot_toggleSgrCodesSeenVisibilty);
+    slot_toggleExtraFontSamplesVisibilty(false);
+    connect(checkBox_toggleExtraFontSamplesVisibilty, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleExtraFontSamplesVisibilty);
 
     setupPasswordsMigration();
 
@@ -4597,6 +4599,17 @@ void dlgProfilePreferences::slot_toggleSgrCodesSeenVisibilty(const bool statusCh
     checkBox_blinking->setVisible(statusCheckBoxesVisible);
     checkBox_concealed->setVisible(statusCheckBoxesVisible);
     checkBox_faint->setVisible(statusCheckBoxesVisible);
+    toolButton_resetSgrCodeDetection->setVisible(statusCheckBoxesVisible);
+}
+
+void dlgProfilePreferences::slot_toggleExtraFontSamplesVisibilty(const bool extraFontSamplesVisible)
+{
+    label_fontSample_bold->setVisible(extraFontSamplesVisible);
+    lineEdit_fontSample_bold->setVisible(extraFontSamplesVisible);
+    label_fontSample_faint->setVisible(extraFontSamplesVisible);
+    lineEdit_fontSample_faint->setVisible(extraFontSamplesVisible);
+    label_fontSample_boldAndFaint->setVisible(extraFontSamplesVisible);
+    lineEdit_fontSample_boldAndFaint->setVisible(extraFontSamplesVisible);
 }
 
 void dlgProfilePreferences::slot_updateSgrCodeFlags()
