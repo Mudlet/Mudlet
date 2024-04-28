@@ -1,5 +1,5 @@
 #!/bin/bash
-cd $GITHUB_WORKSPACE
+cd "$GITHUB_WORKSPACE" || exit
 
 PublicTestBuild=false
 # Check if GITHUB_REPO_TAG is "false"
@@ -9,24 +9,24 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
   # Check if this is a scheduled build
   if [[ "$GITHUB_SCHEDULED_BUILD" == "true" ]]; then
     echo "=== GITHUB_SCHEDULED_BUILD is TRUE, this is a PTB ==="
-    export MUDLET_VERSION_BUILD="-ptb"
+    MUDLET_VERSION_BUILD="-ptb"
     PublicTestBuild=true
   else
-    export MUDLET_VERSION_BUILD="-testing"
+    MUDLET_VERSION_BUILD="-testing"
   fi
 
   # Check if this is a pull request
   if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
     # Use the specific commit SHA from the pull request head, since GitHub Actions merges the PR
-    export BUILD_COMMIT=$(git rev-parse --short "$GITHUB_PULL_REQUEST_HEAD_SHA")
-    export MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-PR$GITHUB_PULL_REQUEST_NUMBER"
+    BUILD_COMMIT=$(git rev-parse --short "$GITHUB_PULL_REQUEST_HEAD_SHA")
+    MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-PR$GITHUB_PULL_REQUEST_NUMBER"
   else
-    export BUILD_COMMIT=$(git rev-parse --short HEAD)
+    BUILD_COMMIT=$(git rev-parse --short HEAD)
 
     if [[ "$MUDLET_VERSION_BUILD" == "-ptb" ]]; then
       # Get current date in YYYY-MM-DD format
       DATE=$(date +%F)
-      export MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-$DATE"
+      MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-$DATE"
     fi
   fi
 fi
@@ -41,7 +41,7 @@ VersionRegex='= {1}(.+)$'
 
 # Use Bash regex matching to extract version
 if [[ $VersionLine =~ $VersionRegex ]]; then
-  export VERSION="${BASH_REMATCH[1]}"
+  VERSION="${BASH_REMATCH[1]}"
 fi
 
 # Check if MUDLET_VERSION_BUILD is empty and print accordingly
@@ -58,7 +58,7 @@ if [[ "$GITHUB_REPO_NAME" != "Mudlet/Mudlet" ]]; then
   exit 0
 fi
 
-cd "$GITHUB_WORKSPACE/package-MINGW64-release"
+cd "$GITHUB_WORKSPACE/package-MINGW64-release" || exit
 
 moveToUploadDir() {
   local uploadFilename=$1
@@ -80,7 +80,7 @@ moveToUploadDir() {
 
 
 # Remove specific file types from the directory
-rm *.cpp *.o
+rm ./*.cpp ./*.o
 
 
 # Check if GITHUB_REPO_TAG is "false" and PublicTestBuild is not true
@@ -125,7 +125,7 @@ else
 
   echo "=== Cloning installer project ==="
   git clone https://github.com/Mudlet/installers.git "$GITHUB_WORKSPACE/installers"
-  cd "$GITHUB_WORKSPACE/installers/windows"
+  cd "$GITHUB_WORKSPACE/installers/windows" || exit
 
   echo "=== Installing Squirrel for Windows ==="
   nuget install squirrel.windows -ExcludeVersion
@@ -218,7 +218,7 @@ else
     #scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@mudlet.org:${DEPLOY_PATH}"
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-installer.exe"
 
-    SHA256SUM=$(shasum -a 256 $setupExePath | awk '{print $1}')
+    SHA256SUM=$(shasum -a 256 "$setupExePath" | awk '{print $1}')
 
     # file_cat=3 asuming Windows is the 3rd item in WP-Download-Manager category
     curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
@@ -242,9 +242,9 @@ else
       curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -o "$DownloadedFeed"
     
       echo "=== Generating a changelog ==="
-      cd "$GITHUB_WORKSPACE/CI"
+      cd "$GITHUB_WORKSPACE/CI" || exit
       Changelog=$(lua "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
-      cd -
+      cd - || exit
       echo "$Changelog"
     
       echo "=== Creating release in Dblsqd ==="
@@ -253,6 +253,7 @@ else
       echo "=== Registering release with Dblsqd ==="
      echo "dblsqd push -a mudlet -c public-test-build -r '${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}' -s mudlet --type 'standalone' --attach win:x86 '${DEPLOY_URL}'"
    fi
+  fi
 fi
 
 if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
