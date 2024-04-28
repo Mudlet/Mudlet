@@ -38,6 +38,7 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
+#include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
 #include "dlgComposer.h"
 #include "dlgMapper.h"
@@ -184,6 +185,17 @@ cTelnet::~cTelnet()
         mpComposer->deleteLater();
     }
     socket.deleteLater();
+}
+
+void cTelnet::cancelLoginTimers()
+{
+    if (mTimerLogin) {
+        mTimerLogin->stop();
+    }
+
+    if (mTimerPass) {
+        mTimerPass->stop();
+    }
 }
 
 // This configures two out of three of the QTextCodec used by this profile:
@@ -497,7 +509,7 @@ void cTelnet::slot_socketDisconnected()
     mNeedDecompression = false;
     reset();
 
-    if (!mpHost->mIsGoingDown) {
+    if (!mpHost->isClosingDown()) {
         postMessage(spacer);
 
 #if !defined(QT_NO_SSL)
@@ -2850,6 +2862,10 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
 
     if (mpHost->mAcceptServerMedia && packageMessage.startsWith(qsl("Client.Media"), Qt::CaseInsensitive)) {
         mpHost->mpMedia->parseGMCP(packageMessage, data);
+    }
+
+    if (packageMessage.startsWith(qsl("Char.Login"), Qt::CaseInsensitive)) {
+        mpHost->mpAuth->handleAuthGMCP(packageMessage, data);
     }
 
     mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);

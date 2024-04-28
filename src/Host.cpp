@@ -236,13 +236,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSslIgnoreAll(false)
 , mUseProxy(false)
 , mProxyPort(0)
-, mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpClientVariables(new TClientVariables(this))
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
+, mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
 , mIsRemoteEchoingActive(false)
@@ -342,7 +342,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mGifTracker()
 , mHostID(id)
 , mHostName(hostname)
-, mIsClosingDown(false)
 , mLogin(login)
 , mPass(pass)
 , mPort(port)
@@ -364,7 +363,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
 {
-    TDebug::addHost(this);
+    TDebug::addHost(this, mHostName);
 
     // The "autolog" sentinel file controls whether logging the game's text as
     // plain text or HTML is immediately resumed on profile loading. Do not
@@ -477,11 +476,114 @@ Host::~Host()
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
-    mIsGoingDown = true;
-    mIsClosingDown = true;
     mErrorLogStream.flush();
     mErrorLogFile.close();
-    TDebug::removeHost(this);
+    // Since this is a destructor, it's risky to rely on member variables within the destructor itself.
+    // To avoid this, we can pass the profile name as an argument instead of accessing it
+    // directly as a member variable. This ensures the destructor doesn't depend on the 
+    // object's state being valid.
+
+    TDebug::removeHost(this, mHostName);
+}
+
+void Host::forceClose()
+{
+    if (!mpConsole) {
+        // The main console has gone away so we must already be dying
+        return;
+    }
+
+    mForcedClose = true;
+    postMessage(tr("[ ALERT ] - This profile will now save and close."));
+    // Ensure the above is displayed before proceeding...
+    qApp->processEvents();
+
+    // Because we have set the mForcedClose flag above a requestClose()
+    // afterwards WILL succeed
+}
+
+// Returns true if we are closing down
+bool Host::requestClose()
+{
+    if (!mpConsole) {
+        // The main console has gone away so we must already be dying
+        return true;
+    }
+
+    // This call ends up at the (void) TMainConsole::closeEvent(...) and causes
+    // the close() method called here to return a true if the event was
+    // accepted:
+    if (!mpConsole->close()) {
+        // Nope the user doesn't want this to close - and it won't have set its
+        // mEnableClose flag:
+        return false;
+    }
+
+    // The above will have initiated a save of the profile (and its map) if it
+    // got a true returned from the TMainConsole::close() call.
+
+    // Get rid of any dialogs we might have open:
+    closeChildren();
+
+    // This time this will succeed as mEnableClose is set:
+    mpConsole->close();
+    return true;
+}
+
+void Host::closeChildren()
+{
+    mIsClosingDown = true;
+    const auto hostToolBarMap = getActionUnit()->getToolBarList();
+    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+    if (mSslTsl) {
+        mTelnet.abortConnection();
+    } else {
+        mTelnet.disconnectIt();
+    }
+
+    stopAllTriggers();
+
+    if (mpEditorDialog) {
+        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+        mpEditorDialog->close();
+        mpEditorDialog = nullptr;
+    }
+
+    for (const QString& consoleName : mpConsole->mSubConsoleMap.keys()) {
+        // Only user-windows will be in this map:
+        auto pD = mpConsole->mDockWidgetMap.value(consoleName);
+        // All User TConsole's will be in this map:
+        auto pC = mpConsole->mSubConsoleMap.value(consoleName);
+        if (pD) {
+            // This undocks the widget
+            mudlet::self()->removeDockWidget(pD);
+        }
+
+        // This will remove both what pD and pC point at from their respective
+        // QMaps:
+        pC->close();
+    }
+
+    if (mpNotePad) {
+        mpNotePad->save();
+        mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+        mpNotePad->close();
+        mpNotePad = nullptr;
+    }
+
+    for (TToolBar* pTB : hostToolBarMap) {
+        if (pTB) {
+            pTB->setAttribute(Qt::WA_DeleteOnClose);
+            pTB->deleteLater();
+        }
+    }
+
+    // close IRC client window if it is open.
+    if (mpDlgIRC) {
+        mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
+        mpDlgIRC->deleteLater();
+        mpDlgIRC = nullptr;
+    }
 }
 
 void Host::loadMap()
@@ -827,7 +929,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     if (mIsProfileLoadingSequence) {
-        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
+        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
         return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
@@ -842,8 +944,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
         // This is likely to be the save as the profile is closed
-        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments "
-                                        "so assuming it is a end of session save and the TCommandLines' histories need saving...";
+        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '"
+                                     << mHostName
+                                     << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
 
@@ -1673,16 +1776,6 @@ void Host::disableTrigger(const QString& name)
 bool Host::killTrigger(const QString& name)
 {
     return mTriggerUnit.killTrigger(name);
-}
-
-void Host::closingDown()
-{
-    mIsClosingDown = true;
-}
-
-bool Host::isClosingDown()
-{
-    return mIsClosingDown;
 }
 
 std::pair<bool, QString> Host::installPackage(const QString& fileName, int module)
@@ -3203,40 +3296,6 @@ void Host::hideMudletsVariables()
     // unhide user's saved variables
     for (const auto& variable : qAsConst(unhideSavedVars)) {
         varUnit->removeHidden(variable);
-    }
-}
-
-void Host::close()
-{
-    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    if (mSslTsl) {
-        mTelnet.abortConnection();
-    } else {
-        mTelnet.disconnectIt();
-    }
-
-    // close script editor
-    if (mpEditorDialog) {
-        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-        mpEditorDialog->close();
-        mpEditorDialog = nullptr;
-    }
-    // close notepad
-    if (mpNotePad) {
-        mpNotePad->save();
-        mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-        mpNotePad->close();
-        mpNotePad = nullptr;
-    }
-    // close IRC client window
-    if (mpDlgIRC) {
-        mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-        mpDlgIRC->deleteLater();
-        mpDlgIRC = nullptr;
-    }
-    if (mpConsole) {
-        mpConsole->close();
-        mpConsole = nullptr;
     }
 }
 

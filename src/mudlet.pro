@@ -623,6 +623,7 @@ SOURCES += \
     FontManager.cpp \
     FileOpenHandler.cpp \
     GifTracker.cpp \
+    GMCPAuthenticator.cpp \
     TrailingWhitespaceMarker.cpp \
     Host.cpp \
     HostManager.cpp \
@@ -669,6 +670,7 @@ SOURCES += \
     TMap.cpp \
     TMapLabel.cpp \
     TMedia.cpp \
+    TMediaPlaylist.cpp \
     TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
@@ -750,6 +752,7 @@ HEADERS += \
     exitstreewidget.h \
     FileOpenHandler.h \
     GifTracker.h \
+    GMCPAuthenticator.h \
     TrailingWhitespaceMarker.h \
     Host.h \
     HostManager.h \
@@ -797,6 +800,7 @@ HEADERS += \
     TMatchState.h \
     TMedia.h \
     TMediaData.h \
+    TMediaPlaylist.h \
     TMxpBRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
