@@ -4,6 +4,20 @@ if ($Env:GITHUB_REPO_NAME -ne "Mudlet/Mudlet") {
   exit 0
 }
 
+function MovetoUploadDir([String] $uploadFilename) {
+  Write-Output "=== Setting up upload directory ==="
+  $uploadDir = "$Env:GITHUB_WORKSPACE\upload"
+  if (-not $(Test-Path "$uploadDir")) {
+    New-Item "$uploadDir" -ItemType "directory"
+  }
+  
+  Write-Output "=== Moving files to upload directory ==="
+  Move-Item $Env:GITHUB_WORKSPACE\package-MINGW64-release\$uploadFilename $uploadDir
+  
+  echo "FOLDER_TO_UPLOAD=$uploadDir" | Out-File -Append -FilePath $Env:GITHUB_ENV
+  echo "UPLOAD_FILENAME=$uploadFilename" | Out-File -Append -FilePath $Env:GITHUB_ENV
+}
+
 cd "$Env:GITHUB_WORKSPACE\package-MINGW64-release"
 
 Remove-Item * -include *.cpp, *.o
@@ -16,19 +30,8 @@ if ($Env:GITHUB_REPO_TAG -eq "false" -and -Not $Script:PublicTestBuild) {
   cmd /c 7z a Mudlet-%VERSION%%MUDLET_VERSION_BUILD%-%BUILD_COMMIT%-windows.zip "%GITHUB_WORKSPACE%\package-MINGW64-release\*"
 
   $uploadFilename = "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.zip"
+  MoveToUploadDir($uploadFileName)
 
-  Write-Output "=== Setting up upload directory ==="
-  $uploadDir = "$Env:GITHUB_WORKSPACE\upload"
-
-  if (-not $(Test-Path "$uploadDir")) {
-    New-Item "$uploadDir" -ItemType "directory"
-  }
-
-  Write-Output "=== Moving files to upload directory ==="
-  Move-Item $Env:GITHUB_WORKSPACE\package-MINGW64-release\$uploadFilename $uploadDir
-  
-  echo "FOLDER_TO_UPLOAD=$uploadDir" | Out-File -Append -FilePath $Env:GITHUB_ENV
-  echo "UPLOAD_FILENAME=$uploadFilename" | Out-File -Append -FilePath $Env:GITHUB_ENV
 } else {
   if ($Script:PublicTestBuild) {
 
@@ -117,63 +120,69 @@ if ($Env:GITHUB_REPO_TAG -eq "false" -and -Not $Script:PublicTestBuild) {
 
   if ($Script:PublicTestBuild) {
     Write-Output "=== Uploading public test build to make.mudlet.org ==="
-    Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.exe";
-    Set-Variable -Name "inFile" -Value "${GITHUB_WORKSPACE}\package-MINGW64-release\Setup.exe";
-    Set-Variable -Name "outFile" -Value "upload-location.txt";
-    Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
+    #Set-Variable -Name "uri" -Value "https://make.mudlet.org/snapshots/Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.exe";
+    #Set-Variable -Name "inFile" -Value "${GITHUB_WORKSPACE}\package-MINGW64-release\Setup.exe";
+    #Set-Variable -Name "outFile" -Value "upload-location.txt";
+    #Invoke-RestMethod -Uri $uri -Method PUT -InFile $inFile -OutFile $outFile;
 
-    $DEPLOY_URL = Get-Content -Path $outFile -Raw
-    $DEPLOY_URL = $DEPLOY_URL.Trim()
-    echo "Deployed Mudlet to '$DEPLOY_URL'"
-  } #else {
+    #$DEPLOY_URL = Get-Content -Path $outFile -Raw
+    #$DEPLOY_URL = $DEPLOY_URL.Trim()
+    #echo "Deployed Mudlet to '$DEPLOY_URL'"
+    
+    $uploadFilename = "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.exe"
+    MoveToUploadDir($uploadFileName)
+    
+  } else {
     # get winscp .NET dll for uploads
     # activate higher TLS version. Seems PS only uses 1.0 by default
     # credit: https://stackoverflow.com/questions/41618766/powershell-invoke-webrequest-fails-with-ssl-tls-secure-channel/48030563#48030563
     
-    
-    #[Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
-    #(New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
-    #Add-Type -AssemblyName System.IO.Compression.FileSystem
-    #[System.IO.Compression.ZipFile]::ExtractToDirectory("$Env:GITHUB_WORKSPACE\Winscp-automation.zip", "$Env:GITHUB_WORKSPACE\Winscp-automation\")
-    #Add-Type -Path '$Env:GITHUB_WORKSPACE\Winscp-automation\WinSCPnet.dll'
+    [Net.ServicePointManager]::SecurityProtocol = [System.Security.Authentication.SslProtocols] "tls, tls11, tls12"
+    (New-Object System.Net.WebClient).DownloadFile("https://downloads.sourceforge.net/project/winscp/WinSCP/5.13.4/WinSCP-5.13.4-Automation.zip?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fwinscp%2Ffiles%2FWinSCP%2F5.13.4%2FWinSCP-5.13.4-Automation.zip%2Fdownload&ts=1538514946", "C:\src\Winscp-automation.zip")
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory("$Env:GITHUB_WORKSPACE\Winscp-automation.zip", "$Env:GITHUB_WORKSPACE\Winscp-automation\")
+    Add-Type -Path '$Env:GITHUB_WORKSPACE\Winscp-automation\WinSCPnet.dll'
 
     # do the upload
-    #$sessionOptions = New-Object WinSCP.SessionOptions -Property @{
-    #  # sftp://
-    #  Protocol = [WinSCP.Protocol]::Scp
-    #  HostName = "mudlet.org"
-    #  UserName = "vadi"
-    #  SshPrivateKeyPath = "$Env:GITHUB_WORKSPACE\CI\mudlet-deploy-key-windows.ppk"
-    #  SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
-    #}
-    #$session = New-Object WinSCP.Session
-    #$fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
-    #$sessionOptions.SshHostKeyFingerprint = $fingerprint
+    $sessionOptions = New-Object WinSCP.SessionOptions -Property @{
+      # sftp://
+      Protocol = [WinSCP.Protocol]::Scp
+      HostName = "mudlet.org"
+      UserName = "vadi"
+      SshPrivateKeyPath = "$Env:GITHUB_WORKSPACE\CI\mudlet-deploy-key-windows.ppk"
+      SshPrivateKeyPassphrase = "${Env:DEPLOY_KEY_PASS}"
+    }
+    $session = New-Object WinSCP.Session
+    $fingerprint =  $session.ScanFingerprint($sessionOptions, "SHA-256")
+    $sessionOptions.SshHostKeyFingerprint = $fingerprint
     ## Connect
-    #Write-Output "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    #$session.Open($sessionOptions)
-    #$session.PutFiles("${Env:GITHUB_WORKSPACE}\src\release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
-    #$session.Close()
-    #$session.Dispose()
-    #$DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
-    #Set-Variable -Name "SHA256SUM" -Value (Get-FileHash -Path "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe" -Algorithm SHA256).Hash
-    #Invoke-RestMethod -Uri 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' `
-    #-Method POST `
-    #-Headers @{
-    #    "x-wp-download-token" = $Env:X_WP_DOWNLOAD_TOKEN
-    #} `
-    #-Body @{
-    #    "file_type" = "2"
-    #    "file_remote" = $Env:DEPLOY_URL
-    #    "file_name" = "Mudlet-$Env:VERSION (Windows)"
-    #    "file_des" = "sha256: $SHA256SUM"
-    #    "file_cat" = "0"
-    #    "file_permission" = "-1"
-    #    "output" = "json"
-    #    "do" = "Add File"
-    #}
+    Write-Output "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+    $session.Open($sessionOptions)
+    $session.PutFiles("${Env:GITHUB_WORKSPACE}\package-MINGW64-release\Setup.exe", "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe")
+    $session.Close()
+    $session.Dispose()
+    $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+    Set-Variable -Name "SHA256SUM" -Value (Get-FileHash -Path "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe" -Algorithm SHA256).Hash
+    Invoke-RestMethod -Uri 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' `
+    -Method POST `
+    -Headers @{
+        "x-wp-download-token" = $Env:X_WP_DOWNLOAD_TOKEN
+    } `
+    -Body @{
+        "file_type" = "2"
+        "file_remote" = $Env:DEPLOY_URL
+        "file_name" = "Mudlet-$Env:VERSION (Windows)"
+        "file_des" = "sha256: $SHA256SUM"
+        "file_cat" = "0"
+        "file_permission" = "-1"
+        "output" = "json"
+        "do" = "Add File"
+    }
     #Push-AppveyorArtifact "${Env:GITHUB_WORKSPACE}\src\release\Setup.exe" -DeploymentName "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe"
-  #}
+    
+    #$uploadFilename = "Mudlet-$env:VERSION$env:MUDLET_VERSION_BUILD-$env:BUILD_COMMIT-windows.exe"
+    #MoveToUploadDir($uploadFileName)
+  }
 
   Write-Output "=== Installing dblsqd-cli ==="
   npm install -g dblsqd-cli

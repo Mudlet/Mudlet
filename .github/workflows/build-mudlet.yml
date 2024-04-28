@@ -80,17 +80,18 @@ jobs:
         
     - name: (Windows) Deploy
       if: matrix.os == 'windows-2019'
-      shell: powershell
-      run: |
-        $Env:BUILD_CONFIG="release"
-        $Env:GITHUB_REPO_NAME = "${{ github.repository }}"
-        $tagged = ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-        $Env:GITHUB_REPO_TAG = if ($tagged -eq 'true') { 'true' } else { 'false' }
-        $scheduled = ${{ github.event_name == 'schedule' }}
-        $Env:GITHUB_SCHEDULED_BUILD = if ($scheduled -eq 'true') { 'true' } else { 'false' }
-        $Env:GITHUB_PULL_REQUEST_NUMBER = ${{ github.event.pull_request.number }}
-        $Env:GITHUB_PULL_REQUEST_HEAD_SHA = "${{ github.event.pull_request.head.sha }}"
-        & $Env:GITHUB_WORKSPACE\CI\deploy-mudlet-for-windows.ps1
+      shell: msys2 {0}
+      env:
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        WIN_SIGNING_PASS: ${{secrets.WIN_SIGNING_PASS}}
+        GITHUB_REPO_NAME: ${{ github.repository }}
+        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
 
     - name: (Linux/macOS) Install Qt
       uses: jurplel/install-qt-action@v3
