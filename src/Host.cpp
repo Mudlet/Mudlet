@@ -27,7 +27,6 @@
 
 
 #include "LuaInterface.h"
-#include "TClientVariables.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
