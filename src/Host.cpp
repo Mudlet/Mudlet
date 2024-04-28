@@ -27,15 +27,15 @@
 
 
 #include "LuaInterface.h"
+#include "TClientVariables.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
-#include "TMainConsole.h"
-#include "TCommandLine.h"
-#include "TClientVariables.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
