@@ -26,6 +26,12 @@
 #include "Host.h"
 
 
+#include "dlgMapper.h"
+#include "dlgModuleManager.h"
+#include "dlgNotepad.h"
+#include "dlgPackageManager.h"
+#include "dlgProfilePreferences.h"
+#include "dlgIRC.h"
 #include "LuaInterface.h"
 #include "mudlet.h"
 #include "TCommandLine.h"
@@ -45,12 +51,6 @@
 #include "VarUnit.h"
 #include "GifTracker.h"
 #include "XMLimport.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgNotepad.h"
-#include "dlgPackageManager.h"
-#include "dlgProfilePreferences.h"
-#include "dlgIRC.h"
 
 #include "pre_guard.h"
 #include <chrono>
