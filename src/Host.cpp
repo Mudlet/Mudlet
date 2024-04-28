@@ -27,6 +27,7 @@
 
 
 #include "LuaInterface.h"
+#include "mudlet.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
@@ -50,7 +51,6 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgIRC.h"
-#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <chrono>
