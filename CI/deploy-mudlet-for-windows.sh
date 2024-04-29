@@ -36,7 +36,7 @@ export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
 export BUILD_COMMIT="${BUILD_COMMIT,,}"
 
 # Extract version from the mudlet.pro file
-VersionLine=$(grep "Version =" "$GITHUB_WORKSPACE/src/mudlet.pro")
+VersionLine=$(grep "VERSION =" "$GITHUB_WORKSPACE/src/mudlet.pro")
 VersionRegex='= {1}(.+)$'
 
 # Use Bash regex matching to extract version
