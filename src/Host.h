@@ -213,8 +213,11 @@ public:
     bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void            setLargeAreaExitArrows(const bool);
 
-    void closingDown();
-    bool isClosingDown();
+    void            forceClose();
+    bool            isClosingDown() const { return mIsClosingDown; }
+    bool            isClosingForced() const { return mForcedClose; }
+    bool            requestClose();
+
     unsigned int assemblePath();
     bool checkForMappingScript();
     bool checkForCustomSpeedwalk();
@@ -367,7 +370,6 @@ public:
     void setCompactInputLine(const bool state);
     bool getCompactInputLine() const { return mCompactInputLine; }
     QPointer<TConsole> findConsole(QString name);
-    void close();
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
@@ -489,7 +491,6 @@ public:
     QString mProxyUsername;
     QString mProxyPassword;
 
-    bool mIsGoingDown;
     // Used to force the test compilation of the scripts for TActions ("Buttons")
     // that are pushdown buttons that run when they are "pushed down" during
     // loading even though the buttons start out with themselves NOT being
@@ -763,6 +764,7 @@ private:
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
     TCommandLine* activeCommandLine();
+    void closeChildren();
 
 
     QFont mDisplayFont;
@@ -786,7 +788,7 @@ private:
     int mHostID;
     QString mHostName;
     QString mDiscordGameName; // Discord self-reported game name
-    bool mIsClosingDown;
+    bool mIsClosingDown = false;
 
     QString mLine;
     QString mLogin;
@@ -937,6 +939,10 @@ private:
 
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
+
+    // Set when the mudlet singleton demands that we close - used to force an
+    // attempt to save the profile and map - without asking:
+    bool mForcedClose = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

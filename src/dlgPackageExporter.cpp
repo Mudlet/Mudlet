@@ -133,6 +133,13 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
 
     //: Title of the window. The %1 will be replaced by the current profile's name
     setWindowTitle(tr("Package Exporter - %1").arg(mpHost->getName()));
+
+    // Ensure this dialog goes away if the Host (profile) is closed while we are
+    // open - as this is parented to the mudlet instance rather than the Host
+    // of the profile it would otherwise be left around if only the profile was
+    // being closed:
+    connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::slot_cancelExport);
+    connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::close);
 }
 
 dlgPackageExporter::~dlgPackageExporter()
@@ -1464,6 +1471,8 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
     if (!debounce) {
         debounce = true;
         QTimer::singleShot(0, this, [this]() {
+            debounce = false;
+            
             const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
                 //: This is the text shown at the top of a groupbox when there is %n (one or more) items to export in the Package exporter dialogue; the initial (and when there is no items selected) is a separate text.
@@ -1472,7 +1481,6 @@ void dlgPackageExporter::slot_recountItems(QTreeWidgetItem *item)
                 //: This is the text shown at the top of a groupbox initially and when there is NO items to export in the Package exporter dialogue.
                 mpSelectionText->setTitle(tr("Select what to export"));
             }
-            debounce = false;
         });
     }
 }

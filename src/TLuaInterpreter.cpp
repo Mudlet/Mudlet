@@ -811,16 +811,6 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     }
 }
 
-// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateMap
-int TLuaInterpreter::updateMap(lua_State* L)
-{
-    const Host& host = getHostFromLua(L);
-    if (host.mpMap) {
-        host.mpMap->update();
-    }
-    return 0;
-}
-
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
 int TLuaInterpreter::cut(lua_State* L)
 {
@@ -1320,7 +1310,7 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
 int TLuaInterpreter::closeMudlet(lua_State* L)
 {
     Q_UNUSED(L)
-    mudlet::self()->forceClose();
+    mudlet::self()->armForceClose();
     return 0;
 }
 

@@ -139,6 +139,7 @@ set(mudlet_SRCS
     TMap.cpp
     TMapLabel.cpp
     TMedia.cpp
+    TMediaPlaylist.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
     TMxpFormattingTagsHandler.cpp
@@ -309,6 +310,7 @@ set(mudlet_HDRS
     TMapLabel.h
     TMatchState.h
     TMedia.h
+    TMediaPlaylist.h
     TMxpBRTagHandler.h
     TMxpClient.h
     TMxpColorTagHandler.h
