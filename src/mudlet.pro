@@ -686,6 +686,7 @@ SOURCES += \
     TMap.cpp \
     TMapLabel.cpp \
     TMedia.cpp \
+    TMediaPlaylist.cpp \
     TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
@@ -814,6 +815,7 @@ HEADERS += \
     TMatchState.h \
     TMedia.h \
     TMediaData.h \
+    TMediaPlaylist.h \
     TMxpBRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
