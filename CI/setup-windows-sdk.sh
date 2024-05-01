@@ -1,5 +1,6 @@
 #!/bin/bash
 ###########################################################################
+#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
 #   Copyright (C) 2023-2024  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -18,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 1.5.0    No change
+# Version: 2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
+#          1.5.0    No change
 #          1.4.0    No change
 #          1.3.0    Don't explicitly install the no longer supported QT 5
 #                   Gamepad stuff (since PR #6787 was merged into
@@ -30,15 +32,14 @@
 #                   and to offer a choice between a base or a full install
 #          1.0.0    Original version
 
-# Script to run once in a directory such as ~/src in a MSYS2 shell to
+# Script to run once in a ${GITHUB_WORKFLOW} directory in a MSYS2 shell to
 # install as much as possible to be able to develop 64/32 Bit Windows
 # version of Mudlet
 
 # To be used prior to building Mudlet, after that run:
 # * build-mudlet-for-window.sh to compile the currently checked out code
-#   (defaults to the 'development' branch
 # * package-mudlet-for-windows.sh to put everything together in an archive that
-#   can be unzipped and run on a different PC.
+#   will be deployed from a github workflow
 
 # Exit codes:
 # 0 - Everything is fine. 8-)

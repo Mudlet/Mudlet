@@ -1,5 +1,6 @@
 #!/bin/bash
 ###########################################################################
+#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
 #   Copyright (C) 2023-2024  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -18,7 +19,8 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
+# Version: 2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
+#          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
 #                   CI/CB system using same variable
 #          1.4.0    Rewrite Makefile to use ccache.exe if available
 #          1.3.0    No changes
@@ -26,13 +28,11 @@
 #          1.1.0    No changes
 #          1.0.0    Original version
 
-# Script to each time to build the Mudlet code currently checked out in
-# ~/src/mudlet in a MINGW32 or MINGW64 shell
+# Script to build the Mudlet code currently checked out in
+# ${GITHUB_WORKSPACE} in a MINGW32 or MINGW64 shell
 
 # To be used AFTER setup-windows-sdk.sh has been run; once this has completed
-# successfully use:
-# * package-mudlet-for-windows.sh to put everything together in an archive that
-#   can be unzipped and run on a different PC.
+# successfully, package-mudlet-for-windows.sh is run by the workflow
 
 # Exit codes:
 # 0 - Everything is fine. 8-)

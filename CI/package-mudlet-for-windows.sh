@@ -1,5 +1,6 @@
 #!/bin/bash
 ###########################################################################
+#   Copyright (C) 2024-2024  by John McKisson - john.mckisson@gmail.com   #
 #   Copyright (C) 2023-2024  by Stephen Lyons - slysven@virginmedia.com   #
 #                                                                         #
 #   This program is free software; you can redistribute it and/or modify  #
@@ -18,9 +19,10 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
+# Version: 2.0.0    Rework to build on an MSYS2 MINGW64 Github workflow
+#          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
 #                   CI/CB system using same variable
-#        : 1.4.0    No change
+#          1.4.0    No change
 #          1.3.0    Remove used of the no longer supported/used by us QT5
 #                   Gamepad stuff (since PR #6787 was merged into
 #                   the development branch)
@@ -30,7 +32,7 @@
 #          1.0.0    Original version
 
 # Script to each time to package all the files needed to run Mudlet on
-# Windows in a archive file that can be used both on this PC and others.
+# Windows in a archive file that will be deployed from a github workflow
 
 # To be used AFTER setup-windows-sdk.sh and build-mudlet-for-windows.sh
 # have been run.
