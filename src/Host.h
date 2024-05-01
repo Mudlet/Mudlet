@@ -423,7 +423,6 @@ public:
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
     void setShowIdsInEditor(const bool isShown) { mShowIDsInEditor = isShown; if (mpEditorDialog) {mpEditorDialog->showIDLabels(isShown);} }
-    bool getBoldIsBright() const { return mBoldIsBright; }
 
 
     cTelnet mTelnet;
@@ -708,6 +707,17 @@ public:
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
 
+    // Support a long-standing hack for using the <SGR>1m (Bold) code to select
+    // a set of brighter 8 colors (the second eight) from the 256 colors for
+    // "16 color" mode of operation - alongside the basic <SGR>30m (Black) to
+    // <SGR>37m (White) set of codes. Using the "AIXTERM" codes (<SGR>90m to
+    // <SGR>97m) codes or the <SGR>38::5:Nm ones are later (better) ways of
+    // accessing that second set of 8 but some Servers only know the first for
+    // 16 color operation. The prior behaviour for Mudlet would be almost
+    // equivalent to this option being true but it limits the ability to have
+    // completely separate bold (and faint) font weightings:
+    bool mBoldIsBright = true;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -918,17 +928,6 @@ private:
     // Set when the mudlet singleton demands that we close - used to force an
     // attempt to save the profile and map - without asking:
     bool mForcedClose = false;
-
-    // Support a long-standing hack for using the <SGR>1m (Bold) code to select
-    // a set of brighter 8 colors (the second eight) from the 256 colors for
-    // "16 color" mode of operation - alongside the basic <SGR>30m (Black) to
-    // <SGR>37m (White) set of codes. Using the "AIXTERM" codes (<SGR>90m to
-    // <SGR>97m) codes or the <SGR>38::5:Nm ones are later (better) ways of
-    // accessing that second set of 8 but some Servers only know the first for
-    // 16 color operation. The prior behaviour for Mudlet would be almost
-    // equivalent to this option being true but it limits the ability to have
-    // completely separate bold (and faint) font weightings:
-    bool mBoldIsBright = true;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

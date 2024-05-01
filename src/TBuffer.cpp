@@ -897,7 +897,7 @@ COMMIT_LINE:
                  | (TChar::alternateFontFlag(mAltFont))
                  | (mConcealed ? TChar::Concealed : TChar::None));
 
-        TChar c((mpHost && mpHost->getBoldIsBright() && mMayShift8ColorSet && mBold) ? mForeGroundColorLight
+        TChar c((mpHost && mpHost->mBoldIsBright && mMayShift8ColorSet && mBold) ? mForeGroundColorLight
                                                                                      : mForeGroundColor,
                 mBackGroundColor,
                 attributeFlags);

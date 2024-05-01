@@ -1172,7 +1172,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
-    checkBox_boldIsBright->setChecked(pHost->getBoldIsBright());
+    checkBox_boldIsBright->setChecked(pHost->mBoldIsBright);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:

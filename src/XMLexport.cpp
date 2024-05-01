@@ -487,7 +487,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_attribute("Large2DMapAreaExitArrows") = "yes";
     }
 
-    host.append_attribute("BoldIsBright") = pHost->getBoldIsBright() ? "yes" : "no";
+    host.append_attribute("BoldIsBright") = pHost->mBoldIsBright ? "yes" : "no";
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
