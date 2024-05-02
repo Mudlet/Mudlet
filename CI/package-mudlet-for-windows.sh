@@ -113,7 +113,11 @@ if [ -f "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.e
   cp "${GITHUB_WORKSPACE_UNIX_PATH}/build-${MSYSTEM}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
 fi
 
-"${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" ./mudlet.exe
+if [ "${MSYSTEM}" = "MINGW64" ]; then
+    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt6" ./mudlet.exe
+else
+    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt" ./mudlet.exe
+fi
 ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 
 
@@ -133,12 +137,21 @@ ZIP_FILE_NAME="Mudlet-${MSYSTEM}"
 #
 echo ""
 echo "Examining Mudlet application to identify other needed libraries..."
-NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
-  | /usr/bin/grep -v "Qt5" \
-  | /usr/bin/grep -i "mingw" \
-  | /usr/bin/cut -d ">" -f2 \
-  | /usr/bin/cut -d "(" -f1 \
-  | /usr/bin/sort)
+if [ "${MSYSTEM}" = "MINGW64" ]; then
+    NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
+      | /usr/bin/grep -v "Qt5" \
+      | /usr/bin/grep -i "mingw" \
+      | /usr/bin/cut -d ">" -f2 \
+      | /usr/bin/cut -d "(" -f1 \
+      | /usr/bin/sort)
+else
+    NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
+      | /usr/bin/grep -v "Qt6" \
+      | /usr/bin/grep -i "mingw" \
+      | /usr/bin/cut -d ">" -f2 \
+      | /usr/bin/cut -d "(" -f1 \
+      | /usr/bin/sort)
+fi
 echo ""
 echo "Copying these identified libraries..."
 for LIB in ${NEEDED_LIBS} ; do

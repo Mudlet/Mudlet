@@ -401,16 +401,29 @@ unix:!macx {
                  $${MINGW_BASE_DIR_TEST}/include/pugixml
         } else {
             # For users/developers building with MSYS2 for Windows in a GH Workflow:
-            LIBS +=  \
-                -LD:\\a\\_temp\\msys64\\mingw64/lib \
-                -LD:\\a\\_temp\\msys64\\mingw64/bin \
-                -llua5.1 \
-                -llibhunspell-1.7
+            contains(QMAKE_HOST.arch, x86_64) {
+                LIBS +=  \
+                    -LD:\\a\\_temp\\msys64\\mingw64/lib \
+                    -LD:\\a\\_temp\\msys64\\mingw64/bin \
+                    -llua5.1 \
+                    -llibhunspell-1.7
 
-            INCLUDEPATH += \
-                 D:\\a\\_temp\\msys64\\mingw64/include \
-                 D:/a/_temp/msys64/mingw64/include/lua5.1 \
-                 $${MINGW_BASE_DIR_TEST}/include/pugixml
+                INCLUDEPATH += \
+                     D:\\a\\_temp\\msys64\\mingw64/include \
+                     D:/a/_temp/msys64/mingw64/include/lua5.1 \
+                     $${MINGW_BASE_DIR_TEST}/include/pugixml
+            } else {
+                LIBS +=  \
+                    -LD:\\a\\_temp\\msys64\\mingw32/lib \
+                    -LD:\\a\\_temp\\msys64\\mingw32/bin \
+                    -llua5.1 \
+                    -llibhunspell-1.7
+
+                INCLUDEPATH += \
+                     D:\\a\\_temp\\msys64\\mingw32/include \
+                     D:/a/_temp/msys64/mingw32/include/lua5.1 \
+                     $${MINGW_BASE_DIR_TEST}/include/pugixml
+            }
         }
     }
 

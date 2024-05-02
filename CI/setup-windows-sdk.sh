@@ -90,32 +90,45 @@ echo "    This could take a long time if it is needed to fetch everything, so fe
 echo "    to go and have a cup of tea (other beverages are available) in the meantime...!"
 echo ""
 
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar git
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar man
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar rsync
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-toolchain
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-base
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-multimedia
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-svg
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-speech
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-imageformats
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-tools
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qt6-5compat
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-pcre
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-libzip
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-ntldd
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-pugixml
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua51
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua51-lpeg
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-hunspell
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-zlib
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-boost
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-yajl
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-lua-luarocks
-/usr/bin/pacman -S --needed --noconfirm --noprogressbar mingw-w64-${BUILDCOMPONENT}-7zip
+if [ "${MSYSTEM}" = "MINGW64" ]; then
+/usr/bin/pacman -S --needed --noconfirm \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
+    "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
+    "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"
+else
+/usr/bin/pacman -S --needed --noconfirm \
+    "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
+    "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
+    "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
+    "mingw-w64-${BUILDCOMPONENT}-qt5-speech" \
+    "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats" \
+    "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" \
+    "mingw-w64-${BUILDCOMPONENT}-qt5-tools"
+fi
 
+/usr/bin/pacman -S --needed --noconfirm \
+    git \
+    man \
+    rsync \
+    "mingw-w64-${BUILDCOMPONENT}-toolchain" \
+    "mingw-w64-${BUILDCOMPONENT}-pcre" \
+    "mingw-w64-${BUILDCOMPONENT}-libzip" \
+    "mingw-w64-${BUILDCOMPONENT}-ntldd" \
+    "mingw-w64-${BUILDCOMPONENT}-pugixml" \
+    "mingw-w64-${BUILDCOMPONENT}-lua51" \
+    "mingw-w64-${BUILDCOMPONENT}-lua51-lpeg" \
+    "mingw-w64-${BUILDCOMPONENT}-lua51-lsqlite3" \
+    "mingw-w64-${BUILDCOMPONENT}-hunspell" \
+    "mingw-w64-${BUILDCOMPONENT}-zlib" \
+    "mingw-w64-${BUILDCOMPONENT}-boost" \
+    "mingw-w64-${BUILDCOMPONENT}-yajl" \
+    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-7zip"
 
 echo ""
 echo "    Completed"

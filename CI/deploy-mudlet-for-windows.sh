@@ -88,7 +88,9 @@ if [[ "$GITHUB_REPO_NAME" != "Mudlet/Mudlet" ]]; then
   exit 2
 fi
 
-cd "$GITHUB_WORKSPACE/package-MINGW64-release" || exit 1
+PACKAGE_DIR = "$GITHUB_WORKSPACE/package-${MSYSTEM}-release"
+
+cd "$PACKAGE_DIR" || exit 1
 
 moveToUploadDir() {
   local uploadFilename=$1
@@ -101,7 +103,7 @@ moveToUploadDir() {
   fi
 
   echo "=== Moving files to upload directory ==="
-  mv "$GITHUB_WORKSPACE/package-MINGW64-release/$uploadFilename" "$uploadDir/"
+  mv "$PACKAGE_DIR/$uploadFilename" "$uploadDir/"
 
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
   echo "FOLDER_TO_UPLOAD=$uploadDir" >> "$GITHUB_ENV"
@@ -116,10 +118,10 @@ rm ./*.cpp ./*.o
 # Check if GITHUB_REPO_TAG is "false" and PublicTestBuild is not true
 if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; then
   echo "=== Creating a snapshot build ==="
-  mv "$GITHUB_WORKSPACE/package-MINGW64-release/mudlet.exe" "Mudlet.exe"
+  mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
   
   # Create a zip file using 7z
-  7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows.zip" "$GITHUB_WORKSPACE/package-MINGW64-release/*"
+  7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows.zip" "$PACKAGE_DIR/*"
   
   # Define the upload filename
   uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows.zip"
@@ -143,13 +145,13 @@ else
 
     echo "=== Creating a public test build ==="
     # Squirrel uses Start menu name from the binary, renaming it
-    mv "$GITHUB_WORKSPACE/package-MINGW64-release/mudlet.exe" "$GITHUB_WORKSPACE/package-MINGW64-release/Mudlet PTB.exe"
+    mv "$PACKAGE_DIR/mudlet.exe" "$PACKAGE_DIR/Mudlet PTB.exe"
     # ensure sha part always starts with a character due to a known issue
     VersionAndSha="${VERSION}-ptb-${BUILD_COMMIT}"
 
   else
     echo "=== Creating a release build ==="
-    mv "$GITHUB_WORKSPACE/package-MINGW64-release/mudlet.exe" "$GITHUB_WORKSPACE/package-MINGW64-release/Mudlet.exe"
+    mv "$PACKAEG_DIR/mudlet.exe" "$PACKAGE_DIR/Mudlet.exe"
     VersionAndSha="$VERSION"
   fi
 
@@ -169,7 +171,7 @@ else
   fi
 
   echo "=== Moving things to where Squirrel expects them ==="
-  mv "$GITHUB_WORKSPACE/package-MINGW64-release/"* "$SQUIRRELWINBIN"
+  mv "$PACKAGE_DIR/"* "$SQUIRRELWINBIN"
 
   # Set the path to the nuspec file
   NuSpec="$GITHUB_WORKSPACE/installers/windows/mudlet.nuspec"
@@ -209,12 +211,12 @@ else
     -n "/a /f $GITHUB_WORKSPACE/installers/windows/code-signing-certificate.p12 /p $WIN_SIGNING_PASS /fd sha256 /tr http://timestamp.digicert.com /td sha256"
 
   echo "=== Removing old directory content of release folder ==="
-  rm -rf "$GITHUB_WORKSPACE/package-MINGW64-release/*"
+  rm -rf "$PACKAGE_DIR/*"
 
   echo "=== Copying installer over ==="
-  mv "$GITHUB_WORKSPACE/squirreloutput/*" "$GITHUB_WORKSPACE/package-MINGW64-release"
+  mv "$GITHUB_WORKSPACE/squirreloutput/*" "$PACKAGE_DIR"
 
-  setupExePath="$GITHUB_WORKSPACE/package-MINGW64-release/Setup.exe"
+  setupExePath="$PACKAGE_DIR/Setup.exe"
 
   # Check if the setup executable exists
   if [[ ! -f "$setupExePath" ]]; then

@@ -94,7 +94,7 @@ echo ""
 #### Qt Creator note ####
 # The following WITH_XXXXs can usefully be used in the Qt Creator's "Project"
 # tab for the "Kit" concerned in the "Build Environment" section:
-if [ "${MSYSTEM}" = "MINGW64" ]; then
+if [ "${MSYSTEM}" = "MINGW64" ] || [ "${MSYSTEM}" = "MINGW32" ]; then
   # The MINGW64 case already has the Qt5 keychain package pre-built so no need
   # to build our bundled copy:
   export WITH_OWN_QTKEYCHAIN="NO"
@@ -110,8 +110,11 @@ export WITH_MAIN_BUILD_SYSTEM="NO"
 echo "Running qmake to make MAKEFILE ..."
 echo ""
 
-
-qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
+if [ "${MSYSTEM}" = "MINGW64" ]; then
+    qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
+else
+    qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
+fi
 
 echo " ... qmake done."
 echo ""

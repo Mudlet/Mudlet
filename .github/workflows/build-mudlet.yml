@@ -41,8 +41,11 @@ jobs:
             deploy: 'deploy'
             run_tests: 'true'
           - os: windows-2019
-            buildname: 'windows'
+            buildname: 'windows64'
             triplet: x86_64-w64-mingw32
+          - os: windows-2019
+            buildname: 'windows32'
+            triplet: x86_64-i686-mingw32
             # compiler: flag not used in windows pipeline
 
     env:
@@ -56,11 +59,18 @@ jobs:
         submodules: true
         fetch-depth: 0
         
-    - name: (Windows) Setup MSYS2
-      if: matrix.os == 'windows-2019'
+    - name: (Windows 64) Setup MSYS2
+      if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
+        update: true
+        
+    - name: (Windows 32) Setup MSYS2
+      if: matrix.buildname == 'windows32'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW32
         update: true
           
     - name: (Windows) Build Environment Setup
@@ -379,6 +389,11 @@ jobs:
         path: ${{env.FOLDER_TO_UPLOAD}}
 
     - name: Submit to make.mudlet.org
+      if: env.UPLOAD_FILENAME
+      run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
+      shell: bash
+      
+    - name: (Windows) Submit Release Build to make.mudlet.org
       if: env.UPLOAD_FILENAME
       run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
       shell: bash
