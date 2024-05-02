@@ -94,7 +94,7 @@ echo ""
 #### Qt Creator note ####
 # The following WITH_XXXXs can usefully be used in the Qt Creator's "Project"
 # tab for the "Kit" concerned in the "Build Environment" section:
-if [ "${MSYSTEM}" = "MINGW64" ] || [ "${MSYSTEM}" = "MINGW32" ]; then
+if [ "${MSYSTEM}" = "MINGW64" ]; then
   # The MINGW64 case already has the Qt5 keychain package pre-built so no need
   # to build our bundled copy:
   export WITH_OWN_QTKEYCHAIN="NO"
