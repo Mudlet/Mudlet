@@ -88,7 +88,7 @@ if [[ "$GITHUB_REPO_NAME" != "Mudlet/Mudlet" ]]; then
   exit 2
 fi
 
-PACKAGE_DIR = "$GITHUB_WORKSPACE/package-${MSYSTEM}-release"
+PACKAGE_DIR="$GITHUB_WORKSPACE/package-${MSYSTEM}-release"
 
 cd "$PACKAGE_DIR" || exit 1
 
@@ -211,7 +211,7 @@ else
     -n "/a /f $GITHUB_WORKSPACE/installers/windows/code-signing-certificate.p12 /p $WIN_SIGNING_PASS /fd sha256 /tr http://timestamp.digicert.com /td sha256"
 
   echo "=== Removing old directory content of release folder ==="
-  rm -rf "$PACKAGE_DIR/*"
+  rm -rf "${PACKAGE_DIR}/*"
 
   echo "=== Copying installer over ==="
   mv "$GITHUB_WORKSPACE/squirreloutput/*" "$PACKAGE_DIR"
