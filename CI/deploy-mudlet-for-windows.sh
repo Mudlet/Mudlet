@@ -29,6 +29,24 @@
 # 4 - nuget error
 # 5 - squirrel error
 
+if [ "${MSYSTEM}" = "MSYS" ]; then
+  echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
+  echo "to the bitness you want to work on. You may do this once for each of them should"
+  echo "you wish to do both."
+  exit 2
+elif [ "${MSYSTEM}" = "MINGW32" ]; then
+  export BUILD_BITNESS="32"
+  export BUILDCOMPONENT="i686"
+elif [ "${MSYSTEM}" = "MINGW64" ]; then
+  export BUILD_BITNESS="64"
+  export BUILDCOMPONENT="x86_64"
+else
+  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
+  echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
+  echo "of those two types."
+  exit 2
+fi
+
 cd "$GITHUB_WORKSPACE" || exit 1
 
 PublicTestBuild=false
@@ -121,10 +139,10 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
   
   # Create a zip file using 7z
-  7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows.zip" "$PACKAGE_DIR/*"
+  7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip" "$PACKAGE_DIR/*"
   
   # Define the upload filename
-  uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows.zip"
+  uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip"
   
   # Move the zip file to the upload directory (assumed to be previously defined as a function or script)
   moveToUploadDir "$uploadFilename"
@@ -240,7 +258,7 @@ else
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
     
-    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows.exe"
+    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
     moveToUploadDir "$uploadFilename"
   else
 
@@ -248,7 +266,7 @@ else
     echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $setupExePath 'mudmachine@mudlet.org:${DEPLOY_PATH}'"
     # upload an unzipped, unversioned release for appimage.github.io
     #scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-installer.exe"
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
     SHA256SUM=$(shasum -a 256 "$setupExePath" | awk '{print $1}')
 
