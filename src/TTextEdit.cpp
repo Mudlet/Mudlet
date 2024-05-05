@@ -1104,10 +1104,19 @@ void TTextEdit::expandSelectionToWords()
 {
     int yind = mPA.y();
     int xind = mPA.x();
-    for (; xind >= 0; --xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
-            break;
+
+    // Check if yind is within the valid range of lineBuffer
+    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
+        for (; xind >= 0; --xind) {
+            // Ensure xind is within the valid range for the current line
+            if (xind >= static_cast<int>(mpBuffer->lineBuffer.at(yind).size())) {
+                break; // xind is out of bounds, break the loop
+            } 
+            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
+            if (currentChar == QChar::Space
+                || mpHost->mDoubleClickIgnore.contains(currentChar)) {
+                break;
+            }
         }
     }
     mDragStart.setX(xind + 1);
@@ -1115,15 +1124,22 @@ void TTextEdit::expandSelectionToWords()
 
     yind = mPB.y();
     xind = mPB.x();
-    for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
-            break;
+
+    // Repeat the check for yind and xind for the second part
+    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
+        for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
+            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
+            if (currentChar == QChar::Space
+                || mpHost->mDoubleClickIgnore.contains(currentChar)) {
+                break;
+            }
         }
     }
     mDragSelectionEnd.setX(xind - 1);
     mPB.setX(xind - 1);
 }
+
+
 
 void TTextEdit::expandSelectionToLine(int y)
 {
