@@ -100,8 +100,13 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
   export WITH_OWN_QTKEYCHAIN="NO"
 fi
 
-# The updater is not helpful in this (build it yourself) environment
-export WITH_UPDATER="NO"
+if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
+    # The updater is not helpful in this environment (PTB or PR)
+    export WITH_UPDATER="NO"
+else
+    # Tagged build, this is a release build, include the updater
+    export WITH_UPDATER="YES"
+fi
 # This one is VITAL as some things in the code have to be tweaked to be
 # different compared to the CI/CB build environment (or the
 # setup-windows-sdk.ps) one!
