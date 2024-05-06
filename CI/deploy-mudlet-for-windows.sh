@@ -123,7 +123,7 @@ moveToUploadDir() {
   fi
 
   echo "=== Moving files to upload directory ==="
-  mv "$PACKAGE_DIR/$uploadFilename" "$uploadDir/"
+  mv "$PACKAGE_DIR/*" "$uploadDir/"
 
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
   echo "FOLDER_TO_UPLOAD=$uploadDir" >> "$GITHUB_ENV"
@@ -141,7 +141,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
   
   # Create a zip file using 7z
-  7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip" "$PACKAGE_DIR/*"
+  #7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip" "$PACKAGE_DIR/*"
   
   # Define the upload filename
   uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip"
