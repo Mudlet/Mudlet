@@ -129,7 +129,7 @@ else
   mingw32-make -k
 fi
 
-echo " ... make finished - has it been successful?"
+echo " ... make finished"
 echo ""
 
 cd ~ || exit 1
