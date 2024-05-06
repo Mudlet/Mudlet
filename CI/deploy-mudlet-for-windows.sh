@@ -37,9 +37,11 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
 elif [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
   export BUILDCOMPONENT="i686"
+  export DBLSQDTYPE="x86"
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
+  export DBLSQDTYPE="x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
   echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
@@ -169,7 +171,7 @@ else
 
   else
     echo "=== Creating a release build ==="
-    mv "$PACKAEG_DIR/mudlet.exe" "$PACKAGE_DIR/Mudlet.exe"
+    mv "$PACKAGE_DIR/mudlet.exe" "$PACKAGE_DIR/Mudlet.exe"
     VersionAndSha="$VERSION"
   fi
 
@@ -199,8 +201,11 @@ else
   if [[ "$PublicTestBuild" == "true" ]]; then
     # Allow public test builds to be installed side by side with the release builds by renaming the app
     # No dots in the <id>: Guidelines by Squirrel
-    sed -i 's/<id>Mudlet<\/id>/<id>Mudlet-PublicTestBuild<\/id>/' "$NuSpec"
-    sed -i 's/<title>Mudlet<\/title>/<title>Mudlet (Public Test Build)<\/title>/' "$NuSpec"
+    sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_-PublicTestBuild<\/id>/" "$NuSpec"
+    sed -i "s/<title>Mudlet<\/title>/<title>Mudlet_${BUILD_BITNESS} (Public Test Build)<\/title>/" "$NuSpec"
+  else
+    sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_<\/id>/" "$NuSpec"
+    sed -i "s/<title>Mudlet<\/title>/<title>Mudlet_${BUILD_BITNESS}<\/title>/" "$NuSpec"
   fi
 
   # Create NuGet package
@@ -229,7 +234,7 @@ else
     -n "/a /f $GITHUB_WORKSPACE/installers/windows/code-signing-certificate.p12 /p $WIN_SIGNING_PASS /fd sha256 /tr http://timestamp.digicert.com /td sha256"
 
   echo "=== Removing old directory content of release folder ==="
-  rm -rf "${PACKAGE_DIR}/*"
+  rm -rf "${PACKAGE_DIR:?}/*"
 
   echo "=== Copying installer over ==="
   mv "$GITHUB_WORKSPACE/squirreloutput/*" "$PACKAGE_DIR"
@@ -299,10 +304,10 @@ else
     echo "$Changelog"
     
     echo "=== Creating release in Dblsqd ==="
-    echo "dblsqd release -a mudlet -c public-test-build -m \"$Changelog\" \"${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}\""
+    echo "dblsqd release -a mudlet -c public-test-build-${BUILD_BITNESS} -m \"$Changelog\" \"${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}\""
 
     echo "=== Registering release with Dblsqd ==="
-    echo "dblsqd push -a mudlet -c public-test-build -r '${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}' -s mudlet --type 'standalone' --attach win:x86 '${DEPLOY_URL}'"
+    echo "dblsqd push -a mudlet -c public-test-build-${BUILD_BITNESS} -r '${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}' -s mudlet --type 'standalone' --attach win:${DBLSQDTYPE} '${DEPLOY_URL}'"
   fi
 fi
 
@@ -327,5 +332,3 @@ fi
 
 echo ""
 echo "******************************************************"
-
-
