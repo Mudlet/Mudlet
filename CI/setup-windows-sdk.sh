@@ -91,7 +91,7 @@ echo "    to go and have a cup of tea (other beverages are available) in the mea
 echo ""
 
 if [ "${MSYSTEM}" = "MINGW64" ]; then
-/usr/bin/pacman -S --needed --noconfirm \
+/usr/bin/pacman -Su --needed --noconfirm \
     "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
     "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
@@ -101,7 +101,7 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
     "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
     "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"
 else
-/usr/bin/pacman -S --needed --noconfirm \
+/usr/bin/pacman -Su --needed --noconfirm \
     "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
     "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
     "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
@@ -111,7 +111,7 @@ else
     "mingw-w64-${BUILDCOMPONENT}-qt5-tools"
 fi
 
-/usr/bin/pacman -S --needed --noconfirm \
+/usr/bin/pacman -Su --needed --noconfirm \
     git \
     man \
     rsync \
