@@ -52,10 +52,13 @@ jobs:
 
     steps:
     - name: Checkout Mudlet source code
-      uses: actions/checkout@v4
       with:
         submodules: true
         fetch-depth: 0
+        
+    - name: Setup tmate session
+      if: matrix.os == 'windows-2019'
+      uses: mxschmitt/action-tmate@v3
         
     - name: (Windows 64) Setup MSYS2
       if: matrix.buildname == 'windows64'
