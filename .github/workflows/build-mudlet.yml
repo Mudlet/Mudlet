@@ -88,9 +88,9 @@ jobs:
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
       
-    - name: Setup tmate session
-      if: matrix.os == 'windows-2019'
-      uses: mxschmitt/action-tmate@v3
+    #- name: Setup tmate session
+    #  if: matrix.os == 'windows-2019'
+    #  uses: mxschmitt/action-tmate@v3
 
     - name: (Windows) Deploy
       if: matrix.os == 'windows-2019'
