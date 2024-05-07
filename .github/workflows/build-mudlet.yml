@@ -64,7 +64,6 @@ jobs:
     - name: (Windows 64) Setup MSYS2
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
-      uses: mxschmitt/action-tmate@v3
       with:
         msystem: MINGW64
         update: true
@@ -72,7 +71,6 @@ jobs:
     - name: (Windows 32) Setup MSYS2
       if: matrix.buildname == 'windows32'
       uses: msys2/setup-msys2@v2
-      uses: mxschmitt/action-tmate@v3
       with:
         msystem: MINGW32
         update: true
