@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015, 2017-2018, 2020, 2022-2023 by Stephen Lyons       *
+ *   Copyright (C) 2015, 2017-2018, 2020, 2022-2024 by Stephen Lyons       *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -300,27 +300,6 @@ public:
     static const int csmCssFontWeight_bold = 800;
 #endif
 
-    // Used to record if some particular SGR codes have been received from the
-    // Game Server - only used in the TMainConsole instance
-    enum SgrCodeFlag {
-        Sgr_None = 0x0,
-        Sgr_Bold = 0x1, // May be combined with Sgr_30_37 (for original {?} 16 colors) or, more hopefully used for a font rendering effect
-        Sgr_Faint = 0x2, // Usage is probably rare, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
-        Sgr_Blinking = 0x4, // Either Blink or Fast Blink code has been seen - at present we convert them to italics
-        Sgr_Conceal = 0x8, // The hidden/concealed code has been seen - at present Mudlet does not handle it and shows the text
-        Sgr_30_37 = 0x10, // Basic 8 FG colors unless combined with Sgr_Bold for 16 colors
-        Sgr_90_97 = 0x20, // Basic 16 FG colors when combined with Sgr_30_37, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
-        Sgr_38_2 = 0x40, // 16M FG colors, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
-        Sgr_38_5 = 0x80, // 256 FG colors, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
-        Sgr_40_47 = 0x100, // Basic 8 BG colors might be combined with Sgr_Bold for 16 colors but that doesn't make much sense as it would also change the FG color as well
-        Sgr_100_107 = 0x200, // Basic 16 BG colors when combined with Sgr_30_37, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
-        Sgr_48_2 = 0x400, // 16M BG colors, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
-        Sgr_48_5 = 0x800, // 256 BG colors, would suggest that Server is NOT using Sgr_Bold to select bright colors in a 16 color mode
-        Sgr_AltFont = 0x1000 // Any of the alternate font codes (SGR 11 to 19)
-    };
-    Q_DECLARE_FLAGS(SgrCodeFlags, SgrCodeFlag)
-
-
     QPoint insert(QPoint&, const QString& text, int, int, int, int, int, int, bool bold, bool italics, bool underline, bool strikeout);
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
@@ -369,8 +348,6 @@ public:
     // is apparently incompatible with using a default constructor - sigh!
     void encodingChanged(const QByteArray &);
     void clearSearchHighlights();
-    SgrCodeFlags getSgrCodesSeen() const { return mSgrCodesSeen; }
-    void resetSgrCodesSeen() { mSgrCodesSeen = Sgr_None; }
 
     static int lengthInGraphemes(const QString& text);
 
@@ -406,7 +383,7 @@ private:
     void decodeSGR48(const QStringList&, bool isColonSeparated = true);
     void decodeOSC(const QString&);
     void resetColors();
-    void setSgrCodeSeenFlag(const SgrCodeFlag);
+
 
     QPointer<TConsole> mpConsole;
 
@@ -480,12 +457,7 @@ private:
 
     QByteArray mEncoding;
     QTextCodec* mMainIncomingCodec = nullptr;
-
-    bool mProcessingServerText = false;
-    SgrCodeFlags mSgrCodesSeen = Sgr_None;
 };
-
-Q_DECLARE_OPERATORS_FOR_FLAGS(TBuffer::SgrCodeFlags)
 
 #ifndef QT_NO_DEBUG_STREAM
 // Dumper for the TChar::AttributeFlags - so that qDebug gives a detailed broken

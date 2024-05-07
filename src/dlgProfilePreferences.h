@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2017-2018, 2022-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2017-2018, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -173,15 +173,6 @@ private slots:
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_hidePasswordMigrationLabel();
     void slot_loadHistoryMap();
-    void slot_updateFontSamplesText(const QString&);
-    // Used by the preference dialog to reset the TBuffer::mSgrCodesSeen flags
-    // for the Main Console:
-    void slot_resetSgrCodeFlags();
-    // Used by the TMainConsole::buffer to update the status display of the
-    // above mentioned flags:
-    void slot_updateSgrCodeFlags();
-    void slot_toggleSgrCodesSeenVisibilty(const bool);
-    void slot_toggleExtraFontSamplesVisibilty(const bool);
 
 
 signals:
@@ -215,7 +206,6 @@ private:
     QString mapSaveLoadDirectory(Host* pHost);
     void loadMap(const QString&);
     void fillOutMapHistory();
-    void updateFontSampleDisplays(const QFont&);
 
 
     int mFontSize = 10;

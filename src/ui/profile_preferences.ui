@@ -756,7 +756,7 @@
          <property name="title">
           <string>Font</string>
          </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_font" rowstretch="1,1,1,1">
+         <layout class="QGridLayout" name="gridLayout_groupBox_font" rowstretch="1,0,0" columnstretch="0,1,0,0,0">
           <item row="0" column="0">
            <widget class="QLabel" name="label_30">
             <property name="text">
@@ -829,143 +829,6 @@
              <string comment="Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer">This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</string>
             </property>
-           </widget>
-          </item>
-          <item row="3" column="0" colspan="5">
-           <widget class="QGroupBox" name="groupBox_fontSamples">
-            <property name="toolTip">
-             <string>&lt;p&gt;Mudlet can display text in multiple &quot;weights&quot; (&quot;Normal&quot;, &quot;Bold&quot;, &quot;Faint&quot; and &quot;Faint+Bold&quot;) &lt;u&gt;provided that the font chosen actually has those multiple weights&lt;/u&gt;. This can be checked by comparing the results of something typed into the &quot;Normal&quot; box and seeing how it is presented for the others.&lt;/p&gt;&lt;p&gt;&lt;i&gt;The Game Server can control the weight that is used for any text by combinations of the ANSI &quot;Set Graphics Redition&quot; codes &lt;tt&gt;1&lt;/tt&gt; (bold) and &lt;tt&gt;2&lt;/tt&gt; (faint), however the bold code is also used in some Games to select the second eight of the sixteeen colors in one type of &quot;16-color&quot; mode and if that is the case (which can now be controlled by the checkbox option &lt;tt&gt;BOLD is Bright&lt;/tt&gt;  in the &quot;Color view&quot; tab) it will interfere with using the bold option to make text &lt;b&gt;bold&lt;/b&gt;.&lt;/i&gt;&lt;/p&gt;</string>
-            </property>
-            <property name="title">
-             <string>Font sample:</string>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_fontSamples">
-             <item row="0" column="0" colspan="4">
-              <widget class="QCheckBox" name="checkBox_toggleExtraFontSamplesVisibilty">
-               <property name="text">
-                <string>Show samples in all the weights that Mudlet might use</string>
-               </property>
-               <property name="checked">
-                <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="label_fontSample_normal">
-               <property name="text">
-                <string>Normal:</string>
-               </property>
-               <property name="buddy">
-                <cstring>lineEdit_fontSample_normal</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="QLineEdit" name="lineEdit_fontSample_normal">
-               <property name="font">
-                <font>
-                 <kerning>false</kerning>
-                </font>
-               </property>
-               <property name="placeholderText">
-                <string>Enter some text here to see how it is rendered in all four supported &quot;weights&quot;.</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="2">
-              <widget class="QLabel" name="label_fontSample_bold">
-               <property name="text">
-                <string>Bold:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="3">
-              <widget class="QLineEdit" name="lineEdit_fontSample_bold">
-               <property name="font">
-                <font>
-                 <kerning>false</kerning>
-                </font>
-               </property>
-               <property name="cursor">
-                <cursorShape>ForbiddenCursor</cursorShape>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="acceptDrops">
-                <bool>false</bool>
-               </property>
-               <property name="readOnly">
-                <bool>true</bool>
-               </property>
-               <property name="placeholderText">
-                <string>Enter some text in the &quot;Normal&quot; box to see how it looks when it is &quot;Bold&quot;. </string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="label_fontSample_faint">
-               <property name="text">
-                <string>Faint:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="QLineEdit" name="lineEdit_fontSample_faint">
-               <property name="font">
-                <font>
-                 <kerning>false</kerning>
-                </font>
-               </property>
-               <property name="cursor">
-                <cursorShape>ForbiddenCursor</cursorShape>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="acceptDrops">
-                <bool>false</bool>
-               </property>
-               <property name="readOnly">
-                <bool>true</bool>
-               </property>
-               <property name="placeholderText">
-                <string>Enter some text in the &quot;Normal&quot; box to see how it looks when it is &quot;Faint&quot;. </string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="2">
-              <widget class="QLabel" name="label_fontSample_boldAndFaint">
-               <property name="text">
-                <string>Bold + Faint:</string>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="3">
-              <widget class="QLineEdit" name="lineEdit_fontSample_boldAndFaint">
-               <property name="font">
-                <font>
-                 <kerning>false</kerning>
-                </font>
-               </property>
-               <property name="cursor">
-                <cursorShape>ForbiddenCursor</cursorShape>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="acceptDrops">
-                <bool>false</bool>
-               </property>
-               <property name="readOnly">
-                <bool>true</bool>
-               </property>
-               <property name="placeholderText">
-                <string>Enter some text in the &quot;Normal&quot; box to see how it looks when it is &quot;Bold&quot; and &quot;Faint&quot;. </string>
-               </property>
-              </widget>
-             </item>
-            </layout>
            </widget>
           </item>
          </layout>
@@ -2066,182 +1929,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
             <property name="text">
              <string>BOLD is Bright</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item>
-        <widget class="QGroupBox" name="groupBox_sgrCodesSeen">
-         <property name="title">
-          <string>&quot;Set Graphics Rendition&quot; codes detected (check this to show details)</string>
-         </property>
-         <property name="checkable">
-          <bool>true</bool>
-         </property>
-         <property name="checked">
-          <bool>false</bool>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_groupBox_sgrColorsSeen">
-          <item row="0" column="0">
-           <widget class="QCheckBox" name="checkBox_bold">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Bold (&quot;1&quot;)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QCheckBox" name="checkBox_faint">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Faint (&quot;2&quot;)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QCheckBox" name="checkBox_blinking">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Blinking ('5' = slow or '6' = rapid)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="checkBox_concealed">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Concealed ('8')</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="checkBox_altFont">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="text">
-             <string>Alternate Font ('11' to '19')</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QCheckBox" name="checkBox_basic8FgColors">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string extracomment="The text 'BOLD is Bright' mentioned here should be the same as the text appearing for the 'checkbox_boldIsBright' control.">&lt;p&gt;Basic eight foreground colors using '&lt;tt&gt;3?&lt;/tt&gt;' where ? is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;7&lt;/tt&gt;.&lt;/p&gt;&lt;p&gt;&lt;i&gt;If only this box for &lt;b&gt;foreground&lt;/b&gt; colors is checked &lt;u&gt;and so is the &lt;tt&gt;Bold&lt;/tt&gt; one&lt;/u&gt; then it is likely that the Game Server is using the latter to indicated that it wants Mudlet to operate in the &quot;BOLD is Bright&quot; mode where that attribute is used to select a second set of eight colors (the right column of colours in the box above) and you should activate that option in the box above.&lt;/i&gt;&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Basic 8 foreground colors ('30' to '37')</string>
-            </property>
-           </widget>
-          </item>
-          <item row="3" column="1">
-           <widget class="QCheckBox" name="checkBox_basic8BgColors">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;Basic eight background colors using '&lt;tt&gt;4?&lt;/tt&gt;' where ? is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;7&lt;/tt&gt;.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Basic 8 background colors ('40' to '47')</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0">
-           <widget class="QCheckBox" name="checkBox_additional8FgColors">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;Second eight of sixteen foreground colors using '&lt;tt&gt;9?&lt;/tt&gt;' where ? is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;7&lt;/tt&gt;.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Additional 8 foreground colors for 16 in total ('90' to '97')</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="1">
-           <widget class="QCheckBox" name="checkBox_additional8BgColors">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;Second eight of sixteen background colors using '&lt;tt&gt;10?&lt;/tt&gt;' where ? is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;7&lt;/tt&gt;.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>Additional 8 background colors for 16 in total ('100' to '107')</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="0">
-           <widget class="QCheckBox" name="checkBox_256FgColors">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;256 foreground colors using '&lt;tt&gt;38;5;N&lt;/tt&gt;' or '&lt;tt&gt;38:5:N&lt;/tt&gt;' where N is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;255&lt;/tt&gt;.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>256 foreground colors</string>
-            </property>
-           </widget>
-          </item>
-          <item row="5" column="1">
-           <widget class="QCheckBox" name="checkBox_256BgColors">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;256 background colors using '&lt;tt&gt;48;5;N&lt;/tt&gt;' or '&lt;tt&gt;48:5:N...&lt;/tt&gt;' where N is an integer from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;255&lt;/tt&gt;.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>256 background colors</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="0">
-           <widget class="QCheckBox" name="checkBox_16MFgColors">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;16M foreground colors using '&lt;tt&gt;38;2;R;G;B...&lt;/tt&gt;', '&lt;tt&gt;38;2;;R;G;B...&lt;/tt&gt;' or '&lt;tt&gt;38:2::R:G:B...&lt;/tt&gt;' where R, G and B are integers from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;255&lt;/tt&gt;.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>16M foreground colors</string>
-            </property>
-           </widget>
-          </item>
-          <item row="6" column="1">
-           <widget class="QCheckBox" name="checkBox_16MBgColors">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
-            <property name="toolTip">
-             <string>&lt;p&gt;16M background colors using '&lt;tt&gt;48;2;R;G;B...&lt;/tt&gt;', '&lt;tt&gt;48;2;;R;G;B...&lt;/tt&gt;' or '&lt;tt&gt;48:2::R:G:B...&lt;/tt&gt;' where R, G and B are integers from &lt;tt&gt;0&lt;/tt&gt; to &lt;tt&gt;255&lt;/tt&gt;.&lt;/p&gt;</string>
-            </property>
-            <property name="text">
-             <string>16M background colors</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="0" colspan="2" alignment="Qt::AlignHCenter">
-           <widget class="QToolButton" name="toolButton_resetSgrCodeDetection">
-            <property name="text">
-             <string>Reset detection</string>
             </property>
            </widget>
           </item>
@@ -4532,8 +4219,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>fontComboBox</tabstop>
   <tabstop>fontSize</tabstop>
   <tabstop>checkBox_antiAlias</tabstop>
-  <tabstop>checkBox_toggleExtraFontSamplesVisibilty</tabstop>
-  <tabstop>lineEdit_fontSample_normal</tabstop>
   <tabstop>topBorderHeight</tabstop>
   <tabstop>bottomBorderHeight</tabstop>
   <tabstop>leftBorderWidth</tabstop>
@@ -4579,8 +4264,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>pushButton_lCyan</tabstop>
   <tabstop>pushButton_lWhite</tabstop>
   <tabstop>pushButton_resetColors</tabstop>
-  <tabstop>groupBox_sgrCodesSeen</tabstop>
-  <tabstop>toolButton_resetSgrCodeDetection</tabstop>
   <tabstop>pushButton_saveMap</tabstop>
   <tabstop>pushButton_loadMap</tabstop>
   <tabstop>comboBox_mapHistory</tabstop>
@@ -4670,19 +4353,6 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_store_passwords_in</tabstop>
   <tabstop>timeEdit_timerDebugOutputMinimumInterval</tabstop>
   <tabstop>doubleSpinBox_networkPacketTimeout</tabstop>
-  <tabstop>checkBox_bold</tabstop>
-  <tabstop>checkBox_blinking</tabstop>
-  <tabstop>checkBox_altFont</tabstop>
-  <tabstop>checkBox_basic8FgColors</tabstop>
-  <tabstop>checkBox_additional8FgColors</tabstop>
-  <tabstop>checkBox_256FgColors</tabstop>
-  <tabstop>checkBox_16MFgColors</tabstop>
-  <tabstop>checkBox_faint</tabstop>
-  <tabstop>checkBox_concealed</tabstop>
-  <tabstop>checkBox_basic8BgColors</tabstop>
-  <tabstop>checkBox_additional8BgColors</tabstop>
-  <tabstop>checkBox_256BgColors</tabstop>
-  <tabstop>checkBox_16MBgColors</tabstop>
  </tabstops>
  <resources>
   <include location="../mudlet.qrc"/>

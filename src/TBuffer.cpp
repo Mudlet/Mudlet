@@ -411,13 +411,6 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
         localBuffer = incoming;
     }
 
-    // Set the class member flag now so that it is available when decoding any
-    // SGR codes later on:
-    if (mpConsole->getType() == TConsole::MainConsole) {
-        // Only the Main Console needs to consider this:
-        mProcessingServerText = isFromServer;
-    }
-
     // Fixup table for our own, substitute QTextCodecs:
     QByteArray encodingTableToUse{mEncoding};
     if (mEncoding == "M_CP437") {
@@ -739,16 +732,16 @@ COMMIT_LINE:
                 }
                 if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
                     const TChar::AttributeFlags attributeFlags =
-                             ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
-                             | (mFaint ? TChar::Faint : TChar::None)
-                             | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
-                             | (mOverline ? TChar::Overline : TChar::None)
-                             | (mReverse ? TChar::Reverse : TChar::None)
-                             | ((mStrikeOut || mpHost->mMxpClient.strikeOut()) ? TChar::StrikeOut : TChar::None)
-                             | ((mUnderline || mpHost->mMxpClient.underline()) ? TChar::Underline : TChar::None)
-                             | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
-                             | (TChar::alternateFontFlag(mAltFont))
-                             | (mConcealed ? TChar::Concealed : TChar::None));
+                            ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                            | (mFaint ? TChar::Faint : TChar::None)
+                            | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
+                            | (mOverline ? TChar::Overline : TChar::None)
+                            | (mReverse ? TChar::Reverse : TChar::None)
+                            | ((mStrikeOut || mpHost->mMxpClient.strikeOut()) ? TChar::StrikeOut : TChar::None)
+                            | ((mUnderline || mpHost->mMxpClient.underline()) ? TChar::Underline : TChar::None)
+                            | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
+                            | (TChar::alternateFontFlag(mAltFont))
+                            | (mConcealed ? TChar::Concealed : TChar::None));
 
                     // Note: we are using the background color for the
                     // foreground color as well so that we are transparent:
@@ -886,16 +879,16 @@ COMMIT_LINE:
         }
 
         const TChar::AttributeFlags attributeFlags =
-                 ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
-                 | (mFaint ? TChar::Faint : TChar::None)
-                 | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
-                 | (mOverline ? TChar::Overline : TChar::None)
-                 | (mReverse ? TChar::Reverse : TChar::None)
-                 | ((mStrikeOut || mpHost->mMxpClient.strikeOut()) ? TChar::StrikeOut : TChar::None)
-                 | ((mUnderline || mpHost->mMxpClient.underline()) ? TChar::Underline : TChar::None)
-                 | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
-                 | (TChar::alternateFontFlag(mAltFont))
-                 | (mConcealed ? TChar::Concealed : TChar::None));
+                ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                | (mFaint ? TChar::Faint : TChar::None)
+                | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
+                | (mOverline ? TChar::Overline : TChar::None)
+                | (mReverse ? TChar::Reverse : TChar::None)
+                | ((mStrikeOut || mpHost->mMxpClient.strikeOut()) ? TChar::StrikeOut : TChar::None)
+                | ((mUnderline || mpHost->mMxpClient.underline()) ? TChar::Underline : TChar::None)
+                | (mFastBlink ? TChar::FastBlink : (mBlink ? TChar::Blink :TChar::None))
+                | (TChar::alternateFontFlag(mAltFont))
+                | (mConcealed ? TChar::Concealed : TChar::None));
 
         TChar c((mpHost && mpHost->mBoldIsBright && mMayShift8ColorSet && mBold) ? mForeGroundColorLight
                                                                                      : mForeGroundColor,
@@ -927,35 +920,12 @@ COMMIT_LINE:
     }
 }
 
-void TBuffer::setSgrCodeSeenFlag(const SgrCodeFlag flag)
-{
-    if (!mProcessingServerText) {
-        return;
-    }
-
-    if (mpConsole->getType() != TConsole::MainConsole) {
-        return;
-    }
-
-    auto currentFlags = mSgrCodesSeen;
-    mSgrCodesSeen |= flag;
-    if (currentFlags == mSgrCodesSeen) {
-        return;
-    }
-
-    auto pMainConsole = qobject_cast<TMainConsole*>(mpConsole);
-    Q_ASSERT_X(pMainConsole, "TBuffer::setSgrCodeSeenFlag", "mpConsole pointer does not point to a TMainConsole instance!");
-    emit pMainConsole->TMainConsole::signal_sgrFlagsChanged();
-}
-
 void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
 {
 #if defined(DEBUG_SGR_PROCESSING)
     qDebug() << "    TBuffer::decodeSGR38(" << parameters << "," << isColonSeparated <<") INFO - called";
 #endif
     if (parameters.at(1) == QLatin1String("5")) {
-
-        setSgrCodeSeenFlag(Sgr_38_5);
 
         int tag = 0;
         if (parameters.count() > 2) {
@@ -1023,8 +993,6 @@ void TBuffer::decodeSGR38(const QStringList& parameters, bool isColonSeparated)
         // else ignore it altogether
 
     } else if (parameters.at(1) == QLatin1String("2")) {
-
-        setSgrCodeSeenFlag(Sgr_38_2);
 
         if (parameters.count() >= 6) {
             // Have enough for all three colour
@@ -1094,8 +1062,6 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
 
     if (parameters.at(1) == QLatin1String("5")) {
 
-        setSgrCodeSeenFlag(Sgr_48_5);
-
         int tag = 0;
         if (parameters.count() > 2) {
             bool isOk = false;
@@ -1162,8 +1128,6 @@ void TBuffer::decodeSGR48(const QStringList& parameters, bool isColonSeparated)
         // else ignore it altogether
 
     } else if (parameters.at(1) == QLatin1String("2")) {
-
-        setSgrCodeSeenFlag(Sgr_48_2);
 
         if (parameters.count() >= 6) {
             // Have enough for all three colour
@@ -1528,11 +1492,9 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 1:
                     mBold = true;
-                    setSgrCodeSeenFlag(Sgr_Bold);
                     break;
                 case 2:
                     mFaint = true;
-                    setSgrCodeSeenFlag(Sgr_Faint);
                     break;
                 case 3:
                     // There is a proposal by the "VTE" terminal
@@ -1556,19 +1518,16 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 5:
                     mBlink = true;
                     mFastBlink = false;
-                    setSgrCodeSeenFlag(Sgr_Blinking);
                     break; //slow-blinking, display as italics instead for the moment
                 case 6:
                     mBlink = false;
                     mFastBlink = true;
-                    setSgrCodeSeenFlag(Sgr_Blinking);
                     break; //fast blinking, display as italics instead for the moment
                 case 7:
                     mReverse = true;
                     break;
                 case 8: // Concealed characters (set foreground to be the same as background?)
                     mConcealed = true;
-                    setSgrCodeSeenFlag(Sgr_Conceal);
                     break;
                 case 9:
                     mStrikeOut = true;
@@ -1579,39 +1538,30 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 11: // 11 to 19 are alternate fonts, what and where those
                          // are set is not so well specified
                     mAltFont = 1;
-                    setSgrCodeSeenFlag(Sgr_AltFont);
                     break;
                 case 12:
                     mAltFont = 2;
-                    setSgrCodeSeenFlag(Sgr_AltFont);
                     break;
                 case 13:
                     mAltFont = 3;
-                    setSgrCodeSeenFlag(Sgr_AltFont);
                     break;
                 case 14:
                     mAltFont = 4;
-                    setSgrCodeSeenFlag(Sgr_AltFont);
                     break;
                 case 15:
                     mAltFont = 5;
-                    setSgrCodeSeenFlag(Sgr_AltFont);
                     break;
                 case 16:
                     mAltFont = 6;
-                    setSgrCodeSeenFlag(Sgr_AltFont);
                     break;
                 case 17:
                     mAltFont = 7;
-                    setSgrCodeSeenFlag(Sgr_AltFont);
                     break;
                 case 18:
                     mAltFont = 8;
-                    setSgrCodeSeenFlag(Sgr_AltFont);
                     break;
                 case 19:
                     mAltFont = 9;
-                    setSgrCodeSeenFlag(Sgr_AltFont);
                     break;
                 // case 20: // Fracktur -  a weird gothic Germanic font apparently
                 // case 21: // Double underline according to specs
@@ -1643,49 +1593,41 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mForeGroundColor = mBlack;
                     mForeGroundColorLight = mLightBlack;
                     mMayShift8ColorSet = true;
-                    setSgrCodeSeenFlag(Sgr_30_37);
                     break;
                 case 31:
                     mForeGroundColor = mRed;
                     mForeGroundColorLight = mLightRed;
                     mMayShift8ColorSet = true;
-                    setSgrCodeSeenFlag(Sgr_30_37);
                     break;
                 case 32:
                     mForeGroundColor = mGreen;
                     mForeGroundColorLight = mLightGreen;
                     mMayShift8ColorSet = true;
-                    setSgrCodeSeenFlag(Sgr_30_37);
                     break;
                 case 33:
                     mForeGroundColor = mYellow;
                     mForeGroundColorLight = mLightYellow;
                     mMayShift8ColorSet = true;
-                    setSgrCodeSeenFlag(Sgr_30_37);
                     break;
                 case 34:
                     mForeGroundColor = mBlue;
                     mForeGroundColorLight = mLightBlue;
                     mMayShift8ColorSet = true;
-                    setSgrCodeSeenFlag(Sgr_30_37);
                     break;
                 case 35:
                     mForeGroundColor = mMagenta;
                     mForeGroundColorLight = mLightMagenta;
                     mMayShift8ColorSet = true;
-                    setSgrCodeSeenFlag(Sgr_30_37);
                     break;
                 case 36:
                     mForeGroundColor = mCyan;
                     mForeGroundColorLight = mLightCyan;
                     mMayShift8ColorSet = true;
-                    setSgrCodeSeenFlag(Sgr_30_37);
                     break;
                 case 37:
                     mForeGroundColor = mWhite;
                     mForeGroundColorLight = mLightWhite;
                     mMayShift8ColorSet = true;
-                    setSgrCodeSeenFlag(Sgr_30_37);
                     break;
                 case 38: {
                     // We are not now using the basic 8 colors so we won't
@@ -1789,35 +1731,27 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 40:
                     mBackGroundColor = mBlack;
-                    setSgrCodeSeenFlag(Sgr_40_47);
                     break;
                 case 41:
                     mBackGroundColor = mRed;
-                    setSgrCodeSeenFlag(Sgr_40_47);
                     break;
                 case 42:
                     mBackGroundColor = mGreen;
-                    setSgrCodeSeenFlag(Sgr_40_47);
                     break;
                 case 43:
                     mBackGroundColor = mYellow;
-                    setSgrCodeSeenFlag(Sgr_40_47);
                     break;
                 case 44:
                     mBackGroundColor = mBlue;
-                    setSgrCodeSeenFlag(Sgr_40_47);
                     break;
                 case 45:
                     mBackGroundColor = mMagenta;
-                    setSgrCodeSeenFlag(Sgr_40_47);
                     break;
                 case 46:
                     mBackGroundColor = mCyan;
-                    setSgrCodeSeenFlag(Sgr_40_47);
                     break;
                 case 47:
                     mBackGroundColor = mWhite;
-                    setSgrCodeSeenFlag(Sgr_40_47);
                     break;
                 case 48: {
                     // We only have single elements so we will need to steal the
@@ -1940,74 +1874,58 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 90:
                     mForeGroundColor = mLightBlack;
                     mMayShift8ColorSet = false;
-                    setSgrCodeSeenFlag(Sgr_90_97);
                     break;
                 case 91:
                     mForeGroundColor = mLightRed;
                     mMayShift8ColorSet = false;
-                    setSgrCodeSeenFlag(Sgr_90_97);
                     break;
                 case 92:
                     mForeGroundColor = mLightGreen;
                     mMayShift8ColorSet = false;
-                    setSgrCodeSeenFlag(Sgr_90_97);
                     break;
                 case 93:
                     mForeGroundColor = mLightYellow;
                     mMayShift8ColorSet = false;
-                    setSgrCodeSeenFlag(Sgr_90_97);
                     break;
                 case 94:
                     mForeGroundColor = mLightBlue;
                     mMayShift8ColorSet = false;
-                    setSgrCodeSeenFlag(Sgr_90_97);
                     break;
                 case 95:
                     mForeGroundColor = mLightMagenta;
                     mMayShift8ColorSet = false;
-                    setSgrCodeSeenFlag(Sgr_90_97);
                     break;
                 case 96:
                     mForeGroundColor = mLightCyan;
                     mMayShift8ColorSet = false;
-                    setSgrCodeSeenFlag(Sgr_90_97);
                     break;
                 case 97:
                     mForeGroundColor = mLightWhite;
                     mMayShift8ColorSet = false;
-                    setSgrCodeSeenFlag(Sgr_90_97);
                     break;
                 case 100:
                     mBackGroundColor = mLightBlack;
-                    setSgrCodeSeenFlag(Sgr_100_107);
                     break;
                 case 101:
                     mBackGroundColor = mLightRed;
-                    setSgrCodeSeenFlag(Sgr_100_107);
                     break;
                 case 102:
                     mBackGroundColor = mLightGreen;
-                    setSgrCodeSeenFlag(Sgr_100_107);
                     break;
                 case 103:
                     mBackGroundColor = mLightYellow;
-                    setSgrCodeSeenFlag(Sgr_100_107);
                     break;
                 case 104:
                     mBackGroundColor = mLightBlue;
-                    setSgrCodeSeenFlag(Sgr_100_107);
                     break;
                 case 105:
                     mBackGroundColor = mLightMagenta;
-                    setSgrCodeSeenFlag(Sgr_100_107);
                     break;
                 case 106:
                     mBackGroundColor = mLightCyan;
-                    setSgrCodeSeenFlag(Sgr_100_107);
                     break;
                 case 107:
                     mBackGroundColor = mLightWhite;
-                    setSgrCodeSeenFlag(Sgr_100_107);
                     break;
                 default:
                     qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - Unhandled single SGR code sequence CSI " << tag << " m received, Mudlet will ignore it.";
