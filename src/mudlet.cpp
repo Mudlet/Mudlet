@@ -4347,8 +4347,8 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
 
 #if defined(Q_OS_WIN32)
-    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.dic"));
-    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.aff"));
 #endif
     return Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
 }
