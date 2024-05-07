@@ -60,6 +60,8 @@ jobs:
     - name: Setup tmate session
       if: matrix.os == 'windows-2019'
       uses: mxschmitt/action-tmate@v3
+      with:
+        detached: true
         
     - name: (Windows 64) Setup MSYS2
       if: matrix.buildname == 'windows64'
