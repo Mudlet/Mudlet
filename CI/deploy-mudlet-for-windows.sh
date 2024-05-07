@@ -108,14 +108,15 @@ if [[ "$GITHUB_REPO_NAME" != "Mudlet/Mudlet" ]]; then
   exit 2
 fi
 
-PACKAGE_DIR="$GITHUB_WORKSPACE/package-${MSYSTEM}-release"
+GITHUB_WORKSPACE_UNIX_PATH=$(echo ${GITHUB_WORKSPACE} | sed 's|\\|/|g' | sed 's|D:|/d|g')
+PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-release"
 
 cd "$PACKAGE_DIR" || exit 1
 
 moveToUploadDir() {
   local uploadFilename=$1
   echo "=== Setting up upload directory ==="
-  local uploadDir="$GITHUB_WORKSPACE/upload"
+  local uploadDir="${GITHUB_WORKSPACE_UNIX_PATH}/upload"
 
   # Check if the upload directory exists, if not, create it
   if [[ ! -d "$uploadDir" ]]; then
@@ -123,7 +124,7 @@ moveToUploadDir() {
   fi
 
   echo "=== Moving files to upload directory ==="
-  mv "$PACKAGE_DIR/*" "$uploadDir/"
+  mv "${PACKAGE_DIR}/*" "$uploadDir/"
 
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
   echo "FOLDER_TO_UPLOAD=$uploadDir" >> "$GITHUB_ENV"
@@ -146,7 +147,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   # Define the upload filename
   uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS"
   
-  # Move the zip file to the upload directory (assumed to be previously defined as a function or script)
+  # Move packaged files to the upload directory
   moveToUploadDir "$uploadFilename"
 else
 
