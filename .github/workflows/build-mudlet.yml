@@ -57,11 +57,11 @@ jobs:
         submodules: true
         fetch-depth: 0
         
-    - name: Setup tmate session
-      if: matrix.os == 'windows-2019'
-      uses: mxschmitt/action-tmate@v3
-      with:
-        detached: true
+    #- name: Setup tmate session
+    #  if: matrix.os == 'windows-2019'
+    #  uses: mxschmitt/action-tmate@v3
+    #  with:
+    #    detached: true
         
     - name: (Windows 64) Setup MSYS2
       if: matrix.buildname == 'windows64'
@@ -108,6 +108,7 @@ jobs:
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
+      uses: mxschmitt/action-tmate@v3
       
     - name: (Linux/macOS) Install Qt
       uses: jurplel/install-qt-action@v3
