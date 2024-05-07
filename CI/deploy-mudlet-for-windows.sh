@@ -124,7 +124,7 @@ moveToUploadDir() {
   fi
 
   echo "=== Moving files to upload directory ==="
-  ls "-l ${PACKAGE_DIR}"
+  ls "${PACKAGE_DIR}"
   mv "${PACKAGE_DIR}/*" "$uploadDir/"
 
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
