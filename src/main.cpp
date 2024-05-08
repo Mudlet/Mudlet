@@ -314,6 +314,8 @@ int main(int argc, char* argv[])
                                                                   "                                    repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific\n"
                                                                   "                                    predefined game, may be repeated."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       --steammode                  adjusts Mudlet settings to match\n"
+                                                                  "                                    Steam's requirements."));
         texts << appendLF.arg(QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which are\n"
                                                                   "less likely to be useful for normal use of this application:"));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
