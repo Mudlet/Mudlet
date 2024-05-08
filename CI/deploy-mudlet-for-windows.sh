@@ -113,64 +113,39 @@ PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-release"
 
 cd "$PACKAGE_DIR" || exit 1
 
-moveToUploadDir() {
-  local uploadFilename=$1
-  echo "=== Setting up upload directory ==="
-  local uploadDir="${GITHUB_WORKSPACE_UNIX_PATH}/upload"
-
-  # Check if the upload directory exists, if not, create it
-  if [[ ! -d "$uploadDir" ]]; then
-    mkdir -p "$uploadDir"
-  fi
-  
-  echo "=== Listing files in package directory ==="
-  ls "${PACKAGE_DIR}"
-
-  echo "=== Copying files to upload directory ==="
-  #cp "${PACKAGE_DIR}/*" "$uploadDir/"
-  #rsync -avR "${PACKAGE_DIR}"/./* "$uploadDir"
-  mv "${PACKAGE_DIR}" "$uploadDir/"
-  echo "=== Listing files in upload directory ==="
-  ls "$uploadDir"
-
-  # Append these variables to the GITHUB_ENV to make them available in subsequent steps
-  echo "FOLDER_TO_UPLOAD=$uploadDir" >> "$GITHUB_ENV"
-  echo "UPLOAD_FILENAME=$uploadFilename" >> "$GITHUB_ENV"
-}
-
-
 # Remove specific file types from the directory
 rm ./*.cpp ./*.o
 
-
-# Check if GITHUB_REPO_TAG is "false" and PublicTestBuild is not true
-if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; then
-  echo "=== Creating a snapshot build ==="
-  mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
-  
+# Helper function to move a packaged mudlet to the upload directory and set up an artifact upload
+moveToUploadDir() {
+  local uploadFilename=$1
   echo "=== Setting up upload directory ==="
-  uploadDir="${GITHUB_WORKSPACE}\\upload"
-  uploadDirUnix=$(echo "${uploadDir}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
+  local uploadDir="${GITHUB_WORKSPACE}\\upload"
+  local uploadDirUnix=$(echo "${uploadDir}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
 
   # Check if the upload directory exists, if not, create it
   if [[ ! -d "$uploadDirUnix" ]]; then
     mkdir -p "$uploadDirUnix"
   fi
-  
-  # Create a zip file using 7z
-  #7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS" "$PACKAGE_DIR/*"
-  #echo "=== Listing files in package directory ==="
-  #ls "${PACKAGE_DIR}"
+
+  echo "=== Copying files to upload directory ==="
   rsync -avR "${PACKAGE_DIR}"/./* "$uploadDirUnix"
-  echo "=== Listing files in upload directory ==="
-  ls "$uploadDirUnix"
+
+  # Append these variables to the GITHUB_ENV to make them available in subsequent steps
+  echo "FOLDER_TO_UPLOAD=${uploadDir}\\" >> "$GITHUB_ENV"
+  echo "UPLOAD_FILENAME=$uploadFilename" >> "$GITHUB_ENV"
+}
+
+# Check if GITHUB_REPO_TAG and PublicTestBuild are "false" for a snapshot build
+if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; then
+  echo "=== Creating a snapshot build ==="
+  mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
+
   # Define the upload filename
   uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS"
 
-  echo "FOLDER_TO_UPLOAD=${uploadDir}\\" >> "$GITHUB_ENV"
-  echo "UPLOAD_FILENAME=$uploadFilename" >> "$GITHUB_ENV"
   # Move packaged files to the upload directory
-  #moveToUploadDir "$uploadFilename"
+  moveToUploadDir "$uploadFilename"
 else
 
   # Check if it's a Public Test Build
