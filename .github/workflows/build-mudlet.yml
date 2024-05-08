@@ -87,10 +87,6 @@ jobs:
       if: matrix.os == 'windows-2019'
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
-      
-    #- name: Setup tmate session
-    #  if: matrix.os == 'windows-2019'
-    #  uses: mxschmitt/action-tmate@v3
 
     - name: (Windows) Deploy
       if: matrix.os == 'windows-2019'
@@ -391,6 +387,10 @@ jobs:
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
+        
+    - name: Setup tmate session
+      if: matrix.os == 'windows-2019'
+      uses: mxschmitt/action-tmate@v3
       
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME

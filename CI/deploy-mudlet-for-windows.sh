@@ -159,7 +159,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   # Create a zip file using 7z
   #7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS" "$PACKAGE_DIR/*"
   echo "=== Listing files in package directory ==="
-  ls "${PACKAGE_DIR}"
+  #ls "${PACKAGE_DIR}"
   rsync -avR "${PACKAGE_DIR}"/./* "$uploadDir"
   echo "=== Listing files in upload directory ==="
   ls "$uploadDir"
