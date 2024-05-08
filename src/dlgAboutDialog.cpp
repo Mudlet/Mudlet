@@ -1085,7 +1085,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
                 %2
                 )")
                     .arg(tr(R"(
-                            These formidable folks will be fondly remembered forever<br>for their generous financial support:
+                            These formidable folks will be fondly remembered forever<br>for their generous financial support on Mudlet's patreon:
                             )"), supporters_image_html);
     } else {
         supporters_text = qsl(R"(
