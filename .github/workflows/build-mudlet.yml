@@ -40,11 +40,6 @@ jobs:
             qt: '5.14.2'
             deploy: 'deploy'
             run_tests: 'true'
-          - os: windows-2019
-            buildname: 'windows64'
-          - os: windows-2019
-            buildname: 'windows32'
-            # compiler: flag not used in windows pipeline
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
@@ -56,52 +51,6 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
-        
-    - name: (Windows 64) Setup MSYS2
-      if: matrix.buildname == 'windows64'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        update: true
-        
-    - name: (Windows 32) Setup MSYS2
-      if: matrix.buildname == 'windows32'
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW32
-        update: true
-          
-    - name: (Windows) Build Environment Setup
-      if: matrix.os == 'windows-2019'
-      shell: msys2 {0}
-      run: $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
-      
-    - name: (Windows) Build
-      if: matrix.os == 'windows-2019'
-      shell: msys2 {0}
-      env:
-        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-      run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
-        
-    - name: (Windows) Package
-      if: matrix.os == 'windows-2019'
-      shell: msys2 {0}
-      run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
-
-    - name: (Windows) Deploy
-      if: matrix.os == 'windows-2019'
-      shell: msys2 {0}
-      env:
-        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
-        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
-        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
-        WIN_SIGNING_PASS: ${{secrets.WIN_SIGNING_PASS}}
-        GITHUB_REPO_NAME: ${{ github.repository }}
-        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' }}
-        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
       
     - name: (Linux/macOS) Install Qt
       uses: jurplel/install-qt-action@v3
@@ -112,7 +61,6 @@ jobs:
         cache: true
 
     - name: (Linux/macOS) Restore Boost cache
-      if: matrix.os != 'windows-2019'
       uses: actions/cache@v4
       id: cache-boost
       with:
@@ -120,7 +68,7 @@ jobs:
         key: boost
 
     - name: (Linux/macOS) Install Boost
-      if: matrix.os != 'windows-2019' && steps.cache-boost.outputs.cache-hit != 'true'
+      if: steps.cache-boost.outputs.cache-hit != 'true'
       run: |
         if [ "$OS" == "Windows_NT" ]; then
           # fix up paths to be forward slashes consistently
@@ -136,7 +84,6 @@ jobs:
 
     # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
     - name: (Linux/macOS) Use CMake 3.20.1
-      if: matrix.os != 'windows-2019'
       uses: lukka/get-cmake@v3.20.1
 
     - name: (macOS) Install non-vcpkg dependencies (1/2)
@@ -157,7 +104,6 @@ jobs:
         sudo apt-get install gettext -y
 
     - name: (Linux/macOS) Restore from cache and run vcpkg
-      if: matrix.os != 'windows-2019'
       uses: lukka/run-vcpkg@v7
       env:
         vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
@@ -257,7 +203,6 @@ jobs:
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
     - name: (Linux/macOS) restore ccache
-      if: matrix.os != 'windows-2019'
       uses: actions/cache@v4
       with:
         path: ${{runner.workspace}}/ccache
@@ -286,7 +231,6 @@ jobs:
       run: ccache --zero-stats --show-stats
 
     - name: (Linux/macOS) Build Mudlet
-      if: matrix.os != 'windows-2019'
       uses: lukka/run-cmake@v3
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
@@ -303,7 +247,7 @@ jobs:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
     - name: (Linux/macOS) Upload GitHub Actions artifact of vcpkg build logs
-      if: matrix.os != 'windows-2019' && failure()
+      if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: vcpkg-logs-${{ runner.os }}
@@ -387,10 +331,6 @@ jobs:
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
-        
-    - name: Setup tmate session
-      if: matrix.os == 'windows-2019'
-      uses: mxschmitt/action-tmate@v3
       
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
@@ -434,7 +374,7 @@ jobs:
         QUIT_MUDLET_AFTER_TESTS: 'true'
 
     - name: (Linux/macOS) Passed Lua tests
-      if: matrix.os != 'windows-2019' && matrix.run_tests == 'true'
+      if: matrix.run_tests == 'true'
       run: |
         if [ -e /tmp/busted-tests-failed ]
         then
