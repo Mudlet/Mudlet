@@ -1077,13 +1077,25 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
         // clang-format on
     }
 
-    QString supporters_text(qsl(R"(
-               <p align="center"><br>%1<br></p>
-               %2
-               )")
-                  .arg(tr(R"(
-                          These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
-                          )"), supporters_image_html));
+    QSettings settings;
+    QString supporters_text;
+    if (settings.value("steamMode").toBool()) {
+        supporters_text = qsl(R"(
+                <p align="center"><br>%1<br></p>
+                %2
+                )")
+                    .arg(tr(R"(
+                            These formidable folks will be fondly remembered forever<br>for their generous financial support:
+                            )"), supporters_image_html);
+    } else {
+        supporters_text = qsl(R"(
+                <p align="center"><br>%1<br></p>
+                %2
+                )")
+                    .arg(tr(R"(
+                            These formidable folks will be fondly remembered forever<br>for their generous financial support on <a href="https://www.patreon.com/mudlet">Mudlet's patreon</a>:
+                            )"), supporters_image_html);
+    }
 
     supportersDocument->setHtml(qsl("<html>%1<body>%2</body></html>").arg(htmlHead, supporters_text));
     textBrowser_supporters->setDocument(supportersDocument.get());
