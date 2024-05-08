@@ -108,7 +108,7 @@ if [[ "$GITHUB_REPO_NAME" != "Mudlet/Mudlet" ]]; then
   exit 2
 fi
 
-GITHUB_WORKSPACE_UNIX_PATH=$(echo ${GITHUB_WORKSPACE} | sed 's|\\|/|g' | sed 's|D:|/d|g')
+GITHUB_WORKSPACE_UNIX_PATH=$(echo "${GITHUB_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
 PACKAGE_DIR="${GITHUB_WORKSPACE_UNIX_PATH}/package-${MSYSTEM}-release"
 
 cd "$PACKAGE_DIR" || exit 1
@@ -124,7 +124,8 @@ moveToUploadDir() {
   fi
 
   echo "=== Copying files to upload directory ==="
-  cp "${PACKAGE_DIR}/*" "$uploadDir/"
+  #cp "${PACKAGE_DIR}/*" "$uploadDir/"
+  rsync -avR "${PACKAGE_DIR}"/./* "$uploadDir"
   echo "=== Listing files in upload directory ==="
   ls "$uploadDir"
 
