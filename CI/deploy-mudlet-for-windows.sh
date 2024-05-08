@@ -150,6 +150,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   
   echo "=== Setting up upload directory ==="
   uploadDir="${GITHUB_WORKSPACE}/upload"
+  uploadDirUnix=$(echo "${uploadDir}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
 
   # Check if the upload directory exists, if not, create it
   if [[ ! -d "$uploadDir" ]]; then
@@ -158,15 +159,15 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   
   # Create a zip file using 7z
   #7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS" "$PACKAGE_DIR/*"
-  echo "=== Listing files in package directory ==="
+  #echo "=== Listing files in package directory ==="
   #ls "${PACKAGE_DIR}"
-  rsync -avR "${PACKAGE_DIR}"/./* "$uploadDir"
+  rsync -avR "${PACKAGE_DIR}"/./* "$uploadDirUnix"
   echo "=== Listing files in upload directory ==="
   ls "$uploadDir"
   # Define the upload filename
   uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS"
 
-  echo "FOLDER_TO_UPLOAD=${uploadDir}/" >> "$GITHUB_ENV"
+  echo "FOLDER_TO_UPLOAD=${uploadDirUnix}\\" >> "$GITHUB_ENV"
   echo "UPLOAD_FILENAME=$uploadFilename" >> "$GITHUB_ENV"
   # Move packaged files to the upload directory
   #moveToUploadDir "$uploadFilename"
