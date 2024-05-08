@@ -160,7 +160,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   #7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS" "$PACKAGE_DIR/*"
   echo "=== Listing files in package directory ==="
   ls "${PACKAGE_DIR}"
-  mv "${PACKAGE_DIR}" "$uploadDir/"
+  mv "${PACKAGE_DIR}/*" "$uploadDir/"
   echo "=== Listing files in upload directory ==="
   ls "$uploadDir"
   # Define the upload filename
