@@ -149,7 +149,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
   
   echo "=== Setting up upload directory ==="
-  uploadDir="${GITHUB_WORKSPACE_UNIX_PATH}/upload"
+  uploadDir="${GITHUB_WORKSPACE}/upload"
 
   # Check if the upload directory exists, if not, create it
   if [[ ! -d "$uploadDir" ]]; then
