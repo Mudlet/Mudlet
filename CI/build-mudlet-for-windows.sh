@@ -58,6 +58,38 @@ else
   exit 2
 fi
 
+# Check if GITHUB_REPO_TAG is "false"
+if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
+  echo "=== GITHUB_REPO_TAG is FALSE ==="
+
+  # Check if this is a scheduled build
+  if [[ "$GITHUB_SCHEDULED_BUILD" == "true" ]]; then
+    echo "=== GITHUB_SCHEDULED_BUILD is TRUE, this is a PTB ==="
+    MUDLET_VERSION_BUILD="-ptb"
+  else
+    MUDLET_VERSION_BUILD="-testing"
+  fi
+
+  # Check if this is a pull request
+  if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
+    # Use the specific commit SHA from the pull request head, since GitHub Actions merges the PR
+    BUILD_COMMIT=$(git rev-parse --short "$GITHUB_PULL_REQUEST_HEAD_SHA")
+    MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-PR$GITHUB_PULL_REQUEST_NUMBER"
+  else
+    BUILD_COMMIT=$(git rev-parse --short HEAD)
+
+    if [[ "$MUDLET_VERSION_BUILD" == "-ptb" ]]; then
+      # Get current date in YYYY-MM-DD format
+      DATE=$(date +%F)
+      MUDLET_VERSION_BUILD="$MUDLET_VERSION_BUILD-$DATE"
+    fi
+  fi
+fi
+
+# Convert to lowercase, not all systems deal with uppercase ASCII characters
+export MUDLET_VERSION_BUILD="${MUDLET_VERSION_BUILD,,}"
+export BUILD_COMMIT="${BUILD_COMMIT,,}"
+
 MINGW_BASE_DIR="${GHCUP_MSYS2}\mingw32"
 export MINGW_BASE_DIR
 MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
