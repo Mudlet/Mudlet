@@ -359,7 +359,7 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS glwidget.h)
 endif(USE_3DMAPPER)
 
-# credit to https://github.com/heavyai/heavydb/blob/master/CMakeLists.txt#L119
+# credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
 macro(set_alternate_linker linker)
   find_program(LINKER_EXECUTABLE ld.${USE_ALTERNATE_LINKER} ${USE_ALTERNATE_LINKER})
   if(LINKER_EXECUTABLE)
