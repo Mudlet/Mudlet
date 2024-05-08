@@ -123,8 +123,8 @@ moveToUploadDir() {
     mkdir -p "$uploadDir"
   fi
 
-  echo "=== Moving files to upload directory ==="
-  mv "${PACKAGE_DIR}/" "$uploadDir/"
+  echo "=== Copying files to upload directory ==="
+  cp "${PACKAGE_DIR}/*" "$uploadDir/"
   echo "=== Listing files in upload directory ==="
   ls "$uploadDir"
 
