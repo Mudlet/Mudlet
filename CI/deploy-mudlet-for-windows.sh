@@ -125,7 +125,8 @@ moveToUploadDir() {
 
   echo "=== Copying files to upload directory ==="
   #cp "${PACKAGE_DIR}/*" "$uploadDir/"
-  rsync -avR "${PACKAGE_DIR}"/./* "$uploadDir"
+  #rsync -avR "${PACKAGE_DIR}"/./* "$uploadDir"
+  mv "${PACKAGE_DIR}" "$uploadDir/"
   echo "=== Listing files in upload directory ==="
   ls "$uploadDir"
 
@@ -145,7 +146,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
   
   # Create a zip file using 7z
-  #7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip" "$PACKAGE_DIR/*"
+  7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS" "$PACKAGE_DIR/*"
   
   # Define the upload filename
   uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS"
