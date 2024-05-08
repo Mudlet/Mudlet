@@ -122,6 +122,9 @@ moveToUploadDir() {
   if [[ ! -d "$uploadDir" ]]; then
     mkdir -p "$uploadDir"
   fi
+  
+  echo "=== Listing files in package directory ==="
+  ls "${PACKAGE_DIR}"
 
   echo "=== Copying files to upload directory ==="
   #cp "${PACKAGE_DIR}/*" "$uploadDir/"
@@ -145,14 +148,28 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   echo "=== Creating a snapshot build ==="
   mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
   
-  # Create a zip file using 7z
-  7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS" "$PACKAGE_DIR/*"
+  echo "=== Setting up upload directory ==="
+  local uploadDir="${GITHUB_WORKSPACE_UNIX_PATH}/upload"
+
+  # Check if the upload directory exists, if not, create it
+  if [[ ! -d "$uploadDir" ]]; then
+    mkdir -p "$uploadDir"
+  fi
   
+  # Create a zip file using 7z
+  #7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS" "$PACKAGE_DIR/*"
+  echo "=== Listing files in package directory ==="
+  ls "${PACKAGE_DIR}"
+  mv "${PACKAGE_DIR}" "$uploadDir/"
+  echo "=== Listing files in upload directory ==="
+  ls "$uploadDir"
   # Define the upload filename
   uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS"
-  
+
+  echo "FOLDER_TO_UPLOAD=${uploadDir}/" >> "$GITHUB_ENV"
+  echo "UPLOAD_FILENAME=$uploadFilename" >> "$GITHUB_ENV"
   # Move packaged files to the upload directory
-  moveToUploadDir "$uploadFilename"
+  #moveToUploadDir "$uploadFilename"
 else
 
   # Check if it's a Public Test Build
