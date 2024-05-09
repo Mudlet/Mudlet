@@ -1078,7 +1078,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     }
 
     QString supporters_text;
-    if (mudlet::self()->smSteamMode) {
+    if (mudlet::smSteamMode) {
         supporters_text = qsl(R"(
                 <p align="center"><br>%1<br></p>
                 %2
