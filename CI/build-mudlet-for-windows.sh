@@ -132,11 +132,11 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
   export WITH_OWN_QTKEYCHAIN="NO"
 fi
 
-if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
-    # The updater is not helpful in this environment (PTB or PR)
+if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$GITHUB_SCHEDULED_BUILD" == "false" ]]; then
+    # The updater is not helpful in this environment (PR testing build)
     export WITH_UPDATER="NO"
 else
-    # Tagged build, this is a release build, include the updater
+    # Tagged build, this is a release or a PTB build, include the updater
     export WITH_UPDATER="YES"
 fi
 # This one is VITAL as some things in the code have to be tweaked to be
