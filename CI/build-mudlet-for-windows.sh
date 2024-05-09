@@ -161,11 +161,10 @@ echo "Running make to build project ..."
 echo ""
 
 # Despite the mingw32 prefix mingw32-make.exe IS the make we want.
-# Use -k to "keep going" to build as much as possible this time around:
 if [ -n "${NUMBER_OF_PROCESSORS}" ] && [ "${NUMBER_OF_PROCESSORS}" -gt 1 ]; then
-  mingw32-make -j "${NUMBER_OF_PROCESSORS}" -k
+  mingw32-make -j "${NUMBER_OF_PROCESSORS}"
 else
-  mingw32-make -k
+  mingw32-make
 fi
 
 echo " ... make finished"
