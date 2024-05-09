@@ -115,6 +115,7 @@ fi
     git \
     man \
     rsync \
+    ccache \
     "mingw-w64-${BUILDCOMPONENT}-toolchain" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
@@ -128,8 +129,7 @@ fi
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
-    "mingw-w64-${BUILDCOMPONENT}-7zip" \
-    "mingw-w64-${BUILDCOMPONENT}-ccache" 
+    "mingw-w64-${BUILDCOMPONENT}-7zip" 
 
 echo ""
 echo "    Completed"
