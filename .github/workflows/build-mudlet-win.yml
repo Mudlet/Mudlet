@@ -1,4 +1,4 @@
-name: 🔨 Build Mudlet
+name: 🔨 Build Mudlet (windows)
 on:
   push:
     branches: [master, development, release-*]
