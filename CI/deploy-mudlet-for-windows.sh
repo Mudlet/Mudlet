@@ -142,7 +142,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
 
   # Define the upload filename
-  uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS"
+  uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip"
 
   # Move packaged files to the upload directory
   moveToUploadDir "$uploadFilename"
