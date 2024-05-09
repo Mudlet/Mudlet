@@ -96,8 +96,10 @@ MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
 export PATH
+export CCACHE_DIR=${RUNNER_WORKSPACE}/ccache
 
 echo "MSYSTEM is: ${MSYSTEM}"
+echo "CCACHE_DIR is: ${CCACHE_DIR}"
 echo "PATH is now:"
 echo "${PATH}"
 echo ""
