@@ -45,7 +45,11 @@ jobs:
           
     - name: (Windows) Build Environment Setup
       shell: msys2 {0}
-      run: $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
+      env:
+        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+      run: |
+        $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
+        $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
 
     - name: restore ccache
       uses: actions/cache@v4
