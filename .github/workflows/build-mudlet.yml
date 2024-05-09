@@ -52,21 +52,21 @@ jobs:
         submodules: true
         fetch-depth: 0
       
-    - name:  Install Qt
+    - name: Install Qt
       uses: jurplel/install-qt-action@v3
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
         cache: true
 
-    - name:  Restore Boost cache
+    - name: Restore Boost cache
       uses: actions/cache@v4
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
         key: boost
 
-    - name:  Install Boost
+    - name: Install Boost
       if: steps.cache-boost.outputs.cache-hit != 'true'
       run: |
         if [ "$OS" == "Windows_NT" ]; then
@@ -82,7 +82,7 @@ jobs:
       shell: bash
 
     # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
-    - name:  Use CMake 3.20.1
+    - name: Use CMake 3.20.1
       uses: lukka/get-cmake@v3.20.1
 
     - name: (macOS) Install non-vcpkg dependencies (1/2)
@@ -102,7 +102,7 @@ jobs:
         # gettext is needed for vcpkg
         sudo apt-get install gettext -y
 
-    - name:  Restore from cache and run vcpkg
+    - name: Restore from cache and run vcpkg
       uses: lukka/run-vcpkg@v7
       env:
         vcpkgResponseFile: ${{github.workspace}}/3rdparty/our-vcpkg-dependencies/vcpkg-${{matrix.triplet}}-dependencies
@@ -201,7 +201,7 @@ jobs:
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
-    - name:  restore ccache
+    - name: restore ccache
       uses: actions/cache@v4
       with:
         path: ${{runner.workspace}}/ccache
@@ -225,10 +225,10 @@ jobs:
         # remove it as it breaks packaging down the line: https://github.com/Mudlet/Mudlet/issues/6668
         brew uninstall pcre
 
-    - name:  check ccache stats prior to build
+    - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
-    - name:  Build Mudlet
+    - name: Build Mudlet
       uses: lukka/run-cmake@v3
       with:
         cmakeListsOrSettingsJson: CMakeListsTxtAdvanced
@@ -244,14 +244,14 @@ jobs:
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
 
-    - name:  Upload GitHub Actions artifact of vcpkg build logs
+    - name: Upload GitHub Actions artifact of vcpkg build logs
       if: failure()
       uses: actions/upload-artifact@v4
       with:
         name: vcpkg-logs-${{ runner.os }}
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
-    - name:  check ccache stats post build
+    - name: check ccache stats post build
       run: ccache --show-stats
 
     - name: (macOS) Run C++ tests
@@ -259,14 +259,14 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
-    - name:  restore Luarocks for packaging
+    - name: restore Luarocks for packaging
       uses: actions/cache@v4
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
 
-    - name:  install dependencies for packaging/tests
+    - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
@@ -300,13 +300,13 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
-    - name:  add ssh-agent for tag deployment
+    - name: add ssh-agent for tag deployment
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
       uses: webfactory/ssh-agent@v0.8.0
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
-    - name:  package Mudlet
+    - name: package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: ${{github.workspace}}/CI/travis.after_success.sh
       env:
@@ -369,7 +369,7 @@ jobs:
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
         QUIT_MUDLET_AFTER_TESTS: 'true'
 
-    - name:  Passed Lua tests
+    - name: Passed Lua tests
       if: matrix.run_tests == 'true'
       run: |
         if [ -e /tmp/busted-tests-failed ]
