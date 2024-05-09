@@ -1077,9 +1077,8 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
         // clang-format on
     }
 
-    QSettings settings;
     QString supporters_text;
-    if (settings.value("steamMode").toBool()) {
+    if (mudlet::self()->smSteamMode) {
         supporters_text = qsl(R"(
                 <p align="center"><br>%1<br></p>
                 %2

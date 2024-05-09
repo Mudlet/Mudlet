@@ -428,10 +428,6 @@ int main(int argc, char* argv[])
 
     const QStringList cliProfiles = parser.values(profileToOpen);
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
-
-    const bool steamModestatus = parser.isSet(steamMode);
-    QSettings settings;
-    settings.setValue("steamMode", steamModestatus);
     
     const bool showSplash = parser.isSet(showSplashscreen);
     QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
@@ -658,6 +654,7 @@ int main(int argc, char* argv[])
     }
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
+    mudlet::self()->smSteamMode = parser.isSet(steamMode);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }

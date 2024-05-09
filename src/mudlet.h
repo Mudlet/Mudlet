@@ -301,6 +301,8 @@ public:
     inline static QPointer<QMainWindow> smpDebugArea;
     // mirror everything shown in any console to stdout. Helpful for CI environments
     inline static bool smMirrorToStdOut = false;
+    // adjust Mudlet settings to match Steam's requirements
+    inline static bool smSteamMode = false;
 
 
     void showEvent(QShowEvent*) override;
