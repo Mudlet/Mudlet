@@ -57,7 +57,10 @@ jobs:
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
-      run: ccache --zero-stats --show-stats
+      run: |
+        # fixme: set PATH once in setup-windows-sdk.sh and export to GITHUB_PATH for re-use within all other steps
+        export PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
+        ccache --zero-stats --show-stats
         
     - name: (Windows) Build
       shell: msys2 {0}
@@ -69,7 +72,9 @@ jobs:
 
     - name: check ccache stats post build
       shell: msys2 {0}
-      run: ccache --show-stats
+      run: |
+        export PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
+        ccache --show-stats
       
     - name: (Windows) Package
       shell: msys2 {0}
