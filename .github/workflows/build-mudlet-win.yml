@@ -56,6 +56,7 @@ jobs:
         save-always: true
 
     - name: check ccache stats prior to build
+      shell: msys2 {0}
       run: ccache --zero-stats --show-stats
         
     - name: (Windows) Build
@@ -67,6 +68,7 @@ jobs:
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     - name: check ccache stats post build
+      shell: msys2 {0}
       run: ccache --show-stats
       
     - name: (Windows) Package
