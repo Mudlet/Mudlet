@@ -131,6 +131,10 @@ moveToUploadDir() {
   echo "=== Copying files to upload directory ==="
   #rsync -avR "${PACKAGE_DIR}"/./* "$uploadDirUnix"
   mv "${PACKAGE_DIR}/$uploadFilename" "$uploadDir/"
+  
+  if [[ "$uploadFilename" == *.zip ]]; then
+    $uploadFilename="${uploadFilename%.zip}"
+  fi
 
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
   echo "FOLDER_TO_UPLOAD=${uploadDir}\\" >> "$GITHUB_ENV"
@@ -146,7 +150,7 @@ if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; the
   7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip" "$PACKAGE_DIR/*"
 
   # Define the upload filename
-  uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS"
+  uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip"
 
   # Move packaged files to the upload directory
   moveToUploadDir "$uploadFilename"
