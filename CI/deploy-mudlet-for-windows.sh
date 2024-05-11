@@ -133,7 +133,7 @@ moveToUploadDir() {
   mv "${PACKAGE_DIR}/$uploadFilename" "$uploadDir/"
   
   if [[ "$uploadFilename" == *.zip ]]; then
-    $uploadFilename="${uploadFilename%.zip}"
+    uploadFilename="${uploadFilename%.zip}"
   fi
 
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
@@ -203,15 +203,21 @@ else
   NuSpec="$GITHUB_WORKSPACE/installers/windows/mudlet.nuspec"
   echo "=== Creating Nuget package ==="
 
-  # Check if this is a Public Test Build
+  # Rename the id and title for Squirrel
   if [[ "$PublicTestBuild" == "true" ]]; then
     # Allow public test builds to be installed side by side with the release builds by renaming the app
     # No dots in the <id>: Guidelines by Squirrel
-    sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_-PublicTestBuild<\/id>/" "$NuSpec"
-    sed -i "s/<title>Mudlet<\/title>/<title>Mudlet_${BUILD_BITNESS} (Public Test Build)<\/title>/" "$NuSpec"
+    if [ "${MSYSTEM}" = "MINGW64" ]; then
+      sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_-PublicTestBuild<\/id>/" "$NuSpec"
+    else
+      sed -i 's/<id>Mudlet<\/id>/<id>Mudlet-PublicTestBuild<\/id>/' "$NuSpec"
+    fi
+    sed -i 's/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS} (Public Test Build)<\/title>/' "$NuSpec"
   else
-    sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_<\/id>/" "$NuSpec"
-    sed -i "s/<title>Mudlet<\/title>/<title>Mudlet_${BUILD_BITNESS}<\/title>/" "$NuSpec"
+    if [ "${MSYSTEM}" = "MINGW64" ]; then
+      sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_<\/id>/" "$NuSpec"
+    fi
+    sed -i 's/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS}<\/title>/' "$NuSpec"
   fi
 
   # Create NuGet package
