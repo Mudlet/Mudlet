@@ -96,7 +96,7 @@ execute_process(
 # If a CI/CB build system provides an alternative Git SHA1 to identify the build
 # use that instead - reporting which is being used:
 if(DEFINED ENV{BUILD_COMMIT} AND NOT $ENV{BUILD_COMMIT} STREQUAL "")
-    set(GIT_SHA1 string(TOLOWER $ENV{BUILD_COMMIT}))
+    string(TOLOWER $ENV{BUILD_COMMIT} GIT_SHA1)
     message(STATUS "Git SHA1 set from environemnt: ${GIT_SHA1}")
 else()
     message(STATUS "Git SHA1 used: ${GIT_SHA1}")
