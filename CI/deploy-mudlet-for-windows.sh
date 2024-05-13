@@ -119,6 +119,7 @@ rm ./*.cpp ./*.o
 # Helper function to move a packaged mudlet to the upload directory and set up an artifact upload
 moveToUploadDir() {
   local uploadFilename=$1
+  local unzip=$2
   echo "=== Setting up upload directory ==="
   local uploadDir="${GITHUB_WORKSPACE}\\upload"
   local uploadDirUnix=$(echo "${uploadDir}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
@@ -130,30 +131,25 @@ moveToUploadDir() {
 
   echo "=== Copying files to upload directory ==="
   rsync -avR "${PACKAGE_DIR}"/./* "$uploadDirUnix"
-  #mv "${PACKAGE_DIR}/$uploadFilename" "$uploadDir/"
   
-  #if [[ "$uploadFilename" == *.zip ]]; then
-  #  uploadFilename="${uploadFilename%.zip}"
-  #fi
-
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
-  echo "FOLDER_TO_UPLOAD=${uploadDir}\\" >> "$GITHUB_ENV"
-  echo "UPLOAD_FILENAME=$uploadFilename" >> "$GITHUB_ENV"
+  {
+    echo "FOLDER_TO_UPLOAD=${uploadDir}\\"
+    echo "UPLOAD_FILENAME=$uploadFilename"
+    echo "PARAM_UNZIP=$unzip" 
+  } >> "$GITHUB_ENV"
 }
 
 # Check if GITHUB_REPO_TAG and PublicTestBuild are "false" for a snapshot build
 if [[ "$GITHUB_REPO_TAG" == "false" ]] && [[ "$PublicTestBuild" == false ]]; then
   echo "=== Creating a snapshot build ==="
   mv "$PACKAGE_DIR/mudlet.exe" "Mudlet.exe"
-  
-  # Create a zip file using 7z
-  #7z a "Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.zip" "$PACKAGE_DIR/*"
 
   # Define the upload filename
   uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS"
 
   # Move packaged files to the upload directory
-  moveToUploadDir "$uploadFilename"
+  moveToUploadDir "$uploadFilename" 0
 else
 
   # Check if it's a Public Test Build
@@ -276,7 +272,7 @@ else
     echo "=== Uploading public test build to make.mudlet.org ==="
     
     uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
-    moveToUploadDir "$uploadFilename"
+    moveToUploadDir "$uploadFilename" 1
   else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
