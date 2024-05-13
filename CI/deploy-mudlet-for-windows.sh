@@ -208,12 +208,12 @@ else
     else
       sed -i 's/<id>Mudlet<\/id>/<id>Mudlet-PublicTestBuild<\/id>/' "$NuSpec"
     fi
-    sed -i 's/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS} (Public Test Build)<\/title>/' "$NuSpec"
+    sed -i "s/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS} (Public Test Build)<\/title>/" "$NuSpec"
   else
     if [ "${MSYSTEM}" = "MINGW64" ]; then
       sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_<\/id>/" "$NuSpec"
     fi
-    sed -i 's/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS}<\/title>/' "$NuSpec"
+    sed -i "s/<title>Mudlet<\/title>/<title>Mudlet x${BUILD_BITNESS}<\/title>/" "$NuSpec"
   fi
 
   # Create NuGet package
