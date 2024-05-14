@@ -51,6 +51,10 @@ fi
 
 cd "$GITHUB_WORKSPACE" || exit 1
 
+# Add nuget location to PATH
+PATH="/c/ProgramData/Chocolatey/bin:${PATH}"
+export PATH
+
 PublicTestBuild=false
 # Check if GITHUB_REPO_TAG is "false"
 if [[ "$GITHUB_REPO_TAG" == "false" ]]; then
@@ -226,6 +230,11 @@ else
   else
     TestBuildString=""
     InstallerIconFile="$GITHUB_WORKSPACE/src/icons/mudlet.ico"
+  fi
+  
+  # Ensure 64 bit build is properly tagged
+  if [ "${MSYSTEM}" = "MINGW64" ]; then
+    TestBuildString="_64_$TestBuildString"
   fi
 
   nupkg_path="$GITHUB_WORKSPACE/squirrel-packaging-prep/Mudlet$TestBuildString.$VersionAndSha.nupkg"
