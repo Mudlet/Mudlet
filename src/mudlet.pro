@@ -968,7 +968,11 @@ contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         message("Including own copy of QtKeyChain library code in this configuration")
     }
 } else {
-    LIBS += -lqt5keychain
+    lessThan(QT_MAJOR_VERSION,6) {
+        LIBS += -lqt5keychain
+    } else {
+        LIBS += -lqt6keychain
+    }
     !build_pass{
         message("Linking with system QtKeyChain library code in this configuration")
     }
