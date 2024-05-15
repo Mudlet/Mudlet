@@ -285,9 +285,7 @@ else
   else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    echo "scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $setupExePath 'mudmachine@mudlet.org:${DEPLOY_PATH}'"
-    # upload an unzipped, unversioned release for appimage.github.io
-    #scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$setupExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
     SHA256SUM=$(shasum -a 256 "$setupExePath" | awk '{print $1}')
@@ -325,10 +323,10 @@ else
     echo "$Changelog"
     
     echo "=== Creating release in Dblsqd ==="
-    echo "dblsqd release -a mudlet -c public-test-build-${BUILD_BITNESS} -m \"$Changelog\" \"${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}\""
+    dblsqd release -a mudlet -c "public-test-build-${BUILD_BITNESS}" -m \""$Changelog\"" \""${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}\""
 
     echo "=== Registering release with Dblsqd ==="
-    echo "dblsqd push -a mudlet -c public-test-build-${BUILD_BITNESS} -r '${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}' -s mudlet --type 'standalone' --attach win:${DBLSQDTYPE} '${DEPLOY_URL}'"
+    dblsqd push -a mudlet -c "public-test-build-${BUILD_BITNESS}" -r "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}" -s mudlet --type 'standalone' --attach "win:${DBLSQDTYPE}" "${DEPLOY_URL}"
   fi
 fi
 
