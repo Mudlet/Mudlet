@@ -254,7 +254,7 @@ else
   rm -rf "${PACKAGE_DIR:?}/*"
 
   echo "=== Copying installer over ==="
-  mv "$GITHUB_WORKSPACE/squirreloutput/*" "$PACKAGE_DIR"
+  mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "$PACKAGE_DIR"
 
   setupExePath="$PACKAGE_DIR/Setup.exe"
 
@@ -304,6 +304,10 @@ else
     -F "output=json" \
     -F "do=Add File"
   fi
+  
+  echo "=== Installing NodeJS ==="
+  choco install nodejs --version="22.1.0"
+  PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
   
   echo "=== Installing dblsqd-cli ==="
   npm install -g dblsqd-cli
