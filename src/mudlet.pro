@@ -253,16 +253,6 @@ isEmpty( OWN_QTKEYCHAIN_TEST ) | !equals( OWN_QTKEYCHAIN_TEST, "NO" ) {
   DEFINES += INCLUDE_OWN_QT5_KEYCHAIN
 }
 
-################ Alternative Windows build environment support #################
-# Developers using a full MSYS2/Mingw-w64 system, as documented at:
-# https://wiki.mudlet.org/w/Compiling_Mudlet#Compiling_on_Windows_7.2B_.28MSYS2_Alternative.29
-# will need some tweaks to names/paths for some libraries/header files, do this
-# by setting an environment variable WITH_MAIN_BUILD_SYSTEM variable to "NO".
-MAIN_BUILD_SYSTEM_TEST = $$upper($$(WITH_MAIN_BUILD_SYSTEM))
-isEmpty( MAIN_BUILD_SYSTEM_TEST ) | !equals( MAIN_BUILD_SYSTEM_TEST, "NO" ) {
-  DEFINES += INCLUDE_MAIN_BUILD_SYSTEM
-}
-
 ###################### Platform Specific Paths and related #####################
 # Specify default location for Lua files, in OS specific LUA_DEFAULT_DIR value
 # below, if this is not done then a hardcoded default of a ./mudlet-lua/lua
@@ -362,42 +352,21 @@ unix:!macx {
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
-    contains( DEFINES, INCLUDE_MAIN_BUILD_SYSTEM ) {
-        # For CI builds or users/developers using the setup-windows-sdk.ps1 method:
-        isEmpty( MINGW_BASE_DIR_TEST ) {
-            MINGW_BASE_DIR_TEST = "C:\\Qt\\Tools\\mingw730_32"
-        }
-        LIBS +=  \
-            -L"$${MINGW_BASE_DIR_TEST}\\bin" \
-            -llua51 \
-            -lhunspell-1.6
-
-        INCLUDEPATH += \
-             "C:\\Libraries\\boost_1_83_0" \
-             "$${MINGW_BASE_DIR_TEST}\\include" \
-             "$${MINGW_BASE_DIR_TEST}\\lib\\include"
-
-    } else {
-        # For users/developers building with MSYS2 on Windows:
-        isEmpty( MINGW_BASE_DIR_TEST ) {
-            error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
+    isEmpty( MINGW_BASE_DIR_TEST ) {
+        error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
 "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
 "application build) typically this is one of:\\n"\
-"'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
 "'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
 "'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
-        }
-        LIBS +=  \
-            -L$${MINGW_BASE_DIR_TEST}/bin \
-            -llua5.1 \
-            -llibhunspell-1.7
-
-        INCLUDEPATH += \
-             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
-             $${MINGW_BASE_DIR_TEST}/include/pugixml
     }
+    INCLUDEPATH += \
+        $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+        $${MINGW_BASE_DIR_TEST}/include/pugixml
 
-    LIBS += \
+    LIBS +=  \
+        -L$${MINGW_BASE_DIR_TEST}/bin \
+        -llua5.1 \
+        -llibhunspell-1.7 \
         -lpcre-1 \
         -lzip \                 # for dlgPackageExporter
         -lz \                   # for ctelnet.cpp
@@ -445,7 +414,7 @@ macx {
 BASE_CXX = $$QMAKE_CXX
 BASE_C = $$QMAKE_C
 # common linux location
-exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe) {
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(/mingw64/bin/ccache.exe)|exists(/mingw32/bin/ccache.exe) {
     QMAKE_CXX = ccache $$BASE_CXX
     QMAKE_C = ccache $$BASE_C
 }
@@ -1653,13 +1622,7 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.gitignore \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.build.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
     ../CI/appveyor.validate_deployment.ps1 \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/generate-changelog.lua \
     ../CI/mudlet-deploy-key.enc \
     ../CI/mudlet-deploy-key-windows.ppk \
@@ -1780,6 +1743,7 @@ DISTFILES += \
     $${LUA_TRANSLATIONS.files} \
     ../.clang-tidy \
     ../.gitmodules \
+    ../build-mudlet-for-windows.sh \
     ../cmake/FindHUNSPELL.cmake \
     ../cmake/FindLua51.cmake \
     ../cmake/FindPCRE.cmake \
@@ -1798,7 +1762,9 @@ DISTFILES += \
     ../mudlet.desktop \
     ../mudlet.png \
     ../mudlet.svg \
+    ../package-mudlet-for-windows.sh \
     ../README.md \
+    ../setup-windows-sdk.sh \
     ../translations/translated/CMakeLists.txt \
     ../translations/translated/generate-translation-stats.lua \
     ../translations/translated/updateqm.pri \

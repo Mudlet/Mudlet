@@ -168,10 +168,6 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_VARIABLE_SPLASH_SCREEN
 include_optional_module(ENVIRONMENT_VARIABLE WITH_OWN_QTKEYCHAIN
                         OPTION_VARIABLE USE_OWN_QTKEYCHAIN
                         READABLE_NAME "own QtKeychain library")
-include_optional_module(ENVIRONMENT_VARIABLE WITH_MAIN_BUILD_SYSTEM
-                        OPTION_VARIABLE USE_MAIN_BUILD_SYSTEM
-                        READABLE_NAME "original CI (setup-windows-sdk.ps1) windows build system"
-                        SUPPORTED_SYSTEMS "Windows")
 include_optional_module(ENVIRONMENT_VARIABLE WITH_QT6
                         OPTION_VARIABLE USE_QT6
                         READABLE_NAME "build with Qt6 (if installed)")

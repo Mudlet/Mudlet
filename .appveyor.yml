@@ -4,12 +4,21 @@ branches:
   - development    # build the default branch
   - /^release-.+/  # build release branches
   - /^Mudlet-.+/   # build release tags (yes, the option also applies to tags)
+
 init:
-- cmd: mkdir C:\src\
+# Not needed, this is done prior to cloning the project's git repository
+#- cmd: mkdir C:\src\
 # enable to debug build process on start
 # - ps: iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 image: Visual Studio 2019
+
+# We only want debug builds for PRs and Test builds and possibly PTBs
+# We want release builds for Release and PTB builds
+configuration:
+- release
+- debug
+
 environment:
   global:
     CCACHE_DIR: "%APPVEYOR_BUILD_FOLDER%\\.ccache"
@@ -26,37 +35,63 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-  - QT_BASE_DIR: C:\Qt\5.14.2\mingw73_32
-    MINGW_BASE_DIR: C:\Qt\Tools\mingw730_32
-install:
-- cd "%APPVEYOR_BUILD_FOLDER%\CI"
-- powershell ".\appveyor.install.ps1"
+  # We might need CHERE_INVOKING: "yes" for each jobs as well:
+  - QT_MAJOR_VERSION: "5"
+    MSYSTEM: "MINGW32"
+  - QT_MAJOR_VERSION: "5"
+    MSYSTEM: "MINGW64"
+  - QT_MAJOR_VERSION: "6"
+    MSYSTEM: "MINGW64"
 
-before_build:
-- set PATH=C:\Program Files\ccache;%PATH%
-- cd "%APPVEYOR_BUILD_FOLDER%\CI"
-- echo "ccache stats before building:"
-- ccache --zero-stats --show-stats --verbose
+# The build cache is restored before the install stage.
+
+install:
+  # Update MSYS2
+  #C:\msys64\usr\bin\bash -lc "pacman --noconfirm -Syuu"  # Core update (in case any core packages are outdated)
+  #C:\msys64\usr\bin\bash -lc "pacman --noconfirm -Syuu"  # Normal update
+  # Then run your code
+  # $env:CHERE_INVOKING = 'yes'  # Preserve the current working directory
+  # The MSYSTEM setting in the matrix controls which terminal this bash.exe runs:
+- C:\msys64\usr\bin\bash.exe -c C:\\projects\\mudlet\\setup-windows-sdk.sh
+
+#Not needed?
+#before_build:
+#- echo "ccache stats before building:"
+#- ccache --zero-stats --show-stats --verbose
 
 build_script:
-- powershell ".\appveyor.build.ps1"
+- C:\msys64\usr\bin\bash.exe -c C:\\projects\\mudlet\\build-mudlet-for-windows.sh
 
 after_build:
-- echo "ccache stats after building:"
-- ccache --show-stats --verbose
+#- echo "ccache stats after building:"
+#- ccache --show-stats --verbose
+- C:\msys64\usr\bin\bash.exe -c C:\\projects\\mudlet\\package-mudlet-for-windows.sh
 
-on_failure:
-- cd C:\src
-- powershell "Push-AppveyorArtifact ./verbose_output.log"
-- echo "Build failed - see verbose_output.log artifact upload for more information."
+# before_test:
+# Not used
+
+# test_script:
+# Not used
+
+# before_deploy:
+# Not used
+
+# There does not appear to be deply_script handler
+
+# after_deploy:
+# Not used
+
+# on_success:
+# Not used
+
+# on_failure:
+# Not used
 
 # enable to debug build process on completion
-#on_finish:
+# on_finish:
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 cache:
-  - '%MINGW_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
-  - '%QT_BASE_DIR% -> CI\appveyor.install.ps1, CI\appveyor.functions.ps1'
   - .ccache
 
 notifications:
