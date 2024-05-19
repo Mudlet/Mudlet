@@ -1498,12 +1498,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     pConsole->show();
 
-    auto pEditor = new dlgTriggerEditor(pH);
-    pH->mpEditorDialog = pEditor;
-    connect(pH, &Host::profileSaveStarted,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pH, &Host::profileSaveFinished,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
-    pEditor->fillout_form();
-
     pH->getActionUnit()->updateToolbar();
 
     pH->mpConsole->show();
@@ -2066,13 +2060,33 @@ void mudlet::slot_showConnectionDialog()
     mpConnectionDialog->show();
 }
 
+dlgTriggerEditor* mudlet::createMudletEditor()
+{
+    Host* pHost = getActiveHost();
+    if (pHost == nullptr) {
+        return nullptr;
+    }
+
+    if (pHost->mpEditorDialog != nullptr) {
+        return pHost->mpEditorDialog;
+    }
+
+    auto* pEditor = new dlgTriggerEditor(pHost);
+    pHost->mpEditorDialog = pEditor;
+    connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+    connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+    pEditor->fillout_form();
+
+    return pEditor;
+}
+
 void mudlet::slot_showEditorDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2088,7 +2102,7 @@ void mudlet::slot_showTriggerDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2104,7 +2118,7 @@ void mudlet::slot_showAliasDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2120,7 +2134,7 @@ void mudlet::slot_showTimerDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2136,7 +2150,7 @@ void mudlet::slot_showScriptDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2152,7 +2166,7 @@ void mudlet::slot_showKeyDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2168,7 +2182,7 @@ void mudlet::slot_showVariableDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2184,7 +2198,7 @@ void mudlet::slot_showActionDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
