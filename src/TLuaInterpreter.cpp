@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -5075,6 +5075,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "loadRawFile", TLuaInterpreter::loadReplay);
     lua_register(pGlobalLua, "loadReplay", TLuaInterpreter::loadReplay);
     lua_register(pGlobalLua, "setBold", TLuaInterpreter::setBold);
+    lua_register(pGlobalLua, "setFaint", TLuaInterpreter::setFaint);
     lua_register(pGlobalLua, "setItalics", TLuaInterpreter::setItalics);
     lua_register(pGlobalLua, "setOverline", TLuaInterpreter::setOverline);
     lua_register(pGlobalLua, "setReverse", TLuaInterpreter::setReverse);
@@ -7238,6 +7239,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         }
         return success();
     }
+    if (key == qsl("boldIsBright")) {
+        host.mBoldIsBright = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7345,7 +7350,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
             default:
                 lua_pushstring(L, "asis");
             }
-        } } //, <- not needed until another one is added
+        } },
+        { qsl("boldIsBright"), [&](){ lua_pushboolean(L, host.mBoldIsBright); } } //, <- not needed until another one is added
     };
 
     auto it = configMap.find(key);

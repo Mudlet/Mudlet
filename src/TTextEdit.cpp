@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2024 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -701,8 +701,11 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
 
 void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor, const QRect& textRect, const QString& grapheme, TChar& charStyle) const
 {
-    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
+    const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
+    const bool isFaint = attributes & TChar::Faint;
+    const QFont::Weight fontWeight = (isBold ? (isFaint ? TBuffer::csmFontWeight_boldAndFaint : TBuffer::csmFontWeight_bold)
+                                             : (isFaint ? TBuffer::csmFontWeight_faint : TBuffer::csmFontWeight_normal));
     // At present we cannot display flashing text - and we just make it italic
     // (we ought to eventually add knobs for them so they can be shown in a user
     // preferred style - which might be static for some users) - anyhow Mudlet
@@ -713,14 +716,14 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isUnderline = attributes & TChar::Underline;
     // const bool isConcealed = attributes & TChar::Concealed;
     // const int altFontIndex = charStyle.alternateFont();
-    if ((painter.font().bold() != isBold)
+    if ((painter.font().weight() != fontWeight)
             || (painter.font().italic() != isItalics)
             || (painter.font().overline() != isOverline)
             || (painter.font().strikeOut() != isStrikeOut)
             || (painter.font().underline() != isUnderline)) {
 
         QFont font = painter.font();
-        font.setBold(isBold);
+        font.setWeight(fontWeight);
         font.setItalic(isItalics);
         font.setOverline(isOverline);
         font.setStrikeOut(isStrikeOut);
@@ -1109,14 +1112,13 @@ void TTextEdit::expandSelectionToWords()
     if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
         for (; xind >= 0; --xind) {
             // Ensure xind is within the valid range for the current line
-            if (xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size())) {
-                const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
-                if (currentChar == QChar::Space
-                    || mpHost->mDoubleClickIgnore.contains(currentChar)) {
-                    break;
-                }
-            } else {
+            if (xind >= static_cast<int>(mpBuffer->lineBuffer.at(yind).size())) {
                 break; // xind is out of bounds, break the loop
+            } 
+            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
+            if (currentChar == QChar::Space
+                || mpHost->mDoubleClickIgnore.contains(currentChar)) {
+                break;
             }
         }
     }
