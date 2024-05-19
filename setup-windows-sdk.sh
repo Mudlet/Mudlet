@@ -223,6 +223,7 @@ echo ""
 # the individual ones ourselves instead of just putting:
 # "mingw-w64-${BUILDCOMPONENT}-qt${QT_MAJOR_VERSION}":
 PACKAGES=( "git" \
+  "mingw-w64-${BUILDCOMPONENT}-binutils \
   "mingw-w64-${BUILDCOMPONENT}-boost" \
   "mingw-w64-${BUILDCOMPONENT}-ccache" \
   "mingw-w64-${BUILDCOMPONENT}-hunspell" \
