@@ -53,7 +53,7 @@ environment:
 
 # Temporarily abort the whole build if one job fails, but don't worry about the
 # qt6 case:
-matix:
+matrix:
   - fast_finish: true
   - allow_failures:
     - QT_MAJOR_VERSION: "6"
