@@ -430,6 +430,7 @@ for ROCK in "${WANTED_ROCKS[@]}"; do
     # This rock is not present
     echo "    ${ROCK}..."
     echo ""
+    ${ROCKCOMMAND} install "${ROCK}"
     if [ $(luarocks --lua-version 5.1 list | grep -c "${ROCK}") -eq 0 ]; then
       echo "    ${ROCK} didn't get installed - try rerunning this script..."
       SUCCESS="false"
