@@ -223,7 +223,7 @@ echo ""
 # the individual ones ourselves instead of just putting:
 # "mingw-w64-${BUILDCOMPONENT}-qt${QT_MAJOR_VERSION}":
 PACKAGES=( "git" \
-  "mingw-w64-${BUILDCOMPONENT}-binutils \
+  "mingw-w64-${BUILDCOMPONENT}-binutils" \
   "mingw-w64-${BUILDCOMPONENT}-boost" \
   "mingw-w64-${BUILDCOMPONENT}-ccache" \
   "mingw-w64-${BUILDCOMPONENT}-hunspell" \
@@ -283,8 +283,7 @@ if [ "${QT_MAJOR_VERSION}" = "6" ]; then
   PACKAGES+=( "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" )
 else
   # Add things every Qt5 build will need - which are not in Qt6:
-  PACKAGES+=( "mingw-w64-${BUILDCOMPONENT}-qt5-gamepad" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" )
+  PACKAGES+=( "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" )
 fi
 
 # Add things we want for 64 bit builds - just the Qt Keychain module - we have
