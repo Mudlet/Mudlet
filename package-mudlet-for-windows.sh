@@ -160,11 +160,12 @@ if [ -z "${BUILD_DIR}" ]; then
     # directory where the code is automagically placed for us:  
     BUILD_DIR="${APPVEYOR_BUILD_FOLDER}/build"
   fi
+  BUILD_DIR="$(echo "${BUILD_DIR}" | sed -e 's|C:|/c|g' | sed -e 's|\\|/|g')"
   export BUILD_DIR
 fi
 
 # In practice this is where the Mudlet source code git repository is placed:
-PARENT_OF_BUILD_DIR="$(echo "${BUILD_DIR}" | sed -e "s|/[^/]*$||" | sed -e "s|C:|/c|g" | sed -e "s|\\|/|g")"
+PARENT_OF_BUILD_DIR="$(echo "${BUILD_DIR}" | sed -e "s|/[^/]*$||")"
 export PARENT_OF_BUILD_DIR
 
 # Extract version information from qmake project file
