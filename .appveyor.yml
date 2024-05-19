@@ -13,12 +13,6 @@ init:
 
 image: Visual Studio 2019
 
-# We only want debug builds for PRs and Test builds and possibly PTBs
-# We want release builds for Release and PTB builds
-configuration:
-- release
-- debug
-
 environment:
   global:
     CCACHE_DIR: "%APPVEYOR_BUILD_FOLDER%\\.ccache"
@@ -42,6 +36,12 @@ environment:
     MSYSTEM: "MINGW64"
   - QT_MAJOR_VERSION: "6"
     MSYSTEM: "MINGW64"
+
+# We only want debug builds for PRs and Test builds and possibly PTBs
+# We want release builds for Release and PTB builds
+configuration:
+- release
+- debug
 
 # The build cache is restored before the install stage.
 

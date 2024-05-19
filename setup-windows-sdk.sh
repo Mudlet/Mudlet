@@ -211,6 +211,7 @@ echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
 echo "MINGW_BASE_DIR: ${MINGW_BASE_DIR}"
 echo "MINGW_INTERNAL_BASE_DIR: ${MINGW_INTERNAL_BASE_DIR}"
+echo "MINGW_PREFIX: ${MINGW_PREFIX}"
 echo "MSYSTEM: ${MSYSTEM}"
 echo "PATH: ${PATH}"
 echo "QT_MAJOR_VERSION: ${QT_MAJOR_VERSION}"
@@ -433,13 +434,16 @@ for ROCK in "${WANTED_ROCKS[@]}"; do
       # Appveyor needs some help to get some rocks installed
       case ${ROCK} in
         *lua-yajl*)
-          ${ROCKCOMMAND} install "${ROCK}" "YAJL_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include"
+          ${ROCKCOMMAND} install "${ROCK}" "YAJL_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include" "YAJL_LIBDIR=${MINGW_INTERNAL_BASE_DIR}/bin"
           ;;
         *lua-zip*)
-          ${ROCKCOMMAND} install "${ROCK}" "ZIP_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include"
+          ${ROCKCOMMAND} install "${ROCK}" "ZIP_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include" "ZIP_LIBDIR=${MINGW_INTERNAL_BASE_DIR}/bin"
           ;;
-        *lua-zip*)
-          ${ROCKCOMMAND} install "${ROCK}" "PCRE_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include"
+        *lrexlib-pcre*)
+          ${ROCKCOMMAND} install "${ROCK}" "PCRE_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include" "PCRE_LIBDIR=${MINGW_INTERNAL_BASE_DIR}/bin"
+          ;;
+        *luasql-sqlite3*)
+          ${ROCKCOMMAND} install "${ROCK}" "SQLITE_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include" "SQLITE_LIBDIR=${MINGW_INTERNAL_BASE_DIR}/bin"
           ;;
         *)
           ${ROCKCOMMAND} install "${ROCK}"
