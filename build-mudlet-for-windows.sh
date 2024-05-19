@@ -138,7 +138,7 @@ esac
 
 if [ -z "${LUA_PATH}" ] || [ -z "${LUA_PATH}" ]; then
   # One or both are not set, but we can do this if there is a luarocks available
-  if $(luarocks --lua-version 5.1 2> /dev/null |grep -q "lua5\.1\.exe.*\(ok\)") ; then
+  if luarocks --lua-version 5.1 2> /dev/null | grep -q "lua5\.1\.exe.*\(ok\)" ; then
     # We do have a 5.1 luarocks available, so proceed
     # If one is planning to use qtcreator these will probably be wanted in a
     # shell startup script so as to prepare it to use Lua 5.1 when running
@@ -192,10 +192,10 @@ if [ -n "${APPVEYOR}" ]; then
     elif [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ]; then
       # It is a scheduled build so it is a Public Test Build
       export TASK="PTB"
-      COMMIT_EPOCH=$(date -u +%s -d $(git show -s --format="%cs"))
+      COMMIT_EPOCH=$(date -u +%s -d "$(git show -s --format="%cs")")
       NOW_EPOCH=$(date -u +%s)
-      let SECONDS_DIFF=(${NOW_EPOCH}-${COMMIT_EPOCH})
-      let DAYS_DIIF=(${SECONDS_DIFF}/86400)
+      SECONDS_DIFF=$(( NOW_EPOCH - COMMIT_EPOCH ))
+      DAYS_DIIF=$(( SECONDS_DIFF / 86400 ))
       if [ "${DAYS_DIIF}" != "0" ]; then
         echo "Last commit was: ${SECONDS_DIFF} seconds, i.e. at least ${DAYS_DIIF} day(s) ago - Public Test build aborted!"
         exit 8
@@ -313,14 +313,14 @@ export WITH_UPDATER="NO"
 
 
 echo "WITH_XXX variables currently defined:"
-echo "$(set | grep "^WITH_")"
+set | grep "^WITH_"
 echo ""
 echo "Running qmake to make MAKEFILE ..."
 echo ""
 
 # We do not use QtQuick so there is no need for those features:
 if [ "${QT_MAJOR_VERSION}" = "6" ]; then
-  if [ "${BUILD_CONFIG}" = dDebug" ]; then
+  if [ "${BUILD_CONFIG}" = "debug" ]; then
     qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" "CONFIG+=debug" "CONFIG+=separate_debug_info"
   else
     qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"

@@ -286,7 +286,7 @@ if [ -d "${PACKAGE_DIR}" ]; then
   # The wanted packaging dir exists - as is wanted
   echo "Checking for an empty ${PACKAGE_DIR} in which to assemble files..."
   echo ""
-  if [ -n "$(ls -A ${PACKAGE_DIR})" ]; then
+  if [ -n "$(ls -A "${PACKAGE_DIR}")" ]; then
     # but it isn't empty...
     echo "${PACKAGE_DIR} does not appear to be empty, please"
     echo "erase everything there and try again."
@@ -456,7 +456,7 @@ NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./${EXECUTABLE_
   | /usr/bin/sort)
 echo ""
 echo "Copying identified libraries..."
-for LIB in ${NEEDED_LIBS[@]} ; do
+for LIB in "${NEEDED_LIBS[@]}" ; do
   cp -v -p "${LIB}" . ;
 done
 echo "    ... done copying identified."
@@ -575,7 +575,7 @@ elif [ "${TASK}" = "PR" ] || [ "${TASK}" = "TESTING" ]; then
   echo ""
   echo "   Uploading archive file to Mudlet's website..."
   curl --fail --fail-early -i -T "${ZIP_FILE_NAME}" "https://make.mudlet.org/snapshots/${ZIP_FILE_NAME}"
-  CURL_STATUS=$@
+  CURL_STATUS=$?
   if [ "${CURL_STATUS}" != "0" ]; then
     echo "   ... uploading failed, curl error code was: ${CURL_STATUS}."
     exit 9
