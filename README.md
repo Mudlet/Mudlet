@@ -6,7 +6,7 @@
   <br>
 </h1>
 
-<h4 align="center">Play immersive, multiplayer, pure-text RPGs on Mudlet.</h4>
+<h4 align="center">Play immersive, multiplayer, pure-text RPGs on Mudlet</h4>
 
 <p align="center">
   <a href="https://discord.gg/kuYvMQ9">
