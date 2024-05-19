@@ -19,8 +19,7 @@
 ###########################################################################
 
 # Version: 1.6.0    Changed to allow scripts to be used for Mudlet's own
-#                   CI/CB process on AppVeyor. Change BUILD_CONFIG to
-#                   CONFIGURATION to match Appveyor's usage.
+#                   CI/CB process on AppVeyor.
 #          1.5.0    No change
 #          1.4.0    No change
 #          1.3.0    Don't explicitly install the no longer supported QT 5
@@ -54,7 +53,7 @@ if [ -z "${LEVEL}" ]; then
   # variable not set so assume that this is being called from setup-windows-sdk.sh
   # and do so now:
   if [ -n "${APPVEYOR}" ]; then
-    # We are running on AppVeyor so we want a "basic" install unless CONFIGURATION is set to "Debug"
+    # We are running on AppVeyor so we want a "basic" install unless BUILD_CONFIG is set to "debug"
     LEVEL="base"
   elif [ "$1" = "base" ] || [ "$1" = "full" ]; then
     LEVEL=$1
@@ -205,7 +204,7 @@ fi
 echo "BUILD_BITNESS: ${BUILD_BITNESS}"
 echo "BUILD_DIR: ${BUILD_DIR}"
 echo "BUILDCOMPONENT: ${BUILDCOMPONENT}"
-echo "CONFIGURATION: ${CONFIGURATION}"
+echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "LEVEL: ${LEVEL}"
 echo "LUA_PATH is: ${LUA_PATH}"
 echo "LUA_CPATH is: ${LUA_CPATH}"
@@ -311,7 +310,7 @@ if [ "${LEVEL}" = "full" ]; then
 fi
 
 # Add things needed for "debug" type builds - which the "full" type of install implies:
-if ([ "${LEVEL}" = "full" ] || [ "${CONFIGURATION}" = "Debug" ]) && [ "${BUILD_BITNESS}" = "64" ]; then
+if ([ "${LEVEL}" = "full" ] || [ "${BUILD_CONFIG}" = "debug" ]) && [ "${BUILD_BITNESS}" = "64" ]; then
   # Unfortunately these libraries are no longer available for the 32-Bit case
   # unless https://github.com/msys2/MINGW-packages/issues/20902 gets done    
   PACKAGES+=( "mingw-w64-${BUILDCOMPONENT}-qt${QT_MAJOR_VERSION}-base-debug" \

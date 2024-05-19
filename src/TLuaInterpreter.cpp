@@ -5473,6 +5473,7 @@ void TLuaInterpreter::initLuaGlobals()
     // binary directory for both modules and binary libraries:
     additionalCPaths << qsl("%1/?.so").arg(appPath);
     additionalLuaPaths << qsl("%1/?.lua").arg(appPath);
+#endif
 
     // Luarocks installs rocks locally for developers, even with sudo
     additionalCPaths << qsl("%1/.luarocks/lib/lua/5.1/?.so").arg(QStandardPaths::standardLocations(QStandardPaths::HomeLocation).first());

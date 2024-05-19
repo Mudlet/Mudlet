@@ -19,9 +19,8 @@
 ###########################################################################
 
 # Version: 1.6.0    Changed to allow scripts to be used for Mudlet's own
-#                   CI/CB process on AppVeyor. Change BUILD_CONFIG to
-#                   CONFIGURATION to match Appveyor's usage.
-#          1.5.0    Change BUILD_TYPE to CONFIGURATION to avoid clash with
+#                   CI/CB process on AppVeyor.
+#          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
 #                   CI/CB system using same variable
 #          1.4.0    No change
 #          1.3.0    Remove used of the no longer supported/used by us QT5
@@ -62,10 +61,10 @@ if [ -z "${QT_MAJOR_VERSION}" ]; then
   fi
 fi
 
-if [ -z "${CONFIGURATION}" ]; then
+if [ -z "${BUILD_CONFIG}" ]; then
   # If this is present and set to "debug" then we'll do a debug type build but
   # otherwise we'll keep it as "release":
-  export CONFIGURATION="Release"
+  export BUILD_CONFIG="release"
 fi
 
 if [ -z "${BUILDCOMPONENT}" ]; then
@@ -194,7 +193,7 @@ if [ -n "${APPVEYOR}" ]; then
       # could be a hyphen prefixed string to identify a 3rd party build
       export BUILD_COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}"| sed 's/.*/\L&/g')
       export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing-pr${APPVEYOR_PULL_REQUEST_NUMBER}" | sed 's/.*/\L&/g')
-      if [ "${CONFIGURATION}" = "Debug" ]; then
+      if [ "${BUILD_CONFIG}" = "debug" ]; then
         export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt{QT_MAJOR_VERSION}-debug.zip"
       else
         export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt{QT_MAJOR_VERSION}.zip"
@@ -209,7 +208,7 @@ if [ -n "${APPVEYOR}" ]; then
       fi
       # MUDLET_VERSION_BUILD could be an empty string but it is intended for
       # third party packagers to tag customised versions of Mudlet:
-      if [ "${CONFIGURATION}" = "Debug" ]; then
+      if [ "${BUILD_CONFIG}" = "debug" ]; then
         export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt{QT_MAJOR_VERSION}-debug.zip"
       else
         export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt{QT_MAJOR_VERSION}.zip"
@@ -224,7 +223,7 @@ if [ -n "${APPVEYOR}" ]; then
     if [ -n "${MUDLET_VERSION_BUILD}" ]; then
       export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
     fi
-    if [ "${CONFIGURATION}" = "Debug" ]; then
+    if [ "${BUILD_CONFIG}" = "debug" ]; then
       export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}-debug.zip"
     else
       export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}.zip"
@@ -232,7 +231,7 @@ if [ -n "${APPVEYOR}" ]; then
   fi
 else
   # Not an appveyor CI build so just produce an archive
-  export PACKAGE_DIR="${PARENT_OF_BUILD_DIR}/package-${MSYSTEM}-qt${QT_MAJOR_VERSION}-${CONFIGURATION}"
+  export PACKAGE_DIR="${PARENT_OF_BUILD_DIR}/package-${MSYSTEM}-qt${QT_MAJOR_VERSION}-${BUILD_CONFIG}"
   export TASK="ZIP"
   export BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
   # MUDLET_VERSION_BUILD could be an empty string but it is intended for
@@ -240,7 +239,7 @@ else
   if [ -n "${MUDLET_VERSION_BUILD}" ]; then
     export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
   fi
-  if [ "${CONFIGURATION}" = "Debug" ]; then
+  if [ "${BUILD_CONFIG}" = "debug" ]; then
     export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}-debug.zip"
   else
     export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}.zip"
@@ -265,7 +264,7 @@ fi
 echo "BUILD_BITNESS: ${BUILD_BITNESS}"
 echo "BUILD_DIR: ${BUILD_DIR}"
 echo "BUILDCOMPONENT: ${BUILDCOMPONENT}"
-echo "CONFIGURATION: ${CONFIGURATION}"
+echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "MINGW_BASE_DIR: ${MINGW_BASE_DIR}"
 echo "MINGW_INTERNAL_BASE_DIR: ${MINGW_INTERNAL_BASE_DIR}"
 echo "MINGW_PREFIX: ${MINGW_PREFIX}"
@@ -301,19 +300,19 @@ else
 fi
 cd "${PACKAGE_DIR}" || exit 1
 echo "Moving to ${PACKAGE_DIR}"
-echo "Copying wanted compiled files from ${BUILD_DIR}-${CONFIGURATION}..."
+echo "Copying wanted compiled files from ${BUILD_DIR}-${BUILD_CONFIG}..."
 echo ""
 
-if [ ! -f "${BUILD_DIR}/${CONFIGURATION}/mudlet.exe" ]; then
+if [ ! -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" ]; then
   echo "ERROR: no Mudlet executable found - did the previous build"
   echo "complete sucessfully?"
   exit 7
 fi
 
 if [ "${TASK}" = "ZIP" ]; then
-  cp "${BUILD_DIR}/${CONFIGURATION}/mudlet.exe" "${PACKAGE_DIR}/"
+  cp "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
   export EXECUTABLE_NAME="mudlet.exe"
-  if [ -f "${BUILD_DIR}/${CONFIGURATION}/mudlet.exe.debug" ]; then
+  if [ -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
     # This will only exist for debug builds (with a separate debug information
     # file, which IS what we asked for during compilation as it makes the
     # executable smaller and quicker to load:
@@ -331,9 +330,9 @@ if [ "${TASK}" = "ZIP" ]; then
 else
   # All other builds are AppVeyor ones on Mudlet's own system and we want to
   # rename the executable:
-  cp "${BUILD_DIR}/${CONFIGURATION}/mudlet.exe" "${PACKAGE_DIR}/Mudlet.exe"
+  cp "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/Mudlet.exe"
   export EXECUTABLE_NAME="Mudlet.exe"
-  if [ -f "${BUILD_DIR}/${CONFIGURATION}/mudlet.exe.debug" ]; then
+  if [ -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
     # This does duplicate the closing stage of the QMake build but might be
     # needed since we have renamed the executable:
     if [ "${QT_MAJOR_VERSION}" = "6" ]; then
@@ -363,7 +362,7 @@ else
   # MINGW .debug files for the Qt libraries. As MSYS2+Mingw64 offers Qt 5.15+
   # this isn't an issue for us. https://bugreports.qt.io/browse/QTBUG-80806 was
   # relevant.
-  if [ "${CONFIGURATION}" = "Debug" ]; then
+  if [ "${BUILD_CONFIG}" = "debug" ]; then
     "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt.exe" --debug --no-virtualkeyboard ./${EXECUTABLE_NAME}
   else
     "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt.exe" --no-virtualkeyboard ./${EXECUTABLE_NAME}
@@ -393,7 +392,7 @@ function copyDebugFiles () {
 # They have been deduced by looking for matching 'Xxxx(.dll).debug' files for
 # each 'Xxxx.dll' one so A) they may not be complete and B) are only for
 # the Qt libraries - other third party ones are not necessarily covered:
-if [ "${CONFIGURATION}" = "Debug" ]; then
+if [ "${BUILD_CONFIG}" = "debug" ]; then
   echo "Copying debug libraries..."
   if [ "${QT_MAJOR_VERSION}" = "6" ]; then
     # Nothing in here for MINWG32 case as Qt6 DOES NOT SUPPORT 32-Bits and it

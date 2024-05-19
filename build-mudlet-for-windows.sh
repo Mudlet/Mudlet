@@ -19,8 +19,7 @@
 ###########################################################################
 
 # Version: 1.6.0    Changed to allow scripts to be used for Mudlet's own
-#                   CI/CB process on AppVeyor. Change BUILD_CONFIG to
-#                   CONFIGURATION to match Appveyor's usage.
+#                   CI/CB process on AppVeyor.
 #          1.5.0    Change BUILD_TYPE to BUILD_CONFIG to avoid clash with
 #                   CI/CB system using same variable
 #          1.4.0    Rewrite Makefile to use ccache.exe if available
@@ -41,7 +40,7 @@
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
 # 2 - Unsupported MSYS2/MINGGW shell type (only "MINGW32" or "MINGW64" currently supported)
-# 3 - Unsupported build type (CONFIGURATION set, but not to "debug" or "release")
+# 3 - Unsupported build type (BUILD_CONFIG set, but not to "debug" or "release")
 # 5 - Invalid configuration (32bit Qt6 build requested, or what is desired to be installed doesn't make sense)
 # 8 - A PTB build was requested but the most recent commit is more than a day ago
 
@@ -56,13 +55,13 @@ if [ -z "${QT_MAJOR_VERSION}" ]; then
   fi
 fi
 
-if [ -z "${CONFIGURATION}" ]; then
+if [ -z "${BUILD_CONFIG}" ]; then
   # If this is present and set to "debug" then we'll do a debug type build but
   # otherwise we'll keep it as "release" - the build and package scripts will
   # also need to be told if we want a debug build
-  export CONFIGURATION="Release"
-elif [ "${CONFIGURATION}" != "Release" ] && [ "${CONFIGURATION}" != "Debug" ]; then
-  echo "Please set the environmental variable CONFIGURATION to one of \"Release\" or"
+  export BUILD_CONFIG="release"
+elif [ "${BUILD_CONFIG}" != "release" ] && [ "${BUILD_CONFIG}" != "debug" ]; then
+  echo "Please set the environmental variable BUILD_CONFIG to one of \"Release\" or"
   echo "\"Debug\" to specify which type of build you wish this to be."
   exit 3
 fi
@@ -261,7 +260,7 @@ if [ -n "${APPVEYOR}" ]; then
 fi
 echo "BUILD_BITNESS: ${BUILD_BITNESS}"
 echo "BUILD_COMMIT: ${BUILD_COMMIT}"
-echo "CONFIGURATION: ${CONFIGURATION}"
+echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR: ${BUILD_DIR}"
 echo "BUILDCOMPONENT: ${BUILDCOMPONENT}"
 echo "LUA_PATH is: ${LUA_PATH}"
@@ -311,10 +310,7 @@ echo ""
 # FIXME:
 # The updater is not helpful in this (build it yourself) environment
 export WITH_UPDATER="NO"
-# This one is VITAL as some things in the code have to be tweaked to be
-# different compared to the CI/CB build environment (or the
-# setup-windows-sdk.ps) one!
-export WITH_MAIN_BUILD_SYSTEM="NO"
+
 
 echo "WITH_XXX variables currently defined:"
 echo "$(set | grep "^WITH_")"
@@ -324,13 +320,13 @@ echo ""
 
 # We do not use QtQuick so there is no need for those features:
 if [ "${QT_MAJOR_VERSION}" = "6" ]; then
-  if [ "${CONFIGURATION}" = "Debug" ]; then
+  if [ "${BUILD_CONFIG}" = dDebug" ]; then
     qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" "CONFIG+=debug" "CONFIG+=separate_debug_info"
   else
     qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
   fi
 else
-  if [ "${CONFIGURATION}" = "Debug" ]; then
+  if [ "${BUILD_CONFIG}" = "debug" ]; then
     qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" "CONFIG+=debug" "CONFIG+=separate_debug_info"
   else
     qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
@@ -341,7 +337,7 @@ echo " ... qmake done."
 echo ""
 
 if [ "${WITH_CCACHE}" = "YES" ]; then
-  if [ "${CONFIGURATION}" = "Debug" ]; then
+  if [ "${BUILD_CONFIG}" = "debug" ]; then
     echo "  Tweaking Makefile.Debug to use ccache..."
     sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Debug
     sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Debug
