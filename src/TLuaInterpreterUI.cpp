@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -1188,29 +1188,36 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 
     lua_newtable(L);
 
-    TChar::AttributeFlags const format = result.second.allDisplayAttributes();
     lua_pushstring(L, "bold");
-    lua_pushboolean(L, format & TChar::Bold);
+    lua_pushboolean(L, result.second.isBold());
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "blink");
+    lua_pushnumber(L, result.second.isFastBlinking() ? 2 : (result.second.isBlinking() ? 1 : 0));
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "faint");
+    lua_pushboolean(L, result.second.isFaint());
     lua_settable(L, -3);
 
     lua_pushstring(L, "italic");
-    lua_pushboolean(L, format & TChar::Italic);
+    lua_pushboolean(L, result.second.isItalic());
     lua_settable(L, -3);
 
     lua_pushstring(L, "overline");
-    lua_pushboolean(L, format & TChar::Overline);
+    lua_pushboolean(L, result.second.isOverlined());
     lua_settable(L, -3);
 
     lua_pushstring(L, "reverse");
-    lua_pushboolean(L, format & TChar::Reverse);
+    lua_pushboolean(L, result.second.isReversed());
     lua_settable(L, -3);
 
     lua_pushstring(L, "strikeout");
-    lua_pushboolean(L, format & TChar::StrikeOut);
+    lua_pushboolean(L, result.second.isStruckOut());
     lua_settable(L, -3);
 
     lua_pushstring(L, "underline");
-    lua_pushboolean(L, format & TChar::Underline);
+    lua_pushboolean(L, result.second.isUnderlined());
     lua_settable(L, -3);
 
     const QColor foreground(result.second.foreground());
@@ -2265,6 +2272,21 @@ int TLuaInterpreter::setBorderTop(lua_State* L)
     return 0;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBold
+int TLuaInterpreter::setFaint(lua_State* L)
+{
+    QString windowName;
+    int s = 1;
+    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
+        windowName = WINDOW_NAME(L, s++);
+    }
+    const bool isAttributeEnabled = getVerifiedBool(L, __func__, s, "enable faint attribute");
+    auto console = CONSOLE(L, windowName);
+    console->setDisplayAttributes(TChar::Faint, isAttributeEnabled);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFgColor
 int TLuaInterpreter::setFgColor(lua_State* L)
 {
@@ -2765,93 +2787,61 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
     colorComponents[5] = qRound(qBound(0.0, getVerifiedDouble(L, __func__, 7, "blue foreground color component"), 255.0));
 
     int s = 7;
-    bool bold;
-    if (lua_isboolean(L, ++s)) {
-        bold = lua_toboolean(L, s);
-    } else if (lua_isnumber(L, s)) {
-        bold = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
-    } else {
-        lua_pushfstring(L, "setTextFormat: bad argument #%d type (bold format as boolean or number {true/non-zero to enable} expected, got %s!)",
-                        s, luaL_typename(L, s));
-        return lua_error(L);
-    }
 
-    bool underline;
-    if (lua_isboolean(L, ++s)) {
-        underline = lua_toboolean(L, s);
-    } else if (lua_isnumber(L, s)) {
-        underline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
-    } else {
-        lua_pushfstring(L, "setTextFormat: bad argument #%d type (underline format as boolean or number {true/non-zero to enable} expected, got %s!)",
-                        s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-
-    bool italics;
-    if (lua_isboolean(L, ++s)) {
-        italics = lua_toboolean(L, s);
-    } else if (lua_isnumber(L, s)) {
-        italics = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
-    } else {
-        lua_pushfstring(L, "setTextFormat: bad argument #%d type (italic format as boolean or number {true/non-zero to enable} expected, got %s!)",
-                        s, luaL_typename(L, s));
-        return lua_error(L);
-    }
-
-    bool strikeout = false;
-    if (s < n) {
-        // s has not been incremented yet so this means we still have another argument!
-
+    auto formatFlag = [&] (const char* name) {
         if (lua_isboolean(L, ++s)) {
-            strikeout = lua_toboolean(L, s);
-        } else if (lua_isnumber(L, s)) {
-            strikeout = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
-        } else {
-            lua_pushfstring(L, "setTextFormat: bad argument #%d type (strikeout format as boolean or number {true/non-zero to enable} is optional, got %s!)",
-                            s, luaL_typename(L, s));
-            return lua_error(L);
+            // Surprisingly, the return type from lua_toboolean(...) is actually
+            // numeric:
+            return static_cast<bool>(lua_toboolean(L, s));
         }
-    }
+        if (lua_isnumber(L, s)) {
+            return !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
+        }
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (%s format as boolean or number {true/non-zero to enable} expected, got %s!)",
+                        s, name, luaL_typename(L, s));
+        lua_error(L);
+        Q_UNREACHABLE();
+    };
 
-    bool overline = false;
-    if (s < n) {
-        // s has not been incremented yet so this means we still have another argument!
-        if (lua_isboolean(L, ++s)) {
-            overline = lua_toboolean(L, s);
-        } else if (lua_isnumber(L, s)) {
-            overline = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
-        } else {
-            lua_pushfstring(L, "setTextFormat: bad argument #%d type (overline format as boolean or number {true/non-zero to enable} is optional, got %s!)",
-                            s, luaL_typename(L, s));
-            return lua_error(L);
+    auto optionalFormatFlag = [&] (const char* name) {
+        if (++s > n) {
+            // We do the pre-increment here so that it always gets done, even
+            // though we are past the end of the arguments so that we can still
+            // track where we are if debugging:
+            return false;
         }
-    }
+        if (lua_isboolean(L, s)) {
+            return static_cast<bool>(lua_toboolean(L, s));
+        }
+        if (lua_isnumber(L, s)) {
+            return !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
+        }
+        lua_pushfstring(L, "setTextFormat: bad argument #%d type (%s format as boolean or number {true/non-zero to enable} is optional, got %s!)",
+                        s, name, luaL_typename(L, s));
+        lua_error(L);
+        Q_UNREACHABLE();
+    };
 
-    bool reverse = false;
-    if (s < n) {
-        // s has not been incremented yet so this means we still have another argument!
-        if (lua_isboolean(L, ++s)) {
-            reverse = lua_toboolean(L, s);
-        } else if (lua_isnumber(L, s)) {
-            reverse = !qFuzzyCompare(1.0, 1.0 + lua_tonumber(L, s));
-        } else {
-            lua_pushfstring(L, "setTextFormat: bad argument #%d type (reverse format as boolean or number {true/non-zero to enable} is optional, got %s!)",
-                            s, luaL_typename(L, s));
-            return lua_error(L);
-        }
-    }
+    bool bold = formatFlag("bold"); // Arg: 8
+    bool underline = formatFlag("underline"); // Arg: 9
+    bool italics = formatFlag("italic"); // Arg: 10
+    bool strikeout = optionalFormatFlag("strikeout"); // Arg: 11
+    bool overline = optionalFormatFlag("overline"); // Arg: 12
+    bool reverse = optionalFormatFlag("reverse"); // Arg: 13
+    bool faint = optionalFormatFlag("faint"); // Arg: 14
 
     TChar::AttributeFlags const flags = (bold ? TChar::Bold : TChar::None)
-            | (italics ? TChar::Italic : TChar::None)
-            | (overline ? TChar::Overline : TChar::None)
-            | (reverse ? TChar::Reverse : TChar::None)
-            | (strikeout ? TChar::StrikeOut : TChar::None)
-            | (underline ? TChar::Underline : TChar::None);
+                                        | (faint ? TChar::Faint : TChar::None)
+                                        | (italics ? TChar::Italic : TChar::None)
+                                        | (overline ? TChar::Overline : TChar::None)
+                                        | (reverse ? TChar::Reverse : TChar::None)
+                                        | (strikeout ? TChar::StrikeOut : TChar::None)
+                                        | (underline ? TChar::Underline : TChar::None);
 
     if (!host.mpConsole->setTextFormat(windowName,
-                                      QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
-                                      QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
-                                      flags)) {
+                                       QColor(colorComponents.at(3), colorComponents.at(4), colorComponents.at(5)),
+                                       QColor(colorComponents.at(0), colorComponents.at(1), colorComponents.at(2)),
+                                       flags)) {
         return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName), true);
     }
 
