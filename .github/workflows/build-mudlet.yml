@@ -40,11 +40,6 @@ jobs:
             qt: '5.14.2'
             deploy: 'deploy'
             run_tests: 'true'
-#           - os: windows-2019
-#             buildname: 'windows'
-#             triplet: x64-mingw-dynamic
-#             # compiler: flag not used in windows pipeline
-#             qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
@@ -56,19 +51,9 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
-
-    - name: (Windows) Install Qt
+      
+    - name: Install Qt
       uses: jurplel/install-qt-action@v3
-      if: runner.os == 'Windows'
-      with:
-        version: ${{matrix.qt}}
-        dir: ${{runner.workspace}}
-        arch: win64_mingw73
-        cache: true
-
-    - name: (Linux/macOS) Install Qt
-      uses: jurplel/install-qt-action@v3
-      if: runner.os == 'Linux' || runner.os == 'macOS'
       with:
         version: ${{matrix.qt}}
         dir: ${{runner.workspace}}
@@ -207,27 +192,6 @@ jobs:
         echo "LUA_PATH=$LUA_PATH" >> $GITHUB_ENV
         echo "LUA_CPATH=$LUA_CPATH" >> $GITHUB_ENV
 
-    - name: (Windows) Install non-vcpkg dependencies
-      if: runner.os == 'Windows'
-      shell: powershell
-      run: |
-        # Install dependencies not available on machine
-        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
-        $env:MINGW_BASE_DIR = "${{runner.workspace}}\mingw73_64"
-        echo "MINGW_BASE_DIR=$env:MINGW_BASE_DIR" >> $env:GITHUB_ENV
-        . ${{github.workspace}}\CI\appveyor.functions.ps1
-
-        # Libzip install complains when \bin is missing
-        New-Item -ItemType Directory -Path "$env:MINGW_BASE_DIR\bin"
-
-        SetQtBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
-        SetMingwBaseDir "$env:WORKING_BASE_DIR\verbose_output.log"
-        SetLuarocksPath "$env:WORKING_BASE_DIR\verbose_output.log"
-        $NoShPath = filterPathForSh
-
-        CheckAndInstallZlib
-        CheckAndInstallLibzip
-
     - name: (Linux Clang) change compiler & disable optional components
       if: runner.os == 'Linux' && matrix.compiler == 'clang_64'
       run: |
@@ -237,14 +201,13 @@ jobs:
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
 
-    - name: (Linux/macOS) restore ccache
+    - name: restore ccache
       uses: actions/cache@v4
       with:
         path: ${{runner.workspace}}/ccache
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-${{matrix.qt}}
         save-always: true
-      if: matrix.os != 'windows-latest'
 
     - name: (Linux) Set build info
       if: runner.os == 'Linux'
@@ -262,8 +225,7 @@ jobs:
         # remove it as it breaks packaging down the line: https://github.com/Mudlet/Mudlet/issues/6668
         brew uninstall pcre
 
-    - name: (Linux/macOS) check ccache stats prior to build
-      if: runner.os == 'Linux' || runner.os == 'macOS'
+    - name: check ccache stats prior to build
       run: ccache --zero-stats --show-stats
 
     - name: Build Mudlet
@@ -289,8 +251,7 @@ jobs:
         name: vcpkg-logs-${{ runner.os }}
         path: ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
 
-    - name: (Linux/macOS) check ccache stats post build
-      if: runner.os == 'Linux' || runner.os == 'macOS'
+    - name: check ccache stats post build
       run: ccache --show-stats
 
     - name: (macOS) Run C++ tests
@@ -298,15 +259,14 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: ctest --output-on-failure
 
-    - name: (Linux/macOS) restore Luarocks for packaging
+    - name: restore Luarocks for packaging
       uses: actions/cache@v4
       with:
         path: $HOME/.luarocks
         key: ccache-${{matrix.os}}-${{matrix.compiler}}-${{hashFiles('.github/workflows/build-mudlet.yml')}}
         restore-keys: ccache-${{matrix.os}}-${{matrix.compiler}}-
-      if: runner.os == 'Linux' || runner.os == 'macOS'
 
-    - name: (Linux/macOS) install dependencies for packaging/tests
+    - name: install dependencies for packaging/tests
       if: matrix.deploy == 'deploy' || matrix.run_tests == 'true'
       run: |
         export PATH="${{env.VCPKG_ROOT}}/installed/${{matrix.triplet}}/tools/lua:$PATH"
@@ -340,13 +300,13 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
-    - name: (Linux/macOS) add ssh-agent for tag deployment
+    - name: add ssh-agent for tag deployment
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
       uses: webfactory/ssh-agent@v0.8.0
       with:
         ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
 
-    - name: (Linux/macOS) package Mudlet
+    - name: package Mudlet
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy'
       run: ${{github.workspace}}/CI/travis.after_success.sh
       env:
@@ -367,7 +327,7 @@ jobs:
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
-
+      
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
       run: curl -X POST "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=${{env.UPLOAD_FILENAME}}&unzip=1"
@@ -417,20 +377,3 @@ jobs:
           echo "Lua tests failed - see the action above for detailed output."
           exit 1
         fi
-
-    - name: (windows) Show relevant setup logs
-      if: failure() && runner.os == 'Windows'
-      run: |
-        $env:WORKING_BASE_DIR = "${{runner.workspace}}\src"
-        if (Test-Path -Path "$env:WORKING_BASE_DIR\stderr.log") {
-          echo "Standard error log from non-vcpkg dependencies: "
-          cat $env:WORKING_BASE_DIR\stderr.log
-        }
-        if (Test-Path -Path "$env:WORKING_BASE_DIR\stdout.log") {
-          echo "Standard output log from non-vcpkg dependencies: "
-          cat $env:WORKING_BASE_DIR\stdout.log
-        }
-        if (Test-Path -Path "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log") {
-          echo "CMakeOutput.log: "
-          cat "${{runner.workspace}}/b/ninja/CMakeFiles/CMakeOutput.log"
-        }

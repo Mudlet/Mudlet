@@ -1,0 +1,113 @@
+name: 🔨 Build Mudlet (windows)
+on:
+  push:
+    branches: [master, development, release-*]
+    tags: [Mudlet-*]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+jobs:
+  compile-mudlet:
+    name: ${{matrix.buildname}}
+    runs-on: ${{matrix.os}}
+    if: ${{ github.repository_owner == 'Mudlet' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2019
+            buildname: 'windows64'
+          - os: windows-2019
+            buildname: 'windows32'
+
+    steps:
+    - name: Checkout Mudlet source code
+      uses: actions/checkout@v4
+      with:
+        submodules: true
+        fetch-depth: 0
+        
+    - name: (Windows 64) Setup MSYS2
+      if: matrix.buildname == 'windows64'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        
+    - name: (Windows 32) Setup MSYS2
+      if: matrix.buildname == 'windows32'
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW32
+        update: true
+          
+    - name: (Windows) Build Environment Setup
+      shell: msys2 {0}
+      env:
+        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+      run: |
+        $GITHUB_WORKSPACE/CI/setup-windows-sdk.sh
+        $GITHUB_WORKSPACE/CI/validate-deployment-for-windows.sh
+
+    - name: restore ccache
+      uses: actions/cache@v4
+      with:
+        path: ${{runner.workspace}}/ccache
+        key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
+        restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
+        save-always: true
+
+    - name: check ccache stats prior to build
+      shell: msys2 {0}
+      run: ccache --zero-stats --show-stats
+        
+    - name: (Windows) Build
+      shell: msys2 {0}
+      env:
+        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+
+    - name: check ccache stats post build
+      shell: msys2 {0}
+      run: ccache --show-stats
+      
+    - name: (Windows) Package
+      shell: msys2 {0}
+      run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
+
+    - name: (Windows) Deploy
+      shell: msys2 {0}
+      env:
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        WIN_SIGNING_PASS: ${{secrets.WIN_SIGNING_PASS}}
+        GITHUB_REPO_NAME: ${{ github.repository }}
+        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
+ 
+    - name: Upload packaged Mudlet
+      uses: actions/upload-artifact@v4
+      if: env.UPLOAD_FILENAME
+      with:
+        name: ${{env.UPLOAD_FILENAME}}
+        path: ${{env.FOLDER_TO_UPLOAD}}
+        
+    #- name: Setup tmate session
+    #  uses: mxschmitt/action-tmate@v3
+      
+    - name: Submit to make.mudlet.org
+      if: env.UPLOAD_FILENAME
+      run: |
+        $uri = "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=$($env:UPLOAD_FILENAME)&unzip=$($env:PARAM_UNZIP)"
+        Invoke-WebRequest -Uri $uri -Method Post
+      shell: pwsh
+
