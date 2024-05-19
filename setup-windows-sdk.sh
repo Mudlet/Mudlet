@@ -433,13 +433,13 @@ for ROCK in "${WANTED_ROCKS[@]}"; do
       # Appveyor needs some help to get some rocks installed
       case ${ROCK} in
         *lua-yajl*)
-          ${ROCKCOMMAND} install "${ROCK}" "YAJL_INCDIR=${MINGW_INTERNAL_BASE_DIR}"
+          ${ROCKCOMMAND} install "${ROCK}" "YAJL_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include"
           ;;
         *lua-zip*)
-          ${ROCKCOMMAND} install "${ROCK}" "ZIP_INCDIR=${MINGW_INTERNAL_BASE_DIR}"
+          ${ROCKCOMMAND} install "${ROCK}" "ZIP_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include"
           ;;
         *lua-zip*)
-          ${ROCKCOMMAND} install "${ROCK}" "PCRE_INCDIR=${MINGW_INTERNAL_BASE_DIR}"
+          ${ROCKCOMMAND} install "${ROCK}" "PCRE_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include"
           ;;
         *)
           ${ROCKCOMMAND} install "${ROCK}"
