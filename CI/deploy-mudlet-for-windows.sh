@@ -295,7 +295,7 @@ else
     -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
-    -F "file_name=Mudlet-${VERSION} (Linux)" \
+    -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
     -F "file_des=sha256: $SHA256SUM" \
     -F "file_cat=3" \
     -F "file_permission=-1" \
@@ -323,10 +323,11 @@ else
     echo "$Changelog"
     
     echo "=== Creating release in Dblsqd ==="
-    dblsqd release -a mudlet -c "public-test-build-${BUILD_BITNESS}" -m \""$Changelog\"" \""${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}\""
+    dblsqd release -a mudlet -c public-test-build -m \""$Changelog\"" \""${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}\""
 
     echo "=== Registering release with Dblsqd ==="
-    dblsqd push -a mudlet -c "public-test-build-${BUILD_BITNESS}" -r "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}" -s mudlet --type 'standalone' --attach "win:${DBLSQDTYPE}" "${DEPLOY_URL}"
+    dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}" -s mudlet --type 'standalone' --attach "win:${DBLSQDTYPE}" "${DEPLOY_URL}"
+
   fi
 fi
 
