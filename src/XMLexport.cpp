@@ -2,7 +2,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
- *   Copyright (C) 2017-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2017-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -486,6 +486,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     if (pHost->getLargeAreaExitArrows()) {
         host.append_attribute("Large2DMapAreaExitArrows") = "yes";
     }
+
+    host.append_attribute("BoldIsBright") = pHost->mBoldIsBright ? "yes" : "no";
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
