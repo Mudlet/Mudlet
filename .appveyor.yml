@@ -13,11 +13,14 @@ init:
 
 image: Visual Studio 2019
 
+# We use CHERE_INVOKING: "yes" for each job so that the directory does not
+# change on startup:
 environment:
   global:
     CCACHE_DIR: "%APPVEYOR_BUILD_FOLDER%\\.ccache"
     # our appveyor cache size is 1G
     CCACHE_MAXSIZE: 1G
+    CHERE_INVOKING: "yes"
   signing_password:
     secure: JJDxNdreMgNn/IOcY+UVmlaqgDT4a7vcxsY3nfcgWY4=
   DEPLOY_KEY_PASS:
@@ -29,13 +32,12 @@ environment:
   DBLSQD_PASS:
     secure: Bm5PLJjC39XmRC55RPGVP9c5CFxvWu2VorAAmu5QS38=
   matrix:
-  # We might need CHERE_INVOKING: "yes" for each jobs as well:
-  - QT_MAJOR_VERSION: "5"
-    MSYSTEM: "MINGW32"
-  - QT_MAJOR_VERSION: "5"
-    MSYSTEM: "MINGW64"
-  - QT_MAJOR_VERSION: "6"
-    MSYSTEM: "MINGW64"
+  - MSYSTEM: "MINGW32"
+    QT_MAJOR_VERSION: "5"
+  - MSYSTEM: "MINGW64"
+    QT_MAJOR_VERSION: "5"
+  - MSYSTEM: "MINGW64"
+    QT_MAJOR_VERSION: "6"
 
 # We only want debug builds for PRs and Test builds and possibly PTBs
 # We want release builds for Release and PTB builds
@@ -49,10 +51,9 @@ install:
   # Update MSYS2
   #C:\msys64\usr\bin\bash -lc "pacman --noconfirm -Syuu"  # Core update (in case any core packages are outdated)
   #C:\msys64\usr\bin\bash -lc "pacman --noconfirm -Syuu"  # Normal update
-  # Then run your code
-  # $env:CHERE_INVOKING = 'yes'  # Preserve the current working directory
-  # The MSYSTEM setting in the matrix controls which terminal this bash.exe runs:
-- C:\msys64\usr\bin\bash.exe -c C:\\projects\\mudlet\\setup-windows-sdk.sh
+  # The MSYSTEM setting in the matrix controls which terminal this bash.exe runs
+  # when it is invoked with the -l (login shell) option:
+- C:\msys64\usr\bin\bash.exe -lc C:\\projects\\mudlet\\setup-windows-sdk.sh
 
 #Not needed?
 #before_build:
@@ -60,12 +61,12 @@ install:
 #- ccache --zero-stats --show-stats --verbose
 
 build_script:
-- C:\msys64\usr\bin\bash.exe -c C:\\projects\\mudlet\\build-mudlet-for-windows.sh
+- C:\msys64\usr\bin\bash.exe -lc C:\\projects\\mudlet\\build-mudlet-for-windows.sh
 
 after_build:
 #- echo "ccache stats after building:"
 #- ccache --show-stats --verbose
-- C:\msys64\usr\bin\bash.exe -c C:\\projects\\mudlet\\package-mudlet-for-windows.sh
+- C:\msys64\usr\bin\bash.exe -lc C:\\projects\\mudlet\\package-mudlet-for-windows.sh
 
 # before_test:
 # Not used
