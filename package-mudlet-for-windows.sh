@@ -54,7 +54,8 @@
 
 if [ -z "${QT_MAJOR_VERSION}" ]; then
   # Assume previously used Qt5 unless told otherwise
-  export "QT_MAJOR_VERSION=5"
+  QT_MAJOR_VERSION="5"
+  export QT_MAJOR_VERSION
   if [ -z "${APPVEYOR}" ]; then
     # Don't bother reporting this for CI builds as the previous script will do so
     echo "Assuming a build with Qt 5.x in absence of a QT_MAJOR_VERSION environmental variable."
@@ -64,21 +65,22 @@ fi
 if [ -z "${BUILD_CONFIG}" ]; then
   # If this is present and set to "debug" then we'll do a debug type build but
   # otherwise we'll keep it as "release":
-  export BUILD_CONFIG="release"
+  BUILD_CONFIG="release"
+  export BUILD_CONFIG
 fi
 
 if [ -z "${BUILDCOMPONENT}" ]; then
   if [ "${MSYSTEM}" = "MINGW64" ]; then
     # We are running in a 64-Bit terminal so assume that that is what the user
     # to build:
-    export BUILD_BITNESS="64"
-    export BUILDCOMPONENT="x86_64"
+    BUILD_BITNESS="64"
+    BUILDCOMPONENT="x86_64"
   elif [ "${MSYSTEM}" = "MINGW32" ]; then
     # We are running in a 32-Bit terminal so assume that that is what the user
     # to build (only possible to do a "base" build - using mingw32-qmake
     # directly as there is not a 32-Bit Qt Creator nowadays):
-    export BUILD_BITNESS="32"
-    export BUILDCOMPONENT="i686"
+    BUILD_BITNESS="32"
+    BUILDCOMPONENT="i686"
   elif [ "${MSYSTEM}" = "MSYS" ]; then
     echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
     echo "to the bitness you want to work on. You may do this once for each of them should"
@@ -94,6 +96,8 @@ if [ -z "${BUILDCOMPONENT}" ]; then
     echo "of those two types."
     exit 2
   fi
+  export BUILD_BITNESS
+  export BUILDCOMPONENT
 fi
 
 if [ "${QT_MAJOR_VERSION}" = "6" ] && [ "${BUILD_BITNESS}" = "32" ]; then
@@ -105,9 +109,11 @@ fi
 if [ -z "${MINGW_INTERNAL_BASE_DIR}" ]; then
   # Variable not set so do so now - see setup-windows-sdk.sh why we are not
   # using the MINGW32/MINGW64 files that Appveyor might provide.
-  export MINGW_BASE_DIR="C:\msys64\mingw${BUILD_BITNESS}"
+  MINGW_BASE_DIR="C:\msys64\mingw${BUILD_BITNESS}"
+  export MINGW_BASE_DIR
   # Provide an equivalent POSIX format path for internal usage:
-  export MINGW_INTERNAL_BASE_DIR="$(cygpath -u "${MINGW_BASE_DIR}")"
+  MINGW_INTERNAL_BASE_DIR="$(cygpath -u "${MINGW_BASE_DIR}")"
+  export MINGW_INTERNAL_BASE_DIR
 fi
 
 # Adjust path so directories we want are prepended if not present:
@@ -116,7 +122,8 @@ case :$PATH: in
   *:/usr/bin:*)
     ;; # do nothing, it's there
   *)
-    export PATH="/usr/bin:${PATH}"
+    PATH="/usr/bin:${PATH}"
+    export PATH
     echo "Prepending /usr/bin to PATH"
     ;;
 esac
@@ -124,7 +131,8 @@ case :$PATH: in
   *:${MINGW_INTERNAL_BASE_DIR}/bin:*)
     ;; # do nothing, it's there
   *)
-    export PATH="${MINGW_INTERNAL_BASE_DIR}/bin:${PATH}"
+    PATH="${MINGW_INTERNAL_BASE_DIR}/bin:${PATH}"
+    export PATH
     echo "Prepending ${MINGW_INTERNAL_BASE_DIR}/bin to PATH"
     ;;
 esac
@@ -132,7 +140,8 @@ case :$PATH: in
   *:${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:*)
     ;; # do nothing, it's there
   *)
-    export PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${PATH}"
+    PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${PATH}"
+    export PATH
     echo "Prepending ${MINGW_INTERNAL_BASE_DIR}/usr/local/bin to PATH"
     ;;
 esac
@@ -145,44 +154,48 @@ if [ -z "${BUILD_DIR}" ]; then
     # The above will be defined for AppVeyor CI builds so this is not one of
     # those, and we need to allow for the end user to have multiple
     # builds in different directories or (for 64bit builds) to use either Qt 5 or 6:
-    export BUILD_DIR="${HOME}/src/mudlet/build-${MSYSTEM}-qt${QT_MAJOR_VERSION}"
+    BUILD_DIR="${HOME}/src/mudlet/build-${MSYSTEM}-qt${QT_MAJOR_VERSION}"
   else
     # On CI builds we can use a plain build folder under the main /c/projects/mudlet
     # directory where the code is automagically placed for us:  
-    export BUILD_DIR="${APPVEYOR_BUILD_FOLDER}/build"
+    BUILD_DIR="${APPVEYOR_BUILD_FOLDER}/build"
   fi
+  export BUILD_DIR
 fi
 
 # In practice this is where the Mudlet source code git repository is placed:
-export PARENT_OF_BUILD_DIR="$(echo "${BUILD_DIR}" | sed -e "s|/[^/]*$||" | sed -e "s|C:|/c|g" | sed -e "s|\\|/|g")"
+PARENT_OF_BUILD_DIR="$(echo "${BUILD_DIR}" | sed -e "s|/[^/]*$||" | sed -e "s|C:|/c|g" | sed -e "s|\\|/|g")"
+export PARENT_OF_BUILD_DIR
 
 # Extract version information from qmake project file
 # sed is used to remove the spaces either side of the `=` in the one line in
 # the file that will match:
-export VERSION=$(grep "^VERSION = " "${PARENT_OF_BUILD_DIR}/src/mudlet.pro" | sed -e 's/VERSION = //g')
+VERSION=$(grep "^VERSION = " "${PARENT_OF_BUILD_DIR}/src/mudlet.pro" | sed -e 's/VERSION = //g')
+export VERSION
 
 # Identify what we are going to do:
 if [ -n "${APPVEYOR}" ]; then
   # This is an Appveyor CI build
-  export PACKAGE_DIR="${PARENT_OF_BUILD_DIR}/package"
+  PACKAGE_DIR="${PARENT_OF_BUILD_DIR}/package"
   if [ "${APPVEYOR_REPO_NAME}" = "Mudlet/Mudlet" ]; then
     # This is being run on Mudlet's own repo
     if [ -n "${APPVEYOR_REPO_TAG_NAME}" ]; then
       # It is a build triggered by a tagged commit - so it is likely to be a
       # proper RELEASE build.
-      export TASK="RELEASE"
+      TASK="RELEASE"
       # This will only persist into the QMake/CMake makefile generation process
       # if the project files for them has been edited to allow this through as
       # an empty string:
-      export MUDLET_VERSION_BUILD=""
+      MUDLET_VERSION_BUILD=""
     elif [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ]; then
       # It is a scheduled build so it is a Public Test Build
-      export TASK="PTB"
-      export BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
-      export MUDLET_VERSION_BUILD="-ptb-$(date -u -Idate)"
+      TASK="PTB"
+      BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+      MUDLET_VERSION_BUILD="-ptb-$(date -u -Idate)"
+      export BUILD_COMMIT
     elif [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
       # It is a PR buiild
-      export TASK="PR"
+      TASK="PR"
       # AppVeyor builds of PRs merge the PR head onto the current development
       # branch creating a new commit - as such we need to refer to the commit
       # Git SHA1 supplied to us rather than trying to back track to the
@@ -191,60 +204,71 @@ if [ -n "${APPVEYOR}" ]; then
       # reference to the state of the development at the time of the build:
       # MUDLET_VERSION_BUILD might be an empty string before this line or it
       # could be a hyphen prefixed string to identify a 3rd party build
-      export BUILD_COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}"| sed 's/.*/\L&/g')
-      export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing-pr${APPVEYOR_PULL_REQUEST_NUMBER}" | sed 's/.*/\L&/g')
+      BUILD_COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}"| sed 's/.*/\L&/g')
+      MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing-pr${APPVEYOR_PULL_REQUEST_NUMBER}" | sed 's/.*/\L&/g')
       if [ "${BUILD_CONFIG}" = "debug" ]; then
-        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-debug.zip"
+        ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-debug.zip"
       else
-        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}.zip"
+        ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}.zip"
       fi
+      export BUILD_COMMIT
+      export ZIP_FILE_NAME
     else
       # It is a testing build which needs an archive to be made with a
       # specific name
-      export TASK="TESTING"
-      export BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+      TASK="TESTING"
+      BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
       if [ -n "${MUDLET_VERSION_BUILD}" ]; then
-        export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing" | sed 's/.*/\L&/g')
+        MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing" | sed 's/.*/\L&/g')
       fi
       # MUDLET_VERSION_BUILD could be an empty string but it is intended for
       # third party packagers to tag customised versions of Mudlet:
       if [ "${BUILD_CONFIG}" = "debug" ]; then
-        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-debug.zip"
+        ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-debug.zip"
       else
-        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}.zip"
+        ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}.zip"
       fi
+      export BUILD_COMMIT
+      export ZIP_FILE_NAME
     fi
   else
     # Not Mudlet's repository so just produce a zip file
-    export TASK="ZIP"
-    export BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+    TASK="ZIP"
+    BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
     # MUDLET_VERSION_BUILD could be an empty string but it is intended for
     # third party packagers to tag customised versions of Mudlet:
     if [ -n "${MUDLET_VERSION_BUILD}" ]; then
-      export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
+      MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
     fi
     if [ "${BUILD_CONFIG}" = "debug" ]; then
-      export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}-debug.zip"
+      ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}-debug.zip"
     else
-      export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}.zip"
+      ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}.zip"
     fi
+    export BUILD_COMMIT
+    export ZIP_FILE_NAME
   fi
 else
   # Not an appveyor CI build so just produce an archive
-  export PACKAGE_DIR="${PARENT_OF_BUILD_DIR}/package-${MSYSTEM}-qt${QT_MAJOR_VERSION}-${BUILD_CONFIG}"
-  export TASK="ZIP"
-  export BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+  PACKAGE_DIR="${PARENT_OF_BUILD_DIR}/package-${MSYSTEM}-qt${QT_MAJOR_VERSION}-${BUILD_CONFIG}"
+  TASK="ZIP"
+  BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
   # MUDLET_VERSION_BUILD could be an empty string but it is intended for
   # third party packagers to tag customised versions of Mudlet:
   if [ -n "${MUDLET_VERSION_BUILD}" ]; then
-    export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
+    MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
   fi
   if [ "${BUILD_CONFIG}" = "debug" ]; then
-    export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}-debug.zip"
+    ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}-debug.zip"
   else
-    export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}.zip"
+    ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-${BUILD_COMMIT}.zip"
   fi
+  export BUILD_COMMIT
+  export ZIP_FILE_NAME
 fi
+export PACKAGE_DIR
+export TASK
+export MUDLET_VERSION_BUILD
 
 ### End of common(-ish) configuration for all three script files.
 
@@ -311,7 +335,8 @@ fi
 
 if [ "${TASK}" = "ZIP" ]; then
   cp "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
-  export EXECUTABLE_NAME="mudlet.exe"
+  EXECUTABLE_NAME="mudlet.exe"
+  export EXECUTABLE_NAME
   if [ -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
     # This will only exist for debug builds (with a separate debug information
     # file, which IS what we asked for during compilation as it makes the
@@ -331,7 +356,8 @@ else
   # All other builds are AppVeyor ones on Mudlet's own system and we want to
   # rename the executable:
   cp "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/Mudlet.exe"
-  export EXECUTABLE_NAME="Mudlet.exe"
+  EXECUTABLE_NAME="Mudlet.exe"
+  export EXECUTABLE_NAME
   if [ -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
     # This does duplicate the closing stage of the QMake build but might be
     # needed since we have renamed the executable:
@@ -530,24 +556,24 @@ echo "Current directory is: $(pwd)"
 
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR ${PARENT_OF_BUILD_DIR}/src/mudlet-lua/./* ./mudlet-lua/
+rsync -avR "${PARENT_OF_BUILD_DIR}"/src/mudlet-lua/./* ./mudlet-lua/
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
 # As written it copies every file but it should be polished up to skip unneeded
 # ones:
-rsync -avR ${PARENT_OF_BUILD_DIR}/3rdparty/lcf/./* ./lcf/
+rsync -avR "${PARENT_OF_BUILD_DIR}"/3rdparty/lcf/./* ./lcf/
 echo ""
 
 # Note we do NOT need the mudlet_??_??.qm files for the Mudlet application
 # as we ship those inside the mudlet executable
 
 echo "Copying Lua translation files in..."
-rsync -avR --mkpath  ${PARENT_OF_BUILD_DIR}/translations/lua/translated/./mudlet-lua_??_??.json ./translations/lua/translated/
+rsync -avR --mkpath  "${PARENT_OF_BUILD_DIR}"/translations/lua/translated/./mudlet-lua_??_??.json ./translations/lua/translated/
 echo ""
 
 echo "Copying Hunspell dictionaries in..."
-rsync -avR ${PARENT_OF_BUILD_DIR}/src/./*.aff ${PARENT_OF_BUILD_DIR}/src/./*.dic .
+rsync -avR "${PARENT_OF_BUILD_DIR}"/src/./*.aff "${PARENT_OF_BUILD_DIR}"/src/./*.dic .
 
 echo ""
 
