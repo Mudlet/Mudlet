@@ -430,28 +430,6 @@ for ROCK in "${WANTED_ROCKS[@]}"; do
     # This rock is not present
     echo "    ${ROCK}..."
     echo ""
-    if [ -n "${APPVEYOR}" ]; then
-      # Appveyor needs some help to get some rocks installed
-      case ${ROCK} in
-        *lua-yajl*)
-          ${ROCKCOMMAND} install "${ROCK}" "YAJL_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include" "YAJL_LIBDIR=${MINGW_INTERNAL_BASE_DIR}/bin"
-          ;;
-        *lua-zip*)
-          ${ROCKCOMMAND} install "${ROCK}" "ZIP_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include" "ZIP_LIBDIR=${MINGW_INTERNAL_BASE_DIR}/bin"
-          ;;
-        *lrexlib-pcre*)
-          ${ROCKCOMMAND} install "${ROCK}" "PCRE_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include" "PCRE_LIBDIR=${MINGW_INTERNAL_BASE_DIR}/bin"
-          ;;
-        *luasql-sqlite3*)
-          ${ROCKCOMMAND} install "${ROCK}" "SQLITE_INCDIR=${MINGW_INTERNAL_BASE_DIR}/include" "SQLITE_LIBDIR=${MINGW_INTERNAL_BASE_DIR}/bin"
-          ;;
-        *)
-          ${ROCKCOMMAND} install "${ROCK}"
-          ;;
-      esac
-    else
-      ${ROCKCOMMAND} install "${ROCK}"
-    fi
     if [ $(luarocks --lua-version 5.1 list | grep -c "${ROCK}") -eq 0 ]; then
       echo "    ${ROCK} didn't get installed - try rerunning this script..."
       SUCCESS="false"
