@@ -445,7 +445,7 @@ echo "Examining Mudlet application to identify other needed libraries..."
 # * include "bin" for the path where Mingw32/64 keep their main library files
 # The cuts ensures we only get the file and path to the library after the =>
 # in the lines that match:
-NEEDED_LIBS=( $("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./${EXECUTABLE_NAME} \
+NEEDED_LIBS=( $("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./mudlet.exe \
   | /usr/bin/grep -v "Qt[56]" \
   | /usr/bin/grep -i "mingw" \
   | /usr/bin/grep -i "bin" \
