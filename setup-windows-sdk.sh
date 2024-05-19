@@ -54,7 +54,7 @@ if [ -z "${LEVEL}" ]; then
   # variable not set so assume that this is being called from setup-windows-sdk.sh
   # and do so now:
   if [ -n "${APPVEYOR}" ]; then
-    # We are running on AppVeyor so we want a "basic" install unless CONFIGURATION is set to "debug"
+    # We are running on AppVeyor so we want a "basic" install unless CONFIGURATION is set to "Debug"
     LEVEL="base"
   elif [ "$1" = "base" ] || [ "$1" = "full" ]; then
     LEVEL=$1
@@ -311,7 +311,7 @@ if [ "${LEVEL}" = "full" ]; then
 fi
 
 # Add things needed for "debug" type builds - which the "full" type of install implies:
-if ([ "${LEVEL}" = "full" ] || [ "${CONFIGURATION}" = "debug" ]) && [ "${BUILD_BITNESS}" = "64" ]; then
+if ([ "${LEVEL}" = "full" ] || [ "${CONFIGURATION}" = "Debug" ]) && [ "${BUILD_BITNESS}" = "64" ]; then
   # Unfortunately these libraries are no longer available for the 32-Bit case
   # unless https://github.com/msys2/MINGW-packages/issues/20902 gets done    
   PACKAGES+=( "mingw-w64-${BUILDCOMPONENT}-qt${QT_MAJOR_VERSION}-base-debug" \

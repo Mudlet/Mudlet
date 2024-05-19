@@ -41,9 +41,10 @@ environment:
 
 # We only want debug builds for PRs and Test builds and possibly PTBs
 # We want release builds for Release and PTB builds
+# It seems these string might be case-sensitive
 configuration:
-- release
-- debug
+- Release
+- Debug
 
 # The build cache is restored before the install stage.
 

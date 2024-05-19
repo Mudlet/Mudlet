@@ -60,10 +60,10 @@ if [ -z "${CONFIGURATION}" ]; then
   # If this is present and set to "debug" then we'll do a debug type build but
   # otherwise we'll keep it as "release" - the build and package scripts will
   # also need to be told if we want a debug build
-  export CONFIGURATION="release"
-elif [ "${CONFIGURATION}" != "release" ] && [ "${CONFIGURATION}" != "debug" ]; then
-  echo "Please set the environmental variable CONFIGURATION to one of \"release\" or"
-  echo "\"debug\" to specify which type of build you wish this to be."
+  export CONFIGURATION="Release"
+elif [ "${CONFIGURATION}" != "Release" ] && [ "${CONFIGURATION}" != "Debug" ]; then
+  echo "Please set the environmental variable CONFIGURATION to one of \"Release\" or"
+  echo "\"Debug\" to specify which type of build you wish this to be."
   exit 3
 fi
 
@@ -324,13 +324,13 @@ echo ""
 
 # We do not use QtQuick so there is no need for those features:
 if [ "${QT_MAJOR_VERSION}" = "6" ]; then
-  if [ "${CONFIGURATION}" = "debug" ]; then
+  if [ "${CONFIGURATION}" = "Debug" ]; then
     qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" "CONFIG+=debug" "CONFIG+=separate_debug_info"
   else
     qmake6 ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
   fi
 else
-  if [ "${CONFIGURATION}" = "debug" ]; then
+  if [ "${CONFIGURATION}" = "Debug" ]; then
     qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler" "CONFIG+=debug" "CONFIG+=separate_debug_info"
   else
     qmake ../src/mudlet.pro -spec win32-g++ "CONFIG-=qml_debug" "CONFIG-=qtquickcompiler"
@@ -341,7 +341,7 @@ echo " ... qmake done."
 echo ""
 
 if [ "${WITH_CCACHE}" = "YES" ]; then
-  if [ "${CONFIGURATION}" = "debug" ]; then
+  if [ "${CONFIGURATION}" = "Debug" ]; then
     echo "  Tweaking Makefile.Debug to use ccache..."
     sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Debug
     sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Debug
