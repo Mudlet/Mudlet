@@ -334,47 +334,15 @@ if [ ! -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" ]; then
   exit 7
 fi
 
-if [ "${TASK}" = "ZIP" ]; then
-  cp "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
-  EXECUTABLE_NAME="mudlet.exe"
-  export EXECUTABLE_NAME
-  if [ -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
-    # This will only exist for debug builds (with a separate debug information
-    # file, which IS what we asked for during compilation as it makes the
-    # executable smaller and quicker to load:
-    if [ "${QT_MAJOR_VERSION}" = "6" ]; then
-      # Qt6 does not keep the extra extension in the debug file name for Qt
-      # libraries so we ought to do the same, but since we are changing the
-      # name to match this we have to update the internal reference in the
-      # executeable and it is safer to get the debug info from the renamed
-      # copied file rather than the original:
-      "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --only-keep-debug mudlet.exe mudlet.debug
-      "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --strip-debug mudlet.exe
-      "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --add-gnu-debuglink=mudlet.debug mudlet.exe
-    fi
-  fi
-else
-  # All other builds are AppVeyor ones on Mudlet's own system and we want to
-  # rename the executable:
-  cp "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/Mudlet.exe"
-  EXECUTABLE_NAME="Mudlet.exe"
-  export EXECUTABLE_NAME
-  if [ -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
-    # This does duplicate the closing stage of the QMake build but might be
-    # needed since we have renamed the executable:
-    if [ "${QT_MAJOR_VERSION}" = "6" ]; then
-      # Qt6 does not keep the extra extension in the debug file name for Qt
-      # libraries so we ought to do the same:
-      "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --only-keep-debug Mudlet.exe Mudlet.debug
-      "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --strip-debug Mudlet.exe
-      "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --add-gnu-debuglink=Mudlet.debug Mudlet.exe
-    else
-      "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --only-keep-debug Mudlet.exe Mudlet.exe.debug
-      "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --strip-debug Mudlet.exe
-      "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --add-gnu-debuglink=Mudlet.exe.debug Mudlet.exe
-    fi
-  fi
-fi  
+echo "Copying mudlet executable to packaging directory."
+cp -v "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" "${PACKAGE_DIR}/"
+if [ -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe.debug" ]; then
+  # This will only exist for debug builds (with a separate debug information
+  # file), which IS what we asked for during compilation as it makes the
+  # executable smaller and quicker to load:
+  echo "Copying mudlet debug to packaging directory."
+  cp -v "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe.debug" "${PACKAGE_DIR}/"
+fi
 
 echo "Running windeployqt..."
 if [ "${QT_MAJOR_VERSION}" = "6" ]; then
@@ -389,15 +357,23 @@ else
   # MINGW .debug files for the Qt libraries. As MSYS2+Mingw64 offers Qt 5.15+
   # this isn't an issue for us. https://bugreports.qt.io/browse/QTBUG-80806 was
   # relevant.
-  if [ "${BUILD_CONFIG}" = "debug" ]; then
-    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt.exe" --debug --no-virtualkeyboard ./${EXECUTABLE_NAME}
-  else
+# Actually it seems that the debug switch might not be needed for Qt 5.15 either
+# given that Mingw-w64 ships the debug information for the Qt libraries
+# separately
+#  if [ "${BUILD_CONFIG}" = "debug" ]; then
+#    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt.exe" --debug --no-virtualkeyboard ./${EXECUTABLE_NAME}
+#  else
     "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt.exe" --no-virtualkeyboard ./${EXECUTABLE_NAME}
-  fi
+#  fi
 fi
 echo "   ... completed windeployqt."
 echo ""
 
+# Stupidly windeployqt does not copy the .debug files that actually contains
+# the debug information for the Qt library files - so copy them manually:
+# They have been deduced by looking for matching 'Xxxx(.dll).debug' files for
+# each 'Xxxx.dll' one so A) they may not be complete and B) are only for
+# the Qt libraries - other third party ones are not necessarily covered:
 function copyDebugFiles () {
   local SOURCE_DIR="${1}"
   local DESTINATION_DIR="${2}"
@@ -414,11 +390,6 @@ function copyDebugFiles () {
   done
 }
 
-# Stupidly windeployqt does not copy the .debug files that actually contains
-# the debug information for the Qt library files - so copy them manually:
-# They have been deduced by looking for matching 'Xxxx(.dll).debug' files for
-# each 'Xxxx.dll' one so A) they may not be complete and B) are only for
-# the Qt libraries - other third party ones are not necessarily covered:
 if [ "${BUILD_CONFIG}" = "debug" ]; then
   echo "Copying debug libraries..."
   if [ "${QT_MAJOR_VERSION}" = "6" ]; then
