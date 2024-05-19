@@ -51,6 +51,12 @@ environment:
     QT_MAJOR_VERSION: "6"
     BUILD_CONFIG: "release"
 
+# Temporarily abort the whole build if one job fails, but don't worry about the
+# qt6 case:
+matix:
+  - fast_finish: true
+  - allow_failures:
+    - QT_MAJOR_VERSION: "6"
 
 # The build cache is restored before the install stage.
 

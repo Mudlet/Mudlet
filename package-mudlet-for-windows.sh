@@ -154,7 +154,7 @@ if [ -z "${BUILD_DIR}" ]; then
 fi
 
 # In practice this is where the Mudlet source code git repository is placed:
-export PARENT_OF_BUILD_DIR="$(echo "${BUILD_DIR}" | sed -e "s|/[^/]*$||")"
+export PARENT_OF_BUILD_DIR="$(echo "${BUILD_DIR}" | sed -e "s|/[^/]*$||" | sed -e "s|C:|/c|g" | sed -e "s|\\|/|g")"
 
 # Extract version information from qmake project file
 # sed is used to remove the spaces either side of the `=` in the one line in
@@ -194,9 +194,9 @@ if [ -n "${APPVEYOR}" ]; then
       export BUILD_COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}"| sed 's/.*/\L&/g')
       export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing-pr${APPVEYOR_PULL_REQUEST_NUMBER}" | sed 's/.*/\L&/g')
       if [ "${BUILD_CONFIG}" = "debug" ]; then
-        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt{QT_MAJOR_VERSION}-debug.zip"
+        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-debug.zip"
       else
-        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt{QT_MAJOR_VERSION}.zip"
+        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}.zip"
       fi
     else
       # It is a testing build which needs an archive to be made with a
@@ -209,9 +209,9 @@ if [ -n "${APPVEYOR}" ]; then
       # MUDLET_VERSION_BUILD could be an empty string but it is intended for
       # third party packagers to tag customised versions of Mudlet:
       if [ "${BUILD_CONFIG}" = "debug" ]; then
-        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt{QT_MAJOR_VERSION}-debug.zip"
+        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}-debug.zip"
       else
-        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt{QT_MAJOR_VERSION}.zip"
+        export ZIP_FILE_NAME="mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}-qt${QT_MAJOR_VERSION}.zip"
       fi
     fi
   else
@@ -277,7 +277,7 @@ echo "PARENT_OF_BUILD_DIR: ${PARENT_OF_BUILD_DIR}"
 echo "QT_MAJOR_VERSION: ${QT_MAJOR_VERSION}"
 echo "TASK: ${TASK}"
 echo "VERSION: ${VERSION}"
-echo "ZIP_FILE_NAME=${ZIP_FILE_NAME}"
+echo "ZIP_FILE_NAME="${ZIP_FILE_NAME}"
 echo "HOME directory, (Windows form): $(cygpath -w "${HOME}")"
 echo "HOME directory, (POSIX form): $(cygpath -u "${HOME}")"
 echo ""
@@ -453,6 +453,8 @@ NEEDED_LIBS=$("${MINGW_INTERNAL_BASE_DIR}/bin/ntldd" --recursive ./${EXECUTABLE_
   | /usr/bin/grep -i "bin" \
   | /usr/bin/cut -d ">" -f2 \
   | /usr/bin/cut -d "(" -f1 \
+  | /usr/bin/sed -e 's|C:|/c|g' \
+  | /usr/bin/sed -e 's|\\|/|g' \
   | /usr/bin/sort)
 echo ""
 echo "Copying identified libraries..."
