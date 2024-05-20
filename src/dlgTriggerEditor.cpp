@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Owen Davison - odavison@cs.dal.ca               *
  *   Copyright (C) 2016-2020 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Tom Scheper - scheper@gmail.com                 *
@@ -281,7 +281,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     //QScopedPointer<edbee::StringTextAutoCompleteProvider> provider(new edbee::StringTextAutoCompleteProvider);
 
     // Add lua functions and reserved lua terms to an AutoComplete provider
-    for (const QString key : mudlet::smLuaFunctionNames.keys()) {
+    for (const QString& key : mudlet::smLuaFunctionNames.keys()) {
         provider->add(key, 3, mudlet::smLuaFunctionNames.value(key).toString());
     }
 
@@ -563,7 +563,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         mProfileSaveAsAction->setToolTip(disabledSaving);
     }
 
-    auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_Tab), this);
+    auto *nextSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab), this);
     QObject::connect(nextSectionShortcut, &QShortcut::activated, this, &dlgTriggerEditor::slot_nextSection);
 
     QShortcut *previousSectionShortcut = new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab), this);
@@ -1031,7 +1031,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         // of this method!
         const int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
+        for (auto treeWidgetItem : std::as_const(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_showTriggers();
@@ -1084,7 +1084,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
         const int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
+        for (auto treeWidgetItem : std::as_const(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_showAliases();
@@ -1132,7 +1132,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
         const int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
+        for (auto treeWidgetItem : std::as_const(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_showScripts();
@@ -1183,7 +1183,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
         const int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetitem : qAsConst(foundItemsList)) {
+        for (auto treeWidgetitem : std::as_const(foundItemsList)) {
 
             if (treeWidgetitem->data(0, IdRole).toInt() == idSearch) {
                 slot_showActions();
@@ -1247,7 +1247,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
 
         const int idSearch = pItem->data(0, IdRole).toInt();
 
-        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
+        for (auto treeWidgetItem : std::as_const(foundItemsList)) {
 
             if (treeWidgetItem->data(0, IdRole).toInt() == idSearch) {
                 slot_showTimers();
@@ -1288,7 +1288,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
     case EditorViewType::cmKeysView: {
         foundItemsList = treeWidget_keys->findItems(pItem->data(0, NameRole).toString(), Qt::MatchCaseSensitive | Qt::MatchFixedString| Qt::MatchRecursive, 0);
 
-        for (auto treeWidgetItem : qAsConst(foundItemsList)) {
+        for (auto treeWidgetItem : std::as_const(foundItemsList)) {
             const int idTree = treeWidgetItem->data(0, IdRole).toInt();
             const int idSearch = pItem->data(0, IdRole).toInt();
             if (idTree == idSearch) {
@@ -9873,7 +9873,11 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
             namedColorRegex.setPattern(QLatin1String("(?:[{ ])color:\\s*(\\w{3,})\\s*;")); // Capture group 1 is a word for a foreground color
             match = namedColorRegex.match(styleSheetText);
             if (match.hasMatch()) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                 if (QColor::isValidColor(match.captured(1))) {
+#else
+                if (QColor::isValidColorName(match.captured(1))) {
+#endif
                     return QColor(match.captured(1));
                 } else {
                     qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid string \"" <<  match.captured(1) << "\" found as name of foreground color!";
@@ -9907,7 +9911,11 @@ QColor dlgTriggerEditor::parseButtonStyleSheetColors(const QString& styleSheetTe
             namedColorRegex.setPattern(QLatin1String("(?:[{ ])background-color:\\s*(\\w{3,})\\s*;")); // Capture group 1 is a word for a background color
             match = namedColorRegex.match(styleSheetText);
             if (match.hasMatch()) {
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
                 if (QColor::isValidColor(match.captured(1))) {
+#else
+                if (QColor::isValidColorName(match.captured(1))) {
+#endif
                     return QColor(match.captured(1));
                 } else {
                     qDebug().noquote().nospace() << "dlgTriggerEditor::parseButtonStyleSheetColors(\"" << styleSheetText << "\", " << isToGetForeground << ") ERROR - Invalid string \"" <<  match.captured(1) << "\" found as name of background color!";

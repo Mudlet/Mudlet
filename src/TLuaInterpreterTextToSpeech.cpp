@@ -1,6 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2013-2022, 2024 by Stephen Lyons                        *
+ *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -136,6 +137,13 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         case QTextToSpeech::State::Ready:
             event.mArgumentList.append(QLatin1String("ttsSpeechReady"));
             break;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        // The Qt documentation is not clear exactly when this change was made
+        // (it says nothing!) but it isn't present in 5.15.13 but is in 6.6.2
+        case QTextToSpeech::State::Synthesizing:
+            event.mArgumentList.append(QLatin1String("ttsSpeechSynthesizing"));
+            break;
+#endif
         }
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
 

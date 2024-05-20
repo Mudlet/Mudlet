@@ -1158,7 +1158,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
         }
     }
 
-    for (auto& translationFileName : qAsConst(translationFilesList)) {
+    for (auto& translationFileName : std::as_const(translationFilesList)) {
         QString languageCode(translationFileName);
         languageCode.remove(qsl("mudlet_"), Qt::CaseInsensitive);
         languageCode.remove(qsl(".qm"), Qt::CaseInsensitive);
@@ -1850,7 +1850,11 @@ void mudlet::readEarlySettings(const QSettings& settings)
         return;
     }
 
-//    qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+// #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
+//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+// #else
+//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+// #endif
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -3281,8 +3285,11 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     zip_uint64_t bytesRead = 0;
     char buf[4096]; // Was 100 but that seems unduly stingy...!
     zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
-    if (err != 0) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
+    if (err) {
+        zip_error_t *error = zip_get_error(archive);
+        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
+        zip_error_fini(error);
+        zip_discard(archive);
         return false;
     }
 
@@ -3373,7 +3380,10 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 
     err = zip_close(archive);
     if (err) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
+        zip_error_t *error = zip_get_error(archive);
+        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
+        zip_error_fini(error);
+        zip_discard(archive);
         return false;
     }
 
@@ -4030,8 +4040,13 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
             qWarning().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
                                            << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";
         } else {
+#if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
             qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
                                          << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+#else
+            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
+                                         << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+#endif
         }
         loadTranslators(languageCode);
         // For full dynamic language change support (no restart necessary) we
@@ -4521,7 +4536,11 @@ static QString getShortPathName(const QString& name)
     }
     QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
     GetShortPathNameW(nameC, buffer.data(), length);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const QString rc = QString::fromUtf16(reinterpret_cast<const ushort*>(buffer.data()), length - 1);
+#else
+    const QString rc = QString::fromWCharArray(buffer.data(), length - 1);
+#endif
     return rc;
 }
 

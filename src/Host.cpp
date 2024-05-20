@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
@@ -218,13 +218,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEchoLuaErrors(false)
 , mCommandLineFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(qsl(";;"))
-, mEnableGMCP(true)
-, mEnableMSSP(true)
-, mEnableMSP(true)
-, mEnableMSDP(false)
-, mServerMXPenabled(true)
-, mAskTlsAvailable(true)
-, mMSSPTlsPort(0)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
 , mFORCE_GA_OFF(false)
@@ -1136,13 +1129,13 @@ unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
-    for (const int i : qAsConst(mpMap->mPathList)) {
+    for (const int i : std::as_const(mpMap->mPathList)) {
         const QString n = QString::number(i);
         pathList.append(n);
     }
     QStringList directionList = mpMap->mDirList;
     QStringList weightList;
-    for (const int stepWeight : qAsConst(mpMap->mWeightList)) {
+    for (const int stepWeight : std::as_const(mpMap->mWeightList)) {
         totalWeight += stepWeight;
         const QString n = QString::number(stepWeight);
         weightList.append(n);
@@ -2434,7 +2427,7 @@ void Host::installPackageFonts(const QString &packageName)
 // ensures fonts from all installed packages are loaded in Mudlet
 void Host::refreshPackageFonts()
 {
-    for (const auto& package : qAsConst(mInstalledPackages)) {
+    for (const auto& package : std::as_const(mInstalledPackages)) {
         installPackageFonts(package);
     }
 }
@@ -3280,7 +3273,7 @@ void Host::hideMudletsVariables()
 
     // remember which users' saved variables shouldn't be hidden
     QVector<QString> unhideSavedVars;
-    for (const auto& variable : qAsConst(varUnit->savedVars)) {
+    for (const auto& variable : std::as_const(varUnit->savedVars)) {
         if (!varUnit->isHidden(variable)) {
             unhideSavedVars.append(variable);
         }
@@ -3293,7 +3286,7 @@ void Host::hideMudletsVariables()
     lI->getVars(true);
 
     // unhide user's saved variables
-    for (const auto& variable : qAsConst(unhideSavedVars)) {
+    for (const auto& variable : std::as_const(unhideSavedVars)) {
         varUnit->removeHidden(variable);
     }
 }
@@ -4168,7 +4161,7 @@ bool Host::commitLayoutUpdates(bool flush)
     if (mpConsole && !flush) {
         // commit changes (or rather clear the layout changed flags) for dockwidget
         // consoles (user windows)
-        for (auto dockedConsoleName : qAsConst(mDockLayoutChanges)) {
+        for (auto dockedConsoleName : std::as_const(mDockLayoutChanges)) {
             auto pD = mpConsole->mDockWidgetMap.value(dockedConsoleName);
             if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
                 pD->setProperty("layoutChanged", QVariant(false));
@@ -4181,7 +4174,7 @@ bool Host::commitLayoutUpdates(bool flush)
     // commit changes (or rather clear the layout changed flags) for
     // dockable/floating toolbars across all profiles:
     if (!flush) {
-        for (auto pToolBar : qAsConst(mToolbarLayoutChanges)) {
+        for (auto pToolBar : std::as_const(mToolbarLayoutChanges)) {
             if (!pToolBar || pToolBar.isNull()) {
                 // This can happen when a TToolBar is deleted
                 continue;

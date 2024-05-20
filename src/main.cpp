@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2021, 2023 by Stephen Lyons             *
+ *   Copyright (C) 2013-2014, 2016-2021, 2023, 2024 by Stephen Lyons       *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
@@ -693,8 +693,8 @@ int main(int argc, char* argv[])
 // return true if we should abort the current launch since the updater got started
 bool runUpdate()
 {
-    QFileInfo updatedInstaller(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup.exe"));
-    QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup-seen.exe"));
+    QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QCoreApplication::applicationDirPath()));
+    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
         if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
@@ -705,7 +705,7 @@ bool runUpdate()
             qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath() << "to" << seenUpdatedInstaller.absoluteFilePath();
         }
 
-        QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath());
+        QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath(), QStringList());
         return true;
     } else if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
         // no new updater and only the old one? Then we're restarting from an update: delete the old installer
