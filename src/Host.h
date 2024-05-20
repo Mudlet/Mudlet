@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2020, 2022-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2015-2020, 2022-2024 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
@@ -63,6 +63,7 @@ class TEvent;
 class TArea;
 class LuaInterface;
 class TMedia;
+class GMCPAuthenticator;
 class TRoom;
 class TConsole;
 class TMainConsole;
@@ -72,6 +73,7 @@ class dlgIRC;
 class dlgPackageManager;
 class dlgModuleManager;
 class dlgProfilePreferences;
+class cTelnet;
 
 class stopWatch {
     friend class XMLimport;
@@ -210,8 +212,11 @@ public:
     bool            getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void            setLargeAreaExitArrows(const bool);
 
-    void closingDown();
-    bool isClosingDown();
+    void            forceClose();
+    bool            isClosingDown() const { return mIsClosingDown; }
+    bool            isClosingForced() const { return mForcedClose; }
+    bool            requestClose();
+
     unsigned int assemblePath();
     bool checkForMappingScript();
     bool checkForCustomSpeedwalk();
@@ -353,7 +358,6 @@ public:
     void setCompactInputLine(const bool state);
     bool getCompactInputLine() const { return mCompactInputLine; }
     QPointer<TConsole> findConsole(QString name);
-    void close();
 
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     std::pair<bool, QString> openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
@@ -440,15 +444,15 @@ public:
     bool mEchoLuaErrors;
     QFont mCommandLineFont;
     QString mCommandSeparator;
-    bool mEnableGMCP;
-    bool mEnableMSSP;
-    bool mEnableMSDP;
-    bool mEnableMSP;
+    bool mEnableGMCP = true;
+    bool mEnableMSSP = true;
+    bool mEnableMSDP = true;
+    bool mEnableMSP = true;
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
-    bool mServerMXPenabled;
-    bool mAskTlsAvailable;
-    int mMSSPTlsPort;
+    bool mServerMXPenabled = true;
+    bool mAskTlsAvailable = true;
+    int mMSSPTlsPort = 0;
     QString mMSSPHostName;
 
     TMxpMudlet mMxpClient;
@@ -472,7 +476,6 @@ public:
     QString mProxyUsername;
     QString mProxyPassword;
 
-    bool mIsGoingDown;
     // Used to force the test compilation of the scripts for TActions ("Buttons")
     // that are pushdown buttons that run when they are "pushed down" during
     // loading even though the buttons start out with themselves NOT being
@@ -484,6 +487,7 @@ public:
     dlgTriggerEditor* mpEditorDialog;
     QScopedPointer<TMap> mpMap;
     QScopedPointer<TMedia> mpMedia;
+    QScopedPointer<GMCPAuthenticator> mpAuth;
     dlgNotepad* mpNotePad;
 
     // This is set when we want commands we typed to be shown on the main
@@ -702,6 +706,17 @@ public:
     // shortcut to switch between the input line and the main window
     CaretShortcut mCaretShortcut = CaretShortcut::None;
 
+    // Support a long-standing hack among all clients for using the <SGR>1m
+    // Bold) code to select a set of brighter 8 colors (the second eight) from
+    // the 256 colors for "16 color" mode of operation - alongside the basic
+    // <SGR>30m (Black) to <SGR>37m (White) set of codes. Using the "AIXTERM"
+    // codes (<SGR>90m to <SGR>97m) codes or the <SGR>38::5:Nm ones are later
+    // (better) ways of accessing that second set of 8 but some Servers only
+    // know the first for 16 color operation. The prior behaviour for Mudlet
+    // would be almost equivalent to this option being true but it limits the
+    // ability to have completely separate bold (and faint) font weightings:
+    bool mBoldIsBright = true;
+
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous
     // width characters:
@@ -743,6 +758,7 @@ private:
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
     TCommandLine* activeCommandLine();
+    void closeChildren();
 
 
     QFont mDisplayFont;
@@ -766,7 +782,7 @@ private:
     int mHostID;
     QString mHostName;
     QString mDiscordGameName; // Discord self-reported game name
-    bool mIsClosingDown;
+    bool mIsClosingDown = false;
 
     QString mLine;
     QString mLogin;
@@ -907,6 +923,10 @@ private:
 
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
+
+    // Set when the mudlet singleton demands that we close - used to force an
+    // attempt to save the profile and map - without asking:
+    bool mForcedClose = false;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(Host::DiscordOptionFlags)

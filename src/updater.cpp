@@ -182,7 +182,9 @@ void Updater::setupOnWindows()
             return;
         }
 
-        QFuture<void> future = QtConcurrent::run(this, &Updater::prepareSetupOnWindows, feed->getDownloadFile()->fileName());
+        QFuture<void> future = QtConcurrent::run([=]() {
+            prepareSetupOnWindows(feed->getDownloadFile()->fileName());
+        });
 
         // replace current binary with the unzipped one
         auto watcher = new QFutureWatcher<void>;

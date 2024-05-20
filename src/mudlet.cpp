@@ -1158,7 +1158,7 @@ void mudlet::scanForMudletTranslations(const QString& path)
         }
     }
 
-    for (auto& translationFileName : qAsConst(translationFilesList)) {
+    for (auto& translationFileName : std::as_const(translationFilesList)) {
         QString languageCode(translationFileName);
         languageCode.remove(qsl("mudlet_"), Qt::CaseInsensitive);
         languageCode.remove(qsl(".qm"), Qt::CaseInsensitive);
@@ -1383,87 +1383,31 @@ void mudlet::slot_closeCurrentProfile()
 void mudlet::slot_closeProfileRequested(int tab)
 {
     const QString name = mpTabBar->tabData(tab).toString();
-    closeHost(name);
-}
-
-void mudlet::closeHost(const QString& name)
-{
     Host* pH = mHostManager.getHost(name);
     if (!pH) {
         return;
     }
 
-    std::list<QPointer<TToolBar>> const hostToolBarMap = pH->getActionUnit()->getToolBarList();
-    QMap<QString, TDockWidget*>& dockWindowMap = pH->mpConsole->mDockWidgetMap;
-    QMap<QString, TConsole*>& hostConsoleMap = pH->mpConsole->mSubConsoleMap;
-
-    if (!pH->mpConsole->close()) {
+    if (!pH->requestClose()) {
         return;
     }
 
-    pH->mpConsole->mUserAgreedToCloseConsole = true;
-    pH->closingDown();
+    closeHost(name);
+}
 
-    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    if (pH->mSslTsl) {
-        pH->mTelnet.abortConnection();
-    } else {
-        pH->mTelnet.disconnectIt();
-    }
-
-    pH->stopAllTriggers();
-    pH->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-    pH->mpEditorDialog->close();
-    pH->mpEditorDialog = nullptr;
-
-    for (auto consoleName : hostConsoleMap.keys()) {
-        if (dockWindowMap.contains(consoleName)) {
-            dockWindowMap[consoleName]->setAttribute(Qt::WA_DeleteOnClose);
-            dockWindowMap[consoleName]->close();
-            removeDockWidget(dockWindowMap[consoleName]);
-            dockWindowMap.remove(consoleName);
-        }
-
-        hostConsoleMap[consoleName]->close();
-        hostConsoleMap.remove(consoleName);
-    }
-
-    if (pH->mpNotePad) {
-        pH->mpNotePad->save();
-        pH->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-        pH->mpNotePad->close();
-        pH->mpNotePad = nullptr;
-    }
-
-    for (TToolBar* pTB : hostToolBarMap) {
-        if (pTB) {
-            pTB->setAttribute(Qt::WA_DeleteOnClose);
-            pTB->deleteLater();
-        }
-    }
-
-    // close IRC client window if it is open.
-    if (pH->mpDlgIRC) {
-        pH->mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-        pH->mpDlgIRC->deleteLater();
-    }
-
+// This removes the Host (profile) from this class's QMainWindow and related
+// structures:
+void mudlet::closeHost(const QString& name)
+{
+    Host* pH = mHostManager.getHost(name);
     migrateDebugConsole(pH);
 
-    pH->mpConsole->close();
-
     mpTabBar->removeTab(name);
-    // PLACEMARKER: Host destruction (1) - from close button on tab bar
-    // Unfortunately the spaghetti nature of the code means that the profile
-    // is also (maybe) saved (or not) in the TConsole::close() call prior to
-    // here but because that is optional we cannot only force a "save"
-    // operation in the profile preferences dialog for the Host specific
-    // details BEFORE the save (so any changes make it into the save) -
-    // instead we just have to accept that any profile changes will not be
-    // saved if the preferences dialog is not closed before the profile is...
+    // PLACEMARKER: Host destruction (1) - from all sources
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
-    mHostManager.deleteHost(pH->getName());
+    // This is what kills the Host instance:
+    mHostManager.deleteHost(name);
     emit signal_adjustAccessibleNames();
     updateMultiViewControls();
 }
@@ -1553,12 +1497,6 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
 
     pConsole->show();
-
-    auto pEditor = new dlgTriggerEditor(pH);
-    pH->mpEditorDialog = pEditor;
-    connect(pH, &Host::profileSaveStarted,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
-    connect(pH, &Host::profileSaveFinished,  pH->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
-    pEditor->fillout_form();
 
     pH->getActionUnit()->updateToolbar();
 
@@ -1803,34 +1741,53 @@ Host* mudlet::getActiveHost()
 {
     if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
         return mpCurrentActiveHost;
-    } else {
-        return nullptr;
     }
+
+    return nullptr;
 }
 
+// Received when the OS/DE/WM tells Mudlet to close (or we force the close
+// ourselves):
 void mudlet::closeEvent(QCloseEvent* event)
 {
-    QVector<QString> closingHosts;
+    qDebug() << "mudlet::closeEvent(...) INFO - called!";
 
+    QStringList hostsToDestroy;
+    bool abortClose = false;
+    // Due to the way that Hosts are stored we cannot do a closeHost(hostName)
+    // within the following loop as it fatally messes with what mHostManager
+    // contains - this is STL iterator stuff!
     for (auto pHost : mHostManager) {
-        const auto console = pHost->mpConsole;
-        if (!console) {
+        if (pHost->requestClose()) {
+            // If we get here then the user has agreed to close it and the
+            // profile has been saved - if required - or both have happened
+            // automatically - and the main console has been told to close:
+
+            hostsToDestroy.append(pHost->getName());
             continue;
         }
-        if (!console->close()) {
-            // close out any profiles that we have agreed to close so far
-            for (const auto& hostName : qAsConst(closingHosts)) {
-                closeHost(hostName);
-            }
 
-            event->ignore();
-            return;
-        } else {
-            console->mUserAgreedToCloseConsole = true;
-            closingHosts.append(pHost->getName());
-        }
+        // This profile is not to be closed or the user has cancelled the close,
+        // in either case the application close cannot proceed - so give up,
+        // but we cannot just ignore() the event and return as there may be
+        // previously closed profiles to clean up:
+        abortClose = true;
+        // Stop the iteration
+        break;
     }
 
+    // Clean up the profiles that are being closed
+    for (auto const& hostName : hostsToDestroy) {
+        closeHost(hostName);
+    }
+
+    // Now we bail out if the close is cancelled:
+    if (abortClose) {
+        event->ignore();
+        return;
+    }
+
+    // Since we are here the close is to be completed:
     writeSettings();
 
     goingDown();
@@ -1839,18 +1796,8 @@ void mudlet::closeEvent(QCloseEvent* event)
         smpDebugArea->close();
     }
 
-    for (auto pHost : mHostManager) {
-        pHost->close();
-    }
-
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
-
-    for (auto pHost : mHostManager) {
-        if (pHost->currentlySavingProfile()) {
-            pHost->waitForProfileSave();
-        }
-    }
 
     // pass the event on so dblsqd can perform an update
     // if automatic updates have been disabled
@@ -1860,50 +1807,10 @@ void mudlet::closeEvent(QCloseEvent* event)
 void mudlet::forceClose()
 {
     for (auto pHost : mHostManager) {
-        auto console = pHost->mpConsole;
-        if (!console) {
-            continue;
-        }
-        pHost->saveProfile();
-        console->mUserAgreedToCloseConsole = true;
-
-        if (pHost->mSslTsl) {
-            pHost->mTelnet.abortConnection();
-        } else {
-            pHost->mTelnet.disconnectIt();
-        }
-
-        // close script-editor
-        if (pHost->mpEditorDialog) {
-            pHost->mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-            pHost->mpEditorDialog->close();
-        }
-
-        if (pHost->mpNotePad) {
-            pHost->mpNotePad->save();
-            pHost->mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-            pHost->mpNotePad->close();
-            pHost->mpNotePad = nullptr;
-        }
-
-        if (pHost->mpDlgIRC) {
-            pHost->mpDlgIRC->close();
-        }
-
-        console->close();
+        pHost->forceClose();
     }
 
-    // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
-    hide();
-
-    for (auto pHost : mHostManager) {
-        if (pHost->currentlySavingProfile()) {
-            pHost->waitForProfileSave();
-        }
-    }
-
-    writeSettings();
-
+    // This will fire the closeEvent(...)
     close();
 }
 
@@ -1943,7 +1850,11 @@ void mudlet::readEarlySettings(const QSettings& settings)
         return;
     }
 
-//    qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+// #if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
+//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+// #else
+//     qDebug().nospace().noquote() << "mudlet::readEarlySettings(...) INFO - Using language code \"" << mInterfaceLanguage << "\" to switch to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+// #endif
 }
 
 void mudlet::readLateSettings(const QSettings& settings)
@@ -2153,13 +2064,33 @@ void mudlet::slot_showConnectionDialog()
     mpConnectionDialog->show();
 }
 
+dlgTriggerEditor* mudlet::createMudletEditor()
+{
+    Host* pHost = getActiveHost();
+    if (pHost == nullptr) {
+        return nullptr;
+    }
+
+    if (pHost->mpEditorDialog != nullptr) {
+        return pHost->mpEditorDialog;
+    }
+
+    auto* pEditor = new dlgTriggerEditor(pHost);
+    pHost->mpEditorDialog = pEditor;
+    connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
+    connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+    pEditor->fillout_form();
+
+    return pEditor;
+}
+
 void mudlet::slot_showEditorDialog()
 {
     Host* pHost = getActiveHost();
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2175,7 +2106,7 @@ void mudlet::slot_showTriggerDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2191,7 +2122,7 @@ void mudlet::slot_showAliasDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2207,7 +2138,7 @@ void mudlet::slot_showTimerDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2223,7 +2154,7 @@ void mudlet::slot_showScriptDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2239,7 +2170,7 @@ void mudlet::slot_showKeyDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2255,7 +2186,7 @@ void mudlet::slot_showVariableDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -2271,7 +2202,7 @@ void mudlet::slot_showActionDialog()
     if (!pHost) {
         return;
     }
-    dlgTriggerEditor* pEditor = pHost->mpEditorDialog;
+    dlgTriggerEditor* pEditor = createMudletEditor();
     if (!pEditor) {
         return;
     }
@@ -3354,8 +3285,11 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
     zip_uint64_t bytesRead = 0;
     char buf[4096]; // Was 100 but that seems unduly stingy...!
     zip* archive = zip_open(archivePath.toStdString().c_str(), 0, &err);
-    if (err != 0) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
+    if (err) {
+        zip_error_t *error = zip_get_error(archive);
+        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
+        zip_error_fini(error);
+        zip_discard(archive);
         return false;
     }
 
@@ -3446,7 +3380,10 @@ bool mudlet::unzip(const QString& archivePath, const QString& destination, const
 
     err = zip_close(archive);
     if (err) {
-        zip_error_to_str(buf, sizeof(buf), err, errno);
+        zip_error_t *error = zip_get_error(archive);
+        qWarning().noquote().nospace() << "mudlet::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") Warning - " << zip_error_strerror(error);
+        zip_error_fini(error);
+        zip_discard(archive);
         return false;
     }
 
@@ -4103,8 +4040,13 @@ void mudlet::setInterfaceLanguage(const QString& languageCode)
             qWarning().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
                                            << "\") WARNING - Unable to convert given language code to a recognised locale, reverting to the POSIX 'C' one.";
         } else {
+#if QT_VERSION < QT_VERSION_CHECK(6, 2, 0)
             qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
                                          << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::countryToString(mUserLocale.country()) << ")\" locale.";
+#else
+            qDebug().nospace().noquote() << "mudlet::setInterfaceLanguage(\"" << languageCode
+                                         << "\") INFO - switching to \"" << QLocale::languageToString(mUserLocale.language()) << " (" << QLocale::territoryToString(mUserLocale.territory()) << ")\" locale.";
+#endif
         }
         loadTranslators(languageCode);
         // For full dynamic language change support (no restart necessary) we
@@ -4418,8 +4360,8 @@ Hunhandle* mudlet::prepareProfileDictionary(const QString& hostName, QSet<QStrin
     wordSet = QSet<QString>(wordList.begin(), wordList.end());
 
 #if defined(Q_OS_WIN32)
-    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.dic"));
-    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.aff"));
+    mudlet::self()->sanitizeUtf8Path(dictionaryPath, qsl("profile.dic"));
+    mudlet::self()->sanitizeUtf8Path(affixPath, qsl("profile.aff"));
 #endif
     return Hunspell_create(affixPath.toUtf8().constData(), dictionaryPath.toUtf8().constData());
 }
@@ -4594,7 +4536,11 @@ static QString getShortPathName(const QString& name)
     }
     QScopedArrayPointer<TCHAR> buffer(new TCHAR[length]);
     GetShortPathNameW(nameC, buffer.data(), length);
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     const QString rc = QString::fromUtf16(reinterpret_cast<const ushort*>(buffer.data()), length - 1);
+#else
+    const QString rc = QString::fromWCharArray(buffer.data(), length - 1);
+#endif
     return rc;
 }
 
@@ -4946,4 +4892,15 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 #else
     return QImage(qsl(":/splash/Mudlet_splashscreen_main.png"));
 #endif // INCLUDE_VARIABLE_SPLASH_SCREEN
+}
+
+// The Lua interpreter cannot call mudlet::forceClose() directly as the latter
+// will destroy the former before a direct call has completed which has bad
+// effects (like the Lua API resetProfile() once did). Instead arrange for it
+// to be done on the next Qt event loop iteration:
+void mudlet::armForceClose()
+{
+    QTimer::singleShot(0, this, [this]() {
+        forceClose();
+    });
 }

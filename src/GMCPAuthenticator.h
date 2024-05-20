@@ -1,10 +1,8 @@
-#ifndef MUDLET_HOSTMANAGER_H
-#define MUDLET_HOSTMANAGER_H
+#ifndef MUDLET_AUTHENTICATOR_H
+#define MUDLET_AUTHENTICATOR_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2024 by Vadim Peretokin - vperetokin@gmail.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,50 +20,35 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
 #include "Host.h"
+#include "utils.h"
 
 #include "pre_guard.h"
-#include <QMap>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QString>
-#include <QSharedPointer>
+#include <QVariantMap>
 #include "post_guard.h"
 
 
-class TEvent;
-typedef QMap<QString, QSharedPointer<Host>> HostMap;
-
-class HostManager
+class GMCPAuthenticator
 {
-    class Iter
-    {
-    public:
-        Iter(HostManager* mgr, bool top);
-        bool operator!= (const Iter& other);
-        bool operator== (const Iter& other);
-        Iter& operator++();
-        QSharedPointer<Host> operator*();
-
-    private:
-        HostMap::iterator it;
-    };
-
+    Q_DECLARE_TR_FUNCTIONS(GMCPAuthenticator)
 
 public:
-    HostManager() = default;
 
-    Host* getHost(const QString& hostname);
-    bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
-    int getHostCount();
-    void deleteHost(const QString&);
-    void postIrcMessage(const QString&, const QString&, const QString&);
-    void postInterHostEvent(const Host*, const TEvent&, const bool = false);
-    void changeAllHostColour(const Host*);
-    Iter begin() { return Iter(this, true); }
-    Iter end() { return Iter(this, false); }
+    explicit GMCPAuthenticator(Host* pHost);
+    ~GMCPAuthenticator() = default;
+
+    void saveSupportsSet(const QString& data);
+    void sendCredentials();
+    void handleAuthResult(const QString& data);
+    void handleAuthGMCP(const QString& packageMessage, const QString& data);
 
 private:
-    HostMap mHostPool;
+    Host* mpHost;
+    QStringList mSupportedAuthTypes;
 };
 
-#endif // MUDLET_HOSTMANAGER_H
+#endif // MUDLET_AUTHENTICATOR_H
