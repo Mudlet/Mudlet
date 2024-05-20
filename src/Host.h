@@ -444,15 +444,15 @@ public:
     bool mEchoLuaErrors;
     QFont mCommandLineFont;
     QString mCommandSeparator;
-    bool mEnableGMCP;
-    bool mEnableMSSP;
-    bool mEnableMSDP;
-    bool mEnableMSP;
+    bool mEnableGMCP = true;
+    bool mEnableMSSP = true;
+    bool mEnableMSDP = true;
+    bool mEnableMSP = true;
     bool mEnableMTTS = true;
     bool mEnableMNES = false;
-    bool mServerMXPenabled;
-    bool mAskTlsAvailable;
-    int mMSSPTlsPort;
+    bool mServerMXPenabled = true;
+    bool mAskTlsAvailable = true;
+    int mMSSPTlsPort = 0;
     QString mMSSPHostName;
 
     TMxpMudlet mMxpClient;
