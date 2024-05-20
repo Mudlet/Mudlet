@@ -1236,6 +1236,7 @@ function getConfig(...)
       "askTlsAvailable",
       "autoClearInputLine",
       "blankLinesBehaviour",
+      "boldIsBright",
       "caretShortcut",
       "commandLineHistorySaveSize",
       "compactInputLine",

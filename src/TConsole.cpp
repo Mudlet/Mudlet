@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2014-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2021 by Vadim Peretokin - vperetokin@gmail.com          *
@@ -1885,14 +1885,17 @@ void TConsole::setProfileName(const QString& newName)
     mProfileName = newName;
 }
 
-
 void TConsole::dragEnterEvent(QDragEnterEvent* e)
 {
     if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
         // Use ctrl key to decide if action is link or copy
         // CopyAction corresponds to installing dropped file as a package
         // LinkAction corresponds to installing dropped file as a module
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+#else
+        Qt::KeyboardModifiers modifiers = e->modifiers();
+#endif
         if (modifiers & Qt::ControlModifier) {
             e->setDropAction(Qt::LinkAction);
         } else {
@@ -1901,12 +1904,18 @@ void TConsole::dragEnterEvent(QDragEnterEvent* e)
         e->accept();
     }
 }
-void TConsole::dragMoveEvent(QDragMoveEvent* e) {
+
+void TConsole::dragMoveEvent(QDragMoveEvent* e)
+{
     if (e->mimeData()->hasUrls() || e->mimeData()->hasText()) {
         // Use ctrl key to decide if action is link or copy
         // CopyAction corresponds to installing dropped file as a package
         // LinkAction corresponds to installing dropped file as a module
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         Qt::KeyboardModifiers modifiers = e->keyboardModifiers();
+#else
+        Qt::KeyboardModifiers modifiers = e->modifiers();
+#endif
         if (modifiers & Qt::ControlModifier) {
             e->setDropAction(Qt::LinkAction);
         } else {
