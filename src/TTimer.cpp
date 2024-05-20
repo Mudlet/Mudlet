@@ -1,7 +1,8 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2019, 2021 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2019, 2021, 2024 by Stephen Lyons                       *
+ *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -32,14 +33,8 @@ const char* TTimer::scmProperty_TTimerId = "TTimerId";
 
 TTimer::TTimer(TTimer* parent, Host* pHost)
 : Tree<TTimer>(parent)
-, mRegisteredAnonymousLuaFunction(false)
-, exportItem(true)
-, mModuleMasterFolder(false)
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
 , mpQTimer(new QTimer)
-, mModuleMember(false)
-, mRepeating(false)
 {
     mpQTimer->stop();
     mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());
@@ -49,15 +44,10 @@ TTimer::TTimer(TTimer* parent, Host* pHost)
 
 TTimer::TTimer(const QString& name, QTime time, Host* pHost, bool repeating)
 : Tree<TTimer>(nullptr)
-, mRegisteredAnonymousLuaFunction(false)
-, exportItem(true)
-, mModuleMasterFolder(false)
 , mName(name)
 , mTime(time)
 , mpHost(pHost)
-, mNeedsToBeCompiled(true)
 , mpQTimer(new QTimer)
-, mModuleMember(false)
 {
     mpQTimer->stop();
     mpQTimer->setProperty(scmProperty_HostName, mpHost->getName());

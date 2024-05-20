@@ -67,8 +67,8 @@ set(mudlet_SRCS
     dlgConnectionProfiles.cpp
     dlgIRC.cpp
     dlgKeysMainArea.cpp
-    dlgMapper.cpp
     dlgMapLabel.cpp
+    dlgMapper.cpp
     dlgModuleManager.cpp
     dlgNotepad.cpp
     dlgPackageExporter.cpp
@@ -87,10 +87,10 @@ set(mudlet_SRCS
     dlgVarsMainArea.cpp
     EAction.cpp
     exitstreewidget.cpp
-    FontManager.cpp
     FileOpenHandler.cpp
+    FontManager.cpp
     GifTracker.cpp
-    TrailingWhitespaceMarker.cpp
+    GMCPAuthenticator.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -100,8 +100,9 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
-    ShortcutsManager.cpp
+    MxpTag.cpp
     ScriptUnit.cpp
+    ShortcutsManager.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
@@ -121,7 +122,6 @@ set(mudlet_SRCS
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
-    TScrollBox.cpp
     TLinkStore.cpp
 
     TLuaInterpreter.cpp
@@ -136,32 +136,37 @@ set(mudlet_SRCS
     TMap.cpp
     TMapLabel.cpp
     TMedia.cpp
+    TMediaPlaylist.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
     TMxpCustomElementTagHandler.cpp
+    TMxpElementDefinitionHandler.cpp
+    TMxpElementRegistry.cpp
     TMxpEntityTagHandler.cpp
     TMxpFontTagHandler.cpp
+    TMxpFormattingTagsHandler.cpp
     TMxpLinkTagHandler.cpp
+    TMxpMudlet.cpp
     TMxpMusicTagHandler.cpp
     TMxpNodeBuilder.cpp
-    TMxpMudlet.cpp
     TMxpProcessor.cpp
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
     TMxpSupportTagHandler.cpp
-    MxpTag.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
     TMxpTagProcessor.cpp
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
+    TrailingWhitespaceMarker.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
+    TScrollBox.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
     TStringUtils.cpp
@@ -218,9 +223,9 @@ set(mudlet_UIS
 
 set(mudlet_HDRS
     ActionUnit.h
-    Announcer.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
+    Announcer.h
     ctelnet.h
     DarkTheme.h
     discord.h
@@ -255,7 +260,7 @@ set(mudlet_HDRS
     FileOpenHandler.h
     FontManager.h
     GifTracker.h
-    TrailingWhitespaceMarker.h
+    GMCPAuthenticator.h
     Host.h
     HostManager.h
     ircmessageformatter.h
@@ -264,10 +269,11 @@ set(mudlet_HDRS
     mapInfoContributorManager.h
     mudlet.h
     MudletInstanceCoordinator.h
+    MxpTag.h
     post_guard.h
     pre_guard.h
-    ShortcutsManager.h
     ScriptUnit.h
+    ShortcutsManager.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -286,12 +292,11 @@ set(mudlet_HDRS
     TEntityResolver.h
     testdbg.h
     TEvent.h
-    TForkedProcess.h
     TFlipButton.h
+    TForkedProcess.h
     TimerUnit.h
     TKey.h
     TLabel.h
-    TScrollBox.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -299,35 +304,37 @@ set(mudlet_HDRS
     TMapLabel.h
     TMatchState.h
     TMedia.h
+    TMediaPlaylist.h
     TMxpBRTagHandler.h
     TMxpClient.h
     TMxpColorTagHandler.h
+    TMxpContext.h
     TMxpCustomElementTagHandler.h
-    TMxpEntityTagHandler.h
-    TMxpFontTagHandler.h
-    TMxpLinkTagHandler.h
-    TMxpMusicTagHandler.h
-    TMxpSoundTagHandler.h
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
-    TMxpContext.h
+    TMxpEntityTagHandler.h
+    TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
+    TMxpLinkTagHandler.h
     TMxpMudlet.h
+    TMxpMusicTagHandler.h
     TMxpNodeBuilder.h
     TMxpProcessor.h
     TMxpSendTagHandler.h
-    MxpTag.h
+    TMxpSoundTagHandler.h
+    TMxpSupportTagHandler.cpp
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
-    TMxpSupportTagHandler.cpp
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TrailingWhitespaceMarker.h
     Tree.h
     TriggerUnit.h
     TRoom.h
     TRoomDB.h
     TScript.h
+    TScrollBox.h
     TSplitter.h
     TSplitterHandle.h
     TStringUtils.h
@@ -339,8 +346,8 @@ set(mudlet_HDRS
     TTreeWidget.h
     TTrigger.h
     TVar.h
-    VarUnit.h
     utils.h
+    VarUnit.h
     widechar_width.h
     XMLexport.h
     XMLimport.h)
