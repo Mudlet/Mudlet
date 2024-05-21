@@ -17,7 +17,8 @@ for(file, TS_FILES) {
 TS_FILES += mudlet_en_US.ts
 
 isEmpty(QMAKE_LRELEASE) {
-    equals(QT_MAJOR_VERSION, 5) {
+     win32 {
+        equals(QT_MAJOR_VERSION, 5) {
             QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease-qt5.exe
         } else {
             QMAKE_LRELEASE = $$[QT_INSTALL_BINS]\\lrelease-qt6.exe
