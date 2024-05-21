@@ -323,6 +323,7 @@ else
     echo "$Changelog"
     
     echo "=== Creating release in Dblsqd ==="
+
     dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
 
     echo "=== Registering release with Dblsqd ==="
