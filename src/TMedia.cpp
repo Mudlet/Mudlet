@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2020, 2022-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -516,7 +516,7 @@ QStringList TMedia::parseFileNameList(TMediaData& mediaData, QDir& dir)
 
         QStringList fileNames(dir.entryList(QDir::Files | QDir::Readable, QDir::Name));
 
-        for (auto& fileName : std::as_const(fileNames)) {
+        for (auto& fileName : qAsConst(fileNames)) {
             fileNameList << qsl("%1/%2").arg(dir.path(), fileName);
         }
     } else {

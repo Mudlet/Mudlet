@@ -1,7 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2022, 2024 by Stephen Lyons                        *
- *                                               - slysven@virginmedia.com *
+ *   Copyright (C) 2013-2022 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2016 by Eric Wallace - eewallace@gmail.com              *
  *   Copyright (C) 2016 by Chris Leacy - cleacy1972@gmail.com              *
@@ -81,7 +80,7 @@ static const char *bad_window_type = "%s: bad argument #%d type (window name as 
 static const char *bad_cmdline_type = "%s: bad argument #%d type (command line name as string expected, got %s)!";
 static const char *bad_window_value = "window \"%s\" not found";
 static const char *bad_cmdline_value = "command line \"%s\" not found";
-// Not used: static const char *bad_label_value = "label \"%s\" not found";
+static const char *bad_label_value = "label \"%s\" not found";
 
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
@@ -2183,22 +2182,14 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
         highlight = false;
     } else {
         highlight = true;
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlFgColor.setNamedColor(lua_tostring(L, 9));
-#else
-        hlFgColor = QColor::fromString(lua_tostring(L, 9));
-#endif
     }
     QColor hlBgColor;
     if (lua_isnumber(L, 10)) {
         highlight = false;
     } else {
         highlight = true;
-#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         hlBgColor.setNamedColor(lua_tostring(L, 10));
-#else
-        hlBgColor = QColor::fromString(lua_tostring(L, 10));
-#endif
     }
 
     QString soundFile;

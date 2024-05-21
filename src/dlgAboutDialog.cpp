@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2009 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2017-2019, 2022, 2024 by Stephen Lyons       *
+ *   Copyright (C) 2013-2014, 2017-2019, 2022 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *                                                                         *
@@ -1047,7 +1047,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
     nameFont.setPixelSize(32);
     nameFont.setFamily(qsl("Bitstream Vera Sans"));
 
-    for (const auto& name: std::as_const(mightier_than_swords)) {
+    for (const auto& name: qAsConst(mightier_than_swords)) {
         QImage background(qsl(":/icons/frame_swords.png"));
         QPainter painter(&background);
         painter.setFont(nameFont);
@@ -1056,7 +1056,7 @@ void dlgAboutDialog::setSupportersTab(const QString& htmlHead)
         image_counter++;
     }
 
-    for (const auto& name: std::as_const(on_a_plaque)) {
+    for (const auto& name: qAsConst(on_a_plaque)) {
         QImage background(qsl(":/icons/frame_plaque.png"));
         QPainter painter(&background);
         painter.setFont(nameFont);

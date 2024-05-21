@@ -892,7 +892,7 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
             }
 
             auto regexCodePropertyList = trigger.append_child("regexCodePropertyList");
-            for (const int i : std::as_const(pT->mPatternKinds)) {
+            for (const int i : qAsConst(pT->mPatternKinds)) {
                 regexCodePropertyList.append_child("integer").text().set(QString::number(i).toUtf8().constData());
             }
         }

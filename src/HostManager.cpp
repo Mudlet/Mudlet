@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018, 2020, 2024 by Stephen Lyons                 *
+ *   Copyright (C) 2016, 2018, 2020 by Stephen Lyons                       *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -120,7 +120,7 @@ void HostManager::postInterHostEvent(const Host* pHost, const TEvent& event, con
     allValidHosts = afterSendingHost;
     allValidHosts.append(beforeSendingHost);
 
-    for (const int validHost : std::as_const(allValidHosts)) {
+    for (const int validHost : qAsConst(allValidHosts)) {
         hostList.at(validHost)->raiseEvent(event);
     }
 }

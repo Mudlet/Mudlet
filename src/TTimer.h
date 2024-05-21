@@ -4,7 +4,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2024 by Stephen Lyons - slysven@virginmedia.com         *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -103,15 +102,15 @@ public:
 
     // specifies whenever the payload is Lua code as a string
     // or a function
-    bool mRegisteredAnonymousLuaFunction = false;
-    bool exportItem = true;
-    bool mModuleMasterFolder = false;
+    bool mRegisteredAnonymousLuaFunction;
+    bool exportItem;
+    bool mModuleMasterFolder;
 
     static const char* scmProperty_HostName;
     static const char* scmProperty_TTimerId;
 
     // temporary timers are single-shot by default, unless repeating is set
-    bool mRepeating = false;
+    bool mRepeating;
 
 private:
     TTimer() = default;
@@ -121,9 +120,9 @@ private:
     QString mCommand;
     QString mFuncName;
     QPointer<Host> mpHost;
-    bool mNeedsToBeCompiled = true;
+    bool mNeedsToBeCompiled;
     QTimer* mpQTimer;
-    bool mModuleMember = false;
+    bool mModuleMember;
 };
 
 #ifndef QT_NO_DEBUG_STREAM

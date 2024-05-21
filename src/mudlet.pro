@@ -1003,7 +1003,6 @@ contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
     } else {
         LIBS += -lqt6keychain
     }
-
     !build_pass{
         message("Linking with system QtKeyChain library code in this configuration")
     }

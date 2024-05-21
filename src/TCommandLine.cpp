@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2018-2020, 2022-2024 by Stephen Lyons                   *
+ *   Copyright (C) 2018-2020, 2022-2023 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
  *                                                                         *
@@ -1013,12 +1013,12 @@ void TCommandLine::handleTabCompletion(bool direction)
     const QStringList blacklist = tabCompleteBlacklist.values();
     QStringList toDelete;
 
-    for (const QString& wstr : std::as_const(wordList)) {
+    for (const QString& wstr : qAsConst(wordList)) {
         if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
             toDelete += wstr;
         }
     }
-    for (const QString& dstr : std::as_const(toDelete)) {
+    for (const QString& dstr : qAsConst(toDelete)) {
         wordList.removeAll(dstr);
     }
 

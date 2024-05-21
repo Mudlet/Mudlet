@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019, 2022. 2024 by Stephen Lyons                  *
+ *   Copyright (C) 2014-2019, 2022 by Stephen Lyons                        *
  *                                            - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -51,8 +51,8 @@ public:
     TMediaPlayer(Host* pHost, TMediaData& mediaData)
     : mpHost(pHost)
     , mMediaData(mediaData)
-    , mMediaPlayer(new QMediaPlayer(pHost))
     , mPlaylist(new TMediaPlaylist())
+    , mMediaPlayer(new QMediaPlayer(pHost))
     , initialized(true)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -93,7 +93,7 @@ private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer = nullptr;
-    TMediaPlaylist* mPlaylist = nullptr;
+    TMediaPlaylist* mPlaylist;
     bool initialized = false;
 };
 

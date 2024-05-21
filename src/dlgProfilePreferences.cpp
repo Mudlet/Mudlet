@@ -2954,7 +2954,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         if (!newIrcChannels.isEmpty()) {
             const QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-            for (const QString& s : tL) {
+            for (const QString s : tL) {
                 if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                     newChanList << s;
                 }
@@ -3488,7 +3488,7 @@ void dlgProfilePreferences::populateThemesList()
 
     if (themesFile.open(QIODevice::ReadOnly)) {
         unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
-        for (auto theme : std::as_const(unsortedThemes)) {
+        for (auto theme : qAsConst(unsortedThemes)) {
             const QString themeText = theme.toObject()["Title"].toString();
             const QString themeFileName = theme.toObject()["FileName"].toString();
 
@@ -3507,7 +3507,7 @@ void dlgProfilePreferences::populateThemesList()
 
     auto currentSelection = code_editor_theme_selection_combobox->currentText();
     code_editor_theme_selection_combobox->clear();
-    for (auto key : std::as_const(sortedThemes)) {
+    for (auto key : qAsConst(sortedThemes)) {
         // store the actual theme file as data because edbee needs that,
         // not the name, for choosing the theme even after the theme file was loaded
         code_editor_theme_selection_combobox->addItem(key.first, key.second);
