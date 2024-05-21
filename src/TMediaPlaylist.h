@@ -1,10 +1,8 @@
-#ifndef MUDLET_HOSTMANAGER_H
-#define MUDLET_HOSTMANAGER_H
+#ifndef TMEDIAPLAYLIST_H
+#define TMEDIAPLAYLIST_H
 
 /***************************************************************************
- *   Copyright (C) 2008-2011 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2016, 2018 by Stephen Lyons - slysven@virginmedia.com   *
+ *   Copyright (C) 2024 by Mike Conley - mike.conley@stickmud.com          *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -22,50 +20,42 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-
-#include "Host.h"
-
 #include "pre_guard.h"
-#include <QMap>
-#include <QString>
-#include <QSharedPointer>
+#include <QList>
+#include <QUrl>
 #include "post_guard.h"
 
-
-class TEvent;
-typedef QMap<QString, QSharedPointer<Host>> HostMap;
-
-class HostManager
+class TMediaPlaylist
 {
-    class Iter
-    {
-    public:
-        Iter(HostManager* mgr, bool top);
-        bool operator!= (const Iter& other);
-        bool operator== (const Iter& other);
-        Iter& operator++();
-        QSharedPointer<Host> operator*();
-
-    private:
-        HostMap::iterator it;
+public:
+    enum PlaybackMode {
+        Sequential,
+        Loop,
+        Random
     };
 
+    TMediaPlaylist();
+    ~TMediaPlaylist();
 
-public:
-    HostManager() = default;
+    void addMedia(const QUrl &url);
+    void removeMedia(int startIndex, int endIndex);
+    void clear();
+    int mediaCount() const;
+    bool isEmpty() const;
+    void setPlaybackMode(PlaybackMode mode);
+    PlaybackMode playbackMode() const;
 
-    Host* getHost(const QString& hostname);
-    bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
-    int getHostCount();
-    void deleteHost(const QString&);
-    void postIrcMessage(const QString&, const QString&, const QString&);
-    void postInterHostEvent(const Host*, const TEvent&, const bool = false);
-    void changeAllHostColour(const Host*);
-    Iter begin() { return Iter(this, true); }
-    Iter end() { return Iter(this, false); }
+    QUrl currentMedia() const;
+    bool setCurrentIndex(int index);
+    int currentIndex() const;
+    int nextIndex() const;
+    QUrl next();
+    QUrl previous();
 
 private:
-    HostMap mHostPool;
+    QList<QUrl> mMediaList;
+    int mCurrentIndex;
+    PlaybackMode mPlaybackMode;
 };
 
-#endif // MUDLET_HOSTMANAGER_H
+#endif // TMEDIAPLAYLIST_H

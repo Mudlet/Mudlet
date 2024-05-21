@@ -89,6 +89,7 @@ qtHaveModule(texttospeech) {
     QT += texttospeech
     !build_pass : message("Using TextToSpeech module")
 }
+
 greaterThan(QT_MAJOR_VERSION, 5) {
     QT += core5compat
 }
@@ -365,6 +366,7 @@ unix:!macx {
     LUA_DEFAULT_DIR = $${DATADIR}/lua
 } else:win32 {
     MINGW_BASE_DIR_TEST = $$(MINGW_BASE_DIR)
+
     contains( DEFINES, INCLUDE_MAIN_BUILD_SYSTEM ) {
         # For CI builds or users/developers using the setup-windows-sdk.ps1 method:
         isEmpty( MINGW_BASE_DIR_TEST ) {
@@ -381,23 +383,51 @@ unix:!macx {
              "$${MINGW_BASE_DIR_TEST}\\lib\\include"
 
     } else {
-        # For users/developers building with MSYS2 on Windows:
         isEmpty( MINGW_BASE_DIR_TEST ) {
             error($$escape_expand("Build aborted as environmental variable MINGW_BASE_DIR not set to the root of \\n"\
-"the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
-"application build) typically this is one of:\\n"\
-"'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
-"'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
-"'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
+            "the Mingw32 or Mingw64 part (depending on the number of bits in your desired\\n"\
+            "application build) typically this is one of:\\n"\
+            "'C:\msys32\mingw32' {32 Bit Mudlet built on a 32 Bit Host}\\n"\
+            "'C:\msys64\mingw32' {32 Bit Mudlet built on a 64 Bit Host}\\n"\
+            "'C:\msys64\mingw32' {64 Bit Mudlet built on a 64 Bit Host}\\n"))
         }
-        LIBS +=  \
-            -L$${MINGW_BASE_DIR_TEST}/bin \
-            -llua5.1 \
-            -llibhunspell-1.7
+        GITHUB_WORKSPACE_TEST = $$(GITHUB_WORKSPACE)
+        isEmpty( GITHUB_WORKSPACE_TEST ) {
+            # For users/developers building with MSYS2 on Windows:
+            LIBS +=  \
+                -L$${MINGW_BASE_DIR_TEST}/bin \
+                -llua5.1 \
+                -llibhunspell-1.7
 
-        INCLUDEPATH += \
-             $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
-             $${MINGW_BASE_DIR_TEST}/include/pugixml
+            INCLUDEPATH += \
+                 $${MINGW_BASE_DIR_TEST}/include/lua5.1 \
+                 $${MINGW_BASE_DIR_TEST}/include/pugixml
+        } else {
+            # For users/developers building with MSYS2 for Windows in a GH Workflow:
+            contains(QMAKE_HOST.arch, x86_64) {
+                LIBS +=  \
+                    -LD:\\a\\_temp\\msys64\\mingw64/lib \
+                    -LD:\\a\\_temp\\msys64\\mingw64/bin \
+                    -llua5.1 \
+                    -llibhunspell-1.7
+
+                INCLUDEPATH += \
+                     D:\\a\\_temp\\msys64\\mingw64/include \
+                     D:/a/_temp/msys64/mingw64/include/lua5.1 \
+                     $${MINGW_BASE_DIR_TEST}/include/pugixml
+            } else {
+                LIBS +=  \
+                    -LD:\\a\\_temp\\msys64\\mingw32/lib \
+                    -LD:\\a\\_temp\\msys64\\mingw32/bin \
+                    -llua5.1 \
+                    -llibhunspell-1.7
+
+                INCLUDEPATH += \
+                     D:\\a\\_temp\\msys64\\mingw32/include \
+                     D:/a/_temp/msys64/mingw32/include/lua5.1 \
+                     $${MINGW_BASE_DIR_TEST}/include/pugixml
+            }
+        }
     }
 
     LIBS += \
@@ -448,7 +478,7 @@ macx {
 BASE_CXX = $$QMAKE_CXX
 BASE_C = $$QMAKE_C
 # common linux location
-exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe) {
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe) {
     QMAKE_CXX = ccache $$BASE_CXX
     QMAKE_C = ccache $$BASE_C
 }
@@ -674,6 +704,7 @@ SOURCES += \
     TMap.cpp \
     TMapLabel.cpp \
     TMedia.cpp \
+    TMediaPlaylist.cpp \
     TMxpBRTagHandler.cpp \
     TMxpElementDefinitionHandler.cpp \
     TMxpElementRegistry.cpp \
@@ -805,6 +836,7 @@ HEADERS += \
     TMatchState.h \
     TMedia.h \
     TMediaData.h \
+    TMediaPlaylist.h \
     TMxpBRTagHandler.h \
     TMxpClient.h \
     TMxpColorTagHandler.h \
@@ -974,7 +1006,11 @@ contains( DEFINES, "INCLUDE_OWN_QT5_KEYCHAIN" ) {
         message("Including own copy of QtKeyChain library code in this configuration")
     }
 } else {
-    LIBS += -lqt5keychain
+    lessThan(QT_MAJOR_VERSION,6) {
+        LIBS += -lqt5keychain
+    } else {
+        LIBS += -lqt6keychain
+    }
     !build_pass{
         message("Linking with system QtKeyChain library code in this configuration")
     }
