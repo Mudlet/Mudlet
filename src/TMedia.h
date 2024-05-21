@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
- *   Copyright (C) 2014-2019, 2022 by Stephen Lyons                        *
+ *   Copyright (C) 2014-2019, 2022. 2024 by Stephen Lyons                  *
  *                                            - slysven@virginmedia.com    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -28,6 +28,7 @@
 #include "TEvent.h"
 #include "mudlet.h"
 #include "TMediaData.h"
+#include "TMediaPlaylist.h"
 
 #include "pre_guard.h"
 #include <QAudioOutput>
@@ -51,6 +52,7 @@ public:
     : mpHost(pHost)
     , mMediaData(mediaData)
     , mMediaPlayer(new QMediaPlayer(pHost))
+    , mPlaylist(new TMediaPlaylist())
     , initialized(true)
     {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -77,11 +79,21 @@ public:
         return mMediaPlayer->audioOutput()->setVolume(volume / 100.0f);
 #endif
     }
+    TMediaPlaylist* playlist() const {
+        return mPlaylist;
+    }
+    void setPlaylist(TMediaPlaylist* playlist) {
+        if (mPlaylist != playlist) {
+            delete mPlaylist;
+            mPlaylist = playlist;
+        }
+    }
 
 private:
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     QMediaPlayer* mMediaPlayer = nullptr;
+    TMediaPlaylist* mPlaylist = nullptr;
     bool initialized = false;
 };
 
