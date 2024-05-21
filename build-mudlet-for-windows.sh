@@ -48,7 +48,7 @@
 
 if [ -z "${QT_MAJOR_VERSION}" ]; then
   # Assume previously used Qt5 unless told otherwise
-  export "QT_MAJOR_VERSION=5"
+  export QT_MAJOR_VERSION="5"
   if [ -z "${APPVEYOR}" ]; then
     # Don't bother reporting this for CI builds as the previous script will do so
     echo "Assuming a build with Qt 5.x in absence of a QT_MAJOR_VERSION environmental variable."
@@ -242,6 +242,12 @@ else
     export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
   fi
 fi
+
+# Extract version information from qmake project file
+# sed is used to remove the spaces either side of the `=` in the one line in
+# the file that will match:
+VERSION=$(grep "^VERSION = " "${PARENT_OF_BUILD_DIR}/src/mudlet.pro" | sed -e 's/VERSION = //g')
+export VERSION
 
 ### End of common(-ish) configuration for all three script files.
 

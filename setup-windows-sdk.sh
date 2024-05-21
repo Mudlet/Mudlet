@@ -84,7 +84,7 @@ fi
 
 if [ -z "${QT_MAJOR_VERSION}" ]; then
   # Assume previously used Qt5 unless told otherwise
-  export "QT_MAJOR_VERSION=5"
+  export QT_MAJOR_VERSION=5
   echo "Assuming a build with Qt 5.x in absence of a QT_MAJOR_VERSION environmental variable."
 fi 
 
@@ -142,7 +142,8 @@ if [ -z "${MINGW_INTERNAL_BASE_DIR}" ]; then
     export MINGW_BASE_DIR="C:\msys64\mingw${BUILD_BITNESS}"
 #  fi
   # Provide an equivalent POSIX format path for internal usage:
-  export MINGW_INTERNAL_BASE_DIR="$(cygpath -u "${MINGW_BASE_DIR}")"
+  MINGW_INTERNAL_BASE_DIR="$(cygpath -u "${MINGW_BASE_DIR}")"
+  export MINGW_INTERNAL_BASE_DIR
 fi
 
 # Adjust paths so directories we want are prepended if not present:
@@ -310,7 +311,7 @@ if [ "${LEVEL}" = "full" ]; then
 fi
 
 # Add things needed for "debug" type builds - which the "full" type of install implies:
-if ([ "${LEVEL}" = "full" ] || [ "${BUILD_CONFIG}" = "debug" ]) && [ "${BUILD_BITNESS}" = "64" ]; then
+if [ "${LEVEL}" = "full" ] || [ "${BUILD_CONFIG}" = "debug" ] && [ "${BUILD_BITNESS}" = "64" ]; then
   # Unfortunately these libraries are no longer available for the 32-Bit case
   # unless https://github.com/msys2/MINGW-packages/issues/20902 gets done    
   PACKAGES+=( "mingw-w64-${BUILDCOMPONENT}-qt${QT_MAJOR_VERSION}-base-debug" \
@@ -422,6 +423,13 @@ echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""
 WANTED_ROCKS=("luafilesystem" "lua-yajl" "luautf8" "lua-zip" "lrexlib-pcre" "luasql-sqlite3")
+
+if [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ] || [ "${APPVEYOR_REPO_TAG}" = "True" ] && [ "${APPVEYOR_REPO_NAME}" = "Mudlet/Mudlet" ]; then
+  # This is a scheduled or a tag build on Mudlet's own Appveyor so this will be
+  # making an installer and we'll need a changelog and the process for that
+  # needs an additional Luarocks
+  WANTED_ROCKS+=("argparse")
+fi
 
 SUCCESS="true"
 for ROCK in "${WANTED_ROCKS[@]}"; do
