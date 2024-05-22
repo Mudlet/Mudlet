@@ -124,6 +124,83 @@ if [ "${QT_MAJOR_VERSION}" = "6" ] && [ "${BUILD_BITNESS}" = "32" ]; then
   exit 5
 fi
 
+# Identify what we are going to do - and give up if it is not appropriate:
+if [ -n "${APPVEYOR}" ]; then
+  # This is an Appveyor CI build
+  if [ "${APPVEYOR_REPO_NAME}" = "Mudlet/Mudlet" ]; then
+    # This is being run on Mudlet's own repo
+    if [ -n "${APPVEYOR_REPO_TAG_NAME}" ]; then
+      # It is a build triggered by a tagged commit - so it is likely to be a
+      # proper RELEASE build.
+      export TASK="RELEASE"
+      if [ "${BUILD_CONFIG}" = "debug" ]; then
+        # We do not want to do debug builds of releases - so fail successfully
+        appveyor AddMessage "setup-windows-sdk.sh: BUILD_CONFIG=${BUILD_CONFIG} is not appropriate for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+      if [ "${QT_MAJOR_VERSION}" = "6" ]; then
+        # We do not want to do Qt6 builds of PTBs YET - so fail successfully
+        appveyor AddMessage "setup-windows-sdk.sh: {QT_MAJOR_VERSION}=${QT_MAJOR_VERSION} is not wanted yet for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+    elif [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ]; then
+      # It is a scheduled build so it is a Public Test Build
+      export TASK="PTB"
+      if [ "${BUILD_CONFIG}" = "debug" ]; then
+        # We do not want to do debug builds of releases - so fail successfully
+        appveyor AddMessage "setup-windows-sdk.sh: BUILD_CONFIG=${BUILD_CONFIG} is not appropriate for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+      if [ "${QT_MAJOR_VERSION}" = "6" ]; then
+        # We do not want to do Qt6 builds of PTBs YET - so fail successfully
+        appveyor AddMessage "setup-windows-sdk.sh: {QT_MAJOR_VERSION}=${QT_MAJOR_VERSION} is not wanted yet for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+      COMMIT_EPOCH=$(date -u +%s -d "$(git show -s --format="%cs")")
+      NOW_EPOCH=$(date -u +%s)
+      SECONDS_DIFF=$(( NOW_EPOCH - COMMIT_EPOCH ))
+      DAYS_DIIF=$(( SECONDS_DIFF / 86400 ))
+      if [ "${DAYS_DIIF}" != "0" ]; then
+        appveyor AddMessage "Last commit was: ${SECONDS_DIFF} seconds, i.e. at least ${DAYS_DIIF} day(s) ago - Public Test build aborted!" -Category Information
+        echo "Last commit was: ${SECONDS_DIFF} seconds, i.e. at least ${DAYS_DIIF} day(s) ago - Public Test build aborted!"
+        # Because we are exiting with a non-zero return value this will fail the
+        # build - and with the "fast-finish" option set to "true" in the
+        # .appveyor.yml file it will abort all the other jobs in this build.
+        # We also don't have to replicate the test in the other two scripts.
+        exit 8
+      fi
+    elif [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
+      # It is a PR buiild
+      export TASK="PR"
+      if [ "${BUILD_CONFIG}" = "release" ]; then
+        # We do not want to do release builds of PRs - so fail successfully
+        appveyor AddMessage "setup-windows-sdk.sh: BUILD_CONFIG=${BUILD_CONFIG} is not appropriate for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+    else
+      # It is some other testing build which needs an archive to be made with a
+      # specific name
+      export TASK="TESTING"
+    fi
+  else
+    # Not Mudlet's repository so just produce a zip file
+    export TASK="ZIP"
+  fi
+else
+  # Not an appveyor CI build so just produce an archive
+  export TASK="ZIP"
+fi
+
 if [ -z "${MINGW_INTERNAL_BASE_DIR}" ]; then
   # Variable not set so do so now
   # It might be nice to use the installation of MINGW32 and MINGW64 files that
@@ -215,11 +292,12 @@ echo "MINGW_PREFIX: ${MINGW_PREFIX}"
 echo "MSYSTEM: ${MSYSTEM}"
 echo "PATH: ${PATH}"
 echo "QT_MAJOR_VERSION: ${QT_MAJOR_VERSION}"
+echo "TASK: ${TASK}"
 echo "HOME directory, (Windows form): $(cygpath -w "${HOME}")"
 echo "HOME directory, (POSIX form): $(cygpath -u "${HOME}")"
 echo ""
 
-# Thigs every type of build will need:
+# Things every type of build will need:
 # MINGW32 has lost the mingw-w64-i686-qt5 group package so we'll have to get
 # the individual ones ourselves instead of just putting:
 # "mingw-w64-${BUILDCOMPONENT}-qt${QT_MAJOR_VERSION}":
@@ -333,6 +411,10 @@ fi
 if [ -n "${APPVEYOR}" ]; then
   # Our CI builds may need wget to upload the archive file to Mudlet's website
   PACKAGES+=( "wget" )
+  # We also need ssh/scp for RELEASE builds to upload to our website
+  if [ "${TASK}" = "RELEASE" ]; then
+    PACKAGES+=( "openssh" )
+  fi
 fi
 
 # Options to consider:

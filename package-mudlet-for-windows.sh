@@ -51,6 +51,8 @@
 # 5 - Invalid configuration requested (32bit Qt6 builds are not possible)
 # 7 - No mudlet.exe file found to work with (failed to compile in prior stage?)
 # 9 - Failed to upload package to Mudlet website
+#10 - Failed to produce nuget .nupkg archive file
+#11 - Failed to produce the Setup.exe after running the Squirrel command
 
 if [ -z "${QT_MAJOR_VERSION}" ]; then
   # Assume previously used Qt5 unless told otherwise
@@ -69,36 +71,34 @@ if [ -z "${BUILD_CONFIG}" ]; then
   export BUILD_CONFIG
 fi
 
-if [ -z "${BUILDCOMPONENT}" ]; then
-  if [ "${MSYSTEM}" = "MINGW64" ]; then
-    # We are running in a 64-Bit terminal so assume that that is what the user
-    # to build:
-    BUILD_BITNESS="64"
-    BUILDCOMPONENT="x86_64"
-  elif [ "${MSYSTEM}" = "MINGW32" ]; then
-    # We are running in a 32-Bit terminal so assume that that is what the user
-    # to build (only possible to do a "base" build - using mingw32-qmake
-    # directly as there is not a 32-Bit Qt Creator nowadays):
-    BUILD_BITNESS="32"
-    BUILDCOMPONENT="i686"
-  elif [ "${MSYSTEM}" = "MSYS" ]; then
-    echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
-    echo "to the bitness you want to work on. You may do this once for each of them should"
-    echo "you wish to do both."
-    exit 2
-  elif [ -z "${MSYSTEM}" ]; then
-    echo "The environmental variable MSYSTEM is not set to anything so something is amiss"
-    echo "Please rerun this in a Mingw-w64 MINGW32 or MINGW64 bash terminal."
-    exit 2
-  else
-    echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
-    echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
-    echo "of those two types."
-    exit 2
-  fi
-  export BUILD_BITNESS
-  export BUILDCOMPONENT
+if [ "${MSYSTEM}" = "MINGW64" ]; then
+  # We are running in a 64-Bit terminal so assume that that is what the user
+  # to build:
+  BUILD_BITNESS="64"
+  BUILDCOMPONENT="x86_64"
+elif [ "${MSYSTEM}" = "MINGW32" ]; then
+  # We are running in a 32-Bit terminal so assume that that is what the user
+  # to build (only possible to do a "base" build - using mingw32-qmake
+  # directly as there is not a 32-Bit Qt Creator nowadays):
+  BUILD_BITNESS="32"
+  BUILDCOMPONENT="i686"
+elif [ "${MSYSTEM}" = "MSYS" ]; then
+  echo "Please run this script from an MINGW32 or MINGW64 type bash terminal appropriate"
+  echo "to the bitness you want to work on. You may do this once for each of them should"
+  echo "you wish to do both."
+  exit 2
+elif [ -z "${MSYSTEM}" ]; then
+  echo "The environmental variable MSYSTEM is not set to anything so something is amiss"
+  echo "Please rerun this in a Mingw-w64 MINGW32 or MINGW64 bash terminal."
+  exit 2
+else
+  echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
+  echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
+  echo "of those two types."
+  exit 2
 fi
+export BUILD_BITNESS
+export BUILDCOMPONENT
 
 if [ "${QT_MAJOR_VERSION}" = "6" ] && [ "${BUILD_BITNESS}" = "32" ]; then
     echo ""
@@ -184,6 +184,20 @@ if [ -n "${APPVEYOR}" ]; then
       # It is a build triggered by a tagged commit - so it is likely to be a
       # proper RELEASE build.
       TASK="RELEASE"
+      if [ "${BUILD_CONFIG}" = "debug" ]; then
+        # We do not want to do debug builds of releases - so fail successfully
+        appveyor AddMessage "package-mudlet-for-windows.sh: BUILD_CONFIG=${BUILD_CONFIG} is not appropriate for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+      if [ "${QT_MAJOR_VERSION}" = "6" ]; then
+        # We do not want to do Qt6 builds of PTBs YET - so fail successfully
+        appveyor AddMessage "package-mudlet-for-windows.sh: {QT_MAJOR_VERSION}=${QT_MAJOR_VERSION} is not wanted yet for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
       # This will only persist into the QMake/CMake makefile generation process
       # if the project files for them has been edited to allow this through as
       # an empty string:
@@ -191,12 +205,35 @@ if [ -n "${APPVEYOR}" ]; then
     elif [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ]; then
       # It is a scheduled build so it is a Public Test Build
       TASK="PTB"
+      if [ "${BUILD_CONFIG}" = "debug" ]; then
+        # We do not want to do debug builds of releases - so fail successfully
+        appveyor AddMessage "package-mudlet-for-windows.sh: BUILD_CONFIG=${BUILD_CONFIG} is not appropriate for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+      if [ "${QT_MAJOR_VERSION}" = "6" ]; then
+        # We do not want to do Qt6 builds of PTBs YET - so fail successfully
+        appveyor AddMessage "package-mudlet-for-windows.sh: {QT_MAJOR_VERSION}=${QT_MAJOR_VERSION} is not wanted yet for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+      # We do not have to check to see if there are recent changes as that has
+      # already been done and confirmed in the setup script.
       BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
       MUDLET_VERSION_BUILD="-ptb-$(date -u -Idate)"
       export BUILD_COMMIT
     elif [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
       # It is a PR buiild
       TASK="PR"
+      if [ "${BUILD_CONFIG}" = "release" ]; then
+        # We do not want to do release builds of PRs - so fail successfully
+        appveyor AddMessage "package-mudlet-for-windows.sh: BUILD_CONFIG=${BUILD_CONFIG} is not appropriate for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
       # AppVeyor builds of PRs merge the PR head onto the current development
       # branch creating a new commit - as such we need to refer to the commit
       # Git SHA1 supplied to us rather than trying to back track to the
@@ -329,8 +366,7 @@ echo "Copying wanted compiled files from ${BUILD_DIR}-${BUILD_CONFIG}..."
 echo ""
 
 if [ ! -f "${BUILD_DIR}/${BUILD_CONFIG}/mudlet.exe" ]; then
-  echo "ERROR: no Mudlet executable found - did the previous build"
-  echo "complete sucessfully?"
+  echo "ERROR: no Mudlet executable found - did the previous build stage complete sucessfully?"
   exit 7
 fi
 
@@ -350,7 +386,7 @@ if [ "${QT_MAJOR_VERSION}" = "6" ]; then
   # deemed to be desireable - also the --debug / --release flags don't work/
   # or are not needed for Qt6 on Mingw32/Mingw64 as the debug information is
   # shipped separatly rather than being included in the Qt6 dll files:
-  "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt-qt6.exe" --no-virtualkeyboard --ignore-library-errors ./${EXECUTABLE_NAME}
+  "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt-qt6.exe" --no-virtualkeyboard --ignore-library-errors ./mudlet.exe
 else
   # Since Qt 5.14 using the --release switch is broken (it now seems to be
   # assumed), --debug still seems to work - sort of - it doesn't copy the
@@ -359,11 +395,12 @@ else
   # relevant.
 # Actually it seems that the debug switch might not be needed for Qt 5.15 either
 # given that Mingw-w64 ships the debug information for the Qt libraries
-# separately
+# separately - and using it provokes a failure about the "platform plugin not
+# being available"!
 #  if [ "${BUILD_CONFIG}" = "debug" ]; then
-#    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt.exe" --debug --no-virtualkeyboard ./${EXECUTABLE_NAME}
+#    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt.exe" --debug --no-virtualkeyboard ./mudlet.exe
 #  else
-    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt.exe" --no-virtualkeyboard ./${EXECUTABLE_NAME}
+    "${MINGW_INTERNAL_BASE_DIR}/bin/windeployqt.exe" --no-virtualkeyboard ./mudlet.exe
 #  fi
 fi
 echo "   ... completed windeployqt."
@@ -410,6 +447,7 @@ if [ "${BUILD_CONFIG}" = "debug" ]; then
     copyDebugFiles "${MINGW_BASE_DIR}/share/qt6/plugins/texttospeech"       "./texttospeech/"       "qtexttospeech_mock" "qtexttospeech_sapi"
     copyDebugFiles "${MINGW_BASE_DIR}/share/qt6/plugins/tls"                "./tls/"                "qcertonlybackend" "qopensslbackend" "qschannelbackend"
   else
+    # Qt 5 case
     #              Source                                                Destination          Debug files
     copyDebugFiles "${MINGW_BASE_DIR}/bin"                               "."                  "Qt5Core" "Qt5Gui" "Qt5Multimedia" "Qt5Network" "Qt5Svg" "Qt5Widgets" "Qt5TextToSpeech"
     copyDebugFiles "${MINGW_BASE_DIR}/share/qt5/plugins/audio"           "./audio/"           "qtaudio_windows"
@@ -542,6 +580,9 @@ echo ""
 
 echo "Copying Lua translation files in..."
 rsync -avR --mkpath  "${PARENT_OF_BUILD_DIR}"/translations/lua/translated/./mudlet-lua_??_??.json ./translations/lua/translated/
+# The en_US case uses the source file directly but it is not in the same placed
+# but it also needs to be included in the package:
+cp -v -p -t  "${PARENT_OF_BUILD_DIR}/translations/lua/mudlet-lua.json" ./translations/lua
 echo ""
 
 echo "Copying Hunspell dictionaries in..."
@@ -560,17 +601,17 @@ if [ "${TASK}" = "ZIP" ]; then
   echo ""
   echo "   ... package-mudlet-for-windows.sh shell script finished."
   echo ""
-  echo "   You may now run the ${EXECUTABLE_NAME} file in ${FINAL_DIR} or take the file"
+  echo "   You may now run the mudlet.exe file in ${FINAL_DIR} or take the file"
   echo "   there: ${ZIP_FILE_NAME}.zip to somewhere else - even a different PC - unzip"
-  echo "   everything and run the ${EXECUTABLE_NAME} file extracted from it..."
+  echo "   everything and run the mudlet.exe file extracted from it..."
   cd ~ || exit 1
 elif [ "${TASK}" = "PR" ] || [ "${TASK}" = "TESTING" ]; then
   # Produce an archive file with a specific name and upload it to Mudlet's own website
   echo "Zipping everything up into an archive that to be uploaded to Mudlet's website:"
   /usr/bin/zip -rv9 "${ZIP_FILE_NAME}" ./*
 
-  # Temporarily, save file in Appveyor
-  appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/mudlet/package/${ZIP_FILE_NAME}")" -FileName "${ZIP_FILE_NAME}"
+  # Could use this to temporarily save file in Appveyor
+  # appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/mudlet/package/${ZIP_FILE_NAME}")" -FileName "${ZIP_FILE_NAME}"
 
   echo ""
   echo "   Uploading archive file to Mudlet's website..."
@@ -584,7 +625,303 @@ elif [ "${TASK}" = "PR" ] || [ "${TASK}" = "TESTING" ]; then
   echo ""
   cd ~ || exit 1
 else
-  echo " TODO: nuget + squirrel.windows stuff not done yet!"
-  exit 10
+  # Doing a "TASK" of "PTB" or "RELEASE" in the Appveyor CI environment
+  # The squirrel installer-maker gives the Windows Start menu item for the
+  # application from the binary name - so we do need to give the different
+  # "flavours" of build different names.
+  # So use (for compatibility with *existing* usage):
+  #                   |         Qt5                       |        Qt6           |
+  # Type (Build)      |     32Bits     |      64Bits      |       64Bits         |
+  # Release (Release) |   *"Mudlet"*   |    Mudlet64      |     Mudlet64 Qt6     |
+  # Release (Debug)   | -------------- | ---------------- | -------------------- |
+  # PTB (Release)     |  *Mudlet PTB*  |   Mudlet64 PTB   |   Mudlet64 Qt6 PTB   |
+  # PTB (Debug)       |Mudlet Debug PTB|Mudlet64 Debug PTB|Mudlet64 Debug Qt6 PTB|
+  # The above names cannot be considered perminant, and not even all the
+  # suggestions given could realisticallybe produced. Eventually we will move to
+  # 64-bit only and then some time after that the 64 marking would become
+  # unneeded. Similarly with the Qt6 designation.
+
+  if [ "${TASK}" = "PTB" ]; then
+    # This is pased to a non-MSYS2/Mingw64/Mingw32 command so use a Windows
+    # native path/file:
+    INSTALLER_ICON_FILE="$(cygpath -m "${PARENT_OF_BUILD_DIR}\src\icons\mudlet_ptb.ico")"
+    # Note that this does NOT contain the date of the PTB - but it does contain
+    # the SHA1 so it is still an unique version number - though not sortable:
+    NUSPEC_VERSION="${VERSION}-ptb-${BUILD_COMMIT}"
+    # however this does contain the date (it is contained in the
+    # MUDLET_VERSION_BUILD variable:
+    DBLSQD_RELEASE="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
+    if [ "${QT_MAJOR_VERSION}" = "6" ]; then
+      DBLSQD_CHANNEL="public-test-build-qt6"
+      if [ "${BUILD_BITNESS}" = "64" ]; then
+        DBLSQD_ATTACH="win:x86_64"
+        if [ "${BUILD_CONFIG}" = "debug" ]; then
+          # EXECUTABLE_FILENAME="Mudlet64 Debug Qt6 PTB.exe"
+          # DEBUG_FILENAME="Mudlet64 Debug Qt6 PTB.debug"
+          echo "Installer build not configured for TASK/QT_MAJOR_VERSION/BUILD_BITNESS/BUILD_CONFIG: ${TASK}/${QT_MAJOR_VERSION}/${BUILD_BITNESS}/${BUILD_CONFIG}!"
+          exit 8
+        else
+          EXECUTABLE_FILENAME="Mudlet64 Qt6 PTB.exe"
+          # Although the nuget guidance for the <id> element of the .nuspec
+          # file says to use '.' to separate elements in a composite id rather
+          # than '-' or '_':
+          # https://learn.microsoft.com/en-us/nuget/create-packages/creating-a-package#choose-a-unique-package-identifier-and-setting-the-version-number
+          # this is exactly the opposite to what the squirrel.windows
+          # documentation:
+          # https://github.com/Squirrel/Squirrel.Windows/blob/master/docs/using/naming.md
+          # says!
+          # Upstream is clear about not using dots in the id - for instance see
+          # https://github.com/Squirrel/Squirrel.Windows/issues/1383
+          NUSPEC_ID="Mudlet64-Qt6-PublicTestBuild"
+          NUSPEC_TITLE="Mudlet (x64, Qt6, Public Test Build)"
+        fi
+      else
+        # It is not possible to build a 32-Bit Qt 6.x version
+        echo "Invalid combination of configurations options selected, build aborted!"
+        exit 5
+      fi
+    else
+      # Qt 5.x PTB
+      DBLSQD_CHANNEL="public-test-build"
+      if [ "${BUILD_BITNESS}" = "64" ]; then
+        DBLSQD_ATTACH="win:x86_64"
+        if [ "${BUILD_CONFIG}" = "debug" ]; then
+          # EXECUTABLE_FILENAME="Mudlet64 Debug PTB.exe"
+          # DEBUG_FILENAME="Mudlet64 Debug PTB.debug"
+          echo "Installer build not configured for TASK/QT_MAJOR_VERSION/BUILD_BITNESS/BUILD_CONFIG: ${TASK}/${QT_MAJOR_VERSION}/${BUILD_BITNESS}/${BUILD_CONFIG}!"
+          exit 8
+        else
+          EXECUTABLE_FILENAME="Mudlet64 PTB.exe"
+          NUSPEC_ID="Mudlet64-PublicTestBuild"
+          NUSPEC_TITLE="Mudlet (x64, Public Test Build)"
+        fi
+      else
+        DBLSQD_ATTACH="win:x86"
+        if [ "${BUILD_CONFIG}" = "debug" ]; then
+          # EXECUTABLE_FILENAME="Mudlet Debug PTB.exe"
+          # DEBUG_FILENAME="Mudlet64 Debug PTB.debug"
+          # ID="Mudlet-PublicTestBuild-Debug"
+          echo "Installer build not configured for TASK/QT_MAJOR_VERSION/BUILD_BITNESS/BUILD_CONFIG: ${TASK}/${QT_MAJOR_VERSION}/${BUILD_BITNESS}/${BUILD_CONFIG}!"
+          exit 8
+        else
+          EXECUTABLE_FILENAME="Mudlet PTB.exe"
+          # Same as it ever was:
+          NUSPEC_ID="Mudlet-PublicTestBuild"
+          NUSPEC_TITLE="Mudlet (x32, Public Test Build)"
+        fi
+      fi
+    fi
+  else
+    # Release rather than PTB build:
+    INSTALLER_ICON_FILE="$(cygpath -m "${PARENT_OF_BUILD_DIR}\src\icons\mudlet.ico")"
+    NUSPEC_VERSION="${VERSION}"
+    DBLSQD_RELEASE="${VERSION}"
+    if [ "${QT_MAJOR_VERSION}" = "6" ]; then
+      DBLSQD_CHANNEL="release-qt6"
+      if [ "${BUILD_BITNESS}" = "64" ]; then
+        DBLSQD_ATTACH="win:x86_64"
+        if [ "${BUILD_CONFIG}" = "debug" ]; then
+          # EXECUTABLE_FILENAME="Mudlet64 Debug Qt6.exe"
+          # DEBUG_FILENAME="Mudlet64 Debug Qt6.debug"
+          echo "Installer build not configured for TASK/QT_MAJOR_VERSION/BUILD_BITNESS/BUILD_CONFIG: ${TASK}/${QT_MAJOR_VERSION}/${BUILD_BITNESS}/${BUILD_CONFIG}!"
+          exit 8
+        else
+          EXECUTABLE_FILENAME="Mudlet64 Qt6.exe"
+          NUSPEC_ID="Mudlet64-Qt6"
+          NUSPEC_TITLE="Mudlet (x64, Qt6)"
+        fi
+      else
+        echo "Invalid combination of configurations options selected, build aborted!"
+        exit 5
+      fi
+    else
+      DBLSQD_CHANNEL="release"
+      if [ "${BUILD_BITNESS}" = "64" ]; then
+        DBLSQD_ATTACH="win:x86_64"
+        if [ "${BUILD_CONFIG}" = "debug" ]; then
+          # EXECUTABLE_FILENAME="Mudlet64 Debug.exe"
+          # DEBUG_FILENAME="Mudlet64 Debug.debug"
+          echo "Installer build not configured for TASK/QT_MAJOR_VERSION/BUILD_BITNESS/BUILD_CONFIG: ${TASK}/${QT_MAJOR_VERSION}/${BUILD_BITNESS}/${BUILD_CONFIG}!"
+          exit 8
+        else
+          EXECUTABLE_FILENAME="Mudlet64.exe"
+          NUSPEC_ID="Mudlet64"
+          NUSPEC_TITLE="Mudlet (x64)"
+        fi
+      else
+        DBLSQD_ATTACH="win:x86"
+        if [ "${BUILD_CONFIG}" = "debug" ]; then
+          # EXECUTABLE_FILENAME="Mudlet Debug.exe"
+          # DEBUG_FILENAME="Mudlet64 Debug.debug"
+          echo "Installer build not configured for TASK/QT_MAJOR_VERSION/BUILD_BITNESS/BUILD_CONFIG: ${TASK}/${QT_MAJOR_VERSION}/${BUILD_BITNESS}/${BUILD_CONFIG}!"
+          exit 8
+        else
+          EXECUTABLE_FILENAME="Mudlet.exe"
+          NUSPEC_ID="Mudlet"
+          NUSPEC_TITLE="Mudlet (x32)"
+        fi
+      fi
+    fi
+  fi
+
+  echo "Renaming executable file from mudlet.exe to ${EXECUTABLE_FILENAME}"
+  mv ./mudlet.exe "./${EXECUTABLE_FILENAME}"
+  if [ -n "${DEBUG_FILENAME}" ]; then
+    export DEBUG_FILENAME
+    echo "Renaming debug information file from mudlet.exe.debug to ${DEBUG_FILENAME}"
+    mv ./mudlet.exe.debug "./${DEBUG_FILENAME}"
+    "${MINGW_INTERNAL_BASE_DIR}/usr/bin/objcopy.exe" --add-gnu-debuglink="${DEBUG_FILENAME}" "${EXECUTABLE_FILENAME}"
+  fi
+
+  # Now get the resources from the Mudlet installers repository
+  git clone https://github.com/Mudlet/installers.git /c/projects/installers
+  # And change to the windows sub-directory in the repo
+  cd /c/projects/installers/windows || exit 1
+  # Get the squirrel installer with AppVeyor's copy of the nuget tool (version
+  # 6.9.1) - previous work was done on an older version (4.9.2) so things might
+  # have changed.
+  echo "Installing squirrel.windows..."
+  nuget.exe install squirrel.windows -ExcludeVersion
+  echo "... installed squirrel.windows"
+  echo ""
+
+  # credit to http://markwal.github.io/programming/2015/07/28/squirrel-for-windows.html
+  # Because squirrel.windows is a Windows application provide it with Windows
+  # paths:
+  SQUIRRELWIN_DIR="C:\projects\squirrel-packaging-prep"
+  SQUIRRELWIN_PACKAGE_DIR="${SQUIRRELWIN_DIR}\lib\net45"
+  NUSPEC_FILE="C:\projects\installers\windows\mudlet.nuspec"
+  # make the directory where squirrel.windows expects to find our package:
+  mkdir -p "$(cygpath -u "${SQUIRRELWIN_PACKAGE_DIR}")"
+
+  # move everything into C:\projects\squirrel-packaging-prep\lib\net45 as that's
+  # where Squirrel would like to see it
+  mv "${PACKAGE_DIR}" "$(cygpath -u "${SQUIRRELWIN_PACKAGE_DIR}")"
+
+  # Edit the nuspec file:
+  sed -e "s|<id>Mudlet</id>|<id>${NUSPEC_ID}</id>|" -i.orig ${NUSPEC_FILE}
+  sed -e "s|<title>Mudlet</title>|<title>${NUSPEC_TITLE}</title>|" -i ${NUSPEC_FILE}
+
+  # Generate the nuget (.nupkg file) package:
+  nuget pack "${NUSPEC_FILE}" -Version "${NUSPEC_VERSION}" -BasePath "${SQUIRRELWIN_DIR}" -OutputDirectory "${SQUIRRELWIN_DIR}"
+
+  # This is what we should get - use a Windows compatible path/file name:
+  # The first part of the file name is NOT ${EXECUTABLE_FILENAME}
+  # but "${NUSPEC_ID}.${NUSPEC_VERSION}.nupkg" i.e the ID we inserted into the
+  # the .nuspec file and the (Semantic) version string we provided on the above
+  # command which is inserted to replace the dummy value of "0.0.0" that is
+  # stored in the ${NUSPEC_FILE}:
+  NUPKG_FILE="$(cygpath -m "${SQUIRRELWIN_DIR}/${NUSPEC_ID}.${NUSPEC_VERSION}.nupkg")"
+
+  # Check that we have - as it happens the nuget pack provides a success message
+  # for us:
+  if [ ! -f "${NUPKG_FILE}" ]; then
+    # appveyor AddMessage "package-mudlet-for-windows.sh: nuget pack operation failed to produce the expected ${NUPKG_FILE} iile - aborting this job." -Category Error
+    echo "package-mudlet-for-windows.sh: nuget pack operation failed to produce the expected ${NUPKG_FILE} iile - aborting this job."
+    exit 10
+  fi
+
+  # Do the squirrel.windows stuff; note the -n options are passed to the
+  # signtool.exe associated with the Windows SDK NOT the same named tool from
+  # the mingw-w64-(i686|x86_64)-nss packages - note that signing_password is
+  # an environmental variable but it might be awkward to rename it to
+  # SIGNING_PASSWORD because it is a "secret" value and updating the name might
+  # break it.
+  #  ./squirrel.windows/tools/Squirrel --releasify "${NUPKG_FILE}" --releaseDir "C:\\projects\\squirreloutput" --loadingGif "C:\\projects\\installers\\windows\\splash-installing-2x.png" --no-msi --setupIcon "${INSTALLER_ICON_FILE}" -n "/a /f C:\\projects\\installers\\windows\\code-signing-certificate.p12 /p ${signing_password} /fd sha256 /tr http://timestamp.digicert.com /td sha256"
+  # Don't sign the file for the moment whilat working on things locally
+  ./squirrel.windows/tools/Squirrel --releasify "${NUPKG_FILE}" --releaseDir "\projects\\squirreloutput" --loadingGif "C:\\projects\\installers\\windows\\splash-installing-2x.png" --no-msi --setupIcon "${INSTALLER_ICON_FILE}"
+
+  # We should now have three files in /c/projects/squirreloutput :
+  # * a RELEASES - which will only have one line for the version we have just made
+  # * a Setup.exe - which needs to be renamed and uploaded to our website
+  # * a copy of the ".nupkg" file ("${NUPKG_FILE}") except the name has "-full"
+  # appended (if there were prior releases a delta would have been produced as
+  # well).
+
+  # Check for the Setup.exe file:
+  if [ ! -f "/c/projects/squirreloutput/Setup.exe" ]; then
+    echo "Squirrel failed to produce the expected Setup.exe file. Build aborted and logs preserved."
+    appveyor AddMessage "package-mudlet-for-windows.sh: squirrel failed to produce the expected Setup.exe file - aborting this job and preserved the logs." -Category Error
+    # Preserve the log files if they are present:
+    if [ -f "./squirrel.windows/tools/SquirrelSetup.log" ]; then
+      appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/installers/windows/squirrel.windows/tools/SquirrelSetup.log")" -FileName "SquirrelSetup.log"
+    fi
+    if [ -f "./squirrel.windows/tools/Squirrel-Releasify.log" ]; then
+      appveyor PushArtifact "$(/usr/bin/cygpath --windows "/c/projects/installers/windows/squirrel.windows/tools/Squirrel-Releasify.log")" -FileName "Squirrel-Releasify.log"
+    fi
+    exit 11
+  fi
+
+  # Now upload the installer - the methodolgy is different for the two different tasks
+  if [ "${TASK}" = "PTB" ]; then
+
+    echo "   Renaming \"Setup.exe\" produced by squirrel.windows to \"Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}.exe\""
+    echo ""
+    echo "   Uploading to Mudlet's website..."
+    curl --fail --fail-early -i -T "/c/projects/squirreloutput/Setup.exe" "https://make.mudlet.org/snapshots/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-windows-x${BUILD_BITNESS}.exe"
+    CURL_STATUS=$?
+    if [ "${CURL_STATUS}" != "0" ]; then
+      echo "   ... uploading failed, curl error code was: ${CURL_STATUS}."
+      exit 9
+    fi
+    echo "   ... upload completed."
+    echo ""
+  elif [ "${TASK}" = "RELEASE" ]; then
+    echo "   Renaming \"Setup.exe\" produced by squirrel.windows to \"Mudlet-${VERSION}-windows-installer-x${BUILD_BITNESS}.exe\""
+    # https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-installer-x${BUILD_BITNESS}.exe
+    echo ""
+    echo "   Uploading to Mudlet's website..."
+    # Note that we are now including an "-x32" or "-x64" into the uploaded file
+    # We probably need these authentication details to do scp:
+    # HostName = "mudlet.org"
+    # UserName = "vadi"
+    # SshPrivateKeyPath = "${APPVEYOR_BUILD_FOLDER}\CI\mudlet-deploy-key-windows.ppk"
+    # SshPrivateKeyPassphrase = "${DEPLOY_KEY_PASS}"
+    # OTOH the MacOS and Linux builds don't
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "/c/projects/squirreloutput/Setup.exe" "mudmachine@mudlet.org:${DEPLOY_PATH}/Mudlet-${VERSION}-windows-installer-x${BUILD_BITNESS}.exe"
+    #   ^-----------option--------^ ^-------------option----------^ ^--------------source----------------^ ^----------------------------destination-------------------------------------------------------^
+
+
+# Push release file to "Download" page
+FILE_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.tar.xz"
+# file_cat=3 asuming Source is the 4th item in WP-Download-Manager category
+curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
+-H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+-F "file_type=2" \
+-F "file_remote=$FILE_URL" \
+-F "file_name=Mudlet-${VERSION} (Source Code)" \
+-F "file_des=sha256: $SHA256SUM" \
+-F "file_cat=3" \
+-F "file_permission=-1" \
+-F "output=json" \
+-F "do=Add File"
+
+#  $DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${Env:VERSION}-windows-installer.exe"
+#  Set-Variable -Name "SHA256SUM" -Value (Get-FileHash -Path "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe" -Algorithm SHA256).Hash
+#  Invoke-RestMethod -Uri 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' `
+#  -Method POST `
+#  -Headers @{
+#      "x-wp-download-token" = $Env:X_WP_DOWNLOAD_TOKEN
+#  } `
+#  -Body @{
+#      "file_type" = "2"
+#      "file_remote" = $Env:DEPLOY_URL
+#      "file_name" = "Mudlet-$Env:VERSION (Windows)"
+#      "file_des" = "sha256: $SHA256SUM"
+#      "file_cat" = "0"
+#      "file_permission" = "-1"
+#      "output" = "json"
+#      "do" = "Add File"
+#  }
+#  Push-AppveyorArtifact "${Env:APPVEYOR_BUILD_FOLDER}\src\release\Setup.exe" -DeploymentName "${Env:DEPLOY_PATH}/Mudlet-${Env:VERSION}-windows-installer.exe"
+
+    echo "   ... upload completed."
+    echo ""
+  fi
+
+  # Now generate and publish the DBLSPC details for the updater
+
 fi
+
 echo "... package-mudlet-for-windows.sh shell script finished."
+cd ~ || exit 1

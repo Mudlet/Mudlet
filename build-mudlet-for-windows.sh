@@ -104,9 +104,11 @@ fi
 if [ -z "${MINGW_INTERNAL_BASE_DIR}" ]; then
   # Variable not set so do so now - see setup-windows-sdk.sh why we are not
   # using the MINGW32/MINGW64 files that Appveyor might provide.
-  export MINGW_BASE_DIR="C:\msys64\mingw${BUILD_BITNESS}"
+  MINGW_BASE_DIR="C:\msys64\mingw${BUILD_BITNESS}"
+  export MINGW_BASE_DIR
   # Provide an equivalent POSIX format path for internal usage:
-  export MINGW_INTERNAL_BASE_DIR="$(cygpath -u "${MINGW_BASE_DIR}")"
+  MINGW_INTERNAL_BASE_DIR="$(cygpath -u "${MINGW_BASE_DIR}")"
+  export MINGW_INTERNAL_BASE_DIR
 fi
 
 # Adjust paths so directories we want are prepended if not present:
@@ -146,11 +148,13 @@ if [ -z "${LUA_PATH}" ] || [ -z "${LUA_PATH}" ]; then
     # statistics):
     # We need cygpath to output "mixed" mode paths (uses "C:"s but with '/' as separator)
     if [ -z "${LUA_PATH}" ]; then
-      export LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path | sed -e 's|\\|/|g')
+      LUA_PATH=$(luarocks --lua-version 5.1 path --lr-path | sed -e 's|\\|/|g')
+      export LUA_PATH
       echo "Setting LUA_PATH to: ${LUA_PATH}"
     fi
     if [ -z "${LUA_CPATH}" ]; then
-      export LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath | sed -e 's|\\|/|g')
+      LUA_CPATH=$(luarocks --lua-version 5.1 path --lr-cpath | sed -e 's|\\|/|g')
+      export LUA_CPATH
       echo "Setting LUA_CPATH to: ${LUA_CPATH}"
     fi
   fi
@@ -162,19 +166,21 @@ if [ -z "${BUILD_DIR}" ]; then
     # The above will be defined for AppVeyor CI builds so this is not one of
     # those, and we need to allow for the end user to have multiple
     # builds in different directories or (for 64bit builds) to use either Qt 5 or 6:
-    export BUILD_DIR="${HOME}/src/mudlet/build-${MSYSTEM}-qt${QT_MAJOR_VERSION}"
+    BUILD_DIR="${HOME}/src/mudlet/build-${MSYSTEM}-qt${QT_MAJOR_VERSION}"
   else
     # On CI builds we can use a plain build folder under the main /c/projects/mudlet
     # directory where the code is automagically placed for us:  
-    export BUILD_DIR="${APPVEYOR_BUILD_FOLDER}/build"
+    BUILD_DIR="${APPVEYOR_BUILD_FOLDER}/build"
   fi
+  export BUILD_DIR
   # Make and then go there before we start the build:
   mkdir -p "${BUILD_DIR}"
   cd "${BUILD_DIR}" || exit 1
 fi
 
 # In practice this is where the Mudlet source code git repository is placed:
-export PARENT_OF_BUILD_DIR="$(echo "${BUILD_DIR}" | sed -e "s|/[^/]*$||")"
+PARENT_OF_BUILD_DIR="$(echo "${BUILD_DIR}" | sed -e "s|/[^/]*$||")"
+export PARENT_OF_BUILD_DIR
 
 # Identify what we are going to do:
 if [ -n "${APPVEYOR}" ]; then
@@ -184,27 +190,58 @@ if [ -n "${APPVEYOR}" ]; then
     if [ -n "${APPVEYOR_REPO_TAG_NAME}" ]; then
       # It is a build triggered by a tagged commit - so it is likely to be a
       # proper RELEASE build.
-      export TASK="RELEASE"
+      TASK="RELEASE"
+      if [ "${BUILD_CONFIG}" = "debug" ]; then
+        # We do not want to do debug builds of releases - so fail successfully
+        appveyor AddMessage "build-mudlet-for-windows.sh: BUILD_CONFIG=${BUILD_CONFIG} is not appropriate for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+      if [ "${QT_MAJOR_VERSION}" = "6" ]; then
+        # We do not want to do Qt6 builds of releases YET - so fail successfully
+        appveyor AddMessage "build-mudlet-for-windows.sh: {QT_MAJOR_VERSION}=${QT_MAJOR_VERSION} is not wanted yet for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
       # This will only persist into the QMake/CMake makefile generation process
       # if the project files for them has been edited to allow this through as
       # an empty string:
       export MUDLET_VERSION_BUILD=""
     elif [ "${APPVEYOR_SCHEDULED_BUILD}" = "True" ]; then
       # It is a scheduled build so it is a Public Test Build
-      export TASK="PTB"
-      COMMIT_EPOCH=$(date -u +%s -d "$(git show -s --format="%cs")")
-      NOW_EPOCH=$(date -u +%s)
-      SECONDS_DIFF=$(( NOW_EPOCH - COMMIT_EPOCH ))
-      DAYS_DIIF=$(( SECONDS_DIFF / 86400 ))
-      if [ "${DAYS_DIIF}" != "0" ]; then
-        echo "Last commit was: ${SECONDS_DIFF} seconds, i.e. at least ${DAYS_DIIF} day(s) ago - Public Test build aborted!"
-        exit 8
+      TASK="PTB"
+      if [ "${BUILD_CONFIG}" = "debug" ]; then
+        # We do not want to do debug builds of releases - so fail successfully
+        appveyor AddMessage "build-mudlet-for-windows.sh: BUILD_CONFIG=${BUILD_CONFIG} is not appropriate for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
       fi
-      export BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
-      export MUDLET_VERSION_BUILD="-ptb-$(date -u -Idate)"
+      if [ "${QT_MAJOR_VERSION}" = "6" ]; then
+        # We do not want to do Qt6 builds of PTBs YET - so fail successfully
+        appveyor AddMessage "build-mudlet-for-windows.sh: {QT_MAJOR_VERSION}=${QT_MAJOR_VERSION} is not wanted yet for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
+      # We do not have to check to see if there are recent changes as that has
+      # already been done and confirmed in the setup script.
+      BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+      MUDLET_VERSION_BUILD="-ptb-$(date -u -Idate)"
+      export BUILD_COMMIT
+      export MUDLET_VERSION_BUILD
     elif [ -n "${APPVEYOR_PULL_REQUEST_NUMBER}" ]; then
       # It is a PR buiild
       export TASK="PR"
+      if [ "${BUILD_CONFIG}" = "release" ]; then
+        # We do not want to do release builds of PRs - so fail successfully
+        appveyor AddMessage "build-mudlet-for-windows.sh: BUILD_CONFIG=${BUILD_CONFIG} is not appropriate for builds with TASK=${TASK} - aborting this job." -Category Information
+        # Since this seems to be a success we have to also skip the same
+        # configuration in all three scripts
+        exit 0
+      fi
       # AppVeyor builds of PRs merge the PR head onto the current development
       # branch creating a new commit - as such we need to refer to the commit
       # Git SHA1 supplied to us rather than trying to back track to the
@@ -213,35 +250,44 @@ if [ -n "${APPVEYOR}" ]; then
       # reference to the state of the development at the time of the build:
       # MUDLET_VERSION_BUILD might be an empty string before this line or it
       # could be a hyphen prefixed string to identify a 3rd party build
-      export BUILD_COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}"| sed 's/.*/\L&/g')
-      export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing-PR${APPVEYOR_PULL_REQUEST_NUMBER}" | sed 's/.*/\L&/g')
+      BUILD_COMMIT=$(git rev-parse --short "${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}"| sed 's/.*/\L&/g')
+      MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing-PR${APPVEYOR_PULL_REQUEST_NUMBER}" | sed 's/.*/\L&/g')
+      export BUILD_COMMIT
+      export MUDLET_VERSION_BUILD
     else
       # It is some other testing build which needs an archive to be made with a
       # specific name
-      export TASK="TESTING"
-      export BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
-      export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing" | sed 's/.*/\L&/g')
+      TASK="TESTING"
+      BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+      MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}-testing" | sed 's/.*/\L&/g')
+      export BUILD_COMMIT
+      export MUDLET_VERSION_BUILD
     fi
   else
     # Not Mudlet's repository so just produce a zip file
-    export TASK="ZIP"
-    export BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+    TASK="ZIP"
+    BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+    export BUILD_COMMIT
     # MUDLET_VERSION_BUILD could be an empty string but it is intended for
     # third party packagers to tag customised versions of Mudlet:
     if [ -n "${MUDLET_VERSION_BUILD}" ]; then
-      export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
+      MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
+      export MUDLET_VERSION_BUILD
     fi
   fi
 else
   # Not an appveyor CI build so just produce an archive
-  export TASK="ZIP"
-  export BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+  TASK="ZIP"
+  BUILD_COMMIT=$(git rev-parse --short HEAD | sed 's/.*/\L&/g')
+  export BUILD_COMMIT
   # MUDLET_VERSION_BUILD could be an empty string but it is intended for
   # third party packagers to tag customised versions of Mudlet:
   if [ -n "${MUDLET_VERSION_BUILD}" ]; then
-    export MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
+    MUDLET_VERSION_BUILD=$(echo "${MUDLET_VERSION_BUILD}" | sed 's/.*/\L&/g')
+    export MUDLET_VERSION_BUILD
   fi
 fi
+export TASK
 
 # Extract version information from qmake project file
 # sed is used to remove the spaces either side of the `=` in the one line in
@@ -311,12 +357,10 @@ else
 fi
 echo ""
 
-
-#### Qt Creator note ####
-# FIXME:
-# The updater is not helpful in this (build it yourself) environment
-export WITH_UPDATER="NO"
-
+# We only want/need the updater for Release or PTB builds on Appveyor:
+if [ "${TASK}" != "RELEASE" ] && [ "${TASK}" != "PTB" ]; then
+  export WITH_UPDATER="NO"
+fi
 
 echo "WITH_XXX variables currently defined:"
 set | grep "^WITH_"
