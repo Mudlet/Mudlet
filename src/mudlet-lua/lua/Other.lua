@@ -1250,6 +1250,7 @@ function getConfig(...)
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
+      "logInHTML",
       "mapExitSize", 
       "mapperPanelVisible",
       "mapRoomSize",

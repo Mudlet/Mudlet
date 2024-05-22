@@ -7253,6 +7253,10 @@ int TLuaInterpreter::setConfig(lua_State * L)
         host.mBoldIsBright = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
+    if (key == qsl("logInHTML")) {
+        host.mIsNextLogFileInHtmlFormat = getVerifiedBool(L, __func__, 2, "value");
+        return success();
+    }
     return warnArgumentValue(L, __func__, qsl("'%1' isn't a valid configuration option").arg(key));
 }
 
@@ -7361,7 +7365,8 @@ int TLuaInterpreter::getConfig(lua_State *L)
                 lua_pushstring(L, "asis");
             }
         } },
-        { qsl("boldIsBright"), [&](){ lua_pushboolean(L, host.mBoldIsBright); } } //, <- not needed until another one is added
+        { qsl("boldIsBright"), [&](){ lua_pushboolean(L, host.mBoldIsBright); } },
+        { qsl("logInHTML"), [&](){ lua_pushboolean(L, host.mIsNextLogFileInHtmlFormat); } } //, <- not needed until another one is added
     };
 
     auto it = configMap.find(key);
