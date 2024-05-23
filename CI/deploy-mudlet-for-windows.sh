@@ -322,11 +322,16 @@ else
     cd - || exit 1
     echo "$Changelog"
     
+    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
+    VersionString="${VersionString,,}"
+    
     echo "=== Creating release in Dblsqd ==="
-    dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+    echo "dblsqd release -a mudlet -c public-test-build -m \"$Changelog\" \"${VersionString}\""
+    dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VersionString}"
 
     echo "=== Registering release with Dblsqd ==="
-    dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}" -s mudlet --type 'standalone' --attach "win:${DBLSQDTYPE}" "${DEPLOY_URL}"
+    echo "dblsqd push -a mudlet -c public-test-build -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:\"${DBLSQDTYPE}\" \"${DEPLOY_URL}\""
+    dblsqd push -a mudlet -c public-test-build -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${DBLSQDTYPE}" "${DEPLOY_URL}"
 
   fi
 fi
