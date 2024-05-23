@@ -318,7 +318,7 @@ else
     
     echo "=== Generating a changelog ==="
     cd "$GITHUB_WORKSPACE/CI" || exit 1
-    Changelog=$(lua "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
+    Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
     cd - || exit 1
     echo "$Changelog"
     
