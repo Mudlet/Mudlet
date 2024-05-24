@@ -103,5 +103,5 @@ done
 
 
 echo "=== Registering release with Dblsqd ==="
-echo "dblsqd push -a mudlet -c public-test-build -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:\"${DBLSQDTYPE}\" \"${matching_url}\""
+echo "dblsqd push -a mudlet -c public-test-build -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${DBLSQDTYPE} \"${matching_url}\""
 dblsqd push -a mudlet -c public-test-build -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${DBLSQDTYPE}" "${matching_url}"
