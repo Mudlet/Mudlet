@@ -277,21 +277,24 @@ else
 
     exit 5
   fi
+  
+  installerExePath="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+  mv "${setupExePath}" "${installerExePath}"
 
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
     
-    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+    uploadFilename="${installerExePath}"
     moveToUploadDir "$uploadFilename" 1
   else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$setupExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
-    SHA256SUM=$(shasum -a 256 "$setupExePath" | awk '{print $1}')
+    SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
 
-    # file_cat=0 asuming Windows is the 0th item in WP-Download-Manager category
+    # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
     curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
     -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
     -F "file_type=2" \
