@@ -5976,7 +5976,9 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
         pS->setScript(oldCode);
         return {-1, qsl("unable to compile \"%1\" for the script \"%2\" at position %3, reason: %4").arg(luaCode, name, QString::number(pos + 1), errMsg)};
     }
-    mpHost->mpEditorDialog->writeScript(id);
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->writeScript(id);
+    }
     return {id, QString()};
 }
 
