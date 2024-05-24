@@ -48,6 +48,7 @@ else
   echo "of those two types."
   exit 2
 fi
+export DBLSQDTYPE
 
 cd "$GITHUB_WORKSPACE" || exit 1
 
@@ -306,6 +307,7 @@ else
   echo "=== Installing NodeJS ==="
   choco install nodejs --version="22.1.0"
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
+  export PATH
   
   echo "=== Installing dblsqd-cli ==="
   npm install -g dblsqd-cli
@@ -323,23 +325,23 @@ else
     echo "$Changelog"
     
     echo "=== Creating release in Dblsqd ==="
-    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
-    VersionString="${VersionString,,}"
+    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+    export VersionString
 
+    # This may fail as a build from another architecture may have already registered a release with dblsqd,
+    # if so, that is OK...
     echo "=== Creating release in Dblsqd ==="
     echo "dblsqd release -a mudlet -c public-test-build -m \"$Changelog\" \"${VersionString}\""
-    dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VersionString}"
-
-    echo "=== Registering release with Dblsqd ==="
-    echo "dblsqd push -a mudlet -c public-test-build -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:\"${DBLSQDTYPE}\" \"${DEPLOY_URL}\""
-    dblsqd push -a mudlet -c public-test-build -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${DBLSQDTYPE}" "${DEPLOY_URL}"
-
+    dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VersionString}" || true
   fi
 fi
 
 if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
   prId=" ,#$GITHUB_PULL_REQUEST_NUMBER"
 fi
+
+# Make PublicTestBuild available GHA to check if we need to run the register step
+echo "PUBLIC_TEST_BUILD=${PublicTestBuild}" >> "$GITHUB_ENV"
 
 echo ""
 echo "******************************************************"

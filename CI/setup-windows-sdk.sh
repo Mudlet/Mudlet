@@ -128,7 +128,8 @@ fi
     "mingw-w64-${BUILDCOMPONENT}-zlib" \
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
-    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" 
+    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-jq"
 
 echo ""
 echo "    Completed"
