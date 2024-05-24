@@ -32,6 +32,9 @@ end
 if package.loaded["lfs"] then
   lfs = require "lfs"
 end
+if package.loaded["utf8"] then
+  utf8 = require "utf8"
+end
 
 -- TODO this is required by DB.lua, so we might load it all at one place
 --if package.loaded["luasql.sqlite3"] then require "luasql.sqlite3" end
