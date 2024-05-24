@@ -316,7 +316,7 @@ else
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Downloading release feed ==="
     DownloadedFeed=$(mktemp)
-    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -o "$DownloadedFeed"
+    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/${DBLSQDTYPE}" -o "$DownloadedFeed"
     
     echo "=== Generating a changelog ==="
     cd "$GITHUB_WORKSPACE/CI" || exit 1
