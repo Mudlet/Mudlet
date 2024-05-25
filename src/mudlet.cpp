@@ -534,6 +534,11 @@ mudlet::mudlet()
         if (!host) {
             return;
         }
+        host->mpEditorDialog = createMudletEditor();
+        if (!host->mpEditorDialog) {
+            return;
+        }
+
         host->mpEditorDialog->showCurrentTriggerItem();
         host->mpEditorDialog->raise();
         host->mpEditorDialog->showNormal();
