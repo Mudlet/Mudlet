@@ -456,6 +456,16 @@ find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
 
+
+# FreeBSD's sysinfo() call is done in a package, libsysinfo.
+# Find the library and include it appropriately.
+
+if (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+  find_library(SYSINFO_LIBRARY NAMES sysinfo)
+  find_path(SYSINFO_INCLUDE_DIR NAMES sys/sysinfo.h)
+  find_library(KVM_LIBRARY NAMES kvm)
+endif()
+
 if(NOT USE_OWN_QTKEYCHAIN)
   # Only use this when we are using a system package and NOT our own local build
   find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
@@ -553,6 +563,14 @@ target_link_libraries(
 # PLACEMARKER: sample benchmarking code
 #       nanobench
         ${QT_LIBS})
+
+if (SYSINFO_LIBRARY)
+  target_link_libraries(mudlet ${SYSINFO_LIBRARY} ${KVM_LIBRARY})
+endif (SYSINFO_LIBRARY)
+
+if (SYSINFO_INCLUDE_DIR)
+  target_include_directories(mudlet INTERFACE ${SYSINFO_INCLUDE_DIR})
+endif (SYSINFO_INCLUDE_DIR)
 
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
