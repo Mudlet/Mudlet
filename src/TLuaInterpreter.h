@@ -778,7 +778,7 @@ private:
             lua_close(ptr);
         }
     };
-    void updateEditorDialogIfNeeded();
+    void updateEditor();
 
 
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());
