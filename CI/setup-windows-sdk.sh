@@ -47,6 +47,7 @@
 # 2 - Unsupported MSYS2/MINGGW shell type
 # 5 - Invalid command line argument
 # 6 - One or more Luarocks could not be installed
+# 7 - One of more packages failed to install
 
 
 if [ "${MSYSTEM}" = "MINGW64" ]; then
@@ -91,27 +92,63 @@ echo "    to go and have a cup of tea (other beverages are available) in the mea
 echo ""
 
 if [ "${MSYSTEM}" = "MINGW64" ]; then
-/usr/bin/pacman -Su --needed --noconfirm \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-    "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"
+  echo "=== Installing Qt6 Packages ==="
+  pacman_attempts=1
+  while true; do
+    /usr/bin/pacman -Su --needed --noconfirm \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
+      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"
+        
+    if [ $? -eq 0 ]; then
+      break
+    fi
+    
+    pacman_attempts=$((pacman_attempts +1))
+    if [ $pacman_attempts -eq 10 ]; then
+      exit 7
+    fi
+    
+    echo "=== Some packages failed to install, waiting and trying again ==="
+    sleep 10
+  done
+  
 else
-/usr/bin/pacman -Su --needed --noconfirm \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-speech" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-tools"
+
+  echo "=== Installing Qt5 Packages ==="
+  pacman_attempts=1
+  while true; do
+    /usr/bin/pacman -Su --needed --noconfirm \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-speech" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-tools"
+    
+    if [ $? -eq 0 ]; then
+      break
+    fi
+    
+    pacman_attempts=$((pacman_attempts +1))
+    if [ $pacman_attempts -eq 10 ]; then
+      exit 7
+    fi
+    
+    echo "=== Some packages failed to install, waiting and trying again ==="
+    sleep 10
+  done
 fi
 
-/usr/bin/pacman -Su --needed --noconfirm \
+pacman_attempts=1
+while true; do
+  /usr/bin/pacman -Su --needed --noconfirm \
     git \
     man \
     rsync \
@@ -130,6 +167,19 @@ fi
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
     "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
     "mingw-w64-${BUILDCOMPONENT}-jq"
+    
+  if [ $? -eq 0 ]; then
+    break
+  fi
+    
+  pacman_attempts=$((pacman_attempts +1))
+  if [ $pacman_attempts -eq 10 ]; then
+    exit 7
+  fi
+    
+  echo "=== Some packages failed to install, waiting and trying again ==="
+  sleep 10
+done
 
 echo ""
 echo "    Completed"
