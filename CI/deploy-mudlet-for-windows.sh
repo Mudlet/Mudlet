@@ -37,18 +37,17 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
 elif [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
   export BUILDCOMPONENT="i686"
-  export DBLSQDTYPE="x86"
+  export ARCH="x86"
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
-  export DBLSQDTYPE="x86_64"
+  export ARCH="x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
   echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
   echo "of those two types."
   exit 2
 fi
-export DBLSQDTYPE
 
 cd "$GITHUB_WORKSPACE" || exit 1
 
@@ -319,7 +318,7 @@ else
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Downloading release feed ==="
     DownloadedFeed=$(mktemp)
-    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/${DBLSQDTYPE}" -o "$DownloadedFeed"
+    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/${ARCH}" -o "$DownloadedFeed"
     
     echo "=== Generating a changelog ==="
     cd "$GITHUB_WORKSPACE/CI" || exit 1

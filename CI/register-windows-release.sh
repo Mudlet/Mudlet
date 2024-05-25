@@ -23,7 +23,7 @@
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Timeout exceeded, failure
-# 2 - DBLSQDTYPE not properly set
+# 2 - ARCH not properly set
 
 echo "=== Downloading JSON feed ==="
 json_url="https://make.mudlet.org/snapshots/json.php?commitid=${BUILD_COMMIT}"
@@ -50,13 +50,13 @@ FetchAndCheckURL() {
       return 1
     fi
 
-    # Determine the search pattern based on DBLSQDTYPE environment variable
-    if [ "$DBLSQDTYPE" == "x86" ]; then
+    # Determine the search pattern based on ARCH environment variable
+    if [ "$ARCH" == "x86" ]; then
       search_pattern="windows-32"
-    elif [ "$DBLSQDTYPE" == "x86_64" ]; then
+    elif [ "$ARCH" == "x86_64" ]; then
       search_pattern="windows-64"
     else
-      echo "DBLSQDTYPE environment variable is not set to x86 or x86_64."
+      echo "ARCH environment variable is not set to x86 or x86_64."
       exit 2
     fi
 
@@ -103,5 +103,5 @@ done
 
 
 echo "=== Registering release with Dblsqd ==="
-echo "dblsqd push -a mudlet -c public-test-build -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${DBLSQDTYPE} \"${matching_url}\""
-dblsqd push -a mudlet -c public-test-build -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${DBLSQDTYPE}" "${matching_url}"
+echo "dblsqd push -a mudlet -c public-test-build -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${matching_url}\""
+dblsqd push -a mudlet -c public-test-build -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${matching_url}"
