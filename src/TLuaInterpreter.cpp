@@ -5946,7 +5946,7 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
 
     const int id = pS->getID();
     pS->setIsActive(false);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {id, QString()};
 }
 
@@ -5976,7 +5976,9 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
         pS->setScript(oldCode);
         return {-1, qsl("unable to compile \"%1\" for the script \"%2\" at position %3, reason: %4").arg(luaCode, name, QString::number(pos + 1), errMsg)};
     }
-    mpHost->mpEditorDialog->writeScript(id);
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->writeScript(id);
+    }
     return {id, QString()};
 }
 
@@ -6014,7 +6016,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
     }
 
     pT->setIsActive(false);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -6063,7 +6065,7 @@ std::pair<int, QString> TLuaInterpreter::startPermAlias(const QString& name, con
     pT->registerAlias();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -6108,7 +6110,7 @@ std::pair<int, QString> TLuaInterpreter::startPermKey(QString& name, QString& pa
     // CHECK: The lua code in function could fail to compile - but there is no feedback here to the caller.
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -6290,7 +6292,7 @@ std::pair<int, QString> TLuaInterpreter::startPermRegexTrigger(const QString& na
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return std::pair(pT->getID(), QString());
 }
 
@@ -6318,7 +6320,7 @@ std::pair<int, QString> TLuaInterpreter::startPermBeginOfLineStringTrigger(const
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return std::pair(pT->getID(), QString());
 }
 
@@ -6346,7 +6348,7 @@ std::pair<int, QString> TLuaInterpreter::startPermSubstringTrigger(const QString
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -6373,7 +6375,7 @@ std::pair<int, QString> TLuaInterpreter::startPermPromptTrigger(const QString& n
     pT->registerTrigger();
     pT->setScript(function);
     pT->setName(name);
-    mpHost->mpEditorDialog->mNeedUpdateData = true;
+    updateEditor();
     return {pT->getID(), QString()};
 }
 
@@ -7442,4 +7444,11 @@ int TLuaInterpreter::setSaveCommandHistory(lua_State* L)
     pCommandline->mSaveCommands = saveCommands;
     lua_pushboolean(L, true);
     return 1;
+}
+
+void TLuaInterpreter::updateEditor()
+{
+    if (mpHost->mpEditorDialog) {
+        mpHost->mpEditorDialog->mNeedUpdateData = true;
+    }
 }
