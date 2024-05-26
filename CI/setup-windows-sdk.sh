@@ -107,10 +107,10 @@ if [ "${MSYSTEM}" = "MINGW64" ]; then
         break
     fi
     
-    pacman_attempts=$((pacman_attempts +1))
     if [ $pacman_attempts -eq 10 ]; then
       exit 7
     fi
+    pacman_attempts=$((pacman_attempts +1))
     
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
@@ -132,10 +132,10 @@ else
         break
     fi
     
-    pacman_attempts=$((pacman_attempts +1))
     if [ $pacman_attempts -eq 10 ]; then
       exit 7
     fi
+    pacman_attempts=$((pacman_attempts +1))
     
     echo "=== Some packages failed to install, waiting and trying again ==="
     sleep 10
@@ -166,10 +166,10 @@ while true; do
       break
   fi
     
-  pacman_attempts=$((pacman_attempts +1))
   if [ $pacman_attempts -eq 10 ]; then
     exit 7
   fi
+  pacman_attempts=$((pacman_attempts +1))
     
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
