@@ -37,11 +37,11 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
 elif [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
   export BUILDCOMPONENT="i686"
-  export DBLSQDTYPE="x86"
+  export ARCH="x86"
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
-  export DBLSQDTYPE="x86_64"
+  export ARCH="x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
   echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
@@ -276,28 +276,31 @@ else
 
     exit 5
   fi
+  
+  installerExePath="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+  mv "${setupExePath}" "${installerExePath}"
 
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
     
-    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+    uploadFilename="${installerExePath}"
     moveToUploadDir "$uploadFilename" 1
   else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$setupExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
-    SHA256SUM=$(shasum -a 256 "$setupExePath" | awk '{print $1}')
+    SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
 
-    # file_cat=3 asuming Windows is the 3rd item in WP-Download-Manager category
+    # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
     curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
     -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
     -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
     -F "file_des=sha256: $SHA256SUM" \
-    -F "file_cat=3" \
+    -F "file_cat=0" \
     -F "file_permission=-1" \
     -F "output=json" \
     -F "do=Add File"
@@ -306,6 +309,7 @@ else
   echo "=== Installing NodeJS ==="
   choco install nodejs --version="22.1.0"
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
+  export PATH
   
   echo "=== Installing dblsqd-cli ==="
   npm install -g dblsqd-cli
@@ -314,26 +318,32 @@ else
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Downloading release feed ==="
     DownloadedFeed=$(mktemp)
-    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -o "$DownloadedFeed"
+    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/${ARCH}" -o "$DownloadedFeed"
     
     echo "=== Generating a changelog ==="
     cd "$GITHUB_WORKSPACE/CI" || exit 1
-    Changelog=$(lua "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
+    Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
     cd - || exit 1
     echo "$Changelog"
     
     echo "=== Creating release in Dblsqd ==="
-    dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+    export VersionString
 
-    echo "=== Registering release with Dblsqd ==="
-    dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}" -s mudlet --type 'standalone' --attach "win:${DBLSQDTYPE}" "${DEPLOY_URL}"
-
+    # This may fail as a build from another architecture may have already registered a release with dblsqd,
+    # if so, that is OK...
+    echo "=== Creating release in Dblsqd ==="
+    echo "dblsqd release -a mudlet -c public-test-build -m \"$Changelog\" \"${VersionString}\""
+    dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VersionString}" || true
   fi
 fi
 
 if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
   prId=" ,#$GITHUB_PULL_REQUEST_NUMBER"
 fi
+
+# Make PublicTestBuild available GHA to check if we need to run the register step
+echo "PUBLIC_TEST_BUILD=${PublicTestBuild}" >> "$GITHUB_ENV"
 
 echo ""
 echo "******************************************************"

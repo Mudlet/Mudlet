@@ -110,4 +110,8 @@ jobs:
         $uri = "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=$($env:UPLOAD_FILENAME)&unzip=$($env:PARAM_UNZIP)"
         Invoke-WebRequest -Uri $uri -Method Post
       shell: pwsh
+      
+    - name: Register Release
+      if: env.PUBLIC_TEST_BUILD == 'true'
+      run: $GITHUB_WORKSPACE/CI/register-windows-release.sh
 
