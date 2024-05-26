@@ -288,6 +288,11 @@ int TLuaInterpreter::addAreaName(lua_State* L)
 
     // Note that adding an area name implicitly creates an underlying TArea instance
     lua_pushnumber(L, host.mpMap->mpRoomDB->addArea(name));
+
+    if (host.mpMap->mpMapper) {
+        host.mpMap->mpMapper->updateAreaComboBox();
+    }
+
     host.mpMap->setUnsaved(__func__);
     host.mpMap->update();
 
@@ -1111,7 +1116,6 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     }
 
     if (result) {
-        // Update mapper Area names widget, using method designed for it...!
         if (host.mpMap->mpMapper) {
             host.mpMap->mpMapper->updateAreaComboBox();
         }
