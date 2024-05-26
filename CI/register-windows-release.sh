@@ -45,7 +45,7 @@ FetchAndCheckURL() {
     json_data=$(curl -s "$json_url")
 
     # Check if curl succeeded
-    if [ $? -ne 0 ]; then
+    if ! curl -s "$json_url" -o /dev/null; then
       echo "Failed to download JSON feed."
       return 1
     fi
@@ -63,12 +63,6 @@ FetchAndCheckURL() {
     # Use jq to filter the JSON data
     matching_url=$(echo "$json_data" | jq -r --arg search_pattern "$search_pattern" '.data[] | select(.platform == "windows" and (.url | test($search_pattern))) | .url')
 
-    # Check if jq succeeded
-    if [ $? -ne 0 ]; then
-      echo "Failed to parse JSON data."
-      return 2
-    fi
-
     # Check if the URL was found
     if [ -z "$matching_url" ]; then
       echo "No matching URL found."
@@ -83,8 +77,7 @@ FetchAndCheckURL() {
 
 # Loop until timeout or success
 while true; do
-    FetchAndCheckURL
-    if [ $? -eq 0 ]; then
+    if FetchAndCheckURL; then
         echo "=== Found URL, proceeding with registration ==="
         break
     fi
