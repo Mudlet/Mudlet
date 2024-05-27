@@ -96,7 +96,8 @@ MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
 export PATH
-export CCACHE_DIR=${RUNNER_WORKSPACE}/ccache
+RUNNER_WORKSPACE_UNIX_PATH=$(echo "${RUNNER_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
+export CCACHE_DIR=${RUNNER_WORKSPACE_UNIX_PATH}/ccache
 
 echo "MSYSTEM is: ${MSYSTEM}"
 echo "CCACHE_DIR is: ${CCACHE_DIR}"

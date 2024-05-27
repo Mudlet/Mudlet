@@ -475,7 +475,7 @@ macx {
 BASE_CXX = $$QMAKE_CXX
 BASE_C = $$QMAKE_C
 # common linux location
-exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe) {
+exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(/mingw64/bin/ccache)|exists(/mingw32/bin/ccache) {
     QMAKE_CXX = ccache $$BASE_CXX
     QMAKE_C = ccache $$BASE_C
 }
