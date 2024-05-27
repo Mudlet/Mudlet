@@ -112,6 +112,7 @@ jobs:
       shell: pwsh
       
     - name: Register Release
+      shell: msys2 {0}
       if: env.PUBLIC_TEST_BUILD == 'true'
       run: $GITHUB_WORKSPACE/CI/register-windows-release.sh
 
