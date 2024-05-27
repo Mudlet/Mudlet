@@ -160,6 +160,7 @@ echo " ... qmake done."
 echo ""
 
 export WITH_CCACHE="YES"
+
 if [ "${WITH_CCACHE}" = "YES" ]; then
   echo "  Tweaking Makefile.Release to use ccache..."
   sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Release
