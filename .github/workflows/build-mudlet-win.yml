@@ -61,7 +61,10 @@ jobs:
 
     - name: check ccache stats prior to build
       shell: msys2 {0}
-      run: ccache --zero-stats --show-stats
+      run: ccache --zero-stats --show-statss
+      
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
         
     - name: (Windows) Build
       shell: msys2 {0}
