@@ -476,9 +476,14 @@ BASE_CXX = $$QMAKE_CXX
 BASE_C = $$QMAKE_C
 # common linux location
 exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/ccache/ccache.exe)|exists(/usr/bin/ccache.exe)|exists(/mingw64/bin/ccache)|exists(/mingw32/bin/ccache) {
+    message("Found ccache, updating QMAKE_CXX and QMAKE_C")
     QMAKE_CXX = ccache $$BASE_CXX
     QMAKE_C = ccache $$BASE_C
+} else {
+    message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, /mingw64/bin/ccache, or /mingw32/bin/ccache")
 }
+
+message("Using QMAKE_CXX: '"$${QMAKE_CXX}"'  new QMAKE_C: '"$${QMAKE_C}"'")
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:

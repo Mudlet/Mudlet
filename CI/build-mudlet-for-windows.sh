@@ -158,6 +158,15 @@ fi
 
 echo " ... qmake done."
 echo ""
+
+export WITH_CCACHE="YES"
+if [ "${WITH_CCACHE}" = "YES" ]; then
+  echo "  Tweaking Makefile.Release to use ccache..."
+  sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Release
+  sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Release
+  echo ""
+fi
+
 echo "Running make to build project ..."
 echo ""
 
