@@ -175,6 +175,9 @@ while true; do
   sleep 10
 done
 
+/usr/bin/pacman -Su --needed --noconfirm ccache
+which ccache
+
 echo ""
 echo "    Completed"
 echo ""

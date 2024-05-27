@@ -483,7 +483,7 @@ exists(/usr/bin/ccache)|exists(/usr/local/bin/ccache)|exists(C:/Program Files/cc
     message("Unable to find ccache in /usr/bin/ccache, /usr/local/bin/ccache, C:/Program Files/ccache/ccache.exe, /usr/bin/ccache.exe, /mingw64/bin/ccache, or /mingw32/bin/ccache")
 }
 
-message("Using QMAKE_CXX: '"$${QMAKE_CXX}"'  new QMAKE_C: '"$${QMAKE_C}"'")
+message("Using QMAKE_CXX: '"$${QMAKE_CXX}"'  QMAKE_C: '"$${QMAKE_C}"'")
 
 # There does not seem to be an obvious pkg-config option for this one, it is
 # for the zlib that is used in cTelnet to expand MCCP1/2 compressed data streams:
