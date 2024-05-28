@@ -148,7 +148,7 @@ while true; do
     git \
     man \
     rsync \
-    ccache \
+    "mingw-w64-${BUILDCOMPONENT}-ccache" \
     "mingw-w64-${BUILDCOMPONENT}-toolchain" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
