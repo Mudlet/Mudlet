@@ -138,7 +138,7 @@ Por favor, espere...</translation>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="34"/>
       <source>InvisibleNotification</source>
-      <translation type="unfinished"/>
+      <translation>Notificación invisible</translation>
     </message>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
@@ -470,12 +470,12 @@ Por favor, espere...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="67"/>
       <source>line %1: %2</source>
-      <translation type="unfinished"/>
+      <translation>línea %1: %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/baseplistparser.cpp" line="149"/>
       <source>Expected %1 while parsing</source>
-      <translation type="unfinished"/>
+      <translation>Se esperaba %1 mientras se analizaba</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/jsonparser.cpp" line="145"/>
@@ -498,17 +498,18 @@ Por favor, espere...</translation>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/io/keymapparser.cpp" line="129"/>
       <source>Invalid keysequence used %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Secuencia de teclas no válida %1
+</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/texteditorkeymap.cpp" line="379"/>
       <source>Error parsing %1: %2 </source>
-      <translation type="unfinished"/>
+      <translation>Error al analizar %1: %2 </translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/models/textgrammar.cpp" line="306"/>
       <source>Error reading file %1:%2</source>
-      <translation type="unfinished"/>
+      <translation>Error al leer el archivo %1:%2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="435"/>
@@ -518,12 +519,12 @@ Por favor, espere...</translation>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="441"/>
       <source>Line %1, Column %2</source>
-      <translation type="unfinished"/>
+      <translation>Línea %1, Columna %2</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="444"/>
       <source>, Offset %1</source>
-      <translation type="unfinished"/>
+      <translation>, Desplazamiento %1</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="448"/>
@@ -557,7 +558,7 @@ Por favor, espere...</translation>
       <location filename="../src/dlgRoomExits.cpp" line="142"/>
       <location filename="../src/dlgRoomExits.cpp" line="222"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>El número ingresado es inválido. Si se deja así, esta salida se eliminará cuando se haga clic en &lt;tt&gt;Guardar.&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="143"/>
@@ -640,7 +641,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2678"/>
       <source>Create new room here</source>
       <extracomment>Menu option to create a new room in the mapper</extracomment>
-      <translation type="unfinished"/>
+      <translation>Crear una nueva habitación aquí</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2685"/>
@@ -655,7 +656,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2692"/>
       <source>Configure room...</source>
       <extracomment>2D Mapper context menu (room) item</extracomment>
-      <translation type="unfinished"/>
+      <translation>Configurar habitación...</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2694"/>
@@ -748,7 +749,7 @@ Por favor, espere...</translation>
       <location filename="../src/T2DMap.cpp" line="2766"/>
       <source>Create label to show text or an image</source>
       <extracomment>2D Mapper context menu (room) item tooltip</extracomment>
-      <translation type="unfinished"/>
+      <translation>Crear etiqueta para mostrar texto o una imagen</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="2773"/>
@@ -1030,7 +1031,7 @@ factor of:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4158"/>
       <source>This will create new area: %1</source>
-      <translation type="unfinished"/>
+      <translation>Esto creará una nueva área: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4174"/>
@@ -1079,7 +1080,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
     <message>
       <location filename="../src/TCommandLine.cpp" line="701"/>
       <source>Add to user dictionary</source>
-      <translation type="unfinished"/>
+      <translation>Añadir al diccionario de usuario</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="703"/>
@@ -1298,7 +1299,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="233"/>
       <source>main window</source>
-      <translation type="unfinished"/>
+      <translation>ventana principal</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="319"/>
