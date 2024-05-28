@@ -96,7 +96,8 @@ MINGW_INTERNAL_BASE_DIR="/mingw${BUILD_BITNESS}"
 export MINGW_INTERNAL_BASE_DIR
 PATH="${MINGW_INTERNAL_BASE_DIR}/usr/local/bin:${MINGW_INTERNAL_BASE_DIR}/bin:/usr/bin:${PATH}"
 export PATH
-export CCACHE_DIR=${RUNNER_WORKSPACE}/ccache
+RUNNER_WORKSPACE_UNIX_PATH=$(echo "${RUNNER_WORKSPACE}" | sed 's|\\|/|g' | sed 's|D:|/d|g')
+export CCACHE_DIR=${RUNNER_WORKSPACE_UNIX_PATH}/ccache
 
 echo "MSYSTEM is: ${MSYSTEM}"
 echo "CCACHE_DIR is: ${CCACHE_DIR}"
@@ -157,6 +158,16 @@ fi
 
 echo " ... qmake done."
 echo ""
+
+export WITH_CCACHE="YES"
+
+if [ "${WITH_CCACHE}" = "YES" ]; then
+  echo "  Tweaking Makefile.Release to use ccache..."
+  sed -i "s/CC            = gcc/CC            = ccache gcc/" ./Makefile.Release
+  sed -i "s/CXX           = g++/CXX           = ccache g++/" ./Makefile.Release
+  echo ""
+fi
+
 echo "Running make to build project ..."
 echo ""
 
