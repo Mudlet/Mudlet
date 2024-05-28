@@ -121,6 +121,7 @@ cd "$PACKAGE_DIR" || exit 1
 rm ./*.cpp ./*.o
 
 # Helper function to move a packaged mudlet to the upload directory and set up an artifact upload
+# We require the files to be uploaded to exist in $PACKAGE_DIR
 moveToUploadDir() {
   local uploadFilename=$1
   local unzip=$2
@@ -254,12 +255,11 @@ else
   rm -rf "${PACKAGE_DIR:?}/*"
 
   echo "=== Copying installer over ==="
-  mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "$PACKAGE_DIR"
-
-  setupExePath="$PACKAGE_DIR/Setup.exe"
+  installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+  mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
 
   # Check if the setup executable exists
-  if [[ ! -f "$setupExePath" ]]; then
+  if [[ ! -f "$installerExePath" ]]; then
     echo "=== ERROR: Squirrel failed to generate the installer! Build aborted. Squirrel log is:"
 
     # Check if the SquirrelSetup.log exists and display its content
@@ -276,14 +276,13 @@ else
 
     exit 5
   fi
-  
-  installerExePath="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
-  mv "${setupExePath}" "${installerExePath}"
 
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
     
-    uploadFilename="${installerExePath}"
+    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+    
+    # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
     moveToUploadDir "$uploadFilename" 1
   else
 
