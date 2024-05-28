@@ -142,18 +142,6 @@ else
   done
 fi
 
-PACMAN_CONF="/etc/pacman.conf"
-
-# Use sed to uncomment the IgnorePkg line and set it to IgnorePkg = luajit
-sed -i '/^#IgnorePkg/s/^#//; s/^IgnorePkg.*/IgnorePkg = luajit/' "$PACMAN_CONF"
-
-if grep -q "^IgnorePkg = luajit" "$PACMAN_CONF"; then
-    echo "Successfully updated IgnorePkg line in pacman.conf"
-else
-    echo "Failed to update IgnorePkg line in pacman.conf"
-    exit 1
-fi
-
 pacman_attempts=1
 while true; do
   if /usr/bin/pacman -Su --needed --noconfirm \
@@ -186,8 +174,6 @@ while true; do
   echo "=== Some packages failed to install, waiting and trying again ==="
   sleep 10
 done
-
-which ccache
 
 echo ""
 echo "    Completed"
