@@ -1509,7 +1509,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2172"/>
       <source>Main Window.</source>
-      <translation type="unfinished"/>
+      <translation>Ventana Principal.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2199"/>
@@ -1534,12 +1534,12 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2231"/>
       <source>User window &quot;%1&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Ventana de usuario &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2233"/>
       <source>Game content or locally generated text may be sent to this window that may be floated away from the Mudlet application or docked within the main application window.</source>
-      <translation type="unfinished"/>
+      <translation>El contenido del juego o el texto generado localmente se puede enviar a esta ventana que se puede separar de la aplicación Mudlet o acoplar dentro de la ventana principal de la aplicación.</translation>
     </message>
   </context>
   <context>
@@ -1601,7 +1601,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9398"/>
       <source>Probably will not be able to access Mudlet Lua code.</source>
-      <translation type="unfinished"/>
+      <translation>Probablemente no podré acceder al código Lua de Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/TLuaInterpreter.cpp" line="9416"/>
