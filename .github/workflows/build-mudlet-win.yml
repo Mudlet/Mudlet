@@ -113,5 +113,8 @@ jobs:
       
     - name: Register Release
       if: env.PUBLIC_TEST_BUILD == 'true'
+      env:
+        ARCH: ${{env.ARCH}}
+        VERSION_STRING: ${{env.VERSION_STRING}}
       run: $GITHUB_WORKSPACE/CI/register-windows-release.sh
 
