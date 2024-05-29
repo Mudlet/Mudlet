@@ -343,7 +343,11 @@ if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
 fi
 
 # Make PublicTestBuild available GHA to check if we need to run the register step
-echo "PUBLIC_TEST_BUILD=${PublicTestBuild}" >> "$GITHUB_ENV"
+{
+  echo "PUBLIC_TEST_BUILD=${PublicTestBuild}"
+  echo "ARCH=${ARCH}"
+  echo "VERSION_STRING=${VersionString}"
+} >> "$GITHUB_ENV"
 
 echo ""
 echo "******************************************************"
