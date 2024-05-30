@@ -112,6 +112,8 @@ jobs:
       shell: pwsh
       
     - name: Register Release
-      if: env.PUBLIC_TEST_BUILD == 'true'
-      run: $GITHUB_WORKSPACE/CI/register-windows-release.sh
+      if: env.RELEASE_TAG == 'release' || env.RELEASE_TAG == 'public-test-build'
+      env:
+        VERSION_STRING: ${{ env.VERSION_STRING }}
+      run: $GITHUB_WORKSPACE/CI/register-windows-release.sh ${{ env.RELEASE_TAG }}
 
