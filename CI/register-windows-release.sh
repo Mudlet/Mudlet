@@ -111,3 +111,4 @@ done
 echo "=== Registering release with Dblsqd ==="
 echo "dblsqd push -a mudlet -c ${RELEASE_TAG} -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${matching_url}\""
 dblsqd push -a mudlet -c "${RELEASE_TAG}" -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${matching_url}"
+
