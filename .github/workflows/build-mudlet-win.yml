@@ -109,5 +109,7 @@ jobs:
       env:
         ARCH: ${{env.ARCH}}
         VERSION_STRING: ${{env.VERSION_STRING}}
+        BUILD_COMMIT: ${{env.BUILD_COMMIT}}
+        PATH: ${{env.PATH}}
       run: $GITHUB_WORKSPACE/CI/register-windows-release.sh
 
