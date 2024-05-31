@@ -346,6 +346,8 @@ fi
   echo "PUBLIC_TEST_BUILD=${PublicTestBuild}"
   echo "ARCH=${ARCH}"
   echo "VERSION_STRING=${VersionString}"
+  echo "BUILD_COMMIT=${BUILD_COMMIT}"
+  echo "PATH=${PATH}"
 } >> "$GITHUB_ENV"
 
 echo ""
