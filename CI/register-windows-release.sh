@@ -18,6 +18,15 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
+# This script reads the JSON feed for a given GitHub artifact with the given
+# BUILD_COMMIT and registers it with dblsqd. It will attempt this for up to
+# an hour, every minute until success.
+# GHA Env vars needed:
+#    ARCH - For registering wither 32 or 64 bit build with dblsqd
+#    BUILD_COMMIT - For listing the json feed
+#    PATH - For path of dblsqd
+#    VERSION_STRING - The version of Mudlet being released
+
 # Version: 1.0.0    Initial Release
 
 # Exit codes:
