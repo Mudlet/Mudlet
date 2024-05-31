@@ -297,27 +297,25 @@ else
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "$DBLSQD_USER" -p "$DBLSQD_PASS"
 
-  #if [[ "$PublicTestBuild" == "true" ]]; then
-    echo "=== Downloading release feed ==="
-    DownloadedFeed=$(mktemp)
-    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${RELEASE_TAG}/win/${ARCH}" -o "$DownloadedFeed"
+  echo "=== Downloading release feed ==="
+  DownloadedFeed=$(mktemp)
+  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${RELEASE_TAG}/win/${ARCH}" -o "$DownloadedFeed"
     
-    echo "=== Generating a changelog ==="
-    cd "$GITHUB_WORKSPACE/CI" || exit 1
-    Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
-    cd - || exit 1
-    echo "$Changelog"
+  echo "=== Generating a changelog ==="
+  cd "$GITHUB_WORKSPACE/CI" || exit 1
+  Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
+  cd - || exit 1
+  echo "$Changelog"
     
-    echo "=== Creating release in Dblsqd ==="
-    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
-    export VersionString
+  echo "=== Creating release in Dblsqd ==="
+  VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+  export VersionString
 
-    # This may fail as a build from another architecture may have already registered a release with dblsqd,
-    # if so, that is OK...
-    echo "=== Creating release in Dblsqd ==="
-    echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"$Changelog\" \"${VersionString}\""
-    dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "$Changelog" "${VersionString}" || true
-  #fi
+  # This may fail as a build from another architecture may have already registered a release with dblsqd,
+  # if so, that is OK...
+  echo "=== Creating release in Dblsqd ==="
+  echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"$Changelog\" \"${VersionString}\""
+  dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "$Changelog" "${VersionString}" || true
 fi
 
 if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
