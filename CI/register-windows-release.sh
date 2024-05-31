@@ -27,6 +27,7 @@
 
 echo "=== Downloading JSON feed ==="
 json_url="https://make.mudlet.org/snapshots/json.php?commitid=${BUILD_COMMIT}"
+echo "$json_url"
 
 # Timeout in seconds before we give up
 timeout_period=$((60 * 60))
