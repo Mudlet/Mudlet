@@ -331,7 +331,6 @@ else
 
     # This may fail as a build from another architecture may have already registered a release with dblsqd,
     # if so, that is OK...
-    echo "=== Creating release in Dblsqd ==="
     echo "dblsqd release -a mudlet -c public-test-build -m \"$Changelog\" \"${VersionString}\""
     dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VersionString}" || true
   fi
