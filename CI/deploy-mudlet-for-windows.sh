@@ -136,12 +136,12 @@ moveToUploadDir() {
 
   echo "=== Copying files to upload directory ==="
   rsync -avR "${PACKAGE_DIR}"/./* "$uploadDirUnix"
-  
+
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
   {
     echo "FOLDER_TO_UPLOAD=${uploadDir}\\"
     echo "UPLOAD_FILENAME=$uploadFilename"
-    echo "PARAM_UNZIP=$unzip" 
+    echo "PARAM_UNZIP=$unzip"
   } >> "$GITHUB_ENV"
 }
 
@@ -232,7 +232,7 @@ else
     TestBuildString=""
     InstallerIconFile="$GITHUB_WORKSPACE/src/icons/mudlet.ico"
   fi
-  
+
   # Ensure 64 bit build is properly tagged
   if [ "${MSYSTEM}" = "MINGW64" ]; then
     TestBuildString="_64_$TestBuildString"
@@ -279,9 +279,9 @@ else
 
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
-    
+
     uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
-    
+
     # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
     moveToUploadDir "$uploadFilename" 1
   else
@@ -304,12 +304,12 @@ else
     -F "output=json" \
     -F "do=Add File"
   fi
-  
+
   echo "=== Installing NodeJS ==="
-  choco install nodejs --version="22.1.0"
+  choco install nodejs --version="22.1.0" -y -r -n
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
   export PATH
-  
+
   echo "=== Installing dblsqd-cli ==="
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "$DBLSQD_USER" -p "$DBLSQD_PASS"
@@ -318,13 +318,13 @@ else
     echo "=== Downloading release feed ==="
     DownloadedFeed=$(mktemp)
     curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/${ARCH}" -o "$DownloadedFeed"
-    
+
     echo "=== Generating a changelog ==="
     cd "$GITHUB_WORKSPACE/CI" || exit 1
     Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
     cd - || exit 1
     echo "$Changelog"
-    
+
     echo "=== Creating release in Dblsqd ==="
     VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
     export VersionString
