@@ -78,10 +78,10 @@ FetchAndCheckURL() {
       echo "No matching URL found."
       return 3
     fi
-    
+
     echo "Matching URL:"
     echo "$matching_url"
-    
+
     return 0
 }
 
@@ -91,7 +91,7 @@ while true; do
         echo "=== Found URL, proceeding with registration ==="
         break
     fi
-    
+
     # Check if timeout period has been reached
     current_time=$(date +%s)
     elapsed_time=$((current_time - start_time))
@@ -107,4 +107,7 @@ done
 
 echo "=== Registering release with Dblsqd ==="
 echo "dblsqd push -a mudlet -c public-test-build -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${matching_url}\""
+
+PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
+export PATH
 dblsqd push -a mudlet -c public-test-build -r "${VERSION_STRING}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${matching_url}"
