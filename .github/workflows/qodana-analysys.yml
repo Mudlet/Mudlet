@@ -33,6 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          submodules: true
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0  # a full history is required for pull request analysis
   
