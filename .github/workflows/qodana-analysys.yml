@@ -21,6 +21,10 @@ jobs:
             triplet: x64-linux
             compiler: clang_64
             qt: '5.14.1'
+
+    env:
+      BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
+      BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2/download
             
     permissions:
       contents: write
