@@ -1,0 +1,6 @@
+-I/home/runner/work/Mudlet/Mudlet/3rdparty/communi/include/IrcCore
+-I/home/runner/work/Mudlet/Mudlet/3rdparty/communi/include/IrcModel
+-I/home/runner/work/Mudlet/Mudlet/3rdparty/communi/include/IrcUtil
+-o
+/home/runner/work/Mudlet/Mudlet/b/ninja/3rdparty/communi/IrcCore/moc_irc.cpp
+/home/runner/work/Mudlet/Mudlet/3rdparty/communi/include/IrcCore/irc.h

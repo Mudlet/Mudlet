@@ -1,0 +1,23 @@
+{
+	"BUILD_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja/src/mudlet_autogen",
+	"CMAKE_BINARY_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja/src",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/runner/work/Mudlet/Mudlet/src",
+	"CMAKE_SOURCE_DIR" : "/home/runner/work/Mudlet/Mudlet",
+	"INCLUDE_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja/src/mudlet_autogen/include",
+	"INPUTS" : 
+	[
+		"/home/runner/work/Mudlet/Mudlet/src/fonts/noto-color-emoji-2022-09-16-v2.038/LICENSE",
+		"/home/runner/work/Mudlet/Mudlet/src/fonts/noto-color-emoji-2022-09-16-v2.038/NotoColorEmoji.ttf"
+	],
+	"LOCK_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/src/CMakeFiles/mudlet_autogen.dir/AutoRcc_mudlet_fonts_linux_EWIEGA46WW_Lock.lock",
+	"MULTI_CONFIG" : false,
+	"OPTIONS" : [ "-name", "mudlet_fonts_linux" ],
+	"OUTPUT_CHECKSUM" : "EWIEGA46WW",
+	"OUTPUT_NAME" : "qrc_mudlet_fonts_linux.cpp",
+	"RCC_EXECUTABLE" : "/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/bin/rcc",
+	"RCC_LIST_OPTIONS" : [ "--list" ],
+	"SETTINGS_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/src/CMakeFiles/mudlet_autogen.dir/AutoRcc_mudlet_fonts_linux_EWIEGA46WW_Used.txt",
+	"SOURCE" : "/home/runner/work/Mudlet/Mudlet/src/mudlet_fonts_linux.qrc",
+	"VERBOSITY" : 0
+}

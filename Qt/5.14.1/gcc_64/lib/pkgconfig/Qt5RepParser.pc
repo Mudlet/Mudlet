@@ -1,0 +1,12 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 RepParser
+Description: Qt RepParser module
+Version: 5.14.1
+Cflags: -DQT_REPPARSER_LIB -I${includedir}/QtRepParser -I${includedir}
+Requires: Qt5Core
+

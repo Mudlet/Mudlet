@@ -1,0 +1,414 @@
+{
+	"BUILD_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja/test/TMxpSendTagHandlerTest_autogen",
+	"CMAKE_BINARY_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja/test",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/runner/work/Mudlet/Mudlet/test",
+	"CMAKE_EXECUTABLE" : "/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/bin/cmake",
+	"CMAKE_LIST_FILES" : 
+	[
+		"/home/runner/work/Mudlet/Mudlet/test/CMakeLists.txt",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5/Qt5ConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5/Qt5Config.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5/Qt5ModuleLocation.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfigExtras.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfigExtrasMkspecDir.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreMacros.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/CMakeParseArguments.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Multimedia/Qt5MultimediaConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Multimedia/Qt5MultimediaConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Network/Qt5NetworkConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Network/Qt5NetworkConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Network/Qt5Network_QConnmanEnginePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Network/Qt5Network_QGenericEnginePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Network/Qt5Network_QNetworkManagerEnginePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5GuiConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5GuiConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QComposePlatformInputContextPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEglFSEmulatorIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEglFSIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEglFSKmsEglDeviceIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEglFSX11IntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEvdevKeyboardPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEvdevMousePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEvdevTabletPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QEvdevTouchScreenPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QGifPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QGtk3ThemePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QICNSPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QICOPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QIbusPlatformInputContextPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QJpegPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QLinuxFbIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QMinimalEglIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QMinimalIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QOffscreenIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QSvgIconPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QSvgPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QTgaPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QTiffPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QTuioTouchPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QVncIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWaylandEglPlatformIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWaylandIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWaylandXCompositeEglPlatformIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWaylandXCompositeGlxPlatformIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWbmpPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QWebpPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QXcbEglIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QXcbGlxIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QXcbIntegrationPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5Gui_QXdgDesktopPortalThemePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Gui/Qt5GuiConfigExtras.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Multimedia/Qt5Multimedia_CameraBinServicePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Multimedia/Qt5Multimedia_QAlsaPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Multimedia/Qt5Multimedia_QGstreamerAudioDecoderServicePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Multimedia/Qt5Multimedia_QGstreamerCaptureServicePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Multimedia/Qt5Multimedia_QGstreamerPlayerServicePlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Multimedia/Qt5Multimedia_QM3uPlaylistPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Multimedia/Qt5Multimedia_QPulseAudioPlugin.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Network/Qt5NetworkConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Network/Qt5NetworkConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5OpenGL/Qt5OpenGLConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5OpenGL/Qt5OpenGLConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsConfigExtras.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsMacros.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/CMakeParseArguments.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5UiTools/Qt5UiToolsConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5UiTools/Qt5UiToolsConfig.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/FindThreads.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/CheckLibraryExists.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/CheckIncludeFile.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/CheckCSourceCompiles.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/FindPackageMessage.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Widgets/Qt5WidgetsConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Concurrent/Qt5ConcurrentConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Concurrent/Qt5ConcurrentConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Test/Qt5TestConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Test/Qt5TestConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Test/Qt5TestConfigExtras.cmake",
+		"/home/runner/work/Mudlet/Mudlet/cmake/FindLua51.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/FindPackageMessage.cmake"
+	],
+	"CMAKE_SOURCE_DIR" : "/home/runner/work/Mudlet/Mudlet",
+	"DEP_FILE" : "",
+	"DEP_FILE_RULE_NAME" : "",
+	"HEADERS" : 
+	[
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/MxpTag.h",
+			"Mu",
+			"VNU7RW3YIC/moc_MxpTag.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TEntityHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TEntityHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TEntityResolver.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TEntityResolver.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpBRTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpBRTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpColorTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpColorTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpCustomElementTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpCustomElementTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpElementDefinitionHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpElementDefinitionHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpElementRegistry.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpElementRegistry.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpEntityTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpEntityTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpFontTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpFontTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpFormattingTagsHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpFormattingTagsHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpLinkTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpLinkTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpMusicTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpMusicTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpNodeBuilder.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpNodeBuilder.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpProcessor.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpProcessor.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpSendTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpSendTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpSoundTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpSoundTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpSupportTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpSupportTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpTagParser.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpTagParser.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpTagProcessor.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpTagProcessor.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpVarTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpVarTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpVersionTagHandler.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TMxpVersionTagHandler.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TStringUtils.h",
+			"Mu",
+			"VNU7RW3YIC/moc_TStringUtils.cpp",
+			null
+		]
+	],
+	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
+	"INCLUDE_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja/test/TMxpSendTagHandlerTest_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/test/TMxpSendTagHandlerTest_autogen/mocs_compilation.cpp",
+	"MOC_DEFINITIONS" : 
+	[
+		"QT_CONCURRENT_LIB",
+		"QT_CORE_LIB",
+		"QT_GUI_LIB",
+		"QT_MULTIMEDIA_LIB",
+		"QT_NETWORK_LIB",
+		"QT_NO_DEBUG",
+		"QT_TESTCASE_BUILDDIR=\"/home/runner/work/Mudlet/Mudlet/b/ninja\"",
+		"QT_TESTLIB_LIB",
+		"QT_UITOOLS_LIB",
+		"QT_WIDGETS_LIB"
+	],
+	"MOC_DEPEND_FILTERS" : 
+	[
+		[
+			"Q_PLUGIN_METADATA",
+			"[\n][ \t]*Q_PLUGIN_METADATA[ \t]*\\([^\\)]*FILE[ \t]*\"([^\"]+)\""
+		]
+	],
+	"MOC_INCLUDES" : 
+	[
+		"/home/runner/work/Mudlet/Mudlet/b/ninja/test",
+		"/home/runner/work/Mudlet/Mudlet/test",
+		"/home/runner/work/Mudlet/Mudlet/src",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include/QtTest",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include/QtCore",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/mkspecs/linux-g++",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include/QtConcurrent",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include/QtNetwork",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include/QtMultimedia",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include/QtGui",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include/QtUiTools",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include/QtWidgets",
+		"/usr/include",
+		"/usr/include/c++/9",
+		"/usr/include/x86_64-linux-gnu/c++/9",
+		"/usr/include/c++/9/backward",
+		"/usr/lib/gcc/x86_64-linux-gnu/9/include",
+		"/usr/local/include",
+		"/usr/include/x86_64-linux-gnu"
+	],
+	"MOC_MACRO_NAMES" : [ "Q_OBJECT", "Q_GADGET", "Q_NAMESPACE", "Q_NAMESPACE_EXPORT" ],
+	"MOC_OPTIONS" : [],
+	"MOC_PATH_PREFIX" : false,
+	"MOC_PREDEFS_CMD" : 
+	[
+		"/usr/bin/c++",
+		"-dM",
+		"-E",
+		"-c",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/CMakeCXXCompilerABI.cpp"
+	],
+	"MOC_PREDEFS_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/test/TMxpSendTagHandlerTest_autogen/moc_predefs.h",
+	"MOC_RELAXED_MODE" : false,
+	"MOC_SKIP" : [],
+	"MULTI_CONFIG" : false,
+	"PARALLEL" : 2,
+	"PARSE_CACHE_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/test/CMakeFiles/TMxpSendTagHandlerTest_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/bin/moc",
+	"QT_UIC_EXECUTABLE" : "",
+	"QT_VERSION_MAJOR" : 5,
+	"QT_VERSION_MINOR" : 14,
+	"SETTINGS_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/test/CMakeFiles/TMxpSendTagHandlerTest_autogen.dir/AutogenUsed.txt",
+	"SOURCES" : 
+	[
+		[ "/home/runner/work/Mudlet/Mudlet/src/MxpTag.cpp", "Mu", null ],
+		[ "/home/runner/work/Mudlet/Mudlet/src/TEntityHandler.cpp", "Mu", null ],
+		[ "/home/runner/work/Mudlet/Mudlet/src/TEntityResolver.cpp", "Mu", null ],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpBRTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpColorTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpCustomElementTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpElementDefinitionHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpElementRegistry.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpEntityTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpFontTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpFormattingTagsHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpLinkTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpMusicTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[ "/home/runner/work/Mudlet/Mudlet/src/TMxpNodeBuilder.cpp", "Mu", null ],
+		[ "/home/runner/work/Mudlet/Mudlet/src/TMxpProcessor.cpp", "Mu", null ],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpSendTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpSoundTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpSupportTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[ "/home/runner/work/Mudlet/Mudlet/src/TMxpTagHandler.cpp", "Mu", null ],
+		[ "/home/runner/work/Mudlet/Mudlet/src/TMxpTagParser.cpp", "Mu", null ],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpTagProcessor.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpVarTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/src/TMxpVersionTagHandler.cpp",
+			"Mu",
+			null
+		],
+		[ "/home/runner/work/Mudlet/Mudlet/src/TStringUtils.cpp", "Mu", null ],
+		[
+			"/home/runner/work/Mudlet/Mudlet/test/TMxpSendTagHandlerTest.cpp",
+			"Mu",
+			null
+		]
+	],
+	"VERBOSITY" : 0
+}

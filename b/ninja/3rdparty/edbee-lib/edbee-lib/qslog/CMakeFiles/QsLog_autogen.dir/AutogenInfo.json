@@ -1,0 +1,175 @@
+{
+	"BUILD_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja/3rdparty/edbee-lib/edbee-lib/qslog/QsLog_autogen",
+	"CMAKE_BINARY_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja",
+	"CMAKE_CURRENT_BINARY_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja/3rdparty/edbee-lib/edbee-lib/qslog",
+	"CMAKE_CURRENT_SOURCE_DIR" : "/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog",
+	"CMAKE_EXECUTABLE" : "/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/bin/cmake",
+	"CMAKE_LIST_FILES" : 
+	[
+		"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/CMakeLists.txt",
+		"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/cmake/QsLogConfigTargets.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5/Qt5ConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5/Qt5Config.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5/Qt5ModuleLocation.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfigVersion.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfig.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfigExtras.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreConfigExtrasMkspecDir.cmake",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/lib/cmake/Qt5Core/Qt5CoreMacros.cmake",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/CMakeParseArguments.cmake"
+	],
+	"CMAKE_SOURCE_DIR" : "/home/runner/work/Mudlet/Mudlet",
+	"DEP_FILE" : "",
+	"DEP_FILE_RULE_NAME" : "",
+	"HEADERS" : 
+	[
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLog.h",
+			"Mu",
+			"EWIEGA46WW/moc_QsLog.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogDest.h",
+			"Mu",
+			"EWIEGA46WW/moc_QsLogDest.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogDestConsole.h",
+			"Mu",
+			"EWIEGA46WW/moc_QsLogDestConsole.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogDestFile.h",
+			"Mu",
+			"EWIEGA46WW/moc_QsLogDestFile.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogDestFunctor.h",
+			"Mu",
+			"EWIEGA46WW/moc_QsLogDestFunctor.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogDisableForThisFile.h",
+			"Mu",
+			"EWIEGA46WW/moc_QsLogDisableForThisFile.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogLevel.h",
+			"Mu",
+			"EWIEGA46WW/moc_QsLogLevel.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogMessage.h",
+			"Mu",
+			"EWIEGA46WW/moc_QsLogMessage.cpp",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogSharedLibrary.h",
+			"Mu",
+			"EWIEGA46WW/moc_QsLogSharedLibrary.cpp",
+			null
+		]
+	],
+	"HEADER_EXTENSIONS" : [ "h", "hh", "h++", "hm", "hpp", "hxx", "in", "txx" ],
+	"INCLUDE_DIR" : "/home/runner/work/Mudlet/Mudlet/b/ninja/3rdparty/edbee-lib/edbee-lib/qslog/QsLog_autogen/include",
+	"MOC_COMPILATION_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/3rdparty/edbee-lib/edbee-lib/qslog/QsLog_autogen/mocs_compilation.cpp",
+	"MOC_DEFINITIONS" : 
+	[
+		"QSLOG_IS_SHARED_LIBRARY",
+		"QS_LOG_LINE_NUMBERS",
+		"QT_CORE_LIB",
+		"QT_NO_DEBUG",
+		"QsLog_EXPORTS"
+	],
+	"MOC_DEPEND_FILTERS" : 
+	[
+		[
+			"Q_PLUGIN_METADATA",
+			"[\n][ \t]*Q_PLUGIN_METADATA[ \t]*\\([^\\)]*FILE[ \t]*\"([^\"]+)\""
+		]
+	],
+	"MOC_INCLUDES" : 
+	[
+		"/home/runner/work/Mudlet/Mudlet/b/ninja/3rdparty/edbee-lib/edbee-lib/qslog",
+		"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/include/QtCore",
+		"/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/mkspecs/linux-g++",
+		"/usr/include/c++/9",
+		"/usr/include/x86_64-linux-gnu/c++/9",
+		"/usr/include/c++/9/backward",
+		"/usr/lib/gcc/x86_64-linux-gnu/9/include",
+		"/usr/local/include",
+		"/usr/include/x86_64-linux-gnu",
+		"/usr/include"
+	],
+	"MOC_MACRO_NAMES" : [ "Q_OBJECT", "Q_GADGET", "Q_NAMESPACE", "Q_NAMESPACE_EXPORT" ],
+	"MOC_OPTIONS" : [],
+	"MOC_PATH_PREFIX" : false,
+	"MOC_PREDEFS_CMD" : 
+	[
+		"/usr/bin/c++",
+		"-dM",
+		"-E",
+		"-c",
+		"/home/runner/work/_temp/773599641/cmake-3.20.1-linux-x86_64/share/cmake-3.20/Modules/CMakeCXXCompilerABI.cpp"
+	],
+	"MOC_PREDEFS_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/3rdparty/edbee-lib/edbee-lib/qslog/QsLog_autogen/moc_predefs.h",
+	"MOC_RELAXED_MODE" : false,
+	"MOC_SKIP" : [],
+	"MULTI_CONFIG" : false,
+	"PARALLEL" : 2,
+	"PARSE_CACHE_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/3rdparty/edbee-lib/edbee-lib/qslog/CMakeFiles/QsLog_autogen.dir/ParseCache.txt",
+	"QT_MOC_EXECUTABLE" : "/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64/bin/moc",
+	"QT_UIC_EXECUTABLE" : "",
+	"QT_VERSION_MAJOR" : 5,
+	"QT_VERSION_MINOR" : 14,
+	"SETTINGS_FILE" : "/home/runner/work/Mudlet/Mudlet/b/ninja/3rdparty/edbee-lib/edbee-lib/qslog/CMakeFiles/QsLog_autogen.dir/AutogenUsed.txt",
+	"SOURCES" : 
+	[
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLog.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogDest.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogDestConsole.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogDestFile.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogDestFunctor.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogLevel.cpp",
+			"Mu",
+			null
+		],
+		[
+			"/home/runner/work/Mudlet/Mudlet/3rdparty/edbee-lib/vendor/qslog/QsLogMessage.cpp",
+			"Mu",
+			null
+		]
+	],
+	"VERBOSITY" : 0
+}

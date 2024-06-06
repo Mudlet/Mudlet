@@ -1,0 +1,13 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 WaylandClient
+Description: Qt WaylandClient module
+Version: 5.14.1
+Libs: -L${libdir} -lQt5WaylandClient 
+Cflags: -DQT_WAYLANDCLIENT_LIB -I${includedir}/QtWaylandClient -I${includedir}
+Requires: Qt5Core Qt5Gui
+
