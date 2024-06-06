@@ -1,0 +1,13 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 SerialPort
+Description: Qt SerialPort module
+Version: 5.14.1
+Libs: -L${libdir} -lQt5SerialPort 
+Cflags: -DQT_SERIALPORT_LIB -I${includedir}/QtSerialPort -I${includedir}
+Requires: Qt5Core
+

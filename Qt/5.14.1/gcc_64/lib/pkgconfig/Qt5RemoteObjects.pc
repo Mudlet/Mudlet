@@ -1,0 +1,13 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 RemoteObjects
+Description: Qt RemoteObjects module
+Version: 5.14.1
+Libs: -L${libdir} -lQt5RemoteObjects 
+Cflags: -DQT_REMOTEOBJECTS_LIB -I${includedir}/QtRemoteObjects -I${includedir}
+Requires: Qt5Core Qt5Network
+

@@ -1,0 +1,14 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 OpenGLExtensions
+Description: Qt OpenGLExtensions module
+Version: 5.14.1
+Libs: -L${libdir} -lQt5OpenGLExtensions 
+Libs.private: -L/home/qt/openssl-1.1.1d/lib /home/qt/work/install/lib/libQt5Gui.so /home/qt/work/install/lib/libQt5Core.so -lpthread -lGL   
+Cflags: -DQT_OPENGLEXTENSIONS_LIB -I${includedir}/QtOpenGLExtensions -I${includedir}
+Requires: Qt5Core Qt5Gui
+

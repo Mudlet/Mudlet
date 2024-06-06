@@ -1,0 +1,14 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 UiTools
+Description: Qt UiTools module
+Version: 5.14.1
+Libs: -L${libdir} -lQt5UiTools 
+Libs.private: -L/home/qt/openssl-1.1.1d/lib /home/qt/work/install/lib/libQt5Widgets.so /home/qt/work/install/lib/libQt5Gui.so /home/qt/work/install/lib/libQt5Core.so -lpthread /home/qt/work/install/lib/libQt5Widgets.so /home/qt/work/install/lib/libQt5Gui.so /home/qt/work/install/lib/libQt5Core.so -lGL   
+Cflags: -DQT_UITOOLS_LIB -I${includedir}/QtUiTools -I${includedir}
+Requires: Qt5Core Qt5Gui Qt5Widgets
+

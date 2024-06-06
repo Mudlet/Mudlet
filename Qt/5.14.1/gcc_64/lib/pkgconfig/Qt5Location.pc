@@ -1,0 +1,13 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 Location
+Description: Qt Location module
+Version: 5.14.1
+Libs: -L${libdir} -lQt5Location 
+Cflags: -DQT_LOCATION_LIB -I${includedir}/QtLocation -I${includedir}
+Requires: Qt5Core Qt5Positioning Qt5PositioningQuick Qt5Gui Qt5Quick Qt5Network Qt5Qml
+
