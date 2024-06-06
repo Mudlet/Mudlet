@@ -1,0 +1,13 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 3DQuickRender
+Description: Qt 3DQuickRender module
+Version: 5.14.1
+Libs: -L${libdir} -lQt53DQuickRender 
+Cflags: -DQT_3DQUICKRENDER_LIB -I${includedir}/Qt3DQuickRender -I${includedir}
+Requires: Qt5Core Qt5Gui Qt5Qml Qt53DCore Qt53DRender Qt53DQuick
+

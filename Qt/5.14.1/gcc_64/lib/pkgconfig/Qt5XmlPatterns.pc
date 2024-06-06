@@ -1,0 +1,13 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 XmlPatterns
+Description: Qt XmlPatterns module
+Version: 5.14.1
+Libs: -L${libdir} -lQt5XmlPatterns 
+Cflags: -DQT_XMLPATTERNS_LIB -I${includedir}/QtXmlPatterns -I${includedir}
+Requires: Qt5Core Qt5Network
+

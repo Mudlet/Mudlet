@@ -1,0 +1,13 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 Quick
+Description: Qt Quick module
+Version: 5.14.1
+Libs: -L${libdir} -lQt5Quick 
+Cflags: -DQT_QUICK_LIB -I${includedir}/QtQuick -I${includedir}
+Requires: Qt5Core Qt5Gui Qt5Qml Qt5QmlModels
+

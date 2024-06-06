@@ -1,0 +1,13 @@
+prefix=/home/runner/work/Mudlet/Mudlet/Qt/5.14.1/gcc_64
+exec_prefix=${prefix}
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+
+Name: Qt5 3DRender
+Description: Qt 3DRender module
+Version: 5.14.1
+Libs: -L${libdir} -lQt53DRender 
+Cflags: -DQT_3DRENDER_LIB -I${includedir}/Qt3DRender -I${includedir}
+Requires: Qt5Core Qt5Gui Qt53DCore
+
