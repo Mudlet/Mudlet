@@ -109,6 +109,7 @@ jobs:
       shell: pwsh
 
     - name: Register Release
+      shell: msys2 {0}
       if: env.RELEASE_TAG == 'release' || env.RELEASE_TAG == 'public-test-build'
       env:
         ARCH: {{{env.ARCH}}
