@@ -48,10 +48,8 @@ jobs:
         echo "Linux PTB link: $LINUX_PTB_URL"
         echo "macOS PTB link: $MACOS_PTB_URL"
 
-        {
-          echo "LINUX_PTB_URL=$LINUX_PTB_URL"
-          echo "MACOS_PTB_URL=$MACOS_PTB_URL"
-        } >> "$GITHUB_ENV"
+        echo "LINUX_PTB_URL=$LINUX_PTB_URL" >> $GITHUB_ENV
+        echo "MACOS_PTB_URL=$MACOS_PTB_URL" >> $GITHUB_ENV
 
     - name: Setup dblsqd client
       run: |
