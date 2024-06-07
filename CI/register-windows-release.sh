@@ -27,7 +27,6 @@
 # GHA Env vars needed:
 #    ARCH - For registering wither 32 or 64 bit build with dblsqd
 #    BUILD_COMMIT - For listing the json feed
-#    PATH - For path of dblsqd
 #    VERSION_STRING - The version of Mudlet being released
 
 # Exit codes:
