@@ -130,7 +130,6 @@ VERSION = 4.17.99
 # the used version simpler
 # Note: the qmake BUILD variable is NOT a built-in one
 # BUILD = $$(MUDLET_VERSION_BUILD)
-BUILD = ""
 isEmpty( BUILD ) {
 # Possible values are:
 # "-dev" for the development build
@@ -139,7 +138,8 @@ isEmpty( BUILD ) {
 # A core dev team member setting things up for a release should comment out the
 # following line - as the app-build.txt file must not contain anything (other
 # than whitespace) for a RELEASE build:
-   BUILD = "-dev-"$${GIT_SHA1}
+   # BUILD = "-dev-"$${GIT_SHA1}
+   BUILD = ""
 } else {
    BUILD = $${BUILD}-$${GIT_SHA1}
 }
