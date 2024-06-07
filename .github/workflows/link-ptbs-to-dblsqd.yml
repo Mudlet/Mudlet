@@ -34,7 +34,7 @@ jobs:
 
     - name: Retrieve binaries available on make.mudlet.org
       run: |
-        LATEST_FEED=$(tempfile) || exit 1
+        LATEST_FEED=$(mktemp /tmp/latest_feed.XXXXXX) || exit 1
         curl --silent --output $LATEST_FEED "https://make.mudlet.org/snapshots/json.php?commitid=$PTB_COMMIT"
 
         if [ "$(cat "$LATEST_FEED" | jq --raw-output '.status')" != "ok" ]; then
