@@ -122,14 +122,15 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 ########################## Version and Build setting ###########################
 # Set the current Mudlet Version, unfortunately the Qt documentation suggests
 # that only a #.#.# form without any other alphanumberic suffixes is required:
-VERSION = 4.17.2
+VERSION = 4.17.99
 
 # if you are distributing modified code, it would be useful if you
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
 # variable (it should use '-' as the first character) to make identification of
 # the used version simpler
 # Note: the qmake BUILD variable is NOT a built-in one
-BUILD = $$(MUDLET_VERSION_BUILD)
+# BUILD = $$(MUDLET_VERSION_BUILD)
+BUILD = ""
 isEmpty( BUILD ) {
 # Possible values are:
 # "-dev" for the development build
