@@ -42,7 +42,7 @@ if [ $# -lt 1 ]; then
 fi
 RELEASE_TAG=$1
 if [ "$RELEASE_TAG" != "release" ] && [ "$RELEASE_TAG" != 'public-test-build' ]; then
-  echo "Invalid release tag provided"
+  echo "Invalid release tag $RELEASE_TAG provided"
   exit 4
 fi
 
