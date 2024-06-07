@@ -346,7 +346,7 @@ jobs:
       shell: bash
 
     - name: (macOS) Prep binary for running tests
-      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      if: matrix.run_tests == 'true' && runner.os == 'macOS' && env.UPLOAD_FILENAME
       run: |
         cp -r ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop
         cd ~/Desktop
@@ -365,7 +365,7 @@ jobs:
         QUIT_MUDLET_AFTER_TESTS: 'true'
 
     - name: (macOS) Run Lua tests
-      if: matrix.run_tests == 'true' && runner.os == 'macOS'
+      if: matrix.run_tests == 'true' && runner.os == 'macOS' && env.UPLOAD_FILENAME
       timeout-minutes: 5
       shell: bash
       run: ~/Desktop/${{env.UPLOAD_FILENAME}}.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
