@@ -25,7 +25,7 @@
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
 # 2 - Unsupported fork
-# 3 - No new commits for PTB
+# 0 - No new commits for PTB
 # 4 - nuget error
 # 5 - squirrel error
 
@@ -167,7 +167,7 @@ else
 
     if [[ "$COMMIT_DATE" < "$YESTERDAY_DATE" ]]; then
       echo "=== No new commits, aborting public test build generation ==="
-      exit 3
+      exit 0
     fi
 
     echo "=== Creating a public test build ==="
@@ -208,7 +208,7 @@ else
   if [[ "$PublicTestBuild" == "true" ]]; then
     # Allow public test builds to be installed side by side with the release builds by renaming the app
     # No dots in the <id>: Guidelines by Squirrel
-    if [ "${MSYSTEM}" = "MINGW64" ]; then
+    if [ "${MSYSTEM}" = "MINGW64" ]a; then
       sed -i "s/<id>Mudlet<\/id>/<id>Mudlet_${BUILD_BITNESS}_-PublicTestBuild<\/id>/" "$NuSpec"
     else
       sed -i 's/<id>Mudlet<\/id>/<id>Mudlet-PublicTestBuild<\/id>/' "$NuSpec"
@@ -254,7 +254,7 @@ else
   echo "=== Removing old directory content of release folder ==="
   rm -rf "${PACKAGE_DIR:?}/*"
 
-  echo "=== Copying installer over ==="
+  echo "=== Copying installer over a==="
   installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
   mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
 
