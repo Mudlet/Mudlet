@@ -136,12 +136,12 @@ moveToUploadDir() {
 
   echo "=== Copying files to upload directory ==="
   rsync -avR "${PACKAGE_DIR}"/./* "$uploadDirUnix"
-  
+
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
   {
     echo "FOLDER_TO_UPLOAD=${uploadDir}\\"
     echo "UPLOAD_FILENAME=$uploadFilename"
-    echo "PARAM_UNZIP=$unzip" 
+    echo "PARAM_UNZIP=$unzip"
   } >> "$GITHUB_ENV"
 }
 
@@ -232,7 +232,7 @@ else
     TestBuildString=""
     InstallerIconFile="$GITHUB_WORKSPACE/src/icons/mudlet.ico"
   fi
-  
+
   # Ensure 64 bit build is properly tagged
   if [ "${MSYSTEM}" = "MINGW64" ]; then
     TestBuildString="_64_$TestBuildString"
@@ -284,15 +284,15 @@ else
     echo "=== Uploading release build to make.mudlet.org ==="
     RELEASE_TAG="release"
   fi
-  
+
   uploadFilename="${installerExePath}"
   moveToUploadDir "$uploadFilename" 1
   
   echo "=== Installing NodeJS ==="
-  choco install nodejs --version="22.1.0"
+  choco install nodejs --version="22.1.0" -y -r -n
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
   export PATH
-  
+
   echo "=== Installing dblsqd-cli ==="
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "$DBLSQD_USER" -p "$DBLSQD_PASS"
@@ -316,6 +316,7 @@ else
   echo "=== Creating release in Dblsqd ==="
   echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"$Changelog\" \"${VersionString}\""
   dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "$Changelog" "${VersionString}" || true
+
 fi
 
 if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
@@ -327,6 +328,7 @@ fi
   echo "RELEASE_TAG=${RELEASE_TAG}"
   echo "ARCH=${ARCH}"
   echo "VERSION_STRING=${VersionString}"
+  echo "BUILD_COMMIT=${BUILD_COMMIT}"
 } >> "$GITHUB_ENV"
 
 echo ""

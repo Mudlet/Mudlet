@@ -5,6 +5,11 @@ on:
     tags: [Mudlet-*]
   pull_request:
   workflow_dispatch:
+    inputs:
+      scheduled:
+        description: 'Imitate a scheduled build'
+        required: false
+        default: 'false'
   schedule:
     - cron: '0 2 * * *'
 
@@ -28,21 +33,21 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
-        
+
     - name: (Windows 64) Setup MSYS2
       if: matrix.buildname == 'windows64'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW64
         update: true
-        
+
     - name: (Windows 32) Setup MSYS2
       if: matrix.buildname == 'windows32'
       uses: msys2/setup-msys2@v2
       with:
         msystem: MINGW32
         update: true
-          
+
     - name: (Windows) Build Environment Setup
       shell: msys2 {0}
       env:
@@ -58,16 +63,16 @@ jobs:
         key: ccache-${{matrix.os}}-${{matrix.buildname}}-${{ github.sha }}
         restore-keys: ccache-${{matrix.os}}-${{matrix.buildname}}
         save-always: true
-        
+
     - name: (Windows) Build
       shell: msys2 {0}
       env:
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' }}
+        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
-      
+
     - name: (Windows) Package
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
@@ -81,33 +86,33 @@ jobs:
         WIN_SIGNING_PASS: ${{secrets.WIN_SIGNING_PASS}}
         GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
-        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' }}
+        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
         GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
         GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
       run: $GITHUB_WORKSPACE/CI/deploy-mudlet-for-windows.sh
- 
+
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v4
       if: env.UPLOAD_FILENAME
       with:
         name: ${{env.UPLOAD_FILENAME}}
         path: ${{env.FOLDER_TO_UPLOAD}}
-        
+
     #- name: Setup tmate session
     #  uses: mxschmitt/action-tmate@v3
-      
+
     - name: Submit to make.mudlet.org
       if: env.UPLOAD_FILENAME
       run: |
         $uri = "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=$($env:UPLOAD_FILENAME)&unzip=$($env:PARAM_UNZIP)"
         Invoke-WebRequest -Uri $uri -Method Post
       shell: pwsh
-      
+
     - name: Register Release
       if: env.RELEASE_TAG == 'release' || env.RELEASE_TAG == 'public-test-build'
       env:
         ARCH: {{{env.ARCH}}
         VERSION_STRING: ${{env.VERSION_STRING}}
+        BUILD_COMMIT: ${{env.BUILD_COMMIT}}
       run: $GITHUB_WORKSPACE/CI/register-windows-release.sh ${{ env.RELEASE_TAG }}
-
 

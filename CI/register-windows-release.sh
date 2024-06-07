@@ -21,6 +21,15 @@
 # Version: 1.1.0    Modified to work with release and public-test-build
 #          1.0.0    Initial Release
 
+# This script reads the JSON feed for a given GitHub artifact with the given
+# BUILD_COMMIT and registers it with dblsqd. It will attempt this for up to
+# an hour, every minute until success.
+# GHA Env vars needed:
+#    ARCH - For registering wither 32 or 64 bit build with dblsqd
+#    BUILD_COMMIT - For listing the json feed
+#    PATH - For path of dblsqd
+#    VERSION_STRING - The version of Mudlet being released
+
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Timeout exceeded, failure
@@ -40,6 +49,7 @@ fi
 
 echo "=== Downloading JSON feed ==="
 json_url="https://make.mudlet.org/snapshots/json.php?commitid=${BUILD_COMMIT}"
+echo "$json_url"
 
 # Timeout in seconds before we give up
 timeout_period=$((60 * 60))
@@ -65,13 +75,15 @@ FetchAndCheckURL() {
 
     # Determine the search pattern based on ARCH environment variable
     if [ "$ARCH" == "x86" ]; then
-      search_pattern="windows-32"
+      search_pattern="windows-32.exe"
     elif [ "$ARCH" == "x86_64" ]; then
-      search_pattern="windows-64"
+      search_pattern="windows-64.exe"
     else
       echo "ARCH environment variable is not set to x86 or x86_64."
       exit 2
     fi
+
+    echo "Searching for $search_pattern"
 
     # Use jq to filter the JSON data
     matching_url=$(echo "$json_data" | jq -r --arg search_pattern "$search_pattern" '.data[] | select(.platform == "windows" and (.url | test($search_pattern))) | .url')
@@ -81,10 +93,10 @@ FetchAndCheckURL() {
       echo "No matching URL found."
       return 3
     fi
-    
+
     echo "Matching URL:"
     echo "$matching_url"
-    
+
     return 0
 }
 
@@ -94,7 +106,7 @@ while true; do
         echo "=== Found URL, proceeding with registration ==="
         break
     fi
-    
+
     # Check if timeout period has been reached
     current_time=$(date +%s)
     elapsed_time=$((current_time - start_time))
@@ -107,8 +119,10 @@ while true; do
     sleep $retry_interval
 done
 
-
 echo "=== Registering release with Dblsqd ==="
-echo "dblsqd push -a mudlet -c ${RELEASE_TAG} -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${matching_url}\""
-dblsqd push -a mudlet -c "${RELEASE_TAG}" -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${matching_url}"
+echo "dblsqd push -a mudlet -c ${RELEASE_TAG} -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${matching_url}\""
+
+PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
+export PATH
+dblsqd push -a mudlet -c "${RELEASE_TAG}" -r "${VERSION_STRING}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${matching_url}"
 
