@@ -18,33 +18,21 @@
 #   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             #
 ###########################################################################
 
-# Version: 1.1.0    Modified to work with release and public-test-build
-#          1.0.0    Initial Release
-
 # This script reads the JSON feed for a given GitHub artifact with the given
 # BUILD_COMMIT and registers it with dblsqd. It will attempt this for up to
 # an hour, every minute until success.
 # GHA Env vars needed:
 #    ARCH - For registering wither 32 or 64 bit build with dblsqd
 #    BUILD_COMMIT - For listing the json feed
+#    PATH - For path of dblsqd
 #    VERSION_STRING - The version of Mudlet being released
+
+# Version: 1.0.0    Initial Release
 
 # Exit codes:
 # 0 - Everything is fine. 8-)
 # 1 - Timeout exceeded, failure
 # 2 - ARCH not properly set
-# 3 - No release tag argument provided
-# 4 - Invalid release tag provided
-
-if [ $# -lt 1 ]; then
-  echo "No release tag provided"
-  exit 3
-fi
-RELEASE_TAG=$1
-if [ "$RELEASE_TAG" != "release" ] && [ "$RELEASE_TAG" != 'public-test-build' ]; then
-  echo "Invalid release tag $RELEASE_TAG provided"
-  exit 4
-fi
 
 echo "=== Downloading JSON feed ==="
 json_url="https://make.mudlet.org/snapshots/json.php?commitid=${BUILD_COMMIT}"
@@ -118,10 +106,10 @@ while true; do
     sleep $retry_interval
 done
 
+
 echo "=== Registering release with Dblsqd ==="
-echo "dblsqd push -a mudlet -c ${RELEASE_TAG} -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${matching_url}\""
+echo "dblsqd push -a mudlet -c public-test-build -r \"${VERSION_STRING}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${matching_url}\""
 
 PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
 export PATH
-dblsqd push -a mudlet -c "${RELEASE_TAG}" -r "${VERSION_STRING}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${matching_url}"
-
+dblsqd push -a mudlet -c public-test-build -r "${VERSION_STRING}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${matching_url}"

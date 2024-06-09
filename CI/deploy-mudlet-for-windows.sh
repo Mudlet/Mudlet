@@ -279,15 +279,37 @@ else
 
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
+
+    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+
+    # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
+    moveToUploadDir "$uploadFilename" 1
     RELEASE_TAG="public-test-build"
+    CHANGELOG_MODE="ptb"
   else
-    echo "=== Uploading release build to make.mudlet.org ==="
+
+    echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "${DEPLOY_SSH_KEY}" "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
+
+    SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
+
+    # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
+    curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
+    -H "x-wp-download-token: ${DEPLOY_KEY_PASS}" \
+    -F "file_type=2" \
+    -F "file_remote=$DEPLOY_URL" \
+    -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
+    -F "file_des=sha256: $SHA256SUM" \
+    -F "file_cat=0" \
+    -F "file_permission=-1" \
+    -F "output=json" \
+    -F "do=Add File"
+    
     RELEASE_TAG="release"
+    CHANGELOG_MODE="release"
   fi
 
-  uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
-  moveToUploadDir "$uploadFilename" 1
-  
   echo "=== Installing NodeJS ==="
   choco install nodejs --version="22.1.0" -y -r -n
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
@@ -300,22 +322,29 @@ else
   echo "=== Downloading release feed ==="
   DownloadedFeed=$(mktemp)
   curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${RELEASE_TAG}/win/${ARCH}" -o "$DownloadedFeed"
-    
+
   echo "=== Generating a changelog ==="
   cd "$GITHUB_WORKSPACE/CI" || exit 1
-  Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode release --releasefile "$DownloadedFeed")
+  
+  Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode "$CHANGELOG_MODE" --releasefile "$DownloadedFeed")
   cd - || exit 1
   echo "$Changelog"
-    
+
   echo "=== Creating release in Dblsqd ==="
   VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
   export VersionString
 
   # This may fail as a build from another architecture may have already registered a release with dblsqd,
   # if so, that is OK...
-  echo "=== Creating release in Dblsqd ==="
-  echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"$Changelog\" \"${VersionString}\""
-  dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "$Changelog" "${VersionString}" || true
+  echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"${Changelog}\" \"${VersionString}\""
+  dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "${Changelog}" "${VersionString}" || true
+
+  # PTB's are handled by the register script, release builds are just pushed here
+  if [[ "$RELEASE_TAG" == "release" ]]; then
+    echo "=== Registering release with Dblsqd ==="
+    echo "dblsqd push -a mudlet -c release -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${DEPLOY_URL}\""
+    dblsqd push -a mudlet -c release -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${DEPLOY_URL}"
+  fi
 
 fi
 
@@ -323,9 +352,9 @@ if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
   prId=" ,#$GITHUB_PULL_REQUEST_NUMBER"
 fi
 
-# Make these available to GHA and the register script
+# Make PublicTestBuild available GHA to check if we need to run the register step
 {
-  echo "RELEASE_TAG=${RELEASE_TAG}"
+  echo "PUBLIC_TEST_BUILD=${PublicTestBuild}"
   echo "ARCH=${ARCH}"
   echo "VERSION_STRING=${VersionString}"
   echo "BUILD_COMMIT=${BUILD_COMMIT}"
