@@ -279,15 +279,32 @@ else
 
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
-    RELEASE_TAG="public-test-build"
+
+    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+
+    # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
+    moveToUploadDir "$uploadFilename" 1
   else
-    echo "=== Uploading release build to make.mudlet.org ==="
-    RELEASE_TAG="release"
+
+    echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
+
+    SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
+
+    # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
+    curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
+    -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+    -F "file_type=2" \
+    -F "file_remote=$DEPLOY_URL" \
+    -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
+    -F "file_des=sha256: $SHA256SUM" \
+    -F "file_cat=0" \
+    -F "file_permission=-1" \
+    -F "output=json" \
+    -F "do=Add File"
   fi
 
-  uploadFilename="${installerExePath}"
-  moveToUploadDir "$uploadFilename" 1
-  
   echo "=== Installing NodeJS ==="
   choco install nodejs --version="22.1.0" -y -r -n
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
@@ -297,38 +314,39 @@ else
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "$DBLSQD_USER" -p "$DBLSQD_PASS"
 
-  echo "=== Downloading release feed ==="
-  DownloadedFeed=$(mktemp)
-  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${RELEASE_TAG}/win/${ARCH}" -o "$DownloadedFeed"
-    
-  echo "=== Generating a changelog ==="
-  cd "$GITHUB_WORKSPACE/CI" || exit 1
-  Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode release --releasefile "$DownloadedFeed")
-  cd - || exit 1
-  echo "$Changelog"
-    
-  echo "=== Creating release in Dblsqd ==="
-  VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
-  export VersionString
+  if [[ "$PublicTestBuild" == "true" ]]; then
+    echo "=== Downloading release feed ==="
+    DownloadedFeed=$(mktemp)
+    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/${ARCH}" -o "$DownloadedFeed"
 
-  # This may fail as a build from another architecture may have already registered a release with dblsqd,
-  # if so, that is OK...
-  echo "=== Creating release in Dblsqd ==="
-  echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"$Changelog\" \"${VersionString}\""
-  dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "$Changelog" "${VersionString}" || true
+    echo "=== Generating a changelog ==="
+    cd "$GITHUB_WORKSPACE/CI" || exit 1
+    Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
+    cd - || exit 1
+    echo "$Changelog"
 
+    echo "=== Creating release in Dblsqd ==="
+    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+    export VersionString
+
+    # This may fail as a build from another architecture may have already registered a release with dblsqd,
+    # if so, that is OK...
+    echo "dblsqd release -a mudlet -c public-test-build -m \"$Changelog\" \"${VersionString}\""
+    dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VersionString}" || true
+  fi
 fi
 
 if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
   prId=" ,#$GITHUB_PULL_REQUEST_NUMBER"
 fi
 
-# Make these available to GHA and the register script
+# Make PublicTestBuild available GHA to check if we need to run the register step
 {
-  echo "RELEASE_TAG=${RELEASE_TAG}"
+  echo "PUBLIC_TEST_BUILD=${PublicTestBuild}"
   echo "ARCH=${ARCH}"
   echo "VERSION_STRING=${VersionString}"
   echo "BUILD_COMMIT=${BUILD_COMMIT}"
+  echo "PATH=${PATH}"
 } >> "$GITHUB_ENV"
 
 echo ""
