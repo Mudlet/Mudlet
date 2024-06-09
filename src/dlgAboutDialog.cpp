@@ -1121,8 +1121,13 @@ QString dlgAboutDialog::createBuildInfo() const
     } else {
         isWow64Process = static_cast<bool>(value);
     }
-    if (Q_UNLIKELY(QLatin1String(qVersion()).compare(QLatin1String(QT_VERSION_STR)))) {
-        // If they are different, then the above is true
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
+        // Originally QLatin1String::compare(...) was to be used but, despite
+        // the Qt documentation claiming that that method was introduced in
+        // Qt 5.14 it lies; CI builds using Qt version 5.14.2 were borking
+        // and giving an: "error: ‘class QLatin1String’ has no member named
+        // ‘compare’" message instead!
         return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
                    "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
                    "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
@@ -1202,8 +1207,7 @@ QString dlgAboutDialog::createBuildInfo() const
 #else
 
     // Anything else
-    if (Q_UNLIKELY(QLatin1String(qVersion()).compare(QLatin1String(QT_VERSION_STR)))) {
-        // If they are different, then the above is true
+    if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
         return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
                    "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
                    "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
