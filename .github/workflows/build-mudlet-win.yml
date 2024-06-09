@@ -83,6 +83,8 @@ jobs:
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        DEPLOY_SSH_KEY: ${{secrets.DEPLOY_SSH_KEY}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
         WIN_SIGNING_PASS: ${{secrets.WIN_SIGNING_PASS}}
         GITHUB_REPO_NAME: ${{ github.repository }}
         GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
@@ -115,5 +117,4 @@ jobs:
         ARCH: ${{env.ARCH}}
         VERSION_STRING: ${{env.VERSION_STRING}}
         BUILD_COMMIT: ${{env.BUILD_COMMIT}}
-        PATH: ${{env.PATH}}
       run: $GITHUB_WORKSPACE/CI/register-windows-release.sh

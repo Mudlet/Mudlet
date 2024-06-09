@@ -284,17 +284,19 @@ else
 
     # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
     moveToUploadDir "$uploadFilename" 1
+    RELEASE_TAG="public-test-build"
+    CHANGELOG_MODE="ptb"
   else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "${DEPLOY_SSH_KEY}" "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
 
     # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
     curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
-    -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+    -H "x-wp-download-token: ${DEPLOY_KEY_PASS}" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
     -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
@@ -303,6 +305,9 @@ else
     -F "file_permission=-1" \
     -F "output=json" \
     -F "do=Add File"
+    
+    RELEASE_TAG="release"
+    CHANGELOG_MODE="release"
   fi
 
   echo "=== Installing NodeJS ==="
@@ -314,26 +319,33 @@ else
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "$DBLSQD_USER" -p "$DBLSQD_PASS"
 
-  if [[ "$PublicTestBuild" == "true" ]]; then
-    echo "=== Downloading release feed ==="
-    DownloadedFeed=$(mktemp)
-    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/${ARCH}" -o "$DownloadedFeed"
+  echo "=== Downloading release feed ==="
+  DownloadedFeed=$(mktemp)
+  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${RELEASE_TAG}/win/${ARCH}" -o "$DownloadedFeed"
 
-    echo "=== Generating a changelog ==="
-    cd "$GITHUB_WORKSPACE/CI" || exit 1
-    Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
-    cd - || exit 1
-    echo "$Changelog"
+  echo "=== Generating a changelog ==="
+  cd "$GITHUB_WORKSPACE/CI" || exit 1
+  
+  Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode "$CHANGELOG_MODE" --releasefile "$DownloadedFeed")
+  cd - || exit 1
+  echo "$Changelog"
 
-    echo "=== Creating release in Dblsqd ==="
-    VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
-    export VersionString
+  echo "=== Creating release in Dblsqd ==="
+  VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+  export VersionString
 
-    # This may fail as a build from another architecture may have already registered a release with dblsqd,
-    # if so, that is OK...
-    echo "dblsqd release -a mudlet -c public-test-build -m \"$Changelog\" \"${VersionString}\""
-    dblsqd release -a mudlet -c public-test-build -m "$Changelog" "${VersionString}" || true
+  # This may fail as a build from another architecture may have already registered a release with dblsqd,
+  # if so, that is OK...
+  echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"${Changelog}\" \"${VersionString}\""
+  dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "${Changelog}" "${VersionString}" || true
+
+  # PTB's are handled by the register script, release builds are just pushed here
+  if [[ "$RELEASE_TAG" == "release" ]]; then
+    echo "=== Registering release with Dblsqd ==="
+    echo "dblsqd push -a mudlet -c release -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${DEPLOY_URL}\""
+    dblsqd push -a mudlet -c release -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${DEPLOY_URL}"
   fi
+
 fi
 
 if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
@@ -346,7 +358,6 @@ fi
   echo "ARCH=${ARCH}"
   echo "VERSION_STRING=${VersionString}"
   echo "BUILD_COMMIT=${BUILD_COMMIT}"
-  echo "PATH=${PATH}"
 } >> "$GITHUB_ENV"
 
 echo ""
