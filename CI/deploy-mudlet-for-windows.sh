@@ -285,7 +285,7 @@ else
     RELEASE_TAG="release"
   fi
 
-  uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+  uploadFilename="${installerExePath}"
   moveToUploadDir "$uploadFilename" 1
   
   echo "=== Installing NodeJS ==="
