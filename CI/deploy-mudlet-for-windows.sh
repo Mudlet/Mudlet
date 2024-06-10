@@ -25,7 +25,7 @@
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
 # 2 - Unsupported fork
-# 3 - No new commits for PTB
+# 3 - Not used
 # 4 - nuget error
 # 5 - squirrel error
 
@@ -167,7 +167,7 @@ else
 
     if [[ "$COMMIT_DATE" < "$YESTERDAY_DATE" ]]; then
       echo "=== No new commits, aborting public test build generation ==="
-      exit 3
+      exit 0
     fi
 
     echo "=== Creating a public test build ==="
