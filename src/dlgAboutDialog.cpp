@@ -1121,7 +1121,6 @@ QString dlgAboutDialog::createBuildInfo() const
     } else {
         isWow64Process = static_cast<bool>(value);
     }
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
     if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
         // Originally QLatin1String::compare(...) was to be used but, despite
         // the Qt documentation claiming that that method was introduced in
