@@ -25,7 +25,7 @@
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
 # 2 - Unsupported fork
-# 0 - No new commits for PTB
+# 3 - Not used
 # 4 - nuget error
 # 5 - squirrel error
 
