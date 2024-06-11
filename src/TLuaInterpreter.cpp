@@ -5797,13 +5797,15 @@ void TLuaInterpreter::loadGlobal()
     // luaL_dostring(pGlobalLua, qsl("debugLoading = true").toUtf8().constData());
 
 #if defined(Q_OS_WIN32)
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
     // Needed to enable permissions checks on NTFS file systems - normally
     // turned off for performance reasons:
     extern Q_CORE_EXPORT int qt_ntfs_permission_lookup;
 #endif
+#endif
 
     int error;
-    for (const auto& pathFileName : qAsConst(mPossiblePaths)) {
+    for (const auto& pathFileName : std::as_const(mPossiblePaths)) {
         if (!(QFileInfo::exists(pathFileName))) {
             failedMessages << tr("%1 (doesn't exist)", "This file doesn't exist").arg(pathFileName);
             continue;
@@ -5816,15 +5818,23 @@ void TLuaInterpreter::loadGlobal()
 
 #if defined(Q_OS_WIN32)
         // Turn on permission checking on NTFS file systems
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         qt_ntfs_permission_lookup++;
+#else
+        qEnableNtfsPermissionChecks();
+#endif
 #endif
         if (!(QFileInfo(pathFileName).isReadable())) {
             failedMessages << tr("%1 (isn't a readable file or symlink to a readable file)").arg(pathFileName);
             continue;
         }
 #if defined(Q_OS_WIN32)
-        // Turn off permission checking
+        // Turn off permission checking on NTFS file systems
+#if QT_VERSION < QT_VERSION_CHECK(6, 6, 0)
         qt_ntfs_permission_lookup--;
+#else
+        qDisableNtfsPermissionChecks();
+#endif
 #endif
 
         // Leave a global variable set to the path so we can use it to find the
@@ -5950,7 +5960,7 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
     const auto ids = mpHost->getScriptUnit()->findItems(name);
     int id = -1;
     TScript* pS = nullptr;
-    if (pos >= 0 && pos < ids.size()) {
+    if (pos >= 0 && pos < static_cast<ptrdiff_t>(ids.size())) {
         id = ids.at(pos);
         pS = mpHost->getScriptUnit()->getScript(id);
     }
@@ -6838,7 +6848,7 @@ void TLuaInterpreter::createHttpHeadersTable(lua_State* L, QNetworkReply* reply)
 
     // Parse headers, add them as key-value pairs to the empty table
     const QList<QByteArray> headerList = reply->rawHeaderList();
-    for (const QByteArray header : headerList) {
+    for (const QByteArray& header : headerList) {
         // Push header key onto stack
         lua_pushstring(L, header.constData());
         // Push header value onto stack
@@ -6870,7 +6880,7 @@ void TLuaInterpreter::createCookiesTable(lua_State* L, QNetworkReply* reply)
     const Host& host = getHostFromLua(L);
     QNetworkCookieJar* cookieJar = host.mLuaInterpreter.mpFileDownloader->cookieJar();
     const QList<QNetworkCookie> cookies = cookieJar->cookiesForUrl(reply->url());
-    for (const QNetworkCookie cookie : cookies) {
+    for (const QNetworkCookie& cookie : cookies) {
         // Push cookie name onto stack
         lua_pushstring(L, cookie.name().constData());
         // Push cookie value onto stack
