@@ -472,7 +472,7 @@ Host::~Host()
     mErrorLogFile.close();
     // Since this is a destructor, it's risky to rely on member variables within the destructor itself.
     // To avoid this, we can pass the profile name as an argument instead of accessing it
-    // directly as a member variable. This ensures the destructor doesn't depend on the 
+    // directly as a member variable. This ensures the destructor doesn't depend on the
     // object's state being valid.
 
     TDebug::removeHost(this, mHostName);
@@ -3894,7 +3894,9 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
 
     mProfileStyleSheet = styleSheet;
     mpConsole->setStyleSheet(styleSheet);
-    mpEditorDialog->setStyleSheet(styleSheet);
+    if (mpEditorDialog) {
+        mpEditorDialog->setStyleSheet(styleSheet);
+    }
 
     if (mpDlgProfilePreferences) {
         mpDlgProfilePreferences->setStyleSheet(styleSheet);
