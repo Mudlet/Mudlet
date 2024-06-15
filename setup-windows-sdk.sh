@@ -440,6 +440,9 @@ if [ -z "${APPVEYOR}" ] && [ "${MSYSTEM}" = "MINGW32" ] && [ "${LEVEL}" = "full"
   echo ""
 fi
 
+# Since grep -c should produce a single numerical output of 0 or more it seems
+# pointless to follow the "shellcheck" advice to "Quote this to prevent
+# word splitting.":
 if [ $(grep -c "/.luarocks-${MSYSTEM}" "${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua") -eq 0 ]; then
   # The luarocks config file has not been tweaked to put the compiled rocks in
   # a location that is different for each different MSYS2 environment
