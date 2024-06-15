@@ -581,8 +581,9 @@ echo ""
 echo "Copying Lua translation files in..."
 rsync -avR --mkpath  "${PARENT_OF_BUILD_DIR}"/translations/lua/translated/./mudlet-lua_??_??.json ./translations/lua/translated/
 # The en_US case uses the source file directly but it is not in the same placed
-# but it also needs to be included in the package:
-cp -v -p -t  "${PARENT_OF_BUILD_DIR}/translations/lua/mudlet-lua.json" ./translations/lua
+# but it also needs to be included in the package - note that -t indicates the
+# destination directory:
+cp -v -p -t ./translations/lua "${PARENT_OF_BUILD_DIR}/translations/lua/mudlet-lua.json"
 echo ""
 
 echo "Copying Hunspell dictionaries in..."
