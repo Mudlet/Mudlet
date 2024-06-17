@@ -125,7 +125,7 @@ endif()
 # underlying version of the Mudlet build for all our current CI/CB processes
 # even a Windows one that currently runs using qmake - so don't mess with it
 # unless you are a Core Developer adjusting the overall versioning:
-set(APP_VERSION 4.17.99)
+set(APP_VERSION 4.17.2)
 # We now make APP_BUILD a CACHE variable so it can be propagated to the ./src/
 # sub-directory build.
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
@@ -134,15 +134,15 @@ if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD}
   message(STATUS "Value written to app-build.txt file: $ENV{MUDLET_VERSION_BUILD}-${GIT_SHA1}")
   set(APP_BUILD $ENV{MUDLET_VERSION_BUILD} CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 else()
-  #file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev-${GIT_SHA1}")
-  #message(STATUS "Value written to app-build.txt file: -dev-${GIT_SHA1}")
-  #set(APP_BUILD "-dev" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
+  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "-dev-${GIT_SHA1}")
+  message(STATUS "Value written to app-build.txt file: -dev-${GIT_SHA1}")
+  set(APP_BUILD "-dev" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
   # Core dev team setting things up for a release should comment out the above
   # three lines and uncomment these below - note that the app-build.txt must not
   # contain anything (other than whitespace) for a RELEASE build:
-  file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
-  message(STATUS "Value written to app-build.txt file: {nothing}")
-  set(APP_BUILD "" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
+  #file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
+  #message(STATUS "Value written to app-build.txt file: {nothing}")
+  #set(APP_BUILD "" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
