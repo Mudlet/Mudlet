@@ -25,7 +25,7 @@ jobs:
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2/download
-            
+
     permissions:
       contents: write
       pull-requests: write
@@ -36,7 +36,7 @@ jobs:
           submodules: true
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0  # a full history is required for pull request analysis
-  
+
       - name: (Windows) Install Qt
         uses: jurplel/install-qt-action@v4
         if: runner.os == 'Windows'
@@ -45,7 +45,7 @@ jobs:
           dir: ${{github.workspace}}
           arch: win64_mingw73
           cache: true
-  
+
       - name: (Linux/macOS) Install Qt
         uses: jurplel/install-qt-action@v4
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -53,14 +53,14 @@ jobs:
           version: ${{matrix.qt}}
           dir: ${{github.workspace}}
           cache: true
-  
+
       - name: Restore Boost cache
         uses: actions/cache@v4
         id: cache-boost
         with:
           path: ${{env.BOOST_ROOT}}
           key: boost
-  
+
       - name: Install Boost
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
@@ -75,17 +75,17 @@ jobs:
           cd $BOOST_ROOT && cp -r boost_*/* .
           rm -rf boost_*/* download.tar.bz2 download.tar
         shell: bash
-  
+
       # workaround a poor interaction between github actions/cmake/vcpkg, see https://github.com/lukka/run-vcpkg/issues/88#issuecomment-885758902
       - name: Use CMake 3.20.1
         uses: lukka/get-cmake@v3.20.1
-  
+
       - name: (Linux) Install non-vcpkg dependencies (1/2)
         if: runner.os == 'Linux'
         run: |
           # gettext is needed for vcpkg
           sudo apt-get install gettext -y
-  
+
       # Restore from cache the previously built ports. If "cache miss", then provision vcpkg, install desired ports, finally cache everything for the next run.
       - name: Restore from cache and run vcpkg
         uses: lukka/run-vcpkg@v7
@@ -95,16 +95,16 @@ jobs:
           vcpkgArguments: '@${{env.vcpkgResponseFile}}'
           vcpkgDirectory: '${{github.workspace}}/3rdparty/vcpkg'
           appendedCacheKey: ${{hashFiles(env.vcpkgResponseFile)}}-cachekey
-  
+
       - name: (Linux) Install non-vcpkg dependencies (2/2)
         if: runner.os == 'Linux'
         run: |
           # Install from vcpkg everything we can for cross-platform consistency
           # If not available, use other methods
           sudo apt-get install pkg-config libzip-dev libglu1-mesa-dev libpulse-dev -y
-  
+
           echo "Skipping generation of translation stats, so not installing lua-yajl."
-  
+
       - name: Generate compile_commands.json
         uses: lukka/run-cmake@v3
         with:
@@ -121,13 +121,18 @@ jobs:
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
           buildWithCMakeArgs: >-
             --target autogen
-      
+
       - name: 'Qodana Scan'
         uses: JetBrains/qodana-action@main
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}       
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           pr-mode: false
           # args: --apply-fixes
           # push-fixes: pull-request
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qodana-results
+          path: ${{ runner.temp }}/qodana/results
