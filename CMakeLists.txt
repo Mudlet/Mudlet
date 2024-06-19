@@ -33,7 +33,7 @@
 ############################################################################
 
 # Should be called before PROJECT.
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.5)
 
 if(APPLE)
   # needed for fetching Sparkle
@@ -119,7 +119,7 @@ endif()
 # leave it in place:
 #
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
-# values are also assigned to the "VERSION" and "BUILD" variables in the native
+# values are also assigned to the "VERSION" and "APP_BUILD" variables in the native
 # qmake project file, which is NOW called: ./src/mudlet.pro
 # NOTE: the CI/CB build process examines the following line to determine the
 # underlying version of the Mudlet build for all our current CI/CB processes

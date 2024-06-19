@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2023 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2024 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -128,30 +128,33 @@ VERSION = 4.17.2
 # put something distinguishing into the MUDLET_VERSION_BUILD environment
 # variable (it should use '-' as the first character) to make identification of
 # the used version simpler
-# Note: the qmake BUILD variable is NOT a built-in one
-# BUILD = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD ) {
-# Possible values are:
-# "-dev" for the development build
-# "-ptb" for the public test build
+# Note: the qmake APP_BUILD variable is NOT a built-in one
+APP_BUILD = $$(MUDLET_VERSION_BUILD)
+isEmpty( APP_BUILD ) {
+# Possible values that could be seen are:
+# "-dev" for a development build
+# "-ptb..." for a public test build
 # "" for the release build
 # A core dev team member setting things up for a release should comment out the
-# following line - as the app-build.txt file must not contain anything (other
-# than whitespace) for a RELEASE build:
-   # BUILD = "-dev-"$${GIT_SHA1}
-   BUILD = ""
+# following line - which forces APP_BUILD to take on a value IF IT WAS NOT SET IN THE
+# ENVIROMENT - as the app-build.txt file must not contain anything (other
+# than whitespace) for a RELEASE build. Note that it is sufficent to JUST
+# comment out this line - to leave the variable empty - if the environmental
+# one is also empty as the latter will not be for PTB ones and this bit will
+# not be used in that case:
+   APP_BUILD = "-dev-"$${GIT_SHA1}
 } else {
-   BUILD = $${BUILD}-$${GIT_SHA1}
+   APP_BUILD = $${APP_BUILD}-$${GIT_SHA1}
 }
 
 # This does append a line-feed to the file which would be problematic if it
 # wasn't trimmed off when read:
-write_file( app-build.txt, BUILD )
+write_file( app-build.txt, APP_BUILD )
 
-isEmpty( BUILD ) {
+isEmpty( APP_BUILD ) {
     !build_pass:message("Value written to app-build.txt file: {nothing}")
 } else {
-    !build_pass:message("Value written to app-build.txt file: " $${BUILD})
+    !build_pass:message("Value written to app-build.txt file: " $${APP_BUILD})
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
@@ -163,7 +166,7 @@ isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
     DEFINES += INCLUDE_VARIABLE_SPLASH_SCREEN
 }
 
-# Changing BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
+# Changing APP_BUILD and VERSION values affects: ctelnet.cpp, main.cpp, mudlet.cpp
 # dlgAboutDialog.cpp and TLuaInterpreter.cpp.  It does NOT cause those files to
 # be automatically rebuilt so you will need to 'touch' them...!
 # Use APP_VERSION and APP_TARGET defines in the source code if needed.
@@ -173,7 +176,7 @@ isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
 # /CI/(travis|appveyor).validate_deployment.(sh|ps1) scripts we probably have to
 # leave it in place:
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
-DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
+DEFINES += APP_BUILD=\\\"$${APP_BUILD}\\\"
 
 # Capitalize the name for Mudlet, so it appears as 'Mudlet' and not 'mudlet' in the .dmg installer
 macx {
@@ -1585,7 +1588,11 @@ macx {
     QMAKE_BUNDLE_DATA += APP_MUDLET_LUA_TRANSLATION
 
     # Set the macOS application's icon
-    contains(BUILD, "-ptb.+") {
+    # It is not documented by Qt but from its own source code one can see that
+    # contains(...) can treat the second argument as a QRegularExpress (with the
+    # "DotMatchesEveryThing" option) - and will handle multiple ones separated
+    # with a '|':
+    contains(APP_BUILD, "-ptb.+") {
         ICON = icons/mudlet_ptb.icns
     } else {
         contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
@@ -1635,7 +1642,7 @@ macx {
 win32 {
     # set the Windows binary icon, a proper .ico file will contains several
     # images/layers in specific formats and is used in MORE than one way!
-    contains(BUILD, "-ptb.+") {
+    contains(APP_BUILD, "-ptb.+") {
         RC_ICONS = icons/mudlet_ptb.ico
     } else {
         contains(BUILD, "-dev.+")|contains(BUILD, "-test.+") {
@@ -1650,7 +1657,7 @@ win32 {
     QMAKE_TARGET_DESCRIPTION = "Mudlet the MUD client"
 
     # Product name determines the Windows Start Menu shortcut name
-    contains(BUILD, "-ptb.+") {
+    contains(APP_BUILD, "-ptb.+") {
         QMAKE_TARGET_PRODUCT = "Mudlet PTB"
     } else {
         QMAKE_TARGET_PRODUCT = "Mudlet"
