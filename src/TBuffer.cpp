@@ -576,8 +576,8 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
                     const int spacesNeeded = temp.toInt(&isOk);
                     if (isOk && spacesNeeded > 0) {
                         const TChar::AttributeFlags attributeFlags =
-                                ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
-                                | (mFaint ? TChar::Faint : TChar::None)
+                                ( (((mBold && !mpHost->mBoldIsBright) || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                                | ((mFaint && !mpHost->mBoldIsBright) ? TChar::Faint : TChar::None)
                                 | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
                                 | (mOverline ? TChar::Overline : TChar::None)
                                 | (mReverse ? TChar::Reverse : TChar::None)
@@ -732,8 +732,8 @@ COMMIT_LINE:
                 }
                 if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) {
                     const TChar::AttributeFlags attributeFlags =
-                            ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
-                            | (mFaint ? TChar::Faint : TChar::None)
+                            ( (((mBold  && !mpHost->mBoldIsBright) || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                            | ((mFaint  && !mpHost->mBoldIsBright) ? TChar::Faint : TChar::None)
                             | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
                             | (mOverline ? TChar::Overline : TChar::None)
                             | (mReverse ? TChar::Reverse : TChar::None)
@@ -879,8 +879,8 @@ COMMIT_LINE:
         }
 
         const TChar::AttributeFlags attributeFlags =
-                ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
-                | (mFaint ? TChar::Faint : TChar::None)
+                ( (((mBold && (!mpHost->mBoldIsBright)) || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                | ((mFaint && (!mpHost->mBoldIsBright)) ? TChar::Faint : TChar::None)
                 | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
                 | (mOverline ? TChar::Overline : TChar::None)
                 | (mReverse ? TChar::Reverse : TChar::None)
@@ -1491,9 +1491,14 @@ void TBuffer::decodeSGR(const QString& sequence)
                     mAltFont = 0;
                     break;
                 case 1:
+                    // While we note this we will not apply it to the text if
+                    // the Host::mBoldIsBright flag is set - so it instead ONLY
+                    // shifts colours from the first 8 ANSI colours set to the
+                    // second:
                     mBold = true;
                     break;
                 case 2:
+                    // Likewise for this one as the mBold one:
                     mFaint = true;
                     break;
                 case 3:
@@ -1602,6 +1607,8 @@ void TBuffer::decodeSGR(const QString& sequence)
                 case 32:
                     mForeGroundColor = mGreen;
                     mForeGroundColorLight = mLightGreen;
+                    // If we also get the Bold code then we'll need to shift
+                    // to the second set of eight colours:
                     mMayShift8ColorSet = true;
                     break;
                 case 33:
