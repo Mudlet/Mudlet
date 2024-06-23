@@ -4,7 +4,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2022 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2022, 2023 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -48,6 +48,7 @@ public:
 
     void resizeEvent(QResizeEvent* event) override;
     void resetMainConsole();
+    void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     TScrollBox* createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
     bool raiseWindow(const QString& name);
@@ -137,7 +138,7 @@ signals:
 private:
     // Was public in Host class but made private there and cloned to here
     // (for main TConsole) to prevent it being changed without going through the
-    // process to load in the the changed dictionary:
+    // process to load in the changed dictionary:
     QString mSpellDic;
 
     // Cloned from Host
@@ -161,6 +162,7 @@ private:
     // for the ".aff" file - this member is for the per profile option only as
     // the shared one is held by the mudlet singleton class:
     QSet<QString> mWordSet_profile;
+    bool mEnableClose = false;
 };
 
 #endif // MUDLET_TMAINCONSOLE_H

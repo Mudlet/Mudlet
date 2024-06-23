@@ -96,7 +96,7 @@ execute_process(
 # If a CI/CB build system provides an alternative Git SHA1 to identify the build
 # use that instead - reporting which is being used:
 if(DEFINED ENV{BUILD_COMMIT} AND NOT $ENV{BUILD_COMMIT} STREQUAL "")
-    set(GIT_SHA1 string(TOLOWER $ENV{BUILD_COMMIT}))
+    string(TOLOWER $ENV{BUILD_COMMIT} GIT_SHA1)
     message(STATUS "Git SHA1 set from environemnt: ${GIT_SHA1}")
 else()
     message(STATUS "Git SHA1 used: ${GIT_SHA1}")
@@ -140,9 +140,9 @@ else()
   # Core dev team setting things up for a release should comment out the above
   # three lines and uncomment these below - note that the app-build.txt must not
   # contain anything (other than whitespace) for a RELEASE build:
-  # file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
-  # message(STATUS "Value written to app-build.txt file: {nothing}")
-  # set(APP_BUILD "" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
+  #file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
+  #message(STATUS "Value written to app-build.txt file: {nothing}")
+  #set(APP_BUILD "" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
