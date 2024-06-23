@@ -47,6 +47,7 @@
 # 2 - Unsupported MSYS2/MINGGW shell type
 # 5 - Invalid command line argument
 # 6 - One or more Luarocks could not be installed
+# 7 - One of more packages failed to install
 
 
 if [ "${MSYSTEM}" = "MINGW64" ]; then
@@ -91,31 +92,63 @@ echo "    to go and have a cup of tea (other beverages are available) in the mea
 echo ""
 
 if [ "${MSYSTEM}" = "MINGW64" ]; then
-/usr/bin/pacman -Su --needed --noconfirm \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
-    "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
-    "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"
+  echo "=== Installing Qt6 Packages ==="
+  pacman_attempts=1
+  while true; do
+    if /usr/bin/pacman -Su --needed --noconfirm \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-base" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-multimedia" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-svg" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-speech" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-imageformats" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-tools" \
+      "mingw-w64-${BUILDCOMPONENT}-qt6-5compat" \
+      "mingw-w64-${BUILDCOMPONENT}-qtkeychain-qt6"; then 
+        break
+    fi
+    
+    if [ $pacman_attempts -eq 10 ]; then
+      exit 7
+    fi
+    pacman_attempts=$((pacman_attempts +1))
+    
+    echo "=== Some packages failed to install, waiting and trying again ==="
+    sleep 10
+  done
+  
 else
-/usr/bin/pacman -Su --needed --noconfirm \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-speech" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" \
-    "mingw-w64-${BUILDCOMPONENT}-qt5-tools"
+
+  echo "=== Installing Qt5 Packages ==="
+  pacman_attempts=1
+  while true; do
+    if /usr/bin/pacman -Su --needed --noconfirm \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-base" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-multimedia" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-svg" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-speech" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-imageformats" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-winextras" \
+      "mingw-w64-${BUILDCOMPONENT}-qt5-tools"; then
+        break
+    fi
+    
+    if [ $pacman_attempts -eq 10 ]; then
+      exit 7
+    fi
+    pacman_attempts=$((pacman_attempts +1))
+    
+    echo "=== Some packages failed to install, waiting and trying again ==="
+    sleep 10
+  done
 fi
 
-/usr/bin/pacman -Su --needed --noconfirm \
+pacman_attempts=1
+while true; do
+  if /usr/bin/pacman -Su --needed --noconfirm \
     git \
     man \
     rsync \
-    ccache \
+    "mingw-w64-${BUILDCOMPONENT}-ccache" \
     "mingw-w64-${BUILDCOMPONENT}-toolchain" \
     "mingw-w64-${BUILDCOMPONENT}-pcre" \
     "mingw-w64-${BUILDCOMPONENT}-libzip" \
@@ -128,14 +161,26 @@ fi
     "mingw-w64-${BUILDCOMPONENT}-zlib" \
     "mingw-w64-${BUILDCOMPONENT}-boost" \
     "mingw-w64-${BUILDCOMPONENT}-yajl" \
-    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" 
+    "mingw-w64-${BUILDCOMPONENT}-lua-luarocks" \
+    "mingw-w64-${BUILDCOMPONENT}-jq"; then
+      break
+  fi
+    
+  if [ $pacman_attempts -eq 10 ]; then
+    exit 7
+  fi
+  pacman_attempts=$((pacman_attempts +1))
+    
+  echo "=== Some packages failed to install, waiting and trying again ==="
+  sleep 10
+done
 
 echo ""
 echo "    Completed"
 echo ""
 
 
-if [ $(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua) -eq 0 ]; then
+if [ "$(grep -c "/.luarocks-${MSYSTEM}" ${MINGW_INTERNAL_BASE_DIR}/etc/luarocks/config-5.1.lua)" -eq 0 ]; then
   # The luarocks config file has not been tweaked to put the compiled rocks in
   # a location that is different for each different MSYS2 environment
   echo "  Tweaking location for constructed Luarocks so 32 and 64 bits ones do"
@@ -172,7 +217,7 @@ echo ""
 # but which cannot make any missing intermediate directories if the
 # luafilesystem module for Lua 5.4 is not present, see:
 # https://github.com/msys2/MINGW-packages/pull/12002
-if [ $(luarocks --lua-version 5.4 list | grep -c "luafilesystem") -eq 0 ]; then
+if [ "$(luarocks --lua-version 5.4 list | grep -c "luafilesystem")" -eq 0 ]; then
   # Need to install the 5.4 luafilesystem rock
   echo "  Improving the luarocks operation by installing the 5.4 luafilesystem rock."
   neededPath=$(${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.4 install luafilesystem 2>&1 | grep "failed making directory" | cut -c 32-)
@@ -203,16 +248,16 @@ ROCKCOMMAND="${MINGW_INTERNAL_BASE_DIR}/bin/luarocks --lua-version 5.1"
 echo ""
 echo "  Checking, and installing if needed, the luarocks used by Mudlet..."
 echo ""
-WANTED_ROCKS=("luafilesystem" "lua-yajl" "luautf8" "lua-zip" "lrexlib-pcre" "luasql-sqlite3")
+WANTED_ROCKS=("luafilesystem" "lua-yajl" "luautf8" "lua-zip" "lrexlib-pcre" "luasql-sqlite3" "argparse" "lunajson")
 
 success="true"
 for ROCK in "${WANTED_ROCKS[@]}"; do
-  if [ $(luarocks --lua-version 5.1 list | grep -c "${ROCK}") -eq 0 ]; then
+  if [ "$(luarocks --lua-version 5.1 list | grep -c "${ROCK}")" -eq 0 ]; then
     # This rock is not present
     echo "    ${ROCK}..."
     echo ""
     ${ROCKCOMMAND} install "${ROCK}"
-	if [ $(luarocks --lua-version 5.1 list | grep -c "${ROCK}") -eq 0 ]; then
+	if [ "$(luarocks --lua-version 5.1 list | grep -c "${ROCK}")" -eq 0 ]; then
 	    echo "    ${ROCK} didn't get installed - try rerunning this script..."
 		success="false"
 	else

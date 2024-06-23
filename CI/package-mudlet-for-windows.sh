@@ -236,6 +236,7 @@ echo "Copying Lua translation files in..."
 mkdir -p ./translations/lua/translated
 cp -v -p -t ./translations/lua/translated \
     ${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/translated/mudlet-lua_??_??.json
+cp -v -p -t ./translations/lua ${GITHUB_WORKSPACE_UNIX_PATH}/translations/lua/mudlet-lua.json
 echo ""
 
 echo "Copying Hunspell dictionaries in..."

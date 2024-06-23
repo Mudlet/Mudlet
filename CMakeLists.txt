@@ -140,9 +140,9 @@ else()
   # Core dev team setting things up for a release should comment out the above
   # three lines and uncomment these below - note that the app-build.txt must not
   # contain anything (other than whitespace) for a RELEASE build:
-  # file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
-  # message(STATUS "Value written to app-build.txt file: {nothing}")
-  # set(APP_BUILD "" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
+  #file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
+  #message(STATUS "Value written to app-build.txt file: {nothing}")
+  #set(APP_BUILD "" CACHE STRING "This variable is automatically set during the CMake run and should not be manually altered!" FORCE)
 endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
