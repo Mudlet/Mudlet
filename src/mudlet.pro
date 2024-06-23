@@ -119,39 +119,31 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 }
 
 
-########################## Version and Build setting ###########################
-# Set the current Mudlet Version, unfortunately the Qt documentation suggests
-# that only a #.#.# form without any other alphanumberic suffixes is required:
+# Set Mudlet Version
 VERSION = 4.17.2
 
-# if you are distributing modified code, it would be useful if you
-# put something distinguishing into the MUDLET_VERSION_BUILD environment
-# variable (it should use '-' as the first character) to make identification of
-# the used version simpler
-# Note: the qmake BUILD variable is NOT a built-in one
-# BUILD = $$(MUDLET_VERSION_BUILD)
-isEmpty( BUILD ) {
-# Possible values are:
-# "-dev" for the development build
-# "-ptb" for the public test build
-# "" for the release build
-# A core dev team member setting things up for a release should comment out the
-# following line - as the app-build.txt file must not contain anything (other
-# than whitespace) for a RELEASE build:
-   # BUILD = "-dev-"$${GIT_SHA1}
-   BUILD = ""
+# Set BUILD based on MUDLET_VERSION_BUILD or default
+isEmpty(BUILD) {
+    # Uncomment for development or public test builds:
+    # BUILD = "-dev-"$${GIT_SHA1}
+    # BUILD = "-ptb-"$${GIT_SHA1}
+
+    # For release builds:
+    BUILD = ""
 } else {
-   BUILD = $${BUILD}-$${GIT_SHA1}
+    BUILD = $${BUILD}-$${GIT_SHA1}
 }
 
-# This does append a line-feed to the file which would be problematic if it
-# wasn't trimmed off when read:
-write_file( app-build.txt, BUILD )
+# Write BUILD to app-build.txt
+write_file(app-build.txt, BUILD)
 
-isEmpty( BUILD ) {
-    !build_pass:message("Value written to app-build.txt file: {nothing}")
-} else {
-    !build_pass:message("Value written to app-build.txt file: " $${BUILD})
+# Log the value written to app-build.txt
+!build_pass {
+    isEmpty(BUILD) {
+        message("Value written to app-build.txt file: {nothing}")
+    } else {
+        message("Value written to app-build.txt file: " $${BUILD})
+    }
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
