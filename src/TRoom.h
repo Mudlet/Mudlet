@@ -194,7 +194,7 @@ private:
     int south = -1;
     int southwest = -1;
     int west = -1;
-    int northwest =-1;
+    int northwest = -1;
     int up = -1;
     int down = -1;
     int in = -1;
@@ -274,13 +274,14 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     QMap<QString, bool> customLinesArrow = room->customLinesArrow;
     QMap<QString, Qt::PenStyle> customLinesStyle = room->customLinesStyle;
     if (!customLines.isEmpty()) {
-        debug.nospace() << ", customLines=(";
-        for (const auto& [key, value] : customLines) {
-            debug.nospace() << key << ": " << value << " (color: " << customLinesColor.value(key).name() << ", arrow: " << (customLinesArrow.value(key) ? "yes" : "no")
-                            << ", style: " << static_cast<int>(customLinesStyle.value(key)) << "), ";
+        debug.nospace() << ", customlines=(";
+        for (auto it = customLines.constBegin(); it != customLines.constEnd(); ++it) {
+            debug.nospace() << it.key().toLower() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower()
+                            << ", arrow: " << (customLinesArrow.value(it.key()) ? "yes" : "no") << ", style: " << static_cast<int>(customLinesStyle.value(it.key())) << "), ";
         }
         debug.nospace() << ")";
     }
+
 
     int weight = room->getWeight();
     if (weight != -1) {
