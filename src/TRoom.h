@@ -221,7 +221,7 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     debug.nospace() << ", name=" << room->name;
     debug.nospace() << ", area=" << room->getArea();
     debug.nospace() << ", pos=" << room->x << "," << room->y << "," << room->z;
-    
+
     debug.nospace() << ", exits:";
     if (room->getNorth() != -1) {
         debug.nospace() << ", north=" << room->getNorth();
@@ -270,25 +270,28 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     }
 
     QMap<QString, QList<QPointF>> customLines = room->customLines;
+    QMap<QString, QColor> customLinesColor = room->customLinesColor;
+    QMap<QString, bool> customLinesArrow = room->customLinesArrow;
+    QMap<QString, Qt::PenStyle> customLinesStyle = room->customLinesStyle;
     if (!customLines.isEmpty()) {
         debug.nospace() << ", customLines=(";
-        for (QMap<QString, QList<QPointF>>::const_iterator it = customLines.begin(); it != customLines.end(); ++it) {
-            debug.nospace() << it.key() << ": " << it.value() << ", ";
+        for (const auto& [key, value] : customLines) {
+            debug.nospace() << key << ": " << value << " (color: " << customLinesColor.value(key).name() << ", arrow: " << (customLinesArrow.value(key) ? "yes" : "no")
+                            << ", style: " << static_cast<int>(customLinesStyle.value(key)) << "), ";
         }
         debug.nospace() << ")";
     }
-    
-    
+
     int weight = room->getWeight();
     if (weight != -1) {
-        debug.nospace() << ", weight=" << weight; 
+        debug.nospace() << ", weight=" << weight;
     }
-    
+
     QString symbol = room->mSymbol;
     if (!symbol.isEmpty()) {
         debug.nospace() << ", symbol=" << symbol;
     }
-    
+
     auto exitWeights = room->getExitWeights();
     if (!exitWeights.isEmpty()) {
         debug.nospace() << ", exitWeights=(";
