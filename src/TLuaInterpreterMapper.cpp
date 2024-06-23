@@ -3481,7 +3481,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    QSet<int> roomIds;
+    QVector<int> roomIds;
     if (lua_isnumber(L, 1)) {
         const int id = getVerifiedInt(L, __func__, 1, "roomID");
         if (!host.mpMap->mpRoomDB->getRoomIDList().contains(id)) {
