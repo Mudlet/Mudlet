@@ -355,7 +355,7 @@ jobs:
         if [ -d "${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app" ]; then
           cp -r ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop/Mudlet.app
         else
-          cp -r ${{runner.workspace}}/b/ninja/build/Mudlet.app ~/Desktop
+          cp -r ${{runner.workspace}}/b/ninja/src/mudlet.app ~/Desktop/Mudlet.app
         fi
         cd ~/Desktop
         sudo codesign --remove-signature Mudlet.app
