@@ -344,11 +344,6 @@ jobs:
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
       shell: bash
 
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      with:
-        limit-access-to-actor: true
-
     - name: (macOS) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       run: |
