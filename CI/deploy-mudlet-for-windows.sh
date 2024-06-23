@@ -25,7 +25,7 @@
 # 0 - Everything is fine. 8-)
 # 1 - Failure to change to a directory
 # 2 - Unsupported fork
-# 3 - No new commits for PTB
+# 3 - Not used
 # 4 - nuget error
 # 5 - squirrel error
 
@@ -37,11 +37,11 @@ if [ "${MSYSTEM}" = "MSYS" ]; then
 elif [ "${MSYSTEM}" = "MINGW32" ]; then
   export BUILD_BITNESS="32"
   export BUILDCOMPONENT="i686"
-  export DBLSQDTYPE="x86"
+  export ARCH="x86"
 elif [ "${MSYSTEM}" = "MINGW64" ]; then
   export BUILD_BITNESS="64"
   export BUILDCOMPONENT="x86_64"
-  export DBLSQDTYPE="x86_64"
+  export ARCH="x86_64"
 else
   echo "This script is not set up to handle systems of type ${MSYSTEM}, only MINGW32 or"
   echo "MINGW64 are currently supported. Please rerun this in a bash terminal of one"
@@ -121,6 +121,7 @@ cd "$PACKAGE_DIR" || exit 1
 rm ./*.cpp ./*.o
 
 # Helper function to move a packaged mudlet to the upload directory and set up an artifact upload
+# We require the files to be uploaded to exist in $PACKAGE_DIR
 moveToUploadDir() {
   local uploadFilename=$1
   local unzip=$2
@@ -135,12 +136,12 @@ moveToUploadDir() {
 
   echo "=== Copying files to upload directory ==="
   rsync -avR "${PACKAGE_DIR}"/./* "$uploadDirUnix"
-  
+
   # Append these variables to the GITHUB_ENV to make them available in subsequent steps
   {
     echo "FOLDER_TO_UPLOAD=${uploadDir}\\"
     echo "UPLOAD_FILENAME=$uploadFilename"
-    echo "PARAM_UNZIP=$unzip" 
+    echo "PARAM_UNZIP=$unzip"
   } >> "$GITHUB_ENV"
 }
 
@@ -166,7 +167,7 @@ else
 
     if [[ "$COMMIT_DATE" < "$YESTERDAY_DATE" ]]; then
       echo "=== No new commits, aborting public test build generation ==="
-      exit 3
+      exit 0
     fi
 
     echo "=== Creating a public test build ==="
@@ -231,7 +232,7 @@ else
     TestBuildString=""
     InstallerIconFile="$GITHUB_WORKSPACE/src/icons/mudlet.ico"
   fi
-  
+
   # Ensure 64 bit build is properly tagged
   if [ "${MSYSTEM}" = "MINGW64" ]; then
     TestBuildString="_64_$TestBuildString"
@@ -254,12 +255,11 @@ else
   rm -rf "${PACKAGE_DIR:?}/*"
 
   echo "=== Copying installer over ==="
-  mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "$PACKAGE_DIR"
-
-  setupExePath="$PACKAGE_DIR/Setup.exe"
+  installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+  mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
 
   # Check if the setup executable exists
-  if [[ ! -f "$setupExePath" ]]; then
+  if [[ ! -f "$installerExePath" ]]; then
     echo "=== ERROR: Squirrel failed to generate the installer! Build aborted. Squirrel log is:"
 
     # Check if the SquirrelSetup.log exists and display its content
@@ -279,61 +279,86 @@ else
 
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
-    
+
     uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+
+    # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
     moveToUploadDir "$uploadFilename" 1
+    RELEASE_TAG="public-test-build"
+    CHANGELOG_MODE="ptb"
   else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$setupExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "${DEPLOY_SSH_KEY}" "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
-    SHA256SUM=$(shasum -a 256 "$setupExePath" | awk '{print $1}')
+    SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
 
-    # file_cat=3 asuming Windows is the 3rd item in WP-Download-Manager category
+    # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
     curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
-    -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+    -H "x-wp-download-token: ${DEPLOY_KEY_PASS}" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
     -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
     -F "file_des=sha256: $SHA256SUM" \
-    -F "file_cat=3" \
+    -F "file_cat=0" \
     -F "file_permission=-1" \
     -F "output=json" \
     -F "do=Add File"
+    
+    RELEASE_TAG="release"
+    CHANGELOG_MODE="release"
   fi
-  
+
   echo "=== Installing NodeJS ==="
-  choco install nodejs --version="22.1.0"
+  choco install nodejs --version="22.1.0" -y -r -n
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
-  
+  export PATH
+
   echo "=== Installing dblsqd-cli ==="
   npm install -g dblsqd-cli
   dblsqd login -e "https://api.dblsqd.com/v1/jsonrpc" -u "$DBLSQD_USER" -p "$DBLSQD_PASS"
 
-  if [[ "$PublicTestBuild" == "true" ]]; then
-    echo "=== Downloading release feed ==="
-    DownloadedFeed=$(mktemp)
-    curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/public-test-build/win/x86" -o "$DownloadedFeed"
-    
-    echo "=== Generating a changelog ==="
-    cd "$GITHUB_WORKSPACE/CI" || exit 1
-    Changelog=$(lua "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode ptb --releasefile "$DownloadedFeed")
-    cd - || exit 1
-    echo "$Changelog"
-    
-    echo "=== Creating release in Dblsqd ==="
-    dblsqd release -a mudlet -c public-test-build -m \""$Changelog\"" \""${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}\""
+  echo "=== Downloading release feed ==="
+  DownloadedFeed=$(mktemp)
+  curl "https://feeds.dblsqd.com/MKMMR7HNSP65PquQQbiDIw/${RELEASE_TAG}/win/${ARCH}" -o "$DownloadedFeed"
 
+  echo "=== Generating a changelog ==="
+  cd "$GITHUB_WORKSPACE/CI" || exit 1
+  
+  Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode "$CHANGELOG_MODE" --releasefile "$DownloadedFeed")
+  cd - || exit 1
+  echo "$Changelog"
+
+  echo "=== Creating release in Dblsqd ==="
+  VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+  export VersionString
+
+  # This may fail as a build from another architecture may have already registered a release with dblsqd,
+  # if so, that is OK...
+  echo "dblsqd release -a mudlet -c ${RELEASE_TAG} -m \"${Changelog}\" \"${VersionString}\""
+  dblsqd release -a mudlet -c "${RELEASE_TAG}" -m "${Changelog}" "${VersionString}" || true
+
+  # PTB's are handled by the register script, release builds are just pushed here
+  if [[ "$RELEASE_TAG" == "release" ]]; then
     echo "=== Registering release with Dblsqd ==="
-    dblsqd push -a mudlet -c public-test-build -r "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}" -s mudlet --type 'standalone' --attach "win:${DBLSQDTYPE}" "${DEPLOY_URL}"
-
+    echo "dblsqd push -a mudlet -c release -r \"${VersionString}\" -s mudlet --type 'standalone' --attach win:${ARCH} \"${DEPLOY_URL}\""
+    dblsqd push -a mudlet -c release -r "${VersionString}" -s mudlet --type 'standalone' --attach win:"${ARCH}" "${DEPLOY_URL}"
   fi
+
 fi
 
 if [[ -n "$GITHUB_PULL_REQUEST_NUMBER" ]]; then
   prId=" ,#$GITHUB_PULL_REQUEST_NUMBER"
 fi
+
+# Make PublicTestBuild available GHA to check if we need to run the register step
+{
+  echo "PUBLIC_TEST_BUILD=${PublicTestBuild}"
+  echo "ARCH=${ARCH}"
+  echo "VERSION_STRING=${VersionString}"
+  echo "BUILD_COMMIT=${BUILD_COMMIT}"
+} >> "$GITHUB_ENV"
 
 echo ""
 echo "******************************************************"
