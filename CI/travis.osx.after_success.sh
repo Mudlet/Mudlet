@@ -34,6 +34,8 @@ if [[ "${MUDLET_VERSION_BUILD}" == -ptb* ]]; then
   public_test_build="true"
 fi
 
+public_test_build="true" # temp ptb build testing
+
 # we deploy only certain builds
 if [ "${DEPLOY}" = "deploy" ]; then
 
@@ -93,6 +95,8 @@ if [ "${DEPLOY}" = "deploy" ]; then
         echo "== No new commits, aborting public test build generation =="
         exit 0
       fi
+
+      exit 0 # temp exit
 
       echo "== Creating a public test build =="
       if [ -n "${GITHUB_REPOSITORY}" ]; then

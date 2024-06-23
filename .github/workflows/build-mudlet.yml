@@ -305,7 +305,7 @@ jobs:
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
 
-    - name: add ssh-agent for tag deployment
+    - name: add ssh-agent for release uploads
       if: (runner.os == 'Linux' || runner.os == 'macOS') && matrix.deploy == 'deploy' && startsWith(github.ref, 'refs/tags/Mudlet-')
       uses: webfactory/ssh-agent@v0.8.0
       with:
@@ -341,16 +341,24 @@ jobs:
     # we need to be in the right place for LuaGlobals.lua to load
     - name: (Linux) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os =='Linux'
-      # macOS binary is in ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}/Contents/MacOS
       run: cp ${{runner.workspace}}/b/ninja/src/mudlet ${{github.workspace}}/src
       shell: bash
+
+    - name: Setup tmate session
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: true
 
     - name: (macOS) Prep binary for running tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       run: |
-        cp -r ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop
+        if [ -d "${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app" ]; then
+          cp -r ${{runner.workspace}}/b/ninja/${{env.UPLOAD_FILENAME}}.app ~/Desktop/Mudlet.app
+        else
+          cp -r ${{runner.workspace}}/b/ninja/build/Mudlet.app ~/Desktop
+        fi
         cd ~/Desktop
-        sudo codesign --remove-signature ${{env.UPLOAD_FILENAME}}.app
+        sudo codesign --remove-signature Mudlet.app
       shell: bash
 
     - name: (Linux) Run Lua tests
@@ -368,7 +376,7 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
       timeout-minutes: 5
       shell: bash
-      run: ~/Desktop/${{env.UPLOAD_FILENAME}}.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
+      run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror
       env:
         AUTORUN_BUSTED_TESTS: 'true'
         TESTS_DIRECTORY: ${{github.workspace}}/src/mudlet-lua/tests
