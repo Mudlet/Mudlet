@@ -1615,49 +1615,41 @@ void TBuffer::decodeSGR(const QString& sequence)
                     lightForegroundColor = mLightBlack;
                     // This has priority over Background color
                     has8ColorFg = true;
-                    has8ColorBg = false;
                     break;
                 case 31:
                     foregroundColor = mRed;
                     lightForegroundColor = mLightRed;
                     has8ColorFg = true;
-                    has8ColorBg = false;
                     break;
                 case 32:
                     foregroundColor = mGreen;
                     lightForegroundColor = mLightGreen;
                     has8ColorFg = true;
-                    has8ColorBg = false;
                     break;
                 case 33:
                     foregroundColor = mYellow;
                     lightForegroundColor = mLightYellow;
                     has8ColorFg = true;
-                    has8ColorBg = false;
                     break;
                 case 34:
                     foregroundColor = mBlue;
                     lightForegroundColor = mLightBlue;
                     has8ColorFg = true;
-                    has8ColorBg = false;
                     break;
                 case 35:
                     foregroundColor = mMagenta;
                     lightForegroundColor = mLightMagenta;
                     has8ColorFg = true;
-                    has8ColorBg = false;
                     break;
                 case 36:
                     foregroundColor = mCyan;
                     lightForegroundColor = mLightCyan;
                     has8ColorFg = true;
-                    has8ColorBg = false;
                     break;
                 case 37:
                     foregroundColor = mWhite;
                     lightForegroundColor = mLightWhite;
                     has8ColorFg = true;
-                    has8ColorBg = false;
                     break;
                 case 38: {
                     // We are not now using the basic 8 colors so we won't
@@ -2044,6 +2036,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     // As an 8-color foreground color has been given so switch
                     // the foreground color to the second 8 in a 16 color set:
                     mForeGroundColor = lightForegroundColor;
+                    mBackGroundColor = backgroundColor;
                 } else {
                     if (has8ColorBg.has_value() && has8ColorBg.value()) {
                         // As an 8-color foreground color has not been given but
