@@ -123,15 +123,9 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 VERSION = 4.17.2
 
 # Set BUILD based on MUDLET_VERSION_BUILD or default
-isEmpty(BUILD) {
-    # Uncomment for development or public test builds:
-    # BUILD = "-dev-"$${GIT_SHA1}
-    # BUILD = "-ptb-"$${GIT_SHA1}
-
-    # For release builds:
-    BUILD = ""
-} else {
-    BUILD = $${BUILD}-$${GIT_SHA1}
+BUILD = $$(MUDLET_VERSION_BUILD)
+!isEmpty(BUILD) {
+    BUILD = ${BUILD}-${GIT_SHA1}
 }
 
 # Write BUILD to app-build.txt
