@@ -95,6 +95,7 @@ void GMCPAuthenticator::handleAuthResult(const QString& data)
         if (message.isEmpty()) {
             mpHost->postMessage(tr("[ WARN ]  - Could not log in to the game, is the login information correct?"));
         } else {
+            //: %1 could be failed authentication, banned user, etc.
             mpHost->postMessage(tr("[ WARN ]  - Could not log in to the game: %1").arg(message));
         }
 
