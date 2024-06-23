@@ -3541,7 +3541,9 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
         return host.mpMap->setRoomArea(id, areaId, id != roomIds.back());
     });
 
-    host.mpMap->update();
+    if (result) {
+        host.mpMap->update();
+    }
     lua_pushboolean(L, result);
     return 1;
 }
