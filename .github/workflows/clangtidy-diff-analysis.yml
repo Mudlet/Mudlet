@@ -19,7 +19,7 @@ jobs:
             buildname: 'clang-tidy'
             triplet: x64-linux
             compiler: clang_64
-            qt: '5.14.1'
+            qt: '5.14.2'
 
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
