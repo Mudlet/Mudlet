@@ -9,7 +9,7 @@
 
 project(lua)
 
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.25.1)
 
 set(HDR_LIBLUA
     src/lapi.h
