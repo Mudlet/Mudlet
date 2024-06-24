@@ -276,7 +276,7 @@ inline QDebug operator<<(QDebug debug, const TRoom* room)
     if (!customLines.isEmpty()) {
         debug.nospace() << ", customlines=(";
         for (auto it = customLines.constBegin(); it != customLines.constEnd(); ++it) {
-            debug.nospace() << it.key().toLower() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower()
+            debug.nospace() << it.key() << ": " << it.value() << " (color: " << customLinesColor.value(it.key()).name().toLower()
                             << ", arrow: " << (customLinesArrow.value(it.key()) ? "yes" : "no") << ", style: " << static_cast<int>(customLinesStyle.value(it.key())) << "), ";
         }
         debug.nospace() << ")";
