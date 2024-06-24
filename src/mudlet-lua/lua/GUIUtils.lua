@@ -2512,7 +2512,17 @@ local function copy2color(name,win,str,inst)
   end
   result = result .. endspan
   if name == "copy2html" then
-    local conversions = {["¦"] = "&brvbar;", ["×"] = "&times;", ["«"] = "&#171;", ["»"] = "&raquo;"}
+    local conversions = {
+      ["¦"] = "&brvbar;", 
+      ["×"] = "&times;", 
+      ["«"] = "&#171;", 
+      ["»"] = "&raquo;",
+      ["<"] = "&lt;",
+      [">"] = "&gt;",
+      ['"'] = "&quot;",
+      ["'"] = "&#39;",
+      ["&"] = "&amp;"
+    }
     for from, to in pairs(conversions) do
       result = string.gsub(result, from, to)
     end
