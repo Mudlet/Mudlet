@@ -126,6 +126,9 @@ VERSION = 4.17.2
 BUILD = $$(MUDLET_VERSION_BUILD)
 !isEmpty(BUILD) {
     BUILD = ${BUILD}-${GIT_SHA1}
+} else {
+    BUILD = "-dev-"$${GIT_SHA1}
+}
 }
 
 # Write BUILD to app-build.txt, note that this adds a newline to the file
