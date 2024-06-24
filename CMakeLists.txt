@@ -202,6 +202,12 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
+if(APPLE OR WIN32)
+  git_submodule_init(
+    CHECK_FILE "3rdparty/sentry-native/CMakeLists.txt" SUBMODULE_PATH
+    "3rdparty/sentry-native" READABLE_NAME "sentry-native")
+endif()
+
 if(USE_OWN_QTKEYCHAIN)
   git_submodule_init(
     CHECK_FILE "3rdparty/qtkeychain/CMakeLists.txt"
@@ -254,6 +260,15 @@ if(CCACHE_FOUND)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
 endif(CCACHE_FOUND)
+
+set(SENTRY_BACKEND "crashpad")
+set(SENTRY_INTEGRATION_QT "ON")
+set(SENTRY_INCLUDE_DIR "3rdparty/sentry-native/include")
+set(SENTRY_LIBRARIES "3rdparty/sentry-native")
+
+if(APPLE OR WIN32)
+  add_subdirectory(3rdparty/sentry-native)
+endif()
 
 add_subdirectory(3rdparty/edbee-lib/edbee-lib)
 add_subdirectory(3rdparty/communi)

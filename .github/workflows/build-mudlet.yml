@@ -49,12 +49,17 @@ jobs:
     env:
       BOOST_ROOT: ${{github.workspace}}/3rdparty/boost
       BOOST_URL: https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2/download
-
+      SENTRY_ORG: mehul-mathur
+      SENTRY_PROJECT: native-qt-mac
+      SENTRY_AUTH_TOKEN: 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
+      SENTRY_DSN: https://862262634976c37a509b4ff8041dbbcb@o4506746708361216.ingest.us.sentry.io/4507063727620096
+      
+  
     steps:
     - name: Checkout Mudlet source code
       uses: actions/checkout@v4
       with:
-        submodules: true
+        submodules: recursive
         fetch-depth: 0
 
     - name: Install Qt

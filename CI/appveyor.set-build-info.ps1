@@ -29,6 +29,10 @@ if ($Env:APPVEYOR_REPO_TAG -eq "false") {
 # not all systems we deal with allow uppercase ascii characters
 $Env:MUDLET_VERSION_BUILD = "$Env:MUDLET_VERSION_BUILD".ToLower()
 $Env:BUILD_COMMIT = "$Env:BUILD_COMMIT".ToLower()
+$Env:SENTRY_ORG = "mehul-mathur"
+$Env:SENTRY_PROJECT = "native-qt-windows"
+$Env:SENTRY_AUTH_TOKEN = "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"
+$Env:SENTRY_DSN = "https://f6e9db5d18fcf0d1fd241f96e6dff72a@o4506746708361216.ingest.us.sentry.io/4507080912797696"
 
 $VersionLine = Select-String -Pattern "Version =" $Env:APPVEYOR_BUILD_FOLDER/src/mudlet.pro
 $VersionRegex = [regex]'= {1}(.+)$'

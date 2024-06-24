@@ -492,6 +492,10 @@ macx:LIBS += -lz
 
 INCLUDEPATH += ../3rdparty/discord/rpc/include
 
+macx|win32 {
+    INCLUDEPATH += ../3rdparty/sentry-native/include
+}
+
 # Define a preprocessor symbol with the default fallback location from which
 # to load installed mudlet lua files. Set LUA_DEFAULT_DIR to a
 # platform-specific value. If LUA_DEFAULT_DIR is unset, the root directory
@@ -524,6 +528,8 @@ DEFINES += LUA_DEFAULT_PATH=\\\"$${LUA_DEFAULT_DIR}\\\"
 # lua packages used via the luarocks sub-system, most specifically "utf8".  This
 # method has NOT been checked thoroughly though, so YMMV.
 win32 {
+    system("cd $${PWD}\.. & git submodule update --init --recursive 3rdparty/sentry-native")
+
     # Use a check explicitly based on where the project file is in the sources
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
@@ -543,6 +549,9 @@ win32 {
         }
     }
 } else {
+    macx {
+        system("cd $${PWD}/.. ; git submodule update --init --recursive 3rdparty/sentry-native")
+    }
     !exists("$${PWD}/../3rdparty/edbee-lib/edbee-lib/edbee-lib.pri") {
         message("git submodule for required edbee-lib editor widget missing from source code, executing 'git submodule update --init' to get it...")
         system("cd $${PWD}/.. ; git submodule update --init 3rdparty/edbee-lib")
@@ -882,6 +891,10 @@ HEADERS += \
     widechar_width.h \
     ../3rdparty/discord/rpc/include/discord_register.h \
     ../3rdparty/discord/rpc/include/discord_rpc.h
+    
+macx|win32 {
+    HEADERS += ../3rdparty/sentry-native/include/sentry.h
+}
 
 macx|win32 {
     macx {
