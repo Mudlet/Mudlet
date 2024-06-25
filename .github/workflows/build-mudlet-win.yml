@@ -107,7 +107,21 @@ jobs:
       if: env.UPLOAD_FILENAME
       run: |
         $uri = "https://make.mudlet.org/snapshots/gha_queue.php?artifact_name=$($env:UPLOAD_FILENAME)&unzip=$($env:PARAM_UNZIP)"
-        Invoke-WebRequest -Uri $uri -Method Post
+        try {
+          $response = Invoke-WebRequest -Uri $uri -Method Post -ErrorAction Stop
+          Write-Output "Submission successful"
+        }
+        catch {
+          $errorMessage = $_.Exception.Message
+          if ($errorMessage -like "*Artifact is not unique*") {
+            Write-Output "Info: Artifact was already submitted and is not unique. Continuing..."
+            exit 0
+          }
+          else {
+            Write-Error "An error occurred: $errorMessage"
+            exit 1
+          }
+        }
       shell: pwsh
 
     - name: Register Release
