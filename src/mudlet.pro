@@ -129,7 +129,6 @@ BUILD = $$(MUDLET_VERSION_BUILD)
 } else {
     BUILD = "-dev-"$${GIT_SHA1}
 }
-}
 
 # Write BUILD to app-build.txt, note that this adds a newline to the file
 write_file(app-build.txt, BUILD)
