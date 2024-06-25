@@ -115,8 +115,8 @@ endif()
 # APP_BUILD is going away (it is not currently used in the source code now as
 # Mudlet instead reads it from the resource file) however until the CI/CB system
 # is cleaned up to not use it in any way in the
-# /CI/(travis|appveyor).validate_deployment.(sh|ps1) scripts we probably have to
-# leave it in place:
+# /CI/travis.validate_deployment.sh script we probably have to leave it in
+# place:
 #
 # IMPORTANT: To insure consistency please ensure the SAME of the first two
 # values are also assigned to the "VERSION" and "BUILD" variables in the native

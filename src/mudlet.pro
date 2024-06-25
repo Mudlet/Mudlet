@@ -170,7 +170,7 @@ isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
 # APP_BUILD is going away (it is not currently used in the source code now as
 # Mudlet instead reads it from the resource file) however until the CI/CB system
 # is cleaned up to not use it in any way in the
-# /CI/(travis|appveyor).validate_deployment.(sh|ps1) scripts we probably have to
+# /CI/travis.validate_deployment.sh script we probably have to
 # leave it in place:
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${BUILD}\\\"
@@ -1660,7 +1660,6 @@ win32 {
 # This is a list of files that we want to show up in the Qt Creator IDE that are
 # not otherwise used by the main project:
 OTHER_FILES += \
-    ../.appveyor.yml \
     ../.crowdin.yml \
     ../.devcontainer/Dockerfile \
     ../.devcontainer/devcontainer.json \
@@ -1678,12 +1677,15 @@ OTHER_FILES += \
     ../.github/repo-metadata.yml \
     ../.github/SUPPORT.md \
     ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/build-mudlet-win.yml \
     ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/clangtidy-post-comments.yml \
     ../.github/workflows/codeql-analysis.yml \
     ../.github/workflows/codespell-analysis.yml \
     ../.github/workflows/dangerjs.yml \
     ../.github/workflows/generate-changelog.yml \
     ../.github/workflows/generate-coder-attribution.yml \
+    ../.github/workflows/qridlayout-ordering.yml \
     ../.github/workflows/link-ptbs-to-dblsqd.yml \
     ../.github/workflows/performance-analysis.yml \
     ../.github/workflows/tag-pull-requests.yml \
@@ -1693,16 +1695,7 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.gitignore \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.build.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.validate_deployment.ps1 \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/generate-changelog.lua \
-    ../CI/mudlet-deploy-key.enc \
-    ../CI/mudlet-deploy-key-windows.ppk \
     ../CI/qt-silent-install.qs \
     ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
