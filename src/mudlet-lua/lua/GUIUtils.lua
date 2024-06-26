@@ -2516,11 +2516,7 @@ local function copy2color(name,win,str,inst)
 
     char = utf8.sub(line, index, index)
     if name == "copy2html" then
-      for from, to in pairs(conversions) do
-        if char == from then
-          char = to
-        end
-      end
+      char = conversions[char] or char -- replace HTML entities (if they are in the table)
     end
 
     if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
