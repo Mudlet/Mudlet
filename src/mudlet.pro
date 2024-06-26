@@ -122,7 +122,7 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 # Set Mudlet version (update in CMakeLists.txt as well)
 VERSION = 4.17.2
 
-# Set BUILD based on MUDLET_VERSION_BUILD or default
+# Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
 BUILD = $$(MUDLET_VERSION_BUILD)
 !isEmpty(BUILD) {
     BUILD = ${BUILD}-${GIT_SHA1}
