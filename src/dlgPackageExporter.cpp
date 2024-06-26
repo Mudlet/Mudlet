@@ -97,6 +97,10 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     connect(mExportButton, &QAbstractButton::clicked, this, &dlgPackageExporter::slot_exportPackage);
     connect(ui->pushButton_packageLocation, &QPushButton::clicked, this, &dlgPackageExporter::slot_openPackageLocation);
     connect(ui->lineEdit_packageName, &QLineEdit::textChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
+    connect(ui->lineEdit_author, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    connect(ui->lineEdit_title, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    connect(ui->lineEdit_version, &QLineEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
+    connect(ui->textEdit_description, &QTextEdit::textChanged, this, &dlgPackageExporter::checkToEnableExportButton);
     connect(this, &dlgPackageExporter::signal_exportLocationChanged, this, &dlgPackageExporter::slot_updateLocationPlaceholder);
     slot_updateLocationPlaceholder();
     connect(ui->packageList, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &dlgPackageExporter::slot_packageChanged);
@@ -347,7 +351,7 @@ void dlgPackageExporter::slot_updateLocationPlaceholder()
 
 void dlgPackageExporter::checkToEnableExportButton()
 {
-    if (ui->lineEdit_packageName->text().isEmpty() || mExportingPackage) {
+    if (ui->lineEdit_packageName->text().isEmpty() || ui->lineEdit_author->text().isEmpty() || ui->lineEdit_title->text().isEmpty() || ui->lineEdit_version->text().isEmpty() || ui->textEdit_description->toPlainText().isEmpty() || mExportingPackage) {
         mExportButton->setEnabled(false);
     } else {
         mExportButton->setEnabled(true);
