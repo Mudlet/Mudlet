@@ -921,6 +921,7 @@ FORMS += \
 
 RESOURCES += \
     mudlet.qrc \
+    default_packages.qrc \
     ../translations/translated/qm.qrc
 
 contains(DEFINES, "INCLUDE_VARIABLE_SPLASH_SCREEN") {

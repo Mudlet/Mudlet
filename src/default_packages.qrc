@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>deleteOldProfiles.mpackage</file>
+        <file>echo.mpackage</file>
+        <file>enable-accessibility.mpackage</file>
+        <file>generic_mapper.mpackage</file>
+        <file>run-lua-code-v4.mpackage</file>
+    </qresource>
+</RCC>
