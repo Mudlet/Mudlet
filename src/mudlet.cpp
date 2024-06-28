@@ -2975,14 +2975,14 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
             if (isAPINotGame) {
                 pHost->mpMedia->muteMedia(TMediaData:MediaProtocolAPI);
             } else {
-                pHost->mpMedia->muteMedia(TMediaData:MediaProtocolMCMP);
+                pHost->mpMedia->muteMedia(TMediaData:MediaProtocolGMCP);
                 pHost->mpMedia->muteMedia(TMediaData:MediaProtocolMSP);
             }
         } else {
             if (isAPINotGame) {
                 pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolAPI);
             } else {
-                pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolMCMP);
+                pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolGMCP);
                 pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolMSP);
             }
         }
