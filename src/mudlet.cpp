@@ -2973,17 +2973,17 @@ void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction,
     for (auto pHost : mHostManager) {
         if (state) {
             if (isAPINotGame) {
-                pHost->mpMedia->muteMedia(TMediaData:MediaProtocolAPI);
+                pHost->mpMedia->muteMedia(TMediaData::MediaProtocolAPI);
             } else {
-                pHost->mpMedia->muteMedia(TMediaData:MediaProtocolGMCP);
-                pHost->mpMedia->muteMedia(TMediaData:MediaProtocolMSP);
+                pHost->mpMedia->muteMedia(TMediaData::MediaProtocolGMCP);
+                pHost->mpMedia->muteMedia(TMediaData::MediaProtocolMSP);
             }
         } else {
             if (isAPINotGame) {
-                pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolAPI);
+                pHost->mpMedia->unmuteMedia(TMediaData::MediaProtocolAPI);
             } else {
-                pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolGMCP);
-                pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolMSP);
+                pHost->mpMedia->unmuteMedia(TMediaData::MediaProtocolGMCP);
+                pHost->mpMedia->unmuteMedia(TMediaData::MediaProtocolMSP);
             }
         }
     }
