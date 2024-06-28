@@ -505,7 +505,7 @@ mudlet::mudlet()
     connect(mpActionPackageExporter.data(), &QAction::triggered, this, &mudlet::slot_packageExporter);
     connect(mpActionMuteMedia.data(), &QAction::triggered, this, &mudlet::slot_muteMedia);
     connect(mpActionMuteAPI.data(), &QAction::triggered, this, &mudlet::slot_muteAPI);
-    connect(mpActionMuteGame.data(), &QAction::triggered, this, &mudlet::slot_muteGame;
+    connect(mpActionMuteGame.data(), &QAction::triggered, this, &mudlet::slot_muteGame);
 
     connect(dactionConnect, &QAction::triggered, this, &mudlet::slot_showConnectionDialog);
     connect(dactionReconnect, &QAction::triggered, this, &mudlet::slot_reconnect);
