@@ -2963,7 +2963,7 @@ void mudlet::slot_multiView(const bool state)
     }
 }
 
-void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText)
+void mudlet::toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText)
 {
     if (toolbarAction->isChecked() != state || menuAction->isChecked() != state) {
         toolbarAction->setChecked(state);
@@ -2972,9 +2972,19 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
 
     for (auto pHost : mHostManager) {
         if (state) {
-            pHost->mpMedia->muteMedia(protocol);
+            if (isAPINotGame) {
+                pHost->mpMedia->muteMedia(TMediaData:MediaProtocolAPI);
+            } else {
+                pHost->mpMedia->muteMedia(TMediaData:MediaProtocolMCMP);
+                pHost->mpMedia->muteMedia(TMediaData:MediaProtocolMSP);
+            }
         } else {
-            pHost->mpMedia->unmuteMedia(protocol);
+            if (isAPINotGame) {
+                pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolAPI);
+            } else {
+                pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolMCMP);
+                pHost->mpMedia->unmuteMedia(TMediaData:MediaProtocolMSP);
+            }
         }
     }
 
@@ -3020,12 +3030,12 @@ void mudlet::toggleMuteForProtocol(bool state, QAction* toolbarAction, QAction* 
 
 void mudlet::slot_muteAPI(const bool state)
 {
-    toggleMuteForProtocol(state, mpActionMuteAPI, dactionMuteAPI, true, tr("Unmute sounds from Mudlet (Triggers, Scripts, etc.)"), tr("Mute sounds from Mudlet (Triggers, Scripts, etc.)"));
+    toggleMute(state, mpActionMuteAPI, dactionMuteAPI, true, tr("Unmute sounds from Mudlet (Triggers, Scripts, etc.)"), tr("Mute sounds from Mudlet (Triggers, Scripts, etc.)"));
 }
 
 void mudlet::slot_muteGame(const bool state)
 {
-    toggleMuteForProtocol(state, mpActionMuteGame, dactionMuteGame, false, tr("Unmute sounds from the game (MCMP, MSP)", tr("Mute sounds from the game (MCMP, MSP)")));
+    toggleMute(state, mpActionMuteGame, dactionMuteGame, false, tr("Unmute sounds from the game (MCMP, MSP)", tr("Mute sounds from the game (MCMP, MSP)")));
 }
 
 void mudlet::slot_muteMedia()
