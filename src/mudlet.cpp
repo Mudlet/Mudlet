@@ -3035,7 +3035,7 @@ void mudlet::slot_muteAPI(const bool state)
 
 void mudlet::slot_muteGame(const bool state)
 {
-    toggleMute(state, mpActionMuteGame, dactionMuteGame, false, tr("Unmute sounds from the game (MCMP, MSP)", tr("Mute sounds from the game (MCMP, MSP)")));
+    toggleMute(state, mpActionMuteGame, dactionMuteGame, false, tr("Unmute sounds from the game (MCMP, MSP)"), tr("Mute sounds from the game (MCMP, MSP)"));
 }
 
 void mudlet::slot_muteMedia()
