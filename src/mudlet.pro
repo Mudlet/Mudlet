@@ -119,42 +119,27 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 }
 
 
-########################## Version and Build setting ###########################
-# Set the current Mudlet Version, unfortunately the Qt documentation suggests
-# that only a #.#.# form without any other alphanumberic suffixes is required:
+# Set Mudlet version (update in CMakeLists.txt as well)
 VERSION = 4.17.2
 
-# if you are distributing modified code, it would be useful if you
-# put something distinguishing into the MUDLET_VERSION_BUILD environment
-# variable (it should use '-' as the first character) to make identification of
-# the used version simpler
-# Note: the qmake APP_BUILD variable is NOT a built-in one
-APP_BUILD = $$(MUDLET_VERSION_BUILD)
-isEmpty( APP_BUILD ) {
-# Possible values that could be seen are:
-# "-dev" for a development build
-# "-ptb..." for a public test build
-# "" for the release build
-# A core dev team member setting things up for a release should comment out the
-# following line - which forces APP_BUILD to take on a value IF IT WAS NOT SET IN THE
-# ENVIROMENT - as the app-build.txt file must not contain anything (other
-# than whitespace) for a RELEASE build. Note that it is sufficent to JUST
-# comment out this line - to leave the variable empty - if the environmental
-# one is also empty as the latter will not be for PTB ones and this bit will
-# not be used in that case:
-   APP_BUILD = "-dev-"$${GIT_SHA1}
+# Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
+BUILD = $$(MUDLET_VERSION_BUILD)
+!isEmpty(BUILD) {https://mc.pathetech.com/
+    BUILD = ${BUILD}-${GIT_SHA1}
 } else {
-   APP_BUILD = $${APP_BUILD}-$${GIT_SHA1}
+    BUILD = "-dev-"$${GIT_SHA1}
 }
 
-# This does append a line-feed to the file which would be problematic if it
-# wasn't trimmed off when read:
-write_file( app-build.txt, APP_BUILD )
+# Write BUILD to app-build.txt, note that this adds a newline to the file
+write_file(app-build.txt, BUILD)
 
-isEmpty( APP_BUILD ) {
-    !build_pass:message("Value written to app-build.txt file: {nothing}")
-} else {
-    !build_pass:message("Value written to app-build.txt file: " $${APP_BUILD})
+# Log the value written to app-build.txt
+!build_pass {
+    isEmpty(BUILD) {
+        message("Value written to app-build.txt file: {nothing}")
+    } else {
+        message("Value written to app-build.txt file: " $${BUILD})
+    }
 }
 
 # As the above also modifies the splash screen image (so developers get reminded
@@ -173,7 +158,7 @@ isEmpty( WITH_VS_SCREEN_TEST ) | !equals(WITH_VS_SCREEN_TEST, "NO" ) {
 # APP_BUILD is going away (it is not currently used in the source code now as
 # Mudlet instead reads it from the resource file) however until the CI/CB system
 # is cleaned up to not use it in any way in the
-# /CI/(travis|appveyor).validate_deployment.(sh|ps1) scripts we probably have to
+# /CI/travis.validate_deployment.sh script we probably have to
 # leave it in place:
 DEFINES += APP_VERSION=\\\"$${VERSION}\\\"
 DEFINES += APP_BUILD=\\\"$${APP_BUILD}\\\"
@@ -1667,7 +1652,6 @@ win32 {
 # This is a list of files that we want to show up in the Qt Creator IDE that are
 # not otherwise used by the main project:
 OTHER_FILES += \
-    ../.appveyor.yml \
     ../.crowdin.yml \
     ../.devcontainer/Dockerfile \
     ../.devcontainer/devcontainer.json \
@@ -1685,12 +1669,15 @@ OTHER_FILES += \
     ../.github/repo-metadata.yml \
     ../.github/SUPPORT.md \
     ../.github/workflows/build-mudlet.yml \
+    ../.github/workflows/build-mudlet-win.yml \
     ../.github/workflows/clangtidy-diff-analysis.yml \
+    ../.github/workflows/clangtidy-post-comments.yml \
     ../.github/workflows/codeql-analysis.yml \
     ../.github/workflows/codespell-analysis.yml \
     ../.github/workflows/dangerjs.yml \
     ../.github/workflows/generate-changelog.yml \
     ../.github/workflows/generate-coder-attribution.yml \
+    ../.github/workflows/qridlayout-ordering.yml \
     ../.github/workflows/link-ptbs-to-dblsqd.yml \
     ../.github/workflows/performance-analysis.yml \
     ../.github/workflows/tag-pull-requests.yml \
@@ -1700,16 +1687,7 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.gitignore \
-    ../CI/appveyor.after_success.ps1 \
-    ../CI/appveyor.build.ps1 \
-    ../CI/appveyor.functions.ps1 \
-    ../CI/appveyor.install.ps1 \
-    ../CI/appveyor.set-build-info.ps1 \
-    ../CI/appveyor.validate_deployment.ps1 \
-    ../CI/copy-non-qt-win-dependencies.ps1 \
     ../CI/generate-changelog.lua \
-    ../CI/mudlet-deploy-key.enc \
-    ../CI/mudlet-deploy-key-windows.ppk \
     ../CI/qt-silent-install.qs \
     ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
