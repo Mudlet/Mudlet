@@ -138,6 +138,11 @@ dlgPackageExporter::dlgPackageExporter(QWidget *parent, Host* pHost)
     //: Title of the window. The %1 will be replaced by the current profile's name
     setWindowTitle(tr("Package Exporter - %1").arg(mpHost->getName()));
 
+    // Set the previous details if saved
+    QSettings settings("mudlet", "Mudlet");
+    auto packageAuthor = settings.value(qsl("packageAuthor"), QString()).toString();
+    ui->lineEdit_author->setText(packageAuthor);
+
     // Ensure this dialog goes away if the Host (profile) is closed while we are
     // open - as this is parented to the mudlet instance rather than the Host
     // of the profile it would otherwise be left around if only the profile was
@@ -605,6 +610,11 @@ void dlgPackageExporter::slot_exportPackage()
         mCloseButton->setVisible(true);
         QApplication::restoreOverrideCursor();
     }
+
+    // save settings for future reuse
+    QSettings settings("mudlet", "Mudlet");
+    settings.setValue("packageAuthor", ui->lineEdit_author->text());
+    settings.setValue("packagePath", getActualPath());
 }
 
 //copy the newly-added description image files
@@ -1522,7 +1532,15 @@ void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
 
 QString dlgPackageExporter::getActualPath() const
 {
-    return mPackagePath.isEmpty() ? QStandardPaths::writableLocation(QStandardPaths::DesktopLocation) : mPackagePath;
+    QSettings settings("mudlet", "Mudlet");
+
+    auto packagePath = settings.value(qsl("packagePath"), QString()).toString();
+
+    if (packagePath.isEmpty()) {
+        packagePath = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
+    }
+
+    return mPackagePath.isEmpty() ? packagePath : mPackagePath;
 }
 
 void dlgPackageExporter::slot_cancelExport()
