@@ -20,7 +20,7 @@ else
       error "mudlet.pro's VERSION variable isn't formatted following the semantic versioning rules in a release build."
     fi
 
-    VALID_BUILD=$(pcregrep --only-matching=1 ' +BUILD ? = ? ("")' < src/mudlet.pro)
+    VALID_BUILD=$(pcregrep --only-matching=1 'BUILD ? = ? ("")' < src/mudlet.pro)
     if [ "${VALID_BUILD}" != '""' ]; then
       error "mudlet.pro's BUILD variable isn't set to \"\" as it should be in a release build."
     fi
