@@ -290,7 +290,15 @@ else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
 
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "${DEPLOY_SSH_KEY}" "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    # write contents of the ssh key out to a temporary file
+    #temp_key_file=$(mktemp)
+    #chmod 600 "$temp_key_file"
+
+    #echo "$DEPLOY_SSH_KEY" > "$temp_key_file"
+
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i <(echo "$DEPLOY_SSH_KEY") "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+    #shred -u "$temp_key_file"
+
     if [ $? -ne 0 ]; then
         echo "installer upload failed" >&2
         exit 1
