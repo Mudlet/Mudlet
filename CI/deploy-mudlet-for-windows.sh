@@ -295,7 +295,7 @@ else
     # process substituion didn't work, "Identity file /dev/fd/63 not accessible: No such file or directory."
     # chmod 600 doesn't take effect either, chmod doesn't work
 
-    powershell.exe -Command "icacls.exe $(cygpath -w "$temp_key_file") /inheritance:r"
+    powershell.exe -Command "icacls.exe temp_key_file /inheritance:r"
 
     powershell.exe <<EOF
 \$installerExePath = "$installerExePath"
