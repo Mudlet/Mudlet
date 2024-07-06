@@ -77,13 +77,19 @@ jobs:
       shell: msys2 {0}
       run: $GITHUB_WORKSPACE/CI/package-mudlet-for-windows.sh
 
+    - name: add ssh-agent for tag deployment
+      if: startsWith(github.ref, 'refs/tags/Mudlet-')
+      uses: webfactory/ssh-agent@v0.7.0 # 0.9.0 doesn't seem to work well in windows: https://github.com/webfactory/ssh-agent/pull/17#issuecomment-1798849240
+      with:
+        ssh-private-key: ${{secrets.UPLOAD_PRIVATEKEY}}
+
     - name: (Windows) Deploy
       shell: msys2 {0}
       env:
         DBLSQD_USER: ${{secrets.DBLSQD_USER}}
         DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
         DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
-        DEPLOY_SSH_KEY: ${{secrets.DEPLOY_SSH_KEY}}
+        DEPLOY_SSH_USERNAME: ${{secrets.UPLOAD_USERNAME}} # FIXME: unused
         DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
         WIN_SIGNING_PASS: ${{secrets.WIN_SIGNING_PASS}}
         GITHUB_REPO_NAME: ${{ github.repository }}
