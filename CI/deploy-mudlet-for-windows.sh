@@ -296,9 +296,9 @@ else
 
     echo "$DEPLOY_SSH_KEY" > temp_key_file
 
-    # process substituion didn't work, "Identity file /dev/fd/63 not accessible: No such file or directory."
-    # chmod 600 doesn't take effect either, chmod doesn't work
-
+    # chown doesn't work in msys2 and scp requires the not be globally readable
+    # use a powershell workaround to set the permissions correctly
+    echo "Fixing permissions of private key file"
     powershell.exe -Command "icacls.exe temp_key_file /inheritance:r"
 
     powershell.exe <<EOF
@@ -309,12 +309,12 @@ EOF
 
     shred -u temp_key_file
 
-    if [ $? -ne 0 ]; then
-        echo "installer upload failed" >&2
-        exit 1
-    fi
-
     DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
+
+    if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
+      echo "Error: release not found as expected at $DEPLOY_URL"
+      exit 1
+    fi
 
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
 
