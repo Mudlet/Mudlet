@@ -290,14 +290,20 @@ else
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
 
-    # write contents of the ssh key out to a temporary file
-    #temp_key_file=$(mktemp)
-    #chmod 600 "$temp_key_file"
+    echo "$DEPLOY_SSH_KEY" > temp_key_file
 
-    #echo "$DEPLOY_SSH_KEY" > "$temp_key_file"
+    # process substituion didn't work, "Identity file /dev/fd/63 not accessible: No such file or directory."
+    # chmod 600 doesn't take effect either, chmod doesn't work
 
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i <(echo "$DEPLOY_SSH_KEY") "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
-    #shred -u "$temp_key_file"
+    powershell.exe -Command "icacls.exe $(cygpath -w "$temp_key_file") /inheritance:r"
+
+    powershell.exe <<EOF
+\$installerExePath = "$installerExePath"
+\$DEPLOY_PATH = "$DEPLOY_PATH"
+scp.exe -i temp_key_file -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \$installerExePath mudmachine@mudlet.org:\${DEPLOY_PATH}
+EOF
+
+    shred -u temp_key_file
 
     if [ $? -ne 0 ]; then
         echo "installer upload failed" >&2
