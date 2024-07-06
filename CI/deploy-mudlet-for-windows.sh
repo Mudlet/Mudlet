@@ -318,6 +318,9 @@ EOF
 
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
 
+    echo "=== Updating WP-Download-Manager ==="
+    echo "sha256 of installer: $SHA256SUM"
+
     # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
     curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
     -H "x-wp-download-token: ${DEPLOY_KEY_PASS}" \
