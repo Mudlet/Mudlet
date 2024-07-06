@@ -336,7 +336,7 @@ else
   echo "$Changelog"
 
   echo "=== Creating release in Dblsqd ==="
-  VersionString="${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT,,}"
+  VersionString="${VERSION}"
   export VersionString
 
   # This may fail as a build from another architecture may have already registered a release with dblsqd,
