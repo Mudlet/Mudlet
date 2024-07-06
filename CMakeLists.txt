@@ -103,7 +103,7 @@ else()
 endif()
 
 # Set APP_VERSION (update in mudlet.pro as well)
-set(APP_VERSION 4.17.2)
+set(APP_VERSION 4.17.99)
 
 # Set APP_BUILD based on environment variable MUDLET_VERSION_BUILD or default
 if(DEFINED ENV{MUDLET_VERSION_BUILD} AND NOT $ENV{MUDLET_VERSION_BUILD} STREQUAL "")
@@ -113,14 +113,14 @@ else()
 endif()
 
 # Write to app-build.txt and set APP_BUILD
-file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
-message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
-set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
+# file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt "${BUILD_VALUE}")
+# message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
+# set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 # For release builds, comment out the above and uncomment below:
-# file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
-# message(STATUS "Value written to app-build.txt file: {nothing}")
-# set(APP_BUILD "" CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
+file(WRITE ${CMAKE_SOURCE_DIR}/src/app-build.txt " ")
+message(STATUS "Value written to app-build.txt file: {nothing}")
+set(APP_BUILD "" CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
