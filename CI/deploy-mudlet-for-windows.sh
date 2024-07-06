@@ -255,7 +255,11 @@ else
   rm -rf "${PACKAGE_DIR:?}/*"
 
   echo "=== Copying installer over ==="
-  installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+  if [[ "$PublicTestBuild" == "true" ]]; then
+    installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+  else
+    installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION-windows-$BUILD_BITNESS.exe"
+  fi
   mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
 
   # Check if the setup executable exists
