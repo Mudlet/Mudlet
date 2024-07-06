@@ -305,13 +305,13 @@ else
     -F "file_permission=-1" \
     -F "output=json" \
     -F "do=Add File"
-    
+
     RELEASE_TAG="release"
     CHANGELOG_MODE="release"
   fi
 
   echo "=== Installing NodeJS ==="
-  choco install nodejs --version="22.1.0" -y -r -n
+  choco install --no-progress nodejs --version="22.1.0" -y -r -n
   PATH="/c/Program Files/nodejs/:/c/npm/prefix/:${PATH}"
   export PATH
 
@@ -325,7 +325,7 @@ else
 
   echo "=== Generating a changelog ==="
   cd "$GITHUB_WORKSPACE/CI" || exit 1
-  
+
   Changelog=$(lua5.1 "${GITHUB_WORKSPACE}/CI/generate-changelog.lua" --mode "$CHANGELOG_MODE" --releasefile "$DownloadedFeed")
   cd - || exit 1
   echo "$Changelog"
