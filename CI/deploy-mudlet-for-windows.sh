@@ -286,10 +286,11 @@ else
     moveToUploadDir "$uploadFilename" 1
     RELEASE_TAG="public-test-build"
     CHANGELOG_MODE="ptb"
-  else
+  else # release build
 
     echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "${DEPLOY_SSH_KEY}" "$installerExePath" "mudmachine@mudlet.org:${DEPLOY_PATH}"
     if [ $? -ne 0 ]; then
         echo "installer upload failed" >&2
         exit 1
