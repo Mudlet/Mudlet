@@ -309,7 +309,7 @@ EOF
 
     shred -u temp_key_file
 
-    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS.exe"
 
     if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
       echo "Error: release not found as expected at $DEPLOY_URL"
