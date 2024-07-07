@@ -135,10 +135,15 @@ if [ "${DEPLOY}" = "deploy" ]; then
         echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-macos"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
-    else
+    else # release build
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+
+      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
+        echo "Error: release not found as expected at $DEPLOY_URL"
+        exit 1
+      fi
 
       SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}.dmg" | awk '{print $1}')
 

@@ -110,9 +110,16 @@ then
         echo "UPLOAD_FILENAME=Mudlet-$VERSION$MUDLET_VERSION_BUILD-${BUILD_COMMIT}-linux-x64"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
-    else
+    else # release build
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet-${VERSION}-linux-x64.AppImage.tar" "mudmachine@mudlet.org:${DEPLOY_PATH}"
+
+      DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
+      if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
+        echo "Error: release not found as expected at $DEPLOY_URL"
+        exit 1
+      fi
+
       # upload an unzipped, unversioned release for appimage.github.io
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "Mudlet.AppImage" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-linux-x64.AppImage.tar"
