@@ -49,7 +49,7 @@ void GMCPAuthenticator::sendCredentials()
     auto character = mpHost->getLogin();
     auto password = mpHost->getPass();
     QJsonObject credentials;
-    if (character.isEmpty() && password.isEmpty()) {
+    if (character.isEmpty() || password.isEmpty()) {
         return;
     }
 
