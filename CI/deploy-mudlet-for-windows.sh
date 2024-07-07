@@ -284,7 +284,7 @@ else
   if [[ "$PublicTestBuild" == "true" ]]; then
     echo "=== Uploading public test build to make.mudlet.org ==="
 
-    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
+    uploadFilename="Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS-installer.exe"
 
     # Installer named $uploadFilename should exist in $PACKAGE_DIR now, we're ok to proceed
     moveToUploadDir "$uploadFilename" 1
@@ -309,7 +309,7 @@ EOF
 
     shred -u temp_key_file
 
-    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS.exe"
+    DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}-windows-$BUILD_BITNESS-installer.exe"
 
     if ! curl --output /dev/null --silent --head --fail "$DEPLOY_URL"; then
       echo "Error: release not found as expected at $DEPLOY_URL"
@@ -318,6 +318,9 @@ EOF
 
     SHA256SUM=$(shasum -a 256 "$installerExePath" | awk '{print $1}')
 
+    # blank echo to remove the stray 'PS D:\a\Mudlet\Mudlet\installers\windows> ' that shows up otherwise
+
+    echo ""
     echo "=== Updating WP-Download-Manager ==="
     echo "sha256 of installer: $SHA256SUM"
 
