@@ -49,10 +49,13 @@ void GMCPAuthenticator::sendCredentials()
     auto character = mpHost->getLogin();
     auto password = mpHost->getPass();
     QJsonObject credentials;
-    if (!character.isEmpty() && !password.isEmpty()) {
-        credentials["account"] = character;
-        credentials["password"] = password;
+    if (character.isEmpty() && password.isEmpty()) {
+        return;
     }
+
+    credentials["account"] = character;
+    credentials["password"] = password;
+
     QJsonDocument doc(credentials);
     QString gmcpMessage = doc.toJson(QJsonDocument::Compact);
 
