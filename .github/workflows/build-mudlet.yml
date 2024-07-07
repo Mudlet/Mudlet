@@ -326,6 +326,24 @@ jobs:
         AC_USERNAME: ${{secrets.APPLE_USERNAME}}
         AC_PASSWORD: ${{secrets.APPLE_PASSWORD}}
 
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
+      env:
+        DBLSQD_USER: ${{secrets.DBLSQD_USER}}
+        DBLSQD_PASS: ${{secrets.DBLSQD_PASS}}
+        DEPLOY_KEY_PASS: ${{secrets.DEPLOY_KEY_PASS}}
+        DEPLOY_SSH_KEY: ${{secrets.UPLOAD_PRIVATEKEY}}
+        DEPLOY_PATH: ${{secrets.DEPLOY_PATH}}
+        WIN_SIGNING_PASS: ${{secrets.WIN_SIGNING_PASS}}
+        GITHUB_REPO_NAME: ${{ github.repository }}
+        GITHUB_REPO_TAG: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+        GITHUB_SCHEDULED_BUILD: ${{ github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' }}
+        GITHUB_PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+        GITHUB_PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      with:
+        limit-access-to-actor: true
+
     - name: Upload packaged Mudlet
       uses: actions/upload-artifact@v4
       if: env.UPLOAD_FILENAME
