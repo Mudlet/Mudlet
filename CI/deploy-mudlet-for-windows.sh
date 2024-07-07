@@ -323,7 +323,7 @@ EOF
 
     # file_cat=0 assuming Windows is the 0th item in WP-Download-Manager category
     curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
-    -H "x-wp-download-token: ${DEPLOY_KEY_PASS}" \
+    -H "x-wp-download-token: ${X_WP_DOWNLOAD_TOKEN}" \
     -F "file_type=2" \
     -F "file_remote=$DEPLOY_URL" \
     -F "file_name=Mudlet-${VERSION} (windows-$BUILD_BITNESS)" \
