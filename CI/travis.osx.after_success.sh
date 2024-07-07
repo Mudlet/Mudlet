@@ -149,7 +149,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}.dmg" | awk '{print $1}')
 
       # file_cat=1 asuming macOS is the 1st item in WP-Download-Manager category
-      curl -X POST 'https://www.mudlet.org/wp-content/plugins/wp-downloadmanager/download-add.php' \
+      curl -X POST 'https://www.mudlet.org/download-add.php' \
       -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
       -F "file_type=2" \
       -F "file_remote=$DEPLOY_URL" \
