@@ -257,8 +257,8 @@ else
   echo "=== Copying installer over ==="
   if [[ "$PublicTestBuild" == "true" ]]; then
     installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION$MUDLET_VERSION_BUILD-$BUILD_COMMIT-windows-$BUILD_BITNESS.exe"
-  else
-    installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION-windows-$BUILD_BITNESS.exe"
+  else # release
+    installerExePath="${PACKAGE_DIR}/Mudlet-$VERSION-windows-$BUILD_BITNESS-installer.exe"
   fi
   mv "$GITHUB_WORKSPACE/squirreloutput/Setup.exe" "${installerExePath}"
 
