@@ -137,6 +137,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else # release build
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
+      # not sure why, but this has to be run twice for the file to actually be uploaded
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
 
