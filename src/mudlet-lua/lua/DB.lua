@@ -441,8 +441,6 @@ function db:create(db_name, sheets, force)
     db.__env = luasql.sqlite3()
   end
 
-  assert(db_name == db:safe_name(db_name), "Database name contains illegal characters.  Only alphanumeric characters are valid.  Database not created or loaded.")
-
   db_name = db:safe_name(db_name)
 
   if not db.__conn[db_name] or db.__conn[db_name] == 'SQLite3 connection (closed)' or (not io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")) then
