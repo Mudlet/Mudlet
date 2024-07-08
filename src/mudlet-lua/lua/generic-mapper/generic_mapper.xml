@@ -893,7 +893,7 @@ else
 end
 
 if map.setExit(map.currentRoom, otherroom, matches[3]) then
-  if not matches[4] then map.setExit(otherroom, map.currentRoom, mmp.ranytolong(matches[3])) end
+  if not matches[4] then map.setExit(otherroom, map.currentRoom, map.ranytolong(matches[3])) end
 
   map.echo(string.format("Linked %s (%d) to %s (%d) via a %s%s exit.",
     (getRoomName(map.currentRoom) ~= "" and getRoomName(map.currentRoom) or "''"), map.currentRoom, (getRoomName(otherroom) ~= "" and getRoomName(otherroom) or "''"), otherroom, (matches[4] and "one-way " or ''), matches[3]))
@@ -4341,7 +4341,7 @@ function map.roomFind(query, lines)
         string.format(
           "&lt;DarkSlateGrey&gt;%s&lt;DarkSlateGrey&gt;\n", getRoomAreaName(getRoomArea(roomid))
         ),
-        [[map.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
+        [[map.echoPath(map.currentRoom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
@@ -4368,7 +4368,7 @@ function map.roomFind(query, lines)
       fg("DarkSlateGrey")
       echoLink(
         " &gt; Show path\n",
-        [[map.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
+        [[map.echoPath(map.currentRoom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
