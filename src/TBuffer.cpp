@@ -879,7 +879,7 @@ COMMIT_LINE:
         }
 
         const TChar::AttributeFlags attributeFlags =
-                ( ((mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
+                ( (mpHost && mpHost->mBoldIsBright ? TChar::None : (mBold || mpHost->mMxpClient.bold()) ? TChar::Bold : TChar::None)
                 | (mFaint ? TChar::Faint : TChar::None)
                 | ((mItalics || mpHost->mMxpClient.italic()) ? TChar::Italic : TChar::None)
                 | (mOverline ? TChar::Overline : TChar::None)
