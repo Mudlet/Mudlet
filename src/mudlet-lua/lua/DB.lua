@@ -381,7 +381,7 @@ end
 --   "mydatabase", and "../../../../etc/passwd" becomes "etcpasswd". This prevents any possible
 --   security issues with database names.
 function db:safe_name(name)
-  name = name:gsub("[^%a%d]", "")
+  name = name:gsub("[^%ad]", "")
   name = name:lower()
   return name
 end
