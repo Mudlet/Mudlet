@@ -444,7 +444,6 @@ function db:create(db_name, sheets, force)
   db_name = db:safe_name(db_name)
 
   if not db.__conn[db_name] or db.__conn[db_name] == 'SQLite3 connection (closed)' or (not io.exists(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")) then
-    assert(db_name == db:safe_name(db_name), "Santized name does not match argument.  Check you are using the correct database.")
     db.__conn[db_name] = db.__env:connect(getMudletHomeDir() .. "/Database_" .. db_name .. ".db")
     db.__conn[db_name]:setautocommit(false)
     db.__autocommit[db_name] = true
