@@ -1,6 +1,6 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2014, 2016-2021, 2023 by Stephen Lyons             *
+ *   Copyright (C) 2013-2014, 2016-2021, 2023, 2024 by Stephen Lyons       *
  *                                            - slysven@virginmedia.com    *
  *   Copyright (C) 2014-2017 by Ahmed Charles - acharles@outlook.com       *
  *   Copyright (C) 2022 by Thiago Jung Bauermann - bauermann@kolabnow.com  *
@@ -129,7 +129,7 @@ void removeOldNoteColorEmojiFonts()
 
 QTranslator* loadTranslationsForCommandLine()
 {
-    QSettings const settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
+    const QSettings settings_new(QLatin1String("mudlet"), QLatin1String("Mudlet"));
     auto pSettings = new QSettings((settings_new.contains(QLatin1String("pos")) ? QLatin1String("mudlet") : QLatin1String("Mudlet")),
                                    (settings_new.contains(QLatin1String("pos")) ? QLatin1String("Mudlet") : QLatin1String("Mudlet 1.0")));
     auto interfaceLanguage = pSettings->value(QLatin1String("interfaceLanguage")).toString();
@@ -227,15 +227,22 @@ int main(int argc, char* argv[])
     app->setOverrideCursor(QCursor(Qt::WaitCursor));
     app->setOrganizationName(qsl("Mudlet"));
 
-    if (mudlet::scmIsPublicTestVersion) {
+    QFile gitShaFile(":/app-build.txt");
+    gitShaFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    const QString appBuild = QString::fromUtf8(gitShaFile.readAll()).trimmed();
+
+    const bool releaseVersion = appBuild.isEmpty();
+    const bool publicTestVersion = appBuild.startsWith("-ptb");
+
+    if (publicTestVersion) {
         app->setApplicationName(qsl("Mudlet Public Test Build"));
     } else {
         app->setApplicationName(qsl("Mudlet"));
     }
-    if (mudlet::scmIsReleaseVersion) {
+    if (releaseVersion) {
         app->setApplicationVersion(APP_VERSION);
     } else {
-        app->setApplicationVersion(APP_VERSION APP_BUILD);
+        app->setApplicationVersion(QString(APP_VERSION) + appBuild);
     }
 
     QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
@@ -269,6 +276,9 @@ int main(int argc, char* argv[])
                                                    qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."),
                                                    qsl("predefined_game"));
     parser.addOption(onlyPredefinedProfileToShow);
+
+    const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
+    parser.addOption(steamMode);
 
     parser.addPositionalArgument("package", "Path to .mpackage file");
 
@@ -304,6 +314,8 @@ int main(int argc, char* argv[])
                                                                   "                                    repeated."));
         texts << appendLF.arg(QCoreApplication::translate("main", "       -o, --only=<predefined>      make Mudlet only show the specific\n"
                                                                   "                                    predefined game, may be repeated."));
+        texts << appendLF.arg(QCoreApplication::translate("main", "       --steammode                  adjusts Mudlet settings to match\n"
+                                                                  "                                    Steam's requirements."));
         texts << appendLF.arg(QCoreApplication::translate("main", "There are other inherited options that arise from the Qt Libraries which are\n"
                                                                   "less likely to be useful for normal use of this application:"));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
@@ -360,22 +372,20 @@ int main(int argc, char* argv[])
 #if defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "%1 %2%3 (with debug symbols, without optimisations)",
                                                           "%1 is the name of the application like mudlet or Mudlet.exe, %2 is the version number like 3.20 and %3 is a build suffix like -dev")
-                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), QLatin1String(APP_BUILD)));
+                 .arg(QLatin1String(APP_TARGET), QLatin1String(APP_VERSION), appBuild));
 #else // ! defined(QT_DEBUG)
-        texts << QLatin1String(APP_TARGET " " APP_VERSION APP_BUILD " \n");
+        texts << QString::fromStdString(APP_TARGET " " APP_VERSION " " + appBuild.toStdString() + " \n");
 #endif // ! defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main", "Qt libraries %1 (compilation) %2 (runtime)",
              "%1 and %2 are version numbers").arg(QLatin1String(QT_VERSION_STR), qVersion()));
         // PLACEMARKER: Date-stamp needing annual update
-        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2023  Mudlet developers"));
+        texts << appendLF.arg(QCoreApplication::translate("main", "Copyright © 2008-2024  Mudlet developers"));
         texts << appendLF.arg(QCoreApplication::translate("main", "Licence GPLv2+: GNU GPL version 2 or later - http://gnu.org/licenses/gpl.html"));
         texts << appendLF.arg(QCoreApplication::translate("main", "This is free software: you are free to change and redistribute it.\n"
                                                                   "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
         return 0;
     }
-
-
 
     // Handles installing a package from a command line argument.
     // Used when mudlet is used to open an .mpackage file on some operating systems.
@@ -390,15 +400,15 @@ int main(int argc, char* argv[])
     // 1. This current process will start as normal.
     // 2. The package will be queued for install until a profile is selected.
 
-    MudletInstanceCoordinator instanceCoordinator("MudletInstanceCoordinator");
-    const bool firstInstanceOfMudlet = instanceCoordinator.tryToStart();
+    std::unique_ptr<MudletInstanceCoordinator> instanceCoordinator = std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator");
+    const bool firstInstanceOfMudlet = instanceCoordinator->tryToStart();
 
     const QStringList positionalArguments = parser.positionalArguments();
     if (!positionalArguments.isEmpty()) {
         const QString absPath = QDir(positionalArguments.first()).absolutePath();
-        instanceCoordinator.queuePackage(absPath);
+        instanceCoordinator->queuePackage(absPath);
         if (!firstInstanceOfMudlet) {
-            const bool successful = instanceCoordinator.installPackagesRemotely();
+            const bool successful = instanceCoordinator->installPackagesRemotely();
             if (successful) {
                 return 0;
             } else {
@@ -418,18 +428,18 @@ int main(int argc, char* argv[])
 
     const QStringList cliProfiles = parser.values(profileToOpen);
     const QStringList onlyProfiles = parser.values(onlyPredefinedProfileToShow);
-
+    
     const bool showSplash = parser.isSet(showSplashscreen);
-    QImage splashImage = mudlet::getSplashScreen();
+    QImage splashImage = mudlet::getSplashScreen(releaseVersion, publicTestVersion);
 
     if (showSplash) {
         QPainter painter(&splashImage);
         unsigned fontSize = 16;
-        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION APP_BUILD));
+        const QString sourceVersionText = QString(QCoreApplication::translate("main", "Version: %1").arg(APP_VERSION + appBuild));
 
         bool isWithinSpace = false;
         while (!isWithinSpace) {
-            QFont const font("Bitstream Vera Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+            const QFont font("Bitstream Vera Serif", fontSize, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
             QTextLayout versionTextLayout(sourceVersionText, font, painter.device());
             versionTextLayout.beginLayout();
             // Start work in this text item
@@ -441,11 +451,11 @@ int main(int argc, char* argv[])
             //Splashscreen bitmap is (now) 320x360 - hopefully entire line will all fit into 280
             versionTextline.setPosition(QPointF(0, 0));
             // Only pretend, so we can see how much space it will take
-            QTextLine const dummy = versionTextLayout.createLine();
+            const QTextLine dummy = versionTextLayout.createLine();
             if (!dummy.isValid()) {
                 // No second line so have got all text in first so can do it
                 isWithinSpace = true;
-                qreal const versionTextWidth = versionTextline.naturalTextWidth();
+                const qreal versionTextWidth = versionTextline.naturalTextWidth();
                 // This is the ACTUAL width of the created text
                 versionTextline.setPosition(QPointF((320 - versionTextWidth) / 2.0, 270));
                 // And now we can place it centred horizontally
@@ -463,20 +473,20 @@ int main(int argc, char* argv[])
 
         // Repeat for other text, but we know it will fit at given size
         // PLACEMARKER: Date-stamp needing annual update
-        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2023");
-        QFont const font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
+        const QString sourceCopyrightText = qsl("©️ Mudlet makers 2008-2024");
+        const QFont font(qsl("Bitstream Vera Serif"), 16, QFont::Bold | QFont::Serif | QFont::PreferMatch | QFont::PreferAntialias);
         QTextLayout copyrightTextLayout(sourceCopyrightText, font, painter.device());
         copyrightTextLayout.beginLayout();
         QTextLine copyrightTextline = copyrightTextLayout.createLine();
         copyrightTextline.setLineWidth(280);
         copyrightTextline.setPosition(QPointF(1, 1));
-        qreal const copyrightTextWidth = copyrightTextline.naturalTextWidth();
+        const qreal copyrightTextWidth = copyrightTextline.naturalTextWidth();
         copyrightTextline.setPosition(QPointF((320 - copyrightTextWidth) / 2.0, 340));
         copyrightTextLayout.endLayout();
         painter.setPen(QColor(112, 16, 0, 255)); // #701000
         copyrightTextLayout.draw(&painter, QPointF(0, 0));
     }
-    QPixmap const pixmap = QPixmap::fromImage(splashImage);
+    const QPixmap pixmap = QPixmap::fromImage(splashImage);
 #if (QT_VERSION) >= (QT_VERSION_CHECK(5, 15, 0))
     // Specifying the screen here seems to help to put the splash screen on the
     // same monitor that the main application window will be put upon on first
@@ -600,7 +610,7 @@ int main(int argc, char* argv[])
         }
     }
 #else
-    QFile const linkFile(homeLink);
+    const QFile linkFile(homeLink);
     if (!linkFile.exists() && first_launch) {
         QFile::link(homeDirectory, homeLink);
     }
@@ -617,7 +627,7 @@ int main(int argc, char* argv[])
 #endif
 
     // Pass ownership of MudletInstanceCoordinator to mudlet.
-    mudlet::self()->registerInstanceCoordinator(&instanceCoordinator);
+    mudlet::self()->takeOwnershipOfInstanceCoordinator(std::move(instanceCoordinator));
 
     // Handle "QEvent::FileOpen" events.
     FileOpenHandler fileOpenHandler;
@@ -644,6 +654,7 @@ int main(int argc, char* argv[])
     }
 
     mudlet::self()->smMirrorToStdOut = parser.isSet(mirrorToStdout);
+    mudlet::smSteamMode = parser.isSet(steamMode);
     if (!onlyProfiles.isEmpty()) {
         mudlet::self()->onlyShowProfiles(onlyProfiles);
     }
@@ -682,8 +693,8 @@ int main(int argc, char* argv[])
 // return true if we should abort the current launch since the updater got started
 bool runUpdate()
 {
-    QFileInfo updatedInstaller(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup.exe"));
-    QFileInfo seenUpdatedInstaller(QCoreApplication::applicationDirPath() + qsl("/new-mudlet-setup-seen.exe"));
+    QFileInfo updatedInstaller(qsl("%1/new-mudlet-setup.exe").arg(QCoreApplication::applicationDirPath()));
+    QFileInfo seenUpdatedInstaller(qsl("%1/new-mudlet-setup-seen.exe").arg(QCoreApplication::applicationDirPath()));
     QDir updateDir;
     if (updatedInstaller.exists() && updatedInstaller.isFile() && updatedInstaller.isExecutable()) {
         if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
@@ -694,7 +705,7 @@ bool runUpdate()
             qWarning() << "Failed to prep installer: couldn't move" << updatedInstaller.absoluteFilePath() << "to" << seenUpdatedInstaller.absoluteFilePath();
         }
 
-        QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath());
+        QProcess::startDetached(seenUpdatedInstaller.absoluteFilePath(), QStringList());
         return true;
     } else if (seenUpdatedInstaller.exists() && !updateDir.remove(seenUpdatedInstaller.absoluteFilePath())) {
         // no new updater and only the old one? Then we're restarting from an update: delete the old installer

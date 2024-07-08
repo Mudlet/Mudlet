@@ -37,15 +37,19 @@ if(USE_FONTS)
 endif()
 
 if(WIN32)
-  # Neither BUILD nor APP_BUILD does not seem to be available?
+  # APP_BUILD should now be be available
 
-  # if(APP_BUILD matches "-ptb.+")
-  #   list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
-  # elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
-  #   list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
-  # else()
+  if(APP_BUILD matches "-ptb.+")
+    list(APPEND mudlet_RCCS icons/mudlet_ptb.ico)
+  elseif((APP_BUILD matches "-dev.+") or (APP_BUILD matches "-test.+"))
+    # The above test may not be correct as it won't pick up builds where
+    # MUDLET_VERSION_BUILD has been set in the environment - OTOH for
+    # "Packagers" they will likely want the original icon anyhow for their
+    # modified for their system packages of Mudlet:
+    list(APPEND mudlet_RCCS icons/mudlet_dev.ico)
+  else()
     list(APPEND mudlet_RCCS icons/mudlet.ico)
-  # endif()
+  endif()
 endif()
 
 set(mudlet_SRCS
@@ -63,8 +67,8 @@ set(mudlet_SRCS
     dlgConnectionProfiles.cpp
     dlgIRC.cpp
     dlgKeysMainArea.cpp
-    dlgMapper.cpp
     dlgMapLabel.cpp
+    dlgMapper.cpp
     dlgModuleManager.cpp
     dlgNotepad.cpp
     dlgPackageExporter.cpp
@@ -83,10 +87,10 @@ set(mudlet_SRCS
     dlgVarsMainArea.cpp
     EAction.cpp
     exitstreewidget.cpp
-    FontManager.cpp
     FileOpenHandler.cpp
+    FontManager.cpp
     GifTracker.cpp
-    TrailingWhitespaceMarker.cpp
+    GMCPAuthenticator.cpp
     Host.cpp
     HostManager.cpp
     ircmessageformatter.cpp
@@ -96,8 +100,9 @@ set(mudlet_SRCS
     mapInfoContributorManager.cpp
     mudlet.cpp
     MudletInstanceCoordinator.cpp
-    ShortcutsManager.cpp
+    MxpTag.cpp
     ScriptUnit.cpp
+    ShortcutsManager.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
@@ -117,39 +122,51 @@ set(mudlet_SRCS
     TimerUnit.cpp
     TKey.cpp
     TLabel.cpp
-    TScrollBox.cpp
     TLinkStore.cpp
+
     TLuaInterpreter.cpp
+    TLuaInterpreterDiscord.cpp
+    TLuaInterpreterMapper.cpp
+    TLuaInterpreterMedia.cpp
+    TLuaInterpreterMudletObjects.cpp
+    TLuaInterpreterNetworking.cpp
+    TLuaInterpreterTextToSpeech.cpp
+    TLuaInterpreterUI.cpp
+    TMainConsole.cpp
     TMap.cpp
     TMapLabel.cpp
-    TMainConsole.cpp
     TMedia.cpp
+    TMediaPlaylist.cpp
     TMxpElementDefinitionHandler.cpp
     TMxpElementRegistry.cpp
     TMxpFormattingTagsHandler.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
     TMxpCustomElementTagHandler.cpp
+    TMxpElementDefinitionHandler.cpp
+    TMxpElementRegistry.cpp
     TMxpEntityTagHandler.cpp
     TMxpFontTagHandler.cpp
+    TMxpFormattingTagsHandler.cpp
     TMxpLinkTagHandler.cpp
+    TMxpMudlet.cpp
     TMxpMusicTagHandler.cpp
     TMxpNodeBuilder.cpp
-    TMxpMudlet.cpp
     TMxpProcessor.cpp
     TMxpSendTagHandler.cpp
     TMxpSoundTagHandler.cpp
     TMxpSupportTagHandler.cpp
-    MxpTag.cpp
     TMxpTagHandler.cpp
     TMxpTagParser.cpp
     TMxpTagProcessor.cpp
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
+    TrailingWhitespaceMarker.cpp
     TriggerUnit.cpp
     TRoom.cpp
     TRoomDB.cpp
     TScript.cpp
+    TScrollBox.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
     TStringUtils.cpp
@@ -206,9 +223,9 @@ set(mudlet_UIS
 
 set(mudlet_HDRS
     ActionUnit.h
-    Announcer.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
+    Announcer.h
     ctelnet.h
     DarkTheme.h
     discord.h
@@ -243,7 +260,7 @@ set(mudlet_HDRS
     FileOpenHandler.h
     FontManager.h
     GifTracker.h
-    TrailingWhitespaceMarker.h
+    GMCPAuthenticator.h
     Host.h
     HostManager.h
     ircmessageformatter.h
@@ -252,10 +269,11 @@ set(mudlet_HDRS
     mapInfoContributorManager.h
     mudlet.h
     MudletInstanceCoordinator.h
+    MxpTag.h
     post_guard.h
     pre_guard.h
-    ShortcutsManager.h
     ScriptUnit.h
+    ShortcutsManager.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
@@ -274,12 +292,11 @@ set(mudlet_HDRS
     TEntityResolver.h
     testdbg.h
     TEvent.h
-    TForkedProcess.h
     TFlipButton.h
+    TForkedProcess.h
     TimerUnit.h
     TKey.h
     TLabel.h
-    TScrollBox.h
     TLinkStore.h
     TLuaInterpreter.h
     TMainConsole.h
@@ -287,35 +304,37 @@ set(mudlet_HDRS
     TMapLabel.h
     TMatchState.h
     TMedia.h
+    TMediaPlaylist.h
     TMxpBRTagHandler.h
     TMxpClient.h
     TMxpColorTagHandler.h
+    TMxpContext.h
     TMxpCustomElementTagHandler.h
-    TMxpEntityTagHandler.h
-    TMxpFontTagHandler.h
-    TMxpLinkTagHandler.h
-    TMxpMusicTagHandler.h
-    TMxpSoundTagHandler.h
     TMxpElementDefinitionHandler.h
     TMxpElementRegistry.h
-    TMxpContext.h
+    TMxpEntityTagHandler.h
+    TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
+    TMxpLinkTagHandler.h
     TMxpMudlet.h
+    TMxpMusicTagHandler.h
     TMxpNodeBuilder.h
     TMxpProcessor.h
     TMxpSendTagHandler.h
-    MxpTag.h
+    TMxpSoundTagHandler.h
+    TMxpSupportTagHandler.cpp
     TMxpTagHandler.h
     TMxpTagParser.h
     TMxpTagProcessor.h
-    TMxpSupportTagHandler.cpp
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TrailingWhitespaceMarker.h
     Tree.h
     TriggerUnit.h
     TRoom.h
     TRoomDB.h
     TScript.h
+    TScrollBox.h
     TSplitter.h
     TSplitterHandle.h
     TStringUtils.h
@@ -327,8 +346,8 @@ set(mudlet_HDRS
     TTreeWidget.h
     TTrigger.h
     TVar.h
-    VarUnit.h
     utils.h
+    VarUnit.h
     widechar_width.h
     XMLexport.h
     XMLimport.h)
@@ -437,6 +456,16 @@ find_package(PUGIXML REQUIRED)
 find_package(HUNSPELL REQUIRED)
 find_package(Boost 1.44)
 
+
+# FreeBSD's sysinfo() call is done in a package, libsysinfo.
+# Find the library and include it appropriately.
+
+if (CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
+  find_library(SYSINFO_LIBRARY NAMES sysinfo)
+  find_path(SYSINFO_INCLUDE_DIR NAMES sys/sysinfo.h)
+  find_library(KVM_LIBRARY NAMES kvm)
+endif()
+
 if(NOT USE_OWN_QTKEYCHAIN)
   # Only use this when we are using a system package and NOT our own local build
   find_package(Qt${QT_MAJOR_VERSION}Keychain REQUIRED)
@@ -502,7 +531,6 @@ endif(UNIX)
 target_compile_definitions(mudlet
   PRIVATE
     APP_VERSION="${APP_VERSION}"
-    APP_BUILD="${APP_BUILD}"
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
 
@@ -536,6 +564,14 @@ target_link_libraries(
 #       nanobench
         ${QT_LIBS})
 
+if (SYSINFO_LIBRARY)
+  target_link_libraries(mudlet ${SYSINFO_LIBRARY} ${KVM_LIBRARY})
+endif (SYSINFO_LIBRARY)
+
+if (SYSINFO_INCLUDE_DIR)
+  target_include_directories(mudlet INTERFACE ${SYSINFO_INCLUDE_DIR})
+endif (SYSINFO_INCLUDE_DIR)
+
 if(USE_UPDATER)
   target_link_libraries(mudlet dblsqd)
   target_compile_definitions(mudlet PRIVATE INCLUDE_UPDATER)
@@ -562,8 +598,10 @@ if(WIN32)
 endif()
 
 if(APPLE)
+  target_link_libraries(mudlet "-framework AppKit")
+
   if(USE_UPDATER)
-    target_link_libraries(mudlet cocoa-qt-glue "-framework AppKit")
+    target_link_libraries(mudlet cocoa-qt-glue)
   endif(USE_UPDATER)
 
   set_target_properties(mudlet PROPERTIES
@@ -636,6 +674,24 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
                                        WORLD_READ)
+   install(
+    FILES "../mudlet.desktop"
+    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
+
+  install(
+    FILES "../mudlet.desktop"
+    DESTINATION "share/applications" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+      WORLD_READ)
+  install(
+    FILES "../mudlet.svg"
+    DESTINATION "share/icons/hicolor/scalable/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
+  install(
+    FILES "../mudlet.png"
+    DESTINATION "share/icons/hicolor/256x256/apps" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
+    WORLD_READ)
+
   install(
     TARGETS mudlet
     RUNTIME

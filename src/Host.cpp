@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2015-2023 by Stephen Lyons - slysven@virginmedia.com    *
+ *   Copyright (C) 2015-2024 by Stephen Lyons - slysven@virginmedia.com    *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *   Copyright (C) 2018 by Huadong Qi - novload@outlook.com                *
  *   Copyright (C) 2023 by Lecker Kebap - Leris@mudlet.org                 *
@@ -25,16 +25,24 @@
 
 #include "Host.h"
 
-
+#include "dlgIRC.h"
+#include "dlgMapper.h"
+#include "dlgModuleManager.h"
+#include "dlgNotepad.h"
+#include "dlgPackageManager.h"
+#include "dlgProfilePreferences.h"
+#include "GifTracker.h"
+#include "GMCPAuthenticator.h"
 #include "LuaInterface.h"
+#include "mudlet.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
-#include "TMainConsole.h"
-#include "TCommandLine.h"
 #include "TDebug.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
 #include "TLabel.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
@@ -42,15 +50,7 @@
 #include "TTextEdit.h"
 #include "TToolBar.h"
 #include "VarUnit.h"
-#include "GifTracker.h"
 #include "XMLimport.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgNotepad.h"
-#include "dlgPackageManager.h"
-#include "dlgProfilePreferences.h"
-#include "dlgIRC.h"
-#include "mudlet.h"
 
 #include "pre_guard.h"
 #include <chrono>
@@ -218,13 +218,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mEchoLuaErrors(false)
 , mCommandLineFont(QFont(qsl("Bitstream Vera Sans Mono"), 14, QFont::Normal))
 , mCommandSeparator(qsl(";;"))
-, mEnableGMCP(true)
-, mEnableMSSP(true)
-, mEnableMSP(true)
-, mEnableMSDP(false)
-, mServerMXPenabled(true)
-, mAskTlsAvailable(true)
-, mMSSPTlsPort(0)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
 , mFORCE_GA_OFF(false)
@@ -236,12 +229,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mSslIgnoreAll(false)
 , mUseProxy(false)
 , mProxyPort(0)
-, mIsGoingDown(false)
 , mIsProfileLoadingSequence(false)
 , mNoAntiAlias(false)
 , mpEditorDialog(nullptr)
 , mpMap(new TMap(this, hostname))
 , mpMedia(new TMedia(this, hostname))
+, mpAuth(new GMCPAuthenticator(this))
 , mpNotePad(nullptr)
 , mPrintCommand(true)
 , mIsRemoteEchoingActive(false)
@@ -341,7 +334,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mGifTracker()
 , mHostID(id)
 , mHostName(hostname)
-, mIsClosingDown(false)
 , mLogin(login)
 , mPass(pass)
 , mPort(port)
@@ -363,7 +355,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mDebugShowAllProblemCodepoints(false)
 , mCompactInputLine(false)
 {
-    TDebug::addHost(this);
+    TDebug::addHost(this, mHostName);
 
     // The "autolog" sentinel file controls whether logging the game's text as
     // plain text or HTML is immediately resumed on profile loading. Do not
@@ -443,7 +435,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    if (mudlet::scmIsPublicTestVersion) {
+    if (mudlet::self()->publicTestVersion) {
         thankForUsingPTB();
     }
 
@@ -476,11 +468,114 @@ Host::~Host()
     if (mpDockableMapWidget) {
         mpDockableMapWidget->deleteLater();
     }
-    mIsGoingDown = true;
-    mIsClosingDown = true;
     mErrorLogStream.flush();
     mErrorLogFile.close();
-    TDebug::removeHost(this);
+    // Since this is a destructor, it's risky to rely on member variables within the destructor itself.
+    // To avoid this, we can pass the profile name as an argument instead of accessing it
+    // directly as a member variable. This ensures the destructor doesn't depend on the
+    // object's state being valid.
+
+    TDebug::removeHost(this, mHostName);
+}
+
+void Host::forceClose()
+{
+    if (!mpConsole) {
+        // The main console has gone away so we must already be dying
+        return;
+    }
+
+    mForcedClose = true;
+    postMessage(tr("[ ALERT ] - This profile will now save and close."));
+    // Ensure the above is displayed before proceeding...
+    qApp->processEvents();
+
+    // Because we have set the mForcedClose flag above a requestClose()
+    // afterwards WILL succeed
+}
+
+// Returns true if we are closing down
+bool Host::requestClose()
+{
+    if (!mpConsole) {
+        // The main console has gone away so we must already be dying
+        return true;
+    }
+
+    // This call ends up at the (void) TMainConsole::closeEvent(...) and causes
+    // the close() method called here to return a true if the event was
+    // accepted:
+    if (!mpConsole->close()) {
+        // Nope the user doesn't want this to close - and it won't have set its
+        // mEnableClose flag:
+        return false;
+    }
+
+    // The above will have initiated a save of the profile (and its map) if it
+    // got a true returned from the TMainConsole::close() call.
+
+    // Get rid of any dialogs we might have open:
+    closeChildren();
+
+    // This time this will succeed as mEnableClose is set:
+    mpConsole->close();
+    return true;
+}
+
+void Host::closeChildren()
+{
+    mIsClosingDown = true;
+    const auto hostToolBarMap = getActionUnit()->getToolBarList();
+    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
+    if (mSslTsl) {
+        mTelnet.abortConnection();
+    } else {
+        mTelnet.disconnectIt();
+    }
+
+    stopAllTriggers();
+
+    if (mpEditorDialog) {
+        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
+        mpEditorDialog->close();
+        mpEditorDialog = nullptr;
+    }
+
+    for (const QString& consoleName : mpConsole->mSubConsoleMap.keys()) {
+        // Only user-windows will be in this map:
+        auto pD = mpConsole->mDockWidgetMap.value(consoleName);
+        // All User TConsole's will be in this map:
+        auto pC = mpConsole->mSubConsoleMap.value(consoleName);
+        if (pD) {
+            // This undocks the widget
+            mudlet::self()->removeDockWidget(pD);
+        }
+
+        // This will remove both what pD and pC point at from their respective
+        // QMaps:
+        pC->close();
+    }
+
+    if (mpNotePad) {
+        mpNotePad->save();
+        mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
+        mpNotePad->close();
+        mpNotePad = nullptr;
+    }
+
+    for (TToolBar* pTB : hostToolBarMap) {
+        if (pTB) {
+            pTB->setAttribute(Qt::WA_DeleteOnClose);
+            pTB->deleteLater();
+        }
+    }
+
+    // close IRC client window if it is open.
+    if (mpDlgIRC) {
+        mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
+        mpDlgIRC->deleteLater();
+        mpDlgIRC = nullptr;
+    }
 }
 
 void Host::loadMap()
@@ -606,7 +701,7 @@ void Host::reloadModules()
         if (otherHost == this || !otherHost->mpConsole) {
             continue;
         }
-        QMap<QString, int> const& modulePri = otherHost->mModulePriorities;
+        const QMap<QString, int>& modulePri = otherHost->mModulePriorities;
         QMap<int, QStringList> moduleOrder;
 
         auto modulePrioritiesIt = modulePri.constBegin();
@@ -826,7 +921,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     }
 
     if (mIsProfileLoadingSequence) {
-        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidetnally clear their contents
+        //If we're inside of profile loading sequence modules might not be loaded yet, thus we can accidentally clear their contents
         return {false, filename_xml, qsl("profile loading is in progress")};
     }
 
@@ -841,8 +936,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
         // This is likely to be the save as the profile is closed
-        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments "
-                                        "so assuming it is a end of session save and the TCommandLines' histories need saving...";
+        qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '"
+                                     << mHostName
+                                     << "' so assuming it is an end of session save and the TCommandLines' histories need saving...";
         emit signal_saveCommandLinesHistory();
     }
 
@@ -967,7 +1063,7 @@ void Host::thankForUsingPTB()
 
 void Host::setMediaLocationGMCP(const QString& mediaUrl)
 {
-    QUrl const url = QUrl(mediaUrl);
+    const QUrl url = QUrl(mediaUrl);
 
     if (!url.isValid()) {
         return;
@@ -983,7 +1079,7 @@ QString Host::getMediaLocationGMCP() const
 
 void Host::setMediaLocationMSP(const QString& mediaUrl)
 {
-    QUrl const url = QUrl(mediaUrl);
+    const QUrl url = QUrl(mediaUrl);
 
     if (!url.isValid()) {
         return;
@@ -1033,13 +1129,13 @@ unsigned int Host::assemblePath()
 {
     unsigned int totalWeight = 0;
     QStringList pathList;
-    for (const int i : qAsConst(mpMap->mPathList)) {
+    for (const int i : std::as_const(mpMap->mPathList)) {
         const QString n = QString::number(i);
         pathList.append(n);
     }
     QStringList directionList = mpMap->mDirList;
     QStringList weightList;
-    for (const int stepWeight : qAsConst(mpMap->mWeightList)) {
+    for (const int stepWeight : std::as_const(mpMap->mWeightList)) {
         totalWeight += stepWeight;
         const QString n = QString::number(stepWeight);
         weightList.append(n);
@@ -1674,16 +1770,6 @@ bool Host::killTrigger(const QString& name)
     return mTriggerUnit.killTrigger(name);
 }
 
-void Host::closingDown()
-{
-    mIsClosingDown = true;
-}
-
-bool Host::isClosingDown()
-{
-    return mIsClosingDown;
-}
-
 std::pair<bool, QString> Host::installPackage(const QString& fileName, int module)
 {
     // As the pointer to dialog is only used now WITHIN this method and this
@@ -1799,7 +1885,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, int modul
         }
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
-        QFileInfoList const entries = _dir.entryInfoList(_filterList, QDir::Files);
+        const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             file2.open(QFile::ReadOnly | QFile::Text);
@@ -1905,7 +1991,7 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     bool result = true;
     const QDir dir(dirName);
     if (dir.exists(dirName)) {
-        for (QFileInfo  const&info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
+        for (QFileInfo const& info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
             // prevent recursion outside of the original branch
             if (info.isDir() && info.absoluteFilePath().startsWith(originalPath)) {
                 result = removeDir(info.absoluteFilePath(), originalPath);
@@ -2341,7 +2427,7 @@ void Host::installPackageFonts(const QString &packageName)
 // ensures fonts from all installed packages are loaded in Mudlet
 void Host::refreshPackageFonts()
 {
-    for (const auto& package : qAsConst(mInstalledPackages)) {
+    for (const auto& package : std::as_const(mInstalledPackages)) {
         installPackageFonts(package);
     }
 }
@@ -3187,7 +3273,7 @@ void Host::hideMudletsVariables()
 
     // remember which users' saved variables shouldn't be hidden
     QVector<QString> unhideSavedVars;
-    for (const auto& variable : qAsConst(varUnit->savedVars)) {
+    for (const auto& variable : std::as_const(varUnit->savedVars)) {
         if (!varUnit->isHidden(variable)) {
             unhideSavedVars.append(variable);
         }
@@ -3200,42 +3286,8 @@ void Host::hideMudletsVariables()
     lI->getVars(true);
 
     // unhide user's saved variables
-    for (const auto& variable : qAsConst(unhideSavedVars)) {
+    for (const auto& variable : std::as_const(unhideSavedVars)) {
         varUnit->removeHidden(variable);
-    }
-}
-
-void Host::close()
-{
-    // disconnect before removing objects from memory as sysDisconnectionEvent needs that stuff.
-    if (mSslTsl) {
-        mTelnet.abortConnection();
-    } else {
-        mTelnet.disconnectIt();
-    }
-
-    // close script editor
-    if (mpEditorDialog) {
-        mpEditorDialog->setAttribute(Qt::WA_DeleteOnClose);
-        mpEditorDialog->close();
-        mpEditorDialog = nullptr;
-    }
-    // close notepad
-    if (mpNotePad) {
-        mpNotePad->save();
-        mpNotePad->setAttribute(Qt::WA_DeleteOnClose);
-        mpNotePad->close();
-        mpNotePad = nullptr;
-    }
-    // close IRC client window
-    if (mpDlgIRC) {
-        mpDlgIRC->setAttribute(Qt::WA_DeleteOnClose);
-        mpDlgIRC->deleteLater();
-        mpDlgIRC = nullptr;
-    }
-    if (mpConsole) {
-        mpConsole->close();
-        mpConsole = nullptr;
     }
 }
 
@@ -3842,7 +3894,9 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
 
     mProfileStyleSheet = styleSheet;
     mpConsole->setStyleSheet(styleSheet);
-    mpEditorDialog->setStyleSheet(styleSheet);
+    if (mpEditorDialog) {
+        mpEditorDialog->setStyleSheet(styleSheet);
+    }
 
     if (mpDlgProfilePreferences) {
         mpDlgProfilePreferences->setStyleSheet(styleSheet);
@@ -3931,7 +3985,7 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode)
 
     auto pL = mpConsole->mLabelMap.value(name);
     if (pL) {
-        QPixmap const bgPixmap(imgPath);
+        const QPixmap bgPixmap(imgPath);
         pL->setPixmap(bgPixmap);
         return true;
     }
@@ -4050,7 +4104,7 @@ void Host::createMapper(const bool loadDefaultMap)
     if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
         pMap->pushErrorMessagesToFile(tr("Pre-Map loading(3) report"), true);
-        QDateTime const now(QDateTime::currentDateTime());
+        const QDateTime now(QDateTime::currentDateTime());
         if (pMap->restore(QString())) {
             pMap->audit();
             pMap->mpMapper->mp2dMap->init();
@@ -4109,7 +4163,7 @@ bool Host::commitLayoutUpdates(bool flush)
     if (mpConsole && !flush) {
         // commit changes (or rather clear the layout changed flags) for dockwidget
         // consoles (user windows)
-        for (auto dockedConsoleName : qAsConst(mDockLayoutChanges)) {
+        for (auto dockedConsoleName : std::as_const(mDockLayoutChanges)) {
             auto pD = mpConsole->mDockWidgetMap.value(dockedConsoleName);
             if (Q_LIKELY(pD) && pD->property("layoutChanged").toBool()) {
                 pD->setProperty("layoutChanged", QVariant(false));
@@ -4122,7 +4176,7 @@ bool Host::commitLayoutUpdates(bool flush)
     // commit changes (or rather clear the layout changed flags) for
     // dockable/floating toolbars across all profiles:
     if (!flush) {
-        for (auto pToolBar : qAsConst(mToolbarLayoutChanges)) {
+        for (auto pToolBar : std::as_const(mToolbarLayoutChanges)) {
             if (!pToolBar || pToolBar.isNull()) {
                 // This can happen when a TToolBar is deleted
                 continue;
@@ -4323,7 +4377,7 @@ void Host::setBorders(QMargins borders)
     }
     auto x = mpConsole->width();
     auto y = mpConsole->height();
-    QSize const s = QSize(x, y);
+    const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     QApplication::sendEvent(mpConsole, &event);
     mpConsole->raiseMudletSysWindowResizeEvent(x, y);

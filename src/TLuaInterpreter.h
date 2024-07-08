@@ -3,7 +3,7 @@
 
 /***************************************************************************
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
- *   Copyright (C) 2013-2016, 2018-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2013-2016, 2018-2024 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2016-2018 by Ian Adkins - ieadkins@gmail.com            *
@@ -26,6 +26,7 @@
  ***************************************************************************/
 
 #include "TMap.h"
+#include "TMediaData.h"
 #include "TTextCodec.h"
 #include "TTrigger.h"
 #include "utils.h"
@@ -430,6 +431,7 @@ public:
     static int hideToolBar(lua_State*);
     static int loadReplay(lua_State*);
     static int setBold(lua_State*);
+    static int setFaint(lua_State*);
     static int setItalics(lua_State*);
     static int setReverse(lua_State*);
     static int setOverline(lua_State*);
@@ -450,6 +452,8 @@ public:
     static int loadSoundFile(lua_State*);
     static int playMusicFile(lua_State*);
     static int playSoundFile(lua_State*);
+    static int getPlayingMusic(lua_State*);
+    static int getPlayingSounds(lua_State*);
     static int stopMusic(lua_State*);
     static int stopSounds(lua_State*);
     static int purgeMediaCache(lua_State*);
@@ -740,6 +744,11 @@ private:
     static int playMusicFileAsTableArgument(lua_State*);
     static int playSoundFileAsOrderedArguments(lua_State*);
     static int playSoundFileAsTableArgument(lua_State*);
+    static void processPlayingMediaTable(lua_State*, TMediaData&);
+    static int getPlayingMusicAsOrderedArguments(lua_State*);
+    static int getPlayingMusicAsTableArgument(lua_State*);
+    static int getPlayingSoundsAsOrderedArguments(lua_State*);
+    static int getPlayingSoundsAsTableArgument(lua_State*);
     static int stopMusicAsOrderedArguments(lua_State*);
     static int stopMusicAsTableArgument(lua_State*);
     static int stopSoundsAsOrderedArguments(lua_State*);
@@ -769,6 +778,7 @@ private:
             lua_close(ptr);
         }
     };
+    void updateEditor();
 
 
     bool loadLuaModule(QQueue<QString>& resultMsgQueue, const QString& requirement, const QString& failureConsequence = QString(), const QString& description = QString(), const QString& luaModuleId = QString());

@@ -3,7 +3,7 @@
  *   Copyright (C) 2008-2013 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
  *   Copyright (C) 2017 by Fae - itsthefae@gmail.com                       *
- *   Copyright (C) 2017-2018, 2020, 2022 by Stephen Lyons                  *
+ *   Copyright (C) 2017-2018, 2020, 2022, 2024 by Stephen Lyons            *
  *                                               - slysven@virginmedia.com *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -138,10 +138,12 @@ void dlgIRC::startClient()
     mIrcStarted = true;
 }
 
+// Only the Lua sub-system call to this method even looks at the return values
+// and even then it only uses the second one if the first is false:
 QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& message)
 {
     if (message.isEmpty()) {
-        return QPair<bool, QString>(true, qsl("message processed by client"));
+        return {true, QString()};
     }
 
     QString msgTarget = target;
@@ -157,12 +159,12 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
     commandParser->setTarget(lastParserTarget);
 
     if (!command) {
-        return QPair<bool, QString>(false, qsl("message could not be parsed"));
+        return {false, qsl("message could not be parsed")};
     }
 
     const bool isCustomCommand = processCustomCommand(command);
     if (isCustomCommand) {
-        return QPair<bool, QString>(true, qsl("command processed by client"));
+        return {true, QString()};
     }
 
     // update ping-started time if this command was a ping
@@ -176,7 +178,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
     if (command->type() == IrcCommand::Quit) {
         setAttribute(Qt::WA_DeleteOnClose);
         close();
-        return QPair<bool, QString>(true, qsl("closing client"));
+        return {true, QString()};
     }
 
     // echo own messages (servers do not send our own messages back)
@@ -186,7 +188,7 @@ QPair<bool, QString> dlgIRC::sendMsg(const QString& target, const QString& messa
         delete msg;
     }
 
-    return QPair<bool, QString>(true, qsl("sent to server"));
+    return {true, QString()};
 }
 
 void dlgIRC::ircRestart(bool reloadConfigs)
@@ -200,7 +202,7 @@ void dlgIRC::ircRestart(bool reloadConfigs)
     }
 
     // remove the old buffers.
-    for (const QString chName : qAsConst(mChannels)) {
+    for (const QString& chName : std::as_const(mChannels)) {
         if (chName == serverBuffer->name()) {
             continue; // skip the server-buffer.
         }
@@ -355,6 +357,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
             msgText = QString(cmd->parameters().mid(2).join(" "));
         }
 
+        // This could return a false + error message but we seem to be ignoring that:
         sendMsg(target, msgText);
         return true;
     }

@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014, 2016-2018, 2020-2023 by Stephen Lyons             *
+ *   Copyright (C) 2014, 2016-2018, 2020-2024 by Stephen Lyons             *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016 by Ian Adkins - ieadkins@gmail.com                 *
  *                                                                         *
@@ -168,7 +168,7 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::scmIsDevelopmentVersion) {
+    if (mudlet::self()->developmentVersion) {
         // tick the box and make it be "un-untickable" as automatic updates are
         // disabled in dev builds
         checkbox_noAutomaticUpdates->setChecked(true);
@@ -694,7 +694,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     QStringList entries = dir.entryList(QDir::Files, QDir::Time);
     // QRegularExpression rex(qsl(R"(\.dic$)"));
     // Use the affix file as that may eliminate supplimental dictionaries:
-    QRegularExpression const rex(qsl(R"(\.aff$)"));
+    const QRegularExpression rex(qsl(R"(\.aff$)"));
     entries = entries.filter(rex);
     // Don't emit signals - like (void) QListWidget::currentItemChanged(QListWidgetItem *current, QListWidgetItem *previous)
     // while populating the widget, it reduces noise about:
@@ -794,7 +794,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         // has a font size larger than the preset range offers?
         fontSize->setCurrentIndex(9); // default font is size 10, index 9.
     }
-
     wrap_at_spinBox->setValue(pHost->mWrapAt);
     indent_wrapped_spinBox->setValue(pHost->mWrapIndentCount);
 
@@ -897,7 +896,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 
     commandLineMinimumHeight->setValue(pHost->commandLineMinimumHeight);
-    mNoAntiAlias->setChecked(!pHost->mNoAntiAlias);
+    checkBox_antiAlias->setChecked(!pHost->mNoAntiAlias);
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
@@ -1081,7 +1080,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
 #if !defined(QT_NO_SSL)
     if (QSslSocket::supportsSsl() && pHost->mSslTsl) {
-        QSslCertificate const cert = pHost->mTelnet.getPeerCertificate();
+        const QSslCertificate cert = pHost->mTelnet.getPeerCertificate();
         if (cert.isNull()) {
             groupBox_ssl_certificate->hide();
         } else {
@@ -1164,6 +1163,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
+
+    checkBox_boldIsBright->setChecked(pHost->mBoldIsBright);
 
     // Enable the controls that would be disabled if there wasn't a Host instance
     // on tab_general:
@@ -1435,7 +1436,7 @@ void dlgProfilePreferences::clearHostDetails()
     mIsToLogInHtml->setChecked(false);
     mIsLoggingTimestamps->setChecked(false);
     commandLineMinimumHeight->clear();
-    mNoAntiAlias->setChecked(false);
+    checkBox_antiAlias->setChecked(false);
     mFORCE_MCCP_OFF->setChecked(false);
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
@@ -1878,6 +1879,7 @@ void dlgProfilePreferences::slot_setDisplayFont()
     }
     QFont newFont = fontComboBox->currentFont();
     newFont.setPointSize(mFontSize);
+    newFont.setWeight(TBuffer::csmFontWeight_normal);
 
     if (pHost->getDisplayFont() == newFont) {
         return;
@@ -1888,14 +1890,16 @@ void dlgProfilePreferences::slot_setDisplayFont()
     if (auto [validFont, errorMessage] = pHost->setDisplayFont(newFont); !validFont) {
         label_invalidFontError->show();
         return;
-    } else if (!QFontInfo(newFont).fixedPitch()) {
+    }
+
+    if (!QFontInfo(newFont).fixedPitch()) {
         label_variableWidthFontWarning->show();
     }
 
 #if defined(Q_OS_LINUX)
     // On Linux ensure that emojis are displayed in colour even if this font
     // doesn't support it:
-    QFont::insertSubstitution(pHost->mDisplayFont.family(), qsl("Noto Color Emoji"));
+    QFont::insertSubstitution(newFont.family(), qsl("Noto Color Emoji"));
 #endif
 
     auto mainConsole = pHost->mpConsole;
@@ -2270,7 +2274,7 @@ void dlgProfilePreferences::fillOutMapHistory()
     mapSaveDir.setSorting(QDir::Time);
     const QStringList mapSaveEntries = mapSaveDir.entryList(QDir::Files | QDir::NoDotAndDotDot, QDir::Time);
     for (const auto& entry : mapSaveEntries) {
-        QRegularExpressionMatch const match = mapSaveRegularExpression.match(entry);
+        const QRegularExpressionMatch match = mapSaveRegularExpression.match(entry);
         const QString mapPathFileName = mapSaveDir.absoluteFilePath(entry);
         if (match.capturedStart() != -1) {
             // A recognised date-time stamp file name of any Mudlet map file type:
@@ -2288,7 +2292,7 @@ void dlgProfilePreferences::fillOutMapHistory()
                 year = match.captured(3);
             }
             const QString extension = match.captured(7);
-            QDateTime const datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
+            const QDateTime datetime(QDate(year.toInt(), month.toInt(), day.toInt()), QTime(hour.toInt(), minute.toInt(), second.toInt()));
             const QString itemText = locale.toString(datetime, dateTimeFormat);
             longestMapHistoryLength = qMax(longestMapHistoryLength, itemText.size());
             if (!extension.compare(QLatin1String("xml"), Qt::CaseInsensitive)) {
@@ -2873,7 +2877,7 @@ void dlgProfilePreferences::slot_saveAndClose()
                 pHost->mpMap->mpMapper->update();
             }
         }
-        QMargins const newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
+        const QMargins newBorders{leftBorderWidth->value(), topBorderHeight->value(), rightBorderWidth->value(), bottomBorderHeight->value()};
         pHost->setBorders(newBorders);
         pHost->commandLineMinimumHeight = commandLineMinimumHeight->value();
         pHost->mFORCE_MXP_NEGOTIATION_OFF = mFORCE_MXP_NEGOTIATION_OFF->isChecked();
@@ -2884,7 +2888,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         pHost->mLogDir = mLogDirPath;
         pHost->mLogFileName = lineEdit_logFileName->text();
         pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
-        pHost->mNoAntiAlias = !mNoAntiAlias->isChecked();
+        pHost->mNoAntiAlias = !checkBox_antiAlias->isChecked();
         pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
 
         pHost->mUseProxy = groupBox_proxy->isChecked();
@@ -2950,7 +2954,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         if (!newIrcChannels.isEmpty()) {
             const QStringList tL = newIrcChannels.split(" ", Qt::SkipEmptyParts);
-            for (const QString s : tL) {
+            for (const QString& s : tL) {
                 if (s.startsWith("#") || s.startsWith("&") || s.startsWith("+")) {
                     newChanList << s;
                 }
@@ -3003,7 +3007,7 @@ void dlgProfilePreferences::slot_saveAndClose()
         if (console) {
             const int x = console->width();
             const int y = console->height();
-            QSize const s = QSize(x, y);
+            const QSize s = QSize(x, y);
             QResizeEvent event(s, s);
             QApplication::sendEvent(console, &event);
         }
@@ -3077,6 +3081,7 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
+        pHost->mBoldIsBright = checkBox_boldIsBright->isChecked();
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
 
@@ -3106,7 +3111,7 @@ void dlgProfilePreferences::slot_saveAndClose()
     }
 
 #if defined(INCLUDE_UPDATER)
-    if (mudlet::scmIsReleaseVersion || mudlet::scmIsPublicTestVersion) {
+    if (mudlet::self()->releaseVersion || mudlet::self()->publicTestVersion) {
         pMudlet->pUpdater->setAutomaticUpdates(!checkbox_noAutomaticUpdates->isChecked());
     }
 #endif
@@ -3407,9 +3412,9 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
     manager->setCache(diskCache);
 
 
-    QUrl const url(themesURL);
+    const QUrl url(themesURL);
     QNetworkRequest request(url);
-    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, APP_BUILD).toUtf8().constData()));
+    request.setRawHeader(QByteArray("User-Agent"), QByteArray(qsl("Mozilla/5.0 (Mudlet/%1%2)").arg(APP_VERSION, mudlet::self()->mAppBuild).toUtf8().constData()));
     // github uses redirects
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
     // load from cache if possible
@@ -3440,7 +3445,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
                             return;
                         }
 
-                        QByteArray const downloadedArchive = reply->readAll();
+                        const QByteArray downloadedArchive = reply->readAll();
 
                         tempThemesArchive = new QTemporaryFile();
                         if (!tempThemesArchive->open()) {
@@ -3449,7 +3454,7 @@ void dlgProfilePreferences::slot_tabChanged(int tabIndex)
                         tempThemesArchive->write(downloadedArchive);
                         tempThemesArchive->close();
 
-                        QTemporaryDir const temporaryDir;
+                        const QTemporaryDir temporaryDir;
                         if (!temporaryDir.isValid()) {
                             return;
                         }
@@ -3483,7 +3488,7 @@ void dlgProfilePreferences::populateThemesList()
 
     if (themesFile.open(QIODevice::ReadOnly)) {
         unsortedThemes = QJsonDocument::fromJson(themesFile.readAll()).array();
-        for (auto theme : qAsConst(unsortedThemes)) {
+        for (auto theme : std::as_const(unsortedThemes)) {
             const QString themeText = theme.toObject()["Title"].toString();
             const QString themeFileName = theme.toObject()["FileName"].toString();
 
@@ -3502,7 +3507,7 @@ void dlgProfilePreferences::populateThemesList()
 
     auto currentSelection = code_editor_theme_selection_combobox->currentText();
     code_editor_theme_selection_combobox->clear();
-    for (auto key : qAsConst(sortedThemes)) {
+    for (auto key : std::as_const(sortedThemes)) {
         // store the actual theme file as data because edbee needs that,
         // not the name, for choosing the theme even after the theme file was loaded
         code_editor_theme_selection_combobox->addItem(key.first, key.second);
@@ -3691,13 +3696,13 @@ void dlgProfilePreferences::generateMapGlyphDisplay()
         pSymbolAnyFont->setToolTip(utils::richText(tr("The room symbol will appear like this if symbols (glyphs) from any font can be used.")));
         pSymbolAnyFont->setFont(anyFont);
 
-        QFontMetrics const SymbolInFontMetrics(selectedFont);
-        QFontMetrics const SymbolAnyFontMetrics(anyFont);
+        const QFontMetrics SymbolInFontMetrics(selectedFont);
+        const QFontMetrics SymbolAnyFontMetrics(anyFont);
 
         // pCodePoints is the sequence of UTF-32 codepoints in the symbol and
         // this ought to be what is needed to check that a font or set of fonts
         // can render the codepoints:
-        QVector<quint32> const pCodePoints = symbol.toUcs4();
+        const QVector<quint32> pCodePoints = symbol.toUcs4();
         // These can be used to flag symbols that cannot be reproduced
         bool isSingleFontUsable = true;
         bool isAllFontUsable = true;
@@ -4040,7 +4045,7 @@ void dlgProfilePreferences::setButtonColor(QPushButton* button, const QColor& co
             return;
         }
 
-        QColor const disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness(), color.alpha());
+        const QColor disabledColor = QColor::fromHsl(color.hslHue(), color.hslSaturation()/4, color.lightness(), color.alpha());
         if (button == pushButton_playerRoomPrimaryColor || button == pushButton_playerRoomSecondaryColor) {
 
             // These two buttons show a color that may have transparency; so,

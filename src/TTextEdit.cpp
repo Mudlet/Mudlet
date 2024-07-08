@@ -1,7 +1,7 @@
 /***************************************************************************
  *   Copyright (C) 2008-2012 by Heiko Koehn - KoehnHeiko@googlemail.com    *
  *   Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            *
- *   Copyright (C) 2014-2016, 2018-2023 by Stephen Lyons                   *
+ *   Copyright (C) 2014-2016, 2018-2024 by Stephen Lyons                   *
  *                                               - slysven@virginmedia.com *
  *   Copyright (C) 2016-2017 by Ian Adkins - ieadkins@gmail.com            *
  *   Copyright (C) 2017 by Chris Reid - WackyWormer@hotmail.com            *
@@ -701,8 +701,11 @@ int TTextEdit::drawGraphemeBackground(QPainter& painter, QVector<QColor>& fgColo
 
 void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor, const QRect& textRect, const QString& grapheme, TChar& charStyle) const
 {
-    TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
+    const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
+    const bool isFaint = attributes & TChar::Faint;
+    const QFont::Weight fontWeight = (isBold ? (isFaint ? TBuffer::csmFontWeight_boldAndFaint : TBuffer::csmFontWeight_bold)
+                                             : (isFaint ? TBuffer::csmFontWeight_faint : TBuffer::csmFontWeight_normal));
     // At present we cannot display flashing text - and we just make it italic
     // (we ought to eventually add knobs for them so they can be shown in a user
     // preferred style - which might be static for some users) - anyhow Mudlet
@@ -713,14 +716,14 @@ void TTextEdit::drawGraphemeForeground(QPainter& painter, const QColor& fgColor,
     const bool isUnderline = attributes & TChar::Underline;
     // const bool isConcealed = attributes & TChar::Concealed;
     // const int altFontIndex = charStyle.alternateFont();
-    if ((painter.font().bold() != isBold)
+    if ((painter.font().weight() != fontWeight)
             || (painter.font().italic() != isItalics)
             || (painter.font().overline() != isOverline)
             || (painter.font().strikeOut() != isStrikeOut)
             || (painter.font().underline() != isUnderline)) {
 
         QFont font = painter.font();
-        font.setBold(isBold);
+        font.setWeight(fontWeight);
         font.setItalic(isItalics);
         font.setOverline(isOverline);
         font.setStrikeOut(isStrikeOut);
@@ -755,7 +758,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // character instead - and so it can be seen it need a space:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is unprintable, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -773,7 +776,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // or elsewhere) but we don't right now:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a non-character that Mudlet is not itself using, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -791,7 +794,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // error somewhere - so put in the replacement character
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which is a zero width combiner, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -811,7 +814,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // what width to used - let's assume 1 for the moment:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qDebug().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Private Use Character, we cannot know how wide it is, codepoint number: U+"
                                              << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -828,7 +831,7 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
         // that our widechar_wcwidth(...) was built for - assume 1:
         if (!mIsLowerPane) {
             bool newCodePointToWarnAbout = !mProblemCodepoints.contains(unicode);
-            if (mShowAllCodepointIssues || newCodePointToWarnAbout) {
+            if (mShowAllCodepointIssues && newCodePointToWarnAbout) {
                 qWarning().nospace().noquote() << "TTextEdit::getGraphemeWidth(...) WARN - trying to get width of a Unicode character which was not previously assigned and we do not know how wide it is, codepoint number: U+"
                                                << qsl("%1").arg(unicode, 4, 16, QLatin1Char('0')).toUtf8().constData() << ".";
             }
@@ -1104,10 +1107,19 @@ void TTextEdit::expandSelectionToWords()
 {
     int yind = mPA.y();
     int xind = mPA.x();
-    for (; xind >= 0; --xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
-            break;
+
+    // Check if yind is within the valid range of lineBuffer
+    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
+        for (; xind >= 0; --xind) {
+            // Ensure xind is within the valid range for the current line
+            if (xind >= static_cast<int>(mpBuffer->lineBuffer.at(yind).size())) {
+                break; // xind is out of bounds, break the loop
+            } 
+            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
+            if (currentChar == QChar::Space
+                || mpHost->mDoubleClickIgnore.contains(currentChar)) {
+                break;
+            }
         }
     }
     mDragStart.setX(xind + 1);
@@ -1115,15 +1127,22 @@ void TTextEdit::expandSelectionToWords()
 
     yind = mPB.y();
     xind = mPB.x();
-    for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
-        if (mpBuffer->lineBuffer.at(yind).at(xind) == QChar::Space
-            || mpHost->mDoubleClickIgnore.contains(mpBuffer->lineBuffer.at(yind).at(xind))) {
-            break;
+
+    // Repeat the check for yind and xind for the second part
+    if (yind >= 0 && yind < static_cast<int>(mpBuffer->lineBuffer.size())) {
+        for (; xind < static_cast<int>(mpBuffer->lineBuffer.at(yind).size()); ++xind) {
+            const QChar currentChar = mpBuffer->lineBuffer.at(yind).at(xind);
+            if (currentChar == QChar::Space
+                || mpHost->mDoubleClickIgnore.contains(currentChar)) {
+                break;
+            }
         }
     }
     mDragSelectionEnd.setX(xind - 1);
     mPB.setX(xind - 1);
 }
+
+
 
 void TTextEdit::expandSelectionToLine(int y)
 {
@@ -1580,7 +1599,7 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     // switches away from the ASCII default
     text.append("  <meta name='generator' content='Mudlet MUD Client version: ");
     text.append(APP_VERSION);
-    text.append(APP_BUILD);
+    text.append(mudlet::self()->mAppBuild);
     text.append("'>\n");
     // Nice to identify what made the file!
     text.append("  <title>");

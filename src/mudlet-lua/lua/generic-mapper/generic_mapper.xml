@@ -893,7 +893,7 @@ else
 end
 
 if map.setExit(map.currentRoom, otherroom, matches[3]) then
-  if not matches[4] then map.setExit(otherroom, map.currentRoom, mmp.ranytolong(matches[3])) end
+  if not matches[4] then map.setExit(otherroom, map.currentRoom, map.ranytolong(matches[3])) end
 
   map.echo(string.format("Linked %s (%d) to %s (%d) via a %s%s exit.",
     (getRoomName(map.currentRoom) ~= "" and getRoomName(map.currentRoom) or "''"), map.currentRoom, (getRoomName(otherroom) ~= "" and getRoomName(otherroom) or "''"), otherroom, (matches[4] and "one-way " or ''), matches[3]))
@@ -1976,7 +1976,7 @@ map.help.area_delete = [[
         it allows you to see a progress meter of how far it has gotten and gives
         you an ability to pause it at any time by doing 'cancel area deletion'.
 
-        Example: &lt;yellow&gt;area delete My City&lt;reset&gt; - create a new area called My City
+        Example: &lt;yellow&gt;area delete My City&lt;reset&gt; - delete an area called My City
 ]]
 map.help.area_cancel = [[
     &lt;cyan&gt;Cancel Area Deletion&lt;reset&gt;
@@ -3189,7 +3189,7 @@ function map.export_area(name)
     tbl.rooms = {}
     tbl.exits = {}
     tbl.special = {}
-    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment
+    local rname, exits, stubs, doors, special, portals, door_up, door_down, coords, environment, roomChar
     for k,v in pairs(rooms) do
         rname = getRoomName(v)
         exits = getRoomExits(v)
@@ -3198,9 +3198,10 @@ function map.export_area(name)
         special = getSpecialExitsSwap(v)
         portals = getRoomUserData(v,"portals") or ""
 	environment = getRoomEnv(v)
+	roomChar = getRoomChar(v)
         coords = {getRoomCoordinates(v)}
         tbl.rooms[v] = {name = rname, coords = coords, exits = exits, stubs = stubs, doors = doors, door_up = door_up,
-            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment}
+            door_down = door_down, door_in = door_in, door_out = door_out, special = special, portals = portals, environment = environment, roomChar = roomChar}
         tmp = {}
         for k1,v1 in pairs(exits) do
             if not table.contains(rooms,v1) then
@@ -3253,6 +3254,7 @@ function map.import_area(name)
         end
         setRoomUserData(ID,"portals",v.portals)
 	setRoomEnv(ID,v.environment)
+	setRoomChar(ID,v.roomChar)
     end
     for k,v in pairs(tbl.rooms) do
         for i,j in pairs(v.exits) do
@@ -4339,7 +4341,7 @@ function map.roomFind(query, lines)
         string.format(
           "&lt;DarkSlateGrey&gt;%s&lt;DarkSlateGrey&gt;\n", getRoomAreaName(getRoomArea(roomid))
         ),
-        [[map.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
+        [[map.echoPath(map.currentRoom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
@@ -4366,7 +4368,7 @@ function map.roomFind(query, lines)
       fg("DarkSlateGrey")
       echoLink(
         " &gt; Show path\n",
-        [[map.echoPath(mmp.currentroom, ]] .. roomid .. [[)]],
+        [[map.echoPath(map.currentRoom, ]] .. roomid .. [[)]],
         "Display directions from here to " .. roomname,
         true
       )
@@ -5148,7 +5150,6 @@ function map.renameArea(name, exact)
   if not (map.currentroom or getRoomArea(map.currentRoom)) then
     map.echo("Don't know what area are we in at the moment, to rename it.")
   else
-    setAreaName(getRoomArea(map.currentRoom), name)
     map.echo(
       string.format(
         "Renamed %s to %s (%d).",
@@ -5157,6 +5158,7 @@ function map.renameArea(name, exact)
         getRoomArea(map.currentRoom)
       )
     )
+    setAreaName(getRoomArea(map.currentRoom), name)			
     centerview(map.currentRoom)
   end
 end

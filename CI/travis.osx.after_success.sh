@@ -63,7 +63,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
 
   if ! [[ "$GITHUB_REF" =~ ^"refs/tags/" ]] && [ "${public_test_build}" != "true" ]; then
     echo "== Creating a snapshot build =="
-    appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}"
+    appBaseName="Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}"
     if [ -n "${GITHUB_REPOSITORY}" ]; then
       mv "${BUILD_DIR}/src/mudlet.app" "${BUILD_DIR}/${appBaseName}.app"
     else
@@ -107,7 +107,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}" "$app"
+      ./make-installer.sh -pr "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}" "$app"
     else
       ./make-installer.sh -r "${VERSION}" "$app"
     fi
@@ -121,7 +121,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
     fi
 
     if [ "${public_test_build}" == "true" ]; then
-      mv "${HOME}/Desktop/Mudlet PTB.dmg" "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg"
+      mv "${HOME}/Desktop/Mudlet PTB.dmg" "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}.dmg"
     else
       mv "${HOME}/Desktop/Mudlet.dmg" "${HOME}/Desktop/Mudlet-${VERSION}.dmg"
     fi
@@ -129,16 +129,31 @@ if [ "${DEPLOY}" = "deploy" ]; then
     if [ "${public_test_build}" == "true" ]; then
       echo "=== Setting up for Github upload ==="
       mkdir "upload/"
-      mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}.dmg" "upload/"
+      mv "${HOME}/Desktop/Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}.dmg" "upload/"
       {
         echo "FOLDER_TO_UPLOAD=$(pwd)/upload"
-        echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-macos"
+        echo "UPLOAD_FILENAME=Mudlet-${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}-macos"
       } >> "$GITHUB_ENV"
       DEPLOY_URL="Github artifact, see https://github.com/$GITHUB_REPOSITORY/runs/$GITHUB_RUN_ID"
     else
       echo "=== Uploading installer to https://www.mudlet.org/wp-content/files/?C=M;O=D ==="
       scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${HOME}/Desktop/Mudlet-${VERSION}.dmg" "mudmachine@mudlet.org:${DEPLOY_PATH}"
       DEPLOY_URL="https://www.mudlet.org/wp-content/files/Mudlet-${VERSION}.dmg"
+
+      SHA256SUM=$(shasum -a 256 "${HOME}/Desktop/Mudlet-${VERSION}.dmg" | awk '{print $1}')
+
+      # file_cat=1 asuming macOS is the 1st item in WP-Download-Manager category
+      curl -X POST 'https://www.mudlet.org/download-add.php' \
+      -H "x-wp-download-token: $X_WP_DOWNLOAD_TOKEN" \
+      -F "file_type=2" \
+      -F "file_remote=$DEPLOY_URL" \
+      -F "file_name=Mudlet-${VERSION} (macOS)" \
+      -F "file_des=sha256: $SHA256SUM" \
+      -F "file_cat=1" \
+      -F "file_permission=-1" \
+      -F "output=json" \
+      -F "do=Add File"
+
     fi
 
     # install dblsqd. NPM must be available here because we use it to install the tool that creates the dmg
@@ -154,7 +169,7 @@ if [ "${DEPLOY}" = "deploy" ]; then
       changelog=$(lua "${SOURCE_DIR}/CI/generate-changelog.lua" --mode ptb --releasefile "${downloadedfeed}")
 
       echo "=== Creating release in Dblsqd ==="
-      dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}" || true
+      dblsqd release -a mudlet -c public-test-build -m "${changelog}" "${VERSION}${MUDLET_VERSION_BUILD}-${BUILD_COMMIT}" || true
 
       # release registration and uploading will be manual for the time being
     else

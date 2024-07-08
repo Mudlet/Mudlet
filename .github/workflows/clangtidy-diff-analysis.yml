@@ -37,7 +37,7 @@ jobs:
         repository: ${{github.event.pull_request.head.repo.full_name}}
 
     - name: (Windows) Install Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       if: runner.os == 'Windows'
       with:
         version: ${{matrix.qt}}
@@ -46,7 +46,7 @@ jobs:
         cache: true
 
     - name: (Linux/macOS) Install Qt
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       if: runner.os == 'Linux' || runner.os == 'macOS'
       with:
         version: ${{matrix.qt}}
@@ -54,7 +54,7 @@ jobs:
         cache: true
 
     - name: Restore Boost cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       id: cache-boost
       with:
         path: ${{env.BOOST_ROOT}}
@@ -122,7 +122,7 @@ jobs:
           --target autogen
 
     - name: Check C++ changes against style guide
-      uses: ZedThree/clang-tidy-review@v0.14.0
+      uses: ZedThree/clang-tidy-review@v0.19.0
       id: static_analysis
       with:
         build_dir: 'b/ninja' # path is relative to checkout directory
@@ -133,4 +133,4 @@ jobs:
         split_workflow: true
 
     - name: Upload check results
-      uses: ZedThree/clang-tidy-review/upload@v0.14.0
+      uses: ZedThree/clang-tidy-review/upload@v0.19.0
