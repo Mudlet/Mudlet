@@ -487,7 +487,26 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         host.append_attribute("Large2DMapAreaExitArrows") = "yes";
     }
 
-    host.append_attribute("BoldIsBright") = pHost->mBoldIsBright ? "yes" : "no";
+    switch (pHost->mBoldIsBright) {
+    case Qt::Unchecked:
+        host.append_attribute("BoldIsBrightTriState") = "never";
+        // Temporary - to support Mudlet versions 4.18.0 to .2:
+        host.append_attribute("BoldIsBright") = "no";
+        break;
+    case Qt::Checked:
+        host.append_attribute("BoldIsBrightTriState") = "always";
+        // Temporary - to support Mudlet versions 4.18.0 to .2 - they will not
+        // see a BoldIsBright and default to their "true" which is the best
+        // equivalent for them and is equivalent to our "sometimes" now:
+        break;
+    default:
+        host.append_attribute("BoldIsBrightTriState") = "sometimes";
+        // Temporary - to support Mudlet versions 4.18.0 to .2 - they will not
+        // see a BoldIsBright and default to their "true" which is the best
+        // equivalent for them and is equivalent to our "sometimes" now:
+    }
+
+    if (host.append_attribute("BoldIsBright") = pHost->mBoldIsBright ? "yes" : "no";
 
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());

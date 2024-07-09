@@ -432,6 +432,10 @@ private:
     bool mFastBlink = false;
     bool mConcealed = false;
     quint8 mAltFont = 0;
+    // These three only used when BoldIsBright mode is "always"
+    bool mHasBoldForBright = false;
+    bool mHas8ColorForeGround = false;
+    bool mHas8ColorBackGround = false;
 
     QString mMudLine;
     std::deque<TChar> mMudBuffer;

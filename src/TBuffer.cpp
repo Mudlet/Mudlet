@@ -1196,7 +1196,7 @@ void TBuffer::decodeSGR(const QString& sequence)
     }
 
     const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
-    const bool boldIsBright = pHost->mBoldIsBright;
+    const QtCheckedState boldIsBright = pHost->mBoldIsBright;
     QColor foregroundColor = mForeGroundColor;
     QColor lightForegroundColor = foregroundColor;
     QColor backgroundColor = mBackGroundColor;
@@ -2010,7 +2010,22 @@ void TBuffer::decodeSGR(const QString& sequence)
         }
     }
 
-    if (boldIsBright) {
+    // Put the processing in three separate if()s just to make it simpler to
+    // follow!
+    if (boldIsBright == Qt::Unchecked) {
+        // Bold is NEVER used to select a color and always used for a text effect:
+        if (hasBold.has_value()) {
+            mBold = hasBold.value();
+        }
+        if (hasFaint.has_value()) {
+            mFaint = hasFaint.value();
+        }
+        mForeGroundColor = foregroundColor;
+        mBackGroundColor = backgroundColor;
+        return;
+    }
+
+    if (boldIsBright == Qt::PartiallyChecked) {
         if (!(  (has8ColorFg.has_value() && has8ColorFg.value())
              || (has8ColorBg.has_value() && has8ColorBg.value()))) {
 
@@ -2023,6 +2038,7 @@ void TBuffer::decodeSGR(const QString& sequence)
             if (hasFaint.has_value()) {
                 mFaint = hasFaint.value();
             }
+
             // Now set the color changes we've detected (if any) during the
             // parsing of this SGR sequence:
             mForeGroundColor = foregroundColor;
@@ -2053,13 +2069,61 @@ void TBuffer::decodeSGR(const QString& sequence)
                 mBackGroundColor = backgroundColor;
             }
         }
-    } else {
+        return;
+    }
+
+    // If we get here then bold is ALWAYS uses to select bright colors
+    if (!(  (has8ColorFg.has_value() && has8ColorFg.value())
+          || (has8ColorBg.has_value() && has8ColorBg.value()))) {
+
+        // We have not got an 8-color mode setting so record that we have
+        // got a bold for later use:
+        // bold (and faint) settings refers to font presentation rather then
+        // 16 color mode setting:
         if (hasBold.has_value()) {
-            mBold = hasBold.value();
+            mHasBoldForBright = hasBold.value();
         }
-        if (hasFaint.has_value()) {
-            mFaint = hasFaint.value();
+
+    } else {
+        // Either an 8 color foreground or background color or both have
+        // been set
+        if (has8ColorFg.has_value()) {
+            if (has8ColorFg.value()) {
+                // We have an 8 color foreground
+                mHas8ColorForeGround = true;
+                mHas8ColorBackGround = false;
+            } else {
+                // We do not have an 8 color foreground
+                mHas8ColorForeGround = false;
+            }
+        } else {
+            if (has8ColorBg.has_value()) {
+                if (has8ColorBg.value()) {
+                    // We have an 8 color background
+                    mHas8ColorBackGround = true;
+                } else {
+                    // We do not have an 8 color background
+                    mHas8ColomHas8ColorBackGroundrForeGround = false;
+                }
+            }
         }
+    }
+
+    // Now combine the three flags to select the right colours
+    if (mHasBoldForBright) {
+        if (mHas8ColorForeGround) {
+            mForeGroundColor = lightForegroundColor;
+            mBackGroundColor = backgroundColor;
+        } else {
+            if (mHas8ColorBackGround) {
+                mForeGroundColor = foregroundColor;
+                mBackGroundColor = lightBackgroundColor;
+            } else {
+                mForeGroundColor = foregroundColor;
+                mBackGroundColor = backgroundColor;
+            }
+        }
+    } else {
         mForeGroundColor = foregroundColor;
         mBackGroundColor = backgroundColor;
     }

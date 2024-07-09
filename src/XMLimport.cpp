@@ -991,15 +991,32 @@ void XMLimport::readHost(Host* pHost)
         pHost->setLargeAreaExitArrows(false);
     }
 
-    if (attributes().hasAttribute(qsl("BoldIsBright"))) {
-        pHost->mBoldIsBright = (attributes().value(qsl("BoldIsBright")) == YES);
+    // Mudlet versions 4.18.0 to .2 had a boolean value here under
+    // "BoldIsBright" so we need to handle "yes"/"no" values for that as well:
+    if (attributes().hasAttribute(qsl("BoldIsBrightTriState"))) {
+        const auto value = attributes().value(qsl("BoldIsBrightTriState")).toString();
+        if (value == qsl("never")) {
+            pHost->mBoldIsBright = Qt::Unchecked;
+        } else {
+            if (value == qsl("always")) {
+                pHost->mBoldIsBright = Qt::Checked;
+            } else {
+                // The structure is organised so that the default becomes this
+                // one:
+                pHost->mBoldIsBright = Qt::PartiallyChecked;
+            }
+        }
     } else {
-        // The default, backwards compatible, option is true, though false would be "better":
-        pHost->mBoldIsBright = true;
-    }
-
-    if (attributes().value(qsl("mShowInfo")) == qsl("no")) {
-        mpHost->mMapInfoContributors.clear();
+        if (attributes().hasAttribute(qsl("BoldIsBright"))) {
+            const auto value = attributes().value(qsl("BoldIsBright")).toString();
+            if (value != qsl("yes")) {
+                pHost->mBoldIsBright = Qt::Unchecked;
+            } else {
+                pHost->mBoldIsBright = Qt::PartiallyChecked;
+            }
+        } else {
+            pHost->mBoldIsBright = Qt::PartiallyChecked;
+        }
     }
 
     QMargins borders;
