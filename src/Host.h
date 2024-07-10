@@ -719,7 +719,7 @@ public:
     // the same sequence as the fg or bg color setting sequence - Checked means
     // don't ever use the BOLD code for bold text effects (and also don't use
     // the faint code either):
-    QtCheckedState mBoldIsBright = Qt::PartiallyChecked;
+    Qt::CheckState mBoldIsBright = Qt::PartiallyChecked;
 
 signals:
     // Tells TTextEdit instances for this profile how to draw the ambiguous

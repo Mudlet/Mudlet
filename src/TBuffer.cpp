@@ -1196,7 +1196,7 @@ void TBuffer::decodeSGR(const QString& sequence)
     }
 
     const bool haveColorSpaceId = pHost->getHaveColorSpaceId();
-    const QtCheckedState boldIsBright = pHost->mBoldIsBright;
+    const Qt::CheckState boldIsBright = pHost->mBoldIsBright;
     QColor foregroundColor = mForeGroundColor;
     QColor lightForegroundColor = foregroundColor;
     QColor backgroundColor = mBackGroundColor;
