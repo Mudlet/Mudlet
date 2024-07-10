@@ -1,5 +1,5 @@
 ############################################################################
-#    Copyright (C) 2013-2015, 2017-2018, 2020-2023 by Stephen Lyons        #
+#    Copyright (C) 2013-2015, 2017-2018, 2020-2024 by Stephen Lyons        #
 #                                                - slysven@virginmedia.com #
 #    Copyright (C) 2014 by Ahmed Charles - acharles@outlook.com            #
 #    Copyright (C) 2017 by Ian Adkins - ieadkins@gmail.com                 #
@@ -120,7 +120,7 @@ BUILD_COMMIT_TEST = $$lower($$BUILD_COMMIT_TEST)
 
 
 # Set Mudlet version (update in CMakeLists.txt as well)
-VERSION = 4.17.2
+VERSION = 4.18.2
 
 # Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
 BUILD = $$(MUDLET_VERSION_BUILD)
