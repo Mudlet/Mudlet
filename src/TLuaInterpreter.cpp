@@ -7262,17 +7262,20 @@ int TLuaInterpreter::setConfig(lua_State * L)
             return 2;
         }
 
-        if (value == qsl("never") || (value == qsl("false")) {
+        if (value == qsl("never") || value == qsl("false")) {
             host.mBoldIsBright = Qt::Unchecked;
-        } else if (value == qsl("always")) {
-            host.mBoldIsBright = Qt::Checked;
-        } else {
-            // "true" might be expected from scripts for Mudlet 4.18.0 to .2 and
-            // in those versions it behaved like this choice, "sometimes" is the
-            // value used in the profile save data and it might conceiveably be
-            // used by those inspecting the XML data:
-            hostt.mBoldIsBright = Qt::PartiallyChecked;
+            return success();
         }
+        if (value == qsl("always")) {
+            host.mBoldIsBright = Qt::Checked;
+            return success();
+        }
+
+        // Of the remaining value "true" might be expected from scripts for
+        // Mudlet 4.18.0 to .2 and in those versions it behaved like this
+        // choice, "sometimes" is the value used in the profile save data and it
+        // might conceiveably be used by those inspecting the XML data:
+        host.mBoldIsBright = Qt::PartiallyChecked;
         return success();
     }
     if (key == qsl("logInHTML")) {
