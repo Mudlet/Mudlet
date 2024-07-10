@@ -1121,12 +1121,22 @@ QString dlgAboutDialog::createBuildInfo() const
     } else {
         isWow64Process = static_cast<bool>(value);
     }
+#if defined(Q_OS_WIN64)
+    const bool is64BitBuild = true;
+#else
+    const bool is64BitBuild = false;
+#endif
+    const QString upgradeTo64Bits = (isWow64Process.has_value() && isWow64Process.value())
+                                            ? qsl("<tr><td colspan=\"2\" style=\"padding-right: 10px; padding-top: 10px;\"><b>%1</b></td></tr>\n")
+                                                      .arg(mudlet::self()->releaseVersion
+                                                                   //: This text is shown on 32-Bit builds of Mudlet of release builds only when run on 64-Bit Windows
+                                                                   ? tr("You are using the 32-Bit version of Mudlet on a 64-Bit version of Windows. "
+                                                                        "You may wish to upgrade (by downloading and then installing the 64-Bit version now available from Mudlet's website).")
+                                                                   //: This text is shown on 32-Bit builds of Mudlet of all but release builds when run on 64-Bit Windows
+                                                                   : tr("This is a 32-Bit build of Mudlet running on a 64-Bit version of Windows."))
+                                            : QString();
+
     if (Q_UNLIKELY(QLatin1String(qVersion()) != QLatin1String(QT_VERSION_STR))) {
-        // Originally QLatin1String::compare(...) was to be used but, despite
-        // the Qt documentation claiming that that method was introduced in
-        // Qt 5.14 it lies; CI builds using Qt version 5.14.2 were borking
-        // and giving an: "error: ‘class QLatin1String’ has no member named
-        // ‘compare’" message instead!
         return qsl("<table border=\"0\" style=\"margin-bottom:18px; margin-left:36px; margin-right:36px;\" width=\"100%\" cellspacing=\"2\" cellpadding=\"0\">\n"
                    "<tr><td colspan=\"2\" style=\"font-weight: 800\">%1</td></tr>\n"
                    "<tr><td style=\"padding-right: 10px;\">%2<td>%3</td></tr>\n"
@@ -1134,6 +1144,7 @@ QString dlgAboutDialog::createBuildInfo() const
                    "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
                    "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
                    "<tr><td style=\"padding-right: 10px;\">%10</td><td>%11</td></tr>\n"
+                   "%12"
                    "</table>")
                 .arg(tr("Technical information:"), // %1
                      tr("Version"), // %2
@@ -1145,12 +1156,16 @@ QString dlgAboutDialog::createBuildInfo() const
                       */
                      isWow64Process.has_value() ? (isWow64Process.value() ? tr("CPU (WoW64)")
                      /*: This is shown for 32-Bit or 64-Bit Windows builds when
-                      *a Windows OS of the same size. It is the opposite case
-                      *to that when \"WoW64\" is included - in those cases a
-                      *32-Bit application is run on 64-Bit hardware via an
-                      *extra WindowOnWindows64 software layer.
+                      *run on a Windows OS of the same bitness. It is the
+                      *opposite case to that when \"WoW64\" is included - in
+                      *those cases a 32-Bit application is run on 64-Bit
+                      *hardware via an extra WindowOnWindows64 software layer.
                       */
-                                                                          : tr("CPU (Native)"))
+                                                                          : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
+                     /*: This is shown for 32-Bit or 64-Bit Windows builds if
+                      *the Windows API call to detect whether the WoW64 system
+                      *is in use fails to work.
+                      */
                                                 : tr("CPU"), // %6
                      QSysInfo::currentCpuArchitecture(), // %7
                      /*: This is shown when the Qt version used at run-time
@@ -1164,7 +1179,8 @@ QString dlgAboutDialog::createBuildInfo() const
                       *the usual case.
                       */
                 .arg(tr("Qt version (run-time)"), // %10
-                     qVersion()); // %11
+                     qVersion(), // %11
+                     upgradeTo64Bits); // %12
     }
 
     // Else they are the same:
@@ -1174,6 +1190,7 @@ QString dlgAboutDialog::createBuildInfo() const
                "<tr><td style=\"padding-right: 10px;\">%4</td><td>%5</td></tr>\n"
                "<tr><td style=\"padding-right: 10px;\">%6</td><td>%7</td></tr>\n"
                "<tr><td style=\"padding-right: 10px;\">%8</td><td>%9</td></tr>\n"
+               "%10"
                "</table>")
             .arg(tr("Technical information:"), // %1
                  tr("Version"), // %2
@@ -1190,7 +1207,7 @@ QString dlgAboutDialog::createBuildInfo() const
                   *32-Bit application is run on 64-Bit hardware via an
                   *extra WindowOnWindows64 software layer.
                   */
-                                                                      : tr("CPU (Native)"))
+                                                                      : tr("CPU (%1-bits)").arg(is64BitBuild ? 64 : 32))
                  /*: This is shown when something has gone wrong and it is not
                   *possible to correctly determine whether there is an extra
                   *software layer being used to run a 32-Bit Windows build
@@ -1202,7 +1219,8 @@ QString dlgAboutDialog::createBuildInfo() const
                   *as was used during compilation - it is the usual case.
                   */
                  tr("Qt version"), // %8
-                 QLatin1String(QT_VERSION_STR)); // %9
+                 QLatin1String(QT_VERSION_STR), // %9
+                 upgradeTo64Bits); // %10
 #else
 
     // Anything else
