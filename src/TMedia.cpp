@@ -1325,16 +1325,16 @@ void TMedia::play(TMediaData& mediaData)
             break;
         case TMediaData::MediaProtocolGMCP:
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMCMP());
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteGame());
 #else
-            pPlayer.getMediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteMCMP());
+            pPlayer.getMediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteGame());
 #endif
             break;
         case TMediaData::MediaProtocolMSP:
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteMSP());
+            pPlayer.getMediaPlayer()->setMuted(mudlet::self()->muteGame());
 #else
-            pPlayer.getMediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteMSP());
+            pPlayer.getMediaPlayer()->audioOutput()->setMuted(mudlet::self()->muteGame());
 #endif
             break;
     }
