@@ -2073,60 +2073,52 @@ void TBuffer::decodeSGR(const QString& sequence)
     }
 
     // If we get here then bold is ALWAYS uses to select bright colors
-    if (!(  (has8ColorFg.has_value() && has8ColorFg.value())
-          || (has8ColorBg.has_value() && has8ColorBg.value()))) {
+    if (hasBold.has_value()) {
+        // So record if we have a bold:
+        mHasBoldForBright = hasBold.value();
+    }
 
-        // We have not got an 8-color mode setting so record that we have
-        // got a bold for later use:
-        // bold (and faint) settings refers to font presentation rather then
-        // 16 color mode setting:
-        if (hasBold.has_value()) {
-            mHasBoldForBright = hasBold.value();
-        }
-
-    } else {
-        // Either an 8 color foreground or background color or both have
-        // been set
-        if (has8ColorFg.has_value()) {
-            if (has8ColorFg.value()) {
-                // We have an 8 color foreground
-                mHas8ColorForeGround = true;
-                mHas8ColorBackGround = false;
-            } else {
-                // We do not have an 8 color foreground
-                mHas8ColorForeGround = false;
-            }
+    // Also record whether we have an 8-color fore ground or - failing that -
+    // an 8-color background:
+    if (has8ColorFg.has_value()) {
+        if (has8ColorFg.value()) {
+            // We have an 8 color foreground
+            mHas8ColorForeGround = true;
+            mHas8ColorBackGround = false;
         } else {
-            if (has8ColorBg.has_value()) {
-                if (has8ColorBg.value()) {
-                    // We have an 8 color background
-                    mHas8ColorBackGround = true;
-                } else {
-                    // We do not have an 8 color background
-                    mHas8ColomHas8ColorBackGroundrForeGround = false;
-                }
+            // We do not have an 8 color foreground
+            mHas8ColorForeGround = false;
+        }
+    } else {
+        if (has8ColorBg.has_value()) {
+            if (has8ColorBg.value()) {
+                // We have an 8 color background
+                mHas8ColorBackGround = true;
+            } else {
+                // We do not have an 8 color background
+                mHas8ColorBackGround = false;
             }
         }
     }
 
-    // Now combine the three flags to select the right colours
+    // Now combine the three flags, whether changed here or not, to select the
+    // right colours
     if (mHasBoldForBright) {
         if (mHas8ColorForeGround) {
             mForeGroundColor = lightForegroundColor;
             mBackGroundColor = backgroundColor;
-        } else {
-            if (mHas8ColorBackGround) {
-                mForeGroundColor = foregroundColor;
-                mBackGroundColor = lightBackgroundColor;
-            } else {
-                mForeGroundColor = foregroundColor;
-                mBackGroundColor = backgroundColor;
-            }
+            return;
         }
-    } else {
-        mForeGroundColor = foregroundColor;
-        mBackGroundColor = backgroundColor;
+
+        if (mHas8ColorBackGround) {
+            mForeGroundColor = foregroundColor;
+            mBackGroundColor = lightBackgroundColor;
+            return;
+        }
     }
+
+    mForeGroundColor = foregroundColor;
+    mBackGroundColor = backgroundColor;
 }
 
 void TBuffer::decodeOSC(const QString& sequence)
