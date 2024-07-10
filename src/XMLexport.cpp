@@ -506,8 +506,6 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
         // equivalent for them and is equivalent to our "sometimes" now:
     }
 
-    if (host.append_attribute("BoldIsBright") = pHost->mBoldIsBright ? "yes" : "no";
-
     { // Blocked so that indentation reflects that of the XML file
         host.append_child("name").text().set(pHost->mHostName.toUtf8().constData());
 
