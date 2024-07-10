@@ -125,7 +125,7 @@ VERSION = 4.17.2
 # Set BUILD based on environment variable MUDLET_VERSION_BUILD or default
 BUILD = $$(MUDLET_VERSION_BUILD)
 !isEmpty(BUILD) {
-    BUILD = ${BUILD}-${GIT_SHA1}
+    BUILD = $${BUILD}-$${GIT_SHA1}
 } else {
     BUILD = "-dev-"$${GIT_SHA1}
 }
@@ -1683,8 +1683,16 @@ OTHER_FILES += \
     ../.github/workflows/update-geyser-docs.yml \
     ../.github/workflows/update-translations.yml \
     ../.gitignore \
+    ../CI/build-mudlet-for-windows.sh \
+    ../CI/deploy-mudlet-for-windows.sh \
+    ../CI/fix.grid.ui.ordering.js \
     ../CI/generate-changelog.lua \
+    ../CI/lua-5.1.5-so.patch \
+    ../CI/org.mudlet.mudlet.yml \
     ../CI/qt-silent-install.qs \
+    ../CI/register-windows-release.sh \
+    ../CI/package-mudlet-for-windows.sh \
+    ../CI/setup-windows-sdk.sh \
     ../CI/travis.after_success.sh \
     ../CI/travis.before_install.sh \
     ../CI/travis.install.sh \
@@ -1697,6 +1705,7 @@ OTHER_FILES += \
     ../CI/travis.set-build-info.sh \
     ../CI/travis.validate_deployment.sh \
     ../CI/update-autocompletion.lua \
+    ../CI/validate-deployment-for-windows.sh \
     ../dangerfile.js \
     ../docker/.env.template \
     ../docker/docker-compose.override.linux.yml \
