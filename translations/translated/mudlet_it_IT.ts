@@ -58,13 +58,13 @@
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="96"/>
       <source>[ WARN ]  - Could not log in to the game, is the login information correct?</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Impossibile completare il login nel gioco, le informazioni sono corrette?</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="99"/>
       <source>[ WARN ]  - Could not log in to the game: %1</source>
       <extracomment>%1 shows the reason for failure, could be authentication, etc.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Impossibile completare il login nel gioco: %1</translation>
     </message>
   </context>
   <context>
@@ -77,7 +77,7 @@
     <message>
       <location filename="../src/Host.cpp" line="489"/>
       <source>[ ALERT ] - This profile will now save and close.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - Questo profilo sarà salvato e chiuso.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="749"/>
@@ -1916,7 +1916,7 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1592"/>
       <source>Could not save profile</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile salvare il profilo</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1593"/>
@@ -11489,32 +11489,32 @@ Prova a caricare una versione più vecchia in &apos;Connetti - Opzioni - Cronolo
     <message>
       <location filename="../src/mudlet.cpp" line="3020"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use %1 to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - I suoni di Mudlet e del gioco sono stati silenziati. Usa %1 per riattivarli.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3021"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use %1 to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - I suoni di Mudlet e del gioco sono attivi. Usa %1 per silenziarli.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3023"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - I suoni di Mudlet e del gioco sono silenziati.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3023"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - I suoni di Mudlet e del gioco sono attivi.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3033"/>
       <source>Unmute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Attiva i suoni di Mudlet (Trigger, Script, ecc.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3038"/>
       <source>Unmute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Attiva i suoni del gioco (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3077"/>
