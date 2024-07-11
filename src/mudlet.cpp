@@ -92,7 +92,7 @@
 #include <QSettings>
 #endif
 
-#if defined(Q_OS_MAC)
+#if defined(Q_OS_MACOS)
 // wrap in namespace since `Collection` defined in these headers will clash with Boost
 namespace coreMacOS {
 #include <CoreFoundation/CoreFoundation.h>
@@ -4801,7 +4801,7 @@ bool mudlet::desktopInDarkMode()
 #if defined(Q_OS_WIN32)
     QSettings settings(R"(HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize)", QSettings::NativeFormat);
     return settings.value("AppsUseLightTheme", 1).toInt() == 0;
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_MACOS)
     bool isDark = false;
     CFStringRef uiStyleKey = CFSTR("AppleInterfaceStyle");
     CFStringRef uiStyle = nullptr;
