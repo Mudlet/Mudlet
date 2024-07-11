@@ -58,13 +58,13 @@
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="96"/>
       <source>[ WARN ]  - Could not log in to the game, is the login information correct?</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Could not log in to the game, is the login information correct?</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="99"/>
       <source>[ WARN ]  - Could not log in to the game: %1</source>
       <extracomment>%1 shows the reason for failure, could be authentication, etc.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Could not log in to the game: %1</translation>
     </message>
   </context>
   <context>
@@ -77,7 +77,7 @@
     <message>
       <location filename="../src/Host.cpp" line="489"/>
       <source>[ ALERT ] - This profile will now save and close.</source>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - This profile will now save and close.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="749"/>
@@ -1918,12 +1918,12 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1592"/>
       <source>Could not save profile</source>
-      <translation type="unfinished"/>
+      <translation>Could not save profile</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1593"/>
       <source>Sorry, could not save your profile as &quot;%1&quot; - got the following error: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Sorry, could not save your profile as &quot;%1&quot; - received the following error: &quot;%2&quot;.</translation>
     </message>
   </context>
   <context>
@@ -5265,14 +5265,18 @@ Count</translation>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                            These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1094"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                            These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1112"/>
@@ -9024,7 +9028,8 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/main.cpp" line="317"/>
       <source>       --steammode                  adjusts Mudlet settings to match
                                     Steam&apos;s requirements.</source>
-      <translation type="unfinished"/>
+      <translation>       --steammode                  adjusts Mudlet settings to match
+                                    Steam&apos;s requirements.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="319"/>
@@ -9470,17 +9475,17 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
     <message>
       <location filename="../src/ui/main_window.ui" line="355"/>
       <source>Mute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mute sounds from Mudlet (Triggers, Scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="372"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Mute sounds from the game (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="375"/>
       <source>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="386"/>
@@ -10589,14 +10594,14 @@ There is NO WARRANTY, to the extent permitted by law.</translation>
       <location filename="../src/mudlet.cpp" line="329"/>
       <location filename="../src/mudlet.cpp" line="3033"/>
       <source>Mute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mute sounds from Mudlet (Triggers, Scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <location filename="../src/mudlet.cpp" line="335"/>
       <location filename="../src/mudlet.cpp" line="3038"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Mute sounds from the game (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="897"/>
@@ -11378,32 +11383,32 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="3020"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use %1 to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet and game sounds are muted. Use %1 to unmute.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3021"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use %1 to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet and game sounds are unmuted. Use %1 to mute.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3023"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet and game sounds are muted.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3023"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Mudlet and game sounds are unmuted.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3033"/>
       <source>Unmute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Unmute sounds from Mudlet (Triggers, Scripts, etc.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3038"/>
       <source>Unmute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Unmute sounds from the game (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3077"/>
@@ -12519,7 +12524,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="802"/>
       <source>&lt;p&gt;Anti-aliasing use on the font for the &lt;b&gt;Main&lt;/b&gt; console. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. &lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Anti-aliasing use on the font for the &lt;b&gt;Main&lt;/b&gt; console. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="829"/>
@@ -12833,12 +12838,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1928"/>
       <source>&lt;p&gt;Server uses BOLD to make Light 8 colors (only for some 16 Color MUDs)&lt;/p&gt;&lt;p&gt;Some older Game Servers support eight different colors which are selected by using the original eight &quot;Set Graphic Rendition&quot; &lt;tt&gt; &amp;lt;SGR&amp;gt; 30&lt;/tt&gt; (black) to &lt;tt&gt;37&lt;/tt&gt; (white)&lt;/tt&gt; ANSI ESC color codes and combine those with the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; (bold or more intense) code to provide a second set of eight colors for sixteen in total. This checkbox causes this use of the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; code however it should not be used if the Game Server:&lt;ul&gt;&lt;li&gt;only uses eight colors&lt;/li&gt;&lt;li&gt;uses more than sixteen colors&lt;/li&gt;&lt;li&gt;uses sixteen colors but selects the &quot;brighter&quot; eight colors with &lt;tt&gt;&amp;lt;SGR&amp;gt; 90&lt;/tt&gt; (light black) to &lt;tt&gt;&amp;lt;SGR&amp;gt; 97&lt;/tt&gt; (light white) {and &lt;tt&gt;100&lt;/tt&gt; to &lt;tt&gt;107&lt;/tt&gt; for the same as a background} of the sixteeen&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Older versions of Mudlet had code that effectively had this option permanently enabled. However nowadays it interferes with using the BOLD attribute to provide &lt;b&gt;bold&lt;/b&gt; text alongside the less often used FAINT attribute to provide &lt;span style=&quot; font-weight: 200&quot;&gt;faint&lt;/span&gt; and &lt;span style=&quot; font-weight: 600&quot;&gt;demi-bold&lt;/span&gt; text effects.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Server uses BOLD to make Light 8 colours (only for some 16 Colour MUDs)&lt;/p&gt;&lt;p&gt;Some older Game Servers support eight different colours which are selected by using the original eight &quot;Set Graphic Rendition&quot; &lt;tt&gt; &amp;lt;SGR&amp;gt; 30&lt;/tt&gt; (black) to &lt;tt&gt;37&lt;/tt&gt; (white)&lt;/tt&gt; ANSI ESC colour codes and combine those with the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; (bold or more intense) code to provide a second set of eight colours for sixteen in total. This checkbox causes this use of the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; code, however it should not be used if the Game Server:&lt;ul&gt;&lt;li&gt;only uses eight colours&lt;/li&gt;&lt;li&gt;uses more than sixteen colours&lt;/li&gt;&lt;li&gt;uses sixteen colours but selects the &quot;brighter&quot; eight colours with &lt;tt&gt;&amp;lt;SGR&amp;gt; 90&lt;/tt&gt; (light black) to &lt;tt&gt;&amp;lt;SGR&amp;gt; 97&lt;/tt&gt; (light white) {and &lt;tt&gt;100&lt;/tt&gt; to &lt;tt&gt;107&lt;/tt&gt; for the same as a background} of the sixteeen&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Older versions of Mudlet had code that effectively had this option permanently enabled. However nowadays it interferes with using the BOLD attribute to provide &lt;b&gt;bold&lt;/b&gt; text alongside the less often used FAINT attribute to provide &lt;span style=&quot; font-weight: 200&quot;&gt;faint&lt;/span&gt; and &lt;span style=&quot; font-weight: 600&quot;&gt;demi-bold&lt;/span&gt; text effects.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
       <source>BOLD is Bright</source>
-      <translation type="unfinished"/>
+      <translation>BOLD is Bright</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1987"/>
