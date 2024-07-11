@@ -1921,7 +1921,7 @@ Percorsi analizzati:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1593"/>
       <source>Sorry, could not save your profile as &quot;%1&quot; - got the following error: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Impossibile salvare il profilo come &quot;%1&quot; - l'errore ricevuto è: &quot;%2&quot;.</translation>
     </message>
   </context>
   <context>
@@ -5344,14 +5344,18 @@ Utilizzi</translation>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                            Queste formidabili persone saranno per sempre ricordate&lt;br&gt;per il loro generoso supporto finanziario a Mudlet come patreon:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1094"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                            Queste formidabili persone saranno per sempre ricordate&lt;br&gt;per il loro generoso supporto finanziario su &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1112"/>
@@ -9118,7 +9122,8 @@ dalla GUI)</translation>
       <location filename="../src/main.cpp" line="317"/>
       <source>       --steammode                  adjusts Mudlet settings to match
                                     Steam&apos;s requirements.</source>
-      <translation type="unfinished"/>
+      <translation>       --steammode                  modifica le impostazioni di Mudlet
+                                    per soddisfare i requisiti di Steam.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="319"/>
@@ -9581,17 +9586,17 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
     <message>
       <location filename="../src/ui/main_window.ui" line="355"/>
       <source>Mute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Silenzia i suoni di Mudlet (Trigger, Script, ecc.)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="372"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Silenzia i suoni del gioco (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="375"/>
       <source>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Silenzia i media del gioco (MCMP, MSP).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="386"/>
@@ -10700,14 +10705,14 @@ Non è prevista NESSUNA GARANZIA, nella misura consentita dalla legge.</translat
       <location filename="../src/mudlet.cpp" line="329"/>
       <location filename="../src/mudlet.cpp" line="3033"/>
       <source>Mute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Silenzia i suoni di Mudlet (Trigger, Script, ecc.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <location filename="../src/mudlet.cpp" line="335"/>
       <location filename="../src/mudlet.cpp" line="3038"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Silenzia i suoni del gioco (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="897"/>
@@ -12631,7 +12636,7 @@ tenta di nuovo quando sarà terminato.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="802"/>
       <source>&lt;p&gt;Anti-aliasing use on the font for the &lt;b&gt;Main&lt;/b&gt; console. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. &lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Utilizza Anti-aliasing per il carattere nella console &lt;b&gt;Principale&lt;/b&gt;. I caratteri sono più leggibili se hai uno schermo con una risoluzione più alta così più utilizzarne di più grandi. Fai attenzione perchè se utilizzi uno schermo a bassa risoluzione i tuoi caratteri potrebbero sembrare sfocati. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="829"/>
@@ -12950,7 +12955,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
       <source>BOLD is Bright</source>
-      <translation type="unfinished"/>
+      <translation>GRASSETTO è più luminoso</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1987"/>
