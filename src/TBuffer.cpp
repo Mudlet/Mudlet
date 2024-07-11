@@ -1791,7 +1791,7 @@ void TBuffer::decodeSGR(const QString& sequence)
                     break;
                 case 43:
                     backgroundColor = mYellow;
-                    lightBackgroundColor = mLightGreen;
+                    lightBackgroundColor = mLightYellow;
                     has8ColorBg = true;
                     m8ColorBg = 3;
                     break;
