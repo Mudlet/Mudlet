@@ -57,13 +57,13 @@
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="96"/>
       <source>[ WARN ]  - Could not log in to the game, is the login information correct?</source>
-      <translation type="unfinished"/>
+      <translation>[ 警告 ]  - 无法登录游戏，登录信息是否正确？</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="99"/>
       <source>[ WARN ]  - Could not log in to the game: %1</source>
       <extracomment>%1 shows the reason for failure, could be authentication, etc.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ 警告 ]  - 无法登录到游戏：%1</translation>
     </message>
   </context>
   <context>
@@ -76,7 +76,7 @@
     <message>
       <location filename="../src/Host.cpp" line="489"/>
       <source>[ ALERT ] - This profile will now save and close.</source>
-      <translation type="unfinished"/>
+      <translation>[ 注意 ] - 该配置文件将被保存并关闭。</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="749"/>
@@ -1904,7 +1904,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1592"/>
       <source>Could not save profile</source>
-      <translation type="unfinished"/>
+      <translation>无法保存用户配置</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1593"/>
