@@ -5468,7 +5468,7 @@ void TLuaInterpreter::initLuaGlobals()
     // AppInstaller on Linux would like the C search path to also be set to
     // a ./lib sub-directory of the current binary directory:
     additionalCPaths << qsl("%1/lib/?.so").arg(appPath);
-#elif defined(Q_OS_MAC)
+#elif defined(Q_OS_MACOS)
     // macOS app bundle would like the search path to also be set to the current
     // binary directory for both modules and binary libraries:
     additionalCPaths << qsl("%1/?.so").arg(appPath);
