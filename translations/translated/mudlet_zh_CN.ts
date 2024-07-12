@@ -595,7 +595,8 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="151"/>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>此特殊出口所通向房间的 roomID 应在此处填写。如果保持这样，当点击 &lt;tt>保存&lt;/tt> 时，此出口将被删除。
+</translation>
     </message>
   </context>
   <context>
@@ -915,7 +916,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3673"/>
       <source>Move the selection, centered on the highlighted room (%1) to:</source>
       <comment>%1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>将选中的内容移动到以高亮显示的房间 (%1) 为中心的位置：</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3679"/>
@@ -1188,7 +1189,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TCommandLine.cpp" line="1444"/>
       <source>Input line of &quot;%1&quot; window of &quot;%2&quot; profile.</source>
       <extracomment>Accessibility-friendly name to describe the built-in command line of a console/window other than the main one, when more than one profile is loaded, %1 is the name of the window/console and %2 is the name of the profile.</extracomment>
-      <translation type="unfinished"/>
+      <translation>“%2”配置文件的“%1”窗口的输入行。</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1458"/>
@@ -1207,7 +1208,8 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="341"/>
       <source>&lt;i&gt;N:&lt;/i&gt; is the latency of the game server and network (aka ping, in seconds),&lt;br&gt;&lt;i&gt;S:&lt;/i&gt; is the system processing time - how long your triggers took to process the last line(s).</source>
-      <translation type="unfinished"/>
+      <translation>&lt;i>N:&lt;/i> 是游戏服务器和网络的延迟（即 ping，以秒为单位），&lt;br>&lt;i>S:&lt;/i> 是系统处理时间 - 您的触发器处理上一行（或多行）所花费的时间。
+</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="356"/>
@@ -1264,7 +1266,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2070"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置文件“%1”的编辑器错误窗口，实时内容。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2073"/>
@@ -1282,7 +1284,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2081"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置文件“%1”的编辑器错误窗口。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2084"/>
@@ -1354,7 +1356,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="836"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved.</source>
-      <translation type="unfinished"/>
+      <translation>回放录制已停止，但无法保存。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="838"/>
@@ -1381,13 +1383,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2100"/>
       <source>Profile &quot;%1&quot; main window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置文件“%1”主窗口的历史内容。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2102"/>
       <source>Profile &quot;%1&quot; main window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置文件“%1”主窗口的实时内容。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2105"/>
@@ -1435,13 +1437,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2137"/>
       <source>Profile embedded window &quot;%1&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置文件嵌入窗口“%1”的实时内容。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2142"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>配置文件“%1”嵌入窗口“%2”。</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2145"/>
@@ -1909,7 +1911,7 @@ Tried these locations:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1593"/>
       <source>Sorry, could not save your profile as &quot;%1&quot; - got the following error: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>抱歉，无法将您的配置文件保存为"%1" - 出现以下错误: "%2".</translation>
     </message>
   </context>
   <context>
@@ -5277,14 +5279,16 @@ Count</source>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
                             </source>
-      <translation type="unfinished"/>
+      <translation>这些杰出的人们将因他们在 Mudlet 的 Patreon 上慷慨的财政支持而被永远铭记：&lt;br>
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1094"/>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                             </source>
-      <translation type="unfinished"/>
+      <translation>这些杰出的人们将因他们在 &lt;a href="https://www.patreon.com/mudlet">Mudlet 的 Patreon&lt;/a> 上慷慨的财政支持而被永远铭记：&lt;br>
+</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1112"/>
@@ -8989,7 +8993,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/main.cpp" line="317"/>
       <source>       --steammode                  adjusts Mudlet settings to match
                                     Steam&apos;s requirements.</source>
-      <translation type="unfinished"/>
+      <translation>--steammode                  调整 Mudlet 设置以符合 Steam 的要求。</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="319"/>
@@ -9429,17 +9433,17 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="355"/>
       <source>Mute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 中的静音声音 (触发器，脚本等)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="372"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>游戏中的静音声音 (MCMP， MSP)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="375"/>
       <source>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>静音游戏中的声音（MCMP，MSP）。&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="386"/>
@@ -10540,14 +10544,14 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="329"/>
       <location filename="../src/mudlet.cpp" line="3033"/>
       <source>Mute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Mudlet 中的静音声音 (触发器，脚本等)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
       <location filename="../src/mudlet.cpp" line="335"/>
       <location filename="../src/mudlet.cpp" line="3038"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>游戏中的静音声音 ( MCMP， MSP)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="897"/>
@@ -11328,32 +11332,32 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="3020"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use %1 to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ]  - Mudlet和游戏声音已被静音。使用%1来取消静音。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3021"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use %1 to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ]  - Mudlet和游戏声音已取消静音。使用 %1 静音。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3023"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted.</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ]  - Mudlet和游戏声音已被静音。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3023"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted.</source>
-      <translation type="unfinished"/>
+      <translation>[ 信息 ]  - Mudlet和游戏声音已取消静音。</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3033"/>
       <source>Unmute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>取消 Mudlet 的静音 (触发器，脚本等)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3038"/>
       <source>Unmute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>取消游戏中的静音 (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3077"/>
@@ -12470,7 +12474,8 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="802"/>
       <source>&lt;p&gt;Anti-aliasing use on the font for the &lt;b&gt;Main&lt;/b&gt; console. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. &lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>在主控制台上使用抗锯齿字体。如果你有高屏幕分辨率并且可以使用较大的字体，抗锯齿可以使字体更加平滑。请注意，在低分辨率和小字体大小下，字体会变得模糊。&lt;/p>
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="829"/>
@@ -12784,12 +12789,20 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1928"/>
       <source>&lt;p&gt;Server uses BOLD to make Light 8 colors (only for some 16 Color MUDs)&lt;/p&gt;&lt;p&gt;Some older Game Servers support eight different colors which are selected by using the original eight &quot;Set Graphic Rendition&quot; &lt;tt&gt; &amp;lt;SGR&amp;gt; 30&lt;/tt&gt; (black) to &lt;tt&gt;37&lt;/tt&gt; (white)&lt;/tt&gt; ANSI ESC color codes and combine those with the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; (bold or more intense) code to provide a second set of eight colors for sixteen in total. This checkbox causes this use of the &lt;tt&gt;&amp;lt;SGR&amp;gt; 1&lt;/tt&gt; code however it should not be used if the Game Server:&lt;ul&gt;&lt;li&gt;only uses eight colors&lt;/li&gt;&lt;li&gt;uses more than sixteen colors&lt;/li&gt;&lt;li&gt;uses sixteen colors but selects the &quot;brighter&quot; eight colors with &lt;tt&gt;&amp;lt;SGR&amp;gt; 90&lt;/tt&gt; (light black) to &lt;tt&gt;&amp;lt;SGR&amp;gt; 97&lt;/tt&gt; (light white) {and &lt;tt&gt;100&lt;/tt&gt; to &lt;tt&gt;107&lt;/tt&gt; for the same as a background} of the sixteeen&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Older versions of Mudlet had code that effectively had this option permanently enabled. However nowadays it interferes with using the BOLD attribute to provide &lt;b&gt;bold&lt;/b&gt; text alongside the less often used FAINT attribute to provide &lt;span style=&quot; font-weight: 200&quot;&gt;faint&lt;/span&gt; and &lt;span style=&quot; font-weight: 600&quot;&gt;demi-bold&lt;/span&gt; text effects.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>服务器使用粗体字来显示亮色的8种颜色（仅适用于某些16色MUD）&lt;/p>
+&lt;p>一些较旧的游戏服务器支持八种不同的颜色，这些颜色通过使用原始的八种“设置图形渲染” &lt;tt>&lt;SGR&gt; 30&lt;/tt>（黑色）到 &lt;tt>37&lt;/tt>（白色）的ANSI ESC颜色代码，并结合 &lt;tt>&lt;SGR&gt; 1&lt;/tt>（粗体或更强烈）代码来提供第二组八种颜色，总共十六种颜色。选中此复选框将启用 &lt;tt>&lt;SGR&gt; 1&lt;/tt> 代码的这种用法，但如果游戏服务器：&lt;/p>
+&lt;ul>
+  &lt;li>仅使用八种颜色&lt;/li>
+  &lt;li>使用超过十六种颜色&lt;/li>
+  &lt;li>使用十六种颜色，但通过 &lt;tt>&lt;SGR&gt; 90&lt;/tt>（亮黑色）到 &lt;tt>&lt;SGR&gt; 97&lt;/tt>（亮白色）{以及 &lt;tt>100&lt;/tt> 到 &lt;tt>107&lt;/tt> 作为背景的相同代码}来选择“更亮”的八种颜色&lt;/li>
+&lt;/ul>
+&lt;p>&lt;i>Mudlet的旧版本代码实际上永久启用了此选项。然而，现在它干扰了使用粗体属性来提供&lt;b>粗体&lt;/b>文本，并且不太常用的微弱属性来提供&lt;span style="font-weight: 200">微弱&lt;/span>和&lt;span style="font-weight: 600">半粗体&lt;/span>文本效果。&lt;/i>&lt;/p>
+</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
       <source>BOLD is Bright</source>
-      <translation type="unfinished"/>
+      <translation>BOLD 是明亮的</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1987"/>
@@ -13993,7 +14006,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="61"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="90"/>
@@ -14041,7 +14054,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="36"/>
       <source>Input new area name to create one.</source>
-      <translation type="unfinished"/>
+      <translation>输入待创建的新区域名称。</translation>
     </message>
   </context>
   <context>
@@ -14057,12 +14070,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="41"/>
       <source>Find</source>
-      <translation type="unfinished"/>
+      <translation>查找</translation>
     </message>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="87"/>
       <source>Replace</source>
-      <translation type="unfinished"/>
+      <translation>替换</translation>
     </message>
   </context>
   <context>
@@ -14095,7 +14108,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="67"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="141"/>
@@ -14193,7 +14206,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="155"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="251"/>
