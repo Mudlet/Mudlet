@@ -1826,73 +1826,75 @@ próbowałem te miejsca:
 |                      system statistics                       |
 +--------------------------------------------------------------+</source>
       <comment>Header for the system&apos;s statistics information displayed in the console, it is 64 &apos;narrow&apos; characters wide</comment>
-      <translation type="unfinished"/>
+      <translation>+ -------------------------------------------------------------- +
+                  statystyki systemowe               
++ -------------------------------------------------------------- +</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1465"/>
       <source>GMCP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zdarzenia GMCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1470"/>
       <source>ATCP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zdarzenia ATCP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1475"/>
       <source>Channel102 events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zdarzenia Channel102:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1480"/>
       <source>MSSP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zdarzenia MSSP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1486"/>
       <source>MSDP events:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zdarzenia MSDP:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1498"/>
       <source>Trigger Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Raport wyzwalacza:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1503"/>
       <source>Timer Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Raport licznika czasu:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1508"/>
       <source>Alias Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Raport aliasu:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1513"/>
       <source>Keybinding Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Raport przypisania klawiszy:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1518"/>
       <source>Script Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Raport skryptu:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1523"/>
       <source>Gif Report:</source>
       <extracomment>Heading for the system&apos;s statistics information displayed in the console</extracomment>
-      <translation type="unfinished"/>
+      <translation>Raport gif:</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1578"/>
@@ -1907,12 +1909,12 @@ próbowałem te miejsca:
     <message>
       <location filename="../src/TMainConsole.cpp" line="1592"/>
       <source>Could not save profile</source>
-      <translation type="unfinished"/>
+      <translation>Nie można zapisać profilu</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="1593"/>
       <source>Sorry, could not save your profile as &quot;%1&quot; - got the following error: &quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Przepraszamy, nie można zapisać Twojego profilu jako &quot;%1&quot; - otrzymano następujący błąd: &quot;%2&quot;.</translation>
     </message>
   </context>
   <context>
@@ -2098,14 +2100,18 @@ została zapisana do wiadomości jako ostatni raport w pliku:
       <source>[ WARN ]  - Attempt made to download an XML map when one has already been
 requested or is being imported from a local file - wait for that
 operation to complete (if it cannot be canceled) before retrying!</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ] - Próba pobrania mapy XML, gdy jest już
+żądana lub jest importowana z pliku lokalnego - czekaj aż operacja
+zostanie zakończona (jeżeli nie może zostać anulowana) przed ponownym próbą!</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2467"/>
       <source>[ WARN ]  - Attempt made to download an XML from an invalid URL.  The URL was:
 %1
 and the error message (may contain technical details) was:&quot;%2&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>[ WARN ] - Podjęto próbę pobrania pliku XML z nieprawidłowego adresu URL.  Adres URL to:
+%1
+a komunikat o błędzie (może zawierać szczegóły techniczne) brzmiał:&quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2481"/>
@@ -2801,7 +2807,8 @@ jakich nowych numerów identyfikatorów użyć.</translation>
       <location filename="../src/TRoomDB.cpp" line="1179"/>
       <source>[  OK  ]  - The changes made are:
 (ID) &quot;old name&quot; ==&gt; &quot;new name&quot;</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Wprowadzone zmiany to:
+(ID) &quot;starej nazwa&quot; ==&gt; &quot;nowa nazwa&quot;</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="773"/>
@@ -3969,7 +3976,7 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="151"/>
       <source>^mycommand$ (example)</source>
-      <translation type="unfinished"/>
+      <translation>^ mojakomenda$ (przykład)</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="158"/>
@@ -3994,12 +4001,12 @@ a ten nie może go odczytać, potrzebujesz nowszego Mudleta!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="219"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wprowadź jedną lub więcej komend, które mają zostać użyte, jeśli dana komenda jest zgodna z wzorcem. (Opcjonalnie)&lt;/p&gt;&lt;p&gt;Może to być inny alias lub komenda, która ma zostać wysłana bezpośrednio do gry. W przypadku złożonych komend, które wymagają modyfikacji zmiennych w tym profilu, należy zamiast tego użyć skryptu Lua w obszarze edytora. To&apos;możliwe jest użycie zarówno tego pola jak i skryptu Lua-zawartość tego pola będzie używana przed uruchomieniem skryptu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="222"/>
       <source>Replacement text (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst zastępczy (opcjonalnie)</translation>
     </message>
   </context>
   <context>
@@ -4122,12 +4129,12 @@ Uwaga: to ostrzeżenie zostanie wydane tylko raz, dopóki kodowanie nie zostanie
     <message>
       <location filename="../src/ctelnet.cpp" line="3006"/>
       <source>[ INFO ]  - A more secure connection on port %1 is available.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO]-Dostępne jest bardziej bezpieczne połączenie na porcie %1.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3011"/>
       <source>For data transfer protection and privacy, this connection advertises a secure port.</source>
-      <translation type="unfinished"/>
+      <translation>Dla ochrony i prywatności przesyłu danych połączenie to reklamuje bezpieczny port.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3012"/>
@@ -6934,7 +6941,7 @@ powód: %2.</translation>
       <location filename="../src/dlgRoomExits.cpp" line="445"/>
       <location filename="../src/dlgRoomExits.cpp" line="988"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji, do której prowadzi to specjalne wyjście.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="447"/>
@@ -6976,27 +6983,27 @@ powód: %2.</translation>
       <location filename="../src/dlgRoomExits.cpp" line="967"/>
       <location filename="../src/dlgRoomExits.cpp" line="992"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>W tym miejscu oczekiwany jest identyfikator pokoju, do którego prowadzi to specjalne wyjście. Jeśli pozostawisz to w ten sposób, to wyjście zostanie usunięte, gdy przycisk &lt;tt&gt;zapisać&lt;/tt&gt; zostanie kliknięty.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="983"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Podany numer jest nieprawidłowy. Jeśli pozostawisz to w ten sposób, to wyjście zostanie usunięte, gdy &lt;tt&gt;zapisać&lt;/tt&gt; zostanie kliknięty.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="984"/>
       <source>Set the number of the room that this special exit leads to.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji, do której prowadzi to specjalne wyjście.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="997"/>
       <source>No command or Lua script entered, if left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Nie wprowadzono komendy ani skryptu Lua. Jeśli zostanie on podany, to wyjście zostanie usunięte po kliknięciu opcji &lt;tt&gt;zapisz&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="999"/>
       <source>(Lua scripts for those profiles using the &lt;tt&gt;mudlet-mapper&lt;/tt&gt; package need to be prefixed with &quot;script:&quot;).</source>
-      <translation type="unfinished"/>
+      <translation>(Skrypty Lua dla tych profili korzystających z &lt;tt&gt;mudlet-mapper&lt;/tt&gt; pakiet musi być poprzedzony prefiksem &quot;skrypt:&quot;).</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1048"/>
@@ -7008,7 +7015,7 @@ powód: %2.</translation>
       <location filename="../src/dlgRoomExits.cpp" line="1511"/>
       <source>This is the Room ID number for this room; this &lt;b&gt;room is locked&lt;/b&gt; so it will not be used for speed-walks at all.</source>
       <extracomment>This text is a revision to the default tooltip text set for this widget in the &apos;room_exits.ui&apos; file. Bold HTML tags are used to emphasis that this room&apos;s locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that comes to it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>To jest numer ID pokoju dla tego pokoju; ten pokój &lt;b&gt;jest zablokowany&lt;/b&gt;, więc w ogóle nie będzie używany do szybkości chodzenia.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1073"/>
@@ -7131,7 +7138,7 @@ powód: %2.</translation>
       <location filename="../src/dlgRoomExits.cpp" line="1081"/>
       <source>&lt;b&gt;Room is locked&lt;/b&gt;, it will not be used for speed-walks for any exit that leads to it.</source>
       <extracomment>Bold HTML tags are used to emphasis that destination room locked status overrides any weight or lock (&quot;No route&quot;) setting of any exit that goes to it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;b&gt;Pokój jest zablokowany&lt;/b&gt;, nie będzie używany do chodzenia dla żadnego wyjścia, który do niego prowadzi.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1063"/>
@@ -7164,7 +7171,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomExits.cpp" line="1277"/>
       <location filename="../src/dlgRoomExits.cpp" line="1286"/>
       <source>Entered number is invalid.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzony numer jest nieprawidłowy.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1521"/>
@@ -7218,13 +7225,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgRoomProperties.cpp" line="246"/>
       <location filename="../src/dlgRoomProperties.cpp" line="286"/>
       <source>count</source>
-      <translation type="unfinished"/>
+      <translation>ilość</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="517"/>
       <source>Delete room color</source>
       <extracomment>This action deletes a color from the list of all room colors</extracomment>
-      <translation type="unfinished"/>
+      <translation>Usuń kolor lokacji</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomProperties.cpp" line="545"/>
@@ -7257,7 +7264,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgRoomProperties.h" line="79"/>
       <source>(Multiple values...)</source>
-      <translation type="unfinished"/>
+      <translation>(Wiele wartości ...)</translation>
     </message>
   </context>
   <context>
@@ -7455,12 +7462,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="163"/>
       <source>new folder</source>
-      <translation type="unfinished"/>
+      <translation>nowy folder</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="164"/>
       <source>new item</source>
-      <translation type="unfinished"/>
+      <translation>nowy element</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="168"/>
@@ -7486,17 +7493,17 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="493"/>
       <source>&lt;p&gt;Saves the selected item. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Saving causes any changes to the item to take effect. It will not save to disk, so changes will be lost in case of a computer/program crash (but Save Profile to the right will be secure.)&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zapisuje wybrany element. (Ctrl+S)&lt;/p&gt;&lt;p&gt;Zapisanie powoduje, że wszelkie zmiany w elemencie zostaną zastosowane. Nie zostanie on zapisany na dysku, więc zmiany zostaną utracone w przypadku awarii komputera/programu (ale opcja Zapisz profil po prawej stronie będzie bezpieczna).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="540"/>
       <source>&lt;p&gt;Saves your profile. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Saves your entire profile (triggers, aliases, scripts, timers, buttons and keys, but not the map or script-specific settings) to your computer disk, so in case of a computer or program crash, all changes you have done will be retained.&lt;/p&gt;&lt;p&gt;It also makes a backup of your profile, you can load an older version of it when connecting.&lt;/p&gt;&lt;p&gt;Should there be any modules that are marked to be &quot;&lt;i&gt;synced&lt;/i&gt;&quot; this will also cause them to be saved and reloaded into other profiles if they too are active.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Zapisuje Twój profil. (Ctrl+Shift+S)&lt;/p&gt;&lt;p&gt;Zapisuje cały profil (wyzwalacze, aliasy, skrypty, timery, przyciski i klucze, ale nie mapa lub ustawienia specyficzne dla skryptu) na dysku komputera, więc w przypadku awarii komputera lub programu wszystkie zmiany, które zrobiłeś, zostaną zachowane.&lt;/p&gt;&lt;p&gt;tworzy również kopię zapasową Twojego profilu, możesz załadować starszą wersję podczas połączenia.&lt;/p&gt;&lt;p&gt;Jeśli istnieją moduły, które są oznaczone jako &quot;&lt;i&gt;zsynchronizowane&lt;/i&gt;&quot; spowoduje to również ich zapisanie i ponowne wczytanie do innych profili, jeśli są one aktywne.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="560"/>
       <source>Something went wrong loading your Mudlet profile and it could not be loaded. Try loading an older version in &apos;Connect - Options - Profile history&apos;</source>
-      <translation type="unfinished"/>
+      <translation>Wystąpił błąd podczas ładowania profilu Mudlet i nie można go załadować. Spróbuj załadować starszą wersję w wersji &apos;Connect-Options-Historia profilu&apos;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="587"/>
@@ -7514,13 +7521,13 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="631"/>
       <source>Restore Actions toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Przywróć pasek narzędzi akcji</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="634"/>
       <source>Restore Items toolbar</source>
       <extracomment>This will restore that toolbar in the editor window, after a user has hidden it or moved it to another docking location or floated it elsewhere.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Przywróć pasek narzędzi elementów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="721"/>
@@ -7730,7 +7737,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="6417"/>
       <location filename="../src/dlgTriggerEditor.cpp" line="10212"/>
       <source>While loading the profile, this script had an error that has since been fixed, possibly by another script. The error was:%2%3</source>
-      <translation type="unfinished"/>
+      <translation>Podczas ładowania profilu skrypt ten miał błąd, który od tego czasu został naprawiony, prawdopodobnie przez inny skrypt. Błąd był następujący:%2%3</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5398"/>
@@ -8046,94 +8053,94 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7681"/>
       <source>Delete Button</source>
-      <translation type="unfinished"/>
+      <translation>Przycisk Usuń</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7682"/>
       <source>Delete the selected button</source>
-      <translation type="unfinished"/>
+      <translation>Usuń wybrany przycisk</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7683"/>
       <location filename="../src/dlgTriggerEditor.h" line="457"/>
       <source>Save Button</source>
-      <translation type="unfinished"/>
+      <translation>Przycisk Zapisz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7684"/>
       <source>Saves the selected button, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje wybrany przycisk, powodując nowe zmiany do wejścia w życie - nie zapisuje się jednak na dysku...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7687"/>
       <source>Add Key</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj klawisz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7688"/>
       <source>Add new key</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nowy klawisz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7689"/>
       <source>Add Key Group</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj grupę klawiszy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7690"/>
       <source>Add new group of keys</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nową grupę klawiszy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7691"/>
       <source>Delete Key</source>
-      <translation type="unfinished"/>
+      <translation>Usuń klawisz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7692"/>
       <source>Delete the selected key</source>
-      <translation type="unfinished"/>
+      <translation>Usuń wybrany klawisz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7693"/>
       <location filename="../src/dlgTriggerEditor.h" line="458"/>
       <source>Save Key</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz klawisz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7694"/>
       <source>Saves the selected key, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje wybrany klawisz, powodując wprowadzenie nowych zmian - nie zapisuje się jednak na dysku...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7697"/>
       <source>Add Variable</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj zmienną</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7698"/>
       <source>Add new variable</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nową zmienną</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7699"/>
       <source>Add Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj tabelę Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7700"/>
       <source>Add new Lua table</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nową tabelę Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7701"/>
       <source>Delete Variable</source>
-      <translation type="unfinished"/>
+      <translation>Usuń zmienną</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7702"/>
       <source>Delete the selected variable</source>
-      <translation type="unfinished"/>
+      <translation>Usuń wybraną zmienną</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7703"/>
@@ -8144,7 +8151,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7704"/>
       <source>Saves the selected variable, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje wybraną zmienną, powodując zastosowanie nowych zmian - nie zapisuje jednak na dysku...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="8314"/>
@@ -8340,7 +8347,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="9961"/>
       <source>Sound file to play when the trigger fires.</source>
-      <translation type="unfinished"/>
+      <translation>Plik dźwiękowy do odtworzenia po uruchomieniu wyzwalacza.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="831"/>
@@ -12443,7 +12450,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="261"/>
       <source>Set dark theme in &lt;a href=&quot;dark-code-editor&quot;&gt;code editor&lt;/a&gt; as well?</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw ciemny motyw w &lt;a href=&quot;dark-code-editor&quot;&gt;Edytor kodu&lt;/a&gt; również?</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="347"/>
@@ -12458,12 +12465,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="357"/>
       <source>Enable MTTS  (Mud Terminal Type Standard)</source>
-      <translation type="unfinished"/>
+      <translation>Włącz MTTS (Mud Terminal Type Standard)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="364"/>
       <source>&lt;p&gt;Enables MNES - provides information about your client settings during game play for supported games&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącza MNES - dostarcza informacje o ustawieniach klienta podczas gry dla obsługiwanych gier&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="367"/>
@@ -12488,12 +12495,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="636"/>
       <source>&lt;p&gt;Sets the maximum number of the most recent entries used in each separate command line that are now stored between sessions.&lt;/p&gt;&lt;p&gt;&lt;i&gt;This limit is only applied when the data is stored at the end of a session; whilst a profile is active the command history is unlimited with any reused entries returned to the front of the list.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ustawia maksymalną liczbę najnowszych wpisów używanych w każdym oddzielnym wierszu polecenia, które są teraz przechowywane między sesjami.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Limit ten jest stosowany tylko wtedy, gdy dane są przechowywane na koniec sesji; Gdy profil jest aktywny, historia poleceń jest nieograniczona, a wszystkie ponownie wykorzystane wpisy są zwracane na początek listy.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="802"/>
       <source>&lt;p&gt;Anti-aliasing use on the font for the &lt;b&gt;Main&lt;/b&gt; console. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry. &lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Użycie antyaliasingu na czcionce dla &lt;b&gt;Główny&lt;/b&gt; konsola. Wygładza czcionki, jeśli ekran ma wysoką rozdzielczość i można używać większych czcionek. Zwróć uwagę, że w przypadku niskich rozdzielczości i małych rozmiarów czcionek czcionka staje się rozmyta. &lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="829"/>
@@ -12536,22 +12543,22 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1402"/>
       <source>Shows bidirection Unicode characters which can be used to change the meaning of source code while remaining invisible to the eye</source>
-      <translation type="unfinished"/>
+      <translation>Pokazuje dwukierunkowe znaki Unicode, które mogą być używane do zmiany znaczenia kodu źródłowego, pozostając niewidocznym dla oka</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1405"/>
       <source>Show invisible Unicode control characters</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż niewidoczne znaki kontrolne Unicode</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1412"/>
       <source>&lt;p&gt;Shows the &lt;b&gt;unique&lt;/b&gt; ID number that Mudlet uses internally to identify each instance of an item this is the same number that the Lua API functions that create aliases, key-binding, etc. return on success. This may be useful to know when there are multiple items of the same type with the same name and will be incorporated in the names of the related items&apos; Lua scripts in the Central Debug Console output.&lt;/p&gt;&lt;p&gt;Note that although the number assigned to an item is constant during a session of the profile it may be different the next time the profile is loaded if other items are added or removed.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pokazuje &lt;b&gt;niepowtarzalny&lt;/b&gt; Numer identyfikacyjny, którego Mudlet używa wewnętrznie do identyfikacji każdego wystąpienia elementu, jest to ten sam numer, który funkcje API Lua, które tworzą aliasy, powiązania itp. zwracają po powodzeniu. Może to być przydatne, gdy istnieje wiele elementów tego samego typu o tej samej nazwie i zostaną one uwzględnione w nazwach powiązanych elementów&apos; Skrypty Lua w danych wyjściowych centralnej konsoli debugowania.&lt;/p&gt;&lt;p&gt;Należy pamiętać, że chociaż numer przypisany do elementu jest stały podczas sesji profilu, może być inny przy następnym załadowaniu profilu, jeśli inne elementy zostaną dodane lub usunięte.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1415"/>
       <source>Show Items&apos; ID number</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż elementy&apos; numer ID </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1458"/>
@@ -12828,12 +12835,12 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2011"/>
       <source>Or load an older version:</source>
-      <translation type="unfinished"/>
+      <translation>Lub załaduj starszą wersję:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2028"/>
       <source>◀ load this map</source>
-      <translation type="unfinished"/>
+      <translation>◀ wczytaj tę mapę</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2055"/>
@@ -12937,7 +12944,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2221"/>
       <source>&lt;p&gt;This enables borders around room. Color can be set in Mapper colors tab&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącza obramowania wokół pokoju na mapie. Kolor można ustawić w zakładce "Mapowanie kolorów"&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2224"/>
@@ -12957,12 +12964,12 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3550"/>
       <source>Username for logging into the proxy if required</source>
-      <translation type="unfinished"/>
+      <translation>Hasło do logowania do serwera proxy, jeśli jest wymagane</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3566"/>
       <source>Password for logging into the proxy if required</source>
-      <translation type="unfinished"/>
+      <translation>Hasło do logowania do serwera proxy, jeśli jest wymagane</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3790"/>
@@ -12987,7 +12994,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4065"/>
       <source>&lt;p&gt;If checked this will cause all problem Unicode codepoints to be reported in the debug output as they occur; if cleared then each different one will only be reported once and summarized in as a table when the console in which they occurred is finally destroyed (when the profile is closed).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jeśli zaznaczone, spowoduje to, że wszystkie problemy z kodowaniem Unicode będą zgłaszane na wyjściu debugowania w miarę ich występowania; jeżeli zostały usunięte, każdy z nich zostanie zgłoszony tylko raz i streszczony jako tabela, gdy konsola, w której się pojawiły, zostanie ostatecznie zniszczona (kiedy profil jest zamknięty).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3951"/>
@@ -13103,7 +13110,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1977"/>
       <source>choose location...</source>
-      <translation type="unfinished"/>
+      <translation>wybierz lokalizację...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2082"/>
@@ -13375,13 +13382,13 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4021"/>
       <source>Show debug messages for timers not smaller than:</source>
-      <translation type="unfinished"/>
+      <translation>Pokaż komunikaty debugowania dla liczników czasu nie mniejszych niż:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4018"/>
       <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
       <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pokaż &apos;LUA OK&apos; Komunikaty dla Timerów z określonym minimalnym odstępem czasu (h:mm:ss.zzz), minimalna wartość (domyślnie) wyświetla wszystkie takie wiadomości, ale może renderować konsolę &lt;i&gt;Central Debug Console&lt;/i&gt; bezużyteczna, jeśli jest bardzo mały interwał uruchamiający licznik czasu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4068"/>
@@ -13413,12 +13420,12 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3681"/>
       <source>On some platforms, like macOS, the screen reader tool has issues announcing incoming text fully, without skipping. You can opt into disabling announcing new text from the game with this option to use a custom TTS instead which avoids such issues</source>
-      <translation type="unfinished"/>
+      <translation>Na niektórych platformach, takich jak macOS, narzędzie odczytu ekranu ma problemy z pełnym ogłaszaniem przychodzącego tekstu, bez pomijania. Możesz zdecydować się wyłączyć ogłaszanie nowego tekstu z gry za pomocą tej opcji i zamiast tego używać niestandardowego TTS, co pozwoli uniknąć takich problemów</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3684"/>
       <source>Announce incoming text in screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Wyślij przychodzący tekst do czytnika ekranu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3712"/>
@@ -13443,12 +13450,12 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3730"/>
       <source>Switch between input line and main window using:</source>
-      <translation type="unfinished"/>
+      <translation>Przełączaj się między liniami wprowadzania danych a głównym oknem za pomocą:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3741"/>
       <source>no key</source>
-      <translation type="unfinished"/>
+      <translation>brak klawisza</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3746"/>
@@ -13798,7 +13805,8 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
       <location filename="../src/ui/room_exits.ui" line="1973"/>
       <source>Exit
 Status</source>
-      <translation type="unfinished"/>
+      <translation>Wyjście
+Status</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="1977"/>
@@ -13946,7 +13954,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="20"/>
       <source>Room properties</source>
-      <translation type="unfinished"/>
+      <translation>Właściwości lokacji</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="47"/>
@@ -13956,7 +13964,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="54"/>
       <source>Room name...</source>
-      <translation type="unfinished"/>
+      <translation>Nazwa lokacji...</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="61"/>
@@ -13997,12 +14005,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/room_properties.ui" line="242"/>
       <source>Pathfinding</source>
-      <translation type="unfinished"/>
+      <translation>Wyszukiwanie ścieżki</translation>
     </message>
     <message>
       <location filename="../src/ui/room_properties.ui" line="288"/>
       <source>1 (default)</source>
-      <translation type="unfinished"/>
+      <translation>1 (domyślnie)</translation>
     </message>
   </context>
   <context>
@@ -14068,7 +14076,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/set_room_area.ui" line="36"/>
       <source>Input new area name to create one.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadź nazwę nowego obszaru, aby go utworzyć.</translation>
     </message>
   </context>
   <context>
@@ -14084,12 +14092,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="41"/>
       <source>Find</source>
-      <translation type="unfinished"/>
+      <translation>Znajdź</translation>
     </message>
     <message>
       <location filename="../src/ui/source_editor_find_area.ui" line="87"/>
       <source>Replace</source>
-      <translation type="unfinished"/>
+      <translation>Zamień</translation>
     </message>
   </context>
   <context>
@@ -14107,7 +14115,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="186"/>
       <source>&lt;p&gt;milliseconds&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;milisekundy&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="220"/>
@@ -14122,7 +14130,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="67"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="141"/>
@@ -14162,7 +14170,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="129"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do wysłania do gry (opcjonalnie)</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="375"/>
@@ -14220,7 +14228,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="155"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="251"/>
@@ -14323,12 +14331,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="124"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wprowadź jedną lub więcej komend, które mają zostać użyte, jeśli dana komenda jest zgodna z wzorcem. (Opcjonalnie)&lt;/p&gt;&lt;p&gt;Może to być inny alias lub komenda, która ma zostać wysłana bezpośrednio do gry. W przypadku złożonych komend, które wymagają modyfikacji zmiennych w tym profilu, należy zamiast tego użyć skryptu Lua w obszarze edytora. To&apos;możliwe jest użycie zarówno tego pola jak i skryptu Lua-zawartość tego pola będzie używana przed uruchomieniem skryptu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="127"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do wysłania do gry (opcjonalnie)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="297"/>
@@ -14343,7 +14351,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="410"/>
       <source>Match all occurrences of the pattern in the line.</source>
-      <translation type="unfinished"/>
+      <translation>Dopasuj wszystkie wystąpienia wzorca w linii.</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="513"/>
@@ -14416,7 +14424,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="107"/>
       <source>&lt;p&gt;Tables can store values either in a list, and/or a hashmap.&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;list&lt;/b&gt;, &lt;i&gt;unique indexed keys&lt;/i&gt; represent values - so you can have values at &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;In a &lt;b&gt;map&lt;/b&gt; {a.k.a. an &lt;i&gt;associative array}&lt;/i&gt;, &lt;i&gt;unique keys&lt;/i&gt; represent values - so you can have values under any identifier you would like (theoretically even a function or other lua entity although this GUI only supports strings).&lt;/p&gt;&lt;p&gt;This, for a newly created table (group) selects whenever you would like your table to be an indexed or an associative one.&lt;/p&gt;&lt;p&gt;In other cases it displays other entities (&lt;span style=&quot; font-style:italic;&quot;&gt;functions&lt;/span&gt;) which cannot be modified from here.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Tabele mogą przechowywać wartości na liście i/lub na mapie skrótów.&lt;/p&gt;&lt;p&gt;W &lt;b&gt;lista&lt;/b&gt;, &lt;i&gt;Unikatowe klucze indeksowane&lt;/i&gt; reprezentują wartości — dzięki czemu można mieć wartości na poziomie &lt;i&gt;1, 2, 3...&lt;/i&gt;&lt;/p&gt;&lt;p&gt;W &lt;b&gt;mapa&lt;/b&gt; {alias an &lt;i&gt;tablica asocjacyjna}&lt;/i&gt;, &lt;i&gt;Unikalne klucze&lt;/i&gt; reprezentować wartości - więc możesz mieć wartości pod dowolnym identyfikatorem, który chcesz (teoretycznie nawet funkcją lub inną jednostką lua, chociaż ten GUI obsługuje tylko ciągi znaków).&lt;/p&gt;&lt;p&gt;To dla nowo utworzonej tabeli (grupy) wybiera zawsze, gdy chcesz, aby Twoja tabela była indeksowana lub asocjacyjna.&lt;/p&gt;&lt;p&gt;W innych przypadkach wyświetlane są inne jednostki (&lt;span style=&quot; font-style:italic;&quot;&gt;Funkcje&lt;/span&gt;), którego nie można modyfikować z tego miejsca.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/vars_main_area.ui" line="119"/>
