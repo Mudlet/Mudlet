@@ -1263,13 +1263,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2068"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Edytor okno błędu dla profilu &quot;%1&quot;, poprzednia zawartość.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2070"/>
       <source>Editor&apos;s error window for profile &quot;%1&quot;, live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet profile&apos;s editor error window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Edytorokno błędu dla profilu &quot;%1&quot;, aktualna zawartość.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2073"/>
@@ -1493,7 +1493,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2064"/>
       <source>Error Console in editor.</source>
-      <translation type="unfinished"/>
+      <translation>Konsola błędów w edytorze.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2077"/>
@@ -1689,7 +1689,7 @@ próbowałem te miejsca:
     <message>
       <location filename="../src/TMainConsole.cpp" line="327"/>
       <source>Stop logging game output to log file.</source>
-      <translation type="unfinished"/>
+      <translation>Zatrzymaj zapisywanie gry do pliku.</translation>
     </message>
     <message>
       <location filename="../src/TMainConsole.cpp" line="223"/>
@@ -2938,7 +2938,12 @@ here (or created in the future) will automatically be assigned the name &quot;%1
 Duplicated area names will cause all but the first encountered one to gain a
 &quot;_###&quot; style suffix.
 %2</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Mudlet wcześniej pozwalał mapie na więcej niż jeden obszar
+z tym samym imieniem lub bez imienia. Aby rozwiązać te problemy, obszar bez nazwy
+tutaj (lub utworzone w przyszłości) zostanie automatycznie przypisana nazwa &quot;%1&quot;.
+Zduplikowane nazwy obszarów spowodują, że wszystkie obszary z wyjątkiem pierwszego, który napotka jeden z nich, zyskają
+&quot;_ ###&quot; sufiks stylu.
+%2</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1207"/>
@@ -3042,7 +3047,7 @@ obszaru) nie znaleziono, dodając &quot;%1&quot; w stosunku do zarezerwowanego -
     <message>
       <location filename="../src/TTextEdit.cpp" line="1987"/>
       <source>Hover on this item to display the Unicode codepoints in the selection &lt;i&gt;(only the first line!)&lt;/i&gt;</source>
-      <translation type="unfinished"/>
+      <translation>Umieść wskaźnik myszy nad tym elementem, aby wyświetlić punkty kodowe Unicode w wyborze &lt;i&gt;(tylko pierwsza linia!)&lt;/i&gt;</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1996"/>
@@ -4139,7 +4144,7 @@ Uwaga: to ostrzeżenie zostanie wydane tylko raz, dopóki kodowanie nie zostanie
     <message>
       <location filename="../src/ctelnet.cpp" line="3012"/>
       <source>Update to port %1 and connect with encryption?</source>
-      <translation type="unfinished"/>
+      <translation>Czy zaktualizować do portu %1 i szyfrować połączenie?</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3162"/>
@@ -5070,7 +5075,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="880"/>
       <source>&lt;h2&gt;&lt;u&gt;Qt-Components, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [broken link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Wayback Machine&amp;quot; archived version}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Copyright © 2013, Razvan Petru&lt;br&gt;All rights reserved.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Komponenty Qt, QsLog&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;(&lt;span style=&quot;color:red&quot;&gt;&lt;u&gt;https://bitbucket.org/razvapetru/qt-components [uszkodzony link]&lt;/u&gt;&lt;/span&gt;&lt;/h3&gt;&lt;h3&gt;&lt;small&gt;&lt;a href=&quot;https://web.archive.org/web/20131220072148/https://bitbucket.org/razvanpetru/qt-components&quot;&gt; {&amp;quot;Maszyna Wayback&amp;quot; wersja archiwalna}&lt;/a&gt;&lt;/small&gt;)&lt;br&gt;Prawa autorskie © 2013, Razvan Petru&lt;br&gt;Wszelkie prawa zastrzeżone.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="887"/>
@@ -5085,7 +5090,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="920"/>
       <source>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - part of KDToolBox&lt;/u&gt;&lt;br&gt;Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, a KDAB Group company, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;singleshot_connect.h - część KDToolBox&lt;/u&gt;&lt;br&gt;Serwis Github: &lt;a href=&quot;https://github.com/KDAB/KDToolBox&quot;&gt;KDToolBox&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2020-2021 Klarälvdalens Datakonsult AB, spółka należąca do Grupy KDAB, &amp;lt;info@kdab.comF&amp;gt;.&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="924"/>
@@ -5289,7 +5294,9 @@ Count</source>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Mudlet&apos;s patreon&lt;/a&gt;:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                            Ci niesamowici ludzie będą czule wspominani na zawsze&lt;br&gt;za ich hojne wsparcie finansowe na &lt;a href=&quot;https://www.patreon.com/mudlet&quot;&gt;Błoto&apos;s patreon powiedział:&lt;/a&gt;:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1112"/>
@@ -6304,7 +6311,7 @@ Dalszy odczyt materiału. Np. link do wiki Mudlet, forum, repozytorium pakietów
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="143"/>
       <source>Reset the directory so that logs are saved to the profile&apos;s &lt;i&gt;log&lt;/i&gt; directory.</source>
-      <translation type="unfinished"/>
+      <translation>Resetuj katalog tak, aby logi były zapisywane w katalogu log profilu.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="147"/>
@@ -6350,7 +6357,7 @@ Dalszy odczyt materiału. Np. link do wiki Mudlet, forum, repozytorium pakietów
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="721"/>
       <source>From the dictionary file &lt;tt&gt;%1.dic&lt;/tt&gt; (and its companion affix &lt;tt&gt;.aff&lt;/tt&gt; file).</source>
-      <translation type="unfinished"/>
+      <translation>Z pliku słownika &lt;tt&gt;%1.Dic&lt;/tt&gt; (i towarzyszący mu afiks &lt;tt&gt;.Aff&lt;/tt&gt; plik).</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="876"/>
@@ -8368,7 +8375,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="110"/>
       <source>&lt;p&gt;Buttons react on mouse clicks. To add a new button:&lt;ol&gt;&lt;li&gt;Add a new group to define a new &lt;strong&gt;button bar&lt;/strong&gt; in case you don&apos;t have any.&lt;/li&gt;&lt;li&gt;Add new groups as &lt;strong&gt;menus&lt;/strong&gt; to a button bar or sub-menus to menus.&lt;li&gt;&lt;li&gt;Add new items as &lt;strong&gt;buttons&lt;/strong&gt; to a button bar or menu or sub-menu.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the toolbar, menu or button. &lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; Deactivated items will be hidden and if they are toolbars or menus then all the items they contain will be also be hidden.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If a button is made a &lt;strong&gt;click-down&lt;/strong&gt; button then you may also define a clear text command that you want to send to the game when the button is pressed a second time to uncheck it or to write a script to run when it happens - within such a script the Lua &apos;getButtonState()&apos; function reports whether the button is up or down.&lt;/p&gt;&lt;p&gt;Check the manual for &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;more information&lt;/a&gt;.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Przyciski reagują na kliknięcia myszką. Aby dodać nowy przycisk:&lt;ol&gt;&lt;li&gt;Dodawanie nowej grupy w celu zdefiniowania nowej grupy &lt;strong&gt;Pasek przycisków&lt;/strong&gt; W przypadku, gdy nie&apos;Nie mam żadnych.&lt;/li&gt;&lt;li&gt;Dodaj nowe grupy jako &lt;strong&gt;Menu&lt;/strong&gt; do paska przycisków lub podmenu do menu.&lt;li&gt;&lt;li&gt;Dodaj nowe elementy jako &lt;strong&gt;Przyciski&lt;/strong&gt; do paska przycisków, menu lub podmenu.&lt;/li&gt;&lt;li&gt;Definiowanie tekstu zwykłego &lt;strong&gt;polecenie&lt;/strong&gt; które chcesz wysłać do gry, jeśli przycisk zostanie naciśnięty, lub napisać skrypt dla bardziej skomplikowanych potrzeb.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Aktywować&lt;/strong&gt; paska narzędzi, menu lub przycisku. &lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Nuta:&lt;/strong&gt; Dezaktywowane elementy zostaną ukryte, a jeśli są to paski narzędzi lub menu, wszystkie zawarte w nich elementy również zostaną ukryte.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Nuta:&lt;/strong&gt; Jeśli przycisk zostanie utworzony jako &lt;strong&gt;kliknięcie w dół&lt;/strong&gt; przycisk, to możesz również zdefiniować polecenie tekstowe, które chcesz wysłać do gry, gdy przycisk zostanie naciśnięty po raz drugi, aby go odznaczyć lub napisać skrypt, który będzie uruchamiany, gdy to się stanie - w ramach takiego skryptu Lua &apos;getButtonState()&apos; Funkcja informuje, czy przycisk jest w górę, czy w dół.&lt;/p&gt;&lt;p&gt;Sprawdź instrukcję, aby uzyskać informacje na temat &lt;a href=&apos;http://wiki.mudlet.org/w/Manual:Contents&apos;&gt;więcej informacji&lt;/a&gt;.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="120"/>
@@ -12308,22 +12315,22 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2234"/>
       <source>Use large area exit arrows in 2D view</source>
-      <translation type="unfinished"/>
+      <translation>Używanie strzałek wyjściowych z dużego obszaru w widoku 2D</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2485"/>
       <source>Map info background:</source>
-      <translation type="unfinished"/>
+      <translation>Informacje o mapie:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2939"/>
       <source>Server password: </source>
-      <translation type="unfinished"/>
+      <translation>Hasło serwera: </translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2959"/>
       <source>&lt;p&gt;TLS/SSL is usually on port 6697. IRC networks often use a &lt;b&gt;+&lt;/b&gt; when listing secure ports offered.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Protokół TLS/SSL jest zwykle na porcie 6697. Sieci IRC często używają &lt;b&gt;+&lt;/b&gt; przy wystawianiu oferty bezpiecznych portów.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2962"/>
@@ -12333,12 +12340,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3492"/>
       <source>Allow secure connection reminder</source>
-      <translation type="unfinished"/>
+      <translation>Zezwalaj na przypomnienie o bezpiecznym połączeniu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3489"/>
       <source>&lt;p&gt;To encourage enhanced data transfer protection and privacy, be prompted for a choice to switch to an encrypted port when advertised via Mud Server Status Protocol (MSSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Aby zachęcić do lepszej ochrony transferu danych i prywatności, należy wyświetlić monit o wybór przełączenia na port szyfrowany, gdy jest anonsowany za pośrednictwem protokołu Mud Server Status Protocol (MSSP).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3599"/>
@@ -12363,12 +12370,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3694"/>
       <source>Advertise screen reader use via protocols supporting this notice (NEW-ENVIRON, MNES, MTTS)</source>
-      <translation type="unfinished"/>
+      <translation>Reklamuj korzystanie z czytnika ekranu za pośrednictwem protokołów obsługujących tę informację (NEW-ENVIRON, MNES, MTTS)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3835"/>
       <source>Force NEW_ENVIRON negotiation off</source>
-      <translation type="unfinished"/>
+      <translation>Wymuś wyłączenie negocjacji NEW_ENVIRON</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3869"/>
@@ -12379,12 +12386,12 @@ try again when it has finished.</source>
       <location filename="../src/ui/profile_preferences.ui" line="3875"/>
       <location filename="../src/ui/profile_preferences.ui" line="3888"/>
       <source>&lt;p&gt;Media files used with Mudlet&apos;s Lua API, Mud Client Media Protocol (MCMP), and Mud Sound Protocol (MSP) are cached with the game profile. You can press this button to clear the media cache. For many games the media will get downloaded again upon demand.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pliki multimedialne używane z Mudletem Lua API, Mud Client Media Protocol (MCMP) i Mud Sound Protocol (MSP) są buforowane w profilu gry. Możesz nacisnąć ten przycisk, aby wyczyścić pamięć podręczną multimediów. W przypadku wielu gier multimedia zostaną pobrane ponownie na żądanie.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3878"/>
       <source>Purge stored media files for the current profile:</source>
-      <translation type="unfinished"/>
+      <translation>Usuń przechowywane pliki multimedialne dla bieżącego profilu:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3891"/>
@@ -12410,7 +12417,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="271"/>
       <source>&lt;p&gt;Show a toolbar notification if Mudlet is minimized and new data arrives.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Pokaż powiadomienie na pasku narzędzi, jeśli Mudlet zostanie zminimalizowany i nadejdą nowe dane.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="288"/>
@@ -12425,7 +12432,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="295"/>
       <source>&lt;p&gt;This also needs GMCP to be enabled in the next group below.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wymaga to również włączenia GMCP w następnej grupie poniżej.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="238"/>
@@ -12460,7 +12467,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="354"/>
       <source>&lt;p&gt;Enables MTTS - provides information about your client settings at logon for supported gamesr&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Włącza MTTS - dostarcza informacji o ustawieniach klienta podczas logowania dla obsługiwanego gracza&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="357"/>
@@ -13534,7 +13541,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/room_exits.ui" line="769"/>
       <source>&lt;p&gt;This is the Room ID Number for this room.</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;To jest numer identyfikacyjny tego pokoju.</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="804"/>
@@ -13544,7 +13551,7 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
     <message>
       <location filename="../src/ui/room_exits.ui" line="817"/>
       <source>&lt;p&gt;This is the default weight for this room, which will be used for any exit &lt;i&gt;that leads to &lt;u&gt;this room&lt;/u&gt;&lt;/i&gt; which does not have its own value set.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Jest to domyślna waga dla tego pomieszczenia, która będzie używana przy każdym wyjściu &lt;i&gt;Prowadzi to do &lt;u&gt;ten pokój&lt;/u&gt;&lt;/i&gt; który nie ma własnego zestawu wartości.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="880"/>
@@ -13851,12 +13858,12 @@ Status</translation>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2057"/>
       <source>&lt;p&gt;Add an empty item to Special exits to be edited as required.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dodaj pusty element do specjalnych wyjść, aby można go było edytować zgodnie z wymaganiami.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2076"/>
       <source>&lt;p&gt;Press this button to deactivate the selection of a Special exit.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Naciśnij ten przycisk, aby dezaktywować wybór wyjścia specjalnego.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/room_exits.ui" line="2111"/>
@@ -14023,12 +14030,12 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="33"/>
       <source>&lt;p&gt;Choose a good, (ideally, though it need not be, unique) name for your script or script group. This will be displayed in the script tree.&lt;/p&gt;&lt;p&gt;If a function within the script is to be used to handle events entered in the list below &lt;b&gt;&lt;u&gt;it must have the same name as is entered here.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz dobrą (najlepiej, choć nie musi to być, unikatową) nazwę dla swojego skryptu lub grupy skryptów. Zostanie to wyświetlone w drzewie skryptów.&lt;/p&gt;&lt;p&gt;Jeśli funkcja w skrypcie ma być używana do obsługi zdarzeń wprowadzonych na poniższej liście &lt;b&gt;&lt;u&gt;Musi mieć taką samą nazwę, jak wprowadzona tutaj.&lt;/u&gt;&lt;/b&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="61"/>
       <source>ID:</source>
-      <translation type="unfinished"/>
+      <translation>ID:</translation>
     </message>
     <message>
       <location filename="../src/ui/scripts_main_area.ui" line="90"/>
@@ -14155,7 +14162,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="440"/>
       <source>&lt;p&gt;The &lt;b&gt;millisecond&lt;/b&gt; part of the interval that the timer will go off at (1000 milliseconds = 1 second).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Okres &lt;b&gt;milisekunda&lt;/b&gt; część interwału, w którym licznik czasu zostanie wyłączony (1000 milisekund = 1 sekunda).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="310"/>
@@ -14165,7 +14172,7 @@ or LUA script</source>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="126"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wprowadź co najmniej jedno polecenie, które ma być używane, jeśli dane polecenie jest zgodne ze wzorcem. (Opcjonalnie)&lt;/p&gt;&lt;p&gt;Może to być inny alias lub polecenie do wysłania bezpośrednio do gry. W przypadku złożonych poleceń, które wymagają modyfikacji zmiennych w tym profilu, użyj skryptu Lua w obszarze edytora poniżej. Ono&apos;Możliwe jest użycie zarówno tego pola, jak i skryptu Lua - zawartość tego pola zostanie użyta przed uruchomieniem skryptu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="129"/>
