@@ -917,7 +917,7 @@ please wait...</source>
       <location filename="../src/T2DMap.cpp" line="3673"/>
       <source>Move the selection, centered on the highlighted room (%1) to:</source>
       <comment>%1 is a room number</comment>
-      <translation type="unfinished"/>
+      <translation>Przesuń zaznaczenie, wyśrodkowane na podświetlonej lokacji (%1), do:</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="3679"/>
@@ -1054,7 +1054,7 @@ factor of:</source>
     <message>
       <location filename="../src/T2DMap.cpp" line="4160"/>
       <source>This will create new area: %1</source>
-      <translation type="unfinished"/>
+      <translation>To stworzy nowy obszar mapy: %1</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4176"/>
@@ -1062,12 +1062,13 @@ factor of:</source>
 See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
       <comment>The &apos;[MAP ERROR:]&apos; text should be the same as that used for the translation of &quot;[MAP ERROR:]%1
 &quot; in the &apos;TMAP::logerror(...)&apos; function.</comment>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie można dodać &quot;%1&quot; jako obszar do mapy.
+Zobacz komunikat &quot;[BŁĄD:]&quot; z powodu.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="4184"/>
       <source>[  OK  ]  - Added &quot;%1&quot; (%2) area to map.</source>
-      <translation type="unfinished"/>
+      <translation>[ OK ] - Dodano obszar &quot;%1&quot; (%2) do mapy.</translation>
     </message>
   </context>
   <context>
@@ -1156,7 +1157,7 @@ See the &quot;[MAP ERROR:]&quot; message for the reason.</source>
 Accessibility-friendly description for an extra command line on top of a console/window when more than one profile is loaded, %1 is the profile name.
 ----------
 Accessibility-friendly description for the built-in command line of a console/window other than the main window&apos;s one when more than one profile is loaded, %1 is the profile name.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Wpisz tekst, który ma zostać wysłany do serwera gry dla profilu &quot;%1&quot; lub wprowadź alias, aby uruchamiać komendy lokalnie.</translation>
     </message>
     <message>
       <location filename="../src/TCommandLine.cpp" line="1391"/>
@@ -1238,25 +1239,25 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2051"/>
       <source>Debug messages from all profiles are shown here.</source>
-      <translation type="unfinished"/>
+      <translation>Tutaj są wyświetlane komunikaty debugowania z wszystkich profili.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2054"/>
       <source>Central debug console past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when you&apos;ve scrolled up</extracomment>
-      <translation type="unfinished"/>
+      <translation>Poprzednia zawartość konsoli debugowania.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2056"/>
       <source>Central debug console live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of the Mudlet central debug when you&apos;ve scrolled up</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aktualna zawartość konsoli debugowania.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2059"/>
       <source>Central debug console.</source>
       <extracomment>accessibility-friendly name to describe the upper half of the Mudlet central debug window when it is not scrolled up</extracomment>
-      <translation type="unfinished"/>
+      <translation>Centralna konsola debugowania.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2068"/>
@@ -1297,7 +1298,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="2091"/>
       <source>Game content is shown here. It may contain subconsoles and a mapper window.</source>
-      <translation type="unfinished"/>
+      <translation>Zawartość gry jest tutaj wyświetlana. Może zawierać podkonsolki i okno mapy.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="233"/>
@@ -1358,7 +1359,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="836"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved.</source>
-      <translation type="unfinished"/>
+      <translation>Nagrywanie odtwarzania zostało zatrzymane, ale nie można go było zapisać.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="838"/>
@@ -1368,7 +1369,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
     <message>
       <location filename="../src/TConsole.cpp" line="1025"/>
       <source>[ INFO ]  - Split-screen scrollback activated. Press CTRL-ENTER to cancel.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Aktywowano podział ekranu historii przewijania. Naciśnij CTRL-ENTER, aby anulować.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1832"/>
@@ -1385,31 +1386,31 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2100"/>
       <source>Profile &quot;%1&quot; main window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil &quot;%1&quot; Zawartość poprzedniego okna głównego.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2102"/>
       <source>Profile &quot;%1&quot; main window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil &quot;%1&quot; Zawartość na żywo w oknie głównym.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2105"/>
       <source>Profile main window past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Główne okno profilu - treść wcześniejsza.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2107"/>
       <source>Profile main window live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s main window when you&apos;ve scrolled up and only one profile is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Główne okno profilu z aktualną zawartością.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2112"/>
       <source>Profile &quot;%1&quot; main window.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s main window when it is not scrolled up, %1 is the name of the profile when more than one is loaded.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil &quot;%1&quot; główne okno.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2115"/>
@@ -1421,67 +1422,67 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2130"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil &quot;%1&quot; osadzone okno &quot;%2&quot; przeszła treść.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2132"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil &quot;%1&quot; osadzone okno &quot;%2&quot; treść na żywo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2135"/>
       <source>Profile embedded window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil osadzony okno &quot;%1&quot; przeszła zawartość.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2137"/>
       <source>Profile embedded window &quot;%1&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil osadzony w oknie &quot;%1&quot; zawartość na żywo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2142"/>
       <source>Profile &quot;%1&quot; embedded window &quot;%2&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil &quot;%1&quot; osadzone okno &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2145"/>
       <source>Profile embedded window &quot;%1&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when it is not scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil osadzony w oknie &quot;%1&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2160"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil &quot;%1&quot; okno użytkownika &quot;%2&quot; poprzednia zawartość.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2162"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s floating/dockable user window window when you&apos;ve scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil &quot;%1&quot; okno użytkownika &quot;%2&quot; na żywo zawartość.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2165"/>
       <source>Profile user window &quot;%1&quot; past content.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Okno profilu użytkownika &quot;%1&quot; przeszła zawartość.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2167"/>
       <source>Profile user window &quot;%1&quot; live content.</source>
       <extracomment>accessibility-friendly name to describe the lower half of a Mudlet profile&apos;s sub-console window when you&apos;ve scrolled up, %1 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Okno użytkownika profilu &quot;%1&quot; zawartość na żywo.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2172"/>
       <source>Profile &quot;%1&quot; user window &quot;%2&quot;.</source>
       <extracomment>accessibility-friendly name to describe the upper half of a Mudlet profile&apos;s floating/dockable user window window when it is not scrolled up, %1 is the name of the profile when more than one is loaded and %2 is the name of the window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profil &quot;%1&quot; okno użytkownika &quot;%2&quot;.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2175"/>
@@ -4147,12 +4148,12 @@ Uwaga: to ostrzeżenie zostanie wydane tylko raz, dopóki kodowanie nie zostanie
     <message>
       <location filename="../src/ctelnet.cpp" line="3187"/>
       <source>WARN</source>
-      <translation type="unfinished"/>
+      <translation>OSTRZEŻENIE</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3199"/>
       <source>ALERT</source>
-      <translation type="unfinished"/>
+      <translation>ALARM</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3211"/>
@@ -4174,12 +4175,12 @@ Uwaga: to ostrzeżenie zostanie wydane tylko raz, dopóki kodowanie nie zostanie
     <message>
       <location filename="../src/ctelnet.cpp" line="3445"/>
       <source>Cannot replay file &quot;%1&quot;, error message was: &quot;replay file seems to be corrupt&quot;.</source>
-      <translation type="unfinished"/>
+      <translation>Nie można powtórzyć pliku &quot;%1&quot;, komunikat o błędzie: &quot;plik powtórki wydaje się być uszkodzony&quot;.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3447"/>
       <source>[ WARN ]  - The replay has been aborted as the file seems to be corrupt.</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ]  - Odtwarzanie zostało przerwane, ponieważ plik wydaje się być uszkodzony.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="3456"/>
@@ -5032,7 +5033,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="838"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaFileSystem&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2020, Kepler Project&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="841"/>
@@ -5042,17 +5043,17 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="845"/>
       <source>&lt;h2&gt;&lt;u&gt;Luautf8 - A UTF-8 support module for Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2018 Xavier Wang&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Luautf8 - Moduł obsługi UTF-8 dla Lua.&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Prawa autorskie © 2018 Xavier Wang&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="848"/>
       <source>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Database connectivity for the Lua programming language (Sqlite3 component).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2003-2019, The Kepler Project&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;LuaSql-Sqlite3 - Łączność z bazą danych dla języka programowania Lua (komponent Sqlite3).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Prawa autorskie © 2003-2019, Projekt Kepler&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="851"/>
       <source>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre -  Regular expression library binding (PCRE flavour).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © Reuben Thomas 2000-2020&lt;br&gt;Copyright © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Lrexlib-pcre - Wiązanie biblioteki wyrażeń regularnych (PCRE).&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Prawa autorskie © Reuben Thomas 2000-2020&lt;br&gt;Prawa autorskie © Shmuel Zeigerman 2004-2020 &lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="862"/>
@@ -5067,7 +5068,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="887"/>
       <source>&lt;h2&gt;&lt;u&gt;Dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2017 Philipp Medien&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;Dblsqd&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Copyright ©️ 2017 Philipp Medien&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="908"/>
@@ -5082,7 +5083,7 @@ Count</source>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="924"/>
       <source>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modifies standard Lua functions so that they work with UTF-8 filenames on Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2019 Egor-Skriptunoff&lt;/h3&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;h2&gt;&lt;u&gt;utf8_filenames.lua - modyfikuje standardowe funkcje Lua tak, aby działały z nazwami plików UTF-8 w systemie Windows&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://gist.github.com/Egor-Skriptunoff/2458547aa3b9210a8b5f686ac08ecbf0&quot;&gt;Github GIST&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Prawa autorskie © 2019 Egor-Skriptunoff&lt;/h3&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="856"/>
@@ -5272,7 +5273,9 @@ Count</source>
       <source>
                             These formidable folks will be fondly remembered forever&lt;br&gt;for their generous financial support on Mudlet&apos;s patreon:
                             </source>
-      <translation type="unfinished"/>
+      <translation>
+                            Ci niesamowici ludzie będą czule wspominani na zawsze&lt;br&gt;za hojne wsparcie finansowe dla Mudlet Patreon:
+                            </translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1094"/>
@@ -5308,7 +5311,7 @@ Count</source>
       <location filename="../src/dlgAliasMainArea.cpp" line="37"/>
       <source>for example, ^myalias$ to match &apos;myalias&apos;</source>
       <extracomment>This text is shown as placeholder in the pattern box when no real pattern was entered, yet.</extracomment>
-      <translation type="unfinished"/>
+      <translation>na przykład: ^ myalias$, aby dopasować &apos;myalias&apos;</translation>
     </message>
   </context>
   <context>
@@ -5460,7 +5463,7 @@ Count</source>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="228"/>
       <source>Characters password. Note that the password is not encrypted in storage</source>
-      <translation type="unfinished"/>
+      <translation>Hasło postaci. Uwaga, hasła nie są zapisywane zaszyfrowane</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="278"/>
@@ -5501,7 +5504,8 @@ Count</source>
       <source>[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.
 Try loading an older version in &apos;Connect - Options - Profile history&apos; or double-check that %1 looks correct.</source>
       <extracomment>%1 is the path and file name (i.e. the location) of the problem fil</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD]-Wystąpił błąd podczas ładowania profilu Mudlet i nie można go załadować.
+Spróbuj załadować starszą wersję w wersji &apos;Connect-Options-Historia profilu&apos; lub podwójnie sprawdzić, czy %1 wygląda poprawnie.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1688"/>
@@ -5674,7 +5678,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1880"/>
       <source>Click to reveal the password for this profile.</source>
-      <translation type="unfinished"/>
+      <translation>Kliknij, aby wyświetlić hasło do tego profilu.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1729"/>
@@ -5930,12 +5934,12 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="109"/>
       <source>Describe your package. Add a description, icons, assets and more.</source>
-      <translation type="unfinished"/>
+      <translation>Opisz paczkę. Dodaj opis, ikony, zasoby i inne elementy.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="175"/>
       <source>For attribution, displayed in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>Informacje o przypisaniu, wyświetlane w menedżerze pakietów.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="216"/>
@@ -5950,7 +5954,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="268"/>
       <source>One-line package description shown in the Package Manager.</source>
-      <translation type="unfinished"/>
+      <translation>Jednoliniowy opis pakietu wyświetlany w Menedżerze Pakietów.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="275"/>
@@ -5983,7 +5987,30 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
 
 * https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
 * [Link 2 might be a webpage](https://example.org)</source>
-      <translation type="unfinished"/>
+      <translation>
+Ten opis pakietu jest wyświetlany w menedżerze pakietów.  Edytor obsługuje oznakowanie Commonmark.  Należy postępować zgodnie z poniższym opisem, aby uzyskać dokładny przykład informacji, które należy uwzględnić w opisie pakietu.
+
+### Opis
+
+Pełny opis tego, co ten pakiet osiąga. Jeśli pakiet jest specyficzna gra, to należy wspomnieć, że tutaj.  Określ, czy pakiet ma automatyczne tworzenie pakietów, czy też, jeśli nie, dodaj odsyłacz w sekcji Patrz także poniżej do repozytorium kodu.
+
+### Składnia
+
+Jeśli ten pakiet używa aliasów, pokaż kilka przykładów i oczekiwane dane wyjściowe.
+
+`&gt; alias_1 `
+
+    wyjście alias_1 -- wcięcie przez cztery spacje
+    więcej danych wyjściowych -- dla bloków kodowych
+
+Jeśli ten pakiet jest implementacją interfejsu GUI, rozważ dodanie zrzutów ekranu poprzez bezpośrednie przeciąganie i upuszczanie obrazów do tego edytora.
+
+### Patrz Także
+
+Dalszy odczyt materiału. Np. link do wiki Mudlet, forum, repozytorium pakietów Github lub strona internetowa.
+
+* https://wiki.mudlet.org/w/Manual:Best_Practices#Package_and_Module_best_practices
+* [ Odsyłacz 2 może być stroną WWW] (https: //example.org)</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="318"/>
@@ -5998,7 +6025,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="395"/>
       <source>Does this package make use of other packages? List them here as requirements. Press &apos;Delete&apos; to remove a package.</source>
-      <translation type="unfinished"/>
+      <translation>Czy ten pakiet wykorzystuje inne pakiety? Wymień je tutaj jako wymagania. Naciśnij &apos;Usuń&apos; , aby usunąć pakiet.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="427"/>
@@ -6023,7 +6050,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="335"/>
       <source>Does this package make use of other packages? List them here as requirements.</source>
-      <translation type="unfinished"/>
+      <translation>Czy ten pakiet wykorzystuje inne pakiety? Wymienić je tutaj jako wymagane.</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="535"/>
@@ -6133,7 +6160,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="873"/>
       <source>cannot copy %1 to the temporary location %2 - can you double-check it?</source>
-      <translation type="unfinished"/>
+      <translation>nie można skopiować %1 do tymczasowej lokalizacji %2 - czy możesz to sprawdzić ponownie?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="359"/>
@@ -6203,7 +6230,7 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="47"/>
       <source>Package Manager - %1</source>
-      <translation type="unfinished"/>
+      <translation>Menedżer pakietów- %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="100"/>
@@ -6285,17 +6312,17 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="203"/>
       <source>This will bring up a display showing all the symbols used in the current map and whether they can be drawn using just the specified font, any other font, or not at all.  It also shows the sequence of Unicode &lt;i&gt;code-points&lt;/i&gt; that make up that symbol, so that they can be identified even if they cannot be displayed; also, up to the first thirty two rooms that are using that symbol are listed, which may help to identify any unexpected or odd cases.</source>
-      <translation type="unfinished"/>
+      <translation>Spowoduje to wyświetlenie ekranu pokazującego wszystkie symbole używane na bieżącej mapie i to, czy można je narysować tylko przy użyciu określonej czcionki, dowolnej innej czcionki, czy też wcale.  Pokazuje również sekwencję Unicode &lt;i&gt;Punkty kodowe&lt;/i&gt; które składają się na ten symbol, tak aby można je było zidentyfikować, nawet jeśli nie można ich wyświetlić; Na liście znajdują się również maksymalnie pierwsze trzydzieści dwa pokoje, które używają tego symbolu, co może pomóc w zidentyfikowaniu wszelkich nieoczekiwanych lub dziwnych przypadków.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="209"/>
       <source>Select the only or the primary font used (depending on &lt;i&gt;Only use symbols (glyphs) from chosen font&lt;/i&gt; setting) to produce the 2D mapper room symbols.</source>
-      <translation type="unfinished"/>
+      <translation>Wybierz jedyną lub używaną czcionkę podstawową (w zależności od opcji &lt;i&gt;Tylko używaj symboli (glify) z wybranej czcionki&lt;/i&gt;), aby utworzyć symbole pokoju programu odwzorowującego 2D.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="211"/>
       <source>Using a single font is likely to produce a more consistent style but may cause the &lt;i&gt;font replacement character&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos; to show if the font does not have a needed glyph (a font&apos;s individual character/symbol) to represent the grapheme (what is to be represented).  Clearing this checkbox will allow the best alternative glyph from another font to be used to draw that grapheme.</source>
-      <translation type="unfinished"/>
+      <translation>Użycie pojedynczej czcionki może spowodować bardziej spójny styl, ale może spowodować, że &lt;i&gt;znak zastępczy czcionki&lt;/i&gt; &apos;&lt;b&gt;�&lt;/b&gt;&apos;, aby pokazać, czy czcionka nie ma potrzebnego glifa (czcionka&apos;s indywidualny znak/symbol) do reprezentowania grapheme (co ma być reprezentowane).  Usunięcie zaznaczenia tego pola wyboru pozwoli na użycie najlepszego alternatywnego glifu z innej czcionki, która będzie używana do rysowania tego grafemu.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="307"/>
@@ -6441,61 +6468,61 @@ Further reading material. e.g. a link to the Mudlet wiki, forums, Github package
       <location filename="../src/dlgProfilePreferences.cpp" line="805"/>
       <source>10</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="806"/>
       <source>20</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>20</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="807"/>
       <source>50</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>50</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="808"/>
       <source>100</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>100</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="809"/>
       <source>200</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>200</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="810"/>
       <source>500</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>500</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="811"/>
       <source>1,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>1 000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="812"/>
       <source>2,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>2 000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="813"/>
       <source>5,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>5 000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="814"/>
       <source>10,000</source>
       <comment>Value for number of command line history size to save, can be formatted for a locale&apos;s number grouping conventions</comment>
-      <translation type="unfinished"/>
+      <translation>10 000</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1775"/>
@@ -6609,7 +6636,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgProfilePreferences.cpp" line="3189"/>
       <source>pick destinations...</source>
       <extracomment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</extracomment>
-      <translation type="unfinished"/>
+      <translation>wybierz miejsca docelowe...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3430"/>
@@ -6674,12 +6701,12 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3762"/>
       <source>The symbol can be made entirely from glyphs in the specified font.</source>
-      <translation type="unfinished"/>
+      <translation>Symbol może być wykonany w całości z glifów w określonej czcionce.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3780"/>
       <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
-      <translation type="unfinished"/>
+      <translation>Symbol nie może być rysowany przy użyciu żadnej czcionki w systemie, albo wprowadzono nieprawidłowy ciąg znaków jako symbol wskazanych pokoi albo mapa została utworzona w innym systemie z innym zestawem czcionek dostępnych do użycia. Możesz to naprawić, instalując dodatkową czcionkę za pomocą dowolnej metody, która jest odpowiednia dla tego systemu lub edytowując mapę aby użyć innego symbolu. Można to zrobić za pomocą skryptu lua przy użyciu funkcji &lt;i&gt;getRoomChar&lt;/i&gt; i &lt;i&gt;setRoomChar&lt;/i&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3873"/>
@@ -6751,7 +6778,7 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="224"/>
       <source>&lt;p&gt;Some East Asian MUDs may use glyphs (characters) that Unicode classifies as being of &lt;i&gt;Ambiguous&lt;/i&gt; width when drawn in a font with a so-called &lt;i&gt;fixed&lt;/i&gt; pitch; in fact such text is &lt;i&gt;duo-spaced&lt;/i&gt; when not using a proportional font. These symbols can be drawn using either a half or the whole space of a full character. By default Mudlet tries to chose the right width automatically but you can override the setting for each profile.&lt;/p&gt;&lt;p&gt;This control has three settings:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Unchecked&lt;/b&gt; &apos;&lt;i&gt;narrow&lt;/i&gt;&apos; = Draw ambiguous width characters in a single &apos;space&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Checked&lt;/b&gt; &apos;&lt;i&gt;wide&lt;/i&gt;&apos; = Draw ambiguous width characters two &apos;spaces&apos; wide.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Partly checked&lt;/b&gt; &lt;i&gt;(Default) &apos;auto&apos;&lt;/i&gt; = Use &apos;wide&apos; setting for MUD Server encodings of &lt;b&gt;Big5&lt;/b&gt;/&lt;b&gt;Big5-HKSCS&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt;, &lt;b&gt;GBK18030&lt;/b&gt; or &lt;b&gt;EUC-KR&lt;/b&gt; and &apos;narrow&apos; for all others.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;This is a temporary arrangement and will probably change when Mudlet gains full support for languages other than English.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Niektóre wschodnioazjatyckie MUD mogą używać glifów (znaków), które Unicode klasyfikuje jako &lt;i&gt;Ambiguous&lt;/i&gt; szerokość przy rysowaniu czcionki o tak zwanej A format@@3 stałej wysokości&lt;/i&gt;; w rzeczywistości taki tekst to &lt;i&gt;dwuodstępowy&lt;/i&gt;, gdy nie używa proporcjonalnej czcionki. Symbole te można rysować za pomocą połowy lub całej przestrzeni pełnego znaku. Domyślnie Mudlet próbuje automatycznie wybrać właściwą szerokość, ale można nadpisać ustawienie dla każdego profilu.&lt;/p&gt;&lt;p&gt;Ta kontrola ma trzy ustawienia:&lt;ul&gt;&lt;li&gt;&lt;b&gt;Niezaznaczone&lt;/b&gt; &apos;&lt;i&gt;wąskie&lt;/i&gt;&apos; = Narysuj dwuznaczne znaki szerokości w pojedynczej przestrzeni &apos;&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Sprawdzone&lt;/b&gt; &apos;&lt;i&gt;o zasięgu&lt;/i&gt;&apos; = szerokość zaokrąglona na dwa znaki &apos;spacje&apos;.&lt;/li&gt;&lt;li&gt;&lt;b&gt;Częściowo zaznaczone&lt;/b&gt; &lt;i&gt;(domyślnie) &apos;auto&apos;&lt;/i&gt; = Użyj ustawień &apos;szerokiego&apos; dla kodowania serwera MUD &lt;b&gt;Big5&lt;/b&gt;/&lt;b&gt;Big5-HKSCS&lt;/b&gt;, &lt;b&gt;GBK&lt;/b&gt;, &lt;b&gt;GBK18030&lt;/b&gt; lub &lt;b&gt;EUC-KR&lt;/b&gt; i &apos;wąski&apos; dla wszystkich innych.&lt;/li&gt;&lt;/ul&gt;&lt;/p&gt;&lt;p&gt;&lt;i&gt;Jest to umowa tymczasowa i prawdopodobnie się zmieni, gdy Mudlet uzyska pełne wsparcie dla języków innych niż angielski.&lt;/i&gt;&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="236"/>
@@ -6782,7 +6809,8 @@ i jest wystarczająco dużo miejsca. Operacja kopiowania nie powiodła się.</tr
       <location filename="../src/dlgProfilePreferences.cpp" line="2361"/>
       <source>[ ERROR ] - Unable to load JSON map file: %1
 reason: %2.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD ] - Nie można załadować pliku mapy JSON: %1
+powód: %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2402"/>
@@ -8349,61 +8377,61 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/dlgTriggerEditor.cpp" line="144"/>
       <source>activated</source>
       <extracomment>Item is currently on, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>aktywowano</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="146"/>
       <source>deactivated</source>
       <extracomment>Item is currently off, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>dezaktywowane</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="148"/>
       <source>activated folder</source>
       <extracomment>Folder is currently turned on</extracomment>
-      <translation type="unfinished"/>
+      <translation>aktywny folder</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="150"/>
       <source>deactivated folder</source>
       <extracomment>Folder is currently turned off</extracomment>
-      <translation type="unfinished"/>
+      <translation>dezaktywowany folder</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="152"/>
       <source>deactivated due to error</source>
       <extracomment>Item is currently inactive because of errors, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>wyłączone z powodu błędu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="154"/>
       <source>%1 in a deactivated group</source>
       <extracomment>Item is currently turned on individually, but is member of an inactive group</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 w dezaktywowanej grupie</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="156"/>
       <source>activated filter chain</source>
       <extracomment>A trigger that unlocks other triggers is currently turned on, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>aktywowany łańcuch filtrów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="158"/>
       <source>deactivated filter chain</source>
       <extracomment>A trigger that unlocks other triggers is currently turned off, short enough to be spoken</extracomment>
-      <translation type="unfinished"/>
+      <translation>dezaktywowany łańcuch filtrów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="160"/>
       <source>activated offset timer</source>
       <extracomment>A timer that starts after another timer is currently turned on</extracomment>
-      <translation type="unfinished"/>
+      <translation>aktywowane przesunięcie licznika czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="162"/>
       <source>deactivated offset timer</source>
       <extracomment>A timer that starts after another timer is currently turned off</extracomment>
-      <translation type="unfinished"/>
+      <translation>dezaktywowany przesunięcie licznika czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="227"/>
@@ -8902,12 +8930,12 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="100"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wprowadź co najmniej jedno polecenie, które ma być używane, jeśli dane polecenie jest zgodne ze wzorcem. (Opcjonalnie)&lt;/p&gt;&lt;p&gt;Może to być inny alias lub polecenie do wysłania bezpośrednio do gry. W przypadku złożonych poleceń, które wymagają modyfikacji zmiennych w tym profilu, użyj skryptu Lua w obszarze edytora poniżej. Możliwe jest użycie zarówno tego pola, jak i skryptu Lua - zawartość tego pola zostanie użyta przed uruchomieniem skryptu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="103"/>
       <source>Text to send to the game (optional)</source>
-      <translation type="unfinished"/>
+      <translation>Tekst do wysłania do gry (opcjonalnie)</translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="110"/>
@@ -10542,7 +10570,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
       <location filename="../src/mudlet.cpp" line="335"/>
       <location filename="../src/mudlet.cpp" line="3038"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz dźwięki z gry (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="897"/>
@@ -10612,7 +10640,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="910"/>
       <source>Latin</source>
-      <translation type="unfinished"/>
+      <translation>Łaciński</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="911"/>
@@ -11080,7 +11108,7 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
       <location filename="../src/mudlet.cpp" line="1019"/>
       <source>EUC-KR (Korean)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>EUC-KR (Koreański)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1021"/>
@@ -11318,43 +11346,44 @@ NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
       <location filename="../src/mudlet.cpp" line="2789"/>
       <source>[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.
 Try loading an older version in &apos;Connect - Options - Profile history&apos; or double-check that %1 looks correct.</source>
-      <translation type="unfinished"/>
+      <translation>[ BŁĄD]-Wystąpił błąd podczas ładowania profilu Mudlet i nie można go załadować.
+Spróbuj załadować starszą wersję w wersji &apos;Connect-Options-Historia profilu&apos; lub podwójnie sprawdzić, czy %1 wygląda poprawnie.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3020"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted. Use %1 to unmute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Dźwięki Mudlet i gry są wyciszone. Użyj %1 aby cofnąć wyciszenie.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3021"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted. Use %1 to mute.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO]-Mudlet i dźwięki gry są niewyciszone. Użyj opcji %1 do wyciszenia.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3023"/>
       <source>[ INFO ]  - Mudlet and game sounds are muted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Dźwięki Mudleta i gry są wyciszone.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3023"/>
       <source>[ INFO ]  - Mudlet and game sounds are unmuted.</source>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Dźwięki Mudleta i gry nie są wyciszone.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3033"/>
       <source>Unmute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Wyłącz wyciszenie dźwięków z Mudlet (wyzwalacze, skrypty itp.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3038"/>
       <source>Unmute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Wyłącz wyciszenie dźwięków z gry (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3077"/>
       <source>[ INFO ]  - Compact input line set. Press %1 to show bottom-right buttons again.</source>
       <extracomment>Here %1 will be replaced with the keyboard shortcut, default is ALT+L.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ] - Kompaktowa linia wejściowa ustawiona. Naciśnij %1 aby ponownie pokazać przyciski w prawym dolnym rogu.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3136"/>
@@ -11364,12 +11393,12 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
     <message>
       <location filename="../src/mudlet.cpp" line="3155"/>
       <source>Replay each step with a shorter time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Powtórz każdy krok z krótszym czasem między kolejnymi krokami.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3161"/>
       <source>Replay each step with a longer time interval between steps.</source>
-      <translation type="unfinished"/>
+      <translation>Powtórz każdy krok z dłuższym czasem między kolejnymi krokami.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="4709"/>
@@ -11573,7 +11602,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/mudlet.cpp" line="439"/>
       <source>Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.</source>
       <extracomment>Same text is used in 2 places.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Dziel ekran Mudleta, aby pokazać wiele profili jednocześnie; wyłączone, gdy mniej niż dwa są załadowane.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="460"/>
@@ -11621,7 +11650,7 @@ Try loading an older version in &apos;Connect - Options - Profile history&apos; 
       <location filename="../src/mudlet.cpp" line="1000"/>
       <location filename="../src/mudlet.cpp" line="1004"/>
       <source>Vietnamese (DauMoi variant - new-style diacritics)</source>
-      <translation type="unfinished"/>
+      <translation>Wietnamski (wariant DauMoi - nowy styl diakrytyczny)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1617"/>
@@ -12816,13 +12845,13 @@ możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn teks
       <location filename="../src/ui/profile_preferences.ui" line="2062"/>
       <source>enable &apos;delete&apos; button</source>
       <comment>Text for a checkbox adjacent to the delete map button, ensure the text &apos;quoted&apos; matches the word or words on the button</comment>
-      <translation type="unfinished"/>
+      <translation>włącz przycisk &apos;usuń&apos;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2085"/>
       <source>pick destinations...</source>
       <comment>text on button to select other profiles to receive the map from this profile, this is used when no profiles have been selected</comment>
-      <translation type="unfinished"/>
+      <translation>wybierz miejsca docelowe ...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2127"/>
