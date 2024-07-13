@@ -7747,7 +7747,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="484"/>
       <source>Add Group (Control+Shift+N)</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj grupę (Control+Shift+N)</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="5626"/>
@@ -7834,109 +7834,109 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7637"/>
       <source>Add Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj wyzwalacz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7638"/>
       <source>Add new trigger</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nowy wyzwalacz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7639"/>
       <source>Add Trigger Group</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj grupę wyzwalaczy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7640"/>
       <source>Add new group of triggers</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nową grupę wyzwalaczy</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7641"/>
       <source>Delete Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Usuń wyzwalacz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7642"/>
       <source>Delete the selected trigger</source>
-      <translation type="unfinished"/>
+      <translation>Usuń wybrany wyzwalacz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7643"/>
       <location filename="../src/dlgTriggerEditor.h" line="453"/>
       <source>Save Trigger</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz wyzwalacz</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7644"/>
       <source>Saves the selected trigger, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje wybrany wyzwalacz, powodując wprowadzenie nowych zmian - nie zapisuje się jednak na dysku...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7647"/>
       <source>Add Timer</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj licznik czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7648"/>
       <source>Add new timer</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nowy licznik czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7649"/>
       <source>Add Timer Group</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj grupę liczników czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7650"/>
       <source>Add new group of timers</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nową grupę liczników czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7651"/>
       <source>Delete Timer</source>
-      <translation type="unfinished"/>
+      <translation>Usuń licznik czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7652"/>
       <source>Delete the selected timer</source>
-      <translation type="unfinished"/>
+      <translation>Usuń wybrany licznik czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7653"/>
       <location filename="../src/dlgTriggerEditor.h" line="454"/>
       <source>Save Timer</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz licznik czasu</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7654"/>
       <source>Saves the selected timer, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje wybrany licznik czasu, powodując wprowadzenie nowych zmian - nie zapisuje się jednak na dysku...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7657"/>
       <source>Add Alias</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7658"/>
       <source>Add new alias</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nowy alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7659"/>
       <source>Add Alias Group</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj grupę aliasów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7660"/>
       <source>Add new group of aliases</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nową grupę aliasów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7661"/>
       <source>Delete Alias</source>
-      <translation type="unfinished"/>
+      <translation>Usuń alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7662"/>
