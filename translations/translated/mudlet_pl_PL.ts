@@ -60,13 +60,13 @@
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="96"/>
       <source>[ WARN ]  - Could not log in to the game, is the login information correct?</source>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ]  - Nie udało się zalogować do gry, czy dane logowania są poprawne?</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="99"/>
       <source>[ WARN ]  - Could not log in to the game: %1</source>
       <extracomment>%1 shows the reason for failure, could be authentication, etc.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ OSTRZEŻENIE ]  - Nie można zalogować się do gry: %1</translation>
     </message>
   </context>
   <context>
@@ -79,19 +79,19 @@
     <message>
       <location filename="../src/Host.cpp" line="489"/>
       <source>[ ALERT ] - This profile will now save and close.</source>
-      <translation type="unfinished"/>
+      <translation>[ UWAGA ] - Ten profil zostanie teraz zapisany i zamknięty.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="749"/>
       <source>Failed to open xml file &quot;%1&quot; inside module %2 to update it. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when the xml file inside the module zip cannot be updated for some reason.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nie udało się otworzyć pliku xml &quot;%1&quot; wewnątrz modułu %2 aby go zaktualizować. Komunikat o błędzie: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="760"/>
       <source>Failed to save &quot;%1&quot; to module &quot;%2&quot;. Error message was: &quot;%3&quot;.</source>
       <extracomment>This error message will appear when a module is saved as package but cannot be done for some reason.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nie udało się zapisać &quot;%1&quot; do modułu &quot;%2&quot;. Komunikat o błędzie: &quot;%3&quot;.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="1060"/>
@@ -158,12 +158,12 @@ please wait...</source>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="34"/>
       <source>InvisibleNotification</source>
-      <translation type="unfinished"/>
+      <translation>Niewidoczne Powiadomienie</translation>
     </message>
     <message>
       <location filename="../src/AnnouncerUnix.cpp" line="35"/>
       <source>An invisible widget used as a workaround to announce text to the screen reader</source>
-      <translation type="unfinished"/>
+      <translation>Niewidoczny widżet używany jako obejście do ogłaszania tekstu do czytnika ekranu</translation>
     </message>
   </context>
   <context>
@@ -583,7 +583,7 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="142"/>
       <location filename="../src/dlgRoomExits.cpp" line="222"/>
       <source>Entered number is invalid. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Wprowadzona liczba jest niepoprawna. W takim przypadku to wyjście zostanie usunięte po kliknięciu opcji &lt;tt&gt;zapisz&lt;/tt&gt;.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="143"/>
@@ -591,13 +591,13 @@ please wait...</source>
       <location filename="../src/dlgRoomExits.cpp" line="223"/>
       <location filename="../src/dlgRoomExits.cpp" line="227"/>
       <source>Set the number of the room that this special exit goes to.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer lokacji, do której prowadzi to specjalne wyjście.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="151"/>
       <location filename="../src/dlgRoomExits.cpp" line="231"/>
       <source>The roomID of the room that this special exit leads to is expected here. If left like this, this exit will be deleted when &lt;tt&gt;save&lt;/tt&gt; is clicked.</source>
-      <translation type="unfinished"/>
+      <translation>Ustaw numer pomieszczenia, do których prowadzi to specjalne wyjście, zmieni kolor na niebieski dla prawidłowego numeru; jeśli pozostanie tak, to wyjście zostanie usunięte, gdy &lt;i&gt;zapisz&lt;/i&gt; zostanie kliknięty.</translation>
     </message>
   </context>
   <context>
@@ -7941,79 +7941,79 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7662"/>
       <source>Delete the selected alias</source>
-      <translation type="unfinished"/>
+      <translation>Usuń wybrany alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7663"/>
       <location filename="../src/dlgTriggerEditor.h" line="455"/>
       <source>Save Alias</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz alias</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7664"/>
       <source>Saves the selected alias, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje wybrany alias, powodując wprowadzenie nowych zmian - nie zapisuje się jednak na dysku...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7667"/>
       <source>Add Script</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj skrypt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7668"/>
       <source>Add new script</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nowy skrypt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7669"/>
       <source>Add Script Group</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj grupę skryptów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7670"/>
       <source>Add new group of scripts</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nową grupę skryptów</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7671"/>
       <source>Delete Script</source>
-      <translation type="unfinished"/>
+      <translation>Usuń skrypt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7672"/>
       <source>Delete the selected script</source>
-      <translation type="unfinished"/>
+      <translation>Usuń wybrany skrypt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7673"/>
       <location filename="../src/dlgTriggerEditor.h" line="456"/>
       <source>Save Script</source>
-      <translation type="unfinished"/>
+      <translation>Zapisz Skrypt</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7674"/>
       <source>Saves the selected script, causing new changes to take effect - does not save to disk though...</source>
-      <translation type="unfinished"/>
+      <translation>Zapisuje wybrany skrypt, powodując wprowadzenie nowych zmian - jednak nie zapisuje na dysku...</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7677"/>
       <source>Add Button</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj przycisk</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7678"/>
       <source>Add new button</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nowy przycisk</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7679"/>
       <source>Add Button Group</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj grupy przycisków</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7680"/>
       <source>Add new group of buttons</source>
-      <translation type="unfinished"/>
+      <translation>Dodaj nową grupę przycisków</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7681"/>
@@ -8949,17 +8949,18 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/main.cpp" line="300"/>
       <source>Warning: %1
 </source>
-      <translation type="unfinished"/>
+      <translation>Ostrzeżenie: %1
+</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="310"/>
       <source>       -h, --help                   displays this message.</source>
-      <translation type="unfinished"/>
+      <translation>       -h, -- help wyświetla ten komunikat.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="311"/>
       <source>       -v, --version                displays version information.</source>
-      <translation type="unfinished"/>
+      <translation>       -v, -- version wyświetla informacje o wersji.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="313"/>
@@ -8977,13 +8978,15 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <location filename="../src/main.cpp" line="317"/>
       <source>       --steammode                  adjusts Mudlet settings to match
                                     Steam&apos;s requirements.</source>
-      <translation type="unfinished"/>
+      <translation>       --steammode                  dostosowuje ustawienia Mudlet do 
+dopasowania wymagań Steama.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="319"/>
       <source>There are other inherited options that arise from the Qt Libraries which are
 less likely to be useful for normal use of this application:</source>
-      <translation type="unfinished"/>
+      <translation>Istnieją inne dziedziczone opcje, które wynikają z bibliotek Qt i są
+mniej prawdopodobne, że będą przydatne w normalnym użyciu tej aplikacji:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="322"/>
@@ -9065,12 +9068,12 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="362"/>
       <source>Arguments:</source>
-      <translation type="unfinished"/>
+      <translation>Argumenty:</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="363"/>
       <source>        [FILE]                       File to install as a package</source>
-      <translation type="unfinished"/>
+      <translation>        [ FILE] Plik do zainstalowania jako pakiet</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="364"/>
@@ -9081,7 +9084,7 @@ less likely to be useful for normal use of this application:</source>
       <location filename="../src/main.cpp" line="305"/>
       <source>Usage: %1 [OPTION...] [FILE] </source>
       <comment>%1 is the name of the executable as it is on this OS.</comment>
-      <translation type="unfinished"/>
+      <translation>Użycie: %1 [OPCJA...] [PLIK] </translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="309"/>
@@ -9091,7 +9094,7 @@ less likely to be useful for normal use of this application:</source>
     <message>
       <location filename="../src/main.cpp" line="312"/>
       <source>       -s, --splashscreen           show splashscreen on startup.</source>
-      <translation type="unfinished"/>
+      <translation>       -s, --splashscreen pokaż ekran splashscreen przy uruchomieniu.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="365"/>
@@ -9124,7 +9127,8 @@ less likely to be useful for normal use of this application:</source>
       <location filename="../src/main.cpp" line="384"/>
       <source>This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.</source>
-      <translation type="unfinished"/>
+      <translation>To jest wolne oprogramowanie: możesz je zmieniać i rozpowszechniać.
+NIE MA GWARANCJI, w zakresie dozwolonym przez prawo.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="438"/>
@@ -9147,7 +9151,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="119"/>
       <source>Mute media</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz multimedia</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="127"/>
@@ -9252,22 +9256,22 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="338"/>
       <source>Mute all media</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz wszystkie multimedia</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="341"/>
       <source>&lt;p&gt;Mutes all media played.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wycisza wszystkie odtwarzane media.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="358"/>
       <source>&lt;p&gt;Mutes media played by the Lua API and scripts.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wycisza multimedia odtwarzane przez API Lua i skrypty.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="389"/>
       <source>&lt;p&gt;Hide / show the search area and buttons at the bottom of the screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Ukryj/pokaż obszar wyszukiwania i przyciski w dolnej części ekranu.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="394"/>
@@ -9277,7 +9281,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/ui/main_window.ui" line="397"/>
       <source>&lt;p&gt;Open a link to Discord.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Otwórz link do Discorda.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="405"/>
@@ -9411,22 +9415,22 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/ui/main_window.ui" line="324"/>
       <source>&lt;p&gt;Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded.&lt;/p&gt;</source>
       <comment>Same text is used in 2 places.</comment>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Dziel ekran Mudleta, aby pokazać wiele profili jednocześnie; wyłączone, gdy mniej niż dwa są załadowane.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="355"/>
       <source>Mute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz dźwięki z Mudleta (wyzwalacze, skrypty itp.)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="372"/>
       <source>Mute sounds from the game (MCMP, MSP)</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz dźwięki z gry (MCMP, MSP)</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="375"/>
       <source>&lt;p&gt;Mutes media played by the game (MCMP, MSP).&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wycisza multimedia grane przez grę (MCMP, MSP).&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/main_window.ui" line="386"/>
@@ -9998,7 +10002,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="314"/>
       <location filename="../src/mudlet.cpp" line="3007"/>
       <source>Mute</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="321"/>
@@ -10006,7 +10010,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="620"/>
       <location filename="../src/mudlet.cpp" line="3004"/>
       <source>Mute all media</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz wszystkie multimedia</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="357"/>
@@ -10016,7 +10020,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
     <message>
       <location filename="../src/mudlet.cpp" line="358"/>
       <source>Open a link to the Mudlet server on Discord</source>
-      <translation type="unfinished"/>
+      <translation>Otwórz link do serwera Mudlet na Discordzie</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="449"/>
@@ -10082,7 +10086,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="805"/>
       <source>English (Australia, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Angielski (Australia, Duża)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="809"/>
@@ -10093,7 +10097,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="810"/>
       <source>English (Canada, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Angielski (Kanada, Duża)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="811"/>
@@ -10109,7 +10113,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="813"/>
       <source>English (United Kingdom, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Angielski (Wielka Brytania, Duży)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="814"/>
@@ -10181,7 +10185,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="827"/>
       <source>English (United States, Large)</source>
       <comment>This dictionary contains larger vocabulary.</comment>
-      <translation type="unfinished"/>
+      <translation>Angielski (Stany Zjednoczone, Duża)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="828"/>
@@ -10481,17 +10485,17 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="1087"/>
       <source>Medievia {Custom codec for that MUD}</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>Medievia {Własny kodek dla tego MUD-a}</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3004"/>
       <source>Unmute all media</source>
-      <translation type="unfinished"/>
+      <translation>Wyłącz wyciszenie wszystkich multimediów</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="3007"/>
       <source>Unmute</source>
-      <translation type="unfinished"/>
+      <translation>Wyłącz wyciszenie</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="3690"/>
@@ -10531,7 +10535,7 @@ There is NO WARRANTY, to the extent permitted by law.</source>
       <location filename="../src/mudlet.cpp" line="329"/>
       <location filename="../src/mudlet.cpp" line="3033"/>
       <source>Mute sounds from Mudlet (Triggers, Scripts, etc.)</source>
-      <translation type="unfinished"/>
+      <translation>Wycisz dźwięki z Mudleta (wyzwalacze, skrypty itp.)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="333"/>
@@ -12435,12 +12439,12 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="367"/>
       <source>Enable MNES  (Mud New-Environ Standard)</source>
-      <translation type="unfinished"/>
+      <translation>Włącz MNES (Mud New-Environ Standard)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="563"/>
       <source>Highlights your input line text when scrolling through your history for easy cancellation</source>
-      <translation type="unfinished"/>
+      <translation>Wyróżnia tekst linii wprowadzonej podczas przewijania historii w celu łatwego anulowania</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="566"/>
@@ -12450,7 +12454,7 @@ try again when it has finished.</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="623"/>
       <source>Number of lines of command line history to save:</source>
-      <translation type="unfinished"/>
+      <translation>Liczba linii historii wiersza poleceń do zapisu:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="636"/>
@@ -12467,17 +12471,18 @@ try again when it has finished.</source>
       <source>This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</source>
       <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
-      <translation type="unfinished"/>
+      <translation>Ta czcionka nie jest monospace(jednakowej szerokości znaku), może nie być dobra do grania w niektóre gry tekstowe:
+możesz jej używać, ale mogą wystąpić problemy z wyrównywaniem kolumn tekstu</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1197"/>
       <source>&lt;p&gt;Select this option for better compatibility if you are using a netbook, or some other computer model that has a small screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p&gt;Wybierz tę opcję, aby uzyskać lepszą kompatybilność, jeśli używasz netbooka, lub innego modelu komputera, który ma mały ekran.&lt;/p&gt;</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1227"/>
       <source>Display control characters as:</source>
-      <translation type="unfinished"/>
+      <translation>Wyświetlaj znaki sterujące jako:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1241"/>
@@ -12487,12 +12492,12 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1246"/>
       <source>Unicode Control Pictures</source>
-      <translation type="unfinished"/>
+      <translation>Zdjęcia sterujące Unicode</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1251"/>
       <source>CP437 (OEM Font)- like</source>
-      <translation type="unfinished"/>
+      <translation>CP437 (czcionka OEM)-podobne</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1366"/>
@@ -12779,7 +12784,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1931"/>
       <source>BOLD is Bright</source>
-      <translation type="unfinished"/>
+      <translation>BOLD jest Jasne</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1987"/>
@@ -12789,7 +12794,7 @@ you can use it but there could be issues with aligning columns of text</source>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2004"/>
       <source>choose map...</source>
-      <translation type="unfinished"/>
+      <translation>wybierz mapę...</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2011"/>
