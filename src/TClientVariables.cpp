@@ -175,7 +175,17 @@ void TClientVariables::sendClientVariableInfo(const QString& variable) {
     Host::DataSharingBehaviour behaviour = specialRequestVariables[variable](); // Needs an OPT-IN to be available
 
     if (behaviour == Host::DataSharingBehaviour::OptIn) {
-        info[variable] = QJsonObject{{"available", true}};
+        const QMap<QString, QPair<bool, QString>> newEnvironDataMap = getNewEnvironDataMap();
+
+        if (newEnvironDataMap.contains(var)) {
+            // QPair first: NEW_ENVIRON_USERVAR indicator, second: data
+            const QPair<bool, QString> newEnvironData = newEnvironDataMap.value(var);
+            const QString val = newEnvironData.second;
+
+            info[variable] = QJsonObject{{"available", true}, {"value", val}};
+        } else {
+            info[variable] = QJsonObject{{"available", true}};
+        }
     }
 
     if (!info.isEmpty()) {
