@@ -169,6 +169,7 @@ private slots:
     void slot_toggleMapDeleteButton(const bool);
     void slot_toggleAdvertiseScreenReader(const bool);
     void slot_changeWrapAt();
+    void slot_changeBoldIsBright();
     void slot_deleteMap();
     void slot_changeLargeAreaExitArrows(const bool);
     void slot_hidePasswordMigrationLabel();

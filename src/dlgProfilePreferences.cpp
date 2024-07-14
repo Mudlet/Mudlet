@@ -3081,7 +3081,14 @@ void dlgProfilePreferences::slot_saveAndClose()
 
         pHost->setHaveColorSpaceId(checkBox_expectCSpaceIdInColonLessMColorCode->isChecked());
         pHost->setMayRedefineColors(checkBox_allowServerToRedefineColors->isChecked());
-        pHost->mBoldIsBright = checkBox_boldIsBright->isChecked();
+
+        const int priorBoldIsBright = pHost->mBoldIsBright;
+        pHost->mBoldIsBright = checkBox_boldIsBright->checkState();
+
+        if (priorBoldIsBright != pHost->mBoldIsBright) {
+            slot_changeBoldIsBright();
+        }
+
         pHost->setDebugShowAllProblemCodepoints(checkBox_debugShowAllCodepointProblems->isChecked());
         pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
 
@@ -4469,6 +4476,17 @@ void dlgProfilePreferences::slot_changeWrapAt()
     }
 
     pHost->mTelnet.sendInfoNewEnvironValue(qsl("WORD_WRAP"));
+}
+
+void dlgProfilePreferences::slot_changeBoldIsBright()
+{
+    Host* pHost = mpHost;
+
+    if (!pHost) {
+        return;
+    }
+
+    pHost->mTelnet.sendInfoNewEnvironValue(qsl("BOLD_IS_BRIGHT"));
 }
 
 void dlgProfilePreferences::slot_toggleMapDeleteButton(const bool state)
